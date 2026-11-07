@@ -1,7 +1,6 @@
 package org.xvm.compiler;
 
 import java.io.File;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -9,9 +8,9 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorList;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /**
  * TODO
@@ -86,11 +85,11 @@ public class LexerTest {
         for (String text : List.of("String s = \"abc", "String s = $\"abc", "String s = \\|abc")) {
             ErrorList errs  = new ErrorList(5);
             Lexer     lexer = new Lexer(new Source(text), errs);
-            assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            Await.run("lexing " + text, () -> {
                 while (lexer.hasNext()) {
                     lexer.next();
                 }
-            }, text);
+            });
             assertEquals(List.of(Lexer.STRING_NO_TERM), errs.getErrors().stream().map(ErrorList.ErrorInfo::getCode).toList(),
                     text);
         }
@@ -106,11 +105,11 @@ public class LexerTest {
         endings.forEach((text, code) -> {
             ErrorList errs  = new ErrorList(5);
             Lexer     lexer = new Lexer(new Source(text), errs);
-            assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            Await.run("lexing " + text, () -> {
                 while (lexer.hasNext()) {
                     lexer.next();
                 }
-            }, text);
+            });
             assertEquals(List.of(code), errs.getErrors().stream().map(ErrorList.ErrorInfo::getCode).toList(), text);
         });
     }

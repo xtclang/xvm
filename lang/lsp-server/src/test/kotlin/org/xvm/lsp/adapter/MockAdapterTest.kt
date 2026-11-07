@@ -34,8 +34,9 @@ class MockAdapterTest {
 
             assertThat(result.success).isTrue()
             assertThat(result.diagnostics).isEmpty()
-            assertThat(result.symbols)
-                .anyMatch { it.name == "myapp" && it.kind == SymbolInfo.SymbolKind.MODULE }
+            assertThat(result.symbols).anyMatch {
+                it.name == "myapp" && it.kind == SymbolInfo.SymbolKind.MODULE
+            }
         }
 
         @Test
@@ -52,8 +53,9 @@ class MockAdapterTest {
             val result = adapter.compile("file:///test.x", source)
 
             assertThat(result.success).isTrue()
-            assertThat(result.symbols)
-                .anyMatch { it.name == "Person" && it.kind == SymbolInfo.SymbolKind.CLASS }
+            assertThat(result.symbols).anyMatch {
+                it.name == "Person" && it.kind == SymbolInfo.SymbolKind.CLASS
+            }
         }
 
         @Test
@@ -69,8 +71,9 @@ class MockAdapterTest {
 
             val result = adapter.compile("file:///test.x", source)
 
-            assertThat(result.symbols)
-                .anyMatch { it.name == "Runnable" && it.kind == SymbolInfo.SymbolKind.INTERFACE }
+            assertThat(result.symbols).anyMatch {
+                it.name == "Runnable" && it.kind == SymbolInfo.SymbolKind.INTERFACE
+            }
         }
 
         @Test
@@ -86,8 +89,9 @@ class MockAdapterTest {
 
             val result = adapter.compile("file:///test.x", source)
 
-            assertThat(result.symbols)
-                .anyMatch { it.name == "UserService" && it.kind == SymbolInfo.SymbolKind.SERVICE }
+            assertThat(result.symbols).anyMatch {
+                it.name == "UserService" && it.kind == SymbolInfo.SymbolKind.SERVICE
+            }
         }
 
         @Test
@@ -106,8 +110,9 @@ class MockAdapterTest {
 
             val result = adapter.compile("file:///test.x", source)
 
-            assertThat(result.symbols)
-                .anyMatch { it.name == "getName" && it.kind == SymbolInfo.SymbolKind.METHOD }
+            assertThat(result.symbols).anyMatch {
+                it.name == "getName" && it.kind == SymbolInfo.SymbolKind.METHOD
+            }
         }
 
         @Test
@@ -140,8 +145,7 @@ class MockAdapterTest {
 
             val result = adapter.compile("file:///test.x", source)
 
-            assertThat(result.diagnostics)
-                .anyMatch { it.message.contains("Unmatched") }
+            assertThat(result.diagnostics).anyMatch { it.message.contains("Unmatched") }
         }
     }
 
@@ -321,8 +325,7 @@ class MockAdapterTest {
             adapter.compile("file:///test.x", source)
             val ranges = adapter.getFoldingRanges("file:///test.x")
 
-            assertThat(ranges)
-                .anyMatch { it.kind == FoldingRange.FoldingKind.IMPORTS }
+            assertThat(ranges).anyMatch { it.kind == FoldingRange.FoldingKind.IMPORTS }
         }
     }
 

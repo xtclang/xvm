@@ -13,12 +13,11 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Shared base class for all tree-sitter adapter tests.
  *
- * Provides adapter lifecycle management (setup, teardown, native-library
- * availability check) and common helper methods so that each focused test
- * class only contains the tests themselves.
+ * Provides adapter lifecycle management (setup, teardown, native-library availability check) and
+ * common helper methods so that each focused test class only contains the tests themselves.
  *
- * All tests are skipped (not failed) when the tree-sitter native library
- * is unavailable, making this safe to run in any environment.
+ * All tests are skipped (not failed) when the tree-sitter native library is unavailable, making
+ * this safe to run in any environment.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class TreeSitterTestBase {
@@ -27,13 +26,13 @@ abstract class TreeSitterTestBase {
     private val uriCounter = AtomicInteger(0)
 
     /** Shorthand accessor -- safe because [assumeAvailable] guards every test. */
-    protected val ts: TreeSitterAdapter get() = adapter!!
+    protected val ts: TreeSitterAdapter
+        get() = adapter!!
 
     /**
-     * Returns a unique URI per call so each test gets a fresh parse tree.
-     * Re-using the same URI across tests would trigger incremental parsing against
-     * a stale tree whose byte offsets don't match the new source, causing
-     * [StringIndexOutOfBoundsException] inside the native parser.
+     * Returns a unique URI per call so each test gets a fresh parse tree. Re-using the same URI
+     * across tests would trigger incremental parsing against a stale tree whose byte offsets don't
+     * match the new source, causing [StringIndexOutOfBoundsException] inside the native parser.
      */
     protected fun freshUri(): String = "file:///t1st${uriCounter.incrementAndGet()}.x"
 

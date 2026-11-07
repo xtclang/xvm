@@ -1,0 +1,165 @@
+package org.xvm.lsp.adapter.xdk
+
+import org.xvm.asm.Constant
+import org.xvm.asm.Constants.Access
+import org.xvm.asm.ErrorList
+import org.xvm.asm.constants.ClassConstant
+import org.xvm.asm.constants.IdentityConstant
+import org.xvm.asm.constants.ModuleConstant
+import org.xvm.asm.constants.PackageConstant
+import org.xvm.asm.constants.TypedefConstant
+import org.xvm.compiler.CompilerException
+import org.xvm.compiler.Lexer
+import org.xvm.compiler.Parser
+import org.xvm.compiler.Source
+import org.xvm.compiler.Token
+import org.xvm.compiler.ast.StatementBlock
+import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.lsp.util.ExecutionTrace
+
+/** Detached import candidates; only a successful whole-graph repair proof can publish an edit. */
+internal object XdkAutoImports {
+    private val bundled by lazy {
+        XdkLibraries.moduleNames
+            .flatMap { module ->
+                XdkLibraries.module(module).constantPool.constants.mapNotNull(::target).filter {
+                    it.module == module
+                }
+            }.distinct()
+            .groupBy { it.name }
+    }
+
+    /** Importable declaration name, module and qualified path established by the compiler. */
+    data class Target(
+        val name: String,
+        val module: String,
+        val path: String,
+    )
+
+    fun targets(
+        name: String,
+        facts: CompilerRenameFacts,
+    ): List<Target> =
+        (facts.imports.filter { it.name == name } + bundled[name].orEmpty())
+            .distinct()
+            .sortedWith(compareBy(Target::module, Target::path))
+
+    fun matchingTargets(
+        prefix: String,
+        facts: CompilerRenameFacts,
+    ): List<Target> =
+        (facts.imports + bundled.filterKeys { it.startsWith(prefix) }.values.flatten())
+            .filter { it.name.startsWith(prefix) }
+            .distinct()
+            .sortedWith(compareBy(Target::name, Target::module, Target::path))
+
+    internal fun target(constant: Constant): Target? {
+        if (constant !is ClassConstant && constant !is TypedefConstant) return null
+        val identity = constant as IdentityConstant
+        if (
+            identity.path.any {
+                (
+                    it !is ModuleConstant &&
+                        it !is PackageConstant &&
+                        it !is ClassConstant &&
+                        it !is TypedefConstant
+                ) || it.component?.access != Access.PUBLIC
+            }
+        ) {
+            return null
+        }
+        return Target(identity.name, identity.moduleConstant.name, identity.pathString)
+    }
+
+    /** Whether [text] parses with no serious error, as it must for an import edit in it. */
+    fun parses(text: String): Boolean = parse(text) != null
+
+    /**
+     * The import of [target] in [text], a file of the module [owner]. A module that [packages], the owner's package
+     * imports as the compiler linked them, already names is imported through that package; any other gets one.
+     */
+    fun edit(
+        text: String,
+        owner: String,
+        target: Target,
+        packages: Map<String, String>,
+    ): XdkRename.Edit? {
+        val root = parse(text) ?: return null
+        val errors = ErrorList()
+        val tokens =
+            ExecutionTrace.api("Lexer.lex(auto-imports)") {
+                Lexer(Source(text), errors).asSequence().toList()
+            }
+        if (errors.hasSeriousErrors()) return null
+        val type =
+            root.childNodes().filterIsInstance<TypeCompositionStatement>().singleOrNull()
+                ?: return null
+        val newline = if ("\r\n" in text) "\r\n" else "\n"
+        val insertion =
+            if (type.category.id == Token.Id.MODULE) {
+                val position = type.ensureBody().startPosition
+                val at =
+                    XdkRename.offset(
+                        text,
+                        SemanticModel.Position(
+                            Source.calculateLine(position),
+                            Source.calculateOffset(position),
+                        ),
+                    ) ?: return null
+                if (text.getOrNull(at) != '{') return null
+                at + 1
+            } else {
+                // A member file may declare imports before its class; the compiler owns their
+                // scope.
+                0
+            }
+        val prefix: String
+        val declaration: String
+        when (target.module) {
+            owner -> {
+                prefix = ""
+                declaration = ""
+            }
+
+            "ecstasy.xtclang.org" -> {
+                prefix = "ecstasy."
+                declaration = ""
+            }
+
+            in packages -> {
+                prefix = "${packages.getValue(target.module)}."
+                declaration = ""
+            }
+
+            else -> {
+                val names = tokens.mapTo(hashSetOf()) { it.valueText }
+                val base = target.module.substringBefore('.').replaceFirstChar { it.lowercase() }
+                val alias =
+                    generateSequence(0) { it + 1 }
+                        .map { if (it == 0) base else "$base$it" }
+                        .first { it !in names && XdkRename.identifier(it) }
+                prefix = "$alias."
+                declaration = "package $alias import ${target.module};$newline"
+            }
+        }
+        val imports = declaration + "import $prefix${target.path};$newline"
+        return XdkRename.Edit(
+            insertion,
+            insertion,
+            if (insertion == 0) imports else "$newline$imports",
+        )
+    }
+
+    private fun parse(text: String): StatementBlock? {
+        val errors = ErrorList()
+        val root =
+            try {
+                ExecutionTrace.api("Parser.parseSource(auto-imports)") {
+                    Parser(Source(text), errors).parseSource()
+                }
+            } catch (_: CompilerException) {
+                return null
+            }
+        return root.takeUnless { errors.hasSeriousErrors() }
+    }
+}

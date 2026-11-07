@@ -16,8 +16,8 @@ import kotlin.time.measureTimedValue
 /**
  * Unit tests for AST-aware document formatting (`textDocument/formatting`) in [TreeSitterAdapter].
  *
- * Each test provides an XTC source with incorrect indentation and asserts the formatter
- * produces the correctly indented version.
+ * Each test provides an XTC source with incorrect indentation and asserts the formatter produces
+ * the correctly indented version.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -27,7 +27,8 @@ class DocumentFormattingTest {
     private var adapter: TreeSitterAdapter? = null
     private val uriCounter = AtomicInteger(0)
 
-    private val ts: TreeSitterAdapter get() = adapter!!
+    private val ts: TreeSitterAdapter
+        get() = adapter!!
 
     private fun freshUri(): String = "file:///docfmt${uriCounter.incrementAndGet()}.x"
 
@@ -56,9 +57,7 @@ class DocumentFormattingTest {
     // Test helpers
     // ========================================================================
 
-    /**
-     * Compile [input], format the whole document, apply edits, and return the result.
-     */
+    /** Compile [input], format the whole document, apply edits, and return the result. */
     private fun formatWhole(input: String): String {
         val uri = freshUri()
         ts.compile(uri, input)
@@ -85,9 +84,7 @@ class DocumentFormattingTest {
         return applyEdits(input, edits)
     }
 
-    /**
-     * Compile [input], format, assert that no edits are returned.
-     */
+    /** Compile [input], format, assert that no edits are returned. */
     private fun assertNoEdits(input: String) {
         val uri = freshUri()
         ts.compile(uri, input)
@@ -96,9 +93,9 @@ class DocumentFormattingTest {
     }
 
     /**
-     * Compile [input], format, and assert the result equals [expected].
-     * Automatically appends `\n` to [expected] if it doesn't already end with one,
-     * since the formatter always ensures a final newline.
+     * Compile [input], format, and assert the result equals [expected]. Automatically appends `\n`
+     * to [expected] if it doesn't already end with one, since the formatter always ensures a final
+     * newline.
      */
     private fun assertFormatsTo(
         input: String,
@@ -110,8 +107,8 @@ class DocumentFormattingTest {
     }
 
     /**
-     * Apply text edits to source. Edits are applied in reverse order (bottom-to-top,
-     * right-to-left) to preserve positions of earlier edits.
+     * Apply text edits to source. Edits are applied in reverse order (bottom-to-top, right-to-left)
+     * to preserve positions of earlier edits.
      */
     private fun applyEdits(
         source: String,
@@ -136,7 +133,8 @@ class DocumentFormattingTest {
             if (startLine == endLine) {
                 // Single-line edit: replace within the line
                 val line = lines[startLine]
-                lines[startLine] = line.substring(0, startCol) + edit.newText + line.substring(endCol)
+                lines[startLine] =
+                    line.substring(0, startCol) + edit.newText + line.substring(endCol)
             } else {
                 // Multi-line edit: splice lines
                 val prefix = lines[startLine].substring(0, startCol)
@@ -315,7 +313,7 @@ class DocumentFormattingTest {
     @DisplayName("Switch/case indentation")
     inner class SwitchCaseTests {
         @Test
-        @DisplayName("case labels at same indent as switch keyword")
+        @DisplayName("a switch expression's case labels are one level inside it, as in the XDK")
         fun caseLabelsAtSwitchLevel() {
             val input =
                 """
@@ -333,14 +331,12 @@ class DocumentFormattingTest {
             val result = formatWhole(input)
             val lines = result.trimEnd('\n').split("\n")
 
-            val caseLine = lines.firstOrNull { it.trimStart().startsWith("case") }
+            val caseLine = lines.first { it.trimStart().startsWith("case") }
             val switchLine = lines.first { it.trimStart().startsWith("return switch") }
-            if (caseLine != null) {
-                val caseIndent = caseLine.takeWhile { it == ' ' }.length
-                val switchIndent = switchLine.takeWhile { it == ' ' }.length
-                // Case at same indent as the switch, or handled by general depth
-                assertThat(caseIndent).isEqualTo(switchIndent)
-            }
+            val caseIndent = caseLine.takeWhile { it == ' ' }.length
+            val switchIndent = switchLine.takeWhile { it == ' ' }.length
+            // a switch statement's labels align with it instead (SwitchFormattingTest)
+            assertThat(caseIndent).isEqualTo(switchIndent + 4)
         }
     }
 

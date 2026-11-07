@@ -27,9 +27,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Phaser;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -52,6 +54,7 @@ import org.xvm.compiler.EvalCompiler;
 import org.xvm.runtime.Debugger;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,21 +63,20 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.WARNING;
 
 /**
  * Compiles and runs modules through {@link EmbeddingSupport}: compilation, runs with a console and
  * a file system, failures, closing a run, how the entry method is selected and what it is passed,
- * exact arguments, console input, changed modules and dependencies, and what repeated runs leave
- * in the runtime's constant pools. The compiled XDK modules come from the test resources, where
- * the build puts them ({@code testXtcModules} in javatools/build.gradle.kts).
+ * exact arguments, console input, changed modules and dependencies, what repeated runs leave in
+ * the runtime's constant pools, and which threads are its pool's. The compiled XDK modules come
+ * from the test resources, where the build puts them ({@code testXtcModules} in
+ * javatools/build.gradle.kts).
  */
 public class EmbeddingSupportTest {
-    private static final Duration RUN_LIMIT = Duration.ofSeconds(60);
-
     @TempDir
     static Path dirOut;
 
@@ -92,6 +94,15 @@ public class EmbeddingSupportTest {
         support = new EmbeddingSupport().configure(repo(), null);
     }
 
+    /**
+     * The tests' interpreter ends with them, so that its runtime is not kept for the rest of the
+     * JVM's tests.
+     */
+    @AfterAll
+    static void shutdown() {
+        support.shutdownInterpreter();
+    }
+
     @Test
     public void compilingReportsInvalidSource() {
         assertEquals("Trivial", compile(helloModule("Trivial")).getName());
@@ -99,6 +110,36 @@ public class EmbeddingSupportTest {
         ErrorList errs = new ErrorList(25);
         assertNull(support.compile("module Broken { void run( }", repo(), errs));
         assertTrue(errs.hasSeriousErrors(), errs.getErrors().toString());
+    }
+
+    /**
+     * A stage reports every error it finds before the compilation stops, as the command-line
+     * compiler does: an editor shows a changed method as an error in each of its callers, not only
+     * in the first one compiled.
+     */
+    @Test
+    public void aCompilationReportsTheErrorsOfEveryClass() {
+        ErrorList errs = new ErrorList(25);
+        assertNull(support.compile("""
+                module Callers {
+                    class First {
+                        void call() {
+                            missing();
+                        }
+                    }
+                    class Second {
+                        void call() {
+                            missing();
+                        }
+                    }
+                }
+                """, repo(), errs));
+        assertEquals(List.of(3, 8), errs.getErrors().stream()
+                .filter(err -> err.getSeverity() == ERROR)
+                .map(ErrorInfo::getLine)
+                .distinct()
+                .sorted()
+                .toList(), errs.getErrors().toString());
     }
 
     @Test
@@ -187,6 +228,40 @@ public class EmbeddingSupportTest {
         assertTrue(output.toString().contains(message), output.toString());
     }
 
+    /**
+     * An exception that a future's whenComplete callback throws is its service's unhandled
+     * exception, as the runtime reports other exceptions that nothing catches. The future that
+     * whenComplete returns gets the exception too, but a caller mostly drops it, so that alone
+     * leaves no trace. Here the program's own handler of unhandled exceptions learns of it, and
+     * run() waits for that; without the report it would wait until the test's limit.
+     */
+    @Test
+    public void anExceptionThatAWhenCompleteCallbackThrowsIsReportedAsUnhandled() {
+        ModuleStructure module = compile("""
+                module Callbacks {
+                    void run() {
+                        @Inject Console console;
+                        @Future String reported;
+                        this:service.registerUnhandledExceptionNotification(e -> {reported = e.text ?: "";});
+
+                        @Future Int value;
+                        &value.whenComplete((v, e) -> {throw new IllegalState("from the callback");});
+                        value = 1;
+                        console.print($"reported: {reported}");
+                    }
+                }
+                """);
+        StringWriter output  = new StringWriter();
+        ErrorList    errs    = new ErrorList(25);
+        Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
+        assertNotNull(control, () -> "Callbacks did not start: " + errs.getErrors());
+
+        try (control) {
+            await(control);
+        }
+        assertTrue(output.toString().contains("reported: from the callback"), output.toString());
+    }
+
     @Test
     public void closingASuspendedRunTerminatesIt() throws InterruptedException {
         ModuleStructure module = compile("""
@@ -196,7 +271,7 @@ public class EmbeddingSupportTest {
                         @Inject Timer timer;
                         try {
                             @Future Tuple done;
-                            timer.schedule(Duration:1H, () -> {done = ();});
+                            timer.schedule(Duration.ofDays(1), () -> {done = ();});
                             console.print("waiting");
                             return done;
                         } catch (Exception e) {
@@ -230,12 +305,12 @@ public class EmbeddingSupportTest {
                     waiting.countDown();
                 }
             });
-            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+            Await.run(() -> waiting.await());
             assertTrue(output.toString().contains("waiting"),
                     () -> "Waiting ended before it suspended: " + output);
 
-            // a close() that waited for the pending one-hour timer would not return in time
-            assertTimeoutPreemptively(RUN_LIMIT, control::close);
+            // a close() that waited for the pending one-day timer would not return in time
+            Await.run(control::close);
         }
         assertTrue(output.toString().contains("Service terminated"), output.toString());
         assertFalse(output.toString().contains("caught termination"), output.toString());
@@ -252,7 +327,7 @@ public class EmbeddingSupportTest {
                         @Inject Timer timer;
                         timer.start();
                         timer.schedule(Duration.ofMillis(300), () -> console.print("kept"), keepAlive=True);
-                        timer.schedule(Duration.ofMinutes(60), () -> console.print("dropped"));
+                        timer.schedule(Duration.ofDays(1), () -> console.print("dropped"));
                         console.print("returned");
                     }
                 }
@@ -263,7 +338,7 @@ public class EmbeddingSupportTest {
         assertNotNull(control, () -> "Lingers did not start: " + errs.getErrors());
 
         try (control) {
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
             assertFalse(control.running());
         }
         assertTrue(output.toString().contains("returned"), output.toString());
@@ -298,20 +373,20 @@ public class EmbeddingSupportTest {
         Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
         assertNotNull(control, () -> "Leaves did not start: " + errs.getErrors());
 
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+        Await.run(() -> {
             while (!output.toString().contains("started")) {
                 Thread.sleep(10);
             }
         });
         // not in a try-with-resources: closing again after a close that timed out would wait without a limit
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
 
         var connector = (InterpreterConnector) support.ensureConnector();
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+        Await.run("the closed run's spinner to stop", () -> {
             while (!connector.isRuntimeIdle()) {
                 Thread.sleep(10);
             }
-        }, "The closed run's spinner still runs");
+        });
     }
 
     @Test
@@ -351,7 +426,7 @@ public class EmbeddingSupportTest {
         Control      control = support.run(module, new PrintWriter(output, true), null, null, errs);
         assertNotNull(control, () -> "Pending did not start: " + errs.getErrors());
 
-        assertTimeoutPreemptively(RUN_LIMIT, () -> {
+        Await.run(() -> {
             while (!output.toString().contains("started") && control.running()) {
                 Thread.sleep(10);
             }
@@ -360,7 +435,7 @@ public class EmbeddingSupportTest {
 
         // the run never ends on its own; closing it ends every service in its container. Not in a
         // try-with-resources: closing again after a close that timed out would wait without a limit
-        assertTimeoutPreemptively(RUN_LIMIT, control::close);
+        Await.run(control::close);
         assertFalse(control.running());
     }
 
@@ -513,6 +588,27 @@ public class EmbeddingSupportTest {
                 errs.getErrors().stream().map(ErrorInfo::getCode).toList());
         assertEquals("Missing method \"absent\" in module Refused", errs.getErrors().getFirst().getMessageText());
         assertEquals(consoles, support.registeredConsoles());
+    }
+
+    @Test
+    public void poolThreadsAreThoseOfTheRuntimesPoolAndNotAThreadOneOfThemStarts() throws Exception {
+        ThreadPoolExecutor pool = assertInstanceOf(InterpreterConnector.class, support.ensureConnector())
+                .getNativeContainer().f_runtime.f_executorXVM;
+        // with each of the pool's threads started, a task does not start another
+        pool.prestartAllCoreThreads();
+        assertEquals(pool.getCorePoolSize(), support.poolThreads());
+
+        // a thread that a pool thread starts joins the pool's thread group, as the JDK's for a
+        // CompletableFuture's timeout does when the debugger sets a time limit on a stopped fiber
+        CompletableFuture<Void> release = new CompletableFuture<>();
+        Thread started = pool.submit(() -> Thread.ofPlatform().start(release::join)).get();
+        try {
+            assertEquals("XVM", started.getThreadGroup().getName());
+            assertEquals(pool.getCorePoolSize(), support.poolThreads());
+        } finally {
+            release.complete(null);
+            started.join();
+        }
     }
 
     @Test
@@ -795,7 +891,7 @@ public class EmbeddingSupportTest {
                         @Inject Console console;
                         @Inject Timer timer;
                         @Future Tuple done;
-                        timer.schedule(Duration:1H, () -> {done = ();});
+                        timer.schedule(Duration.ofDays(1), () -> {done = ();});
                         console.print("waiting");
                         return done;
                     }
@@ -806,7 +902,7 @@ public class EmbeddingSupportTest {
             ErrorList      errs    = new ErrorList(25);
             Control        control = support.run(module, signallingConsole("waiting", waiting), null, null, errs);
             assertNotNull(control, () -> "Closing did not start: " + errs.getErrors());
-            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+            Await.run(() -> waiting.await());
 
             // both close at once, and each must find the run ended when its close returns
             Phaser        together = new Phaser(2);
@@ -820,7 +916,7 @@ public class EmbeddingSupportTest {
                 }));
             }
             for (Thread closer : closers) {
-                assertTimeoutPreemptively(RUN_LIMIT, () -> closer.join());
+                Await.run(() -> closer.join());
             }
             assertEquals(List.of(false, false), running);
         }
@@ -846,12 +942,12 @@ public class EmbeddingSupportTest {
                     EntryPoint.RUN, signallingConsole("waiting", waiting), _ -> line.join(),
                     rootDir.toFile(), errs);
             assertNotNull(control, () -> "Ending did not start: " + errs.getErrors());
-            assertTimeoutPreemptively(RUN_LIMIT, () -> waiting.await());
+            Await.run(() -> waiting.await());
 
             // the end of input lets the program end while the close asks the runner to stop it,
             // as a Stop does for a program waiting for input
             line.complete(null);
-            assertTimeoutPreemptively(RUN_LIMIT, control::close);
+            Await.run(control::close);
             assertFalse(control.running());
             assertNotNull(control.whenStopped());
             Long result = control.result();
@@ -874,7 +970,7 @@ public class EmbeddingSupportTest {
         Instant started = control.whenStarted();
         assertNotNull(started);
 
-        assertTimeoutPreemptively(RUN_LIMIT, control::join);
+        Await.run(control::join);
 
         Instant stopped = control.whenStopped();
         assertNotNull(stopped);
@@ -966,7 +1062,7 @@ public class EmbeddingSupportTest {
                 rootDir.toFile(), errs);
         assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
         try (control) {
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
         }
         return output.toString();
     }
@@ -980,7 +1076,7 @@ public class EmbeddingSupportTest {
                 new PrintWriter(new StringWriter(), true), ConsoleInput.NONE, rootDir.toFile(), errs);
         assertNotNull(control, () -> moduleName + " did not start: " + errs.getErrors());
         try (control) {
-            assertTimeoutPreemptively(RUN_LIMIT, control::join);
+            Await.run(control::join);
         }
         return errs;
     }

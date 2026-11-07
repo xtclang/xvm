@@ -1,16 +1,15 @@
-# Testing the XTC LSP Server with External Editors
+# Testing the Ecstasy Language Server with External Editors
 
-This guide explains how to build the XTC LSP server jar and connect it to
+This guide explains how to build the Ecstasy language server jar and connect it to
 text editors like Neovim, Emacs, or VS Code -- without using the IntelliJ plugin.
 
 ## Prerequisites
 
-- **Java 25+** is required for the default tree-sitter adapter (it uses the
-  Foreign Function & Memory API). Verify with `java -version`.
-- If you don't have Java 25, you can build with the regex-based mock adapter
-  instead (see the build step below).
+- **Java 25+** is required to build and run the server, whichever adapter it uses: the build
+  compiles for Java 25, and the optional tree-sitter adapter also uses the Foreign Function &
+  Memory API. Verify with `java -version`.
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite build semantics](../../AGENTS.md#composite-build-semantics) in the project AGENTS.md for details.
 
 ## Step 1: Build the Fat JAR
 
@@ -31,9 +30,9 @@ lang/lsp-server/build/libs/lsp-server-<version>-all.jar
 
 For example: `lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar`
 
-### Using the mock adapter (no Java 25 required)
+### Using the mock adapter
 
-If you don't have Java 25+, build with the mock adapter instead:
+To build with the mock adapter, which needs no native library:
 
 ```bash
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
@@ -52,7 +51,7 @@ echo -ne 'Content-Length: 73\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize
 ```
 
 You should see a JSON-RPC response containing the server's capabilities. The
-server also writes logs to `~/.xtc/logs/lsp-server.log`.
+server also writes logs to `~/.xtc/logs/lsp/server-*/server.log`.
 
 ## Step 3: Connect to Your Editor
 
@@ -80,7 +79,7 @@ vim.filetype.add({
   },
 })
 
--- Start the XTC LSP server when opening .x files
+-- Start the Ecstasy language server when opening .x files
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'xtc',
   callback = function()
@@ -116,7 +115,7 @@ Add the following to your Emacs configuration (`~/.emacs.d/init.el` or
 ;; Associate .x files with a major mode
 (add-to-list 'auto-mode-alist '("\\.x\\'" . prog-mode))
 
-;; Register the XTC LSP server with eglot
+;; Register the Ecstasy language server with eglot
 (with-eval-after-load 'eglot
   (add-to-list 'eglot-server-programs
                '(prog-mode . ("java"
@@ -449,7 +448,7 @@ nvim --headless \
 After running any of the above, verify the server logged the requests:
 
 ```bash
-tail -20 ~/.xtc/logs/lsp-server.log
+tail -20 ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 You should see entries like:
@@ -470,13 +469,13 @@ TreeSitterAdapter - parsed in 2.3ms, 0 errors, 31 symbols (query: 1.2ms)
 The LSP server writes detailed logs to:
 
 ```
-~/.xtc/logs/lsp-server.log
+~/.xtc/logs/lsp/server-*/server.log
 ```
 
 Tail the log while testing to see server activity in real time:
 
 ```bash
-tail -f ~/.xtc/logs/lsp-server.log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 ### "UnsatisfiedLinkError" or tree-sitter failures

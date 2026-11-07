@@ -1,59 +1,389 @@
+import { spawn } from 'node:child_process';
 import * as path from 'node:path';
-import * as fs from 'node:fs';
 import * as vscode from 'vscode';
+import type { LanguageClient } from 'vscode-languageclient/node';
 
-import { buildJvmArgs, findJavaExecutable } from './java';
+import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from './embedded-execution';
+import type { SourceModule } from './source-graph-configuration';
+import { createXtcRunTask, type XtcTaskDefinition } from './task-provider';
+import { LineSplitter, parseTestEvent, REPORT, type TestEvent } from './test-events';
 
-export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
-    constructor(private readonly context: vscode.ExtensionContext) {}
+type ClientAccess = () => LanguageClient | undefined;
 
-    async createDebugAdapterDescriptor(
-        _session: vscode.DebugSession,
-        _executable: vscode.DebugAdapterExecutable | undefined
-    ): Promise<vscode.DebugAdapterDescriptor | undefined> {
-        const serverJar = this.context.asAbsolutePath(path.join('server', 'dap-server.jar'));
-        if (!fs.existsSync(serverJar)) {
-            void vscode.window.showErrorMessage(
-                'XTC DAP server JAR not found. Build lang:vscode-extension to enable debugging.',
-                'Show Build Command'
-            ).then(choice => {
-                if (choice === 'Show Build Command') {
-                    void vscode.commands.executeCommand('xtc.showServerOutput');
+/** The live adapters, by the language server's ID for their session, which routes the server's messages. */
+const adapters = new Map<string, LanguageServerDebugAdapter>();
+
+/**
+ * Routes the language server's debug session messages to their adapters, and runs the Gradle tasks its Gradle-mode
+ * launches ask for. JSON-RPC keeps one handler per method, so this is registered once per client rather than per
+ * session.
+ */
+export function attachDebugSessions(client: LanguageClient): vscode.Disposable {
+    return vscode.Disposable.from(
+        client.onNotification('xtc/debugMessage', (params: { sessionId: string; message: vscode.DebugProtocolMessage }) =>
+            adapters.get(params.sessionId)?.receive(params.message)),
+        client.onRequest('xtc/debugTask', (params: DebugTaskParams, token: vscode.CancellationToken) =>
+            runDebugTask(params, token)),
+    );
+}
+
+/** A Gradle-mode launch's task, as the language server asks for it with `xtc/debugTask`. */
+export interface DebugTaskParams {
+    sessionId: string;
+    module: string;
+    method?: string;
+    args: string[];
+    /** The value of the Gradle property `xtcDebug`: the launcher's `--debug`, which connects to the debug session. */
+    debug: string;
+    /** The launch's `buildMode`: `gradle`, or `commandLine` for `xtc run`, which VS Code does not run. */
+    buildMode?: string;
+    /** The module's tests the task runs instead, with `testXtc`, all of them for an empty list. */
+    tests?: TestSelection[];
+}
+
+/** A test, or a container of tests, as xunit's selector and its kind: `module`, `package`, `class` or `test`. */
+export interface TestSelection {
+    selector: string;
+    kind: string;
+}
+
+/** The Gradle wrapper on [platform], in the folder its build runs in. */
+export function gradleWrapper(platform = process.platform): string {
+    return platform === 'win32' ? 'gradlew.bat' : './gradlew';
+}
+
+/** `testXtc`'s options that run [tests] of [module], all of its tests for none, with xunit's `json` report. */
+export function gradleTestArgs(module: string, tests: readonly TestSelection[]): string[] {
+    const options: Record<string, string> = { package: 'test-package', class: 'test-class', test: 'test-method' };
+    return [
+        '-q',
+        'testXtc',
+        `--module=${module}`,
+        ...tests.flatMap(test => options[test.kind] ? [`--${options[test.kind]}=${test.selector}`] : []),
+        `--test-report=${REPORT}`,
+    ];
+}
+
+/**
+ * Runs [command] with [args] in [directory], as a test run of Gradle does, and gives its output to [output] in lines,
+ * with whether each came from its standard error; answers with its exit code once it has ended. [token] ends it.
+ */
+export function runTestProcess(command: string, args: readonly string[], directory: string,
+                               output: (line: string, error: boolean) => void, token: vscode.CancellationToken): Promise<number | undefined> {
+    return new Promise(resolve => {
+        // the wrapper is the folder's own, and Windows runs its batch file through the shell
+        const child = spawn(command.startsWith('./') ? path.join(directory, command) : command, [...args],
+            { cwd: directory, shell: process.platform === 'win32' });
+        const streams = [{ stream: child.stdout, error: false }, { stream: child.stderr, error: true }];
+        streams.forEach(({ stream, error }) => {
+            const lines = new LineSplitter();
+            stream.setEncoding('utf8');
+            stream.on('data', (text: string) => lines.feed(text).forEach(line => output(line, error)));
+            stream.on('end', () => lines.flush().forEach(line => output(line, error)));
+        });
+        const stop = token.onCancellationRequested(() => child.kill());
+        child.on('error', failure => {
+            output(`${command} could not run: ${failure.message}`, true);
+        });
+        child.on('close', code => {
+            stop.dispose();
+            resolve(code ?? undefined);
+        });
+    });
+}
+
+/**
+ * The Gradle wrapper and its arguments for a Gradle-mode launch's task: the module's run, in a JVM of its own, with
+ * the debug properties that make the launcher run the program under the debugger.
+ */
+export function gradleDebugCommand(params: DebugTaskParams, platform = process.platform): { command: string; args: string[] } {
+    return {
+        command: gradleWrapper(platform),
+        args: [
+            '-q',
+            'runXtc',
+            '--mode=ATTACHED',
+            `--module=${params.module}`,
+            ...(params.method ? [`--method=${params.method}`] : []),
+            ...(params.args.length > 0 ? [`--args=${params.args.join(',')}`] : []),
+            `-PxtcDebug=${params.debug}`,
+        ],
+    };
+}
+
+/**
+ * Runs a Gradle-mode launch's task in the terminal, as Run does in Gradle mode, and answers with its exit code once
+ * it has ended; the server's cancel, when the session stops, ends the task, and the program with it.
+ */
+async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationToken): Promise<{ exitCode?: number }> {
+    if (params.buildMode !== undefined && params.buildMode !== 'gradle') {
+        throw new Error(`VS Code runs a debugged program only with Gradle, not in build mode ${params.buildMode}`);
+    }
+    const adapter = adapters.get(params.sessionId);
+    if (params.tests && adapter?.folder) {
+        return { exitCode: await runDebugTestTask(params, params.tests, adapter, adapter.folder, token) };
+    }
+    const folder = adapter?.folder;
+    const { command, args } = gradleDebugCommand(params);
+    const definition: XtcTaskDefinition = { type: 'xtc', moduleName: params.module, methodName: params.method, mode: 'gradle' };
+    const task = new vscode.Task(definition, folder ?? vscode.TaskScope.Workspace, `Debug ${params.module}`, 'xtc',
+        new vscode.ShellExecution(command, args), []);
+    task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Shared };
+    const execution = await vscode.tasks.executeTask(task);
+    return new Promise(resolve => {
+        const subscriptions: vscode.Disposable[] = [];
+        const end = (exitCode?: number) => {
+            subscriptions.forEach(each => each.dispose());
+            resolve({ exitCode });
+        };
+        subscriptions.push(
+            vscode.tasks.onDidEndTaskProcess(event => {
+                if (event.execution === execution) {
+                    end(event.exitCode);
                 }
-            });
-            return undefined;
+            }),
+            // a task whose process never started ends without an exit code
+            vscode.tasks.onDidEndTask(event => {
+                if (event.execution === execution) {
+                    end(undefined);
+                }
+            }),
+            token.onCancellationRequested(() => execution.terminate()),
+        );
+    });
+}
+
+/**
+ * Runs a Gradle-mode test launch's task, `testXtc` with the debug property, in a process of the extension's own, whose
+ * output goes to the debug session as its output, apart from xunit's events, which go to it as the DAP event
+ * `xtcTest`, as the language server sends an embedded launch's.
+ */
+function runDebugTestTask(params: DebugTaskParams, tests: readonly TestSelection[], adapter: LanguageServerDebugAdapter,
+                          folder: vscode.WorkspaceFolder, token: vscode.CancellationToken): Promise<number | undefined> {
+    const args = [...gradleTestArgs(params.module, tests), '--mode=ATTACHED', `-PxtcDebug=${params.debug}`];
+    return runTestProcess(gradleWrapper(), args, folder.uri.fsPath, (line, error) => {
+        const event = error ? undefined : parseTestEvent(line);
+        if (event) {
+            adapter.tested(event);
+        } else {
+            adapter.output(`${line}\n`, error ? 'stderr' : 'stdout');
         }
+    }, token);
+}
 
-        const javaExecutable = await findJavaExecutable(this.context);
-        const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
-        const jvmArgs = buildJvmArgs(serverJar, logLevel);
-
-        return new vscode.DebugAdapterExecutable(javaExecutable, jvmArgs);
+/** A stopped or restarted language server takes its debug sessions, and the programs they launched, with it. */
+export function endAllDebugSessions(reason: string): void {
+    for (const adapter of [...adapters.values()]) {
+        adapter.serverStopped(reason);
     }
 }
 
+/**
+ * An Ecstasy debug session lives in the language server, which builds and runs its program the way Run does. This
+ * adapter carries the session's Debug Adapter Protocol messages over the language client's connection:
+ * `xtc/debugStart` creates the session, `xtc/debugMessage` notifications carry its messages both ways, and
+ * `xtc/debugEnd` ends it, which stops its program.
+ */
+class LanguageServerDebugAdapter implements vscode.DebugAdapter {
+    private readonly messages = new vscode.EventEmitter<vscode.DebugProtocolMessage>();
+    readonly onDidSendMessage = this.messages.event;
+
+    constructor(private readonly client: LanguageClient, private readonly sessionId: string,
+                private readonly notice: string | undefined, readonly folder: vscode.WorkspaceFolder | undefined) {
+        adapters.set(sessionId, this);
+    }
+
+    handleMessage(message: vscode.DebugProtocolMessage): void {
+        void this.client.sendNotification('xtc/debugMessage', { sessionId: this.sessionId, message })
+            .catch(error => this.serverStopped(`The Ecstasy language server did not take the debug message: ${error}`));
+        if (this.notice && (message as { command?: string }).command === 'launch') {
+            this.event('output', { category: 'console', output: `${this.notice}\n` });
+        }
+    }
+
+    receive(message: vscode.DebugProtocolMessage): void {
+        this.messages.fire(message);
+    }
+
+    /** Output of the session's program that the extension's own process runs, as a debug test task does. */
+    output(text: string, category: string): void {
+        this.event('output', { category, output: text });
+    }
+
+    /** An event of the tests that the extension's own process runs, as the DAP event `xtcTest` the server sends. */
+    tested(event: TestEvent): void {
+        this.event('xtcTest', event);
+    }
+
+    serverStopped(reason: string): void {
+        if (adapters.delete(this.sessionId)) {
+            this.event('output', { category: 'stderr', output: `\n${reason}\n` });
+            this.event('terminated', {});
+        }
+    }
+
+    dispose(): void {
+        if (adapters.delete(this.sessionId) && this.client.isRunning()) {
+            void this.client.sendNotification('xtc/debugEnd', { sessionId: this.sessionId }).catch(() => undefined);
+        }
+        this.messages.dispose();
+    }
+
+    /** An event of the adapter's own, which VS Code shows like the server's. */
+    private event(event: string, body: object): void {
+        this.messages.fire({ type: 'event', seq: 0, event, body } as vscode.DebugProtocolMessage);
+    }
+}
+
+/** The context key that says whether Ecstasy debug sessions show integers in hexadecimal, for the menu's check mark. */
+const HEX_VALUES = 'xtc.debug.hexValues';
+
+/**
+ * The Variables and Watch views' "Show Values as Hexadecimal" item. VS Code never asks a debug adapter for a value
+ * format, so the item sets the Ecstasy sessions' own with `xtc/valueFormat`, now and for each session that starts
+ * while it is on; the language server's session then tells VS Code to read the variables again.
+ */
+export function registerValueFormat(context: vscode.ExtensionContext): void {
+    let hex = false;
+    const sessions = new Set<vscode.DebugSession>();
+    const send = (session: vscode.DebugSession) =>
+        Promise.resolve(session.customRequest('xtc/valueFormat', { hex })).catch(() => undefined);
+    context.subscriptions.push(
+        vscode.commands.registerCommand('xtc.debug.toggleHexValues', async () => {
+            hex = !hex;
+            await vscode.commands.executeCommand('setContext', HEX_VALUES, hex);
+            await Promise.all([...sessions].map(send));
+        }),
+        vscode.debug.onDidStartDebugSession(session => {
+            if (session.type === 'xtc') {
+                sessions.add(session);
+                if (hex) {
+                    void send(session);
+                }
+            }
+        }),
+        vscode.debug.onDidTerminateDebugSession(session => { sessions.delete(session); }),
+    );
+}
+
+export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
+    constructor(private readonly client: ClientAccess) {}
+
+    async createDebugAdapterDescriptor(session: vscode.DebugSession): Promise<vscode.DebugAdapterDescriptor> {
+        const client = this.client();
+        if (!client?.isRunning()) {
+            throw new Error('The Ecstasy language server is not running.');
+        }
+        const { sessionId } = await client.sendRequest<{ sessionId: string }>('xtc/debugStart');
+        const gradle = session.configuration.buildMode === 'gradle';
+        const notice = !gradle && hasGradleBuild(session.workspaceFolder) ? GRADLE_NOT_USED : undefined;
+        return new vscode.DebugAdapterInlineImplementation(
+            new LanguageServerDebugAdapter(client, sessionId, notice, session.workspaceFolder));
+    }
+}
+
+/** The port that the copied `--debug` option listens on, and the attach snippet attaches to. */
+export const ATTACH_PORT = 5005;
+
+/**
+ * The `--debug` option of `xec` and `xtc run` for a program that an "Ecstasy: Attach" configuration debugs: it waits
+ * before its first line, on [port] of this machine. The program's XDK has the debugger's agent.
+ */
+export function debugOption(port = ATTACH_PORT): string {
+    return `--debug listen:127.0.0.1:${port},suspend`;
+}
+
+/** The "Copy Option to Debug a Program Outside the Editor" command, which copies [debugOption]. */
+export function registerDebugOption(context: vscode.ExtensionContext): void {
+    context.subscriptions.push(vscode.commands.registerCommand('xtc.debug.copyOption', async () => {
+        const option = debugOption();
+        await vscode.env.clipboard.writeText(option);
+        void vscode.window.showInformationMessage(
+            `Copied ${option}. Run the program with it, as in xec ${option} App.x, then start an "Ecstasy: Attach to Program" configuration on port ${ATTACH_PORT}.`);
+    }));
+}
+
+/**
+ * Launches in embedded mode start a debug session in the language server, which builds and runs the module as the
+ * Run button does, under the runtime debugger. In Gradle mode, a Debug launch starts a session too, whose module the
+ * Gradle task runs under the debugger (`xtc/debugTask`), and a Run launch runs the task without a session. An
+ * attach, to a program run with `--debug`, starts a session in either mode.
+ */
 export class XtcDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-    resolveDebugConfiguration(
-        _folder: vscode.WorkspaceFolder | undefined,
+    constructor(private readonly client: ClientAccess) {}
+
+    async resolveDebugConfiguration(
+        folder: vscode.WorkspaceFolder | undefined,
         config: vscode.DebugConfiguration,
         _token?: vscode.CancellationToken
-    ): vscode.ProviderResult<vscode.DebugConfiguration> {
+    ): Promise<vscode.DebugConfiguration | undefined> {
+        const resolved = await this.fill(config);
+        if (!resolved) {
+            return undefined;
+        }
+        if (resolved.request === 'attach' || buildMode(folder) === 'embedded') {
+            return resolved;
+        }
+        if (!resolved.noDebug) {
+            resolved.buildMode = 'gradle';
+            return resolved;
+        }
+        const editor = vscode.window.activeTextEditor;
+        const definition: XtcTaskDefinition = {
+            type: 'xtc',
+            moduleName: resolved.module,
+            methodName: resolved.method,
+            moduleArguments: typeof resolved.args === 'string' ? resolved.args : undefined,
+            args: Array.isArray(resolved.args) ? resolved.args : undefined,
+            moduleUri: editor?.document.languageId === 'xtc' ? editor.document.uri.toString() : undefined,
+            mode: 'gradle',
+        };
+        await vscode.tasks.executeTask(createXtcRunTask(definition, this.client));
+        // returning undefined ends the launch without starting a debug session
+        return undefined;
+    }
+
+    /**
+     * Fills a launch without a configuration from the active editor's module, which its file then identifies: the
+     * module the file declares, or else the source module whose sources hold it, such as a class's file.
+     */
+    private async fill(config: vscode.DebugConfiguration): Promise<vscode.DebugConfiguration | undefined> {
         if (!config.type && !config.request && !config.name) {
             const editor = vscode.window.activeTextEditor;
             if (editor?.document.languageId === 'xtc') {
                 config.type = 'xtc';
-                config.name = 'Debug Ecstasy Module';
+                config.name = 'Run Ecstasy Module';
                 config.request = 'launch';
-                const text = editor.document.getText();
-                const match = /^\s*module\s+(\w+)/m.exec(text);
-                if (match) {
-                    config.module = match[1];
-                }
+                config.moduleUri = editor.document.uri.toString();
+                const match = /^\s*module\s+(\w+)/m.exec(editor.document.getText());
+                config.module = match?.[1] ?? await this.moduleOf(editor.document.uri);
             }
         }
-        if (!config.module) {
-            return vscode.window.showInformationMessage('Cannot find an Ecstasy module to debug').then(() => undefined);
+        if (config.request !== 'attach' && !config.module) {
+            void vscode.window.showInformationMessage('Cannot find an Ecstasy module to run');
+            return undefined;
         }
         return config;
     }
+
+    /** The name of the source module whose sources hold [file], as the language server's source graph has them. */
+    private async moduleOf(file: vscode.Uri): Promise<string | undefined> {
+        const client = this.client();
+        if (!client?.isRunning()) {
+            return undefined;
+        }
+        const modules = await client.sendRequest<SourceModule[]>('xtc/compilerSourceModules').then(undefined, () => []);
+        return owningModule(file, modules)?.name;
+    }
+}
+
+/**
+ * The module of [modules] whose sources hold [file]: the module whose root file it is, or whose directory, named as
+ * its root file is without the .x, holds it, as a module's packages and classes are laid out.
+ */
+export function owningModule(file: vscode.Uri, modules: readonly SourceModule[]): SourceModule | undefined {
+    return modules.find(module => {
+        const root = vscode.Uri.parse(module.uri).fsPath;
+        return file.fsPath === root || file.fsPath.startsWith(root.replace(/\.x$/, '') + path.sep);
+    });
 }

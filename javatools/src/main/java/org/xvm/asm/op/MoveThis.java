@@ -137,14 +137,13 @@ public class MoveThis
             }
 
             if (m_nAccess != 0) {
-                Access access = switch (m_nAccess) {
+                hOuter = hOuter.ensureAccess(switch (m_nAccess) {
                     case A_PUBLIC    -> Access.PUBLIC;
                     case A_PROTECTED -> Access.PROTECTED;
                     case A_PRIVATE   -> Access.PRIVATE;
                     case A_STRUCT    -> Access.STRUCT;
                     default          -> throw new IllegalStateException();
-                };
-                hOuter = hOuter.ensureAccess(access);
+                });
             }
 
             int nToValue = m_nToValue;

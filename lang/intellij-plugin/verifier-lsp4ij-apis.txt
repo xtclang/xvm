@@ -1,0 +1,60 @@
+# Exact internal API dependencies of the compiler-backed LSP4IJ integration.
+# These are risk exceptions, not public API guarantees. Keep the verifier's complete reports.
+# Revisit on every LSP4IJ upgrade; do not add package wildcards or IntelliJ Platform APIs.
+# Parameter names are omitted because they depend on available debug information.
+# Missing classes/methods and other binary incompatibilities still fail verifyPlugin.
+#
+# LanguageServiceAccessor / server wrappers: identify our live connection without starting
+# unrelated servers; preserve lifecycle ownership for custom requests and refactorings.
+# LSPFileSupport: invalidate stale semantic caches after compiler/project changes; restarting
+# the entire server would lose the document-version and request ownership guarantees.
+# EditorFeature renderers: refresh hints, lenses and tokens in one coalesced read/UI pass,
+# avoiding upstream's per-document scheduling storm while retaining native rendering.
+# Public LanguageServerManager start/stop APIs cannot replace these connection/cache hooks.
+# Remove entries when upstream exposes equivalent public APIs and the adapter migrates.
+lsp4ij=0.21.0
+
+Internal class com.redhat.devtools.lsp4ij.LSPFileSupport
+Internal class com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+Internal class com.redhat.devtools.lsp4ij.internal.editor.CodeVisionEditorFeature
+Internal class com.redhat.devtools.lsp4ij.internal.editor.DeclarativeInlayHintsEditorFeature
+Internal class com.redhat.devtools.lsp4ij.internal.editor.SemanticTokensEditorFeature
+Internal constructor com.redhat.devtools.lsp4ij.internal.editor.CodeVisionEditorFeature.<init>()
+Internal constructor com.redhat.devtools.lsp4ij.internal.editor.DeclarativeInlayHintsEditorFeature.<init>()
+Internal constructor com.redhat.devtools.lsp4ij.internal.editor.SemanticTokensEditorFeature.<init>()
+Internal interface com.redhat.devtools.lsp4ij.internal.editor.EditorFeature
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getCallHierarchyIncomingCallsSupport() : com.redhat.devtools.lsp4ij.features.callHierarchy.LSPCallHierarchyIncomingCallsSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getCallHierarchyOutgoingCallsSupport() : com.redhat.devtools.lsp4ij.features.callHierarchy.LSPCallHierarchyOutgoingCallsSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getCodeLensSupport() : com.redhat.devtools.lsp4ij.features.codeLens.LSPCodeLensSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getCompletionSupport() : com.redhat.devtools.lsp4ij.features.completion.LSPCompletionSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getDefinitionSupport() : com.redhat.devtools.lsp4ij.features.navigation.LSPDefinitionSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getDocumentSymbolSupport() : com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentSymbolSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getHighlightSupport() : com.redhat.devtools.lsp4ij.features.highlight.LSPHighlightSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getHoverSupport() : com.redhat.devtools.lsp4ij.features.documentation.LSPHoverSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getImplementationSupport() : com.redhat.devtools.lsp4ij.features.implementation.LSPImplementationSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getInlayHintsSupport() : com.redhat.devtools.lsp4ij.features.inlayhint.LSPInlayHintsSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getIntentionCodeActionSupport() : com.redhat.devtools.lsp4ij.features.codeAction.intention.LSPIntentionCodeActionSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getPrepareCallHierarchySupport() : com.redhat.devtools.lsp4ij.features.callHierarchy.LSPPrepareCallHierarchySupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getPrepareRenameSupport() : com.redhat.devtools.lsp4ij.features.rename.LSPPrepareRenameSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getPrepareTypeHierarchySupport() : com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPPrepareTypeHierarchySupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getReferenceSupport() : com.redhat.devtools.lsp4ij.features.references.LSPReferenceSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getRenameSupport() : com.redhat.devtools.lsp4ij.features.rename.LSPRenameSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getSemanticTokensSupport() : com.redhat.devtools.lsp4ij.features.semanticTokens.LSPSemanticTokensSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getSignatureHelpSupport() : com.redhat.devtools.lsp4ij.features.signatureHelp.LSPSignatureHelpSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getSupport(com.intellij.psi.PsiFile) : com.redhat.devtools.lsp4ij.LSPFileSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getTypeDefinitionSupport() : com.redhat.devtools.lsp4ij.features.typeDefinition.LSPTypeDefinitionSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getTypeHierarchySubtypesSupport() : com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchySubtypesSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getTypeHierarchySupertypesSupport() : com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchySupertypesSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.hasSupport(com.intellij.psi.PsiFile) : boolean
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.restartDaemonCodeAnalyzerWithDebounce(org.eclipse.lsp4j.jsonrpc.CancelChecker) : void
+Internal method com.redhat.devtools.lsp4ij.LanguageServerItem.getServerWrapper() : com.redhat.devtools.lsp4ij.LanguageServerWrapper
+Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getInstance(com.intellij.openapi.project.Project) : com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getLanguageServers(com.intellij.psi.PsiFile, java.util.function.Predicate, java.util.function.Predicate) : java.util.concurrent.CompletableFuture
+Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getStartedServers() : java.util.Set
+Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.hasAny(com.intellij.psi.PsiFile, java.util.function.Predicate) : boolean
+Internal method com.redhat.devtools.lsp4ij.client.LanguageClientImpl.setServerWrapper(com.redhat.devtools.lsp4ij.LanguageServerWrapper) : void
+Internal method com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures.getServerWrapper() : com.redhat.devtools.lsp4ij.LanguageServerWrapper
+Internal method com.redhat.devtools.lsp4ij.internal.editor.EditorFeature.clearEditorCache(com.intellij.openapi.editor.Editor, com.intellij.openapi.project.Project) : void
+Internal method com.redhat.devtools.lsp4ij.internal.editor.EditorFeature.clearLSPCache(com.intellij.psi.PsiFile) : void
+Internal method com.redhat.devtools.lsp4ij.internal.editor.EditorFeature.collectUiRunnable(com.intellij.openapi.editor.Editor, com.intellij.psi.PsiFile, java.util.List) : void
+Internal method com.redhat.devtools.lsp4ij.internal.editor.EditorFeature.shouldProcess(com.intellij.psi.PsiFile) : boolean

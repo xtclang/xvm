@@ -100,6 +100,54 @@ class ConfigurationCacheCompatibilityTest {
         assertEquals("fixed compiler", Files.readString(output));
     }
 
+    /**
+     * The compiler records the absolute path of a module's source directory, which the debugger finds the module's
+     * files by, so a build cache shared by two copies of a project, such as two checkouts, must not give one copy the
+     * module compiled in the other.
+     */
+    @Test
+    void aProjectInAnotherDirectoryDoesNotReuseTheCompiledModule() throws IOException {
+        final Path cache = testProjectDir.resolve("shared-cache");
+        final List<Path> projects = List.of(testProjectDir.resolve("first"), testProjectDir.resolve("second"));
+        for (final Path project : projects) {
+            Files.writeString(Files.createDirectories(project).resolve("settings.gradle.kts"), """
+                rootProject.name = "relocated"
+                buildCache {
+                    local { directory = file("%s") }
+                }
+                """.formatted(cache.toString().replace('\\', '/')));
+            Files.writeString(project.resolve("build.gradle.kts"), """
+                import org.xtclang.plugin.tasks.XtcCompileTask
+
+                plugins {
+                    id("org.xtclang.xtc-plugin")
+                }
+                version = "1.0"
+                tasks.named("extractXdk") { enabled = false }
+                tasks.named<XtcCompileTask>("compileXtc") {
+                    // Record what the compiler records of the module, its source file's absolute path,
+                    // without bootstrapping a compiler in this TestKit fixture.
+                    actions.clear()
+                    val modules = moduleSources
+                    val destination = outputDirectory
+                    doLast {
+                        val output = destination.get().file("Example.xtc").asFile
+                        output.parentFile.mkdirs()
+                        output.writeText(modules.files.single().absolutePath)
+                    }
+                }
+                """);
+            Files.writeString(Files.createDirectories(project.resolve("src/main/x")).resolve("Example.x"), "module Example {}");
+        }
+
+        for (final Path project : projects) {
+            final BuildResult build = runBuild(project, "compileXtc", "--build-cache");
+            assertEquals(TaskOutcome.SUCCESS, build.task(":compileXtc").getOutcome());
+            final Path source = project.resolve("src/main/x/Example.x").toRealPath();
+            assertEquals(source.toString(), Files.readString(project.resolve("build/xtc/main/lib/Example.xtc")));
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"xtc/main/resources", "custom-resources"})
     void resourcesFollowLateConfigurationAndChangesOnCacheReuse(final String resourceDestination) throws IOException {
@@ -397,12 +445,16 @@ class ConfigurationCacheCompatibilityTest {
     }
 
     private BuildResult runBuild(final String... tasksAndOptions) {
+        return runBuild(testProjectDir, tasksAndOptions);
+    }
+
+    private BuildResult runBuild(final Path projectDir, final String... tasksAndOptions) {
         final var arguments = new ArrayList<>(List.of(tasksAndOptions));
         // Without file-system watching, every build re-reads its inputs from disk instead of trusting a
         // retained snapshot that is only corrected once an asynchronous change notification arrives.
         arguments.addAll(List.of("--configuration-cache", "--configuration-cache-problems=fail", "--no-watch-fs", "--stacktrace"));
         return GradleRunner.create()
-            .withProjectDir(testProjectDir.toFile())
+            .withProjectDir(projectDir.toFile())
             .withPluginClasspath()
             .withArguments(arguments)
             .build();

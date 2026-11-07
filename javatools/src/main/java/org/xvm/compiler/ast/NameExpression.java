@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -21,7 +22,6 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Argument;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -43,6 +43,9 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
@@ -224,6 +227,11 @@ public class NameExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public NameExpression copyTree() {
+        return (NameExpression) super.copyTree();
+    }
+
+    @Override
     protected boolean usesSuper() {
         return "super".equals(name.getValueText()) || left != null && left.usesSuper();
     }
@@ -350,6 +358,27 @@ public class NameExpression
     }
 
     /**
+     * What this name turned out to refer to.
+     *
+     * <p>The compiler decides this while it resolves the name, and the answer stays on the node
+     * afterwards; this only makes it readable from outside the compiler. It is what a host needs
+     * in order to answer "where is this declared", which cannot be answered from the text: two
+     * names spelled the same can refer to different things, and the same thing can be referred to
+     * by different names.
+     *
+     * <p>The result is a {@link Constant} - usually an
+     * {@link org.xvm.asm.constants.IdentityConstant} - when the name refers to something the
+     * module declares, and a {@link org.xvm.asm.Register} when it refers to a local variable,
+     * which has no identity beyond the method it lives in.
+     *
+     * @return what the name resolved to, or null if it was never resolved, which is the ordinary
+     *         case in source that does not compile
+     */
+    public Argument getResolvedTarget() {
+        return m_arg;
+    }
+
+    /**
      * @return true iff there are any trailing type expressions
      */
     public boolean hasTrailingTypeParams() {
@@ -408,7 +437,7 @@ public class NameExpression
                     break;
                 }
 
-                tokens.add(0, exprLeft.name);
+                tokens.addFirst(exprLeft.name);
 
                 Expression expr = exprLeft.left;
                 if (!(expr instanceof NameExpression)) {
@@ -491,7 +520,7 @@ public class NameExpression
     public TypeConstant getImplicitType(Context ctx) {
         return isValidated()
                 ? getType()
-                : getImplicitType(ctx, null, ErrorListener.BLACKHOLE);
+                : getImplicitType(ctx, null, silent(PROBE));
     }
 
     /**
@@ -519,10 +548,6 @@ public class NameExpression
             return TypeFit.Fit;
         }
 
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
-
         return calcFit(ctx, getImplicitType(ctx, typeRequired, errs), typeRequired);
     }
 
@@ -537,7 +562,7 @@ public class NameExpression
             // outer type
             TypeConstant typeDesired = null;
             if (typeRequired != null && typeRequired.isTypeOfType() && isIdentityMode(ctx, true) &&
-                    testFit(ctx, pool.typeInner().getType(), false, null).isFit()) {
+                    testFit(ctx, pool.typeInner().getType(), false, silent(PROBE)).isFit()) {
                 typeDesired = pool.typeOuter().getType();
             }
 
@@ -636,8 +661,7 @@ public class NameExpression
             // the class could either be identified (in the raw) by an identity
             // constant a relative (pseudo) constant or a typedef
             assert argRaw instanceof IdentityConstant ||
-                   argRaw instanceof PseudoConstant   ||
-                   argRaw instanceof TypedefConstant  ;
+                   argRaw instanceof PseudoConstant;
             constVal = type;
             break;
 
@@ -680,7 +704,8 @@ public class NameExpression
 
             case None: {
                 assert type.isA(pool.typeProperty());
-                assert left == null || left.getType().isA(pool.typeClass());
+                TypeConstant typeClass = pool.typeClass();
+                assert left == null || left.getType().isA(typeClass);
 
                 TypeConstant typeParent = left == null
                         ? ctx.getThisType()
@@ -738,6 +763,7 @@ public class NameExpression
                 break;
 
             case Property: {
+                assert argRaw instanceof PropertyConstant;
                 PropertyConstant idProp = (PropertyConstant) argRaw;
 
                 if (idProp.isFormalType()) {
@@ -755,7 +781,9 @@ public class NameExpression
                     }
                     // there is a read of the implicit "this" variable
                     else if (getParent() instanceof NameExpression) {
-                        if (!ctx.requireThis(getStartPosition(), null)) {
+                        // a question, not an assertion: the comment below says the outer
+                        // expression reports whatever follows from the answer
+                        if (!ctx.requireThis(getStartPosition(), silent(PROBE))) {
                             // we know that this expression represents a property but there is
                             // no "this"; we can only proceed with the identity mode here;
                             // it becomes the outer expression's job to report any errors that
@@ -784,7 +812,7 @@ public class NameExpression
         }
 
         // if the type could fully be resolved in the current context, do it now
-        if (type != null && type.containsGenericType(true)) {
+        if (type.containsGenericType(true)) {
             TypeConstant typeResolved = type.resolveGenerics(pool, ctx.getThisType());
             if (!typeResolved.containsGenericType(true)) {
                 type = typeResolved;
@@ -1015,7 +1043,8 @@ public class NameExpression
                     break;
 
                 case Left: {
-                    assert !idProp.getComponent().isStatic();
+                    Component component = idProp.getComponent();
+                    assert !component.isStatic();
                     Argument argLeft = left.generateArgument(ctx, code, false, errs);
                     code.add(new P_Get(idProp, argLeft, argLVal));
                     break;
@@ -1563,7 +1592,8 @@ public class NameExpression
             return ctx.getThisRegister();
 
         case Left:
-            assert !idProp.getComponent().isStatic();
+            Component component = idProp.getComponent();
+            assert !component.isStatic();
             return left.generateArgument(ctx, code, true, errs);
 
         default:
@@ -2015,7 +2045,7 @@ public class NameExpression
                     // process the "this.OuterName" construct
                     if (!typeLeft.isTypeOfType() && !fIdMode) {
                         Constant constTarget = new NameResolver(this, sName)
-                                .forceResolve(ErrorListener.BLACKHOLE);
+                                .forceResolve(silent(PROBE));
                         if (constTarget instanceof IdentityConstant && constTarget.isClass()) {
                             if (constTarget.equals(pool.clzOuter())) {
                                 // this.Outer
@@ -2702,9 +2732,7 @@ public class NameExpression
         case MultiMethod:
             // the constant refers to a method or function
             m_plan = Plan.None;
-            if (typeDesired != null) {
-                // TODO: find the match
-            }
+            // TODO: find a matching overload when typeDesired is available
             log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS,
                     ((MultiMethodConstant) constant).getName());
             return null;
@@ -2752,7 +2780,7 @@ public class NameExpression
                 break CheckDynamic;
             }
 
-            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, silent(PROBE));
             if (!(argLeft instanceof Register regLeft)) {
                 break CheckDynamic;
             }
@@ -3025,7 +3053,7 @@ public class NameExpression
         if (typeNarrow != null) {
             assert isValidated();
 
-            Argument arg = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument arg = resolveRawArgument(ctx, false, silent(PROBE));
 
             if (left != null) {
                 if (arg instanceof FormalTypeChildConstant constFormal) {
@@ -3056,7 +3084,7 @@ public class NameExpression
                         if (idProp.isFormalType()) {
                             ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
                         }
-                    } else if (id instanceof IdentityConstant) {
+                    } else if (id != null) {
                         // narrow the "outer this"
                         ctx.replaceArgument("this", branch, new TargetInfo(info, typeNarrow));
                     }

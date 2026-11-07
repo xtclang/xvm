@@ -7,19 +7,19 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xtclang.idea.awaited
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 
 class ConnectionProcessTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @Test
     fun `cancelled startup never creates a child in the upstream provider`() {
         withProvider { provider, lifetime ->
             lifetime.stop()
-            assertThatThrownBy { lifetime.start() }.isInstanceOf(CannotStartProcessException::class.java)
+            assertThatThrownBy { lifetime.start() }
+                .isInstanceOf(CannotStartProcessException::class.java)
             assertThat(provider.pid).isNull()
         }
     }
@@ -33,9 +33,10 @@ class ConnectionProcessTest {
             assertThat(provider.pid).isEqualTo(pid)
             val process = ProcessHandle.of(pid).orElseThrow()
             lifetime.stop()
-            process.onExit().get(10, SECONDS)
+            process.onExit().awaited()
             assertThat(process.isAlive).isFalse()
-            assertThatThrownBy { lifetime.start() }.isInstanceOf(CannotStartProcessException::class.java)
+            assertThatThrownBy { lifetime.start() }
+                .isInstanceOf(CannotStartProcessException::class.java)
         }
     }
 
@@ -46,16 +47,17 @@ class ConnectionProcessTest {
                 "class Probe { public static void main(String[] args) throws Exception { System.in.read(); } }",
             )
         val provider =
-            object : OSProcessStreamConnectionProvider(
-                GeneralCommandLine(
-                    ProcessHandle
-                        .current()
-                        .info()
-                        .command()
-                        .orElseThrow(),
-                    source.toString(),
-                ),
-            ) {
+            object :
+                OSProcessStreamConnectionProvider(
+                    GeneralCommandLine(
+                        ProcessHandle
+                            .current()
+                            .info()
+                            .command()
+                            .orElseThrow(),
+                        source.toString(),
+                    ),
+                ) {
                 fun child(): Process? = processHandler?.process
             }
         try {
@@ -63,7 +65,7 @@ class ConnectionProcessTest {
         } finally {
             provider.child()?.let { child ->
                 if (child.isAlive) child.destroyForcibly()
-                check(child.waitFor(10, SECONDS))
+                check(child.awaited())
             }
         }
     }

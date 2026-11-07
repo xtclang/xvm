@@ -1,7 +1,6 @@
 package org.xvm.compiler.ast;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -10,6 +9,9 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.GP_Neg;
 
 import org.xvm.compiler.Token;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * The "-" that precedes a number.
@@ -48,29 +50,19 @@ public class UnaryMinusExpression
         }
 
         // otherwise, this expression must apply the unary minus as an op
-        TypeFit  fit      = TypeFit.Fit;
-        Constant constVal = null;
 
         // if there is a type that is being requested that we can convert to and satisfy this
         // operation, then do so (just like with binary ops, convert as "deep" in the AST tree as
         // possible)
         TypeConstant typeRight = null;
-        if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, null).isFit()
+        if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, silent(PROBE)).isFit()
                 && !typeRequired.ensureTypeInfo(errs).findOpMethods("neg", "-#", 0).isEmpty()) {
             typeRight = typeRequired;
         }
 
         typeRight = findBestOp(ctx, typeRequired, typeRight, "neg", "-#", errs);
 
-        if (typeRight == null) {
-            fit = TypeFit.NoFit;
-        } else if (exprRight.isConstant()) {
-            try {
-                constVal = exprRight.toConstant().apply(operator.getId(), null);
-            } catch (RuntimeException ignore) {}
-        }
-
-        return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);
+        return finishUnaryValidation(ctx, typeRequired, typeRight, exprRight, errs);
     }
 
     @Override
