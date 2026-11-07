@@ -13,6 +13,7 @@ import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.util.Key
@@ -21,6 +22,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
+import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.runInEdtAndGet
 import com.intellij.testFramework.runInEdtAndWait
 import org.assertj.core.api.Assertions.assertThat
@@ -132,6 +134,54 @@ class AllTestModulesTest {
         }
     }
 
+    @Test
+    fun `Run All Ecstasy Tests is its own choice on the folders whose tests are JVM ones too, and only there`() {
+        RunConfigurationProducer.EP_NAME.point.registerExtension(GradleTestsIn(), editor.fixture.testRootDisposable)
+        editor.fixture.addFileToProject("src/test/x/DeckTest.x", "module DeckTest {}")
+        editor.fixture.addFileToProject("src/test/java/DeckJavaTest.java", "class DeckJavaTest {}")
+        editor.fixture.addFileToProject("src/main/x/Deck.x", "module Deck {}")
+
+        // where Gradle's Tests in replaces the producer's Run All, the only choice that the context's Run offers
+        assertThat(offered("src/test")).containsExactly("Tests in 'test'")
+        assertThat(actionShown("src/test")).isTrue()
+        // where the context's Run offers Run All already, the menu does not list it twice
+        assertThat(actionShown("src/test/x")).isFalse()
+        // nor where no test module is
+        assertThat(actionShown("src/main/x")).isFalse()
+    }
+
+    @Test
+    fun `Run All Ecstasy Tests runs the configuration that the context's Run makes, or makes it, not a copy of it`() {
+        editor.fixture.addFileToProject("src/test/x/DeckTest.x", "module DeckTest {}")
+        val project = editor.fixture.project
+        val runs = RunManager.getInstance(project)
+        try {
+            // the context's Run made it first
+            val first = runFrom("src/test/x")
+            assertThat(runInEdtAndGet { XtcRunAllTestsAction.configuration(project) }).isSameAs(first)
+            runInEdtAndWait { runs.allSettings.forEach(runs::removeConfiguration) }
+
+            // the action made it first
+            val made = runInEdtAndGet { XtcRunAllTestsAction.configuration(project) }
+            assertThat((made.configuration as XtcRunConfiguration).allTestModules).isTrue()
+            assertThat(runInEdtAndGet { XtcRunAllTestsAction.configuration(project) }).isSameAs(made)
+            assertThat(runFrom("src/test/x")).isSameAs(made)
+            assertThat(runs.allSettings.map { it.name }).containsExactly(XtcAllTestsConfigurationProducer.NAME)
+        } finally {
+            // the next test's light project is this one
+            runInEdtAndWait { runs.allSettings.forEach(runs::removeConfiguration) }
+        }
+    }
+
+    /** Whether the Project window's context menu shows the Run All Ecstasy Tests action on the folder [path]. */
+    private fun actionShown(path: String): Boolean =
+        runInEdtAndGet {
+            val action = XtcRunAllTestsAction()
+            val event = TestActionEvent.createTestEvent(action, data(path))
+            action.update(event)
+            event.presentation.isEnabledAndVisible
+        }
+
     /**
      * The configuration that Run in the Project window's context menu on the folder [path] runs: the context's existing
      * one, or else the context's own, which becomes the temporary configuration.
@@ -154,18 +204,20 @@ class AllTestModulesTest {
         }
 
     /** The Project window's context on the light project's folder [path]. */
-    private fun context(path: String): ConfigurationContext {
+    private fun context(path: String): ConfigurationContext =
+        ConfigurationContext.getFromContext(data(path), ActionPlaces.PROJECT_VIEW_POPUP)
+
+    /** The Project window's data on the light project's folder [path]. */
+    private fun data(path: String): DataContext {
         val project = editor.fixture.project
         val folder = checkNotNull(editor.fixture.tempDirFixture.getFile(path)) { "No folder $path" }
         val directory = checkNotNull(PsiManager.getInstance(project).findDirectory(folder)) { "No directory $path" }
-        val data =
-            SimpleDataContext
-                .builder()
-                .add(CommonDataKeys.PROJECT, project)
-                .add(PlatformCoreDataKeys.PSI_ELEMENT_ARRAY, arrayOf<PsiElement>(directory))
-                .add(PlatformCoreDataKeys.MODULE, editor.fixture.module)
-                .build()
-        return ConfigurationContext.getFromContext(data, ActionPlaces.PROJECT_VIEW_POPUP)
+        return SimpleDataContext
+            .builder()
+            .add(CommonDataKeys.PROJECT, project)
+            .add(PlatformCoreDataKeys.PSI_ELEMENT_ARRAY, arrayOf<PsiElement>(directory))
+            .add(PlatformCoreDataKeys.MODULE, editor.fixture.module)
+            .build()
     }
 
     /**
