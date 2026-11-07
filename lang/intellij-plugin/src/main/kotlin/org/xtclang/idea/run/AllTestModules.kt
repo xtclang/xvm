@@ -181,7 +181,7 @@ internal class SequentialProcessHandler(
  * every other configuration of the same folder, so Run All gives the test sources as its source element where the
  * folder holds no Java or Kotlin tests: a source element inside another's ranks before it, ahead of what replaces
  * what, and Gradle's, which would run only the JVM tests, then is not offered. Where the folder holds JVM tests, Run
- * All gives the folder, and Gradle's "Tests in" stays.
+ * All gives the folder, and Gradle's "Tests in" stays; [XtcRunAllTestsAction] offers Run All there.
  */
 class XtcAllTestsConfigurationProducer : LazyRunConfigurationProducer<XtcRunConfiguration>() {
     override fun getConfigurationFactory(): ConfigurationFactory = XtcRunConfigurationType.instance.configurationFactories.first()
@@ -193,12 +193,7 @@ class XtcAllTestsConfigurationProducer : LazyRunConfigurationProducer<XtcRunConf
     ): Boolean {
         val directory = context.psiLocation as? PsiDirectory ?: return false
         if (!holdsTests(directory.virtualFile, directory.project.guessProjectDir())) return false
-        configuration.allTestModules = true
-        configuration.moduleName = ""
-        configuration.moduleUri = ""
-        configuration.tests = emptyList()
-        configuration.runWith = XtcRunMode.PROJECT
-        configuration.name = NAME
+        runAll(configuration)
         sourceElement.set(rankingElement(directory) ?: directory)
         return true
     }
@@ -240,6 +235,16 @@ class XtcAllTestsConfigurationProducer : LazyRunConfigurationProducer<XtcRunConf
 
         /** The extensions of the Java and Kotlin sources whose tests Gradle's configurations run. */
         private val JVM_SOURCES = setOf("java", "kt")
+
+        /** Makes [configuration] Run All Ecstasy Tests: every test module's tests, each in turn, with the project's build mode. */
+        fun runAll(configuration: XtcRunConfiguration) {
+            configuration.allTestModules = true
+            configuration.moduleName = ""
+            configuration.moduleUri = ""
+            configuration.tests = emptyList()
+            configuration.runWith = XtcRunMode.PROJECT
+            configuration.name = NAME
+        }
 
         /** Whether [directory] holds the project's test sources: [root]'s `src/test/x`, or a folder of [root]'s on its way. */
         fun holdsTests(
