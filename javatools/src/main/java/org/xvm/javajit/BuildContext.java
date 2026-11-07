@@ -6,6 +6,7 @@ import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.DirectMethodHandleDesc.Kind;
 import java.lang.constant.DynamicCallSiteDesc;
 import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
@@ -2002,7 +2003,7 @@ public class BuildContext {
 
             case "NullablePrimitive->Specific",
                  "NullableXvmPrimitive->Specific":
-                // the value and its "is Null" flag are on the stack; the flag decides between
+                // the value and its "is_Null" flag are on the stack; the flag decides between
                 // boxing the value and storing Null
                 Builder.boxNullable(code, typeFrom);
                 break;
@@ -2613,8 +2614,10 @@ public class BuildContext {
             code.aconst_null();
         }
 
+        loadPropertyAssigned(code, targetReg, propInfo);
+
         code.invokespecial(refClass, INIT_NAME, md(CD_void, CD_Ctx,
-                CD_TypeConstant, CD_boolean, CD_MethodHandle, CD_MethodHandle))
+                CD_TypeConstant, CD_boolean, CD_MethodHandle, CD_MethodHandle, CD_MethodHandle))
             .astore(refReg.slot());
     }
 
@@ -2627,17 +2630,35 @@ public class BuildContext {
         boolean      isInterface = !propInfo.isNative() && ownerType.isJitCCInterface();
 
         assert !jmd.isStandardStatic;
-        DirectMethodHandleDesc.Kind kind = isInterface
-                ? DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL
-                : DirectMethodHandleDesc.Kind.VIRTUAL;
 
-        code.ldc(MethodHandleDesc.ofMethod(kind, builder.getCCDesc(ownerType),
-                methodName, jmd.standardMD));
+        code.ldc(MethodHandleDesc.ofMethod(isInterface ? Kind.INTERFACE_VIRTUAL : Kind.VIRTUAL,
+                builder.getCCDesc(ownerType), methodName, jmd.standardMD));
 
         RegisterInfo loadedTarget = targetReg.load(code);
         if (loadedTarget.flavor().isOptimized) {
             Builder.box(code, loadedTarget);
         }
+        code.invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject));
+    }
+
+    /**
+     * Load an assignment check MethodHandle that is backed by raw storage; null for known to be
+     * assigned properties.
+     */
+    private void loadPropertyAssigned(CodeBuilder code, RegisterInfo targetReg, PropertyInfo prop) {
+        if (!prop.isJitPotentiallyUnassigned()) {
+            // null means "always assigned"
+            code.aconst_null();
+            return;
+        }
+
+        TypeConstant ownerType = prop.getFieldOwnerType(builder, targetReg.type());
+        Kind         kind      = ownerType.isJitCCInterface() ? Kind.INTERFACE_VIRTUAL : Kind.VIRTUAL;
+
+        // -> prop$assigned$get()
+        code.ldc(MethodHandleDesc.ofMethod(kind, builder.getCCDesc(ownerType),
+                prop.ensureJitName(typeSystem) + Builder.AssignedGet, md(CD_boolean, CD_Ctx)));
+        targetReg.load(code);
         code.invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject));
     }
 
@@ -2946,6 +2967,10 @@ public class BuildContext {
                 // may happen for a derived child's receiver
                 code.checkcast(builder.getCCDesc(typeOwner));
             }
+            boolean setAssigned = i == 0 && propInfo.requiresJitAssignedBit();
+            if (setAssigned) {
+                code.dup();
+            }
             Builder.load(code, param.cd, slots[i]);
 
             String name = param.extension
@@ -2956,6 +2981,11 @@ public class BuildContext {
             ClassDesc cd = i == 0 ? fieldCD : param.cd;
 
             builder.storeField(code, typeOwner, name, cd);
+
+            if (setAssigned) {
+                code.iconst_1();
+                builder.storeField(code, typeOwner, fieldName + Builder.Assigned, CD_boolean);
+            }
         }
     }
 

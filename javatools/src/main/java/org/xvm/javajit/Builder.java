@@ -2991,6 +2991,16 @@ public abstract class Builder {
      */
     public static final String FieldSet = "$set$";
 
+    /**
+     * Suffix for generated boolean getters reporting property storage assignment.
+     */
+    public static final String AssignedGet = "$assigned$get$p";
+
+    /**
+     * Suffix for the assignment bit of an unassigned inline primitive property.
+     */
+    public static final String Assigned = "$assigned";
+
     // various commonly used MethodDesc constants
     public static final MethodTypeDesc MD_Bit_box      = md(CD_Bit, CD_int);
     public static final MethodTypeDesc MD_Boolean_box  = md(CD_Boolean, CD_boolean);

@@ -39,6 +39,7 @@ public class nRef
         $isVar        = isVar;
         $getter       = null;
         $setter       = null;
+        $assigned     = null;
     }
 
     /**
@@ -49,9 +50,10 @@ public class nRef
      * @param isVar         true for a Var; false for a Ref
      * @param getter        the property getter
      * @param setter        the property setter for a Var, or null for a Ref
+     * @param assigned      the bound (Ctx)boolean storage check, or null if always assigned
      */
     public nRef(Ctx ctx, TypeConstant referentType, boolean isVar,
-                MethodHandle getter, MethodHandle setter) {
+                MethodHandle getter, MethodHandle setter, MethodHandle assigned) {
         super(ctx);
 
         assert getter != null;
@@ -62,6 +64,7 @@ public class nRef
         $isVar        = isVar;
         $getter       = getter;
         $setter       = setter;
+        $assigned     = assigned;
     }
 
     public       nObject      $referent;
@@ -69,6 +72,7 @@ public class nRef
     public final boolean      $isVar;
     public final MethodHandle $getter;
     public final MethodHandle $setter;
+    public final MethodHandle $assigned; // if null, the value is known to be assigned
 
     public nType Referent$get(Ctx ctx) {
         return nType.$ensureType(ctx, $referentType);
@@ -83,9 +87,21 @@ public class nRef
 
     @Override
     public boolean assigned$get$p(Ctx ctx) {
-        return $getter == null
-                ? $referent != null
-                : get(ctx) != null;
+        if ($getter == null) {
+            return $referent != null;
+        }
+
+        if ($assigned == null) {
+            return true;
+        }
+
+        try {
+            return (boolean) $assigned.invokeExact(ctx);
+        } catch (nException nEx) {
+            throw nEx;
+        } catch (Throwable e) {
+            throw Exception.$typeMismatch(ctx, e.getMessage());
+        }
     }
 
     @Override
