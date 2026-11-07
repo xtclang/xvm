@@ -59,6 +59,7 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorCustomElementRenderer
+import com.intellij.openapi.editor.EditorKind
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.ScrollingModel
@@ -2129,7 +2130,8 @@ object TourUi {
 
     /**
      * Sets the focused text field's text to [text], such as a dialog's or a search popup's, as typing it over its
-     * selection does.
+     * selection does. A file's editor is not such a field: with the focus still in one, as before a popup has taken
+     * it, this fails, and the file keeps its text.
      */
     @JvmStatic
     fun fill(text: String) {
@@ -2137,11 +2139,17 @@ object TourUi {
         when (owner) {
             is JTextComponent -> anyEdt { owner.text = text }
 
-            is EditorComponentImpl ->
+            is EditorComponentImpl -> {
+                // with its popup not open, tour run 12813917966189450822's Go to symbol check set the text of the
+                //  editor that had the focus, CardCollection.x's, to the name it searched for
+                check(owner.editor.editorKind != EditorKind.MAIN_EDITOR) {
+                    "The focused editor is ${owner.editor.virtualFile?.name}'s, not a text field"
+                }
                 onEdt(ModalityState.stateForComponent(owner)) {
                     WriteCommandAction.runWriteCommandAction(project(), "Tour fill", null, { owner.editor.document.setText(text) })
                     owner.editor.caretModel.moveToOffset(text.length)
                 }
+            }
 
             else -> error("The focused ${owner?.javaClass?.name} takes no text")
         }
