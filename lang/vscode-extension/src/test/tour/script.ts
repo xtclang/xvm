@@ -1919,9 +1919,14 @@ async function building(tour: Tour): Promise<void> {
         await command('xtc.build');
         await tour.until('The Gradle build fails', () => tour.taskExits.slice(before).some(each => each.name === 'Build'), () => tour.ui.terminalText());
         expect(tour.taskExits.slice(before).find(each => each.name === 'Build')!.exitCode !== 0, () => 'The build passed');
+        // VS Code reports the matcher's errors once the task has ended, after tour.taskExits has its exit, and the
+        //  terminal shows only its last rows, which the build's summary below the error fills: wait for either
         const matcher = /^.*?(Error|Warning|Info): (.+\.x):\d+ \[(\d+):(\d+)\.\.(\d+):(\d+)\] (\S+): (.*)$/m;
-        const shown = await tour.ui.terminalText();
-        expect(matcher.test(shown.replace(/\s+\n/g, '\n')) || errors(deck).some(item => item.message.includes('rnk')), () => `Nothing the $xtc problem matcher reads: ${shown.slice(-600)}`);
+        await tour.until(
+            'The $xtc problem matcher reads the error',
+            async () => matcher.test((await tour.ui.terminalText()).replace(/\s+\n/g, '\n')) || errors(deck).some(item => item.message.includes('rnk')),
+            async () => `Nothing the $xtc problem matcher reads: ${(await tour.ui.terminalText()).slice(-600)}`,
+        );
         await tour.restore();
         // the problem matcher's errors stay until the task runs again: the build of the sources as they were clears them
         const after = tour.taskExits.length;
