@@ -53,6 +53,12 @@
         <action id="xtc.runModule" class="org.xtclang.idea.run.XtcRunModuleAction"
                 text="Run Ecstasy Module" description="Build and run the Ecstasy module in this editor"
                 icon="AllIcons.Actions.Execute"/>
+        <!-- Run All Ecstasy Tests on a folder whose tests are Java or Kotlin ones too, where Gradle's "Tests in" replaces it -->
+        <action id="xtc.runAllTests" class="org.xtclang.idea.run.XtcRunAllTestsAction"
+                text="Run All Ecstasy Tests" description="Run every Ecstasy test module's tests, each module in turn"
+                icon="AllIcons.Actions.Execute">
+            <add-to-group group-id="ProjectViewPopupMenuRunGroup" anchor="last"/>
+        </action>
         <action id="xtc.toggleServerLog" class="org.xtclang.idea.lsp.XtcServerLogAction"
                 text="Toggle Ecstasy Language Server Log"
                 description="Show the Ecstasy server log or hide the Language Servers tool window">
