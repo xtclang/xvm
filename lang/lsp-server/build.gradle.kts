@@ -536,6 +536,8 @@ tasks.register<JavaExec>("prepareLibraryPlaybook") {
     // javatools shades a no-op provider. This standalone JVM can select Logback directly;
     // do not put this property on Gradle's test-worker/bootstrap classloader.
     systemProperty("slf4j.provider", "ch.qos.logback.classic.spi.LogbackServiceProvider")
+    // SLF4J announces an explicitly chosen provider at INFO; the server's launcher keeps its own JVM to warnings too
+    systemProperty("slf4j.internal.verbosity", "WARN")
     systemProperty(
         "xtc.logs.directory",
         layout.buildDirectory
