@@ -12,6 +12,8 @@ import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -192,7 +194,11 @@ internal class Tour(
 
     fun section(name: String) {
         section = name
+        progress("Section $name")
     }
+
+    /** A line of the run's progress in the build's output, as the VS Code tour prints it, with the time of day. */
+    private fun progress(line: String) = println("[tour] ${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)} $line")
 
     fun card(
         title: String,
@@ -225,6 +231,7 @@ internal class Tour(
         val started = System.currentTimeMillis()
         var shot: Long? = null
         val number = steps.size + 1
+        progress("$number $title: starts")
         val image = "frames/%03d.png".format(number)
         var step =
             try {
@@ -265,6 +272,7 @@ internal class Tour(
         }
         Quiescence.stuck = null
         runCatching { ui.after() }
+        progress("$number $title: ${if (step.error == null && step.check == null) "ok" else "FAILED"}")
         steps += step.copy(end = System.currentTimeMillis())
     }
 
@@ -279,6 +287,7 @@ internal class Tour(
     ) {
         if (!recording || skips(what, needs)) return
         checks++
+        progress("check $what: starts")
         val started = System.currentTimeMillis()
         Quiescence.stuck = null
         val failure = runCatching { ui.block() }.exceptionOrNull()
@@ -290,6 +299,7 @@ internal class Tour(
             cleanUp()
         }
         Quiescence.stuck = null
+        progress("check $what: ${if (failure == null) "ok" else "FAILED"}")
         verifies += TourCheck(section, what, started, System.currentTimeMillis(), failure?.let(::causes))
     }
 
@@ -314,6 +324,7 @@ internal class Tour(
                 }
                 ?: return false
         skipped += "$section: $what: skipped: $reason"
+        progress("$what: skipped: $reason")
         return true
     }
 
