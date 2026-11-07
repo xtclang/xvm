@@ -36,7 +36,7 @@ download = "5.7.0"
 foojay-resolver = "1.0.0"
 gradle-portal-publish = "2.2.1"
 palantir-git-version = "5.1.0"
-spotless = "8.10.4"
+spotless = "8.11.0"
 vanniktech-maven-publish = "0.37.0"
 
 # =============================================================================
@@ -46,7 +46,7 @@ vanniktech-maven-publish = "0.37.0"
 # every classpath that resolves it (javatools' and docker's build scripts, build-logic's
 # accessor generation), and it is already at its latest release. The Guava BOM raises
 # that floor without pinning.
-guava = "33.7.2-jre"
+guava = "33.8.0-jre"
 
 # =============================================================================
 # Testing (shared across XDK and lang)
