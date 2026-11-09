@@ -85,6 +85,14 @@ public class nRef
         return nType.$ensureType(ctx, ((nObject) get(ctx)).$xvmType(ctx));
     }
 
+    /**
+     * The native implementation of {@code <Masked> Masked maskAs(Type<Masked> maskType);}.
+     */
+    public Object maskAs(Ctx ctx, nType type, nType maskType) {
+        // TODO this need to be implemented properly
+        return $referent;
+    }
+
     @Override
     public boolean assigned$get$p(Ctx ctx) {
         if ($getter == null) {

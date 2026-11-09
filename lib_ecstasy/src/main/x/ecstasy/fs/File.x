@@ -12,6 +12,7 @@ interface File
      * array of bytes; however, using this property will be quite inefficient when working with
      * large files.
      *
+     * @throws FileNotFound  if getting the contents property and the file does not exist
      * @throws AccessDenied  if the necessary file permissions to get or set the property have not
      *                       been granted
      */
@@ -39,8 +40,9 @@ interface File
      *
      * @throws FileNotFound  if the file does not exist
      * @throws AccessDenied  if permission to modify the file has not been granted
+     * @throws OutOfBounds   if the newSize is not within `0 ..< size`
      */
-    File truncate(Int newSize);
+    File truncate(Int newSize = 0);
 
     /**
      * Append the specified bytes to the end of the file. If the file did not exist, it will be

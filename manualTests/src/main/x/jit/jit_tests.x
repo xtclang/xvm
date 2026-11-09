@@ -21,6 +21,7 @@ module jit_tests.examples.org {
         passed &= new indexed_ops.TestRunner().run();
         passed &= new temporal.TestRunner().run();
         passed &= new enums.TestRunner().run();
+        passed &= new files.TestRunner().run();
 
         console.print("<<<< Finished JIT tests <<<<");
         if (passed) {
