@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy.collections;
 
+import org.xtclang._native.collections.BasicHashCollector;
 import org.xtclang.ecstasy.Object;
 
 import org.xtclang.ecstasy.numbers.Int64;
@@ -12,36 +13,22 @@ import org.xvm.javajit.Ctx;
 public interface HashCollector extends Object {
 
     /**
-     * This is the native implementation of Const.x:
-     * <pre>{@code
-     *     @Abstract Int compute();
-     * }</pre>
-     *
-     * @return  the computed hash code as an {@link Int64}
+     * This is the native implementation of:
+     *     Int compute();
      */
     default Int64 compute(Ctx ctx) {
         return Int64.$box(compute$p(ctx));
     }
 
     /**
-     * This is the primitive implementation of Const.x:
-     * <pre>{@code
-     *     @Abstract Int compute();
-     * }</pre>
-     *
-     * @return  the computed hash code
+     * This is the primitive implementation of:
+     *     Int compute();
      */
     long compute$p(Ctx ctx);
 
     /**
-     * Reset this {@link HashCollector}.
-     *
-     * <p>This is the native implementation of Const.x:
-     * <pre>{@code
-     *     @Abstract HashCollector reset();
-     * }</pre>
-     *
-     * @return  this {@link HashCollector} instance
+     * This is the native implementation of:
+     *     HashCollector reset();
      */
     HashCollector reset(Ctx ctx);
 }

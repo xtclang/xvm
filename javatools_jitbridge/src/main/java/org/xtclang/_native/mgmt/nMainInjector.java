@@ -6,6 +6,8 @@ import java.util.Map;
 
 import java.util.function.Function;
 
+import org.xtclang._native.collections.BasicHashCollector;
+
 import org.xtclang._native.io.TerminalConsole;
 
 import org.xtclang._native.numbers.RTRandom;
@@ -109,5 +111,9 @@ public class nMainInjector
         suppliers.put(new Resource(directoryType, "homeDir"), fsInjector::ensureHomeDir);
         suppliers.put(new Resource(directoryType, "curDir" ), fsInjector::ensureCurDir);
         suppliers.put(new Resource(directoryType, "tmpDir" ), fsInjector::ensureTmpDir);
+
+        TypeConstant hashType = pool.ensureEcstasyTypeConstant("collections.HashCollector");
+        suppliers.put(new Resource(hashType, "hash"),
+                _ -> BasicHashCollector.$create(xvm.getCtx()));
     }
 }
