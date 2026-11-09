@@ -60,21 +60,21 @@ public class OSDirectory
     }
 
     /**
-     * The native implementation of the Directory.x method {@code Iterator<Directory> dirs();}.
+     * The native implementation of the OSDirectory.x method {@code Iterator<Directory> dirs();}.
      */
     public Iterator dirs(Ctx ctx) {
         return new nIterator(ctx, $getJavaPath(ctx), ctx.pool().typeDirectory(), 1);
     }
 
     /**
-     * The native implementation of the Directory.x method {@code Iterator<File> files();}.
+     * The native implementation of the OSDirectory.x method {@code Iterator<File> files();}.
      */
     public Iterator files(Ctx ctx) {
         return new nIterator(ctx, $getJavaPath(ctx),ctx.pool().typeFile(), 2);
     }
 
     /**
-     * The primitive implementation of the Directory.x method {@code Boolean deleteRecursively();}.
+     * The primitive implementation of the OSDirectory.x method {@code Boolean deleteRecursively();}.
      */
     public boolean deleteRecursively$p(Ctx ctx) {
         Path path = $getJavaPath(ctx);
@@ -90,7 +90,7 @@ public class OSDirectory
     }
 
     /**
-     * The native implementation of the Directory.x method {@code Iterator<File> filesRecursively();}.
+     * The native implementation of the OSDirectory.x method {@code Iterator<File> filesRecursively();}.
      */
     public Iterator filesRecursively(Ctx ctx) {
         return new nRecursiveIterator(ctx, $getJavaPath(ctx));

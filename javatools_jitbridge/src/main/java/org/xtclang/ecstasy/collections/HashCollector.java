@@ -1,6 +1,5 @@
 package org.xtclang.ecstasy.collections;
 
-import org.xtclang._native.collections.BasicHashCollector;
 import org.xtclang.ecstasy.Object;
 
 import org.xtclang.ecstasy.numbers.Int64;

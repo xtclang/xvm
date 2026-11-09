@@ -40,7 +40,7 @@ interface File
      *
      * @throws FileNotFound  if the file does not exist
      * @throws AccessDenied  if permission to modify the file has not been granted
-     * @throws OutOfBounds   if the newSize is not within `0 ..< size`
+     * @throws OutOfBounds   if the newSize is not within `0 ..< size` range
      */
     File truncate(Int newSize = 0);
 

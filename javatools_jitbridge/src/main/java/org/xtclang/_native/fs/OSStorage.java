@@ -5,9 +5,6 @@ import java.nio.file.Path;
 
 import java.util.Arrays;
 
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.nService;
 
@@ -25,7 +22,7 @@ import org.xvm.javajit.ModuleLoader;
  */
 public class OSStorage extends nService {
 
-    public OSStorage() {
+    private OSStorage() {
         ModuleLoader loader = (ModuleLoader) OSStorage.class.getClassLoader();
         Ctx          ctx    = loader.getCtx();
         super(ctx);
@@ -57,7 +54,7 @@ public class OSStorage extends nService {
     public Directory homeDir$get(Ctx ctx) {
         boolean found = find$p(ctx, fileStore, String.of(ctx, System.getProperty("user.home")));
         if (!found) {
-            throw Exception.$illegalState(ctx, "Assertion failed");
+            throw Exception.$illegalState(ctx, "Failed to find \"user.home\" directory");
         }
         return (Directory) ctx.o0;
     }
@@ -68,7 +65,7 @@ public class OSStorage extends nService {
     public Directory curDir$get(Ctx ctx) {
         boolean found = find$p(ctx, fileStore, String.of(ctx, System.getProperty("user.dir")));
         if (!found) {
-            throw Exception.$illegalState(ctx, "Assertion failed");
+            throw Exception.$illegalState(ctx, "Failed to find \"user.dir\" directory");
         }
         return (Directory) ctx.o0;
     }
@@ -79,7 +76,7 @@ public class OSStorage extends nService {
     public Directory tmpDir$get(Ctx ctx) {
         boolean found = find$p(ctx, fileStore, String.of(ctx, System.getProperty("java.io.tmpdir")));
         if (!found) {
-            throw Exception.$illegalState(ctx, "Assertion failed");
+            throw Exception.$illegalState(ctx, "Failed to find \"java.io.tmpdir\" directory");
         }
         return (Directory) ctx.o0;
     }

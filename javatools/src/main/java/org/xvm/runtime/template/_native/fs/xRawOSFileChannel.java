@@ -97,16 +97,13 @@ public class xRawOSFileChannel
             }
 
         case "readable":
-            return frame.assignValue(iReturn,
-                xBoolean.makeHandle(hChannel.f_fReadable));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(hChannel.f_fReadable));
 
         case "writable":
-            return frame.assignValue(iReturn,
-                xBoolean.makeHandle(hChannel.f_fWritable));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(hChannel.f_fWritable));
 
         case "closed":
-            return frame.assignValue(iReturn,
-                xBoolean.makeHandle(!hChannel.f_channel.isOpen()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(!hChannel.f_channel.isOpen()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -243,6 +240,7 @@ public class xRawOSFileChannel
      * @param path    the channel's path
      * @param setOpt  the {@link OpenOption options} used to open the channel
      * @param iReturn the register id to place the created handle into
+     *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     public int createHandle(Frame frame, FileChannel channel, Path path, Set<OpenOption> setOpt, int iReturn) {

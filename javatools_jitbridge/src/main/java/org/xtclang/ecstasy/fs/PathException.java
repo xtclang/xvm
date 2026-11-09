@@ -17,7 +17,7 @@ public class PathException extends IOException {
         super(ctx);
     }
 
-    public Object path = Nullable.Null.$INSTANCE;
+    public Object path;
 
     public nException $init(Ctx ctx, java.lang.String message, Path path) {
         return $init(ctx, message, null, path);
