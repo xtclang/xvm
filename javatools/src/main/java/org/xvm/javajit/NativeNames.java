@@ -163,6 +163,34 @@ public class NativeNames {
         reservedMethodName.put("temporal.Timer/schedule/3", "schedule");
         reservedMethodName.put("temporal.Timer/stop/0",     "stop");
         reservedMethodName.put("temporal.Timer/reset/0",    "reset");
+
+        reservedMethodName.put("fs.FileStore/find/1",           "find");
+        reservedMethodName.put("fs.FileStore/dirFor/1",         "dirFor");
+        reservedMethodName.put("fs.FileStore/fileFor/1",        "fileFor");
+        reservedMethodName.put("fs.FileStore/copy/2",           "copy");
+        reservedMethodName.put("fs.FileStore/move/2",           "move");
+        reservedMethodName.put("fs.FileStore/ensureReadOnly/0", "ensureReadOnly");
+
+        // JavaTools Bridge _native types
+
+        reservedMethodName.put("fs.OSStorage/createDir/1",    "createDir");
+        reservedMethodName.put("fs.OSStorage/createFile/1",   "createFile");
+        reservedMethodName.put("fs.OSStorage/delete/1",       "delete");
+        reservedMethodName.put("fs.OSStorage/find/2",         "find");
+        reservedMethodName.put("fs.OSFileStore/dirFor/1",     "dirFor");
+        reservedMethodName.put("fs.OSFileStore/fileFor/1",    "fileFor");
+        reservedMethodName.put("fs.OSStorage/instance/0",     "instance");
+        reservedMethodName.put("fs.OSStorage/names/1",        "names");
+        reservedMethodName.put("fs.OSStorage/unwatch/1",      "unwatch");
+        reservedMethodName.put("fs.OSStorage/watch/1",        "watch");
+        reservedMethodName.put("fs.OSFileStore/copyOrMove/5", "copyOrMove");
+        reservedMethodName.put("fs.OSFileStore/linkAsFile/1", "linkAsFile");
+
+        reservedMethodName.put("fs.OSDirectory/dirs/0",             "dirs");
+        reservedMethodName.put("fs.OSDirectory/files/0",            "files");
+        reservedMethodName.put("fs.OSDirectory/filesRecursively/0", "filesRecursively");
+
+        reservedMethodName.put("io.RawChannel/close/0", "close");
     }
 
     /**

@@ -15,8 +15,8 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -380,7 +380,7 @@ public class xOSFile
         ObjectHandle hReadOption  = ahArg[0];
         ObjectHandle hWriteOption = ahArg[1];
 
-        OpenOption[] aOpenOpt = NO_ACCESS;
+        Set<OpenOption> setOpt = NO_ACCESS;
 
         ReadOption optRead = hReadOption == ObjectHandle.DEFAULT
                 ? ReadOption.Read
@@ -391,11 +391,11 @@ public class xOSFile
             // the default is "Read/Write"
             switch (optRead) {
             case NoRead:
-                aOpenOpt = WRITE_ONLY;
+                setOpt = WRITE_ONLY;
                 break;
 
             case Read:
-                aOpenOpt = READ_WRITE;
+                setOpt = READ_WRITE;
                 break;
 
             case Exclusive:
@@ -418,7 +418,7 @@ public class xOSFile
                     break;
 
                 case Read:
-                    aOpenOpt = READ_ONLY;
+                    setOpt = READ_ONLY;
                     break;
 
                 case Exclusive:
@@ -426,13 +426,13 @@ public class xOSFile
                         xException.notImplemented(frame, "ReadOption.Exclusive"));
                 }
             } else {
-                List<OpenOption> listOpt = new ArrayList<>(cWriteOpts);
+                setOpt = new HashSet<>(cWriteOpts);
                 switch (optRead) {
                 case NoRead:
                     break;
 
                 case Read:
-                    listOpt.add(StandardOpenOption.READ);
+                    setOpt.add(StandardOpenOption.READ);
                     break;
 
                 case Exclusive:
@@ -440,7 +440,7 @@ public class xOSFile
                         xException.notImplemented(frame, "ReadOption.Exclusive"));
                 }
 
-                listOpt.add(StandardOpenOption.WRITE);
+                setOpt.add(StandardOpenOption.WRITE);
 
                 for (ObjectHandle objectHandle : ahWriteOpt) {
                     EnumHandle hWrite = (EnumHandle) objectHandle;
@@ -449,42 +449,41 @@ public class xOSFile
                     case Write:
                         break;
                     case Ensure:
-                        listOpt.add(StandardOpenOption.CREATE);
+                        setOpt.add(StandardOpenOption.CREATE);
                         break;
                     case Create:
-                        listOpt.add(StandardOpenOption.CREATE_NEW);
+                        setOpt.add(StandardOpenOption.CREATE_NEW);
                         break;
                     case Sparse:
-                        listOpt.add(StandardOpenOption.SPARSE);
+                        setOpt.add(StandardOpenOption.SPARSE);
                         break;
                     case Temp:
-                        listOpt.add(StandardOpenOption.DELETE_ON_CLOSE);
+                        setOpt.add(StandardOpenOption.DELETE_ON_CLOSE);
                         break;
                     case Truncate:
-                        listOpt.add(StandardOpenOption.TRUNCATE_EXISTING);
+                        setOpt.add(StandardOpenOption.TRUNCATE_EXISTING);
                         break;
                     case Append:
-                        listOpt.add(StandardOpenOption.APPEND);
+                        setOpt.add(StandardOpenOption.APPEND);
                         break;
                     case Exclusive:
                         return frame.raiseException(
                             xException.notImplemented(frame, "WriteOption.Exclusive"));
                     case SyncData:
-                        listOpt.add(StandardOpenOption.DSYNC);
+                        setOpt.add(StandardOpenOption.DSYNC);
                         break;
                     case SyncAll:
-                        listOpt.add(StandardOpenOption.SYNC);
+                        setOpt.add(StandardOpenOption.SYNC);
                         break;
                     }
                 }
-                aOpenOpt = listOpt.toArray(NO_ACCESS);
             }
         }
 
         Path path = hFile.f_path;
         try {
-            FileChannel channel = FileChannel.open(path, aOpenOpt);
-            return xRawOSFileChannel.INSTANCE.createHandle(frame, channel, path, iReturn);
+            FileChannel channel = FileChannel.open(path, setOpt);
+            return xRawOSFileChannel.INSTANCE.createHandle(frame, channel, path, setOpt, iReturn);
         } catch (IOException e) {
             return raisePathException(frame, e, path);
         }
@@ -495,10 +494,10 @@ public class xOSFile
     private enum ReadOption  {NoRead, Read, Exclusive}
     private enum WriteOption {Write, Ensure, Create, Sparse, Temp, Truncate, Append, Exclusive, SyncData, SyncAll}
 
-    private static final OpenOption[]  NO_ACCESS  = new OpenOption[0];
-    private static final OpenOption[]  READ_ONLY  = new OpenOption[] {StandardOpenOption.READ};
-    private static final OpenOption[]  WRITE_ONLY = new OpenOption[] {StandardOpenOption.WRITE};
-    private static final OpenOption[]  READ_WRITE = new OpenOption[] {StandardOpenOption.READ, StandardOpenOption.WRITE};
+    private static final Set<OpenOption> NO_ACCESS  = Set.of();
+    private static final Set<OpenOption> READ_ONLY  = Set.of(StandardOpenOption.READ);
+    private static final Set<OpenOption> WRITE_ONLY = Set.of(StandardOpenOption.WRITE);
+    private static final Set<OpenOption> READ_WRITE = Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE);
 
     private static MethodStructure s_constructor;
 }

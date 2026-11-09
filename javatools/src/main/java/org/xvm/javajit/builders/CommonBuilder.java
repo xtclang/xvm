@@ -944,8 +944,8 @@ public class CommonBuilder
      */
     protected void assembleAssignedGetter(ClassBuilder classBuilder, PropertyInfo prop) {
 
-        String    fieldName   = prop.ensureJitName(typeSystem);
-        boolean   hasAssigned = prop.requiresJitAssignedBit();
+        String  fieldName   = prop.ensureJitName(typeSystem);
+        boolean hasAssigned = prop.requiresJitAssignedBit();
 
         classBuilder.withMethodBody(fieldName + AssignedGet, md(CD_boolean, CD_Ctx),
                 ClassFile.ACC_PUBLIC, code -> {
@@ -4893,6 +4893,12 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin
         Map.entry("org.xtclang.ecstasy.Timeout",
-            Set.of("construct")) // TODO: invokes nService with invokeinterface although nService is a Java class
+            Set.of("construct")), // TODO: invokes nService with invokeinterface although nService is a Java class
+        Map.entry("org.xtclang.ecstasy.io.Channel",
+                Set.of("write")), // TODO: Future support
+        Map.entry("org.xtclang._native.fs.OSStorage",
+            Set.of("onEvent")), // TODO: Future support
+        Map.entry("org.xtclang._native.io.RTChannel",
+            Set.of("read", "write")) // TODO: Future support
     );
 }

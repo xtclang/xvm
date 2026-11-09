@@ -1,5 +1,14 @@
 package org.xtclang.ecstasy;
 
+import java.nio.channels.NonReadableChannelException;
+import java.nio.channels.NonWritableChannelException;
+
+import org.xtclang.ecstasy.fs.AccessDenied;
+
+import org.xtclang.ecstasy.fs.FileNotFound;
+import org.xtclang.ecstasy.fs.Path;
+import org.xtclang.ecstasy.io.IOException;
+
 import org.xvm.javajit.Ctx;
 
 import org.xtclang.ecstasy.text.String;
@@ -98,6 +107,10 @@ public class Exception extends nConst {
         return new ReadOnly(ctx).$init(ctx, text);
     }
 
+    public static nException $oob(Ctx ctx, long index, long start, long end) {
+        return $oob(ctx, "Index " + index + " out of range " + start + ".." + end);
+    }
+
     public static nException $oob(Ctx ctx, java.lang.String text) {
         return new OutOfBounds(ctx).$init(ctx, text);
     }
@@ -119,6 +132,49 @@ public class Exception extends nConst {
 
     public static nException $illegalArg(Ctx ctx, java.lang.String text) {
         return new IllegalArgument(ctx).$init(ctx, text);
+    }
+
+    public static nException $illegalState(Ctx ctx, java.lang.String text) {
+        return new IllegalState(ctx).$init(ctx, text);
+    }
+
+    public static nException $io(Ctx ctx, java.lang.Exception ex) {
+        if (ex instanceof java.nio.file.AccessDeniedException
+            || ex instanceof NonReadableChannelException
+            || ex instanceof NonWritableChannelException) {
+            return new AccessDenied(ctx).$init(ctx, ex.getMessage());
+        }
+        if (ex instanceof java.io.IOException) {
+            if (ex instanceof java.io.FileNotFoundException) {
+                return new FileNotFound(ctx).$init(ctx, ex.getMessage());
+            }
+            return $io(ctx, ex.getMessage(), null);
+        }
+        return $io(ctx, ex.getMessage(), ex);
+    }
+
+    public static nException $io(Ctx ctx, java.lang.String text) {
+        return $io(ctx, text, null);
+    }
+
+    public static nException $io(Ctx ctx, java.lang.String text, Throwable cause) {
+        return new IOException(ctx).$init(ctx, text, cause);
+    }
+
+    public static nException $fileNotFound(Ctx ctx, Path path) {
+        return $fileNotFound(ctx, "", path);
+    }
+
+    public static nException $fileNotFound(Ctx ctx, java.lang.String text, Path path) {
+        return new FileNotFound(ctx).$init(ctx, text, path);
+    }
+
+    public static nException $accessDenied(Ctx ctx, Path path) {
+        return $accessDenied(ctx, "", path);
+    }
+
+    public static nException $accessDenied(Ctx ctx, java.lang.String text, Path path) {
+        return new AccessDenied(ctx).$init(ctx, text, path);
     }
 
     public static nException $xvmError(Ctx ctx, java.lang.String text, Throwable cause) {

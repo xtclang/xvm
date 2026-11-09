@@ -186,6 +186,21 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
+    protected void assembleInflatedAccessors(ClassBuilder classBuilder, PropertyInfo prop) {
+        String        jitName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc jmd     = prop.getGetterJitDesc(this, thisType);
+
+        if (jmd.isOptimized && findMethod(jitName + OPT, jmd.optimizedMD) != null) {
+            // the native optimized getter still needs its boxed entry point
+            if (findMethod(jitName, jmd.standardMD) == null) {
+                assembleMethodWrapper(classBuilder, jitName, jmd);
+            }
+        } else if (findMethod(jitName, jmd.standardMD) == null) {
+            super.assembleInflatedAccessors(classBuilder, prop);
+        }
+    }
+
+    @Override
     protected void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop) {
         String        jitName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmd     = prop.getGetterJitDesc(this, thisType);
