@@ -1,0 +1,163 @@
+position	commit_693	kind	errs_commits	not_from_errs	subject
+115	8f878f0024	copied	f06abbeeb9	-	Keep the doc comments of properties and methods on their structures
+116	751bfe878f	adapted	17c69d3f08	lang/intellij-plugin/README.md,lang/lsp-server/README.md	Describe the debugger's attach and R9-R12 features in the READMEs
+117	d691455386	copied	ebe005bff4	-	Describe running and debugging tests from both editors in the READMEs
+118	977dcc8441	copied	de72d99f14	-	Give the playbook catalog's size as its 342 cases everywhere
+119	926b5f354a	copied	a2e856c19e	-	List every VS Code command in the extension README, by its own title
+120	1bb5cbfece	copied	7b104705ff	-	Fix lang/README's task paths, versions and feature summary
+121	4a739eed9a	copied	85f1294483	-	List the editors' test, attach and debug-task sources, and when xtc is needed
+122	76c866bb74	copied	614d359039	-	Point the playbook instructions at the playbook container
+123	7e8bf99564	adapted	bea1daae54	lang/doc/manual-test-plan.md,lang/lsp-server/README.md	Use American spelling in the shippable docs
+124	ae7ebc99bf	own	-	lang/doc/README.md	Name testing in the embedded build and run index entry
+125	3d090422dc	copied	c9cff1bb2e	-	Name the editors' UI as it reads, Ecstasy, where the docs said XTC
+126	99e34170ea	copied	6874334e3c	-	Call the server and the IntelliJ plugin by their names in the lang docs
+127	445888ecd8	copied	837043ef05	-	List the test and debug-task messages and a test row in the playbook's 18a
+128	c43fa5ceae	copied	539c53df5d	-	Say that every adapter needs Java 25 in editor-setup.md
+129	4c353d7484	copied	9cb4f48df1	-	Name javatools' debugger, agent and provider in its README
+130	a5bedc6f16	adapted	0d8f66410b	lang/intellij-plugin/README.md	Give IntelliJ's missing breakpoint pass count its own LSP4IJ fix
+131	ab9465570b	copied	db77e75d5c	-	Complete a member access typed at the end of a line
+132	8f4ffbbdc7	copied	d634893137	-	Name a type by what it is when hovering its name
+133	a63cdcaf71	copied	73cf018911	-	Deliver a run's events to dap-server's ProgramEvents, not a copy of it
+134	52d3250905	copied	1a5ef3cd18	-	Complete with the language model's keywords and built-in types
+135	3a752b03c8	copied	856841eb67	-	Share the formatter's empty-block skeleton and whitespace edits
+136	c4ab95b6d9	copied	2eedc30bde	-	Build an embedded run's process handler in one place
+137	9ed0288ffe	adapted	48ede4d4d4	-	Name the properties that hold behavior or mutable state in camel case
+138	0a03f7eba0	copied	b7b0411dce	-	Split the LSP tests into a fast default tier and complete runs
+139	8ec38a7bd9	copied	f7083536a2	-	Give Ecstasy its Code Style settings page
+140	c59f841bd0	adapted	af5ba8c080	lang/doc/manual-test-plan.md	Load the Ecstasy live templates, and offer them in Ecstasy files only
+141	a815871a94	copied	636d9dc44d	-	Debug a program that has an interface
+142	603c213af3	copied	5029b6c426	-	Lift SessionDebuggerTest's time limit to an hour
+143	544f80db64	copied	75f201faf3	-	Let the compiler-consumer gate accept the default tier's later cases
+144	ee1e068b6d	copied	7b2102e9ef	-	Complete a member with the cursor right after its dot
+145	a67d415f77	copied	a33ace8e71	-	Offer code actions in a module that has a const with a toString
+146	c34f23e848	aggregated	72b024d0c6,8267909fe3,f9d7e807de,44eb714c1d,fa594a89b8	-	Queue playbook container runs on one machine lock, each with its own export
+147	4335298e89	aggregated	658f150908,c189690556	-	Start the playbook's IDE from one place, without the plugins it does not use
+148	c8004e4131	aggregated	69b1bceea9,8ccd2be806,4c3587a2f8,a1c4c64665,69cc343e43,5ca0b1b3af,93068b4f45,2943fd4a66,214b4b927b,08eb0b5301	lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt,lang/lsp-server/src/test/kotlin/org/xvm/lsp/run/EmbeddedExecutionTest.kt	Let tests wait for a hang only, not for a fast machine
+149	55d09fec29	copied	69248c721f	-	Wait for configurationDone before a debug session starts its program
+150	c55f877d42	aggregated	b479e29d12,79993d95d4,351086fb60,05d6b8ad51	-	Record a tour of the IntelliJ plugin on a card game, checking what it shows
+151	eaa4b0dc87	copied	3716963e95	-	Show a library declaration's doc comment in hover, from its source
+152	4313d209cf	aggregated	2c211c6123,991c694a19	-	Give Ecstasy files a PSI of the Ecstasy language
+153	d69a5a4cd6	copied	757db71854	-	Close a block that Enter opens after a { in an Ecstasy file
+154	8366edee0d	aggregated	1687b47219,9ccf45dcbe	lang/doc/manual-test-plan.md	Remove unused imports with Organize imports, run from IntelliJ's Optimize Imports
+155	712f33cdb2	aggregated	432d84e15d,952c880bda,4a08dc8d46,acc71264b7	-	Keep an Ecstasy file's brackets and words as plain text had them
+156	0524568cb2	copied	c41615a893	-	Give a constructor's finally block no references lens of its own
+157	049aed4834	copied	5b2fef0e0a	-	Name an inferred local's type in its hint as the source names it
+158	8ec4eb7414	copied	57ca3b4ff3	-	Rerun only the failed Ecstasy tests from the test console
+159	0e25454081	aggregated	d58c99db0b,ec07a09af6	-	Take a line typed in IntelliJ's Debug console to the debug session
+160	5ef6ac7688	adapted	af62871322	javatools/src/main/java/org/xvm/api/EmbeddingSupport.java	Report every class's errors from an embedded compile, not only the first's
+161	9d22dda618	aggregated	5c743b310b,f19ac1d03d	-	Complete names and show a call's signature where they are typed at a line's end
+162	938934c84a	aggregated	d041f34676,e1a83440f8	-	Complete a type of another module where a statement starts, with its import
+163	1286c004c5	copied	52df078d22	-	Copy a concurrent map's entries without failing when one goes meanwhile
+164	9412e39972	aggregated	1bb65a330c,1af63901df	lang/lsp-server/README.md	Name a server's log session by the server alone, and tell a live one by its lock
+165	12d0ff434f	copied	d63dcbc2fd	-	Undo a server's edit of one file without asking, as IntelliJ's quick fixes are
+166	7f3c57aef9	aggregated	1748024690,a533001723,553455652a	-	Make SessionDebuggerTest independent of how its threads are scheduled
+167	a2fd8ddd74	copied	d0b6d17ee3	-	Import a moved type where its new package's name is a property
+168	d1e7abf91c	copied	99b78bef74	-	Extract statements that use an injected local, passing its value
+169	bd6092024a	copied	d3dc75ae51	-	Keep earlier debugger stops out of a clock alarm set for a given time
+170	4de213f299	copied	9056109017	-	Report a Future callback that throws or that a terminated service drops
+171	7dcb291c37	aggregated	ba3e1b4be6,4ffadbb3c8,4d224e5ca2,027c40af0d,8f3476dad6	lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLspServerSupportProvider.kt,lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcTextDocumentService.kt	Prove only the code actions a request asks for, and share a revision's proofs
+172	7d457bf22c	copied	b8ef506740	-	Keep the execution trace's events out of stderr and server.log
+173	f5b0344b18	copied	816126f276	-	Let one source that discovery cannot read cost only itself
+174	176d44158d	copied	379e8f1006	-	Let a debugger condition name an enum value by its enumeration
+175	7d9758622a	copied	6c93d0cc3f	-	Give X145 a reference search that waits until it is canceled
+176	9a6b77820c	copied	6137531b3e	-	Offer Create class for the diagnostic of a statement that constructs it
+177	6acea1d7a0	copied	7021e5b292	-	Extract statements from a selection of whole lines
+178	9df5c750d6	aggregated	58fbd215dc,9c13fc0724	javatools/src/main/java/org/xvm/tool/Compiler.java,javatools/src/main/java/org/xvm/tool/Runner.java	Let xtc test, run and build take a project's test module with its modules
+179	df2986318d	aggregated	5f2a79dabf,79e755624e	-	Build a Gradle-imported project embedded in embedded mode
+180	9e4b9c6040	aggregated	767162dc64,5ed9f44f93	-	Keep a project's module, source and library order the same in every JVM
+181	0a0df4f259	aggregated	4d55d89423,aede2a49d5,24a9ded56d	-	Send LSP4IJ's held edits before it asks for completions or a call's signature
+182	7931e9da7d	copied	8c0d135671	-	Indent the rest of a line that Enter moves into the block it opens
+183	5815683171	copied	7e3ed5c735	-	Say on the debug console why a breakpoint's condition cannot be evaluated
+184	d67492494f	copied	4c6fa44b2e	-	Answer requests that a restarted client sends while it opens its files again
+185	1167a5e4dd	copied	8b14d2b657	-	Insert a method's call when its completion is chosen
+186	fcedc77832	copied	117e28a53b	-	Answer on-type formatting without waiting for the change to compile
+187	b6595ea95b	copied	48945973cb	-	Check that Debug of Current File launches an Ecstasy configuration
+188	cf62e8e383	copied	3fcbc7e8d0	-	Report a stopped run's end without the failure its stop causes
+189	e1ad12f24f	copied	4e1b1092e9	-	Check 7a.9 against the compiler's error budget, which the server keeps
+190	b8636c7db6	copied	c679993494	-	Run the VS Code playbook after the extension suite, not with it
+191	68693f86db	adapted	c814b7e366	lang/doc/manual-test-plan.md,lang/test-fixtures/compiler-playbook/scenarios.json	Get a closed file's errors to IntelliJ from the server's workspace report
+192	04622c487c	copied	e55aa4f9e8	-	Prove a code action by compiling only the modules its edit reaches
+193	6f88d9fd82	aggregated	090691a26b,48a01cc772	-	Start a revision's code action compile from the previous one's, and log its cost
+194	217b2bd4c3	aggregated	a0e951b873,cb9391802b,67dfd35abf,c620cb9335,660d1fb172	-	Find a test's hang by the CPU it stops using, not by an hour on the clock
+195	92119b9513	copied	b90edc7acb	-	Show a stopped run as stopped, without what its stop made it print
+196	bece41f410	copied	c05e24a5cc	-	Give each thread its own spare key for a hasher map's lookups
+197	d022513c45	adapted	993c426897	-	Make the debugger's expression fragment physical, which ends a paused session's daemon loop
+198	cbe8f1f63c	copied	0f92666a86	-	Complete a service's shutdown however it goes, and report its failure
+199	c35d7cae35	aggregated	b46089c851,3ff3f977a7	-	Report a test that throws other than by failing an assertion as aborted, keep its later exceptions, and count skipped tests
+200	ff091f4fc3	copied	4c52a73c61	-	Count the code actions at the tour's unused import and unused local
+201	87e3176a6b	copied	c63aa3c091	-	Answer an idle client's workspace pull of an unchanged graph without a job
+202	d2dbadfe66	copied	dc38a7cc68	-	Show Rerun Failed Tests on an IntelliJ test run
+203	b208f1d1db	adapted	fd4c52f07f	-	Wait for LSP4IJ's automatic code action answers only a budget
+204	e2eadb4638	aggregated	2f6511d331,ab47548d4d	-	Run testXtc whenever a tool reads its test report, never from the cache
+205	1c767cfd3d	copied	b00153cfb9	-	Keep the compiles of the modules that depend on an edited one whose API stayed
+206	6d2852896e	copied	0e47ff7943	-	Run every test module's tests at once in IntelliJ: Run 'All Ecstasy Tests'
+207	748163d9fc	copied	78948c8ac6	-	Keep each light test's stub server and wrappers to that test
+208	ccbb8b659c	aggregated	8640fe965d,c2117a1eb1	-	Say which requests the language server is still answering, and which diagnostics it has still to report
+209	2200056f89	adapted	d3d20b269f	-	Tag the light tests' workarounds of two LSP4IJ gaps
+210	f164a43be8	copied	0741ce32b0	-	List a closed test module's tests from the workspace pull's compile
+211	8d568fcaa3	copied	453ad2ce4b	-	Declare the code action kinds the language server's actions have
+212	a39315eb1a	copied	d408ded752	-	Ask the server for no edit of a rename that Undo makes, and report a stale refactoring without a dialog
+213	50781421e9	copied	9c62356fbf	-	Test that Undo takes a resolved code action's edit of one file back without asking
+214	6764202cac	copied	a338542a4f	-	Safely delete a member whose body has an annotation, as an injected local
+215	e124c1fa31	copied	46dd94c4be	-	Restart a frame whose fiber ran code in its stop
+216	55e9359bb1	copied	afd092afc1	-	End the tests of the modules a stopped VS Code test run did not reach
+217	91c37af7bc	copied	bafe587e24	-	Compile the VS Code extension's TypeScript into an empty out/
+218	95ca5d5b30	copied	d27dcbf635	-	Report no diagnostics for a library source's read-only copy
+219	3df71abd1a	copied	a3d8a45566	-	Offer Run 'All Ecstasy Tests' before Gradle's Tests in on Ecstasy-only test sources
+220	6bcb7d87cc	copied	7fc4ae1584	-	Ask the language server for full code action answers again, not ones within a budget, in IntelliJ
+221	d6de28b885	copied	ea339596e5	-	Put the embedded build's errors in the Problems window's Project Errors
+222	b4f4add2fb	copied	ca227c0715	-	Show a completion item's documentation on Ctrl+Q in IntelliJ, from its resolve
+223	09613e293d	copied	f4aa053ba0	-	Check that Ctrl+Z's Undo action takes a resolved code action's edit back
+224	6e125d0b14	copied	651c47d1db	-	Find Run All Ecstasy Tests' existing configuration, not make "(1)" of it
+225	f17743d865	adapted	8306d55d8c	lang/doc/manual-test-plan.md,lang/intellij-plugin/README.md,lang/test-fixtures/compiler-playbook/scenarios.json	Keep Run to Cursor's temporary breakpoint until the program stops, in IntelliJ
+226	9d5a348af7	copied	92b74eb34d	-	Answer xtc/busy with the server's open requests and its compiler's jobs
+227	26d2915c00	copied	f1efecc43d	-	Record a playbook run's screen as video in the container
+228	6650266567	copied	fe48408393	-	Delete a playbook run's IDE folder once its logs are copied, in the container
+229	264e96d9d4	copied	1c854efdbe	-	Check the plugin's features through the IntelliJ tour, and detect its hangs from the IDE's state
+230	e586fe8547	copied	57a92c36ba	-	Compose the tours' video from their recorded clips, each step from a run where it passed
+231	68ea7701b7	copied	3dd8486db5	-	Let VS Code set breakpoints in Ecstasy files
+232	a9d3cebbc3	copied	425a7f7ad4	-	Debug the module of a class's file with F5
+233	90672899cc	copied	412b3cd863	-	Pass a run task's args in Gradle and command-line mode
+234	1d8cae0590	copied	b9594bcad2	-	Trace the language server's messages when xtc.trace.server says so
+235	209afc3e75	copied	b8e2fee0ff	-	Fold comments and runs of imports with the compiler adapter
+236	bbe2bc8c97	copied	d2a4d70f37	-	Run the editor's module from its Run button and context menu
+237	b3420fea16	copied	1092a48ccd	-	Clear a deleted file's diagnostics in the next workspace pull
+238	c79c0d202b	copied	dcd1984ba8	-	Say when a move leaves the uses of its sources as they were
+239	daeaf58280	copied	02f002d8f3	-	Say how many embedded runs the server tracks, and where a test is
+240	fcb96c8578	copied	94daae7485	-	Fail the playbooks' diagnostics waits once their reports are final
+241	d9c3c0f335	copied	c01932b37a	-	Add playbook cases X342-X349 for xunit tests, in both editors
+242	d75c0e8f0b	copied	98a999d335	-	Give a VS Code tour's run its screen recording, and every run only its own, in the container
+243	589ade0c0b	copied	6612a3944f	-	Record a tour of the VS Code extension that checks what it shows
+244	0a4ed474a1	copied	bfb30d87bb	-	Drop XtcRunConfigurationTest's redundant casts to TaskOutputsInternal
+245	eb58ce5b5b	copied	592b9b3121	-	Give a completion item's resolved documentation to Ctrl+Q through public API only, in IntelliJ
+246	2a7c63c2e8	copied	bab2848d4d	-	Keep the compiles of modules that compiled when only private declarations move
+247	01edc2ed93	copied	9572dacb1e	-	Expect the card game's Hand to keep heading when Safe delete removes display
+248	4346817320	copied	a47190daa0	-	Clear a removed file's report once in workspace pulls that name its result ID
+249	4a5b9d7406	copied	d67638021f	-	Compile a library source's copy on its own even once a compile has named it
+250	5acd180ccd	copied	6390e6a357	-	Ask the server again for a move's edits when a change overtook its answer
+251	f02e6c54dc	copied	942afdec74	-	Make the VS Code tour pass as one whole run, unrecorded
+252	e985169414	copied	27e04f4e74	-	Press the keymap's own Undo key in the IntelliJ tour
+253	ca2f7eab06	copied	8b68743d84	-	Undo in the IntelliJ tour from the editor as the change left it
+254	a6efae617b	copied	30866ec890	-	Ask before Undo takes back a rename or move that changed several files
+255	bde32b7f29	copied	80e2087e5a	-	Answer Undo's question in the IntelliJ tour and playbook as it offers
+256	0ba4ddd019	copied	29c665fe84	-	Rename a method of four files in the IntelliJ tour, and show Undo's question
+257	4266ebba1b	copied	1a5bec3ce2	-	Rename cardMatches across four files in the VS Code tour, undone by Ctrl+Z
+258	77802b5a99	copied	13b1e1f6eb	-	Check in the VS Code tour that Ctrl+Z takes a quick fix back whole
+259	3cd93b4bf5	copied	b8b1ca6611	-	Show the VS Code tour's Undo of the four-file rename as steps
+260	bb1632ed5d	copied	ffdb1c3d67	-	Wait in the IntelliJ tour for Go to symbol's popup to close, and never fill a file's editor
+261	e625089259	copied	9dd6f55753	-	Keep prepareLibraryPlaybook's JVM to SLF4J's warnings
+262	6da33b70f2	copied	f5ced196c5	-	Print the IntelliJ tour's progress in the build's output, step by step
+263	7f90f958e4	copied	b107f2c76c	-	Print both compiler playbooks' progress per case in the build's output
+264	4dd1e98574	copied	9be33df388	-	Report the written video's real length from the tour composer
+265	54d34a4b05	copied	e42ba00834	-	Fail the debugger probe's waits when nothing is in progress for a minute
+266	ae43856bbd	adapted	984ca59c0b	lang/doc/manual-test-plan.md,lang/lsp-server/README.md	Remove the unused xtc/runnableTargets request
+267	ea9a862f11	adapted	c7ac1f1f16	javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java	Let a class's own child named Inner cover the implicit Outer.Inner
+268	2d4a8e7cc8	copied	be9d5eebfc	-	Answer hover and Go to Definition in a library copy that the debugger opens
+269	c1e5af21f6	copied	b4abbd6f5f	-	Offer Run All Ecstasy Tests beside Gradle's Tests in on mixed test folders
+270	348cac69bc	copied	e0caa97565	-	Compile a run's embedded build again when its files change on disk as it compiles
+271	28f99a8055	copied	ce806a2a15	-	Wait in the IntelliJ tour for the new server's didOpen before File Structure
+272	53e5b39144	copied	3eab527b1c	-	Wait in the VS Code tour for the $xtc problem matcher's error after a failed build
+273	ab9b839ff0	copied	0d843bdf16	-	Shorten the comment on the implicit Outer.Inner
+274	bed7d0c1d0	copied	c18126f5ac	-	Test the implicit Outer.Inner in manualTests instead of javatools
+275	f74fc9ad02	copied	b0e2471b05	-	Let testChildNamedInner's asserts speak, its prints kept as comments
+276	d671236571	copied	4c851d0c2e	-	Upgrade the VS Code extension's npm dev tools past the MSAL, glob and minimatch advisories

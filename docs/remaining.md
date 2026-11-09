@@ -1221,10 +1221,16 @@ editor, which its probe never measured (the probe item below).
   and likely won't merge as it stands.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
   when the user decided that #693 takes everything that completes the LSP and DAP implementation,
-  distilled per feature, without tracking documents or plans. Last synchronized 2026-11-04: #693's
-  tip `c4f916bf44`, rebased with errs onto master `2f18c1335c` (see
-  [the integration plan](errs-integration-plan.md)), has errs' features through R13 and its two CI
-  fixes of that day, `a145de1074` and `fc302daaff`, as `0e95701f79` and `c4f916bf44`. On 2026-10-28 #693 was also regrouped
+  distilled per feature, without tracking documents or plans. Last synchronized 2026-11-09: #693's
+  tip `ffe34357bb`, commit 276, rebased with errs onto master `8097b66a89` that day, has errs' work
+  through the VS Code extension's npm upgrade, errs `623d20c12b`. Its commits 115–276 came from errs
+  from 2026-11-04 to 2026-11-09, and both branches were rebased onto master `46a5536e1f` on
+  2026-11-05; [the synchronization map](errs-693-sync-2026-11-04-to-09.tsv) gives the errs commits
+  each one carries (see "#693 synchronized with errs" and the two rebases around it in
+  [the integration plan](errs-integration-plan.md)). Before that, 2026-11-04: #693's
+  tip `c4f916bf44`, rebased with errs onto master `2f18c1335c`, had errs' features through R13 and
+  its two CI fixes of that day, `a145de1074` and `fc302daaff`, as `0e95701f79` and `c4f916bf44`.
+  On 2026-10-28 #693 was also regrouped
   into 70 commits on master `6c025c0426`, without its plans, every commit compiling, with
   [the regroup map](errs-693-regroup-2026-10-28.tsv) from each new commit to the old ones (see "#693
   regrouped and rebased onto master" in

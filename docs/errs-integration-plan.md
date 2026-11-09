@@ -259,6 +259,55 @@ milestone), #753, #754, and the three test-support PRs taken from these branches
   `c4f916bf44`, and CI passes on both (runs 41832045986 and 41832050573). The backups,
   `backup/errs-pre-rebase-20261104` and `backup/693-pre-rebase-20261104`, are deleted.
 
+**errs and #693 rebased onto master `46a5536e1f` (2026-11-05).** Master had moved by #758, which
+clarifies recent x-doc changes. Both branches replayed without a conflict, every commit with its
+patch unchanged: [the map](errs-rebase-2026-11-05.tsv) gives errs' 1272 commits on `79b97c2ee1` and
+their replays, and [#693's map](errs-693-rebase-2026-11-05.tsv) its 145 commits on `6b4cc531f8`.
+errs was force-pushed to `48945973cb` at 12:03, with its next 80 commits; #693 to `6f88d9fd82` at
+13:40, with its commits 146–193 (see #693's synchronization below), and CI passed there (run
+42029105109). The rebase was not recorded that day; this record was written on 2026-11-09 from both
+branches' push history and their patches.
+
+**#693 synchronized with errs (2026-11-04 to 2026-11-09).** After its rebase onto `2f18c1335c`,
+#693 took errs' work in 33 pushes, from `c4f916bf44`, its commit 114, to `d671236571`, its commit
+276: commits 115–145 on 2026-11-04, 146–221 on 2026-11-05, 222–258 on 2026-11-06, 259–275 on
+2026-11-07, and 276 on 2026-11-09. None of them was recorded when it was pushed; this record was
+written on 2026-11-09.
+
+- [The map](errs-693-sync-2026-11-04-to-09.tsv) gives each of commits 115–276 its kind and the errs
+  commits it carries. 126 are copies, with the patch of an errs commit. 13 are adapted copies: they
+  leave out errs' records and plans, or keep #693's own READMEs, manual test plan and playbook
+  catalog, or fit code to what #693 has. 22 aggregate several errs commits into one per feature, up
+  to the ten of commit 148, which has every test suite wait for a hang only. Commit 124, an index
+  entry in `lang/doc/README.md`, is #693's own.
+- An aggregate carries, for each file it changes, the errs commits between the file's content
+  before it on #693 and its content after; `not_from_errs` names the files whose content errs never
+  had. Copies are found by patch, the rest by title and content.
+- CI passed on `6f88d9fd82`, commit 193, and on `f74fc9ad02`, commit 275. Commit 276, errs'
+  `4c851d0c2e`, the VS Code extension's npm upgrade, made #693 conflict with master's #762 in the
+  extension's `package.json` and `package-lock.json`, so its CI no longer ran; the rebase below
+  resolves that.
+
+**errs and #693 rebased onto master `8097b66a89` (2026-11-09).** Master had moved by #759 and #760
+(`actions/setup-java` 6.2.0), #761 (Spotless 8.11.0 and Guava 33.8.0) and #762 (`@vscode/vsce`
+4.1.0 and eslint 10.14.0 in the VS Code extension).
+
+- The one conflict, on both branches, was the npm upgrade (errs `4c851d0c2e`, #693 `d671236571`) in
+  the extension's `package.json` and `package-lock.json`. It is resolved on #762's files with the
+  same changes: glob `^14.0.4`, minimatch 11 for the dev tools that only call `minimatch()` and
+  `match()`, and `@azure/identity` 4.14.1 with `@azure/msal-node` 7.2.1 (errs `623d20c12b`, #693
+  `ffe34357bb`). npm audit reports 2 of the 16, both `vscode-languageclient`'s minimatch 10, as
+  before. #762's vsce and eslint still take minimatch 10, so the overrides stay.
+- [The map](errs-rebase-2026-11-09.tsv) gives errs' 1469 commits and their replays, and
+  [#693's map](errs-693-rebase-2026-11-09.tsv) its 276. Every other commit keeps its changes; three
+  of errs' and one of #693's now have master's lines around them.
+- Both trees are the old ones with master's six files, and errs' and #693's npm files are the same.
+  On both, `spotlessCheck` passes with Spotless 8.11.0; the main and test code of javatools, the
+  plugin, the language server, the DAP server and the IntelliJ plugin compile; and the extension
+  installs, compiles and passes eslint.
+- Backups: `backup/errs-pre-rebase-20261109` (`4c851d0c2e`) and `backup/693-pre-rebase-20261109`
+  (`d671236571`).
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
