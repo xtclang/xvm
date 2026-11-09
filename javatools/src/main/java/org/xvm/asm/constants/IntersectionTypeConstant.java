@@ -589,7 +589,7 @@ public class IntersectionTypeConstant
             if (map2.containsKey(sChild)) {
                 // the child exists in both maps
                 ChildInfo child2 = map2.get(sChild);
-                ChildInfo childM = child1.layerOn(child2);
+                ChildInfo childM = child1.layerOn(getConstantPool(), child2);
                 if (childM == null) {
                     log(errs, Severity.ERROR, VE_CHILD_COLLISION,
                         getValueString(), sChild,

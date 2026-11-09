@@ -3851,16 +3851,7 @@ public abstract class TypeConstant
                     ChildInfo infoChild = entry.getValue();
                     ChildInfo infoPrev  = mapChildren.putIfAbsent(sName, infoChild);
                     if (infoPrev != null) {
-                        ChildInfo infoNew = infoPrev.layerOn(infoChild);
-                        if (infoNew == null) {
-                            // a class's own Inner covers the implicit Outer.Inner, which is no super virtual child
-                            IdentityConstant idInner = pool.clzInner();
-                            if (infoPrev.getIdentity().equals(idInner)) {
-                                infoNew = infoChild;
-                            } else if (infoChild.getIdentity().equals(idInner)) {
-                                infoNew = infoPrev;
-                            }
-                        }
+                        ChildInfo infoNew = infoPrev.layerOn(pool, infoChild);
                         if (infoNew == null) {
                             log(errs, Severity.ERROR, VE_CHILD_COLLISION,
                                     constId,
