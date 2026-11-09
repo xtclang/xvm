@@ -305,8 +305,11 @@ written on 2026-11-09.
   On both, `spotlessCheck` passes with Spotless 8.11.0; the main and test code of javatools, the
   plugin, the language server, the DAP server and the IntelliJ plugin compile; and the extension
   installs, compiles and passes eslint.
-- Backups: `backup/errs-pre-rebase-20261109` (`4c851d0c2e`) and `backup/693-pre-rebase-20261109`
-  (`d671236571`).
+- Both were force-pushed with leases on their old tips, errs to `120ae16e19` (`623d20c12b` with this
+  record's first part) and #693 to `ffe34357bb`, which merges with master again. CI passes on #693
+  (run 42651142961); errs runs no CI outside a pull request. The backups,
+  `backup/errs-pre-rebase-20261109` (`4c851d0c2e`) and `backup/693-pre-rebase-20261109`
+  (`d671236571`), are kept.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
