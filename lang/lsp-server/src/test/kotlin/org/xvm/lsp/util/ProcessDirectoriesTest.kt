@@ -25,11 +25,13 @@ class ProcessDirectoriesTest {
     @Test
     fun `a server deletes the directories of a server that was killed, not those of a running or an older server`() {
         val own = copies("xtc-library-sources-1")
-        val lock = SessionLock.hold(own)
+        val lock = SessionLock.hold(own, SessionLock.beside(own))
         // the system released the killed server's lock, and left its lock file
-        val killed = copies("xtc-library-sources-2").also { Files.createFile(it.resolve(SessionLock.NAME)) }
-        // an older server took no lock
-        val older = copies("xtc-library-sources-3")
+        val killed = copies("xtc-library-sources-2").also { Files.createFile(SessionLock.beside(it)) }
+        // an older server took no lock beside it
+        val older = copies("xtc-library-sources-3").also { Files.createFile(it.resolve(SessionLock.NAME)) }
+        // which reads every file in its directory once it holds it, as a compile fingerprinting resources does: had
+        // the lock been in the directory, that would have released it
         val running = copies("xtc-library-sources-4")
         val owner =
             ProcessBuilder(
@@ -41,7 +43,7 @@ class ProcessDirectoriesTest {
                 "-cp",
                 System.getProperty("java.class.path"),
                 SessionOwner::class.java.name,
-                "hold",
+                "process",
             ).redirectError(ProcessBuilder.Redirect.INHERIT)
                 .start()
         try {
@@ -54,6 +56,7 @@ class ProcessDirectoriesTest {
             ProcessDirectories.deleteAbandoned(own, "xtc-library-sources-")
 
             assertThat(killed).doesNotExist()
+            assertThat(SessionLock.beside(killed)).doesNotExist()
             assertThat(listOf(own, older, running)).allMatch { Files.isRegularFile(it.resolve(COLLECTION)) }
         } finally {
             owner.outputStream.close()
