@@ -7,8 +7,8 @@ screens it captured, frames/NNN.png, in its run directory. This draws each step 
 screen with its highlight, arrow and pointer, or a title card, over a caption band with the step's number, section,
 title, caption, and a tag with the feature it exercises, such as textDocument/hover, and writes:
 
-    <out>/tour.mp4      each step held for a time that fits its caption, silent, H.264
-    <out>/tour.pptx     the title cards, a slide per section listing its steps, and the steps' frames, captions as notes
+    <out>/tour-<editor>.mp4    each step held for a time that fits its caption, silent, H.264
+    <out>/tour-<editor>.pptx   the title cards, a slide per section listing its steps, and the steps' frames, captions as notes
     <out>/failures.md   the steps that failed or were not captured, and the checks that failed
     <out>/frames/       the composed frames
     <out>/clips/        with a screen recording, each step's clip
@@ -22,7 +22,10 @@ sped up when it would still run longer than CLIP_MAX seconds; the step's keys an
 a ring where the pointer clicked. Its frame then holds, for its caption to be read. The deck keeps the frames and links
 each step's clip.
 
-Usage: compose.py [--speed <factor>] <run directory>... <out directory>
+Usage: compose.py [--speed <factor>] [--editor intellij|vscode] <run directory>... <out directory>
+
+<editor> is the editor the runs toured, intellij or vscode, as their tour.json's "editor" names it, so that the two
+tours' files keep apart; --editor gives it for runs recorded before tour.json named it. Runs of both are refused.
 
 Several run directories, such as runs that each recorded some of the tour's sections, are composed in the order given,
 as one tour, a step that several runs have taken from the newest of them in which it passed. The newest run that has a
@@ -49,6 +52,8 @@ from pptx import Presentation
 from pptx.util import Emu
 
 WIDTH, HEIGHT = 1920, 1080
+# the editors whose tours this composes, which name the video and the deck
+EDITORS = ("intellij", "vscode")
 # the IDE's window is captured at this height; the caption band is under it
 SCREEN = 936
 
@@ -306,13 +311,13 @@ def held(step, still, out):
     return segment
 
 
-def clips_video(segments, out):
-    """The steps' segments, clips and held frames, one after another, as one video."""
+def clips_video(segments, out, movie):
+    """The steps' segments, clips and held frames, one after another, as one video, [movie]."""
     listing = out / "clips.txt"
     listing.write_text("".join(f"file '{segment.resolve()}'\n" for segment in segments))
     subprocess.run(
         ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy",
-         "-movflags", "+faststart", str(out / "tour.mp4")],
+         "-movflags", "+faststart", str(movie)],
         check=True,
     )
     listing.unlink()
@@ -324,8 +329,8 @@ def seconds(step):
     return min(max(6.0 + words * 0.32, 9.0), 16.0)
 
 
-def video(frames, steps, out):
-    """The frames, each held for its step's time, as an H.264 video at 15 frames a second."""
+def video(frames, steps, out, movie):
+    """The frames, each held for its step's time, as an H.264 video at 15 frames a second, [movie]."""
     listing = out / "frames.txt"
     with listing.open("w") as entries:
         for frame, step in zip(frames, steps):
@@ -336,15 +341,15 @@ def video(frames, steps, out):
         [
             "ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
             "-vf", "fps=15,format=yuv420p", "-c:v", "libx264", "-preset", "slow", "-crf", "18",
-            "-tune", "stillimage", "-movflags", "+faststart", str(out / "tour.mp4"),
+            "-tune", "stillimage", "-movflags", "+faststart", str(movie),
         ],
         check=True,
     )
     listing.unlink()
 
 
-def slides(frames, steps, out):
-    """The deck: the title cards, then per section a slide listing its steps and its first captured step."""
+def slides(frames, steps, out, path):
+    """The deck, [path]: the title cards, then per section a slide listing its steps and its first captured step."""
     deck = Presentation()
     deck.slide_width, deck.slide_height = Emu(12192000), Emu(6858000)
     blank = deck.slide_layouts[6]
@@ -384,7 +389,7 @@ def slides(frames, steps, out):
             picture(path, "\n".join(f"{step['number']:02d} {step['title']}: {step['caption']}" for _, step in members))
             for frame, step in shots if any(step.get("clip") for _, step in shots) else shots[:1]:
                 picture(frame, step["caption"], step.get("clip"))
-    deck.save(str(out / "tour.pptx"))
+    deck.save(str(path))
 
 
 def passed(step):
@@ -486,12 +491,13 @@ def failures_report(failures, checks, out):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--speed", type=float, default=SPEED, help="how fast clips play against the recording")
+    parser.add_argument("--editor", choices=EDITORS,
+                        help="the editor the runs toured, for runs whose tour.json does not name it")
     parser.add_argument("paths", nargs="+", metavar="directory", help="the run directories, then the out directory")
     arguments = parser.parse_args()
     if len(arguments.paths) < 2 or arguments.speed <= 0:
         sys.exit(__doc__)
     runs, out = [Path(arg) for arg in arguments.paths[:-1]], Path(arguments.paths[-1])
-    out.mkdir(parents=True, exist_ok=True)
     tours = []
     candidates = {}
     for run in runs:
@@ -502,6 +508,13 @@ def main():
                   for step in tour["steps"]]
         for key, step in keyed(tagged):
             candidates.setdefault(key, []).append((at, step))
+    named = {tour["editor"] for _, tour, _ in tours if tour.get("editor")}
+    editor = arguments.editor or (named.pop() if len(named) == 1 else None)
+    if editor not in EDITORS or named - {editor}:
+        sys.exit(f"The runs name the editors {sorted(named)}: compose one editor's runs, and give --editor "
+                 f"{' or '.join(EDITORS)} for runs whose tour.json names none")
+    movie, deck = out / f"tour-{editor}.mp4", out / f"tour-{editor}.pptx"
+    out.mkdir(parents=True, exist_ok=True)
     steps = []
     failures = []
     left = 0
@@ -536,14 +549,14 @@ def main():
             step["clip"] = clip(step, still, out, arguments.speed)
             segments.append(step["clip"] or held(step, still, out))
     if recorded:
-        clips_video(segments, out)
+        clips_video(segments, out, movie)
     else:
-        video(frames, steps, out)
-    slides(frames, steps, out)
+        video(frames, steps, out, movie)
+    slides(frames, steps, out, deck)
     checks = failed_checks(tours)
     failures_report(failures, checks, out)
     # of the written video: the clips' stretched and held lengths are not the steps' reading times
-    total = length(out / "tour.mp4")
+    total = length(movie)
     print(f"{len(steps)} steps, {total / 60:.1f} minutes; {len(failures)} failed steps, {left} steps left out, "
           f"{len(checks)} failed checks: {out / 'failures.md'}")
 
