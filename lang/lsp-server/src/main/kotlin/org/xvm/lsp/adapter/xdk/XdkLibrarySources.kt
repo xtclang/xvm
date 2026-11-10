@@ -245,6 +245,26 @@ internal object XdkLibrarySources {
         return copy(path, entry).toString()
     }
 
+    /**
+     * The 1-based line where the bundled source of [path] in the library [module], as [file] writes it, declares the
+     * method [name], as a stack frame names it, `Class.method`; null when [module] is not a bundled library, or the source
+     * does not declare exactly one such method.
+     */
+    fun methodLine(
+        module: String,
+        path: String,
+        name: String,
+    ): Int? {
+        if (module !in XdkLibraries.moduleNames) return null
+        val entry = entries[path] ?: return null
+        val names = name.split('.')
+        return sources
+            .computeIfAbsent(path) { parse(module, path, entry) }
+            .declarations
+            .singleOrNull { it.path.takeLast(names.size) == names }
+            ?.let { it.range.start.line + 1 }
+    }
+
     /** The read-only file with the bundled source of [path], written the first time it is asked for. */
     private fun copy(
         path: String,

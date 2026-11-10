@@ -9,7 +9,7 @@ import java.nio.file.Path
 
 /**
  * Checks the cleanup of the bundled sources' read-only copies, which the server writes to a temporary folder for
- * clients that open library sources as files, and deletes when its JVM exits.
+ * clients that open library sources as files, and deletes when its JVM exits, and the lines a stack frame finds in them.
  */
 class XdkLibrarySourcesTest {
     @TempDir lateinit var directory: Path
@@ -25,5 +25,19 @@ class XdkLibrarySourcesTest {
         }
         assertThat(XdkLibrarySources.deleteCopies(copies)).isTrue()
         assertThat(copies).doesNotExist()
+    }
+
+    @Test
+    fun `a stack frame of a method with no line of its own has the line of its declaration`() {
+        val path = "ecstasy/mgmt/Container.x"
+        val lines = Files.readAllLines(Path.of(requireNotNull(XdkLibrarySources.file(ECSTASY, path))))
+        val line = requireNotNull(XdkLibrarySources.methodLine(ECSTASY, path, "Control.invoke"))
+        assertThat(lines[line - 1]).contains("Tuple invoke(String methodName")
+        assertThat(XdkLibrarySources.methodLine(ECSTASY, path, "Control.missing")).isNull()
+        assertThat(XdkLibrarySources.methodLine("App", "App.x", "App.run")).isNull()
+    }
+
+    private companion object {
+        const val ECSTASY = "ecstasy.xtclang.org"
     }
 }
