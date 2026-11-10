@@ -377,7 +377,11 @@ local branch (see the last point):
   `ProcessDirectoriesTest` (2), `ServerLogsTest` (7) and `XtcDebugServerTest` (54) pass, none
   skipped. The master PR's branch, `lagergren/xtc-version-test-tempdir`, is `f8242a0a38`, errs
   `8f650fe08c` on master `973268d2a0`; there `spotlessCheck` passes, and so does
-  `XtcVersionSanityTest` (10, none skipped). Nothing is pushed yet.
+  `XtcVersionSanityTest` (10, none skipped).
+- Pushed on 2026-11-10 at the user's go-ahead, both fast-forwards: #693 from `4f92c01069` to
+  `2afb23929a`, and errs to `2e921902ce`, which also has the tours' video and deck named
+  `tour-intellij` and `tour-vscode` (#693 has not taken that yet). The master branch was pushed and
+  opened as #764.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
