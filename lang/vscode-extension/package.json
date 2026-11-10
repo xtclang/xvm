@@ -547,6 +547,12 @@
                         "scope": "machine",
                         "description": "Advanced LSP JVM options, one argument per item. Supports -Xms/-Xmx/-Xss sizes (K/M/G), MaxMetaspaceSize, ReservedCodeCacheSize, ActiveProcessorCount and G1/Serial/Parallel/Z collectors. Restart Language Server to apply. Workspace overrides are ignored."
                     },
+                    "xtc.server.compileLibraries": {
+                        "type": "boolean",
+                        "scope": "machine",
+                        "default": true,
+                        "description": "Compile an XDK library's sources as a whole when one of them is opened, so that Go to Definition, hover and references work for every name in it, also in method bodies. The compile takes about 10 seconds when a library's first source opens, and some hundred MB while one stays open; it needs a server heap of at least 1 GB (-Xmx1G). Off: an opened XDK source resolves only its own declarations, imports and type names. Restart to apply."
+                    },
                     "xtc.server.logs": {
                         "type": "object",
                         "scope": "machine",
