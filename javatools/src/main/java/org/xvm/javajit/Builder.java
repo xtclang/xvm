@@ -2443,6 +2443,11 @@ public abstract class Builder {
         //  - Widened -> NullablePrimitive    (Int?|String n narrowed to Int?; f(n) with f(Int?))
         switch (srcFlavor.name() + "->" + dstFlavor.name()) {
         case "Specific->SpecificWithDefault":
+            if (!srcReg.cd().equals(pd.cd) && !srcReg.type().isJitAssignableTo(pd.type)) {
+                generateCheckCast(code, pd.type, ctxSlot);
+            }
+            return;
+
         case "Widened->Specific",
              "Widened->SpecificWithDefault":
             if (!srcReg.cd().equals(pd.cd)) {

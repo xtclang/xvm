@@ -783,9 +783,9 @@ public class BuildContext {
         } else if (!thisType.isJitPrimitive()) {
             RegisterInfo regThis = new SingleSlot(Op.A_THIS, 0, Specific, thisType, CD_this, "thi$");
 
-            // an augmented interface (e.g. Service) can declare the method while every runtime
-            // instance is represented by the corresponding native class (nService)
-            if (thisType.isInterfaceType()) {
+            // interface bodies may need a native-class view of this (e.g. Service -> nService);
+            // native Ref/Var bodies already use their concrete receiver type
+            if (thisType.isInterfaceType() && !thisType.isNativeRef()) {
                 ClassDesc cdValue = builder.getCCDesc(thisType);
                 if (!cdValue.equals(CD_this)) {
                     regThis = new Narrowed(Op.A_THIS, regThis.slots(), thisType, Specific, cdValue,
