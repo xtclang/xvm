@@ -533,6 +533,18 @@ interface DebugRuns {
         path: String,
     ): String? = null
 
+    /**
+     * The 1-based line where [librarySource]'s file for a library's source [path] in its [module] declares the method
+     * [name], as a frame names it, `Class.method`: for a frame of that library's code that has no line of its own, such
+     * as a native method's. Null when the module is not one of the bundled libraries, or its source does not declare
+     * exactly one such method.
+     */
+    fun libraryLine(
+        module: String,
+        path: String,
+        name: String,
+    ): Int? = null
+
     /** The modules of the debugged program, its own and the libraries it uses; none before it starts. */
     fun modules(runId: String): CompletableFuture<List<ModuleState>> = CompletableFuture.completedFuture(emptyList())
 

@@ -2313,11 +2313,11 @@ class XdkAdapter
             val module = module(uri)
             val declaration = module?.document(uri)?.semantics?.definitionLocationAt(line, column)
             if (declaration == null) {
-                // as hover, from the library's binary
+                // from the library's binary, which a library source's compile on its own cannot resolve names in
                 return if (isLibraryDocument(uri)) {
                     libraryQuery("library-definition", uri) { XdkLibrarySources.definition(uri, line, column) }
                         .join()
-                        ?.let { locationOf(uri, it.toRange()) }
+                        ?.let { locationOf(it.sourceName ?: uri, it.range.toRange()) }
                 } else {
                     null
                 }
