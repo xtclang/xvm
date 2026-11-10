@@ -18,7 +18,7 @@ internal object ProcessDirectories {
         val temporary = Path.of(System.getProperty("java.io.tmpdir"))
         return SessionLock.guard(temporary.resolve(".${prefix}lock")).use { guard ->
             Files.createTempDirectory(temporary, prefix).also { directory ->
-                val lock = SessionLock.hold(directory)
+                val lock = SessionLock.hold(directory, SessionLock.beside(directory))
                 Runtime.getRuntime().addShutdownHook(
                     Thread(
                         {
@@ -44,11 +44,12 @@ internal object ProcessDirectories {
 
     /**
      * Deletes [directory] and the files in it, each made writable first, since a read-only file is what Windows does
-     * not delete. Returns whether it is gone.
+     * not delete, and then its lock file [SessionLock.beside] it. Returns whether the directory is gone.
      */
     internal fun delete(directory: Path): Boolean =
         directory
             .toFile()
             .walkBottomUp()
             .fold(true) { deleted, file -> file.setWritable(true) && file.delete() && deleted }
+            .also { SessionLock.beside(directory).toFile().delete() }
 }
