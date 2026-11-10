@@ -1232,11 +1232,12 @@ editor, which its probe never measured (the probe item below).
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
 - [ ] #693 takes errs' XDK source work of 2026-11-10 as two commits after its commit 277: `f01e6e24c8`
-  and `7482c37cae` as one, `45e1bb70ec` as the next. Planned, checked to apply in that order, not
-  carried out (see "errs' XDK source work of 2026-11-10" in
-  [the integration plan](errs-integration-plan.md)).
-- [ ] A master PR for errs `8f650fe08c` alone, `XtcVersionSanityTest`'s projects under `@TempDir`, at
-  the user's go-ahead; #693 takes it from master.
+  and `7482c37cae` as 278 (`c9be92b5f8`), and `45e1bb70ec` as 279 (`2afb23929a`). Made and
+  validated, not pushed (see "errs' XDK source work of 2026-11-10" in
+  [the integration plan](errs-integration-plan.md)). To do: push, at the user's go-ahead.
+- [ ] A master PR for errs `8f650fe08c` alone, `XtcVersionSanityTest`'s projects under `@TempDir`:
+  branch `lagergren/xtc-version-test-tempdir` (`f8242a0a38` on master `973268d2a0`). To do: open
+  it, at the user's go-ahead; #693 takes it from master.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
   when the user decided that #693 takes everything that completes the LSP and DAP implementation,
   distilled per feature, without tracking documents or plans. Last synchronized 2026-11-09: #693's
