@@ -80,8 +80,8 @@ internal object XdkLibraries {
     internal val directory: File get() = shared.directory
 
     /**
-     * [directory], which every server of the bundle shares and holds a shared [SessionLock] on while it runs; it stays
-     * for the next one. Making it, a server deletes those of other bundles that no process holds ([SessionLock.unheld]),
+     * [directory], which every server of the bundle shares and holds a shared [SessionLock] on, [SessionLock.beside]
+     * it, while it runs; it stays for the next one. Making it, a server deletes those of other bundles that no process holds ([SessionLock.unheld]),
      * which servers of other builds left.
      */
     private val shared by lazy {
@@ -96,8 +96,13 @@ internal object XdkLibraries {
                 if (!File(dir, COMPLETE).isFile) dir.deleteRecursively()
                 if (!staging.renameTo(dir)) staging.deleteRecursively()
             }
-            val lock = SessionLock.share(dir.toPath())
-            if (guard != null) SessionLock.unheld(dir.toPath(), "$PREFIX*").forEach { it.toFile().deleteRecursively() }
+            val lock = SessionLock.share(SessionLock.beside(dir.toPath()))
+            if (guard != null) {
+                SessionLock.unheld(dir.toPath(), "$PREFIX*").forEach {
+                    it.toFile().deleteRecursively()
+                    Files.deleteIfExists(SessionLock.beside(it))
+                }
+            }
             Shared(dir, lock)
         }
     }
