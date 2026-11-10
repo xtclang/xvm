@@ -1446,8 +1446,12 @@ class XtcDebugServer(
         StackFrame().apply {
             id = frame.id
             name = frame.name
-            // a bundled library's frame is shown in the source its code was compiled from
-            val shown = frame.module?.let { module -> frame.source?.let { runs.librarySource(module, it) } } ?: frame.path
+            // a bundled library's frame is shown in the source its code was compiled from, and a frame of its method that
+            // has no line of its own, such as a native method's, at that method's declaration there
+            val module = frame.module
+            val sourcePath = frame.source
+            val library = if (module != null && sourcePath != null) runs.librarySource(module, sourcePath) else null
+            val shown = library ?: frame.path
             shown?.let { file ->
                 source =
                     Source().apply {
@@ -1455,7 +1459,13 @@ class XtcDebugServer(
                         name = File(file).name
                     }
             }
-            line = frame.line + lineBase
+            val declared =
+                if (module != null && sourcePath != null && library != null && frame.line == 0) {
+                    runs.libraryLine(module, sourcePath, frame.name)
+                } else {
+                    null
+                }
+            line = (declared ?: frame.line) + lineBase
             column = if (shown == null) 0 else 1 + columnBase
             canRestart = frame.restartable
         }
