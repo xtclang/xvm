@@ -21,6 +21,8 @@ import java.util.function.Predicate;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ModuleStructure;
 
+import static org.xvm.javajit.TypeSystem.getJitSuffix;
+
 import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.require;
 
@@ -159,8 +161,13 @@ public class ModuleLoader
                 File       file        = new File(dir, fileName + ".jasm");
 
                 try (PrintStream out = new PrintStream(new FileOutputStream(file))) {
-                    out.println("\n**** " + (isInterface ? "interface " : "class ") +
-                            className.replace('/', '.'));
+                    out.print("\n**** " + (isInterface ? "interface " : "class ") + fileName);
+
+                    int typeId = getJitSuffix(className);
+                    if (typeId >= 0) {
+                        out.print(" (" + typeSystem.pool().getConstant(typeId).getValueString() + ')');
+                    }
+                    out.println();
 
                     model.superclass().ifPresent(ce ->
                             out.println("Extends: " + ce.asInternalName().replace('/', '.')));
