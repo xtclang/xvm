@@ -487,6 +487,7 @@ class XdkAdapter
                     }
                 result.whenComplete { _, _ -> if (result.isCancelled) compiles.remove(task) }
                 compiles.execute(task.ready())
+                yieldCopyCompiles()
                 result
             }
 
@@ -657,6 +658,9 @@ class XdkAdapter
                 project.scope(uri)?.let {
                     return it
                 }
+                XdkSources.file(uri)?.let { copyScope(uri, it) }?.let {
+                    return it
+                }
                 val root = XdkSources.moduleRoot(uri, overlays)
                 if (root == XdkSources.file(uri)) {
                     scopes[uri] ?: root?.toURI()?.toString() ?: uri
@@ -665,6 +669,37 @@ class XdkAdapter
                 }
             }
 
+        /**
+         * Called under lifecycle. The scope of [uri] when it is a library source's read-only copy: its whole library,
+         * whose sources [XdkLibrarySources.libraryRoot] writes beside it, unless [compilesLibraries] says not to, or
+         * the copy itself, compiled on its own; null for any other file.
+         */
+        private fun copyScope(
+            uri: String,
+            file: File,
+        ): String? {
+            if (!XdkLibrarySources.isCopy(uri)) return null
+            val library = if (compilesLibraries()) XdkLibrarySources.libraryRoot(file) else null
+            return library?.toURI()?.toString() ?: scopes[uri] ?: file.toURI().toString()
+        }
+
+        /**
+         * Called under lifecycle. Whether a copy is compiled with its whole library: the setting says so and the heap
+         * fits the compile. A heap that does not is logged, once.
+         */
+        private fun compilesLibraries(): Boolean {
+            if (!XdkLibrarySources.compilesLibraries()) return false
+            if (XdkLibrarySources.fitsLibraries()) return true
+            if (!smallHeapLogged) {
+                smallHeapLogged = true
+                logger.warn(
+                    "XDK sources compile each on their own: a library's whole compile needs a maximum heap of 1 GB, and this server has {} MB",
+                    Runtime.getRuntime().maxMemory() shr 20,
+                )
+            }
+            return false
+        }
+
         /** One operation's ownership view; canonicalize each open path once, without a stale cache. */
         internal fun analysisScopes(uris: Collection<String>): Map<String, String> =
             synchronized(lifecycle) {
@@ -672,7 +707,7 @@ class XdkAdapter
                 val openFiles = overlays.keys.mapNotNull(files::get).toSet()
                 uris.associateWith { uri ->
                     val file = files[uri]
-                    file?.let(project::scope) ?: file?.let {
+                    file?.let(project::scope) ?: file?.let { copyScope(uri, it) } ?: file?.let {
                         val root = XdkSources.moduleRoot(it, openFiles)
                         if (root == file) scopes[uri] ?: root.toURI().toString() else root.toURI().toString()
                     } ?: uri
@@ -800,17 +835,54 @@ class XdkAdapter
                 return CompletableFuture.completedFuture(CompilationResult.success(uri, emptyList()))
             }
             updateDocument(uri, content)
-            val submission =
+            val (request, submission) =
                 synchronized(lifecycle) {
                     if (closed) return closedAdapter()
                     overlays[uri] = content
                     val scope = analysisScope(uri)
                     scopes[uri] = scope
-                    submit(scope, uri, retire = true)
+                    // a library's copies never change, so one compile of it serves each of them while one is open
+                    val shared =
+                        requests[scope]?.takeIf {
+                            XdkLibrarySources.isCopy(scope) && !it.result.isCancelled && !it.result.isCompletedExceptionally
+                        }
+                    val submission = if (shared == null) submit(scope, uri, retire = true) else null
+                    (shared ?: checkNotNull(submission).request) to submission
                 }
-            submission.retired.forEach { it.result.cancel(false) }
-            submission.obsoleteQueries.forEach { it.result.cancel(false) }
-            return submission.request.result
+            submission?.retired?.forEach { it.result.cancel(false) }
+            submission?.obsoleteQueries?.forEach { it.result.cancel(false) }
+            return if (XdkLibrarySources.isCopy(request.scope)) copyResult(request, uri) else request.result
+        }
+
+        /**
+         * The result for the copy [uri] of [request], the compile that it shares with its library's other copies. The
+         * server cancels a scope's previous result when another of its documents opens, which must not cancel the
+         * compile; closing the last copy does ([closeDocumentAndRefresh]).
+         */
+        private fun copyResult(
+            request: Request,
+            uri: String,
+        ): CompletableFuture<CompilationResult> {
+            val result = CompletableFuture<CompilationResult>()
+            request.result.whenComplete { _, failure ->
+                val analysis = completed[request.scope]
+                when {
+                    failure == null && analysis != null ->
+                        result.complete(
+                            CompilationResult.withDiagnostics(
+                                uri,
+                                reported(uri, analysis.diagnostics),
+                                analysis.document(uri)?.symbols.orEmpty(),
+                                analysis.documentUris,
+                            ),
+                        )
+
+                    failure == null || request.result.isCancelled -> result.cancel(false)
+
+                    else -> result.completeExceptionally(failure)
+                }
+            }
+            return result
         }
 
         /**
@@ -842,9 +914,12 @@ class XdkAdapter
                 Request(
                     scope,
                     uri,
-                    overlays.filterKeys {
-                        overlayScopes[it] in sourceScopes
-                    },
+                    // a library source's read-only copy compiles with its own text, whatever text an editor sends for it
+                    overlays
+                        .filterKeys { overlayScopes[it] in sourceScopes }
+                        .mapValues { (uri, text) ->
+                            if (XdkLibrarySources.isCopy(uri)) XdkLibrarySources.document(uri)?.text ?: text else text
+                        },
                     dependencies,
                     project,
                     discovery.get().problem,
@@ -874,6 +949,7 @@ class XdkAdapter
                         synchronized(lifecycle) {
                             if (scheduled.remove(request) != null && !isStale(request)) {
                                 compiles.execute(request.task.ready())
+                                if (!XdkLibrarySources.isCopy(scope)) yieldCopyCompiles()
                             }
                         }
                     },
@@ -1128,8 +1204,39 @@ class XdkAdapter
             val previous = pending.put(key, request)
             previous?.let { compiles.remove(it.task) }
             compiles.execute(request.task.ready())
+            if (request is QueryRequest && !XdkLibrarySources.isCopy(request.compilation.scope)) yieldCopyCompiles()
             return previous
         }
+
+        /**
+         * Called under lifecycle, after queuing editor work for a project file, which must not wait seconds for an XDK
+         * copy's compile: the compiler runs one compile at a time, as EmbeddingSupport asks of compiles that share its
+         * repository. A copy's compile that runs stops at the compiler's next check for cancellation and runs again
+         * after that work ([requeued]); one that waits moves behind it. A project's queries, which can come many at a
+         * time, wait as before.
+         */
+        private fun yieldCopyCompiles() {
+            runningCopy?.takeUnless { it.preempted }?.let {
+                it.preempted = true
+                it.task.preempted()
+            }
+            requests.values
+                .filter { XdkLibrarySources.isCopy(it.scope) && it.buildCancelled == null && compiles.remove(it.task) }
+                .forEach { compiles.execute(it.task) }
+        }
+
+        /**
+         * Called on the compiler worker when [request] stopped: queues it again, behind the work that preempted it, when
+         * that is why it stopped, and says so; false when it is stale for good.
+         */
+        private fun requeued(request: Request): Boolean =
+            synchronized(lifecycle) {
+                if (!request.preempted || closed || requests[request.scope] !== request || request.result.isDone) return false
+                request.preempted = false
+                compiles.execute(request.task.requeued())
+                logger.info("compile: scope={} yields to a project's work, and compiles after it", request.scope)
+                true
+            }
 
         private fun isStale(request: CursorRequest): Boolean =
             cursors[request.key] !== request ||
@@ -1183,12 +1290,17 @@ class XdkAdapter
         }
 
         private fun runCompilation(request: Request) {
+            val copy = XdkLibrarySources.isCopy(request.scope)
             try {
+                if (copy) synchronized(lifecycle) { runningCopy = request }
                 if (isStale(request)) throw CancellationException()
                 val started = System.nanoTime()
                 val result = compileNow(request)
                 synchronized(lifecycle) {
-                    if (isStale(request)) throw CancellationException()
+                    // a compile that has finished is kept, whatever work has come since to preempt it, and is done with that
+                    if (isSuperseded(request)) throw CancellationException()
+                    if (runningCopy === request) runningCopy = null
+                    request.preempted = false
                     completed[request.scope] = result
                 }
                 logger.info(
@@ -1208,12 +1320,14 @@ class XdkAdapter
                     ),
                 )
             } catch (_: CancellationException) {
-                request.result.cancel(false)
+                if (!requeued(request)) request.result.cancel(false)
             } catch (e: Exception) {
                 request.result.completeExceptionally(e)
             } catch (e: Error) {
                 request.result.completeExceptionally(e)
                 throw e
+            } finally {
+                if (copy) synchronized(lifecycle) { if (runningCopy === request) runningCopy = null }
             }
         }
 
@@ -1261,6 +1375,10 @@ class XdkAdapter
             /** How far this analysis has got in reading its sources; see [readsUnchanged]. */
             @Volatile
             var sources: SourceRead = SourceRead.Pending
+
+            /** Set, on an XDK copy's compile, by a project's work that it must not keep waiting; see [yieldCopyCompiles]. */
+            @Volatile
+            var preempted = false
         }
 
         /** How far an analysis has got in reading its sources from disk and the editor's buffers. */
@@ -1508,6 +1626,8 @@ class XdkAdapter
                 synchronized(lifecycle) {
                     val scope = scopes.remove(uri) ?: analysisScope(uri)
                     overlays.remove(uri)
+                    // a library's compile serves its other open copies, and goes, with the memory it holds, with the last
+                    if (XdkLibrarySources.isCopy(scope) && scope in scopes.values) return emptySet()
                     retireRequests(project.affected(scope)).also {
                         val retained =
                             requests.keys
@@ -1567,7 +1687,10 @@ class XdkAdapter
             if (!compiles.awaitTermination(SHUTDOWN_SECONDS, TimeUnit.SECONDS)) compiles.shutdownNow()
         }
 
-        private fun isStale(request: Request): Boolean =
+        private fun isStale(request: Request): Boolean = isSuperseded(request) || request.preempted
+
+        /** Whether [request] is no longer wanted: preempted only, it is wanted after the work that preempted it. */
+        private fun isSuperseded(request: Request): Boolean =
             request.buildCancelled?.invoke() ?: (requests[request.scope] !== request || request.result.isCancelled)
 
         private fun captureSources(
@@ -1852,7 +1975,14 @@ class XdkAdapter
                 buildMap {
                     compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
                 }
-            val semantics = compilation.compiledSemantics(dependencies, errs, navigation = moduleName != null)
+            val library = XdkLibrarySources.isCopy(request.scope)
+            val semantics =
+                compilation.compiledSemantics(
+                    dependencies,
+                    errs,
+                    navigation = moduleName != null && !library,
+                    library = library,
+                )
             val navigation = semantics.navigation
             val views = semantics.models
             val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
@@ -3037,6 +3167,12 @@ class XdkAdapter
         private val queueTrace = CompilerQueueTrace()
         private val lifecycle = Any()
         private var closed = false
+
+        /** Under lifecycle: the XDK copy's compile that the worker runs now, if one does; see [yieldCopyCompiles]. */
+        private var runningCopy: Request? = null
+
+        /** Under lifecycle: whether [compilesLibraries] has logged that the heap is too small for a library's compile. */
+        private var smallHeapLogged = false
 
         /** Replaced only under lifecycle; each request captures its immutable dependency set. */
         private var dependencies = XdkDependencies(emptyList())

@@ -3,6 +3,7 @@ package org.xtclang.idea.lsp
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
@@ -22,6 +23,15 @@ class ServerRuntimeConfigurable : Configurable {
     private val fileSize = JSpinner(SpinnerNumberModel(10, 1, 100, 1)).apply { name = "xtc.logs.maxFileMb" }
     private val totalSize = JSpinner(SpinnerNumberModel(50, 1, 1000, 1)).apply { name = "xtc.logs.totalSizeMb" }
     private val sessions = JSpinner(SpinnerNumberModel(5, 1, 20, 1)).apply { name = "xtc.logs.retainedSessions" }
+    private val libraries =
+        JBCheckBox("Compile an XDK library as a whole when one of its sources is opened").apply {
+            name = "xtc.lsp.compileLibraries"
+            toolTipText =
+                "Go to Definition, hover and references then work for every name in an XDK source, also in method " +
+                "bodies. The compile takes about 10 seconds when a library's first source opens, and some hundred MB " +
+                "while one stays open; it needs a server heap of at least 1 GB (-Xmx1G). Off: an XDK source resolves " +
+                "only its own declarations, imports and type names."
+        }
     private var original = ServerRuntimeSettings.Options()
 
     override fun getDisplayName(): String = "Ecstasy Server Runtime and Logs"
@@ -47,6 +57,8 @@ class ServerRuntimeConfigurable : Configurable {
                             add(totalSize)
                             add(JBLabel("Retired process sessions to keep"))
                             add(sessions)
+                            add(libraries)
+                            add(JBLabel("Navigation in XDK sources, also in method bodies."))
                             add(JBLabel("Active processes are protected. Old sessions are pruned on server start."))
                             add(JBLabel("Tools → Export Ecstasy Server Logs saves bounded recent logs and status."))
                         },
@@ -83,6 +95,7 @@ class ServerRuntimeConfigurable : Configurable {
             logMaxFileMb = fileSize.value as Int,
             logTotalSizeMb = totalSize.value as Int,
             logRetainedSessions = sessions.value as Int,
+            compileLibraries = libraries.isSelected,
         )
 
     override fun isModified(): Boolean = draft() != original
@@ -94,6 +107,7 @@ class ServerRuntimeConfigurable : Configurable {
         fileSize.value = original.logMaxFileMb
         totalSize.value = original.logTotalSizeMb
         sessions.value = original.logRetainedSessions
+        libraries.isSelected = original.compileLibraries
     }
 
     override fun apply() {
