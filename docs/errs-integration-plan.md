@@ -343,12 +343,13 @@ up four temporary-directory leaks. errs took four commits after `e6952a7596`:
 - What servers left before this, which has no lock file and stays, was deleted by hand on this
   machine: 134 copy, 171 attached-source and 97 bundle directories, and 333 `xtctest*`, about 300 MB.
 
-The plan for #693, at `4f92c01069` (commit 277); not carried out yet:
+The plan for #693, at `4f92c01069` (commit 277), carried out the same day as planned, apart from the
+local branch (see the last point):
 
 | #693 | errs | Subject |
 |---|---|---|
-| 278 | `f01e6e24c8`, `7482c37cae` | Navigate the XDK's library sources: definitions from their names, frames at their methods |
-| 279 | `45e1bb70ec` | Delete the language server's temporary directories once no server needs them |
+| 278, `c9be92b5f8` | `f01e6e24c8`, `7482c37cae` | Navigate the XDK's library sources: definitions from their names, frames at their methods |
+| 279, `2afb23929a` | `45e1bb70ec` | Delete the language server's temporary directories once no server needs them |
 | none | `8f650fe08c` | A master PR of its own; #693 gets it from master, or as commit 280 if the PR is not wanted |
 | none | this record | Stays out, as records do |
 
@@ -369,6 +370,14 @@ The plan for #693, at `4f92c01069` (commit 277); not carried out yet:
   `XtcDebugServerTest`, `ProcessDirectoriesTest`, `ServerLogsTest` and `spotlessCheck` pass; and the
   touched files equal errs'. Pushing errs and #693, both fast-forwards, and opening the master PR wait
   for the user's go-ahead; the result is then recorded here and in the remaining list.
+- Done: the two commits were made in a worktree detached at `4f92c01069`, which left the stale local
+  branch as it was, and so needed no backup. The cherry-picks were clean. Of the 17 files they touch,
+  16 equal errs' and `XtcDebugServer.kt` differs only in #693's class comment. In that fresh worktree
+  `spotlessCheck` passes, and `XdkLibraryDocumentsTest` (3), `XdkLibrarySourcesTest` (1),
+  `ProcessDirectoriesTest` (2), `ServerLogsTest` (7) and `XtcDebugServerTest` (54) pass, none
+  skipped. The master PR's branch, `lagergren/xtc-version-test-tempdir`, is `f8242a0a38`, errs
+  `8f650fe08c` on master `973268d2a0`; there `spotlessCheck` passes, and so does
+  `XtcVersionSanityTest` (10, none skipped). Nothing is pushed yet.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
