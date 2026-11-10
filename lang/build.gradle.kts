@@ -187,8 +187,8 @@ val runIntellijPlugin =
         dependsOn(project(":intellij-plugin").tasks.named("runIde"))
     }
 
-val runVsCodeExtension =
-    tasks.register("runVsCodeExtension") {
+val runVsCodePlugin =
+    tasks.register("runVsCodePlugin") {
         group = "run"
         description = "Launch VS Code with the XTC extension loaded for testing"
         dependsOn(project(":vscode-extension").tasks.named("runCode"))
