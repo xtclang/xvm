@@ -311,6 +311,19 @@ written on 2026-11-09.
   `backup/errs-pre-rebase-20261109` (`4c851d0c2e`) and `backup/693-pre-rebase-20261109`
   (`d671236571`), are kept.
 
+**#693 synchronized with errs (2026-11-10).** errs took five IDE build-task commits after its rebase,
+and #693 takes them as one aggregate, its commit 277, `4f92c01069`.
+
+- The five: `1ad1f2ec21` (vsce's file tree with `--info` only), `aeaca8b9ca` and `ae5d29ac56`
+  (`:lang:assembleIdePlugins`, which builds both installable packages, prints their paths and,
+  with `-PidePluginsDir`, copies them into one directory), `43f315ebe3` (`runVsCodeExtension`
+  renamed `runVsCodePlugin`) and `d3d5893547` (`:lang:installIntellijPlugin`, which installs the
+  plugin and LSP4IJ into the closed IntelliJ IDE that `org.xtclang.idea.home` names). The aggregate's
+  five files are errs' exactly. errs' `7655edfc25`, a record, stays out of #693.
+- On #693, build-logic's plugin validation, `IntellijInstallationTest` and `spotlessCheck` pass, and
+  the three new tasks resolve to their subprojects' tasks.
+- errs was pushed to `d3d5893547` and #693 to `4f92c01069`; CI runs on #693 after the push.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
