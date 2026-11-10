@@ -10,6 +10,7 @@ import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.MultiMethodConstant
 import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.adapter.SymbolMoniker
+import org.xvm.lsp.util.ProcessDirectories
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -52,12 +53,9 @@ internal object XdkLibrarySources {
         }
     }
 
-    /** The folder of the read-only copies, which the JVM deletes when it exits. */
-    private val directory by lazy {
-        Files.createTempDirectory("xtc-library-sources-").also {
-            Runtime.getRuntime().addShutdownHook(Thread({ deleteCopies(it) }, "xtc-library-sources-cleanup"))
-        }
-    }
+    /** The folder of the read-only copies, deleted when this process exits, or by the next server if it is killed. */
+    private val directory by lazy { ProcessDirectories.create("xtc-library-sources-") }
+
     private val sources = ConcurrentHashMap<String, SourceFile>()
 
     /** The read-only files of the bundled sources written so far, by source path. */
@@ -278,16 +276,6 @@ internal object XdkLibrarySources {
             check(file.toFile().setReadOnly()) { "Cannot protect bundled source $path" }
             file.toFile().canonicalFile.toPath()
         }
-
-    /**
-     * Deletes [directory] and the read-only copies in it, each made writable first, which Windows needs to delete
-     * it. Returns whether it is gone.
-     */
-    internal fun deleteCopies(directory: Path): Boolean =
-        directory
-            .toFile()
-            .walkBottomUp()
-            .fold(true) { deleted, file -> file.setWritable(true) && file.delete() && deleted }
 
     /** Use the actual artifact identity, never a name search across library modules. */
     fun declaration(identity: IdentityConstant): DependencyDeclaration? {

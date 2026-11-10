@@ -82,6 +82,24 @@ class ServerLogsTest {
         assertThat(session).doesNotExist()
     }
 
+    @Test fun `a directory that servers share is held while any of them runs, and one nobody holds is unheld`() {
+        val own = Files.createDirectory(root.resolve("xtc-lsp-xdk-1"))
+        val shared = Files.createDirectory(root.resolve("xtc-lsp-xdk-2"))
+        // a server of another build ended, and the system released its lock
+        val ended = Files.createDirectory(root.resolve("xtc-lsp-xdk-3")).also { Files.createFile(it.resolve(SessionLock.NAME)) }
+        // a server wrote it before servers took the lock, so it is never unheld
+        Files.createDirectory(root.resolve("xtc-lsp-xdk-4"))
+        Owner("share").use { first ->
+            Owner("share").use { second ->
+                assertThat(first.reply(shared.toString())).isEqualTo("true")
+                assertThat(second.reply(shared.toString())).describedAs("Servers of one build share it").isEqualTo("true")
+                assertThat(SessionLock.unheld(own, "xtc-lsp-xdk-*")).containsExactly(ended)
+            }
+            assertThat(SessionLock.unheld(own, "xtc-lsp-xdk-*")).describedAs("One server still holds it").containsExactly(ended)
+        }
+        assertThat(SessionLock.unheld(own, "xtc-lsp-xdk-*")).containsExactlyInAnyOrder(shared, ended)
+    }
+
     @Test fun `a server's pruning keeps its own session locked`() {
         Owner("server").use { owner ->
             val session = Path.of(owner.reply())
