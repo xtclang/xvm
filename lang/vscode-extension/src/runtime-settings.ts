@@ -44,3 +44,8 @@ export function runtimeLogOptions(): LogRetention {
 export function runtimeLogArguments(): string[] {
     return Object.entries(runtimeLogOptions()).map(([key, value]) => `-Dxtc.logs.${key}=${value}`);
 }
+/** Whether the server compiles an opened XDK source's whole library, machine-local like the other runtime settings. */
+export function runtimeLibraryArguments(): string[] {
+    const compile = vscode.workspace.getConfiguration('xtc').inspect<boolean>('server.compileLibraries')?.globalValue;
+    return [`-Dxtc.lsp.compileLibraries=${compile !== false}`];
+}

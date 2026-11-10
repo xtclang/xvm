@@ -92,6 +92,21 @@ internal class CompilerQueueTrace {
                     }
                 }
 
+            /** Called when other work preempts this work as it runs, which stops at the compiler's next check for cancellation. */
+            fun preempted() {
+                synchronized(lock) { log(span, "preempted") }
+            }
+
+            /** Called when this work, preempted, is queued again, to run after the work that preempted it. */
+            fun requeued(): Work =
+                apply {
+                    synchronized(lock) {
+                        jobs[span.id] = Job(span, submitted.get(), Phase.QUEUED)
+                        readyOrder += span.id
+                        log(span, "requeued", mapOf("enqueueOrder" to enqueued.incrementAndGet()))
+                    }
+                }
+
             override fun run() {
                 val tracked =
                     synchronized(lock) {

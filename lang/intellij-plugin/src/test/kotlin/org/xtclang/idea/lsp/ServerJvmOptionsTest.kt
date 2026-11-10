@@ -42,4 +42,12 @@ class ServerJvmOptionsTest {
         assertThatThrownBy { store.install(before, before) }.hasMessageContaining("changed")
         assertThat(store.state).isEqualTo(next)
     }
+
+    @Test fun `an opened XDK source is compiled with its whole library unless the setting turns it off`() {
+        val store = ServerRuntimeSettings()
+        val before = store.state
+        assertThat(store.launchArguments()).contains("-Dxtc.lsp.compileLibraries=true")
+        store.install(before, before.copy(compileLibraries = false))
+        assertThat(store.launchArguments()).contains("-Dxtc.lsp.compileLibraries=false").doesNotContain("-Dxtc.lsp.compileLibraries=true")
+    }
 }

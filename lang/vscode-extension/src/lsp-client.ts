@@ -24,7 +24,7 @@ import { attachEmbeddedExecution, endAllRuns } from './embedded-execution';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
-import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
+import { runtimeJvmOptions, runtimeLibraryArguments, runtimeLogArguments } from './runtime-settings';
 import { supportLogs } from './support-logs';
 import { serviceFailure } from './service-notifications';
 
@@ -34,7 +34,7 @@ let activeConnectionKey: string | undefined;
 function connectionKey(): string {
     const settings = readServiceSettings();
     const config = vscode.workspace.getConfiguration('xtc');
-    return JSON.stringify([settings.adapter, settings.textSynchronization, settings.saveFormatting, config.get('java.home', ''), config.get('sourceRoots', []), runtimeJvmOptions(), runtimeLogArguments()]);
+    return JSON.stringify([settings.adapter, settings.textSynchronization, settings.saveFormatting, config.get('java.home', ''), config.get('sourceRoots', []), runtimeJvmOptions(), runtimeLogArguments(), runtimeLibraryArguments()]);
 }
 
 export function connectionSettingsChanged(): boolean { return connectionKey() !== activeConnectionKey; }
@@ -131,7 +131,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     });
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
     const adapterArgs = preferences.adapter === 'default' ? [] : [`-Dxtc.lsp.adapter=${preferences.adapter}`];
-    const jvmArgs = [...runtimeJvmOptions(), ...runtimeLogArguments(), ...adapterArgs, ...buildJvmArgs(serverJar, logLevel)];
+    const jvmArgs = [...runtimeJvmOptions(), ...runtimeLogArguments(), ...runtimeLibraryArguments(), ...adapterArgs, ...buildJvmArgs(serverJar, logLevel)];
 
     outputChannel.appendLine('Starting Ecstasy Language Server...');
     outputChannel.appendLine(`Java: ${javaExecutable}`);
