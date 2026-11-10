@@ -483,7 +483,7 @@ public class PropertyClassTypeConstant
 
     @Override
     public String getValueString() {
-        return m_typeParent.getValueString() + '.' + m_idProp.getName();
+        return getRefType().getValueString();
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
