@@ -1238,14 +1238,16 @@ editor, which its probe never measured (the probe item below).
 - [ ] #764, opened 2026-11-10 at the user's go-ahead: errs `8f650fe08c` alone on master,
   `XtcVersionSanityTest`'s projects under `@TempDir` (branch `lagergren/xtc-version-test-tempdir`,
   `f8242a0a38` on master `973268d2a0`). To do: get it merged; #693 then takes it from master.
-- [ ] #693 takes errs `2e921902ce`, the tours' video and deck named `tour-intellij` and `tour-vscode`,
-  as its commit 280: its three files are the same on #693, and it applies there without conflicts.
-  To do: make, validate and push it, at the user's go-ahead.
+- [x] #693 takes errs `2e921902ce`, the tours' video and deck named `tour-intellij` and `tour-vscode`,
+  as its commit 280, `8d22b98fdc`: a clean cherry-pick whose three files equal errs'. On #693
+  `spotlessCheck` passes and the IntelliJ plugin's integration tests compile; its VS Code sources
+  equal errs', where `tsc` and eslint pass. Pushed on 2026-11-10 at the user's go-ahead.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
   when the user decided that #693 takes everything that completes the LSP and DAP implementation,
   distilled per feature, without tracking documents or plans. Last synchronized 2026-11-10: #693's
-  tip `2afb23929a`, commit 279, has errs' work through `45e1bb70ec`; its commits 277–279 are in the
-  integration plan's records of 2026-11-10. Before that, 2026-11-09: #693's
+  tip `8d22b98fdc`, commit 280, has errs' work through `2e921902ce`, all but `8f650fe08c`, which
+  waits for #764; its commits 277–280 are in the integration plan's records of 2026-11-10. Before
+  that, 2026-11-09: #693's
   tip `ffe34357bb`, commit 276, rebased with errs onto master `8097b66a89` that day, has errs' work
   through the VS Code extension's npm upgrade, errs `623d20c12b`. Its commits 115–276 came from errs
   from 2026-11-04 to 2026-11-09, and both branches were rebased onto master `46a5536e1f` on
