@@ -7,6 +7,7 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.MultiMethodConstant
 import org.xvm.lsp.adapter.ReadOnlyDocument
+import org.xvm.lsp.util.ProcessDirectories
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -16,7 +17,8 @@ import java.util.HexFormat
 
 /** Navigation-only snapshots: attachments never become writable project modules. */
 internal object XdkAttachedSources {
-    private val directory by lazy { Files.createTempDirectory("xtc-attached-sources-") }
+    /** The folder of the snapshots, deleted when this process exits, or by the next server if it is killed. */
+    private val directory by lazy { ProcessDirectories.create("xtc-attached-sources-") }
 
     /**
      * Mapping from dependency symbols to attached source locations and doc comments, and the read-only source

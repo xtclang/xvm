@@ -53,7 +53,9 @@ internal data class LogRetention(
  * the process ends, however it ends. Pruning takes a session whose lock nobody holds for a closed one, whatever the
  * PID and start time in its name say: the start time of a PID is computed by each JVM, which on Linux reads the
  * boot time once, so after a step of the clock two JVMs disagree about it, and a PID can be reused. The lock is
- * advisory on Linux and macOS, which is enough: every server takes and tests it the same way.
+ * advisory on Linux and macOS, which is enough: every server takes and tests it the same way. A server holds the
+ * folder of its library sources' read-only copies the same way, and shares the folder of its bundled libraries with
+ * the other servers of its build, for the same cleanup.
  */
 internal object SessionLock {
     const val NAME = "server.lock"
@@ -76,6 +78,73 @@ internal object SessionLock {
             }
         } catch (_: IOException) {
             null
+        }
+
+    /**
+     * Takes a shared lock on the directory's [NAME] for the rest of this process, creating it, for a directory that
+     * servers use together; null when it cannot. [held] is true of the directory while any process holds it.
+     */
+    fun share(directory: Path): FileLock? =
+        try {
+            val channel = FileChannel.open(directory.resolve(NAME), CREATE, READ, WRITE, NOFOLLOW_LINKS)
+            try {
+                channel.tryLock(0, Long.MAX_VALUE, true).also { if (it == null) channel.close() }
+            } catch (failure: IOException) {
+                channel.close()
+                throw failure
+            }
+        } catch (_: IOException) {
+            null
+        }
+
+    /**
+     * Opens and locks [file], creating it: the lock that servers make their directories of one kind under, and delete
+     * the [unheld] ones, so that no server sees another's directory before that one is held. Closing the channel
+     * releases it. Null when the file system has no locks; then nothing is to be deleted.
+     */
+    fun guard(file: Path): FileChannel? {
+        val channel =
+            try {
+                FileChannel.open(file, CREATE, WRITE, NOFOLLOW_LINKS)
+            } catch (_: IOException) {
+                return null
+            }
+        return try {
+            channel.lock()
+            channel
+        } catch (_: IOException) {
+            channel.close()
+            null
+        } catch (_: OverlappingFileLockException) {
+            channel.close()
+            null
+        }
+    }
+
+    /**
+     * The other directories beside [own] whose names match [glob], which the same user owns and no process holds: those
+     * of servers that ended. One without a lock file, which a server wrote before servers took it, is not among them.
+     * Asked under the [guard] of their kind, whose holder alone makes one.
+     */
+    fun unheld(
+        own: Path,
+        glob: String,
+    ): List<Path> =
+        try {
+            val owner = Files.getOwner(own, NOFOLLOW_LINKS)
+            Files.newDirectoryStream(own.parent, glob).use { entries ->
+                entries.filter { entry ->
+                    entry != own &&
+                        Files.isDirectory(entry, NOFOLLOW_LINKS) &&
+                        Files.getOwner(entry, NOFOLLOW_LINKS) == owner &&
+                        held(entry) == false
+                }
+            }
+        } catch (_: IOException) {
+            emptyList()
+        } catch (_: UnsupportedOperationException) {
+            // a file system without owners
+            emptyList()
         }
 
     /**
