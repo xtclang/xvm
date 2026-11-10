@@ -2,6 +2,8 @@ import com.github.gradle.node.npm.task.NpmTask
 import com.github.gradle.node.task.NodeTask
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import java.io.ByteArrayOutputStream
+import java.io.OutputStream
 
 // Build-classpath security constraint: node-gradle 7.1.0 drags Jackson 2.14.2 onto this
 // project's build classpath. The Jackson BOM raises it to at least the patched version.
@@ -259,6 +261,31 @@ fun registerPackage(
     inputs.files(stage)
     inputs.file(layout.projectDirectory.file("package-lock.json"))
     outputs.file(archive)
+    // vsce prints a tree of every packaged file on stdout and has no option to omit it, so its
+    // stdout shows with --info only; its warnings and errors go to stderr and still show, except
+    // under GitHub Actions, where vsce writes them to stdout as ::warning:: and ::error:: commands
+    execOverrides {
+        val log = Logging.getLogger(NodeTask::class.java)
+        standardOutput =
+            object : OutputStream() {
+                private val line = ByteArrayOutputStream()
+
+                override fun write(b: Int) {
+                    if (b == '\n'.code) flushLine() else line.write(b)
+                }
+
+                override fun close() = flushLine()
+
+                private fun flushLine() {
+                    val text = line.toString(Charsets.UTF_8).trimEnd('\r')
+                    when {
+                        text.startsWith("::") -> log.lifecycle(text)
+                        text.isNotEmpty() -> log.info(text)
+                    }
+                    line.reset()
+                }
+            }
+    }
     doFirst {
         archive
             .get()
