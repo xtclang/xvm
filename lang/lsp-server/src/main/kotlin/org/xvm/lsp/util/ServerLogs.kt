@@ -55,25 +55,36 @@ internal data class LogRetention(
  * boot time once, so after a step of the clock two JVMs disagree about it, and a PID can be reused. The lock is
  * advisory on Linux and macOS, which is enough: every server takes and tests it the same way. A server holds the
  * folder of its library sources' read-only copies the same way, and shares the folder of its bundled libraries with
- * the other servers of its build, for the same cleanup.
+ * the other servers of its build, for the same cleanup, each by a lock file [beside] the folder.
  */
 internal object SessionLock {
     const val NAME = "server.lock"
 
     /**
-     * Locks the directory's [NAME] for the rest of this process, creating both; null when it cannot. A lock file
-     * that cannot be locked, on a file system without locks, is removed, so that pruning judges the session by its
-     * name as it does one written before servers took the lock.
+     * The lock file of a [directory] that other code may read every file of, beside it rather than in it: on Linux and
+     * macOS a process that opens and closes a file it holds a lock on, by any channel or stream, releases the lock. A
+     * compile does so in the library source copies' folder, whose files it reads to fingerprint a module's resources,
+     * which let other servers take a running server's folder for a killed one's and delete it.
      */
-    fun hold(directory: Path): FileLock? =
+    fun beside(directory: Path): Path = directory.resolveSibling("${directory.fileName}.lock")
+
+    /**
+     * Locks [lock], by default the directory's [NAME], for the rest of this process, creating the directory and the
+     * lock file; null when it cannot. A lock file that cannot be locked, on a file system without locks, is removed,
+     * so that pruning judges the session by its name as it does one written before servers took the lock.
+     */
+    fun hold(
+        directory: Path,
+        lock: Path = directory.resolve(NAME),
+    ): FileLock? =
         try {
             Files.createDirectories(directory)
-            val channel = FileChannel.open(directory.resolve(NAME), CREATE, WRITE, NOFOLLOW_LINKS)
+            val channel = FileChannel.open(lock, CREATE, WRITE, NOFOLLOW_LINKS)
             try {
                 channel.tryLock().also { if (it == null) channel.close() }
             } catch (failure: IOException) {
                 channel.close()
-                Files.deleteIfExists(directory.resolve(NAME))
+                Files.deleteIfExists(lock)
                 throw failure
             }
         } catch (_: IOException) {
@@ -81,12 +92,12 @@ internal object SessionLock {
         }
 
     /**
-     * Takes a shared lock on the directory's [NAME] for the rest of this process, creating it, for a directory that
-     * servers use together; null when it cannot. [held] is true of the directory while any process holds it.
+     * Takes a shared lock on [lock] for the rest of this process, creating it, for a directory that servers use
+     * together; null when it cannot. [held] is true of the directory while any process holds it.
      */
-    fun share(directory: Path): FileLock? =
+    fun share(lock: Path): FileLock? =
         try {
-            val channel = FileChannel.open(directory.resolve(NAME), CREATE, READ, WRITE, NOFOLLOW_LINKS)
+            val channel = FileChannel.open(lock, CREATE, READ, WRITE, NOFOLLOW_LINKS)
             try {
                 channel.tryLock(0, Long.MAX_VALUE, true).also { if (it == null) channel.close() }
             } catch (failure: IOException) {
@@ -122,9 +133,9 @@ internal object SessionLock {
     }
 
     /**
-     * The other directories beside [own] whose names match [glob], which the same user owns and no process holds: those
-     * of servers that ended. One without a lock file, which a server wrote before servers took it, is not among them.
-     * Asked under the [guard] of their kind, whose holder alone makes one.
+     * The other directories beside [own] whose names match [glob], which the same user owns and whose lock [beside]
+     * them no process holds: those of servers that ended. One without that lock file, which a server wrote before
+     * servers took it there, is not among them. Asked under the [guard] of their kind, whose holder alone makes one.
      */
     fun unheld(
         own: Path,
@@ -137,7 +148,7 @@ internal object SessionLock {
                     entry != own &&
                         Files.isDirectory(entry, NOFOLLOW_LINKS) &&
                         Files.getOwner(entry, NOFOLLOW_LINKS) == owner &&
-                        held(entry) == false
+                        held(entry, beside(entry)) == false
                 }
             }
         } catch (_: IOException) {
@@ -148,12 +159,14 @@ internal object SessionLock {
         }
 
     /**
-     * Whether a process holds the session's lock, or null when the session has no lock file, as one written before
-     * servers took it, or its lock cannot be tested. A process must not ask about a session it holds: on Linux and
-     * macOS, closing any channel to the file releases the process's locks on it.
+     * Whether a process holds the session's lock, [lock], by default its [NAME], or null when the session has no lock
+     * file, as one written before servers took it, or its lock cannot be tested. A process must not ask about a session
+     * it holds: on Linux and macOS, closing any channel to the file releases the process's locks on it.
      */
-    fun held(directory: Path): Boolean? {
-        val lock = directory.resolve(NAME)
+    fun held(
+        directory: Path,
+        lock: Path = directory.resolve(NAME),
+    ): Boolean? {
         if (!Files.isRegularFile(lock, NOFOLLOW_LINKS)) return null
         return try {
             FileChannel.open(lock, WRITE, NOFOLLOW_LINKS).use { channel ->
