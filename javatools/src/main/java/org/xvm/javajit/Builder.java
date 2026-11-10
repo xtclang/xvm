@@ -65,7 +65,7 @@ import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 
-import static org.xvm.javajit.TypeSystem.HASH;
+import static org.xvm.javajit.TypeSystem.addJitSuffix;
 
 /**
  * Base class for JIT class builders.
@@ -177,8 +177,8 @@ public abstract class Builder {
             // we need to generate a synthetic super
             cd         = getThisCD(bctx);
             isIface    = false;
-            methodName = MethodInfo.getJitIdentity(bctx.callChain, 0).ensureJitMethodName(typeSystem)
-                            + HASH + depth;
+            methodName = addJitSuffix(MethodInfo.getJitIdentity(bctx.callChain, 0)
+                                                .ensureJitMethodName(typeSystem), depth);
             bctx.buildSuper(methodName, depth);
         } else {
             TypeConstant type = bctx.isSpecialized

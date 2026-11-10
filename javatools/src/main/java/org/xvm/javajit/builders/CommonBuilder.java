@@ -83,8 +83,8 @@ import static java.lang.constant.ConstantDescs.MTD_void;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
-import static org.xvm.javajit.TypeSystem.HASH;
-
+import static org.xvm.javajit.TypeSystem.addJitSuffix;
+import static org.xvm.javajit.TypeSystem.removeJitSuffix;
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyList;
 
@@ -4682,7 +4682,7 @@ public class CommonBuilder
                             ? getImplDesc(typeTarget)
                             : cdReceiver;
                     String validatorName = depth > 0 && isEmbedded(format)
-                            ? validator.ensureJitMethodName(typeSystem) + HASH + depth
+                            ? addJitSuffix(validator.ensureJitMethodName(typeSystem), depth)
                             : validatorId.ensureJitMethodName(typeSystem);
 
                     code.aload(ctxSlot)
@@ -4779,7 +4779,7 @@ public class CommonBuilder
             for (int depth = 1; depth < chain.length; depth++) {
                 Format format = chain[depth].getIdentity().getNamespace().getComponent().getFormat();
                 if (isEmbedded(format)) {
-                    bctx.buildSuper(jitName + HASH + depth, depth);
+                    bctx.buildSuper(addJitSuffix(jitName, depth), depth);
                 }
             }
         }
@@ -4837,12 +4837,7 @@ public class CommonBuilder
     }
 
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
-        String className = bctx.className;
-        int    baseIndex = TypeSystem.findJitSuffix(className);
-        if (baseIndex > 0) {
-            className = className.substring(0, baseIndex);
-        }
-
+        String className = removeJitSuffix(bctx.className);
         if (Arrays.stream(NO_JIT_LIST).noneMatch(className::endsWith)) {
             // use the enclosing Ecstasy method name to cover all overloads and nested lambdas
             MethodConstant methodId = bctx.methodStruct.getIdentityConstant();

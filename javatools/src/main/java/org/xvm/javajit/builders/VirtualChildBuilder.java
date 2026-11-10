@@ -40,8 +40,7 @@ import org.xvm.javajit.TypeSystem.Artifact;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
-
-import static org.xvm.javajit.TypeSystem.HASH;
+import static org.xvm.javajit.TypeSystem.addJitSuffix;
 
 /**
  * Builds virtual children using the effective parent composition.
@@ -264,8 +263,8 @@ public class VirtualChildBuilder extends CommonBuilder {
 
         if (isEmbedded(targetType.getExplicitClassFormat())) {
             // an embedded super body must retain the detached receiver, which can be an interface
-            String name = DetachedBody + MethodInfo.getJitIdentity(bctx.callChain, 0)
-                    .ensureJitMethodName(typeSystem) + HASH + depth;
+            String name = addJitSuffix(DetachedBody + MethodInfo.getJitIdentity(bctx.callChain, 0)
+                                                                .ensureJitMethodName(typeSystem), depth);
             bctx.buildSuper(name, depth);
             return new JitCallDesc(art.CD(), name, body.getJitDesc(this, thisType), Kind.Static,
                     false, detached.receiverCD);
