@@ -324,6 +324,52 @@ and #693 takes them as one aggregate, its commit 277, `4f92c01069`.
   the three new tasks resolve to their subprojects' tasks.
 - errs was pushed to `d3d5893547` and #693 to `4f92c01069`; CI runs on #693 after the push.
 
+**errs' XDK source work of 2026-11-10, and its plan for #693.** In a `runIde` session, Go to
+Definition found nothing in the read-only copy of `ecstasy/mgmt/Container.x`, and the debugger
+opened the stack frame of `Container.Control.invoke` at the top of that file. Looking into it turned
+up four temporary-directory leaks. errs took four commits after `e6952a7596`:
+
+- `f01e6e24c8`: Go to Definition from a library source's imports and type names, resolved in the
+  library's binary (`LibraryReferences.kt`), since the copy's compile on its own cannot resolve
+  them. Compiling each library as a whole, for everything else in the copy, is open in
+  [the remaining list](remaining.md#navigation-inside-the-xdks-library-sources).
+- `7482c37cae`: a library frame with line 0, such as that of a native method, at its method's
+  declaration in the bundled source (`DebugRuns.libraryLine`).
+- `45e1bb70ec`: the copies and the attached-source snapshots in directories that each server holds a
+  lock on and deletes on exit, and that the next server deletes once a killed one leaves them
+  (`ProcessDirectories`); the bundle directory, kept for the next server of the build, under a shared
+  lock, and other builds' that nobody holds deleted.
+- `8f650fe08c`: javatools' `XtcVersionSanityTest` writes its projects under `@TempDir`.
+- What servers left before this, which has no lock file and stays, was deleted by hand on this
+  machine: 134 copy, 171 attached-source and 97 bundle directories, and 333 `xtctest*`, about 300 MB.
+
+The plan for #693, at `4f92c01069` (commit 277); not carried out yet:
+
+| #693 | errs | Subject |
+|---|---|---|
+| 278 | `f01e6e24c8`, `7482c37cae` | Navigate the XDK's library sources: definitions from their names, frames at their methods |
+| 279 | `45e1bb70ec` | Delete the language server's temporary directories once no server needs them |
+| none | `8f650fe08c` | A master PR of its own; #693 gets it from master, or as commit 280 if the PR is not wanted |
+| none | this record | Stays out, as records do |
+
+- 278 joins the two because they are one change to a reviewer: the XDK's sources, as navigation and
+  stack frames open them, become usable, in `XdkLibrarySources` and its tests. 279 stays apart: the
+  lifecycle of three kinds of directory, with tests of its own, one of them not a source directory.
+  `8f650fe08c` changes a test that master has, unchanged; it is master's to take, like #755.
+- Checked with `git merge-tree` on 2026-11-10: in this order the three apply to `4f92c01069`
+  without conflicts. `45e1bb70ec` alone conflicts in `XdkLibrarySourcesTest`, beside
+  `7482c37cae`'s case, so the order stays. Every file they touch was the same on errs and #693
+  before them, except `XtcDebugServer.kt`'s class comment, which #693's `024dd72b2a` changed, away
+  from these changes.
+- Steps: a worktree at `origin/errs/full-testable-lsp-20261009`; the local branch of that name is
+  stale (`f74fc9ad02`, diverged), so it is reset to the remote tip after a
+  `backup/693-pre-sync-20261110`. `git cherry-pick -n f01e6e24c8 7482c37cae` and one commit whose
+  message joins both reports; `git cherry-pick 45e1bb70ec`. Validation stays light: lsp-server and
+  dap-server compile with their tests; `XdkLibraryDocumentsTest`, `XdkLibrarySourcesTest`,
+  `XtcDebugServerTest`, `ProcessDirectoriesTest`, `ServerLogsTest` and `spotlessCheck` pass; and the
+  touched files equal errs'. Pushing errs and #693, both fast-forwards, and opening the master PR wait
+  for the user's go-ahead; the result is then recorded here and in the remaining list.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
