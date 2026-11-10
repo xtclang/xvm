@@ -380,8 +380,11 @@ local branch (see the last point):
   `XtcVersionSanityTest` (10, none skipped).
 - Pushed on 2026-11-10 at the user's go-ahead, both fast-forwards: #693 from `4f92c01069` to
   `2afb23929a`, and errs to `2e921902ce`, which also has the tours' video and deck named
-  `tour-intellij` and `tour-vscode` (#693 has not taken that yet). The master branch was pushed and
-  opened as #764.
+  `tour-intellij` and `tour-vscode`. The master branch was pushed and opened as #764.
+- #693 then took `2e921902ce` as its commit 280, `8d22b98fdc`, a clean cherry-pick whose three files
+  equal errs'. On #693 `spotlessCheck` passes and the IntelliJ plugin's integration tests compile;
+  its VS Code sources equal errs', where `tsc` and eslint pass. Pushed at the user's go-ahead, from
+  `2afb23929a` to `8d22b98fdc`.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
