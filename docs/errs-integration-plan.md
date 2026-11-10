@@ -385,6 +385,15 @@ local branch (see the last point):
   equal errs'. On #693 `spotlessCheck` passes and the IntelliJ plugin's integration tests compile;
   its VS Code sources equal errs', where `tsc` and eslint pass. Pushed at the user's go-ahead, from
   `2afb23929a` to `8d22b98fdc`.
+- CI on `8d22b98fdc` failed (run 42854314561): five lsp-server tests lost their library source
+  copies, since XdkStdioTest's servers had swept two live test forks' copy directories. A compile
+  fingerprinting a module's resources had read the fork's own lock file, which was in the directory,
+  and on Linux and macOS closing any descriptor of a file releases the process's locks on it.
+  Reproduced locally with `:lang:lsp-server:test` and `compilerStdioTest` together, as CI's build
+  runs them, by logging each sweep. errs `663ea7cad4` keeps the lock beside the directory; with it
+  both suites pass together, 2,496 tests and 83, on errs and, as #693's commit 281 (`2e5854af45`,
+  whose `lang/lsp-server/src` equals errs'), on #693. #764 was not affected: it changes only
+  `XtcVersionSanityTest`, and its CI passes.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
