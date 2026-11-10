@@ -168,9 +168,17 @@ public class ChildInfo {
             Set<IdentityConstant> setIds = new HashSet<>(this.f_setIds);
             setIds.addAll(that.f_setIds);
             return new ChildInfo(child, access, setIds);
-        } else {
-            return null;
         }
+
+        // a class's own Inner covers the implicit Outer.Inner, which is no super virtual child
+        IdentityConstant idInner = getComponent().getConstantPool().clzInner();
+        if (this.getIdentity().equals(idInner)) {
+            return that;
+        }
+        if (that.getIdentity().equals(idInner)) {
+            return this;
+        }
+        return null;
     }
 
     // ----- Object methods ------------------------------------------------------------------------

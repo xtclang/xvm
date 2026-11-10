@@ -6,6 +6,7 @@ module TestInnerOuter {
         testStaticIface();
         testAnonInner();
         testFunky();
+        testChildNamedInner();
     }
 
     interface IfaceOuter {
@@ -152,5 +153,68 @@ module TestInnerOuter {
         Parent<String>.Child c1 = p.new Child("hello");
         Parent<String>.Child c2 = p.new Child("world");
         assert c1 > c2;
+    }
+
+    // a class with a virtual child implicitly implements ecstasy.reflect.Outer, whose own Inner
+    // must not collide with a child of the class named Inner
+    class Holder(String text) {
+        class Inner {
+            String textByOuter.get() {
+                return outer.text;
+            }
+        }
+    }
+
+    class Shelf(String label) {
+        static const Inner(Int size);
+
+        class Drawer {
+            String labelByOuter.get() {
+                return outer.label;
+            }
+        }
+    }
+
+    // a subclass's @Override of an inherited Inner overrides it, as for any virtual child
+    class Box {
+        class Inner {
+            String kind() {
+                return "box";
+            }
+        }
+    }
+
+    class Crate extends Box {
+        @Override
+        class Inner {
+            @Override
+            String kind() {
+                return "crate";
+            }
+        }
+    }
+
+    void testChildNamedInner() {
+        console.print("\n** testChildNamedInner()");
+
+        Holder       holder = new Holder("Held");
+        Holder.Inner inner  = holder.new Inner();
+        assert inner.textByOuter == "Held";
+        assert inner.outer.text == "Held";
+        // console.print($"inner.textByOuter={inner.textByOuter}");
+
+        Shelf.Inner item = new Shelf.Inner(3);
+        assert item.size == 3;
+
+        Shelf        shelf  = new Shelf("Top");
+        Shelf.Drawer drawer = shelf.new Drawer();
+        assert drawer.labelByOuter == "Top";
+        // console.print($"item={item}, drawer.labelByOuter={drawer.labelByOuter}");
+
+        Box box = new Box();
+        assert box.new Inner().kind() == "box";
+        Box crate = new Crate();
+        assert crate.new Inner().kind() == "crate";
+        // console.print($"box={box.new Inner().kind()}, crate={crate.new Inner().kind()}");
     }
 }
