@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,6 +27,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class XtcVersionSanityTest {
 
     private static final Pattern CATALOG_XTC_VERSION = Pattern.compile("xtc = \"([^\"]+)\"");
+
+    /** The generated projects' parent, which JUnit deletes after each test. */
+    @TempDir
+    Path projects;
 
     // ---- version validation: real release AND snapshot are both valid ----
 
@@ -136,7 +141,7 @@ class XtcVersionSanityTest {
 
     // ---- helpers ----
 
-    private static String catalogFor(String xtcVersion) throws Exception {
+    private String catalogFor(String xtcVersion) throws Exception {
         var projectPath = newProjectDir();
         var creator =
             new XtcProjectCreator(projectPath, XtcProjectCreator.ProjectType.APPLICATION, false, xtcVersion, null);
@@ -146,8 +151,8 @@ class XtcVersionSanityTest {
     }
 
     /** A fresh, empty project directory with a module-name-safe leaf (no hyphens). */
-    private static Path newProjectDir() throws Exception {
-        return Files.createTempDirectory("xtctest").resolve("app");
+    private Path newProjectDir() throws Exception {
+        return Files.createTempDirectory(projects, "xtctest").resolve("app");
     }
 
     private static String pinnedXtcVersion(String catalog) {
