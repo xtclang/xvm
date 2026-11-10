@@ -194,13 +194,43 @@ val runVsCodePlugin =
         dependsOn(project(":vscode-extension").tasks.named("runCode"))
     }
 
-// Both IDE plugins as installable packages, whether or not they are attached to lang's build
+// Called from task configuration only: the subprojects' tasks do not exist yet when this script runs
+fun idePluginPackages() =
+    files(
+        project(":intellij-plugin").tasks.named("buildPlugin"),
+        project(":vscode-extension").tasks.named("packageExtension"),
+    )
+
+// in a composite, only the outermost build's start parameter has the directory gradlew runs in
+val idePluginsDir =
+    generateSequence(gradle) { it.parent }.last().startParameter.currentDir.let { invocationDir ->
+        providers.gradleProperty("idePluginsDir").map { invocationDir.resolve(it) }
+    }
+
+// Copy rather than Sync, since Sync would delete whatever else is in a directory the user names
+val copyIdePlugins =
+    tasks.register<Copy>("copyIdePlugins") {
+        description = "Copy the IDE plugin packages into -PidePluginsDir=<dir>"
+        from(idePluginPackages())
+        into(idePluginsDir)
+    }
+
+// Both IDE plugins as installable packages, whether or not they are attached to lang's build. They
+// stay in each project's build/distributions, and -PidePluginsDir=<dir> also copies them into <dir>,
+// created if missing; a relative <dir> is taken from the directory gradlew runs in. Either way, the
+// task ends by printing each package's full path.
 val assembleIdePlugins =
     tasks.register("assembleIdePlugins") {
         group = "build"
         description =
-            "Assemble the IntelliJ plugin (intellij-plugin/build/distributions/*.zip) and the " +
-            "VS Code extension (vscode-extension/build/distributions/*.vsix)"
-        dependsOn(project(":intellij-plugin").tasks.named("buildPlugin"))
-        dependsOn(project(":vscode-extension").tasks.named("packageExtension"))
+            "Assemble the IntelliJ plugin zip and the VS Code extension vsix, and copy them into " +
+            "-PidePluginsDir=<dir> if given"
+        val packages = idePluginPackages()
+        val destination = idePluginsDir.orNull
+        dependsOn(packages)
+        if (destination != null) dependsOn(copyIdePlugins)
+        doLast {
+            val paths = packages.files.map { destination?.resolve(it.name) ?: it }
+            logger.lifecycle(paths.joinToString("\n", "Installable IDE plugins:\n") { "  ${it.absolutePath}" })
+        }
     }
