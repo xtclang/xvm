@@ -82,6 +82,9 @@ internal object XdkLibrarySources {
 
         // as monikers, with copied text only
         val hovers by lazy { declarationHovers(this) }
+
+        // parsed, with no compiler objects
+        val references by lazy { libraryReferences(document.text, path) }
     }
 
     private fun source(uri: String): SourceFile? {
@@ -133,12 +136,29 @@ internal object XdkLibrarySources {
         column: Int,
     ): String? = declared(uri, line, column)?.value
 
-    /** The name of the artifact declaration at this source position, as [hover] finds it. */
+    /**
+     * Where the name at this source position is declared: in [uri], for the name of an artifact declaration, as [hover]
+     * finds it; or where the type or package is declared that a name in an import or a type there names, as
+     * [libraryTarget] resolves it in the library's binary. Null when neither is found.
+     */
     fun definition(
         uri: String,
         line: Int,
         column: Int,
-    ): SemanticModel.Range? = declared(uri, line, column)?.key
+    ): SemanticModel.SourceLocation? {
+        declared(uri, line, column)?.let { return SemanticModel.SourceLocation(uri, it.key) }
+        if (line < 0 || column < 0) return null
+        val source = source(uri) ?: return null
+        val at = SemanticModel.Position(line, column)
+        val reference = source.references.find { reference -> reference.ranges.any { at in it } } ?: return null
+        val module = XdkLibraries.module(source.module) ?: return null
+        val imports = source.references.filter { it.import && it.alias != null }
+        return ConstantPool.withPool(module.constantPool).use {
+            libraryTarget(module, imports, reference, reference.ranges.indexOfFirst { at in it } + 1)
+                ?.let { declaration(it.identityConstant) }
+                ?.location
+        }
+    }
 
     private fun declared(
         uri: String,
@@ -223,6 +243,26 @@ internal object XdkLibrarySources {
         val entry = entries[path] ?: return null
         sources.computeIfAbsent(path) { parse(module, path, entry) }
         return copy(path, entry).toString()
+    }
+
+    /**
+     * The 1-based line where the bundled source of [path] in the library [module], as [file] writes it, declares the
+     * method [name], as a stack frame names it, `Class.method`; null when [module] is not a bundled library, or the source
+     * does not declare exactly one such method.
+     */
+    fun methodLine(
+        module: String,
+        path: String,
+        name: String,
+    ): Int? {
+        if (module !in XdkLibraries.moduleNames) return null
+        val entry = entries[path] ?: return null
+        val names = name.split('.')
+        return sources
+            .computeIfAbsent(path) { parse(module, path, entry) }
+            .declarations
+            .singleOrNull { it.path.takeLast(names.size) == names }
+            ?.let { it.range.start.line + 1 }
     }
 
     /** The read-only file with the bundled source of [path], written the first time it is asked for. */

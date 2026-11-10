@@ -894,6 +894,26 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a frame of a bundled library's method with no line of its own is at the method's declaration`() {
+        val container = "ecstasy/mgmt/Container.x"
+        runs.frames =
+            listOf(
+                FrameState(1, "App.run", "/work/App.x", 5, "App", "App.x"),
+                // a native method, which a program's call into its container goes through
+                FrameState(2, "Control.invoke", "/build/lib_ecstasy/$container", 0, ECSTASY, container),
+                FrameState(3, "Control.unknown", "/build/lib_ecstasy/$container", 0, ECSTASY, container),
+            )
+        runs.libraries = mapOf((ECSTASY to container) to "/bundled/$container")
+        runs.declarations = mapOf(Triple(ECSTASY, container, "Control.invoke") to 429)
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).awaited()
+
+        val frames = server.stackTrace(StackTraceArguments().apply { threadId = 12 }).awaited().stackFrames
+        assertThat(frames.map { it.source.path }).containsExactly("/work/App.x", "/bundled/$container", "/bundled/$container")
+        assertThat(frames.map { it.line }).containsExactly(5, 429, 0)
+    }
+
+    @Test
     fun `modules and loaded sources are the program's own and its libraries', a bundled library's sources bundled with it`() {
         runs.modules =
             listOf(
@@ -1664,6 +1684,15 @@ class XtcDebugServerTest {
             module: String,
             path: String,
         ) = libraries[module to path]
+
+        /** The lines where library sources declare methods, by module, source path and the method's name in a frame. */
+        var declarations = mapOf<Triple<String, String, String>, Int>()
+
+        override fun libraryLine(
+            module: String,
+            path: String,
+            name: String,
+        ) = declarations[Triple(module, path, name)]
 
         var modules = listOf<ModuleState>()
 
