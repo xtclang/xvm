@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -61,6 +62,39 @@ class XdkLibraryDocumentsTest {
             assertThat(adapter.compile("file:///App.x", consumer).diagnostics).isEmpty()
             assertThat(adapter.findMonikers("file:///App.x", 0, consumer.indexOf("size")))
                 .containsExactly(moniker.copy(kind = SymbolMoniker.Kind.IMPORT))
+        }
+    }
+
+    @Test
+    fun `a library source's imports and type names go to their declarations in the library`() {
+        // the copy that navigation or a stack frame opens, which is compiled on its own
+        val uri = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", "ecstasy/mgmt/Container.x"))).toUri().toString()
+        val text = Files.readString(Path.of(URI(uri)))
+        val lines = text.lines()
+        XdkAdapter().use { adapter ->
+            adapter.compile(uri, text)
+
+            // the file the declaration of the name on the line is in, and the name it declares
+            fun target(
+                line: String,
+                name: String,
+            ): Pair<String, String> {
+                val row = lines.indexOfFirst { it.contains(line) }
+                val location = requireNotNull(adapter.findDefinition(uri, row, lines[row].indexOf(name))) { "$name in $line" }
+                val declared = Files.readAllLines(Path.of(URI(location.uri)))[location.startLine]
+                return location.uri.substringAfter("xtc-library-sources-").substringAfter('/') to
+                    declared.substring(location.startColumn, location.endColumn)
+            }
+            val template = "ecstasy/reflect/ModuleTemplate.x" to "ModuleTemplate"
+            assertThat(target("import reflect.ModuleTemplate;", "ModuleTemplate")).isEqualTo(template)
+            assertThat(target("import reflect.ModuleTemplate;", "reflect")).isEqualTo("ecstasy/reflect.x" to "reflect")
+            // by the file's import
+            assertThat(target("collectInjections(ModuleTemplate template", "ModuleTemplate")).isEqualTo(template)
+            // by an implicit import
+            assertThat(target("limitCompute(Duration max", "Duration")).isEqualTo("ecstasy/temporal/Duration.x" to "Duration")
+            assertThat(target("extends Service.ServiceControl", "ServiceControl")).isEqualTo("ecstasy/Service.x" to "ServiceControl")
+            // a declaration's own name
+            assertThat(target("Tuple invoke(String methodName", "invoke")).isEqualTo("ecstasy/mgmt/Container.x" to "invoke")
         }
     }
 }
