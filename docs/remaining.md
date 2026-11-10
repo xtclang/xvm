@@ -1246,9 +1246,10 @@ editor, which its probe never measured (the probe item below).
 - [ ] #693's commit 281, `2e5854af45` (errs `663ea7cad4`), which fixes the CI failure of commit 279's
   directory locks (run 42854314561), made and validated with the full lsp-server and stdio suites.
   To do: push it, at the user's go-ahead, and see CI pass.
-- [ ] #764, opened 2026-11-10 at the user's go-ahead: errs `8f650fe08c` alone on master,
+- [x] #764, opened 2026-11-10 at the user's go-ahead: errs `8f650fe08c` alone on master,
   `XtcVersionSanityTest`'s projects under `@TempDir` (branch `lagergren/xtc-version-test-tempdir`,
-  `f8242a0a38` on master `973268d2a0`). To do: get it merged; #693 then takes it from master.
+  `f8242a0a38` on master `973268d2a0`). Approved, CI green; squash-merged the same day at the
+  user's go-ahead as `85de7ec12c`. errs and #693 drop their copies on their next rebase onto master.
 - [x] #693 takes errs `2e921902ce`, the tours' video and deck named `tour-intellij` and `tour-vscode`,
   as its commit 280, `8d22b98fdc`: a clean cherry-pick whose three files equal errs'. On #693
   `spotlessCheck` passes and the IntelliJ plugin's integration tests compile; its VS Code sources
