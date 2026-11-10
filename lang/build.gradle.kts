@@ -193,3 +193,14 @@ val runVsCodeExtension =
         description = "Launch VS Code with the XTC extension loaded for testing"
         dependsOn(project(":vscode-extension").tasks.named("runCode"))
     }
+
+// Both IDE plugins as installable packages, whether or not they are attached to lang's build
+val assembleIdePlugins =
+    tasks.register("assembleIdePlugins") {
+        group = "build"
+        description =
+            "Assemble the IntelliJ plugin (intellij-plugin/build/distributions/*.zip) and the " +
+            "VS Code extension (vscode-extension/build/distributions/*.vsix)"
+        dependsOn(project(":intellij-plugin").tasks.named("buildPlugin"))
+        dependsOn(project(":vscode-extension").tasks.named("packageExtension"))
+    }
