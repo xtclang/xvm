@@ -396,6 +396,13 @@ intellijPlatform {
         }
     }
 
+    // No code instrumentation. The plugin is written in Kotlin, which emits its own null checks,
+    // and has no GUI Designer forms, so instrumentCode left every Kotlin class unchanged. Its only
+    // effect was @NotNull assertions in the XtcProjectCreator copied from javatools, whose
+    // javatools.jar copy has never had them. The task runs through Gradle's Ant integration,
+    // deprecated in Gradle 9.9 and removed in Gradle 10, and printed that deprecation on every build.
+    instrumentCode = false
+
     pluginConfiguration {
         id = "org.xtclang.idea"
         // The language is officially "Ecstasy"; "XTC" is the file extension
