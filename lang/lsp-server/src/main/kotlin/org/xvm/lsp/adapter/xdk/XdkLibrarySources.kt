@@ -72,6 +72,16 @@ internal object XdkLibrarySources {
      */
     fun compilesLibraries(): Boolean = System.getProperty(COMPILE_LIBRARIES)?.toBooleanStrictOrNull() ?: true
 
+    /**
+     * The least maximum heap with which a library is compiled as a whole: ecstasy's compile holds about 450 MB of live
+     * data at its peak, most of it the compiler's TypeInfos, on top of what the server holds, and runs out of 384 MB.
+     * It is 1 GB, less the survivor space that some collectors leave out of [Runtime.maxMemory].
+     */
+    const val LIBRARY_HEAP_BYTES = (1L shl 30) - (1L shl 26)
+
+    /** Whether a JVM whose maximum heap is [maxHeap] can compile a library as a whole; see [LIBRARY_HEAP_BYTES]. */
+    fun fitsLibraries(maxHeap: Long = Runtime.getRuntime().maxMemory()): Boolean = maxHeap >= LIBRARY_HEAP_BYTES
+
     /** The module files of the libraries whose sources have all been written, by their source paths. */
     private val libraries = ConcurrentHashMap<String, Path>()
 

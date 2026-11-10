@@ -2,11 +2,16 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
+import org.xvm.lsp.awaited
+import org.xvm.lsp.server.TraceRecording
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Checks revision-owned library source documents and monikers in virtual and file-backed views. Navigation
@@ -116,6 +121,70 @@ class XdkLibraryDocumentsTest {
         // with the setting off, each copy is compiled on its own
         compiledAlone {
             XdkAdapter().use { adapter -> assertThat(adapter.analysisScope(string)).endsWith("/ecstasy/text/String.x") }
+        }
+    }
+
+    @Test
+    fun `a project's compile preempts a library's, which then serves each copy of the library until the last closes`() {
+        val string = copy("ecstasy/text/String.x")
+        val container = copy("ecstasy/mgmt/Container.x")
+        val lines = text(string).lines()
+        preemptible { adapter, compiles, held ->
+            val first = adapter.compileAsync(string, text(string))
+            held.awaited()
+            // the server cancels a scope's earlier result when another of its documents opens, which leaves the compile
+            val second = adapter.compileAsync(container, text(container))
+            first.cancel(false)
+            // a project file's compile preempts the library's, held until then, and the library compiles after it
+            assertThat(adapter.compileAsync("file:///App.x", "module App {}").awaited().diagnostics).isEmpty()
+            assertThat(second.awaited().diagnostics).isEmpty()
+            assertThat(adapter.compileAsync(string, text(string)).awaited().diagnostics).isEmpty()
+            assertThat(compiles.get()).isEqualTo(2)
+            // closing one copy keeps the compile for the other, and closing the last lets it go
+            adapter.closeDocument(container)
+            assertThat(adapter.target(string, lines, "buffer.add(transform(ch));", "add")).isEqualTo("ecstasy/text/StringBuffer.x" to "add")
+            assertThat(adapter.getCachedResult(string)).isNotNull()
+            adapter.closeDocument(string)
+            assertThat(adapter.getCachedResult(string)).isNull()
+            assertThat(compiles.get()).isEqualTo(2)
+        }
+    }
+
+    @Test
+    fun `a library is compiled as a whole only with a heap that fits the compile`() {
+        assertThat(XdkLibrarySources.fitsLibraries(384L shl 20)).isFalse()
+        assertThat(XdkLibrarySources.fitsLibraries(512L shl 20)).isFalse()
+        assertThat(XdkLibrarySources.fitsLibraries(1L shl 30)).isTrue()
+        // the server's tests run with 1 GB, which the whole library's case needs
+        assertThat(XdkLibrarySources.fitsLibraries()).isTrue()
+    }
+
+    /** The text of the copy [uri]. */
+    private fun text(uri: String): String = Files.readString(Path.of(URI(uri)))
+
+    /**
+     * Runs [body] with an adapter that counts its compiles of the ecstasy library, of which it holds the first, once
+     * [held] says it has started, until a project's work preempts it: the compile queue's trace says so after it has
+     * told the compile to stop, and the compiler, called then, stops at once.
+     */
+    private fun preemptible(body: (adapter: XdkAdapter, compiles: AtomicInteger, held: CountDownLatch) -> Unit) {
+        CompilerTestSupport.configure()
+        val support = EmbeddingSupport.instance()
+        val compiles = AtomicInteger()
+        val held = CountDownLatch(1)
+        val preempted = CountDownLatch(1)
+        TraceRecording { if (it["event"]?.asString == "preempted") preempted.countDown() }.use {
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    if (sources.sourceFile.name == "ecstasy.x" && compiles.incrementAndGet() == 1) {
+                        held.countDown()
+                        preempted.awaited()
+                    }
+                    support.compileModule(sources, repository, errors)
+                },
+                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+            ).use { body(it, compiles, held) }
         }
     }
 

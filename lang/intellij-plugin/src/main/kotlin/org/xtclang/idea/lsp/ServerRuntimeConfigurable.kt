@@ -28,8 +28,9 @@ class ServerRuntimeConfigurable : Configurable {
             name = "xtc.lsp.compileLibraries"
             toolTipText =
                 "Go to Definition, hover and references then work for every name in an XDK source, also in method " +
-                "bodies. Takes some seconds and memory the first time per library and server. Off: an XDK source " +
-                "resolves only its own declarations, imports and type names."
+                "bodies. The compile takes about 10 seconds when a library's first source opens, and some hundred MB " +
+                "while one stays open; it needs a server heap of at least 1 GB (-Xmx1G). Off: an XDK source resolves " +
+                "only its own declarations, imports and type names."
         }
     private var original = ServerRuntimeSettings.Options()
 
