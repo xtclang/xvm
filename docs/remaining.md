@@ -75,11 +75,23 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   (`LibraryReferences.kt`), which stays for when the setting is off. Done 2026-11-10 (local, errs):
   an opened copy's scope is its library's module file, with every source of the library and the
   resources its sources name written beside it, and the library compiles in a library mode that
-  skips implementation and declaration targets, which ran out of memory for the core library. All of
-  ecstasy compiles in about 14 s within a 512 MB test heap. The setting is "Compile an XDK library
-  as a whole" in IntelliJ's Ecstasy Server Runtime page and `xtc.server.compileLibraries` in VS Code,
-  on by default (`-Dxtc.lsp.compileLibraries`). `XdkLibraryDocumentsTest` covers both modes.
-  Not seen yet in an editor or a playbook run.
+  skips implementation and declaration targets, which ran out of memory for the core library. The
+  setting is "Compile an XDK library as a whole" in IntelliJ's Ecstasy Server Runtime page and
+  `xtc.server.compileLibraries` in VS Code, on by default (`-Dxtc.lsp.compileLibraries`).
+  `XdkLibraryDocumentsTest` covers both modes. Not seen yet in an editor or a playbook run.
+  Measured the same day, with nothing else running: nothing compiles until a copy opens; ecstasy's
+  compile takes 8.6 s with a 2 GB heap and 10.6 s with 512 MB, its live data peaks at about 450 MB
+  (heap histograms: mostly the compiler's TypeInfos, its MethodInfos and MethodBodies and their
+  maps; the AST is about 15 MB and the LSP model 20 MB), and its analysis holds about 330 MB while
+  a copy stays open. With 384 MB it runs out of memory. Fixed in `3b9bb74e87` (local, errs):
+  - each copy that opened recompiled the library (7 s more for a second file); one compile now
+    serves every open copy of the library, and goes, with its memory, when the last one closes;
+  - it held up the project's compiles on the one compiler worker (EmbeddingSupport asks a host to
+    serialize compiles that share its repository, so no second worker); a project file's compile,
+    cursor query, rename or build now preempts it, and it compiles again after that work; project
+    queries such as references and code lenses still wait;
+  - with a maximum heap under 1 GB a copy compiles on its own, and the server logs why once; the
+    server's tests run with 1 GB (Gradle's default for a test JVM is 512 MB).
 
 ### L82: completion evidence and release gates
 
