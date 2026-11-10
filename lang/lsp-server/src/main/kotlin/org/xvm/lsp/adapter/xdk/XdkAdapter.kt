@@ -657,6 +657,9 @@ class XdkAdapter
                 project.scope(uri)?.let {
                     return it
                 }
+                XdkSources.file(uri)?.let { copyScope(uri, it) }?.let {
+                    return it
+                }
                 val root = XdkSources.moduleRoot(uri, overlays)
                 if (root == XdkSources.file(uri)) {
                     scopes[uri] ?: root?.toURI()?.toString() ?: uri
@@ -665,6 +668,20 @@ class XdkAdapter
                 }
             }
 
+        /**
+         * Called under lifecycle. The scope of [uri] when it is a library source's read-only copy: its whole library,
+         * whose sources [XdkLibrarySources.libraryRoot] writes beside it, unless [XdkLibrarySources.compilesLibraries]
+         * is off, or the copy itself, compiled on its own; null for any other file.
+         */
+        private fun copyScope(
+            uri: String,
+            file: File,
+        ): String? {
+            if (!XdkLibrarySources.isCopy(uri)) return null
+            val library = if (XdkLibrarySources.compilesLibraries()) XdkLibrarySources.libraryRoot(file) else null
+            return library?.toURI()?.toString() ?: scopes[uri] ?: file.toURI().toString()
+        }
+
         /** One operation's ownership view; canonicalize each open path once, without a stale cache. */
         internal fun analysisScopes(uris: Collection<String>): Map<String, String> =
             synchronized(lifecycle) {
@@ -672,7 +689,7 @@ class XdkAdapter
                 val openFiles = overlays.keys.mapNotNull(files::get).toSet()
                 uris.associateWith { uri ->
                     val file = files[uri]
-                    file?.let(project::scope) ?: file?.let {
+                    file?.let(project::scope) ?: file?.let { copyScope(uri, it) } ?: file?.let {
                         val root = XdkSources.moduleRoot(it, openFiles)
                         if (root == file) scopes[uri] ?: root.toURI().toString() else root.toURI().toString()
                     } ?: uri
@@ -842,9 +859,12 @@ class XdkAdapter
                 Request(
                     scope,
                     uri,
-                    overlays.filterKeys {
-                        overlayScopes[it] in sourceScopes
-                    },
+                    // a library source's read-only copy compiles with its own text, whatever text an editor sends for it
+                    overlays
+                        .filterKeys { overlayScopes[it] in sourceScopes }
+                        .mapValues { (uri, text) ->
+                            if (XdkLibrarySources.isCopy(uri)) XdkLibrarySources.document(uri)?.text ?: text else text
+                        },
                     dependencies,
                     project,
                     discovery.get().problem,
@@ -1852,7 +1872,14 @@ class XdkAdapter
                 buildMap {
                     compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
                 }
-            val semantics = compilation.compiledSemantics(dependencies, errs, navigation = moduleName != null)
+            val library = XdkLibrarySources.isCopy(request.scope)
+            val semantics =
+                compilation.compiledSemantics(
+                    dependencies,
+                    errs,
+                    navigation = moduleName != null && !library,
+                    library = library,
+                )
             val navigation = semantics.navigation
             val views = semantics.models
             val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
