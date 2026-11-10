@@ -4,8 +4,11 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.BuildRepository
 import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.lsp.util.SessionLock
 import java.io.File
+import java.nio.channels.FileLock
 import java.nio.file.Files
+import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.Properties
@@ -74,18 +77,39 @@ internal object XdkLibraries {
      * an embedded test run, whose module path takes directories: written once for the bundle, under the temporary
      * directory, by its fingerprint, and complete once its `.complete` file is there.
      */
-    internal val directory: File by lazy {
-        val dir = File(System.getProperty("java.io.tmpdir"), "xtc-lsp-xdk-${fingerprint.take(16)}")
-        if (!File(dir, COMPLETE).isFile) {
-            val staging = Files.createTempDirectory(dir.parentFile.toPath(), "${dir.name}.").toFile()
-            packagedResources.forEach { name -> resource(name).use { input -> File(staging, name).outputStream().use(input::copyTo) } }
-            File(staging, COMPLETE).writeText(fingerprint)
-            // another server may have written it meanwhile, or left it incomplete
-            if (!File(dir, COMPLETE).isFile) dir.deleteRecursively()
-            if (!staging.renameTo(dir)) staging.deleteRecursively()
+    internal val directory: File get() = shared.directory
+
+    /**
+     * [directory], which every server of the bundle shares and holds a shared [SessionLock] on while it runs; it stays
+     * for the next one. Making it, a server deletes those of other bundles that no process holds ([SessionLock.unheld]),
+     * which servers of other builds left.
+     */
+    private val shared by lazy {
+        val temporary = Path.of(System.getProperty("java.io.tmpdir"))
+        val dir = temporary.resolve("$PREFIX${fingerprint.take(16)}").toFile()
+        SessionLock.guard(temporary.resolve(".${PREFIX}lock")).use { guard ->
+            if (!File(dir, COMPLETE).isFile) {
+                val staging = Files.createTempDirectory(temporary, "${dir.name}.").toFile()
+                packagedResources.forEach { name -> resource(name).use { input -> File(staging, name).outputStream().use(input::copyTo) } }
+                File(staging, COMPLETE).writeText(fingerprint)
+                // another server may have written it meanwhile, or left it incomplete
+                if (!File(dir, COMPLETE).isFile) dir.deleteRecursively()
+                if (!staging.renameTo(dir)) staging.deleteRecursively()
+            }
+            val lock = SessionLock.share(dir.toPath())
+            if (guard != null) SessionLock.unheld(dir.toPath(), "$PREFIX*").forEach { it.toFile().deleteRecursively() }
+            Shared(dir, lock)
         }
-        dir
     }
+
+    /** The bundle's directory, and this process's shared hold on it, which the reference keeps while the process runs. */
+    private class Shared(
+        val directory: File,
+        val lock: FileLock?,
+    )
+
+    /** The prefix of each bundle's directory in the temporary directory. */
+    private const val PREFIX = "xtc-lsp-xdk-"
 
     /** The file that marks [directory] complete. */
     private const val COMPLETE = ".complete"
