@@ -31,8 +31,9 @@ export async function run(): Promise<void> {
         const recorded = process.env.XTC_RECORDING_START_FILE;
         const started = recorded ? Number((await fs.readFile(recorded, 'utf8').catch(() => '')).trim()) : NaN;
         const screen = RECORDING && Number.isFinite(started) ? { file: 'screen.mp4', start: started, frame: ui.frame() } : undefined;
+        // the editor names the composer's video and deck, tour-vscode.mp4 and .pptx
         await fs.writeFile(path.join(directory, 'tour.json'), JSON.stringify({
-            project, ...(screen && { screen }), steps: tour.steps, checks: tour.checks, actions: ui.actions,
+            editor: 'vscode', project, ...(screen && { screen }), steps: tour.steps, checks: tour.checks, actions: ui.actions,
         }, null, 2) + '\n');
         const extension = vscode.extensions.all.find(item => item.packageJSON.name === 'xtc-language');
         await fs.writeFile(path.join(directory, 'results.json'), JSON.stringify({

@@ -69,6 +69,8 @@ class TourTest {
                 run.resolve("tour.json"),
                 json.toJson(
                     mapOf(
+                        // which names the composer's video and deck, tour-intellij.mp4 and .pptx
+                        "editor" to "intellij",
                         "project" to project.toString(),
                         "screen" to screen,
                         "steps" to steps,
