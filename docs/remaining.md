@@ -205,6 +205,14 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   runs by their `.completed` files, which it leaves alone. `8777c067c` recorded the fault as the
   build's, and `70cdd636f`'s message says its run before selected an earlier list; both were this
   misreading (found 2026-10-26).
+- [ ] Record both editor tours again from current errs, in the container, for new final videos.
+  The ones sent on 2026-11-10, `tour-intellij.mp4` and `tour-vscode.mp4` with their decks
+  (`~/shared/xtc-*-tour-draft/final/`), were recorded on 2026-11-06 and 11-07. No tour step changed
+  since, but errs' features since then are not in them, such as a library frame's line, and two of
+  the IntelliJ video's recordings ran on `lagergren/tour-final` commits that errs does not have
+  under those subjects (`91392b946d`, `45470dc5e7`), one of them a scrolling fix.
+- [ ] Remove `lang/intellij-plugin/tour/__pycache__/compose.cpython-315.pyc`, committed by
+  accident, and keep `__pycache__` out of the repository.
 
 ### Beyond the current scope
 
@@ -1235,6 +1243,9 @@ editor, which its probe never measured (the probe item below).
   and `7482c37cae` as 278 (`c9be92b5f8`), and `45e1bb70ec` as 279 (`2afb23929a`). Pushed on
   2026-11-10 at the user's go-ahead (see "errs' XDK source work of 2026-11-10" in
   [the integration plan](errs-integration-plan.md)).
+- [ ] #693's commit 281, `2e5854af45` (errs `663ea7cad4`), which fixes the CI failure of commit 279's
+  directory locks (run 42854314561), made and validated with the full lsp-server and stdio suites.
+  To do: push it, at the user's go-ahead, and see CI pass.
 - [ ] #764, opened 2026-11-10 at the user's go-ahead: errs `8f650fe08c` alone on master,
   `XtcVersionSanityTest`'s projects under `@TempDir` (branch `lagergren/xtc-version-test-tempdir`,
   `f8242a0a38` on master `973268d2a0`). To do: get it merged; #693 then takes it from master.
