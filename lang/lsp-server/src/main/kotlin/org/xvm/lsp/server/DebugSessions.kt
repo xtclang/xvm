@@ -292,6 +292,12 @@ internal class DebugSessions(
             module: String,
             path: String,
         ) = XdkLibrarySources.file(module, path)
+
+        override fun libraryLine(
+            module: String,
+            path: String,
+            name: String,
+        ) = XdkLibrarySources.methodLine(module, path, name)
     }
 
     private companion object {
