@@ -7,7 +7,6 @@ import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.TypedefStructure;
 
@@ -128,14 +127,13 @@ public class ChildInfo {
     /**
      * Determine if this ChildInfo and another ChildInfo are referring to the same component.
      *
-     * @param pool  the ConstantPool to use
      * @param that  another ChildInfo by the same name
      *
      * @return the resulting ChildInfo to use, or null if a name collision occurs that requires the
      *         name to be unavailable (e.g. because the ChildInfo objects are not referring to the
      *         same component)
      */
-    protected ChildInfo layerOn(ConstantPool pool, ChildInfo that) {
+    protected ChildInfo layerOn(ChildInfo that) {
         if (this.f_setIds.equals(that.f_setIds) || this.f_setIds.containsAll(that.f_setIds)) {
             return this;
         }
@@ -173,7 +171,7 @@ public class ChildInfo {
         }
 
         // a class's own Inner covers the implicit Outer.Inner, which is no super virtual child
-        IdentityConstant idInner = pool.clzInner();
+        IdentityConstant idInner = getComponent().getConstantPool().clzInner();
         if (this.getIdentity().equals(idInner)) {
             return that;
         }

@@ -3851,7 +3851,7 @@ public abstract class TypeConstant
                     ChildInfo infoChild = entry.getValue();
                     ChildInfo infoPrev  = mapChildren.putIfAbsent(sName, infoChild);
                     if (infoPrev != null) {
-                        ChildInfo infoNew = infoPrev.layerOn(pool, infoChild);
+                        ChildInfo infoNew = infoPrev.layerOn(infoChild);
                         if (infoNew == null) {
                             log(errs, Severity.ERROR, VE_CHILD_COLLISION,
                                     constId,

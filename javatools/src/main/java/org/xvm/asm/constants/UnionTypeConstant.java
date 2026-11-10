@@ -744,7 +744,7 @@ public class UnionTypeConstant
             ChildInfo child1 = entry.getValue();
             ChildInfo child2 = map2.get(sChild);
             if (child2 != null) {
-                ChildInfo childM = child1.layerOn(getConstantPool(), child2);
+                ChildInfo childM = child1.layerOn(child2);
                 if (childM != null) {
                     mapMerge.put(sChild, entry.getValue());
                 }
