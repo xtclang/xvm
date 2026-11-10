@@ -634,6 +634,21 @@ val buildPlugin =
         }
     }
 
+// Installs the zip, with LSP4IJ, into the installed IntelliJ IDE that org.xtclang.idea.home names (set it in
+// ~/.gradle/gradle.properties), replacing an earlier install; the IDE must be closed. org.xtclang.idea.pluginsDir
+// names its plugins directory when the IDE's own report of it fails.
+val installPlugin =
+    tasks.register<InstallIntellijPluginTask>("installPlugin") {
+        group = "intellij platform"
+        description = "Install the plugin into the closed IntelliJ IDE that org.xtclang.idea.home names"
+        ideHome.set(providers.gradleProperty("org.xtclang.idea.home"))
+        pluginsDirectory.set(providers.gradleProperty("org.xtclang.idea.pluginsDir"))
+        pluginZip.set(tasks.named<Zip>("buildPlugin").flatMap { it.archiveFile })
+        dependencyIds.add("com.redhat.devtools.lsp4ij")
+        sinceBuild.set(intellijSinceBuild)
+        workDirectory.set(layout.buildDirectory.dir("tmp/installPlugin"))
+    }
+
 // =============================================================================
 // Copy TextMate Grammar into plugin lib directory
 // =============================================================================
