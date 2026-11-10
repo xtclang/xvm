@@ -187,6 +187,13 @@ val runIntellijPlugin =
         dependsOn(project(":intellij-plugin").tasks.named("runIde"))
     }
 
+val installIntellijPlugin =
+    tasks.register("installIntellijPlugin") {
+        group = "run"
+        description = "Install the XTC plugin into the closed IntelliJ IDE that org.xtclang.idea.home names"
+        dependsOn(project(":intellij-plugin").tasks.named("installPlugin"))
+    }
+
 val runVsCodePlugin =
     tasks.register("runVsCodePlugin") {
         group = "run"
