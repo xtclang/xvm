@@ -261,8 +261,8 @@ public class VirtualChildBuilder extends CommonBuilder {
                     : super.resolveSuperCall(bctx);
         }
 
-        if (isEmbedded(targetType.getExplicitClassFormat())) {
-            // an embedded super body must retain the detached receiver, which can be an interface
+        if (isEmbedded(targetType.getExplicitClassFormat()) || targetType.isInterfaceType()) {
+            // a synthetic super body must retain the detached receiver, which can be an interface
             String name = addJitSuffix(DetachedBody + MethodInfo.getJitIdentity(bctx.callChain, 0)
                                                                 .ensureJitMethodName(typeSystem), depth);
             bctx.buildSuper(name, depth);

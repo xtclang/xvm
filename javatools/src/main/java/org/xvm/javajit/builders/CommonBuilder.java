@@ -4867,12 +4867,15 @@ public class CommonBuilder
 
     protected void assembleMethod(ClassBuilder classBuilder, MethodInfo method, String jitName,
                                   JitMethodDesc jmd, PropertyHosting hosting) {
-        int flags = ClassFile.ACC_PUBLIC;
-        if (!method.getHead().getMethodStructure().hasCode()) {
-            if (method.isAbstract()) {
-                flags |= ClassFile.ACC_ABSTRACT;
-            } else {
-                // this must be a "sans-code" override; just ignore it
+        TypeInfo info  = method.isCtorOrValidator() ? structInfo : typeInfo;
+        int      flags = ClassFile.ACC_PUBLIC;
+
+        if (method.isAbstract()) {
+            flags |= ClassFile.ACC_ABSTRACT;
+        } else {
+            MethodBody[]    chain = method.ensureOptimizedMethodChain(info);
+            MethodStructure head  = chain.length == 0 ? null : chain[0].getMethodStructure();
+            if (head == null || !head.hasCode()) {
                 return;
             }
         }
@@ -4907,8 +4910,7 @@ public class CommonBuilder
             return;
         }
 
-        BuildContext bctx = new BuildContext(this,
-                method.isCtorOrValidator() ? structInfo : typeInfo, method, jmd, thisType, hosting);
+        BuildContext bctx = new BuildContext(this, info, method, jmd, thisType, hosting);
         if (method.isValidator()) {
             // assemble embedded validator bodies explicitly; there are no super() calls to reach
             // them; see step 7 in assembleNew()
@@ -5022,6 +5024,13 @@ public class CommonBuilder
     };
 
     private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
+        Map.entry("org.xtclang.ecstasy.collections.MapSet",
+            Set.of("addAll", "freeze")), // TODO: conditional mixin contracts and MapSetFreezer
+        Map.entry("org.xtclang.ecstasy.collections.ListSet",
+            Set.of("addAll")), // TODO: inherited conditional mixin contracts
+        Map.entry("org.xtclang.ecstasy.maps.ListMap",
+            Set.of("indexOf", "appendEntry", "deleteEntryAt", "clear", "makeImmutable", "freeze")),
+                // TODO: conditional ListMapIndex super calls and MapFreezer
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin
         Map.entry("org.xtclang.ecstasy.Timeout",

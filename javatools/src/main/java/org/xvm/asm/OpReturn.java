@@ -135,11 +135,17 @@ public abstract class OpReturn
                 String sTransform = regRet.flavor().name() + "->" + pdRet.flavor.name();
                 switch (sTransform) {
                 case "Primitive->Primitive",
-                     "Specific->Specific",
                      "Specific->Widened",
                      "Widened->Specific",
                      "Widened->Widened":
                     Builder.store(code, cd, slotR);
+                    break;
+
+                case "Specific->Specific":
+                    if (!cd.equals(pdRet.cd) && !regRet.type().isJitAssignableTo(pdRet.type)) {
+                        code.checkcast(pdRet.cd);
+                    }
+                    Builder.store(code, pdRet.cd, slotR);
                     break;
 
                 case "Primitive->Specific",
@@ -291,9 +297,14 @@ public abstract class OpReturn
                     break;
 
                 case "Primitive->Primitive",
-                     "Specific->Specific",
                      "Specific->Widened",
                      "Widened->Widened":
+                    break;
+
+                case "Specific->Specific":
+                    if (!cd.equals(pdRet.cd) && !regRet.type().isJitAssignableTo(pdRet.type)) {
+                        code.checkcast(pdRet.cd);
+                    }
                     break;
 
                 case "Widened->Specific":

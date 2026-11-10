@@ -164,18 +164,22 @@ public abstract class Builder {
             return ensureFieldAccessor(body);
         }
 
-        IdentityConstant owner = body.getIdentity().getNamespace();
+        MethodConstant   methodId = body.getIdentity();
+        IdentityConstant owner    = methodId.getNamespace();
         ClassDesc        cd;
         String           methodName;
         boolean          isIface;
 
-        if (isEmbedded(owner.getComponent().getFormat())) {
+        // super() always targets this, so check the caller's format
+        Format format = owner.getComponent().getFormat();
+        if (isEmbedded(format) || format == Format.INTERFACE && !getThisType().isInterfaceType()) {
+            // a class routes interface super calls through its superclass or a synthetic body
             TypeConstant superType = getSuperType();
             if (superType != null) {
                 TypeInfo   superInfo   = superType.ensureAccess(Access.PRIVATE).ensureTypeInfo();
-                MethodInfo superMethod = superInfo.getMethodById(body.getIdentity());
-                if (superMethod != null &&
-                        superMethod.getIdentity().getNamespace().equals(owner)) {
+                MethodInfo superMethod = superInfo.getMethodById(methodId);
+
+                if (superMethod != null && superMethod.getIdentity().getNamespace().equals(owner)) {
                     // superclass implementation belongs to the required owner - use invokespecial
                     return JitCallDesc.special(getSuperCD(),
                             superMethod.ensureJitMethodName(typeSystem),
@@ -187,8 +191,8 @@ public abstract class Builder {
             cd         = getThisCD(bctx);
             isIface    = false;
             methodName = bctx.propertyHosting instanceof PropertyHosting hosting
-                ? hosting.methodName(MethodInfo.getJitIdentity(bctx.callChain, 0))
-                : MethodInfo.getJitIdentity(bctx.callChain, 0).ensureJitMethodName(typeSystem);
+                    ? hosting.methodName(MethodInfo.getJitIdentity(bctx.callChain, 0))
+                    : MethodInfo.getJitIdentity(bctx.callChain, 0).ensureJitMethodName(typeSystem);
             methodName = addJitSuffix(methodName, depth);
             bctx.buildSuper(methodName, depth);
         } else {
@@ -217,7 +221,8 @@ public abstract class Builder {
 
             MethodBody head = method.getHead();
             if (head.getIdentity().getNamespace() instanceof ClassConstant &&
-                head.getMethodStructure().getAccess() == Access.PRIVATE) {
+                    head.getMethodStructure() instanceof MethodStructure structure &&
+                    structure.getAccess() == Access.PRIVATE) {
 
                 return VirtualChildBuilder.resolveChildMethodCall(this, head, receiverType);
             }
@@ -324,8 +329,8 @@ public abstract class Builder {
      */
     protected boolean shouldAddInterface(TypeConstant type) {
         // ignore "implements Object" for classes and "implements Comparable" for everyone
-        return (getThisType().getExplicitClassFormat() == Format.INTERFACE ||
-                !type.equals(pool().typeObject())) && !type.equals(pool().typeComparable());
+        return (getThisType().isInterfaceType() || !type.equals(pool().typeObject()))
+                && !type.equals(pool().typeComparable());
     }
 
     /**

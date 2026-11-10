@@ -120,7 +120,7 @@ package arrayTests {
 //        assert result.contains(3);
 //        assert !result.contains(4);
 
-//        TODO: requires @Lazy getter generation for DeferredCollection.reified
+//        TODO: requires conditional mixin support in MapSet and ListMap
 //        Int[] array = result.toArray();
 //
 //        assert array.size == 3;
@@ -142,7 +142,7 @@ package arrayTests {
 //        assert result.contains("three");
 //        assert !result.contains("four");
 
-//        TODO: requires @Lazy getter generation for DeferredCollection.reified
+//        TODO: conditional parent specializations produce unrelated Keys instantiator interfaces
 //        String[] array = result.toArray();
 //
 //        assert array.size == 3;

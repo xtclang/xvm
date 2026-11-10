@@ -185,7 +185,7 @@ public class MoveThis
         TypeConstant type = bctx.thisType;
         ClassDesc    cd   = bctx.builder.art.CD();
 
-        code.aload(0);
+        bctx.loadThis(code);
         for (int i = 0, steps = getOuterSteps(bctx); i < steps; i++) {
             code.getfield(cd, Outer, CD_nObject);
 

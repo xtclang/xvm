@@ -77,7 +77,9 @@ package callTests {
         assert testNullableXvmPrimitiveWithDefault()  == 42;
 
         testSuperCall();
+        testIndirectInterfaceSuperCall();
         testCovariantSuperCall();
+        testInheritedCovariantBody();
         testWidenedArgumentNarrowing();
         testWidenedPrimitiveArguments();
         testWidenedNullableArguments();
@@ -294,6 +296,42 @@ package callTests {
 
         Test result = new Test(42).self();
         assert result.value == 42;
+    }
+
+    void testIndirectInterfaceSuperCall() {
+        interface Base {
+            Int value() = 40;
+        }
+
+        interface Middle extends Base {}
+
+        class Test implements Middle {
+            // the selected super body belongs to an indirectly implemented interface
+            @Override
+            Int value() = super() + 2;
+        }
+
+        assert new Test().value() == 42;
+    }
+
+    void testInheritedCovariantBody() {
+        interface Base {
+            Base! self() = this;
+        }
+
+        interface Derived extends Base {
+            // the inherited body must also be available with this narrower return signature
+            @Override
+            Derived self();
+        }
+
+        class Test implements Derived {}
+
+        Derived receiver = asDerived(new Test());
+        Derived result   = receiver.self();
+        assert &result == &receiver;
+
+        Derived asDerived(Object value) = value.as(Derived);
     }
 
     void testWidenedArgumentNarrowing() {

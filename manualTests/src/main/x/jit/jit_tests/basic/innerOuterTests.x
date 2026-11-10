@@ -3,6 +3,7 @@ package innerOuterTests {
     void run() {
         testSimple();
         testOuterIdentity();
+        testChildInterfaceSuper();
         testStaticIface();
         testAnonInner();
         testFunky();
@@ -79,6 +80,23 @@ package innerOuterTests {
     void testStaticIface() {
         IfaceOuter.IfaceInner child = new Base.StaticChild("NonVirtual");
         assert child.fnInner() == "NonVirtual";
+    }
+
+    void testChildInterfaceSuper() {
+        interface Base {
+            Int value() = 40;
+        }
+
+        interface Middle extends Base {}
+
+        class Parent {
+            class Child implements Middle {
+                @Override
+                Int value() = super() + 2;
+            }
+        }
+
+        assert new Parent().new Child().value() == 42;
     }
 
     void testAnonInner() {
