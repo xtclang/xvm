@@ -69,15 +69,17 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### Navigation inside the XDK's library sources
 
-- [ ] Compile each bundled XDK library as a whole, so that a library source's read-only copy answers
-  for every name in it. The copy is compiled on its own, which cannot resolve the library's names.
-  Since 2026-11-10 Go to Definition resolves an import's and a type's names in the library's binary
-  instead (`LibraryReferences.kt`, `XdkLibraryDocumentsTest`): through the types and packages
-  around the name, the file's imports, the module's own name and the implicit imports. Still not
-  found: methods, properties and locals in its bodies, names a type inherits, typedefs and
-  module-qualified names; hover and Find Usages answer only for the copy's own declarations. The
-  server bundles every source of each library, so one background compile per library, kept apart
-  from the user's projects, could answer all of it; weigh its memory and the first compile's time.
+- [x] Compile each bundled XDK library as a whole, so that a library source's read-only copy answers
+  for every name in it. Before, the copy was compiled on its own, which cannot resolve the library's
+  names; Go to Definition resolved only an import's and a type's names, in the library's binary
+  (`LibraryReferences.kt`), which stays for when the setting is off. Done 2026-11-10 (local, errs):
+  an opened copy's scope is its library's module file, with every source of the library and the
+  resources its sources name written beside it, and the library compiles in a library mode that
+  skips implementation and declaration targets, which ran out of memory for the core library. All of
+  ecstasy compiles in about 14 s within a 512 MB test heap. The setting is "Compile an XDK library
+  as a whole" in IntelliJ's Ecstasy Server Runtime page and `xtc.server.compileLibraries` in VS Code,
+  on by default (`-Dxtc.lsp.compileLibraries`). `XdkLibraryDocumentsTest` covers both modes.
+  Not seen yet in an editor or a playbook run.
 
 ### L82: completion evidence and release gates
 
@@ -1243,9 +1245,9 @@ editor, which its probe never measured (the probe item below).
   and `7482c37cae` as 278 (`c9be92b5f8`), and `45e1bb70ec` as 279 (`2afb23929a`). Pushed on
   2026-11-10 at the user's go-ahead (see "errs' XDK source work of 2026-11-10" in
   [the integration plan](errs-integration-plan.md)).
-- [ ] #693's commit 281, `2e5854af45` (errs `663ea7cad4`), which fixes the CI failure of commit 279's
+- [x] #693's commit 281, `2e5854af45` (errs `663ea7cad4`), which fixes the CI failure of commit 279's
   directory locks (run 42854314561), made and validated with the full lsp-server and stdio suites.
-  To do: push it, at the user's go-ahead, and see CI pass.
+  Pushed at the user's go-ahead; CI passes on it (run 42862014359).
 - [x] #764, opened 2026-11-10 at the user's go-ahead: errs `8f650fe08c` alone on master,
   `XtcVersionSanityTest`'s projects under `@TempDir` (branch `lagergren/xtc-version-test-tempdir`,
   `f8242a0a38` on master `973268d2a0`). Approved, CI green; squash-merged the same day at the
