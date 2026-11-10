@@ -39,6 +39,13 @@ public class JitTypeDesc {
     public final JitFlavor    flavor;
     public final ClassDesc    cd;
 
+    @Override
+    public String toString() {
+        return "type="    + type.getValueString()
+            + ", cd="     + cd
+            + ", flavor=" + flavor;
+    }
+
     /**
      * @return the primitive ClassDesc if the specified type is optimizable to a primitive Java
      *         class; and a corresponding non-primitive ClassDesc otherwise.

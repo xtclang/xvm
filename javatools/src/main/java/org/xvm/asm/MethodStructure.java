@@ -949,6 +949,8 @@ public class MethodStructure
         }
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
     /**
      * Resolve the signature of this method as being called on the specified type.
      *
@@ -957,39 +959,37 @@ public class MethodStructure
      *
      * @return the resolved signature
      */
-    public SignatureConstant resolveSignature(ConstantPool pool, TypeConstant typeTarget) {
-        SignatureConstant sigResolved =
-                getIdentityConstant().getSignature().resolveGenericTypes(pool, typeTarget);
+    public SignatureConstant resolveJitSignature(ConstantPool pool, TypeConstant typeTarget) {
+        SignatureConstant sig     = getIdentityConstant().getSignature();
+        TypeConstant      typeJit = typeTarget.getJitCCType();
 
-        TypeConstant typeJit = typeTarget.getJitCCType();
-
-        // generic types are passed to lambdas as type parameters; primitive and layer-two
-        // specialized targets also need concrete formal types for their specialized JVM descriptors;
+        // resolve captured lambda type parameters and method type parameters on primitive or
+        // layer-two specialized targets, including both primitive and reference bindings;
         // function targets always use the central nFunction interface, not a specialized wrapper
         if (getTypeParamCount() > 0 &&
                 (isLambda() || typeJit.isJitPrimitive() ||
                  !typeJit.isFunction() && typeJit.isJitL2Specialized())) {
-            SignatureConstant sigOrig = sigResolved;
+            SignatureConstant sigOrig = sig;
 
-            sigResolved = sigResolved.resolveGenericTypes(pool, formalConst -> {
+            sig = sig.resolveGenericTypes(pool, formalConst -> {
                 int iParam = indexOfTypeParameter(formalConst);
                 if (iParam < 0) {
                     return null;
                 }
 
-                TypeConstant typeOfType = sigOrig.getRawParams()[iParam];
+                TypeConstant typeOfType = sigOrig.getRawParams()[iParam].resolveGenerics(pool, typeTarget);
                 assert typeOfType.isTypeOfType();
 
                 TypeConstant type = typeOfType.getParamType(0);
                 if (type.containsAutoNarrowing(true)) {
                     type = type.resolveAutoNarrowing(pool, false, typeJit, null);
                 }
-                return type.isJitPrimitive() || type.isJitL2Specialized()
-                        ? type
-                        : null;
+                return type;
             });
         }
-        return sigResolved;
+        // resolve class formals after method formals, so a captured lambda binding is not
+        // replaced by a same-named class generic
+        return sig.resolveGenericTypes(pool, typeTarget);
     }
 
     // ----- run-time support ----------------------------------------------------------------------

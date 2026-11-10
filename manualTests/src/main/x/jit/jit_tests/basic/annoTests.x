@@ -3,6 +3,7 @@ package annoTests {
 
     void run() {
         testSimple();
+        testIntoParameterized();
         testIntoClass();
         testIntoChild();
         testIntoInheritedChild();
@@ -269,6 +270,24 @@ package annoTests {
                     console.print("in test at Child");
                 }
             }
+        }
+    }
+
+    void testIntoParameterized() {
+        Box<Int> number = new @Tagged Box<Int>(42);
+        assert number.value == 42;
+        assert asTagged(number).tag() == "tagged";
+
+        Box<String> text = new @Tagged Box<String>("value");
+        assert text.value == "value";
+        assert asTagged(text).tag() == "tagged";
+
+        Tagged asTagged(Object value) = value.as(Tagged);
+
+        const Box<Element>(Element value) {}
+
+        annotation Tagged into Const {
+            String tag() = "tagged";
         }
     }
 

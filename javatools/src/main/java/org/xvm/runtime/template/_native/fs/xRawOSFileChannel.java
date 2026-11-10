@@ -7,10 +7,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonReadableChannelException;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+
+import java.util.Set;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -95,16 +97,13 @@ public class xRawOSFileChannel
             }
 
         case "readable":
-            return frame.assignValue(iReturn,
-                xBoolean.makeHandle(hChannel.f_channel instanceof ReadableByteChannel));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(hChannel.f_fReadable));
 
         case "writable":
-            return frame.assignValue(iReturn,
-                xBoolean.makeHandle(hChannel.f_channel instanceof WritableByteChannel));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(hChannel.f_fWritable));
 
         case "closed":
-            return frame.assignValue(iReturn,
-                xBoolean.makeHandle(!hChannel.f_channel.isOpen()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(!hChannel.f_channel.isOpen()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -236,14 +235,15 @@ public class xRawOSFileChannel
     /**
      * Construct a new {@link ChannelHandle} representing the specified file.
      *
-     * @param frame    the current frame
-     * @param channel  the channel
-     * @param path     the channel's path
-     * @param iReturn  the register id to place the created handle into
+     * @param frame   the current frame
+     * @param channel the channel
+     * @param path    the channel's path
+     * @param setOpt  the {@link OpenOption options} used to open the channel
+     * @param iReturn the register id to place the created handle into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    public int createHandle(Frame frame, FileChannel channel, Path path, int iReturn) {
+    public int createHandle(Frame frame, FileChannel channel, Path path, Set<OpenOption> setOpt, int iReturn) {
         if (iReturn == Op.A_IGNORE) {
             return Op.R_NEXT;
         }
@@ -251,7 +251,7 @@ public class xRawOSFileChannel
         Container      container = frame.f_context.f_container;
         ServiceContext context   = container.createServiceContext(path.toString());
         ChannelHandle  hChannel  = new ChannelHandle(getCanonicalClass(),
-                context, channel, path.toAbsolutePath());
+                context, channel, path.toAbsolutePath(), setOpt);
 
         // this should come from the config
         int cbPreferredSize = 8192;
@@ -270,13 +270,17 @@ public class xRawOSFileChannel
             extends xRawChannel.ChannelHandle {
         public final FileChannel f_channel;
         public final Path        f_path;
+        public final boolean     f_fReadable;
+        public final boolean     f_fWritable;
 
         public ChannelHandle(TypeComposition clazz, ServiceContext context,
-                             FileChannel channel, Path path) {
+                             FileChannel channel, Path path, Set<OpenOption> setOpt) {
             super(clazz, context);
 
-            f_channel = channel;
-            f_path    = path;
+            f_channel   = channel;
+            f_path      = path;
+            f_fReadable = setOpt.contains(StandardOpenOption.READ);
+            f_fWritable = setOpt.contains(StandardOpenOption.WRITE);
         }
 
         @Override

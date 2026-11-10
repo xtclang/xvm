@@ -16,6 +16,8 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -65,7 +67,7 @@ public class AnnotationHelper {
                     ? builder.pool().typeConstRB() : builder.pool().typeObject();
         }
         this.baseType              = baseType.ensureAccess(Access.PRIVATE);
-        this.constructionSiteCount = getConstructionSiteCount(thisType, annotations);
+        this.constructionSiteCount = isConstructionSite ? thisType.getAnnotations().length : 0;
     }
 
     private final CommonBuilder builder;
@@ -136,7 +138,7 @@ public class AnnotationHelper {
                 }
 
                 BuildContext bctx = new BuildContext(
-                        builder, method.getTypeInfo(), method, jmd, thisType);
+                        builder, method.getTypeInfo(), method, jmd, thisType, null);
                 builder.doAssembleMethod(classBuilder, bctx, method, name,
                         jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD,
                         ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC);
@@ -145,19 +147,19 @@ public class AnnotationHelper {
     }
 
     /**
-     * @return constructor candidates in annotation invocation order, including no-op constructors;
-     *         each construction site row contains all overloads ordered by method identity, and
-     *         each declaration site row contains only the constructor selected by its arguments
+     * @return one row of constructor candidates per annotation, with rows in annotation invocation
+     *         order and no-op constructors included; construction site rows contain all overloads
+     *         sorted lexicographically by method identity, while declaration site rows contain only
+     *         the constructor selected by the annotation arguments
      *
      * @throws IllegalStateException if an annotation has no constructor
      */
     private AnnotationConstructor[][] collectAnnotationConstructors() {
         AnnotationConstructor[][] candidates = new AnnotationConstructor[annotations.length][];
         for (int i = 0; i < annotations.length; i++) {
-            Annotation annotation = annotations[i];
-            TypeInfo   info       = annotation.getAnnotationType()
-                    .ensureAccess(Access.PRIVATE).ensureTypeInfo();
-            boolean isConstructionSite = i < constructionSiteCount;
+            Annotation annotation         = annotations[i];
+            TypeInfo   info               = getAnnotationInfo(annotation, thisType);
+            boolean    isConstructionSite = i < constructionSiteCount;
 
             MethodConstant[] ids;
             if (isConstructionSite) {
@@ -189,8 +191,7 @@ public class AnnotationHelper {
      * @return the synthetic constructor method name, also used as an instantiator suffix
      */
     private String annotationConstructorName(AnnotationConstructor constructor) {
-        return annotationConstructorName(
-                builder, constructor.annotationIndex(), constructor.method());
+        return annotationConstructorName(builder, constructor.annotationIndex(), constructor.method());
     }
 
     /**
@@ -199,7 +200,7 @@ public class AnnotationHelper {
      *
      * @return the synthetic constructor name, such as {@code @1$2}, using '@' for AT
      */
-    private static String annotationConstructorName(Builder builder, int index, MethodInfo method) {
+    public static String annotationConstructorName(Builder builder, int index, MethodInfo method) {
         // every annotation segment includes an explicit constructor ordinal, including zero
         String name    = method.ensureJitMethodName(builder.typeSystem);
         String ordinal = name.equals("construct") ? "0" : name.substring("construct$".length());
@@ -326,23 +327,35 @@ public class AnnotationHelper {
      * @throws IllegalStateException if an annotation constructor cannot be resolved
      */
     public static JitCallDesc getInstantiatorCall(BuildContext bctx, TypeConstant targetType,
-                                                 String baseName, JitCtorDesc baseDesc) {
-        Builder       builder     = bctx.builder;
-        JitCtorDesc   newDesc     = baseDesc;
-        StringBuilder newName     = new StringBuilder(baseName);
-        Annotation[]  annotations = targetType.ensureTypeInfo().getMixinAnnotations();
-        int           count       = getConstructionSiteCount(targetType, annotations);
+                                                  String baseName, JitCtorDesc baseDesc) {
+        Annotation[]     annos = targetType.getAnnotations();
+        List<MethodInfo> ctors = new ArrayList<>(annos.length);
 
-        for (int i = 0; i < count; i++) {
-            Annotation annotation  = annotations[i];
-            MethodInfo constructor = findAnnotationConstructor(bctx, annotation);
-
-            newDesc = newDesc.appendParams(constructor.getJitDesc(
-                    builder, targetType.ensureAccess(Access.STRUCT)));
-            newName.append(annotationConstructorName(builder, i, constructor));
+        for (Annotation anno : annos) {
+            ctors.add(findAnnotationConstructor(bctx, anno, targetType));
         }
-        return JitCallDesc.static_(
-                builder.getICDesc(targetType), newName.toString(), newDesc, false);
+        return getInstantiatorCall(bctx.builder, targetType, baseName, baseDesc, ctors);
+    }
+
+    /**
+     * Resolve an instantiator call using the selected construction site annotation constructors.
+     *
+     * @param constructors  the selected construction site constructors, in invocation order
+     *
+     * @return the instantiator call with annotation suffixes and parameters appended
+     */
+    public static JitCallDesc getInstantiatorCall(Builder builder, TypeConstant targetType,
+                                                  String baseName, JitCtorDesc baseDesc,
+                                                  List<MethodInfo> constructors) {
+        JitCtorDesc   instorDesc = baseDesc;
+        StringBuilder instorName = new StringBuilder(baseName);
+        for (int i = 0; i < constructors.size(); i++) {
+            MethodInfo constructor = constructors.get(i);
+
+            instorDesc = instorDesc.appendParams(constructor.getJitDesc(builder, targetType));
+            instorName.append(annotationConstructorName(builder, i, constructor));
+        }
+        return JitCallDesc.static_(builder.getICDesc(targetType), instorName.toString(), instorDesc, false);
     }
 
     /**
@@ -358,15 +371,10 @@ public class AnnotationHelper {
      */
     public static void loadAnnotationConstructorArgs(BuildContext bctx, CodeBuilder code,
                                                      TypeConstant targetType) {
-        Builder      builder     = bctx.builder;
-        Annotation[] annotations = targetType.ensureTypeInfo().getMixinAnnotations();
-        int          count       = getConstructionSiteCount(targetType, annotations);
-        for (int annotationIndex = 0; annotationIndex < count; annotationIndex++) {
-            Annotation    annotation = annotations[annotationIndex];
-            MethodInfo    ctor       = findAnnotationConstructor(bctx, annotation);
-            JitMethodDesc jmd        = ctor.getJitDesc(
-                    builder, targetType.ensureAccess(Access.STRUCT));
-            Constant[]    args       = annotation.getParams();
+        for (Annotation annotation : targetType.getAnnotations()) {
+            MethodInfo    ctor = findAnnotationConstructor(bctx, annotation, targetType);
+            JitMethodDesc jmd  = ctor.getJitDesc(bctx.builder, targetType);
+            Constant[]    args = annotation.getParams();
 
             bctx.loadCallArguments(code, jmd, i -> {
                 Constant value = i < args.length ? args[i] : null;
@@ -377,32 +385,23 @@ public class AnnotationHelper {
 
                 return value instanceof RegisterConstant register
                         ? bctx.loadArgument(code, register.getRegisterIndex())
-                        : builder.loadConstant(bctx, code, value);
+                        : bctx.loadConstant(code, value);
             }, targetType);
         }
-    }
-
-    /**
-     * @return the number of leading construction site annotations in the complete invocation list
-     */
-    private static int getConstructionSiteCount(TypeConstant type, Annotation[] annotations) {
-        // TypeInfo layers construction site annotations before the base's declaration annotations
-        return type.isAnnotated()
-                ? annotations.length - type.removeAnnotations()
-                        .ensureTypeInfo().getMixinAnnotations().length
-                : 0;
     }
 
     /**
      * Find the constructor overload for an annotation application, such as {@code @A(value)}.
      *
      * @param annotation  the annotation application retaining its original arguments
+     * @param targetType  the type supplying the annotation's generic bindings
      *
      * @return the matching Ecstasy constructor's MethodInfo
      *
      * @throws IllegalStateException if no matching constructor is found
      */
-    private static MethodInfo findAnnotationConstructor(BuildContext bctx, Annotation annotation) {
+    private static MethodInfo findAnnotationConstructor(BuildContext bctx, Annotation annotation,
+                                                        TypeConstant targetType) {
         Constant[]     args     = annotation.getParams();
         TypeConstant[] argTypes = new TypeConstant[args.length];
 
@@ -419,7 +418,7 @@ public class AnnotationHelper {
             }
         }
 
-        return findAnnotationConstructor(annotation, argTypes);
+        return findAnnotationConstructor(annotation, argTypes, targetType);
     }
 
     /**
@@ -509,7 +508,7 @@ public class AnnotationHelper {
                     ? property.getProperty().getValueType(builder.pool(), null)
                     : value.getType();
         }
-        return findAnnotationConstructor(annotation, argTypes);
+        return findAnnotationConstructor(annotation, argTypes, thisType);
     }
 
     /**
@@ -518,20 +517,83 @@ public class AnnotationHelper {
      * @param annotation  the annotation whose constructor overloads are searched
      * @param argTypes    the supplied argument types; null entries leave the corresponding types
      *                    unspecified, and omitted trailing arguments use constructor defaults
+     * @param targetType  the type supplying the annotation's generic bindings
      *
      * @return the matching Ecstasy constructor
      *
      * @throws IllegalStateException if no matching constructor is found
      */
-    private static MethodInfo findAnnotationConstructor(Annotation annotation,
-                                                        TypeConstant[] argTypes) {
-        TypeInfo info = annotation.getAnnotationType()
-                .ensureAccess(Access.PRIVATE).ensureTypeInfo();
-        MethodConstant id = info.findConstructor(argTypes);
+    public static MethodInfo findAnnotationConstructor(Annotation annotation, TypeConstant[] argTypes,
+                                                       TypeConstant targetType) {
+        TypeInfo       info = getAnnotationInfo(annotation, targetType);
+        MethodConstant id   = info.findConstructor(argTypes);
+
         if (id == null) {
             throw new IllegalStateException("Missing annotation constructor for " + annotation);
         }
         return info.getMethodById(id, false);
+    }
+
+    /**
+     * @return the annotation's private TypeInfo with generic arguments resolved by the target
+     */
+    private static TypeInfo getAnnotationInfo(Annotation annotation, TypeConstant targetType) {
+        return annotation.getFormalType().resolveGenerics(targetType.getConstantPool(), targetType)
+                .ensureAccess(Access.PRIVATE).ensureTypeInfo();
+    }
+
+    /**
+     * Remove compiler-only annotations from the specified annotation type. The well-known classes
+     * to filter out are:
+     * <ul>
+     *   <li>{@code Abstract}
+     *   <li>{@code Concurrent}
+     *   <li>{@code Override}
+     *   <li>{@code RO}
+     *   <li>{@code Synchronized}
+     *   <li>{@code Transient}
+     *   <li>{@code Unassigned}
+     *   <li>{@code Volatile}
+     * </ul>
+     *
+     * @param type  the type whose annotations are being filtered
+     *
+     * @return the composition without compiler-only annotations, retaining other annotations and
+     *         their arguments in their original order
+     */
+    public static TypeConstant filterAnnotations(TypeConstant type) {
+        if (!(type instanceof AnnotatedTypeConstant annotated)) {
+            return type;
+        }
+
+        TypeConstant underlying = filterAnnotations(annotated.getUnderlyingType());
+
+        return isCompilerOnlyAnnotation(annotated.getAnnotationClass())
+                ? underlying
+                : annotated.replaceUnderlying(type.getConstantPool(), _ -> underlying);
+    }
+
+    /**
+     * @return true iff at least one annotation is not compiler-only
+     */
+    public static boolean hasRuntimeAnnotations(Annotation[] annotations) {
+        for (Annotation annotation : annotations) {
+            if (!isCompilerOnlyAnnotation((ClassConstant) annotation.getAnnotationClass())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return true iff the annotation is a well-known compiler-only annotation
+     */
+    public static boolean isCompilerOnlyAnnotation(ClassConstant annoId) {
+        return switch (annoId.getImplicitImportName()) {
+            case "Abstract", "Concurrent", "Override", "RO", "Synchronized", "Transient",
+                 "Unassigned", "Volatile" -> true;
+            case null, default -> false;
+        };
     }
 
     /**

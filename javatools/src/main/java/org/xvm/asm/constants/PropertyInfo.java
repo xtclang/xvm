@@ -1385,6 +1385,48 @@ public class PropertyInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
+     * @return true iff the JIT requires a field that stores a Ref object for this property
+     */
+    public boolean isJitInflated() {
+        // TODO: handle Future in a later phase; keep its stored-Ref implementation for now
+        return containsRefAnnotation(pool().clzFuture());
+    }
+
+    /**
+     * @return true iff this property has storage annotated by {@code Unassigned}, directly or
+     *         through a derived annotation
+     */
+    public boolean isJitPotentiallyUnassigned() {
+        if (hasField()) {
+            TypeConstant typeUnassigned = pool().clzUnassigned().getType();
+            for (Annotation anno : getRefAnnotations()) {
+                if (anno.getAnnotationType().isA(typeUnassigned)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return true iff the JIT must initialize this property's storage using an explicit
+     *         initializer or its type's default value
+     */
+    public boolean requiresJitInitialization() {
+        return isInitialized() ||
+               !isImplicitlyAssigned() && getType().getDefaultValue() != null;
+    }
+
+    /**
+     * @return true iff inline primitive storage needs an assignment bit separate from its value
+     */
+    public boolean requiresJitAssignedBit() {
+        // an "@Unassigned T" property with primitive storage needs an "$assigned" bit;
+        // all others use the value of "null" for that
+        return isJitPotentiallyUnassigned() && getType().isJitPrimitive() && !isJitInflated();
+    }
+
+    /**
      * @return the type of the field owner for this property to be used by the JIT compiler to
      *         generate the direct field access
      */
@@ -1409,11 +1451,19 @@ public class PropertyInfo
      *         containing the backing field
      */
     public TypeConstant getCallableOwnerType(Builder builder, TypeConstant targetType) {
+        ConstantPool     pool    = builder.pool();
         IdentityConstant idOwner = getJitOwnerIdentity();
+
+        if (targetType.isNativeRef() &&
+                (idOwner.equals(pool.clzRef()) || idOwner.equals(pool.clzVar()))) {
+            // native Ref/Var accessors are hosted by nRef, rather than the public interfaces
+            return targetType.removeAccess().removeAnnotations();
+        }
+
         return switch (idOwner.getComponent().getFormat()) {
             case METHOD, PROPERTY
                     -> targetType;
-            default -> idOwner.getFormalType().resolveGenerics(builder.pool(), targetType);
+            default -> idOwner.getFormalType().resolveGenerics(pool, targetType);
         };
     }
 
@@ -1430,6 +1480,13 @@ public class PropertyInfo
         }
         assert id != null;
         return id.getNamespace();
+    }
+
+    /**
+     * Ensure a unique name for this property at the specified TypeSystem.
+     */
+    public String ensureJitName(TypeSystem ts) {
+        return getIdentity().ensureJitPropertyName(ts);
     }
 
     /**

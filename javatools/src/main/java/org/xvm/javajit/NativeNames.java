@@ -83,6 +83,8 @@ public class NativeNames {
         reservedMethodName.put("collections.Array.FreezableArray/freeze/1", "freeze");
         reservedMethodName.put("collections.Collection/reify/0", "reify");
         reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
+        reservedMethodName.put("collections.HashCollector/compute/0", "compute");
+        reservedMethodName.put("collections.HashCollector/reset/0",   "reset");
         reservedMethodName.put("collections.Tuple/add/2",         "add");
         reservedMethodName.put("collections.Tuple/addAll/1",      "addAll");
         reservedMethodName.put("collections.Tuple/elementAt/1",   "elementAt");
@@ -163,6 +165,34 @@ public class NativeNames {
         reservedMethodName.put("temporal.Timer/schedule/3", "schedule");
         reservedMethodName.put("temporal.Timer/stop/0",     "stop");
         reservedMethodName.put("temporal.Timer/reset/0",    "reset");
+
+        reservedMethodName.put("fs.FileStore/find/1",           "find");
+        reservedMethodName.put("fs.FileStore/dirFor/1",         "dirFor");
+        reservedMethodName.put("fs.FileStore/fileFor/1",        "fileFor");
+        reservedMethodName.put("fs.FileStore/copy/2",           "copy");
+        reservedMethodName.put("fs.FileStore/move/2",           "move");
+        reservedMethodName.put("fs.FileStore/ensureReadOnly/0", "ensureReadOnly");
+
+        // JavaTools Bridge _native types
+
+        reservedMethodName.put("fs.OSStorage/createDir/1",    "createDir");
+        reservedMethodName.put("fs.OSStorage/createFile/1",   "createFile");
+        reservedMethodName.put("fs.OSStorage/delete/1",       "delete");
+        reservedMethodName.put("fs.OSStorage/find/2",         "find");
+        reservedMethodName.put("fs.OSFileStore/dirFor/1",     "dirFor");
+        reservedMethodName.put("fs.OSFileStore/fileFor/1",    "fileFor");
+        reservedMethodName.put("fs.OSStorage/instance/0",     "instance");
+        reservedMethodName.put("fs.OSStorage/names/1",        "names");
+        reservedMethodName.put("fs.OSStorage/unwatch/1",      "unwatch");
+        reservedMethodName.put("fs.OSStorage/watch/1",        "watch");
+        reservedMethodName.put("fs.OSFileStore/copyOrMove/5", "copyOrMove");
+        reservedMethodName.put("fs.OSFileStore/linkAsFile/1", "linkAsFile");
+
+        reservedMethodName.put("fs.OSDirectory/dirs/0",             "dirs");
+        reservedMethodName.put("fs.OSDirectory/files/0",            "files");
+        reservedMethodName.put("fs.OSDirectory/filesRecursively/0", "filesRecursively");
+
+        reservedMethodName.put("io.RawChannel/close/0", "close");
     }
 
     /**
@@ -189,9 +219,9 @@ public class NativeNames {
 
                 String methodName = methodId.getName();
                 if (jitName == null &&
-                        (methodName.startsWith("toInt") || methodName.startsWith("toUInt") ||
-                         methodName.startsWith("toDec") || methodName.startsWith("toFloat") ||
-                         methodName.startsWith("toNibble"))) {
+                        (methodName.startsWith("toInt")    || methodName.startsWith("toUInt") ||
+                         methodName.startsWith("toDec")    || methodName.startsWith("toFloat") ||
+                         methodName.startsWith("toNibble") || methodName.startsWith("toByte"))) {
                     jitName = methodName;
                 }
             }
@@ -213,6 +243,7 @@ public class NativeNames {
         Set<String> names = new HashSet<>(reservedMethodName.values());
         addConversionNames(names, "toInt",   "", "8", "16", "32", "64", "128", "N", "Literal");
         addConversionNames(names, "toUInt",  "", "8", "16", "32", "64", "128", "N");
+        addConversionNames(names, "toByte", "");
         addConversionNames(names, "toNibble", "");
         addConversionNames(names, "toDec",   "", "32", "64", "128", "N");
         addConversionNames(names, "toFloat", "8e4", "8e5", "16", "32", "64", "128", "N");

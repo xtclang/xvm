@@ -22,6 +22,9 @@ package tupleTests {
         Int    i2 = tuple[2];
         assert s0 == "hello" && s1 == "world" && i2 == 17;
 
+        Tuple<String, String, Int> tuple1 = (BYE, "world", 17);
+        assert tuple1[0] == "goodbye";
+
         // TODO: the Map lookup fails; formatting the assertion invokes specialized Map as a class
 //        Tuple<String, Map<Int, String>> tuple2 = ("goodbye", [4="now"]);
 //        assert tuple2[0] == "goodbye";
@@ -29,10 +32,10 @@ package tupleTests {
 //
 //        Tuple<String, Map<Int, String>> tuple3 = Tuple:(BYE, [4="now"]);
 //        assert tuple3 == tuple2;
-//
-//        private @Lazy String BYE.calc() {
-//            return "goodbye";
-//        }
+
+        private @Lazy String BYE.calc() {
+            return "goodbye";
+        }
     }
 
     void testEquals() {

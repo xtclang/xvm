@@ -79,7 +79,7 @@ public class AugmentingBuilder extends CommonBuilder {
 
         // if there is any native Exception, we need to generate the "$createJavaException" method
         TypeConstant type        = thisType.removeAccess();
-        TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
+        TypeConstant T_EXCEPTION = pool().typeException();
         if (type.isA(T_EXCEPTION) && !type.equals(T_EXCEPTION)) {
             new ExceptionBuilder(typeSystem, art).assembleCreateException(classBuilder);
         }
@@ -127,7 +127,7 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleField(ClassBuilder classBuilder, PropertyInfo prop) {
-        String      jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
+        String      jitName = prop.ensureJitName(typeSystem);
         JitTypeDesc jtd     = prop.getType().getJitDesc(this);
 
         boolean isNativeField = switch (jtd.flavor) {
@@ -183,6 +183,21 @@ public class AugmentingBuilder extends CommonBuilder {
         }
 
         super.assemblePropertyAccessor(classBuilder, prop, jitName, jmd, isGetter);
+    }
+
+    @Override
+    protected void assembleInflatedAccessors(ClassBuilder classBuilder, PropertyInfo prop) {
+        String        jitName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc jmd     = prop.getGetterJitDesc(this, thisType);
+
+        if (jmd.isOptimized && findMethod(jitName + OPT, jmd.optimizedMD) != null) {
+            // the native optimized getter still needs its boxed entry point
+            if (findMethod(jitName, jmd.standardMD) == null) {
+                assembleMethodWrapper(classBuilder, jitName, jmd);
+            }
+        } else if (findMethod(jitName, jmd.standardMD) == null) {
+            super.assembleInflatedAccessors(classBuilder, prop);
+        }
     }
 
     @Override
@@ -375,10 +390,6 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected boolean isNativeField(String jitName) {
-        FieldModel fm = findField(jitName);
-        if (fm != null) {
-            return true;
-        }
-        return false;
+        return findField(jitName) != null;
     }
 }

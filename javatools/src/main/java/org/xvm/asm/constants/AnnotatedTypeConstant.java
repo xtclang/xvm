@@ -19,6 +19,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
+import org.xvm.javajit.builders.AnnotationHelper;
+
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -166,7 +168,7 @@ public class AnnotatedTypeConstant
 
         TypeConstant typeFormal = anno.getFormalType();
         TypeConstant typeInto   = anno.getTypeInto();
-        TypeConstant typeActual = m_constType;
+        TypeConstant typeActual = m_constType.normalizeParameters();
 
         Map<String, TypeConstant> mapResolve = new HashMap<>();
         for (Map.Entry<StringConstant, TypeConstant> entry : anno.getTypeParamsAsList()) {
@@ -555,14 +557,24 @@ public class AnnotatedTypeConstant
 
     @Override
     public TypeConstant getJitCCType() {
-        TypeConstant type = replaceUnderlying(getConstantPool(), TypeConstant::getJitCCType);
-        return ((AnnotatedTypeConstant) type).stripParameters();
+        TypeConstant type = AnnotationHelper.filterAnnotations(this);
+        if (type == this) {
+            TypeConstant typeUnderlying = getUnderlyingType().getJitCCType();
+
+            // strip parameters
+            return getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
+                            Constant.NO_CONSTS, typeUnderlying);
+        }
+        return type.getJitCCType();
     }
 
     @Override
     public TypeConstant getJitICType() {
-        TypeConstant type = replaceUnderlying(getConstantPool(), TypeConstant::getJitICType);
-        return ((AnnotatedTypeConstant) type).stripParameters();
+        TypeConstant typeUnderlying = getUnderlyingType().getJitICType();
+
+        // strip parameters
+        return getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
+                        Constant.NO_CONSTS, typeUnderlying);
     }
 
     // ----- type comparison support ---------------------------------------------------------------

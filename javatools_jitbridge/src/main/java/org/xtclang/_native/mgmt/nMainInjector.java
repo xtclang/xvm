@@ -6,6 +6,8 @@ import java.util.Map;
 
 import java.util.function.Function;
 
+import org.xtclang._native.collections.BasicHashCollector;
+
 import org.xtclang._native.io.TerminalConsole;
 
 import org.xtclang._native.numbers.RTRandom;
@@ -35,6 +37,7 @@ public class nMainInjector
     public nMainInjector(Xvm xvm, Map<java.lang.String, List<java.lang.String>> cliInjectables) {
         this.xvm         = xvm;
         this.cliInjector = new nCommandLineInjector(xvm, cliInjectables);
+        this.fsInjector  = new nFileSystemInjector(xvm);
     }
 
     private final Xvm xvm;
@@ -45,6 +48,11 @@ public class nMainInjector
      * The helper class to produce injectables from the command line.
      */
     private final nCommandLineInjector cliInjector;
+
+    /**
+     * The helper class to produce injectables from the file system.
+     */
+    private final nFileSystemInjector fsInjector;
 
     /**
      * A {@link Function} that always returns {@link Nullable.Null}.
@@ -95,5 +103,17 @@ public class nMainInjector
 
         TypeConstant timerType = pool.ensureEcstasyTypeConstant("temporal.Timer");
         suppliers.put(new Resource(timerType, "timer"), NanosTimer::$create);
+
+        TypeConstant fileStoreType = pool.ensureEcstasyTypeConstant("fs.FileStore");
+        TypeConstant directoryType = pool.ensureEcstasyTypeConstant("fs.Directory");
+        suppliers.put(new Resource(fileStoreType, "storage"), fsInjector::ensureFileStore);
+        suppliers.put(new Resource(directoryType, "rootDir"), fsInjector::ensureRootDir);
+        suppliers.put(new Resource(directoryType, "homeDir"), fsInjector::ensureHomeDir);
+        suppliers.put(new Resource(directoryType, "curDir" ), fsInjector::ensureCurDir);
+        suppliers.put(new Resource(directoryType, "tmpDir" ), fsInjector::ensureTmpDir);
+
+        TypeConstant hashType = pool.ensureEcstasyTypeConstant("collections.HashCollector");
+        suppliers.put(new Resource(hashType, "hash"),
+                _ -> BasicHashCollector.$create(xvm.getCtx()));
     }
 }

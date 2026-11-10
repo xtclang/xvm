@@ -136,6 +136,17 @@ public class Bit extends nConst {
         return thi$;
     }
 
+    /**
+     * The primitive implementation of Byte toByte()
+     *
+     * @param ctx  the build context
+     *
+     * @return this Bit value as a Byte (a Java {@code int})
+     */
+    public static int toByte$p(int thi$, Ctx ctx) {
+        return thi$;
+    }
+
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override public java.lang.String toString() {

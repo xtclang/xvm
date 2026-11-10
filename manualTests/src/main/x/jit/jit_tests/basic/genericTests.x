@@ -34,6 +34,7 @@ package genericTests {
 
         testFormalComparison();
         testFormalType();
+        testErasedLambdaParameter();
         testGenericLocalClassName();
         testEscapedClassName();
     }
@@ -53,6 +54,23 @@ package genericTests {
     void testFormalType() {
         Iterator<String> iterator = ["alpha"].iterator();
         assert iterator.Element.is(Type<Orderable>);
+    }
+
+    void testErasedLambdaParameter() {
+        // Int specializes Entry, while Value remains erased at the class level; the lambda's
+        // captured String binding must be resolved consistently in its signature and body
+        assert new Entry<Int, String>(1, "value").formatValue() == "value";
+
+        class Entry<Key, Value>(Key key, Value value) {
+            String formatValue() {
+                function String(Value) render = Value.is(Type<String>)
+                        ? (item -> copy(item))
+                        : (item -> "");
+                return render(value);
+            }
+
+            static String copy(String value) = value;
+        }
     }
 
     void testGenericLocalClassName() {

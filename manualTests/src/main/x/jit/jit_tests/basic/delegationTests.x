@@ -7,6 +7,7 @@ package delegationTests {
         testSimpleDelegation();
         testSuperDelegation();
         testDefaultDelegation();
+        testChildDelegation();
     }
 
     void testSimpleDelegation() {
@@ -90,5 +91,26 @@ package delegationTests {
         // the delegate inherits the interface's default implementation
         Wrapper wrapper = new Wrapper(new Report());
         assert wrapper.report() == "default";
+    }
+
+    void testChildDelegation() {
+        interface Reporter {
+            String report();
+        }
+
+        class Report(String value) implements Reporter {
+            @Override
+            String report() = value;
+        }
+
+        class Parent {
+            class Child(Reporter delegate)
+                    delegates Reporter-Object(delegate) {
+                String reportFromChild() = report() + "!";
+            }
+        }
+
+        Parent.Child child = new Parent().new Child(new Report("child"));
+        assert child.reportFromChild() == "child!";
     }
 }

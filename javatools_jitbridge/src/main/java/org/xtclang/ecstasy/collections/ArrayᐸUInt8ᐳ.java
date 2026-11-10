@@ -1,7 +1,10 @@
 package org.xtclang.ecstasy.collections;
 
+import java.nio.ByteBuffer;
+
 import java.util.Arrays;
 
+import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.IteratorᐸUInt8ᐳ;
 import org.xtclang.ecstasy.Object;
@@ -233,6 +236,109 @@ public class ArrayᐸUInt8ᐳ
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Create a new {@link ArrayᐸUInt8ᐳ} from a Java byte array.
+     */
+    public static ArrayᐸUInt8ᐳ $makeArray(Ctx ctx, byte... values) {
+        return $makeArray(ctx, Mutability.Constant.$INSTANCE, values);
+    }
+
+    /**
+     * Create a new mutable {@link ArrayᐸUInt8ᐳ} of a give capacity.
+     */
+    public static ArrayᐸUInt8ᐳ $makeArray(Ctx ctx, long capacity) {
+        TypeConstant type = ctx.pool().typeByteArray();
+        return $new$p(ctx, type, capacity, false);
+    }
+
+    /**
+     * Create a new {@link ArrayᐸUInt8ᐳ} from a Java byte array.
+     */
+    public static ArrayᐸUInt8ᐳ $makeArray(Ctx ctx, Mutability mutability, byte... values) {
+        TypeConstant type  = ctx.pool().typeByteArray();
+        ArrayᐸUInt8ᐳ array = new ArrayᐸUInt8ᐳ(ctx, type);
+        array.$storage = new long[(values.length + 7) / 8];
+        for (int i = 0; i < values.length; i++) {
+            array.$set8bitElement(i, values[i]);
+        }
+        array.$size(values.length);
+
+        if (mutability == null) {
+            mutability = Mutability.Constant.$INSTANCE;
+        }
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+
+        return array;
+    }
+
+    /**
+     * Create a new {@link ArrayᐸUInt8ᐳ} from a Java {@link ByteBuffer}.
+     */
+    public static ArrayᐸUInt8ᐳ $makeArray(Ctx ctx, int size, ByteBuffer buffer) {
+        return $makeArray(ctx, Mutability.Constant.$INSTANCE, size, buffer);
+    }
+
+    /**
+     * Create a new {@link ArrayᐸUInt8ᐳ} from a Java {@link ByteBuffer}.
+     */
+    public static ArrayᐸUInt8ᐳ $makeArray(Ctx ctx, Mutability mutability, int size, ByteBuffer buffer) {
+        TypeConstant type  = ctx.pool().typeByteArray();
+        ArrayᐸUInt8ᐳ array = new ArrayᐸUInt8ᐳ(ctx, type);
+        array.$storage = new long[(size + 7) / 8];
+        for (int i = 0; i < size; i++) {
+            array.$set8bitElement(i, buffer.get(i));
+        }
+        array.$size(size);
+
+        if (mutability == null) {
+            mutability = Mutability.Constant.$INSTANCE;
+        }
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+
+        return array;
+    }
+
+    /**
+     * Create a {@link ByteBuffer} from this array.
+     */
+    public ByteBuffer $getBuffer(Ctx ctx, long start, long end) {
+        // TODO this is very inefficient but can change it when we look at making ArrayᐸUInt8ᐳ
+        //  use a byte array instead of a long array so we can work directly with buffers and I/O.
+        long size = Math.min(end - start + 1, size$get$p(ctx));
+        if (size > Integer.MAX_VALUE) {
+            // In theory an Ecstasy array can be larger than Integer.MAX_VALUE, but we don't
+            // support that yet.
+            throw Exception.$oob(ctx, "Requested size (" + size
+                    + ") exceeds maximum buffer size");
+        }
+        byte[] bytes = new byte[(int) size];
+        int    index = 0;
+        for (long i = start; i < end; i++) {
+            bytes[index++] = (byte) $get8bitUnsignedElement(i);
+        }
+        return ByteBuffer.wrap(bytes);
+    }
+
+    /**
+     * Copy this array's content at the specified offset into the specified array.
+     */
+    public void $copyRawBytes(Ctx ctx, long srcOffset, ArrayᐸUInt8ᐳ target, long dstOffset, long count) {
+        // TODO this is very inefficient but can change it when we look at making ArrayᐸUInt8ᐳ
+        //  use a byte array instead of a long array so we can work directly with buffers and I/O.
+        long size = size$get$p(ctx);
+        if (size == 0 || size <= srcOffset) {
+            return;
+        }
+        long end = Math.min(srcOffset + count, size);
+        for (long i = srcOffset; i < end; i++) {
+            target.setElement$pi(ctx, dstOffset++, $get8bitUnsignedElement(i));
+        }
+    }
+
+    public byte $getByte(long index) {
+        return (byte) $get8bitUnsignedElement(index);
+    }
 
     /**
      * Internal method to create a UInt8 array from a long array.

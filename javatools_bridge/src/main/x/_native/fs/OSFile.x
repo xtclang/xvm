@@ -25,7 +25,7 @@ const OSFile
     }
 
     @Override
-    File truncate(Int newSize) {
+    File truncate(Int newSize = 0) {
         if (!exists) {
             throw new FileNotFound(path);
         }

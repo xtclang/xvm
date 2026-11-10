@@ -32,6 +32,8 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
+import org.xvm.javajit.builders.PropertyHosting;
+
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.CallChain.VirtualConstructorChain;
 import org.xvm.runtime.Frame;
@@ -449,46 +451,53 @@ public abstract class OpInvocable extends Op {
     private void buildSingleInvoke(BuildContext bctx, CodeBuilder code, ClassDesc cdTarget,
                                    TypeConstant typeTarget, TypeInfo infoTarget, boolean fUnboxed,
                                    MethodInfo infoMethod, int[] anArgValue) {
-        MethodBody   bodyHead   = infoMethod.getHead();
-        TypeConstant typeInvoke = typeTarget;
-        ClassDesc    cdInvoke   = cdTarget;
+        MethodBody      bodyHead   = infoMethod.getHead();
+        TypeConstant    typeInvoke = typeTarget;
+        ClassDesc       cdInvoke   = cdTarget;
+        MethodConstant  methodId   = bctx.getConstant(m_nMethodId, MethodConstant.class);
+        PropertyHosting hosting    = bctx.getPropertyHosting(typeTarget);
+        boolean         isPropCall = hosting != null && hosting.findMethod(methodId) != null;
+        JitCallDesc     call;
 
-        if (typeTarget.getJitCCType().isAnnotated()) {
-            // annotated targets are widened; dispatch through the declaring callable contract
-            typeInvoke = bodyHead.resolveDeclaringType(bctx.pool(), typeTarget);
-            cdInvoke   = bctx.builder.getCCDesc(typeInvoke);
-            if (!cdInvoke.equals(cdTarget)) {
-                code.checkcast(cdInvoke);
-            }
-            infoTarget = bctx.getTypeInfo(typeInvoke);
-        }
-
-        if (bodyHead.getImplementation() == Implementation.FromInto) {
-            TypeConstant typeOwner = bctx.getConstant(m_nMethodId, MethodConstant.class).
-                    getNamespace().getType();
-            if (!typeOwner.equals(typeTarget)) {
-                typeInvoke = typeOwner;
-                cdInvoke   = bctx.builder.getCCDesc(typeOwner);
-                if (!typeTarget.isJitAssignableTo(typeOwner)) {
-                    // the target type could be a mixin, which is a Java interface, so invoking a
-                    // method from its "into" class requires a cast to that class
+        if (isPropCall) {
+            call = hosting.resolveCall(infoMethod);
+        } else {
+            if (typeTarget.getJitCCType().isAnnotated()) {
+                // annotated targets are widened; dispatch through the declaring callable contract
+                typeInvoke = bodyHead.resolveDeclaringType(bctx.pool(), typeTarget);
+                cdInvoke   = bctx.builder.getCCDesc(typeInvoke);
+                if (!cdInvoke.equals(cdTarget)) {
                     code.checkcast(cdInvoke);
                 }
-                infoTarget = bctx.getTypeInfo(typeOwner);
-                infoMethod = computeMethodInfo(bctx, typeOwner);
-                bodyHead   = infoMethod.getHead();
+                infoTarget = bctx.getTypeInfo(typeInvoke);
             }
+
+            if (bodyHead.getImplementation() == Implementation.FromInto) {
+                TypeConstant typeOwner = methodId.getNamespace().getType();
+                if (!typeOwner.equals(typeTarget)) {
+                    typeInvoke = typeOwner;
+                    cdInvoke   = bctx.builder.getCCDesc(typeOwner);
+                    if (!typeTarget.isJitAssignableTo(typeOwner)) {
+                        // the target type could be a mixin, which is a Java interface, so invoking a
+                        // method from its "into" class requires a cast to that class
+                        code.checkcast(cdInvoke);
+                    }
+                    infoTarget = bctx.getTypeInfo(typeOwner);
+                    infoMethod = computeMethodInfo(bctx, typeOwner);
+                    bodyHead   = infoMethod.getHead();
+                }
+            }
+
+            // private detached methods require a static call with a receiver as the first argument
+            call = bctx.builder.resolvePrivateDetachedCall(infoMethod, typeInvoke);
         }
 
-        // private detached methods require a static call with a receiver as the first argument
-        JitCallDesc   callDetached = bctx.builder.resolvePrivateDetachedCall(infoMethod, typeInvoke);
         JitMethodDesc jmd;
-
-        if (callDetached == null) {
+        if (call == null) {
             jmd = infoMethod.getJitDesc(bctx.builder, typeInvoke);
         } else {
-            jmd = callDetached.jmd();
-            code.checkcast(callDetached.receiverCD());
+            jmd = call.jmd();
+            code.checkcast(call.receiverCD() == null ? call.owner() : call.receiverCD());
         }
 
         String methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
@@ -512,7 +521,8 @@ public abstract class OpInvocable extends Op {
             Builder.unbox(code, typeInvoke);
         }
 
-        if (bodyHead.getIdentity().getNestedDepth() > 2 || infoMethod.getTypeInfo() == null) {
+        if (!isPropCall && (bodyHead.getIdentity().getNestedDepth() > 2 ||
+                                 infoMethod.getTypeInfo() == null)) {
             // nested and private mixin methods absent from TypeInfo need to be built here;
             // the second check is based on the synthetic info produced by computeMethodInfo()
             bctx.buildMethod(methodName, bodyHead);
@@ -530,8 +540,8 @@ public abstract class OpInvocable extends Op {
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmd, anArgValue);
 
-        if (callDetached != null) {
-            callDetached.invoke(code, fOptimized);
+        if (call != null) {
+            call.invoke(code, fOptimized);
         } else if (fPrimitive) {
             cdInvoke = typeInvoke.getJitCCDesc(bctx.typeSystem);
             code.invokestatic(cdInvoke, methodName, md);
@@ -567,7 +577,13 @@ public abstract class OpInvocable extends Op {
 
         TypeInfo       infoTarget = bctx.getTypeInfo(typeTarget);
         MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        MethodInfo     infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack
+
+        if (bctx.getPropertyHosting(typeTarget) instanceof PropertyHosting hosting &&
+                hosting.findMethod(idMethod) instanceof MethodInfo method) {
+            return method;
+        }
+
+        MethodInfo infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack
         if (infoMethod == null) {
             SignatureConstant sig    = idMethod.getSignature();
             boolean           fForce = false;

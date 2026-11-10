@@ -9,12 +9,14 @@ import java.util.Collection;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 /**
@@ -54,5 +56,12 @@ public class PureVirtualChildBuilder extends PureBuilder {
             classBuilder.withMethod(FieldGet + name, md(cd), flags, _ -> {});
             classBuilder.withMethod(FieldSet + name, md(CD_void, cd), flags, _ -> {});
         });
+
+        for (PropertyInfo prop : structInfo.getProperties().values()) {
+            if (prop.isJitPotentiallyUnassigned()) {
+                classBuilder.withMethod(prop.ensureJitName(typeSystem) + AssignedGet,
+                        md(CD_boolean, CD_Ctx), ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT, _ -> {});
+            }
+        }
     }
 }

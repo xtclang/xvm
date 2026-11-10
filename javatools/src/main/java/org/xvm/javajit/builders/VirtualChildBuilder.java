@@ -37,10 +37,10 @@ import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
-
-import static org.xvm.javajit.TypeSystem.HASH;
+import static org.xvm.javajit.TypeSystem.addJitSuffix;
 
 /**
  * Builds virtual children using the effective parent composition.
@@ -87,7 +87,7 @@ public class VirtualChildBuilder extends CommonBuilder {
             // storage not supplied by the Java superclass
             PropertyInfo inheritedProp = javaSuperType == null
                     ? null
-                    : javaSuperType.ensureAccess(Access.STRUCT).ensureTypeInfo().findProperty(propId);
+                    : javaSuperType.ensureTypeInfo().findProperty(propId);
             return inheritedProp == null || !propId.equals(inheritedProp.getFieldIdentity());
         }
         return super.shouldGenerate(id);
@@ -209,7 +209,16 @@ public class VirtualChildBuilder extends CommonBuilder {
                 continue;
             }
 
-            String         field   = prop.getFieldIdentity().ensureJitPropertyName(builder.typeSystem);
+            String field = prop.getFieldIdentity().ensureJitPropertyName(builder.typeSystem);
+            if (prop.requiresJitAssignedBit()) {
+                consumer.accept(field + Assigned, CD_boolean);
+            }
+
+            if (prop.isJitInflated()) {
+                consumer.accept(field, CD_nRef);
+                continue;
+            }
+
             JitMethodDesc  getter  = prop.getGetterJitDesc(builder, builder.thisType);
             JitParamDesc[] returns = getter.isOptimized
                     ? getter.getAllOptimizedReturns(0)
@@ -228,7 +237,7 @@ public class VirtualChildBuilder extends CommonBuilder {
     }
 
     /**
-     * Resolve a composition-specific child super target, or return null for ordinary super resolution.
+     * Resolve a composition-specific child super target, using ordinary super resolution otherwise.
      *
      * <p>Suppose B.C1 extends B.C0 and D extends B with same-name children D.C1 and D.C0.
      * A super call in the hard-left B.C1 body must enter D.C0 on a D.C1 receiver, but B.C0 on
@@ -236,26 +245,33 @@ public class VirtualChildBuilder extends CommonBuilder {
      * body directly. A super call in the derived D.C0 body instead enters its fixed B.C0
      * predecessor; routing it virtually again would re-enter D.C0.
      */
-    public JitCallDesc resolveChildSuperCall(BuildContext bctx) {
+    @Override
+    public JitCallDesc resolveSuperCall(BuildContext bctx) {
         int          depth      = bctx.callDepth + 1;
         MethodBody   body       = bctx.callChain[depth];
         TypeConstant targetType = resolveType(body.getIdentity().getClassIdentity());
 
         if (!(bctx.methodDesc instanceof JitDetachedBodyDesc detached)) {
-            return null;
+            // an annotation's non-detached method can super-call a child's detached body;
+            // invoke that body statically, not via invokespecial on the child's interface;
+            // field targets still need the base resolver's backing-field accessor (common path)
+            return targetType.isVirtualChildClass() &&
+                    body.getImplementation() != MethodBody.Implementation.Field
+                    ? resolveChildCall(body, targetType)
+                    : super.resolveSuperCall(bctx);
         }
 
-        if (isEmbedded(targetType.getExplicitClassFormat())) {
-            // an embedded super body must retain the detached receiver, which can be an interface
-            String name = DetachedBody + MethodInfo.getJitIdentity(bctx.callChain, 0)
-                    .ensureJitMethodName(typeSystem) + HASH + depth;
+        if (isEmbedded(targetType.getExplicitClassFormat()) || targetType.isInterfaceType()) {
+            // a synthetic super body must retain the detached receiver, which can be an interface
+            String name = addJitSuffix(DetachedBody + MethodInfo.getJitIdentity(bctx.callChain, 0)
+                                                                .ensureJitMethodName(typeSystem), depth);
             bctx.buildSuper(name, depth);
             return new JitCallDesc(art.CD(), name, body.getJitDesc(this, thisType), Kind.Static,
                     false, detached.receiverCD);
         }
 
         if (!targetType.isVirtualChildClass()) {
-            return null;
+            return super.resolveSuperCall(bctx);
         }
 
         JitCallDesc callDesc   = resolveChildCall(body, targetType);
@@ -435,6 +451,12 @@ public class VirtualChildBuilder extends CommonBuilder {
             normalizePrimitiveField(code, prop.getType());
             addReturn(code, jmd.getReturn(0).cd);
         } else {
+            if (prop.requiresJitAssignedBit()) {
+                // prop$assigned = true;
+                code.aload(0)
+                    .iconst_1();
+                storeField(code, thisType, field + Assigned, CD_boolean);
+            }
             code.return_();
         }
     }

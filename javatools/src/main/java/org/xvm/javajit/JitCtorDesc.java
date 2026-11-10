@@ -94,6 +94,20 @@ public class JitCtorDesc
     }
 
     /**
+     * Copy this descriptor for a different target, preserving both calling conventions and
+     * implicit-parameter flags.
+     *
+     * @param typeTarget  the type that contains the constructor
+     * @param targetCD    the implicit receiver descriptor, or null if there is no receiver parameter
+     *
+     * @return the descriptor for the specified target
+     */
+    public JitCtorDesc withTarget(TypeConstant typeTarget, ClassDesc targetCD) {
+        return new JitCtorDesc(typeTarget, targetCD, addCtorCtx, addType, addOuter,
+                standardReturns, standardParams, optimizedReturns, optimizedParams);
+    }
+
+    /**
      * Append constructor parameters, preserving both calling conventions.
      */
     public JitCtorDesc appendParams(JitMethodDesc suffix) {

@@ -135,21 +135,31 @@ public abstract class OpReturn
                 String sTransform = regRet.flavor().name() + "->" + pdRet.flavor.name();
                 switch (sTransform) {
                 case "Primitive->Primitive",
-                     "Specific->Specific",
                      "Specific->Widened",
                      "Widened->Specific",
                      "Widened->Widened":
                     Builder.store(code, cd, slotR);
                     break;
 
-                case "Primitive->Widened",
+                case "Specific->Specific":
+                    if (!cd.equals(pdRet.cd) && !regRet.type().isJitAssignableTo(pdRet.type)) {
+                        code.checkcast(pdRet.cd);
+                    }
+                    Builder.store(code, pdRet.cd, slotR);
+                    break;
+
+                case "Primitive->Specific",
+                     "XvmPrimitive->Specific",
+                     "Primitive->Widened",
                      "XvmPrimitive->Widened":
                     // e.g.: (Int|String) v = f(); where f() returns an Int value
                     Builder.box(code, regRet);
                     Builder.store(code, pdRet.cd, slotR);
                     break;
 
-                case "NullablePrimitive->Widened",
+                case "NullablePrimitive->Specific",
+                     "NullableXvmPrimitive->Specific",
+                     "NullablePrimitive->Widened",
                      "NullableXvmPrimitive->Widened":
                     // the null flag selects either a boxed payload or Ecstasy Null
                     Builder.boxNullable(code, regRet.type());
@@ -287,22 +297,31 @@ public abstract class OpReturn
                     break;
 
                 case "Primitive->Primitive",
-                     "Specific->Specific",
                      "Specific->Widened",
                      "Widened->Widened":
+                    break;
+
+                case "Specific->Specific":
+                    if (!cd.equals(pdRet.cd) && !regRet.type().isJitAssignableTo(pdRet.type)) {
+                        code.checkcast(pdRet.cd);
+                    }
                     break;
 
                 case "Widened->Specific":
                     code.checkcast(pdRet.cd);
                     break;
 
-                case "Primitive->Widened",
+                case "Primitive->Specific",
+                     "XvmPrimitive->Specific",
+                     "Primitive->Widened",
                      "XvmPrimitive->Widened":
                     Builder.box(code, regRet);
                     cd = pdRet.cd;
                     break;
 
-                case "NullablePrimitive->Widened",
+                case "NullablePrimitive->Specific",
+                     "NullableXvmPrimitive->Specific",
+                     "NullablePrimitive->Widened",
                      "NullableXvmPrimitive->Widened":
                     Builder.boxNullable(code, regRet.type());
                     cd = pdRet.cd;

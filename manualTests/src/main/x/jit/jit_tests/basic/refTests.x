@@ -1,28 +1,44 @@
 package refTests {
 
+    static TestConsole watchConsole = new TestConsole();
+
     void run() {
-        test1();
-        test2();
-        test3();
-        test4();
-        test5();
-        test6();
+        testEquality();
+        testEquality2();
+        testPeek();
+        testRefEquality();
+        testSet();
+        testWatch();
+        testDelegatingVar();
 
         TestProp test = new TestProp();
         test.testStandard();
         test.testPrimitive();
         test.testConstant();
+        test.testAnnotated();
 
         new UnassignedProp().test();
     }
 
-    void test1() {
+    void testEquality() {
         Test t1 = new Test();
         Test t2 = new Test();
         assert &t1 != &t2;
     }
 
-    void test2() {
+    void testEquality2() {
+        Test t1 = new Test();
+        Test t2 = new Test();
+
+        // this is functionally equivalent to testEquality(), but produces a different op code stream
+        Ref<Test> r1 = &t1;
+        Var<Test> r2 = &t2;
+        if (r1 == r2) {
+            throw new Assertion($"r1 == r2");
+        }
+    }
+
+    void testPeek() {
         Test t1 = new Test();
 
         Ref<Test> r1 = &t1;
@@ -33,26 +49,7 @@ package refTests {
         assert &value == r1;
     }
 
-    void test3() {
-        Test t1 = new Test();
-        Test t2 = new Test();
-
-        assert &t1 != &t2;
-    }
-
-    void test4() {
-        Test t1 = new Test();
-        Test t2 = new Test();
-
-        // this is functionally equivalent to test3(), but produces a different op code stream
-        Ref<Test> r1 = &t1;
-        Var<Test> r2 = &t2;
-        if (r1 == r2) {
-            throw new Assertion($"r1 == r2");
-        }
-    }
-
-    void test5() {
+    void testRefEquality() {
         Test t1 = new Test();
         Test t2 = new Test();
 
@@ -60,15 +57,68 @@ package refTests {
         assert !t1.testRefEquality(t2);
     }
 
-    void test6() {
+    void testSet() {
         Test t = new Test(0);
         Var<Test> r = &t;
         setValue(r, 1);
         assert t.value == 1;
+
+        void setValue(Var<Test> r, Int value) {
+            r.set(new Test(value));
+        }
     }
 
-    void setValue(Var<Test> r, Int value) {
-        r.set(new Test(value));
+    void testWatch() {
+        // property-based
+        watchConsole.reset();
+        for (@Watch(logger) Int i = 3; i > 0; --i) {}
+        assert watchConsole.output() == "->3->2->1->0";
+
+        // var-based
+        function void(Int) log = (Int value) -> watchConsole.print($"{value}->", True);
+
+        watchConsole.reset();
+        @Watch(log) Int value;
+        value = 1;
+        value++;
+        assert watchConsole.output() == "1->2->";
+
+        // lambda-based
+        watchConsole.reset();
+        @Watch((Int v) -> {watchConsole.print($"{v}, ", True);}) Int k;
+        for (k = 3; k > 0; --k) {}
+        assert watchConsole.output() == "3, 2, 1, 0, ";
+    }
+
+    function void(Int) logger = (Int value) -> watchConsole.print($"->{value}", True);
+
+    void testDelegatingVar() {
+        import ecstasy.collections.UniformIndexed;
+
+        // exercise the SimpleVar returned by UniformIndexed.elementAt(), which delegates Var
+        IndexedValue<String> indexed = new IndexedValue("before");
+        Var<String> ref = indexed.elementAt(0);
+        assert ref.assigned;
+        assert ref.get() == "before";
+
+        ref.set("after");
+        assert indexed.getElement(0) == "after";
+
+        indexed.setElement(0, "direct");
+        assert ref.get() == "direct";
+        assert String value := ref.peek();
+        assert value == "direct";
+
+        class IndexedValue<Element>(Element value)
+                implements UniformIndexed<Int, Element> {
+            @Override
+            Element getElement(Int index) = value;
+
+            @Override
+            void setElement(Int index, Element value) {
+                this.value = value;
+            }
+        }
     }
 
     class Test(Int value = 0) {
@@ -79,6 +129,7 @@ package refTests {
 
     class UnassignedProp() {
         @Unassigned String value;
+        @Unassigned Int128 wide;
 
         void test() {
             Ref<String> ref = &value;
@@ -89,6 +140,15 @@ package refTests {
             assert ref.assigned;
             assert String actual := ref.peek();
             assert actual == value;
+
+            Ref<Int128> wideRef = &wide;
+            assert !wideRef.assigned;
+            assert !wideRef.peek();
+
+            wide = 0;
+            assert wideRef.assigned;
+            assert Int128 actualWide := wideRef.peek();
+            assert actualWide == 0;
         }
     }
 
@@ -96,8 +156,13 @@ package refTests {
         static Boolean c = True;
 
         String r.get() = "RO";
+        String neverRead.get() {
+            throw new IllegalState("assigned invoked property getter");
+        }
         String v = "orig";
         Int n = 1;
+        @Watch(v -> watchConsole.print($"-{v}", True)) String msg;
+        @Watch(v -> watchConsole.print($"={v}", True)) Int value;
 
         void testStandard() {
             Ref<String> ref = &r;
@@ -105,6 +170,8 @@ package refTests {
             assert ref.assigned;
             assert String value := ref.peek();
             assert value == "RO";
+
+            assert &neverRead.assigned;
 
             Var<String> var = &v;
             var.set("updated");
@@ -129,6 +196,18 @@ package refTests {
             assert cRef.assigned;
             assert Boolean value := cRef.peek();
             assert value;
+        }
+
+        void testAnnotated() {
+            watchConsole.reset();
+            msg = "hello";
+            assert msg == "hello";
+            assert watchConsole.output() == "-hello";
+
+            watchConsole.reset();
+            value = 42;
+            assert value == 42;
+            assert watchConsole.output() == "=42";
         }
     }
 }
