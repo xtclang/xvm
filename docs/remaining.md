@@ -67,6 +67,18 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   (`debug.inlineValues` on `auto`). IntelliJ's is not implemented: released LSP4IJ draws no inline
   values for Ecstasy (UP50); with our LSP4IJ #1781, merged 2026-10-28, it passes.
 
+### Navigation inside the XDK's library sources
+
+- [ ] Compile each bundled XDK library as a whole, so that a library source's read-only copy answers
+  for every name in it. The copy is compiled on its own, which cannot resolve the library's names.
+  Since 2026-11-10 Go to Definition resolves an import's and a type's names in the library's binary
+  instead (`LibraryReferences.kt`, `XdkLibraryDocumentsTest`): through the types and packages
+  around the name, the file's imports, the module's own name and the implicit imports. Still not
+  found: methods, properties and locals in its bodies, names a type inherits, typedefs and
+  module-qualified names; hover and Find Usages answer only for the copy's own declarations. The
+  server bundles every source of each library, so one background compile per library, kept apart
+  from the user's projects, could answer all of it; weigh its memory and the first compile's time.
+
 ### L82: completion evidence and release gates
 
 - [ ] Agree response-time and memory budgets per supported hardware and platform. The current
@@ -1219,6 +1231,12 @@ editor, which its probe never measured (the probe item below).
   need both in a released plugin and XDK.
 - [ ] #693 (the complete reference PR): reviews. It's for building and testing the whole product,
   and likely won't merge as it stands.
+- [ ] #693 takes errs' XDK source work of 2026-11-10 as two commits after its commit 277: `f01e6e24c8`
+  and `7482c37cae` as one, `45e1bb70ec` as the next. Planned, checked to apply in that order, not
+  carried out (see "errs' XDK source work of 2026-11-10" in
+  [the integration plan](errs-integration-plan.md)).
+- [ ] A master PR for errs `8f650fe08c` alone, `XtcVersionSanityTest`'s projects under `@TempDir`, at
+  the user's go-ahead; #693 takes it from master.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
   when the user decided that #693 takes everything that completes the LSP and DAP implementation,
   distilled per feature, without tracking documents or plans. Last synchronized 2026-11-09: #693's
