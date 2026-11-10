@@ -28,7 +28,11 @@ internal fun compilerSourceTypes(
             .filterIsInstance<Expression>()
             .filter { it.isValidated && it.typeFit.isFit }
             .mapNotNull { it.type }
-            .filter { !it.isFormalType && it.isSingleUnderlyingClass(false) && it.getSingleUnderlyingClass(false) in classes }
+            // a union or intersection names no class of its own, and a union takes no access, as the core library has
+            .filter {
+                !it.isFormalType && !it.isRelationalType && it.isSingleUnderlyingClass(false) &&
+                    it.getSingleUnderlyingClass(false) in classes
+            }
     return (classes.values.map { it.formalType } + instantiated)
         .map { it.ensureAccess(Access.PRIVATE) }
         .distinct()

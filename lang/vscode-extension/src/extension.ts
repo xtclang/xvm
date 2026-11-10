@@ -199,7 +199,7 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         }),
         vscode.workspace.onDidChangeConfiguration(event => {
-            if (event.affectsConfiguration('xtc.java.vmOptions') || event.affectsConfiguration('xtc.server.logs')) {
+            if (event.affectsConfiguration('xtc.java.vmOptions') || event.affectsConfiguration('xtc.server.logs') || event.affectsConfiguration('xtc.server.compileLibraries')) {
                 try {
                     runtimeJvmOptions();
                     runtimeLogArguments();
