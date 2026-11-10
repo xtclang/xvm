@@ -11,6 +11,7 @@ import org.xvm.asm.constants.MultiMethodConstant
 import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.util.ProcessDirectories
+import java.io.File
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -60,6 +61,22 @@ internal object XdkLibrarySources {
 
     /** The read-only files of the bundled sources written so far, by source path. */
     private val copies = ConcurrentHashMap<String, Path>()
+
+    /** The system property that turns off compiling a library source's copy with its whole library. */
+    const val COMPILE_LIBRARIES = "xtc.lsp.compileLibraries"
+
+    /**
+     * Whether a library source's read-only copy is compiled with its whole library ([libraryRoot]), which answers for
+     * every name in it, or else on its own: `-Dxtc.lsp.compileLibraries=false` turns it off, which the editors' setting
+     * gives.
+     */
+    fun compilesLibraries(): Boolean = System.getProperty(COMPILE_LIBRARIES)?.toBooleanStrictOrNull() ?: true
+
+    /** The module files of the libraries whose sources have all been written, by their source paths. */
+    private val libraries = ConcurrentHashMap<String, Path>()
+
+    /** A resource that a source names: `$/` from the library's root, or `./` and `../` from the source's folder. */
+    private val resourceName = Regex("""(?<![\w.$])#?(\$|\.\.|\.)/(\w[\w./-]*\.\w+)""")
 
     /** Attached source text and the revision used to detect a changed source file. */
     private data class Entry(
@@ -261,6 +278,59 @@ internal object XdkLibrarySources {
             .declarations
             .singleOrNull { it.path.takeLast(names.size) == names }
             ?.let { it.range.start.line + 1 }
+    }
+
+    /**
+     * The read-only copy of the module file of the library that the copy [file] is a source of, with every other source
+     * of that library written beside it, so that the library compiles as a whole, as its sources' module, and the
+     * resources its sources name: the language's implicit imports as the compiler has them, and an empty file for each
+     * other, since a library compiled for navigation never runs. Null when [file] is not a copy, or its library has no
+     * bundled module file.
+     */
+    fun libraryRoot(file: File): File? {
+        val path = copies.entries.find { it.value == file.toPath() }?.key ?: return null
+        val name = path.substringBefore('/').removeSuffix(".x")
+        val root = "$name.x"
+        val entry = entries[root] ?: return null
+        return libraries
+            .computeIfAbsent(root) {
+                val members = entries.filterKeys { it.startsWith("$name/") }
+                members.forEach { (member, source) -> copy(member, source) }
+                members.forEach { (member, source) -> resources(name, member, source.text) }
+                resources(name, root, entry.text)
+                copy(root, entry)
+            }.toFile()
+    }
+
+    /**
+     * Writes each resource that [text], the source at [path] of the library [name], names and that is not there yet.
+     * A name in a comment gets its file too, which does no harm, but never one that would be a source of the library.
+     */
+    private fun resources(
+        name: String,
+        path: String,
+        text: String,
+    ) {
+        val folder = path.substringBeforeLast('/', "")
+        resourceName.findAll(text).forEach { match ->
+            val (prefix, relative) = match.destructured
+            val base =
+                when (prefix) {
+                    "$" -> ""
+                    "." -> folder
+                    else -> folder.substringBeforeLast('/', "")
+                }
+            val target = directory.resolve(base).resolve(relative).normalize()
+            val source = target.startsWith(directory.resolve(name)) && relative.endsWith(".x")
+            if (target.startsWith(directory) && !source && !Files.exists(target)) {
+                Files.createDirectories(target.parent)
+                val implicit = prefix == "$" && relative == "implicit.x"
+                val content =
+                    (if (implicit) XdkLibrarySources::class.java.getResourceAsStream("/implicit.x")?.use { it.readBytes() } else null)
+                        ?: ByteArray(0)
+                Files.write(target, content)
+            }
+        }
     }
 
     /** The read-only file with the bundled source of [path], written the first time it is asked for. */

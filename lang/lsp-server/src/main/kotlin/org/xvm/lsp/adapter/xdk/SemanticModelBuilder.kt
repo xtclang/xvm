@@ -157,12 +157,14 @@ internal fun EmbeddingSupport.Compilation.compiledSemantics(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
     navigation: Boolean = false,
+    library: Boolean = false,
 ): CompiledSemantics =
     ExecutionTrace.api("Compilation.compiledSemantics") {
         ConstantPool.withPool(pool()).use {
             val builder =
                 SemanticModelBuilder(
                     dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId },
+                    library,
                 )
             val models = builder.build(this, errors)
             val bindings = builder.constantBindings()
@@ -293,6 +295,9 @@ fun EmbeddingSupport.PartialAnalysis.semanticSnapshot(errors: ErrorListener): Pa
 /** Compiler-worker extraction. All mutable state dies with the builder. */
 private class SemanticModelBuilder(
     private val dependencies: Map<IdentityConstant, DependencyDeclaration> = emptyMap(),
+    // a bundled library's sources compiled as a whole for navigation: their implementation and declaration targets,
+    // a TypeInfo for every type of the core library, cost more memory than a server has
+    private val library: Boolean = false,
 ) {
     private val id = UUID.randomUUID()
     private val captureOrigins = IdentityHashMap<Register, Register>()
@@ -456,7 +461,7 @@ private class SemanticModelBuilder(
             copyConstruction(node, binding)
         }
         val implementations =
-            if (compilation.succeeded() && errors != null) {
+            if (!library && compilation.succeeded() && errors != null) {
                 compilerImplementationTargets(nodes, errors)
             } else {
                 emptyMap()
@@ -470,7 +475,7 @@ private class SemanticModelBuilder(
                 symbol(implementation, implementation.name, kind(implementation))
             }
         val declarations =
-            if (compilation.succeeded() && errors != null) {
+            if (!library && compilation.succeeded() && errors != null) {
                 compilerDeclarationTargets(nodes, errors)
             } else {
                 emptyMap()
@@ -1846,6 +1851,9 @@ private class SemanticModelBuilder(
                     formal.method.isNascent ||
                         formal.method.rawParams[formal.register].containsUnresolved()
                 ) -> false
+
+            // a property that is not a formal type, as the core library's own compile has, has no constraint
+            formal is PropertyConstant && !formal.isFormalType -> true
 
             formal != null -> acyclicConstraint(formal.constraintType, visited)
 
