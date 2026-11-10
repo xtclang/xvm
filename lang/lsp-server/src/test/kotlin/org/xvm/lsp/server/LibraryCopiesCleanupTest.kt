@@ -41,9 +41,9 @@ class LibraryCopiesCleanupTest {
     fun `the server deletes its library copies when it exits`(shutdown: Boolean) {
         val jar = Path.of(requireNotNull(System.getProperty("xtc.lsp.jar")) { "Run compilerStdioTest" })
         val temporary = Files.createDirectory(directory.resolve("tmp"))
-        // the copies of a server that was killed: the system released its lock, and left its lock file
+        // the copies of a server that was killed: the system released its lock, and left its lock file beside them
         val killed = Files.createDirectories(temporary.resolve("xtc-library-sources-1/ecstasy"))
-        Files.createFile(killed.parent.resolve("server.lock"))
+        Files.createFile(temporary.resolve("xtc-library-sources-1.lock"))
         val workspace = Files.createDirectory(directory.resolve("workspace"))
         val source = "module Copies { String text = \"value\"; }"
         val uri = Files.writeString(workspace.resolve("Copies.x"), source).toUri().toString()

@@ -86,7 +86,7 @@ class ServerLogsTest {
         val own = Files.createDirectory(root.resolve("xtc-lsp-xdk-1"))
         val shared = Files.createDirectory(root.resolve("xtc-lsp-xdk-2"))
         // a server of another build ended, and the system released its lock
-        val ended = Files.createDirectory(root.resolve("xtc-lsp-xdk-3")).also { Files.createFile(it.resolve(SessionLock.NAME)) }
+        val ended = Files.createDirectory(root.resolve("xtc-lsp-xdk-3")).also { Files.createFile(SessionLock.beside(it)) }
         // a server wrote it before servers took the lock, so it is never unheld
         Files.createDirectory(root.resolve("xtc-lsp-xdk-4"))
         Owner("share").use { first ->
