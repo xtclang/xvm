@@ -57,23 +57,21 @@ class ColorTests {
         hasNext = nextAsSequential(Color.Blue);
         assert hasNext == False;
 
-// TODO see nextAsEnum below
-//        assert Enum e := nextAsEnum(Color.Red);
-//        assert e == Color.Green;
-//        assert e := nextAsEnum(Color.Green);
-//        assert e == Color.Blue;
-//        hasNext = nextAsEnum(Color.Blue);
-//        assert hasNext == False;
+        assert Enum e := nextAsEnum(Color.Red);
+        assert e == Color.Green;
+        assert e := nextAsEnum(Color.Green);
+        assert e == Color.Blue;
+        hasNext = nextAsEnum(Color.Blue);
+        assert hasNext == False;
     }
 
     conditional Sequential nextAsSequential(Sequential s) {
         return s.next();
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    conditional Enum nextAsEnum(Enum e) {
-//        return e.next();
-//    }
+    conditional Enum nextAsEnum(Enum e) {
+        return e.next();
+    }
 
     void testPrev() {
         Boolean hasPrev = Color.Red.prev();
@@ -90,23 +88,21 @@ class ColorTests {
         assert s := prevAsSequential(Color.Blue);
         assert s == Color.Green;
 
-// TODO see prevAsEnum below
-//        hasPrev = prevAsEnum(Color.Red);
-//        assert hasPrev == False;
-//        assert Enum e := prevAsEnum(Color.Green);
-//        assert e == Color.Red;
-//        assert e := prevAsEnum(Color.Blue);
-//        assert e == Color.Green;
+        hasPrev = prevAsEnum(Color.Red);
+        assert hasPrev == False;
+        assert Enum e := prevAsEnum(Color.Green);
+        assert e == Color.Red;
+        assert e := prevAsEnum(Color.Blue);
+        assert e == Color.Green;
     }
 
     conditional Sequential prevAsSequential(Sequential s) {
         return s.prev();
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    conditional Enum prevAsEnum(Enum e) {
-//        return e.next();
-//    }
+    conditional Enum prevAsEnum(Enum e) {
+        return e.prev();
+    }
 
     void testSkip() {
         Color b = Color.Red.skip(0);
@@ -182,26 +178,24 @@ class ColorTests {
             // expected
         }
 
-// TODO see skipAsEnum below
-//        Enum e = skipAsEnum(Color.Red, 2);
-//        assert e == Color.Blue;
-//
-//        try {
-//            skipAsEnum(Color.Green, -3);
-//            assert as "should have thrown OOB";
-//        } catch (OutOfBounds _) {
-//            // expected
-//        }
+        Enum e = skipAsEnum(Color.Red, 2);
+        assert e == Color.Blue;
+
+        try {
+            skipAsEnum(Color.Green, -3);
+            assert as "should have thrown OOB";
+        } catch (OutOfBounds _) {
+            // expected
+        }
     }
 
     Sequential skipAsSequential(Sequential s, Int steps) {
         return s.skip(steps);
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    Enum skipAsEnum(Enum e, Int steps) {
-//        return e.skip(steps);
-//    }
+    Enum skipAsEnum(Enum e, Int steps) {
+        return e.skip(steps);
+    }
 
     void testStepsTo() {
         Color r = Red;
@@ -223,19 +217,17 @@ class ColorTests {
         assert stepsToAsSequential(Color.Red, Color.Blue) == 2;
         assert stepsToAsSequential(Color.Blue, Color.Green) == -1;
 
-// TODO see stepsToAsEnum below
-//        assert stepsToAsEnum(Color.Red, Color.Blue) == 2;
-//        assert stepsToAsEnum(Color.Blue, Color.Green) == -1;
+        assert stepsToAsEnum(Color.Red, Color.Blue) == 2;
+        assert stepsToAsEnum(Color.Blue, Color.Green) == -1;
     }
 
     Int stepsToAsSequential(Sequential s1, Sequential s2) {
         return s1.stepsTo(s2);
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    Int stepsToAsEnum(Enum e1, Enum e2) {
-//        return e1.stepsTo(e2);
-//    }
+    Int stepsToAsEnum(Enum e1, Enum e2) {
+        return e1.stepsTo(e2);
+    }
 
     void testOrder() {
         assert Color.Red <=> Color.Red == Equal; // compile time computation

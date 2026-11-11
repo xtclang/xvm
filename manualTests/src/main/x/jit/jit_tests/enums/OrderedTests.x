@@ -51,23 +51,21 @@ class OrderedTests {
         hasNext = nextAsSequential(Ordered.Greater);
         assert hasNext == False;
 
-// TODO see nextAsEnum below
-//        assert Enum e := nextAsEnum(Ordered.Lesser);
-//        assert e == Ordered.Equal;
-//        assert e := nextAsEnum(Ordered.Equal);
-//        assert e == Ordered.Greater;
-//        hasNext = nextAsEnum(Ordered.Greater);
-//        assert hasNext == False;
+        assert Enum e := nextAsEnum(Ordered.Lesser);
+        assert e == Ordered.Equal;
+        assert e := nextAsEnum(Ordered.Equal);
+        assert e == Ordered.Greater;
+        hasNext = nextAsEnum(Ordered.Greater);
+        assert hasNext == False;
     }
 
     conditional Sequential nextAsSequential(Sequential s) {
         return s.next();
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    conditional Enum nextAsEnum(Enum e) {
-//        return e.next();
-//    }
+    conditional Enum nextAsEnum(Enum e) {
+        return e.next();
+    }
 
     void testPrev() {
         Boolean hasPrev = Ordered.Lesser.prev();
@@ -84,23 +82,21 @@ class OrderedTests {
         assert s := prevAsSequential(Ordered.Greater);
         assert s == Ordered.Equal;
 
-// TODO see prevAsEnum below
-//        hasPrev = prevAsEnum(Ordered.Lesser);
-//        assert hasPrev == False;
-//        assert Enum e := prevAsEnum(Ordered.Equal);
-//        assert e == Ordered.Lesser;
-//        assert e := prevAsEnum(Ordered.Greater);
-//        assert e == Ordered.Equal;
+        hasPrev = prevAsEnum(Ordered.Lesser);
+        assert hasPrev == False;
+        assert Enum e := prevAsEnum(Ordered.Equal);
+        assert e == Ordered.Lesser;
+        assert e := prevAsEnum(Ordered.Greater);
+        assert e == Ordered.Equal;
     }
 
     conditional Sequential prevAsSequential(Sequential s) {
         return s.prev();
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    conditional Enum prevAsEnum(Enum e) {
-//        return e.next();
-//    }
+    conditional Enum prevAsEnum(Enum e) {
+        return e.prev();
+    }
 
     void testSkip() {
         Ordered b = Ordered.Lesser.skip(0);
@@ -176,26 +172,24 @@ class OrderedTests {
             // expected
         }
 
-// TODO see skipAsEnum below
-//        Enum e = skipAsEnum(Ordered.Lesser, 2);
-//        assert e == Ordered.Greater;
-//
-//        try {
-//            skipAsEnum(Ordered.Equal, -3);
-//            assert as "should have thrown OOB";
-//        } catch (OutOfBounds _) {
-//            // expected
-//        }
+        Enum e = skipAsEnum(Ordered.Lesser, 2);
+        assert e == Ordered.Greater;
+
+        try {
+            skipAsEnum(Ordered.Equal, -3);
+            assert as "should have thrown OOB";
+        } catch (OutOfBounds _) {
+            // expected
+        }
     }
 
     Sequential skipAsSequential(Sequential s, Int steps) {
         return s.skip(steps);
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    Enum skipAsEnum(Enum e, Int steps) {
-//        return e.skip(steps);
-//    }
+    Enum skipAsEnum(Enum e, Int steps) {
+        return e.skip(steps);
+    }
 
     void testStepsTo() {
         Ordered l = Lesser;
@@ -217,19 +211,17 @@ class OrderedTests {
         assert stepsToAsSequential(Ordered.Lesser, Ordered.Greater) == 2;
         assert stepsToAsSequential(Ordered.Greater, Ordered.Equal) == -1;
 
-// TODO see stepsToAsEnum below
-//        assert stepsToAsEnum(Ordered.Lesser, Ordered.Greater) == 2;
-//        assert stepsToAsEnum(Ordered.Greater, Ordered.Equal) == -1;
+        assert stepsToAsEnum(Ordered.Lesser, Ordered.Greater) == 2;
+        assert stepsToAsEnum(Ordered.Greater, Ordered.Equal) == -1;
     }
 
     Int stepsToAsSequential(Sequential s1, Sequential s2) {
         return s1.stepsTo(s2);
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    Int stepsToAsEnum(Enum e1, Enum e2) {
-//        return e1.stepsTo(e2);
-//    }
+    Int stepsToAsEnum(Enum e1, Enum e2) {
+        return e1.stepsTo(e2);
+    }
 
     void testLesser() {
         assert Ordered.Lesser.name == "Lesser";
