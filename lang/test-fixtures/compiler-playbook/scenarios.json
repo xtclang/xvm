@@ -10878,6 +10878,30 @@
         "limitations": []
       }
     },
+    "X350": {
+      "title": "in the read-only source of a bundled library that Go to Definition opened, Go to Definition on a call goes to the method another source of the library declares, which only the library's whole compile resolves",
+      "manual": [
+        "The case runs with Compile an XDK library as a whole on, as it is by default (IntelliJ: the Ecstasy Server Runtime page; VS Code: xtc.server.compileLibraries), and a server heap of at least 1 GB, which the server's default heap is on a machine with 4 GB or more; with a smaller heap, or the setting off, the server compiles the source on its own and the call goes nowhere",
+        "IntelliJ opens the library's source as a protected file (UP25); VS Code as the server's ecstasy-library content. That the editor refuses a change to either is X101's"
+      ],
+      "values": {
+        "file": "LibraryNavigation.x",
+        "source": "module LibraryNavigation {\n    String echo(String text) = text;\n}\n",
+        "libraryType": "String",
+        "librarySource": "ecstasy/text/String.x",
+        "libraryDeclaration": "const String",
+        "call": "buffer.add(transform(ch));",
+        "callOffset": 7,
+        "target": "add",
+        "targetSource": "ecstasy/text/StringBuffer.x",
+        "targetDeclaration": "StringBuffer add(Char v)",
+        "hover": "StringBuffer add(Char v)"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
