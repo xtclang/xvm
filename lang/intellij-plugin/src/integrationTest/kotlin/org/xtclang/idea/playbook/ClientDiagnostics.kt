@@ -76,6 +76,11 @@ interface ProblemFilesProbe {
         project: Project,
         path: String,
     ): List<String>
+
+    fun projectErrorSources(
+        project: Project,
+        path: String,
+    ): List<String>
 }
 
 /** Copies the client's received diagnostic coordinates and classification into the test process. */
