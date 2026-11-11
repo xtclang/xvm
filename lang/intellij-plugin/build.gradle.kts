@@ -972,6 +972,17 @@ val test =
         inputs.files(testTextMateBundle).withPropertyName("textMateBundle")
         val bundle = testTextMateDirectory
         jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dxtc.test.textmate=${bundle.get().asFile.absolutePath}") })
+        // instrumentCode is off, so nothing writes build/instrumented any more, but the IntelliJ Platform Gradle
+        // Plugin still puts build/instrumented/instrumentTestCode first among the test classes and on the classpath.
+        // A checkout that built before it was turned off (#766) keeps its old test classes there, which shadow the
+        // current ones: an old test, even one deleted or renamed since, runs against the current main classes.
+        val instrumented =
+            layout.buildDirectory
+                .dir("instrumented")
+                .get()
+                .asFile
+        testClassesDirs = testClassesDirs.filter { !it.startsWith(instrumented) }
+        classpath = classpath.filter { !it.startsWith(instrumented) }
         testLogging {
             events("failed")
         }
