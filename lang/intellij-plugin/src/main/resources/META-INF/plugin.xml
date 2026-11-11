@@ -168,9 +168,6 @@
         <!-- Commenter for Ctrl+/ (line comment) and Ctrl+Shift+/ (block comment) -->
         <lang.commenter language="Ecstasy"
                         implementationClass="org.xtclang.idea.XtcCommenter"/>
-        <!-- The server gets the edits that LSP4IJ still holds before LSP4IJ asks it for completions (UP73) -->
-        <completion.contributor language="Ecstasy" order="first, before LSPCompletionContributor"
-                                implementationClass="org.xtclang.idea.lsp.EditsBeforeCompletion"/>
         <!-- An explicit completion that the language server answers with nothing offers the file's words, as in plain text -->
         <codeInsight.wordCompletionFilter language="Ecstasy" implementationClass="org.xtclang.idea.XtcWordCompletionFilter"/>
         <!-- Code | Optimize Imports (Ctrl+Alt+O) runs the language server's Organize imports. -->
@@ -181,15 +178,9 @@
         <renameHandler implementation="org.xtclang.idea.lsp.XtcFileRenameHandler"/>
         <refactoring.moveHandler implementation="org.xtclang.idea.lsp.XtcFileMoveHandler" order="first"/>
 
-        <!-- LSP4IJ's signature help, after the edits LSP4IJ holds (UP73), for Ecstasy, TEXT and TextMate PSI. -->
+        <!-- LSP4IJ registers its signature help for TEXT and TextMate files; Ecstasy's own PSI needs it too. -->
         <codeInsight.parameterInfo language="Ecstasy"
-                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
-        <codeInsight.parameterInfo language="TEXT"
-                                   order="before LSPParameterInfoHandlerForTEXT"
-                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
-        <codeInsight.parameterInfo language="textmate"
-                                   order="before LSPParameterInfoHandlerForTextMate"
-                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
+                                   implementationClass="com.redhat.devtools.lsp4ij.features.signatureHelp.LSPParameterInfoHandler"/>
 
         <!-- Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) -->
         <formattingService id="XtcFormattingService"
