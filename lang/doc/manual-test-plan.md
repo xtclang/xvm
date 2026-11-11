@@ -307,7 +307,8 @@ code /path/to/xtc-project
 ```
 
 The extension starts the LSP server automatically when a `.x` file is opened.
-Requires `JAVA_HOME` or `XTC_JAVA_HOME` pointing to Java 25+.
+Requires Java 25+: the `xtc.java.home` setting, or a JDK the extension finds itself (`JAVA_HOME`, `PATH`, SDKMAN and
+the like), or one it downloads.
 
 ### 3. Verify Which Adapter is Active
 
@@ -1062,7 +1063,7 @@ ls lang/intellij-plugin/build/idea-sandbox/*/plugins/intellij-plugin/lib/textmat
 
 1. Open Output panel → select "Ecstasy Language Server"
 2. If no output channel exists, the extension failed to activate
-3. Check `JAVA_HOME` or `XTC_JAVA_HOME` points to Java 25+
+3. Check that `xtc.java.home`, or else `JAVA_HOME`, names a Java 25+ JDK
 4. Verify the fat JAR exists: `ls lang/lsp-server/build/libs/xtc-lsp-server-*-all.jar`
 5. Try Developer Tools: Help → Toggle Developer Tools → Console tab
 

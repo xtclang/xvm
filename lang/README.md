@@ -24,12 +24,12 @@ and editor support.
 >
 > We are actively working to improve stability and move toward a supported beta release.
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite build semantics](../AGENTS.md#composite-build-semantics) in the project AGENTS.md for details.
+> **Note:** The root `gradle.properties` turns on both lang build flags, so `./gradlew :lang:*` commands work from the project root as they are. Where the flags are off, as in CI's push and pull request builds, pass `-PincludeBuildLang=true -PincludeBuildAttachLang=true`. See [Composite build semantics](../AGENTS.md#composite-build-semantics) in the project AGENTS.md for details.
 
 ## Enabling the Lang Build
 
-By default, the lang build is **disabled** in `gradle.properties`. To include it in the XVM composite build,
-you need to set two properties:
+The root `gradle.properties` turns the lang build on, since the language server compiles through javatools and a
+compiler change can break it. CI's push and pull request builds turn `includeBuildLang` off. Two properties control it:
 
 | Property | Purpose |
 |----------|---------|
