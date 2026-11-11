@@ -896,7 +896,10 @@ class XtcTextDocumentService(
             workspace = false,
             progress = params,
         ) { results ->
-            val current = diagnosticReports.record(results)
+            // a module's tests are part of its root document's report here too: VS Code takes an open document's report
+            // from its own pulls, not from the workspace's, so a test added to an open module, which leaves its
+            // diagnostics as they were, makes a new report only here, which its Testing view lists the tests again on
+            val current = diagnosticReports.record(results, (adapter as? XdkAdapter)?.testsByRoot().orEmpty())
             // Unknown or removed documents have an empty report, never an old cached error.
             if (!diagnosticReports.includes(current, params.textDocument.uri)) {
                 diagnosticReports.record(params.textDocument.uri, emptyList())

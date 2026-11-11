@@ -32,7 +32,8 @@ internal class DiagnosticReports {
 
     /**
      * Diagnostic items and their result ID, retained for unchanged pull-diagnostic responses, with the tests of the
-     * module whose root the document is, if a workspace report has said so: a change to either is a new report.
+     * module whose root the document is, as the latest report that recorded them said: a change to either is a new
+     * report.
      */
     private data class Entry(
         val id: String,
