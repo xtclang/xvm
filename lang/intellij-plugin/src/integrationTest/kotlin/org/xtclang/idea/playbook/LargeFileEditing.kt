@@ -18,6 +18,9 @@ import java.nio.file.StandardOpenOption.CREATE
 // TODO LSP4IJ: UP17 — the underlying IntelliJ interval tree scales poorly when many ranges are
 // invalidated together. Keep this diagnostic and freeze gate until the platform repair is verified.
 
+/** The methods of the decorated module, 3 semantic tokens and so 3 highlighters each. */
+private const val LARGE_FILE_METHODS = 40_000
+
 /** Opt-in freeze investigation; receipts survive even if the IDE's freeze detector fails the run. */
 fun Driver.largeFileEditing(
     fixtures: Map<String, String>,
@@ -42,7 +45,7 @@ fun Driver.largeFileEditing(
                 (0 until methods).joinToString("\n") { "    Int read$it() { return value; }" } +
                 "\n}\n"
 
-        workspace.write("LargeFile.x", workload(20_000))
+        workspace.write("LargeFile.x", workload(LARGE_FILE_METHODS))
         workspace.configure(
             listOf(SharedScenarios.SourceModule("LargeFile", workspace.uri("LargeFile.x"), emptyList())),
         )
@@ -70,9 +73,14 @@ fun Driver.largeFileEditing(
             )
         check(decoration["semanticTokens"].asInt > 0) { "The server gave the large file no semantic tokens: $decoration" }
         record(withContext(OnDispatcher.EDT) { utility(LargeFileProbe::class).snapshot(singleProject(), file) })
+        // The replacement keeps the first half of the methods. What it costs without the platform's fix is set by where
+        // it starts in the highlighters' tree, not by how many highlighters there are: the daemon installs them in
+        // ascending order, which puts the tree's root at 0.2 to 0.4 of them, and a replacement that also removes the
+        // root is cheap. Keeping a quarter did, once the server's 3 tokens a method made 60,003 highlighters (276 ms);
+        // keeping half starts beyond the root for any number. The record's invalidBelowValid gives the cost's measure.
         val replacement =
             withContext(OnDispatcher.EDT) {
-                utility(LargeFileProbe::class).replace(singleProject(), file, workload(5_000))
+                utility(LargeFileProbe::class).replace(singleProject(), file, workload(LARGE_FILE_METHODS / 2))
             }
         record(replacement)
         // The record names the highlighters installed when the replacement started, against the tokens.
