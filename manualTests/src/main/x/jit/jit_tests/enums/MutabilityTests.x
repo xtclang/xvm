@@ -60,25 +60,23 @@ class MutabilityTests {
         hasNext = nextAsSequential(Mutability.Mutable);
         assert hasNext == False;
 
-// TODO see nextAsEnum below
-//        assert Enum e := nextAsEnum(Mutability.Constant);
-//        assert e == Mutability.Persistent;
-//        assert e := nextAsEnum(Mutability.Persistent);
-//        assert e == Mutability.Fixed;
-//        assert e := nextAsEnum(Mutability.Fixed);
-//        assert e == Mutability.Mutable;
-//        hasNext = nextAsEnum(Mutability.Mutable);
-//        assert hasNext == False;
+        assert Enum e := nextAsEnum(Mutability.Constant);
+        assert e == Mutability.Persistent;
+        assert e := nextAsEnum(Mutability.Persistent);
+        assert e == Mutability.Fixed;
+        assert e := nextAsEnum(Mutability.Fixed);
+        assert e == Mutability.Mutable;
+        hasNext = nextAsEnum(Mutability.Mutable);
+        assert hasNext == False;
     }
 
     conditional Sequential nextAsSequential(Sequential s) {
         return s.next();
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    conditional Enum nextAsEnum(Enum e) {
-//        return e.next();
-//    }
+    conditional Enum nextAsEnum(Enum e) {
+        return e.next();
+    }
 
     void testPrev() {
         Boolean hasPrev = Mutability.Constant.prev();
@@ -99,25 +97,23 @@ class MutabilityTests {
         assert s := prevAsSequential(Mutability.Mutable);
         assert s == Mutability.Fixed;
 
-// TODO see prevAsEnum below
-//        hasPrev = prevAsEnum(Mutability.Constant);
-//        assert hasPrev == False;
-//        assert Enum e := prevAsEnum(Mutability.Persistent);
-//        assert e == Mutability.Constant;
-//        assert e := prevAsEnum(Mutability.Fixed);
-//        assert e == Mutability.Persistent;
-//        assert e := prevAsEnum(Mutability.Mutable);
-//        assert e == Mutability.Fixed;
+        hasPrev = prevAsEnum(Mutability.Constant);
+        assert hasPrev == False;
+        assert Enum e := prevAsEnum(Mutability.Persistent);
+        assert e == Mutability.Constant;
+        assert e := prevAsEnum(Mutability.Fixed);
+        assert e == Mutability.Persistent;
+        assert e := prevAsEnum(Mutability.Mutable);
+        assert e == Mutability.Fixed;
     }
 
     conditional Sequential prevAsSequential(Sequential s) {
         return s.prev();
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    conditional Enum prevAsEnum(Enum e) {
-//        return e.next();
-//    }
+    conditional Enum prevAsEnum(Enum e) {
+        return e.prev();
+    }
 
     void testSkip() {
         Mutability b = Mutability.Constant.skip(0);
@@ -193,26 +189,24 @@ class MutabilityTests {
             // expected
         }
 
-// TODO see skipAsEnum below
-//        Enum e = skipAsEnum(Mutability.Constant, 2);
-//        assert e == Mutability.Fixed;
-//
-//        try {
-//            skipAsEnum(Mutability.Persistent, -3);
-//            assert as "should have thrown OOB";
-//        } catch (OutOfBounds _) {
-//            // expected
-//        }
+        Enum e = skipAsEnum(Mutability.Constant, 2);
+        assert e == Mutability.Fixed;
+
+        try {
+            skipAsEnum(Mutability.Persistent, -3);
+            assert as "should have thrown OOB";
+        } catch (OutOfBounds _) {
+            // expected
+        }
     }
 
     Sequential skipAsSequential(Sequential s, Int steps) {
         return s.skip(steps);
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    Enum skipAsEnum(Enum e, Int steps) {
-//        return e.skip(steps);
-//    }
+    Enum skipAsEnum(Enum e, Int steps) {
+        return e.skip(steps);
+    }
 
     void testStepsTo() {
         Mutability c = Constant;
@@ -243,19 +237,17 @@ class MutabilityTests {
         assert stepsToAsSequential(Mutability.Constant, Mutability.Fixed) == 2;
         assert stepsToAsSequential(Mutability.Fixed, Mutability.Persistent) == -1;
 
-// TODO see stepsToAsEnum below
-//        assert stepsToAsEnum(Mutability.Constant, Mutability.Fixed) == 2;
-//        assert stepsToAsEnum(Mutability.Fixed, Mutability.Persistent) == -1;
+        assert stepsToAsEnum(Mutability.Constant, Mutability.Fixed) == 2;
+        assert stepsToAsEnum(Mutability.Fixed, Mutability.Persistent) == -1;
     }
 
     Int stepsToAsSequential(Sequential s1, Sequential s2) {
         return s1.stepsTo(s2);
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    Int stepsToAsEnum(Enum e1, Enum e2) {
-//        return e1.stepsTo(e2);
-//    }
+    Int stepsToAsEnum(Enum e1, Enum e2) {
+        return e1.stepsTo(e2);
+    }
 
     void testConstant() {
         assert Mutability.Constant.name == "Constant";

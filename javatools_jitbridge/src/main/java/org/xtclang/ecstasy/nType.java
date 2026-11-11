@@ -188,6 +188,11 @@ public class nType
             return true;
         }
 
+        if ($dataType.equals(ctx.pool().typeEnum())) {
+            // Enum inherits Const.equals(), whose native implementation uses ordinal equality
+            return nEnum.equals$p(ctx, this, (nEnum) value1, (nEnum) value2);
+        }
+
         nType type1 = ((nObject) value1).$type(ctx);
         nType type2 = ((nObject) value2).$type(ctx);
         if ($dataType.isJitPrimitive()) {
