@@ -57,13 +57,13 @@ This is a snapshot of the net committed changes at the commit above. It excludes
 
 ## docs (7 files)
 
-- **A** — [docs/errs-audit.md](./docs/errs-audit.md)
-- **A** — [docs/errs-error-listeners.md](./docs/errs-error-listeners.md)
-- **A** — [docs/errs-integration-plan.md](./docs/errs-integration-plan.md)
-- **A** — [docs/errs-lsp-process-lifecycle.md](./docs/errs-lsp-process-lifecycle.md)
-- **A** — [docs/errs-rebase-2026-10-05.tsv](./docs/errs-rebase-2026-10-05.tsv)
-- **A** — [docs/errs-upstream-issues.md](./docs/errs-upstream-issues.md)
-- **A** — [docs/errs.md](./docs/errs.md)
+- **A** — [doc/errs-audit.md](./doc/errs-audit.md)
+- **A** — [doc/errs-error-listeners.md](./doc/errs-error-listeners.md)
+- **A** — [doc/errs-integration-plan.md](./doc/errs-integration-plan.md)
+- **A** — [doc/errs-lsp-process-lifecycle.md](./doc/errs-lsp-process-lifecycle.md)
+- **A** — [doc/errs-rebase-2026-10-05.tsv](./doc/errs-rebase-2026-10-05.tsv)
+- **A** — [doc/errs-upstream-issues.md](./doc/errs-upstream-issues.md)
+- **A** — [doc/errs.md](./doc/errs.md)
 
 ## gradle (1 files)
 
