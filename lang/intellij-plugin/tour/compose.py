@@ -263,7 +263,7 @@ def clip(step, still, out, speed):
     if not recording.exists():
         return None
     begin = (step["start"] - screen["start"]) / 1000.0
-    length = (step["shot"] - step["start"]) / 1000.0 + 0.5
+    span = (step["shot"] - step["start"]) / 1000.0 + 0.5
     x, y, w, h = [int(v) for v in (screen.get("frame") or f"0,0,{WIDTH},{SCREEN}").split(",")]
     rings = [
         f"drawbox=x={a['x'] - x - 30}:y={a['y'] - y - 30}:w=60:h=60:color=0xF0A83C@0.9:t=6"
@@ -276,7 +276,7 @@ def clip(step, still, out, speed):
     lapse = out / "clips" / f"lapse-{step['number']:03d}.mp4"
     chain = [f"crop={w}:{min(h, SCREEN)}:{x}:{y}", f"scale={WIDTH}:{SCREEN}", *rings, "mpdecimate", "setpts=N/15/TB"]
     subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-ss", f"{max(begin, 0):.2f}", "-t", f"{length:.2f}", "-i", str(recording),
+        ["ffmpeg", "-v", "error", "-y", "-ss", f"{max(begin, 0):.2f}", "-t", f"{span:.2f}", "-i", str(recording),
          "-vf", ",".join(chain), "-r", "15", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", str(lapse)],
         check=True,
     )
@@ -384,9 +384,9 @@ def slides(frames, steps, out, path):
             for i, step in enumerate(listed):
                 x, y = 110 + (i // rows) * 860, 260 + (i % rows) * 46
                 draw.text((x, y), f"{step['number']:02d}   {step['title']}", font=font(30), fill=TEXT)
-            path = out / "frames" / f"section-{len(deck.slides._sldIdLst):03d}.png"
-            overview.save(path)
-            picture(path, "\n".join(f"{step['number']:02d} {step['title']}: {step['caption']}" for _, step in members))
+            listing = out / "frames" / f"section-{len(deck.slides._sldIdLst):03d}.png"
+            overview.save(listing)
+            picture(listing, "\n".join(f"{step['number']:02d} {step['title']}: {step['caption']}" for _, step in members))
             for frame, step in shots if any(step.get("clip") for _, step in shots) else shots[:1]:
                 picture(frame, step["caption"], step.get("clip"))
     deck.save(str(path))
