@@ -395,6 +395,34 @@ local branch (see the last point):
   whose `lang/lsp-server/src` equals errs'), on #693. #764 was not affected: it changes only
   `XtcVersionSanityTest`, and its CI passes.
 
+**errs and #693 rebased onto master `856fa585e4` (2026-11-11).** Master had moved by #763 (a class's
+own child named Inner, squash-merged as `973268d2a0`), #764 (`XtcVersionSanityTest` under
+`@TempDir`, `85de7ec12c`), #766 (Gradle 9.9.1 and Develocity 4.6.1) and #765 (the JIT milestone).
+#693 conflicted with it in `TypeConstant.java`, so GitHub ran no CI on it.
+
+- Both were backed up first, at the tips just pushed: `backup/errs-pre-rebase-20261111`
+  (`289676fcc0`) and `backup/693-pre-rebase-20261111` (`958d21cc15`).
+- Dropped, as master has them: each branch's four commits of #763 as it was developed (errs
+  `8e3354e577`, `36ec2548fa`, `8de7a73809`, `632d31a810`; #693 `e85ccb711f`, `a4517b4cf5`,
+  `358a93f8f8`, `37de86749c`), which made the change in `TypeConstant.java` where the reviewed #763
+  makes it in `ChildInfo.java`, and errs' copy of #764, `8f650fe08c`. No later commit changes their
+  files; `innerouter.x` and `XtcVersionSanityTest` were already master's.
+- Conflicts, all with #765: an `assert` in `TypeConstant` that #765 prefixed with
+  `type.isNativeRef() ||` and whose argument errs and #693 change (`BLACKHOLE`, `PROBE`,
+  `silent(PROBE)`), resolved by keeping the prefix with each commit's argument (errs `feab760109`,
+  `f43116f5c1`, `ecb2489262`; #693 `37c68327a3`); and in `MethodBody`, where #765 removed
+  `asFunctionType`, two errs Javadoc edits beside it (`c178a8f19c`, `2fabf9768c`), resolved as each
+  commit changes the Javadoc, without the method.
+- [The map](errs-rebase-2026-11-11.tsv) gives errs' 1506 commits and their 1501 replays, and
+  [#693's map](errs-693-rebase-2026-11-11.tsv) its 286 and 282. `git range-diff` finds every other
+  commit's patch unchanged: 1497 of errs' and 281 of #693's. Every file in which the new trees differ
+  from the old ones is one that master's four commits change.
+- On both: `:xdk:installDist` builds the XDK with the rebased compiler; javatools' main and test
+  code, the IntelliJ plugin's integration tests and the VS Code extension (`tsc`) compile;
+  `LibraryContentProtocolTest` (6) and `XdkLibraryDocumentsTest` (6) pass with every case;
+  `spotlessCheck` and `:lang:spotlessCheck` pass. Force-pushed with leases on the old tips at the
+  user's go-ahead; #693's CI runs again on its new tip.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
