@@ -193,11 +193,11 @@ public class OSFileNode
     }
 
     /**
-     * A utility method to convert a string path to a Java path.
+     * A utility method to convert a string path to an absolute Java path.
      */
     public static java.nio.file.Path $toOsPath(Ctx ctx, String pathString) {
         try {
-            return xOSFileNode.toOsPath(pathString.toString());
+            return xOSFileNode.toOsPath(pathString.toString()).toAbsolutePath();
         } catch (InvalidPathException e) {
             throw $io(ctx, e.getMessage());
         }
