@@ -59,10 +59,12 @@ class FileStoreTests {
 
     void shouldGetRelativeDirForPath() {
         @Inject FileStore storage;
-        Path      path = new Path("one/two");
-        Directory dir  = storage.dirFor(path);
-        assert dir.toString() == "one/two";
-        assert dir.path == path;
+        @Inject Directory curDir;
+        Path      path     = new Path("one/two");
+        Directory dir      = storage.dirFor(path);
+        Path      expected = new Path(curDir.path, "one/two");
+        assert dir.toString() == expected.toString();
+        assert dir.path == expected;
     }
 
     void shouldGetFileForPath() {
