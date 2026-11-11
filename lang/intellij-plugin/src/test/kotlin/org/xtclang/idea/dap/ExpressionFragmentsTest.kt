@@ -6,6 +6,7 @@ import com.intellij.testFramework.LightVirtualFile
 import com.intellij.xdebugger.evaluation.EvaluationMode
 import com.intellij.xdebugger.impl.breakpoints.XExpressionImpl
 import com.redhat.devtools.lsp4ij.LanguageServersRegistry
+import com.redhat.devtools.lsp4ij.dap.DAPDebuggerEditorsProvider
 import com.redhat.devtools.lsp4ij.dap.evaluation.DAPExpressionCodeFragment
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -15,10 +16,10 @@ import org.xtclang.idea.XtcFileType
 
 /**
  * An expression editor's document, such as the Debug window's expression field's, has a physical fragment, which
- * IntelliJ's daemon highlights; LSP4IJ 0.21.0's, never physical, left the daemon starting again every 300 ms while a
- * session was paused (UP37).
+ * IntelliJ's daemon highlights, as LSP4IJ's debugger editors make it (#1763); LSP4IJ 0.21.0's, never physical, left the
+ * daemon starting again every 300 ms while a session was paused (UP37).
  */
-class PhysicalExpressionFragmentsTest {
+class ExpressionFragmentsTest {
     @JvmField
     @RegisterExtension
     val editor = LightEditor()
@@ -28,7 +29,7 @@ class PhysicalExpressionFragmentsTest {
         editor.open("Hand.x", "module Hand { void deal(Int that) { deal(th<caret>at); } }") { file ->
             val context = checkNotNull(file.findElementAt(caretOffset))
             val document =
-                PhysicalExpressionFragments(XtcFileType, null)
+                DAPDebuggerEditorsProvider(XtcFileType, null)
                     .createDocument(project, XExpressionImpl.fromText("that"), context, EvaluationMode.EXPRESSION)
             val fragment = checkNotNull(PsiDocumentManager.getInstance(project).getPsiFile(document))
             assertThat(fragment).isInstanceOf(DAPExpressionCodeFragment::class.java)
