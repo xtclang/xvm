@@ -7,16 +7,13 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.problems.ProblemListener
 import com.intellij.psi.PsiManager
 import com.intellij.psi.codeStyle.CodeStyleSettingsListener
 import com.intellij.util.concurrency.SequentialTaskExecutor
 import com.redhat.devtools.lsp4ij.LSPFileSupport
-import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
-import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticUtils
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.PublishDiagnosticsParams
@@ -131,36 +128,6 @@ class XtcLanguageClient(
     @JsonRequest("xtc/debugTask")
     fun debugTask(params: DebugTaskParams): CompletableFuture<DebugTaskResult> = DebugTasks.run(project, params)
 
-    override fun setServerWrapper(wrapper: LanguageServerWrapper) {
-        super.setServerWrapper(wrapper)
-        // TODO LSP4IJ: UP70 — as a file closes, LSP4IJ clears its problem mark in a background task that nothing orders
-        // with the report of the errors then published for its closed document, so the clear can come last and leave a
-        // closed file with errors unmarked. Each clear is announced; report the file again then, from what LSP4IJ holds,
-        // so the last report computes the right mark. Remove with an LSP4IJ release that orders the two.
-        project.messageBus
-            .connect(this)
-            .subscribe(
-                ProblemListener.TOPIC,
-                object : ProblemListener {
-                    override fun problemsDisappeared(file: VirtualFile) = remark(wrapper, file)
-                },
-            )
-    }
-
-    /** Reports [file] to IntelliJ's problem files again when LSP4IJ holds errors for it, which its mark should show. */
-    private fun remark(
-        wrapper: LanguageServerWrapper,
-        file: VirtualFile,
-    ) {
-        if (isDisposed || project.isDisposed || wrapper.isDisposed) return
-        val uri = wrapper.clientFeatures.getFileUri(file) ?: return
-        val errors =
-            wrapper.getClosedDocument(uri, false)?.takeIf { it.hasErrors() }
-                ?: wrapper.getOpenedDocument(uri)?.takeIf { it.hasErrors() }
-                ?: return
-        LSPDiagnosticUtils.reportProblem(file, errors, project)
-    }
-
     /** Once the server has started, record where it logs, which only it can name, for an export after it stops. */
     override fun handleServerStatusChanged(serverStatus: ServerStatus) {
         super.handleServerStatusChanged(serverStatus)
@@ -270,11 +237,6 @@ class XtcLanguageClient(
         override fun opened(uri: String) {
             // a publication that reached the document as it opened stays beside its pulled diagnostics, unless cleared
             publish(uri, emptyList())
-            val file = clientFeatures.findFileByUri(uri) ?: return
-            // TODO LSP4IJ: UP70 — LSP4IJ drops a closed document's diagnostics when it opens without telling
-            // WolfTheProblemSolver, which keeps the file red when its first pull has no errors. Report the file from
-            // what LSP4IJ holds now. Remove with an LSP4IJ release that reports the file when it opens (#1861).
-            LSPDiagnosticUtils.reportProblem(file, clientFeatures.serverWrapper.getOpenedDocument(clientFeatures.getFileUri(file)), project)
         }
 
         // TODO LSP4IJ: UP69 — the workspace report is what Project Errors lists of the server's errors while the plugin
