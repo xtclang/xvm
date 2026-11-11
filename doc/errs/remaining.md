@@ -25,6 +25,16 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 - [x] `errs-integration-plan.md`, the R1–R8 section: the inventory is now the current catalog (299
   cases then; 296 since X273–X275 were retired with the color prototype), with the October 7 284-case
   run as the latest full-catalog run.
+- [x] One reference for the lang tooling's configuration: `lang/doc/configuration.md` (2026-11-11), every
+  editor setting, server property, environment variable, path and build, test and container property,
+  each with the line that reads it; linked from `lang/README.md`, `lang/doc/README.md` and the READMEs
+  with partial lists. On errs and #693. AGENTS.md said the lang build flags default to `false`, which
+  only master's `gradle.properties` does; corrected on both branches.
+- [ ] Six statements in other docs that the code no longer bears out, listed in the reference's
+  "Stale in other docs" section: `XTC_JAVA_HOME` in `lang/doc/manual-test-plan.md`, `-Dxtc.debug.lsp` in
+  `lang/intellij-plugin/testing.md`, `xtc.formatting.tabSize` in the VS Code README, the
+  `includeBuildLang` defaults in `lang/lsp-server/README.md` and `lang/README.md` (right for master),
+  the launcher's `--socket` comment, and the DAP server's `logback.xml` comment. Fix each, or remove it.
 
 ## 2. LSP features
 
