@@ -1406,7 +1406,7 @@ public class Compiler {
      * may indicate an operator precedence error in the expression, and parenthesis may be required
      * to enforce the desired precedence.
      */
-    public static String EXPRESSION_UNREACHABLE                    = "COMPILER-208";
+    public static final String EXPRESSION_UNREACHABLE              = "COMPILER-208";
     /**
      * The "construct" call can only be made from within a constructor.
      */
