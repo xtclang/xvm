@@ -21,9 +21,7 @@ import kotlin.system.exitProcess
 /**
  * Launcher for the Ecstasy Language Server.
  *
- * Usage:
- * - For stdio communication: `java -jar xtc-lsp.jar`
- * - For socket communication: `java -jar xtc-lsp.jar --socket 5007`
+ * Usage: `java -jar xtc-lsp.jar`, which speaks LSP over stdio; the launcher takes no arguments.
  *
  * Adapter Selection:
  * - Select at startup with `java -Dxtc.lsp.adapter=treesitter -jar xtc-lsp.jar`.
