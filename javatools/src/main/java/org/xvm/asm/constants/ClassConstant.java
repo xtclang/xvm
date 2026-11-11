@@ -300,13 +300,15 @@ public class ClassConstant
 
     @Override
     public TypeConstant getType() {
-        ClassStructure clz = (ClassStructure) getComponent();
+        ConstantPool   pool = getConstantPool();
+        ClassStructure clz  = (ClassStructure) getComponent();
 
-        return clz.isVirtualChild()   ? getConstantPool().ensureVirtualChildTypeConstant(
+        // an inner class's outer is the containing class, not an intervening method or property
+        return clz.isVirtualChild()   ? pool.ensureVirtualChildTypeConstant(
                                             getParentConstant().getType(), getName())
-             : clz.isInnerChild()     ? getConstantPool().ensureInnerChildTypeConstant(
-                                            getParentConstant().getType(), this)
-             : clz.isAnonInnerClass() ? getConstantPool().ensureAnonymousClassTypeConstant(
+             : clz.isInnerChild()     ? pool.ensureInnerChildTypeConstant(
+                                            getParentConstant().getClassIdentity().getFormalType(), this)
+             : clz.isAnonInnerClass() ? pool.ensureAnonymousClassTypeConstant(
                                             getParentConstant().getType(), this)
              : super.getType();
     }
