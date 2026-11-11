@@ -247,12 +247,26 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   runs by their `.completed` files, which it leaves alone. `8777c067c` recorded the fault as the
   build's, and `70cdd636f`'s message says its run before selected an earlier list; both were this
   misreading (found 2026-10-26).
-- [ ] Record both editor tours again from current errs, in the container, for new final videos.
+- [x] Record both editor tours again from current errs, in the container, for new final videos.
   The ones sent on 2026-11-10, `tour-intellij.mp4` and `tour-vscode.mp4` with their decks
   (`~/shared/xtc-*-tour-draft/final/`), were recorded on 2026-11-06 and 11-07. No tour step changed
   since, but errs' features since then are not in them, such as a library frame's line, and two of
   the IntelliJ video's recordings ran on `lagergren/tour-final` commits that errs does not have
   under those subjects (`91392b946d`, `45470dc5e7`), one of them a scrolling fix.
+  Recorded again on 2026-11-11 from errs `f4092dbb61`, in the container, every run used passing all
+  its steps and checks: `~/shared/xtc-intellij-tour-2026-11-11/final/` (88 steps, 10:42) and
+  `~/shared/xtc-vscode-tour-2026-11-11/final/` (98 steps, 19:35), each with its video, deck, clips,
+  frames, evidence and `failures.md`, and the runs in `runs/` beside it; the old finals are kept.
+  errs had both `tour-final` commits' changes already, from `02653af02e`. The recording found four
+  faults, fixed on errs and #693: the composer crashed on every recorded run and wrote its deck over
+  the last image (`701f413a69`); IntelliJ's Debugging clicked "Debug of Current File" while the run
+  widget swapped its buttons (`cc8fbcdaf8`); VS Code's tour wrote `launch.json` without `.vscode`
+  when Debugging and Build and run were not in the run (`a168397f1d`); and the server's document
+  pull left out the module's tests, so VS Code's Testing view, which takes an open document's report
+  from its own pulls, never listed a test added to an open file (`3e23e9c139`, with a test in
+  `XdkPullDiagnosticsTest`). Only the VS Code run of Settings, Tests and The end has the server fix,
+  where "A new test" is. Partial runs skip the protocol section's two checks that every request
+  reached the servers.
 - [x] Remove `lang/intellij-plugin/tour/__pycache__/compose.cpython-315.pyc`, committed by
   accident, and keep `__pycache__` out of the repository: `6a4684a033` (2026-11-11), which also
   ignores `*.pyc`.
