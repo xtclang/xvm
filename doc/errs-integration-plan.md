@@ -2044,7 +2044,7 @@ not have them. Each commit message records its own validation, problems fixed an
 | `94a1e8c19` | VS Code build mode, Build/Rebuild/Run/Stop, tasks, debug launches without a debugger | `lang/vscode-extension/**` | LSP/editor reference (#693) or the editor review branch; needs the server commit |
 | `1a89eb1a5` | IntelliJ build mode page, project task runner, run configuration modes, process handler, Run lens action | `lang/intellij-plugin/**` | Same as VS Code; needs the server commit |
 | `50fb713a0` | Plan status, playbook section 18a, plan/index notes | `lang/doc/**`, `lang/README.md` | Travels with whichever of the three commits above is extracted; the plan and playbook describe all of them |
-| `590935e77` | `javatools/LSP-COMPILER.md` → `lsp-compiler.md`; documentation links to `AGENTS.md` instead of `CLAUDE.md` | `javatools/`, `docs/errs-error-listeners.md`, `lang/README.md`, `lang/lsp-server/*.md`, `plugin/README.md` | Mirror into #693 and the outside-`lang/` comparison (both still have the old name) at their next synchronization; independent of the feature |
+| `590935e77` | `javatools/LSP-COMPILER.md` → `lsp-compiler.md`; documentation links to `AGENTS.md` instead of `CLAUDE.md` | `javatools/`, `doc/errs-error-listeners.md`, `lang/README.md`, `lang/lsp-server/*.md`, `plugin/README.md` | Mirror into #693 and the outside-`lang/` comparison (both still have the old name) at their next synchronization; independent of the feature |
 
 Follow-up commits on 2026-10-15, after the five above:
 
@@ -2104,7 +2104,7 @@ suite checks command registration only; run behavior is covered by the server an
 Nine commits on `lagergren/errs` after `457fcb570` close seven problems in the language server and
 its editor-facing contract. Like the embedded run work they were mirrored into #693 on 2026-10-16
 ([#693 synchronization](#693-synchronization-and-the-runtime-pull-request-2026-10-16)); no review branch has them. All paths are under `lang/`, apart from this
-document and `docs/errs.md`. Each commit message records its own validation, problems fixed and
+document and `doc/errs.md`. Each commit message records its own validation, problems fixed and
 limits; the behavior is documented in the [server README](../lang/lsp-server/README.md) and the
 [playbook](../lang/doc/manual-test-plan.md).
 
@@ -2218,7 +2218,7 @@ The commits from `5a14da284` to `e4f357f49` were replayed onto #693's branch
 
 How the replay was done:
 - Left out: the tracking-only commits (`600c8a143`, `4f61b98de`, `da18f1dd6`, `c9da8dead`), and
-  `docs/errs*.md` and `pr-roadmap.md` in every other commit, since #693 does not carry them; also
+  `doc/errs*.md` and `pr-roadmap.md` in every other commit, since #693 does not carry them; also
   `78032ae04`, `f1d323bbc` and their revert `174518d03`, which add up to nothing.
 - #693 keeps master's planning documents in `lang/doc/plans`, as it always has. It gains only
   `plan-embedded-execution.md`, which its guides link to, without that plan's link to this
@@ -2490,7 +2490,7 @@ fixes the old `run(...)` overloads with a console: they passed `null` console in
 checks that assert behavior into `EmbeddingSupportTest` (renamed from `EmbeddingRunMethodTest`),
 each run within a time limit. Both threads are answered and resolved, and #703's description is
 updated. Here `5af99b8ba`, `95c17bfb7` and `b6629bd48` carry them: `95c17bfb7` adapts `RunWorker`
-(`EmbeddingSupport.EntryPoint(method, args)`) and `docs/errs.md`, and `b6629bd48` points
+(`EmbeddingSupport.EntryPoint(method, args)`) and `doc/errs.md`, and `b6629bd48` points
 `plan-embedded-execution.md` at the new test. Mirrored on #693 as `c8fa87338`, `b2975613b` and
 `09b6cfcbc`.
 
@@ -2529,7 +2529,7 @@ worker show a run's warnings in its output and report why a run cannot start wit
 code; shared X294 checks the warning (299 cases).
 
 #693 moved from `a3d1d3dd3` to `f769bae47` as a fast-forward. Each commit ends with
-`(cherry picked from commit …)`; `docs/errs*.md` changes are left out, as before.
+`(cherry picked from commit …)`; `doc/errs*.md` changes are left out, as before.
 
 | #693 | Source | Subject |
 |---|---|---|
@@ -2717,7 +2717,7 @@ the commit after it.
 
 Mirrored into #693 on 2026-10-21 (`40f2c385e..8954d3a81`): `b5b569e52`, `bf1073970`, `19e2e5bf2`,
 `8e085a0e2`, `f51824782`, `452262dfc`, `9f256a63c`, `835caa2c8` and `8954d3a81`, the same changes in
-the same order. #693 has no `docs/errs-*.md` or `remaining.md`, so those parts are left out and the
+the same order. #693 has no `doc/errs-*.md` or `remaining.md`, so those parts are left out and the
 three affected messages say so; `6be52d893`, which only records the batch, is not mirrored. On #693:
 `:lang:lsp-server:test` 2,369 tests (2 existing skips) and `:lang:intellij-plugin:test` 143, 0
 failures; `compileIntegrationTestKotlin` (forced), the VS Code compile and `spotlessCheck` pass; the
@@ -2756,7 +2756,7 @@ changed TypeScript and `spotlessCheck` pass.
 
 Mirrored into #693 on 2026-10-21 (`8954d3a81..fb4157063`): `5578994fb`, `b2929983c`, `f4805aa8e`,
 `21db0ead8` and `fb4157063`, the same changes in the same order, cherry-picked with `-x`. #693 has
-no `docs/errs-*.md`, so three of them leave out their change to this file's catalog count, and their
+no `doc/errs-*.md`, so three of them leave out their change to this file's catalog count, and their
 messages say so; `670954781` and `c553468d0`, which only record work here, are not mirrored. On
 #693: `:lang:lsp-server:test` 2,374 tests (the 2 existing skips) and `:lang:intellij-plugin:test`
 143, 0 failures, from fresh JUnit XML; X280, X288, X291 and X301–X303 pass in VS Code
@@ -2830,7 +2830,7 @@ program's fibers without running more of it, and the debugger leaves the runner'
 Not covered: variables, stepping, exception stops, pause, evaluation and source revisions. The
 opt-in IntelliJ `projectLifecycle` check of the same Gradle task fails ("closed project's pending
 reply retires"), and fails the same way on `ef1491a6c`, before this work
-(`run-15132038242161374573`); it is listed as open in `docs/remaining.md`, and was fixed later the
+(`run-15132038242161374573`); it is listed as open in `doc/remaining.md`, and was fixed later the
 same day in `3813e27a9` ([below](#r7-variables-and-stepping-2026-10-22)).
 
 ### R7: variables and stepping (2026-10-22)
@@ -2941,7 +2941,7 @@ branch only:
   logpoint IntelliJ does not set yet (UP32).
 
 Found on the way: joining strings is not native in the runtime (a candidate for master on its own,
-in docs/remaining.md), and `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine` hung once in
+in doc/remaining.md), and `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine` hung once in
 `Control.close()`, a resume/stop race recorded there too.
 
 ### R9: the runner's frames left out of stacks (2026-10-23)
@@ -3126,7 +3126,7 @@ A third, `ab9fbddeb` (2026-10-23), is a runtime fix that master and #693 have to
 `Container.kill()` hung, with assertions on, on a service whose fiber had ended with a call still out.
 It is one `ServiceContext` change and an `EmbeddingSupportTest` case, both of which apply to master's
 code as it is, with a `SessionDebuggerTest` change that stays here. Whether it becomes a master pull
-request of its own is to be discussed (docs/remaining.md). It went into #693 on 2026-10-23
+request of its own is to be discussed (doc/remaining.md). It went into #693 on 2026-10-23
 (`5955362da..e618f7a22`) as `e618f7a22`, cherry-picked with the same `ServiceContext` and
 `EmbeddingSupportTest` changes, its message without the debugger, and without the `SessionDebuggerTest`
 change, which #693 has no file for; `c7fedbe53` before it is `eddd77ee9`, the language server's test JVMs
@@ -3136,7 +3136,7 @@ A fourth, `1473c7e89` (2026-10-23), also outside every burst: an embedded run no
 until its services have nothing left to do, and its container is then killed; before, a service still at
 work when `run()` returned ran on in the worker, unreachable. It changes `lib_runner`, `Container`, the
 container control's status and `EmbeddingSupport`'s documentation, all of which master has (#703), and the
-server README's `xtc/runExited` line. A candidate for master (docs/remaining.md). It went into #693 on
+server README's `xtc/runExited` line. A candidate for master (doc/remaining.md). It went into #693 on
 2026-10-23 (`e618f7a22..a6c3f519d`) as `a6c3f519d`, with the same changes in all seven files; the
 cherry-pick conflicted only in context #693 does not have, the debugger's
 `InterpreterConnector.replaceDebugger()` and the README's `xtc/debug` rows, and kept none of it. There
@@ -3209,7 +3209,7 @@ How it was done, in a worktree of #693's branch:
   `XtcDebugServer`'s class comment and four of the catalog's IntelliJ limitations; and
   `6f5f5fde1b` brings the server, VS Code, IntelliJ and lang READMEs and the IntelliJ testing
   guide up to the code. There, LSP4IJ's limits name its pull requests instead of UP numbers or
-  `docs/remaining.md`, and the server README no longer counts debug inline values as incomplete.
+  `doc/remaining.md`, and the server README no longer counts debug inline values as incomplete.
   It is a commit of its own, as the request was for no Markdown beyond what the features need;
   the user had it pushed after checking what it changes.
 

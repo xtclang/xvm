@@ -2629,7 +2629,7 @@ hypothesis rather than from nothing, not so they can skip the other sixty-seven.
 
 ### Printed failures and empty catches
 
-`docs/errs-audit.md` has the full count: 56 places that print a failure instead of reporting it,
+`doc/errs-audit.md` has the full count: 56 places that print a failure instead of reporting it,
 and 35 `catch` blocks with empty bodies. Deliberately not swept - each needs a judgment about
 whether the failure is real and where it should go, and those judgments belong to whoever owns
 the code. The prior-art branch found real bugs in this category, not just untidiness.

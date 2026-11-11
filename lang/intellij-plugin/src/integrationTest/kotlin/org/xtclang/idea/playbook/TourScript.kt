@@ -5,7 +5,7 @@
  * LSP4IJ actions that a user uses them by. Each feature has the steps (frames of the recording, each with its check)
  * or the checks (verify, between the steps, without a frame) that exercise it, by their titles; or why the tour
  * cannot, and what covers it instead: a case of the compiler playbook (X...), the plugin's or the servers' own tests,
- * or LSP4IJ 0.30.0, whose client the IDE needs first (UP.. in docs/remaining.md).
+ * or LSP4IJ 0.30.0, whose client the IDE needs first (UP.. in doc/remaining.md).
  *
  * Language server: initialize's capabilities
  *   textDocumentSync: didOpen, didChange, didClose  step Errors as you type; check a test module sees an edit of the module it tests
