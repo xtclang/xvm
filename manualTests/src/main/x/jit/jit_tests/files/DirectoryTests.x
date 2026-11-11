@@ -173,33 +173,32 @@ class DirectoryTests {
     }
 
     void shouldListFilesRecursively() {
-// TODO inner Iterator of Directory.filesRecursively() fails to compile
-//        @Inject Directory tmpDir;
-//        Directory dir = tmpDir.dirFor("foo");
-//        assert !dir.exists;
-//        dir.ensure();
-//        assert dir.exists;
-//
-//        File subFile1 = dir.fileFor("file-1.txt").ensure();
-//        assert subFile1.exists;
-//        File[] files = dir.filesRecursively().toArray();
-//        assert files.size == 1;
-//        assert files[0].name == "file-1.txt";
-//
-//        Directory subDir = dir.dirFor("sub-dir-1").ensure();
-//        assert subDir.exists;
-//        files = dir.filesRecursively().toArray();
-//        assert files.size == 1;
-//        assert files[0].name == "file-1.txt";
-//
-//        File subFile2 = subDir.fileFor("file-2.txt").ensure();
-//        assert subFile2.exists;
-//        files = dir.filesRecursively().toArray();
-//        assert files.size == 2;
-//        assert (files[0].name == "file-1.txt" && files[1].name == "file-2.txt")
-//            || (files[0].name == "file-2.txt" && files[1].name == "file-1.txt");
-//
-//        cleanup([subFile1, subFile2, subDir, dir]);
+        @Inject Directory tmpDir;
+        Directory dir = tmpDir.dirFor("foo");
+        assert !dir.exists;
+        dir.ensure();
+        assert dir.exists;
+
+        File subFile1 = dir.fileFor("file-1.txt").ensure();
+        assert subFile1.exists;
+        File[] files = dir.filesRecursively().toArray();
+        assert files.size == 1;
+        assert files[0].name == "file-1.txt";
+
+        Directory subDir = dir.dirFor("sub-dir-1").ensure();
+        assert subDir.exists;
+        files = dir.filesRecursively().toArray();
+        assert files.size == 1;
+        assert files[0].name == "file-1.txt";
+
+        File subFile2 = subDir.fileFor("file-2.txt").ensure();
+        assert subFile2.exists;
+        files = dir.filesRecursively().toArray();
+        assert files.size == 2;
+        assert (files[0].name == "file-1.txt" && files[1].name == "file-2.txt")
+            || (files[0].name == "file-2.txt" && files[1].name == "file-1.txt");
+
+        cleanup([subFile1, subFile2, subDir, dir]);
     }
 
     void shouldDeleteRecursively() {
