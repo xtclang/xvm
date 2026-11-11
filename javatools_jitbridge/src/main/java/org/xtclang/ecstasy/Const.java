@@ -7,8 +7,9 @@ import org.xvm.javajit.Ctx;
  */
 public interface Const extends Object {
     /**
-     * Native implementation of: "static <CompileType extends Const> Boolean equals(CompileType
-     * value1, CompileType value2)".
+     * Native implementation of:
+     *
+     * {@code static <CompileType extends Const> Boolean equals(CompileType value1, CompileType value2)}.
      */
     static boolean equals$p(Ctx ctx, nType CompileType, Const value1, Const value2) {
         if (CompileType.$dataType.equals(ctx.pool().typeConst())) {
