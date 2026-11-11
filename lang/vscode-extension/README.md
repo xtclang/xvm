@@ -385,6 +385,8 @@ Type a prefix in any `.x` file to insert a snippet:
 
 ## Extension Settings
 
+The [configuration reference](../doc/configuration.md) lists all 19 settings, what each becomes for the language server, and the code that reads it.
+
 All settings live under the `xtc` namespace (`Cmd+,` / `Ctrl+,`):
 
 | Setting                                | Type      | Default | Description                                                                                              |
