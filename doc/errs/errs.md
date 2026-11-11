@@ -1,7 +1,7 @@
 **Embedded build and run (2026-10-15):** both IDEs can build with the language server's compiler and
 run in a persistent execution worker JVM, beside the Gradle path: VS Code `xtc.build.mode`, IntelliJ
 Build, Execution, Deployment › Ecstasy. This is a first delivery of R2–R5 in the
-[execution plan](../lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15); debugging
+[execution plan](plan-embedded-execution.md#first-delivery-2026-10-15); debugging
 is not included, and followed as R6–R13, done by 2026-11-03
 ([remaining.md](remaining.md#3-embedded-run-and-debugging)). Commits, extraction targets and validation are in the
 [integration plan](errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
@@ -248,13 +248,13 @@ decodes its existing comment token. This passive AST accessor adds no field, cac
 Kotlin owns documentation presentation. Parser value-prefix recovery reuses its existing boundary
 guards for mid-token cursors. No separate name/type resolver or Kotlin dependency enters javatools.
 
-**Execution architecture:** the accepted [embedded Run and debugging plan](../lang/doc/plans/plan-embedded-execution.md)
+**Execution architecture:** the accepted [embedded Run and debugging plan](plan-embedded-execution.md)
 keeps the compiler PR focused while defining how compilation artifacts feed reusable runtime
 sessions. Both IDEs will use the same build/run contract; a supervised execution worker reuses
 EmbeddingSupport/lib_runner and creates fresh application containers. R1–R8 cover the runtime and
 DAP work. Compiler ASTs/pools stay worker-owned, compile-only paths never start the VM, and source
 revisions remain paired with emitted artifacts for reruns and future breakpoint mapping. The
-[first delivery](../lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15) (2026-10-15)
+[first delivery](plan-embedded-execution.md#first-delivery-2026-10-15) (2026-10-15)
 implements embedded Build/Run in both IDEs; compile-only paths still never start the runtime.
 
 **L63 member actions:** the compiler adapter implements individual and atomic all-required-member
@@ -306,7 +306,7 @@ The active [full compiler LSP completion checklist (L55–L83)](errs-integration
 now distinguishes remaining semantic coverage, reliability investigations, unimplemented LSP
 operations and native validation. The compiler now implements 27 adapter capability categories, including declaration lookup, monikers and inline completion;
 that is not full protocol or language coverage. See the
-[current capability/absence inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot).
+[current capability/absence inventory](../../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot).
 L55's real-workspace acceptance, the bounded L56–L59 work and native parity checkpoint are
 complete. L61–L82 feature/protocol scopes and their remaining limits stay on the active checklist.
 
@@ -570,7 +570,7 @@ tracked compiler objects. Full evidence and extraction boundaries are in
 Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
-[`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
+[`testCompilerPlaybook`](../../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
 X1–X94 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
@@ -2300,7 +2300,7 @@ inference and named argument mappings through the separate CursorBinding records
 selected-call signatures. Unknown mappings keep labels without parameter highlights. These bounded
 features are advertised in compiler mode. Broader incomplete syntax and additional callable forms
 remain open; see the current
-[capability matrix](../lang/doc/plans/plan-ide-integration.md).
+[capability matrix](../../lang/doc/plans/plan-ide-integration.md).
 
 #### Passive source facts on nodes
 
@@ -2629,7 +2629,7 @@ hypothesis rather than from nothing, not so they can skip the other sixty-seven.
 
 ### Printed failures and empty catches
 
-`doc/errs-audit.md` has the full count: 56 places that print a failure instead of reporting it,
+`doc/errs/errs-audit.md` has the full count: 56 places that print a failure instead of reporting it,
 and 35 `catch` blocks with empty bodies. Deliberately not swept - each needs a judgment about
 whether the failure is real and where it should go, and those judgments belong to whoever owns
 the code. The prior-art branch found real bugs in this category, not just untidiness.

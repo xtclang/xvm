@@ -280,7 +280,7 @@ class XdkStdioTest {
                     ),
                     // TODO LSP4IJ: UP15 — underlying LSP4J 1.0.0 labels valid JSON with bad parameter
                     // types ParseError. Switch to InvalidParams after its decoder is repaired;
-                    // retain reader-recovery checks. See doc/errs-upstream-issues.md (UP15).
+                    // retain reader-recovery checks. See doc/errs/errs-upstream-issues.md (UP15).
                     ResponseErrorCode.ParseError,
                 ),
             ).forEach { (method, params, code) ->

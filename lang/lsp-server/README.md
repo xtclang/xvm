@@ -18,8 +18,8 @@ This project provides the LSP server that powers IDE features like:
 - Document outline
 - And many more (see feature matrix below)
 
-The server is used by both the [IntelliJ plugin](../intellij-plugin/) and
-[VS Code extension](../vscode-extension/).
+The server is used by both the [IntelliJ plugin](../intellij-plugin) and
+[VS Code extension](../vscode-extension).
 
 The [backend comparison](#backend-comparison) and [supported features](#supported-lsp-features)
 describe the adapter boundaries. For the architectural changes required in the compiler, start with
@@ -516,7 +516,7 @@ closing and reopening the file; in full-sync mode the next keystroke does this.
 IDE clients can build and run source modules without Gradle. The editor integrations use this as
 their *embedded* mode ([VS Code](../vscode-extension/README.md#building-and-running),
 [IntelliJ](../intellij-plugin/README.md#running-your-application)); the design and its delivery record are in
-the [execution plan](../doc/plans/plan-embedded-execution.md). Only the compiler adapter supports it;
+the [execution plan](../../doc/errs/plan-embedded-execution.md). Only the compiler adapter supports it;
 other adapters fail these requests. `xtc/languageServiceStatus` reports `embeddedExecution: true`.
 
 | Message | Direction | Purpose |
