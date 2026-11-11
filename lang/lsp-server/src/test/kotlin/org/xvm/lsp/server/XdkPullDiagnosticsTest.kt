@@ -370,6 +370,42 @@ class XdkPullDiagnosticsTest {
         }
     }
 
+    @Test
+    fun `a test added to an open test module makes its own pull a new report, with the same diagnostics`() {
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {\n    Int one() = 1;\n}\n") }
+        val tests = directory.resolve("LibTest.x").toFile().apply { writeText(libTest("adds")) }
+        val uri = tests.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Lib", lib.toURI().toString()),
+                    XdkSourceModule("LibTest", uri, setOf("Lib")),
+                ),
+            )
+            session.open(uri, libTest("adds"), 1)
+            val first = session.pull(uri).left
+            assertThat(first.items).isEmpty()
+            assertThat(session.pull(uri, first.resultId).right.resultId).isEqualTo(first.resultId)
+
+            // VS Code takes an open document's report from its own pulls, not from the workspace's: the test the edit
+            // adds, which leaves the diagnostics as they were, must make that report new, which is what the Testing
+            // view lists its tests again on (the VS Code tour's "A new test", run-ETDL65)
+            session.change(uri, libTest("adds", "subtracts"), 2)
+            val added = session.pull(uri, first.resultId).left
+            assertThat(added.items).isEmpty()
+            assertThat(added.resultId).isNotEqualTo(first.resultId)
+            assertThat(session.pull(uri, added.resultId).right.resultId).isEqualTo(added.resultId)
+            assertThat(
+                session.server
+                    .tests()
+                    .awaited()
+                    .single { it.module == "LibTest" }
+                    .tests.children
+                    .map { it.selector },
+            ).containsExactly("adds", "subtracts")
+        }
+    }
+
     /** A test module of Lib's with a test, each [names]d, that calls it. */
     private fun libTest(vararg names: String) =
         "module LibTest {\n    package lib import Lib;\n" +
