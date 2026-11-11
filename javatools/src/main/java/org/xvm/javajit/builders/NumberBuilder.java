@@ -94,14 +94,22 @@ public class NumberBuilder extends AugmentingBuilder {
                 if (prop.isFormalType()) {
                     continue;
                 }
-                PropertyInfo declaredProp = prop;
-                prop = typeInfo.findProperty(prop.getName());
-                assert prop != null;
+                PropertyInfo actualProp = typeInfo.findProperty(prop.getName());
+                assert actualProp != null;
 
-                String jitName = prop.ensureJitName(typeSystem);
-                BiConsumer<CodeBuilder, JitMethodDesc> generator = getPropertyCodeGenerator(jitName);
-                if (generator != null && generatedProperties.add(jitName)) {
-                    assemblePrimitivePropertyAccessor(classBuilder, prop, declaredProp, generator);
+                String jitName   = actualProp.ensureJitName(typeSystem);
+                var    generator = getPropertyCodeGenerator(jitName);
+
+                if (generator == null) {
+                    JitMethodDesc jmd = actualProp.getGetterJitDesc(this, thisType);
+                    if (!jmd.standardMD.equals(prop.getGetterJitDesc(this).standardMD)) {
+                        // naturally compiled covariant getters still need the base signature;
+                        // e.g. Dec32.emax returns Int, while FPNumber.emax returns IntNumber
+                        generatePrimitiveGetterWrapper(classBuilder, prop,
+                                actualProp.ensureGetterJitMethodName(typeSystem), jmd);
+                    }
+                } else if (generatedProperties.add(jitName)) {
+                    assemblePrimitivePropertyAccessor(classBuilder, actualProp, prop, generator);
                 }
             }
         }

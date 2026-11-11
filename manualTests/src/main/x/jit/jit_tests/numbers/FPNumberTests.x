@@ -200,19 +200,16 @@ class FPNumberTests {
     }
 
     void testEMaxFPNumber(FPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.emax.toInt() == expected;
+        assert n.emax.toInt() == expected;
     }
 
     void testEMaxBinaryFPNumber(BinaryFPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.emax.toInt() == expected;
+        assert n.emax.toInt() == expected;
         testEMaxFPNumber(n, expected);
     }
 
     void testEMaxDecimalFPNumber(DecimalFPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.emax.toInt() == expected;
+        assert n.emax.toInt() == expected;
         testEMaxFPNumber(n, expected);
     }
 
@@ -222,7 +219,7 @@ class FPNumberTests {
         assert Dec64.one().emin == -383;
         testEMinDecimalFPNumber(Dec64.one(), -383);
         assert Dec128.one().emin == -6143;
-        testEMinDecimalFPNumber(Dec128.one(), -6144);
+        testEMinDecimalFPNumber(Dec128.one(), -6143);
 
         assert Float16.one().emin == -14;
         testEMinBinaryFPNumber(Float16.one(), -14);
@@ -233,19 +230,16 @@ class FPNumberTests {
     }
 
     void testEMinFPNumber(FPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.emin.toInt() == expected;
+        assert n.emin.toInt() == expected;
     }
 
     void testEMinBinaryFPNumber(BinaryFPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.emin.toInt() == expected;
+        assert n.emin.toInt() == expected;
         testEMinFPNumber(n, expected);
     }
 
     void testEMinDecimalFPNumber(DecimalFPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.emin.toInt() == expected;
+        assert n.emin.toInt() == expected;
         testEMinFPNumber(n, expected);
     }
 
@@ -266,19 +260,16 @@ class FPNumberTests {
     }
 
     void testBiasFPNumber(FPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.bias.toInt() == expected;
+        assert n.bias.toInt() == expected;
     }
 
     void testBiasBinaryFPNumber(BinaryFPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.bias.toInt() == expected;
+        assert n.bias.toInt() == expected;
         testBiasFPNumber(n, expected);
     }
 
     void testBiasDecimalFPNumber(DecimalFPNumber n, Int expected) {
-// TODO Fails due to missing "capped" property accessor
-//        assert n.bias.toInt() == expected;
+        assert n.bias.toInt() == expected;
         testBiasFPNumber(n, expected);
     }
 
