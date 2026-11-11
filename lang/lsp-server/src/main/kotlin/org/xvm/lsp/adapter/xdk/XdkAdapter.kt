@@ -368,9 +368,9 @@ class XdkAdapter
                 XdkLibrarySources.owns(uri) || synchronized(lifecycle) { dependencies.modules.values.any { uri in it.documents } }
 
         /**
-         * Whether [uri] is a library document that is not compiled. A library source's read-only copy is compiled on
-         * its own, which gives its outline, whether navigation, a compile that names one of its declarations or a stack
-         * frame wrote it. None of a copy's diagnostics are reported.
+         * Whether [uri] is a library document that is not compiled. A library source's read-only copy is compiled, which
+         * gives its outline, whether navigation, a compile that names one of its declarations or a stack frame wrote it,
+         * and so is its ecstasy-library content, as the copy. None of a copy's diagnostics are reported.
          */
         private fun isUncompiledLibraryDocument(uri: String): Boolean = isLibraryDocument(uri) && !XdkLibrarySources.isCopy(uri)
 
@@ -658,7 +658,7 @@ class XdkAdapter
                 project.scope(uri)?.let {
                     return it
                 }
-                XdkSources.file(uri)?.let { copyScope(uri, it) }?.let {
+                XdkLibrarySources.fileOf(uri)?.let { copyScope(uri, it) }?.let {
                     return it
                 }
                 val root = XdkSources.moduleRoot(uri, overlays)
@@ -1426,13 +1426,13 @@ class XdkAdapter
             val hierarchy = XdkHierarchy(semanticViews)
             val calls = XdkCalls(semanticViews)
 
+            // a copy's ecstasy-library content is the copy's document
             fun document(uri: String): Analysis? =
                 documents[uri]
-                    ?: documents.entries
-                        .firstOrNull {
-                            XdkSources.file(it.key) != null &&
-                                XdkSources.file(it.key) == XdkSources.file(uri)
-                        }?.value
+                    ?: XdkLibrarySources.fileOf(uri)?.let { file ->
+                        documents[file.toURI().toString()]
+                            ?: documents.entries.firstOrNull { XdkSources.file(it.key) == file }?.value
+                    }
 
             fun sourceUri(name: String?): String? =
                 documents.entries.firstOrNull { it.value.semantics?.sourceName == name }?.key
