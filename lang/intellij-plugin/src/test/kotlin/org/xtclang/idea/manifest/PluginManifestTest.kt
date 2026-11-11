@@ -232,6 +232,19 @@ class PluginManifestTest {
     }
 
     @Test
+    @DisplayName("depends on IntelliJ 2026.3's Problems view plugin optionally, whose classes Project Errors needs there")
+    fun problemsViewDependency() {
+        val elements = pluginXml.getElementsByTagName("depends")
+        val problemsView =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .single { it.textContent.trim() == "com.intellij.problemsView" }
+        assertThat(problemsView.getAttribute("optional")).isEqualTo("true")
+        val config = problemsView.getAttribute("config-file")
+        assertThat(javaClass.classLoader.getResource("META-INF/$config")).describedAs(config).isNotNull()
+    }
+
+    @Test
     @DisplayName("every default shortcut keeps Control on both macOS keymaps, as VS Code and the docs do")
     fun macShortcutsKeepControl() {
         val elements = pluginXml.getElementsByTagName("action")
