@@ -21,7 +21,8 @@ import java.util.concurrent.CountDownLatch
  * plugin's client asks every started wrapper for its run lenses and tests as it refreshes, which started that one
  * again, and the stub's factory connected each start to the stub of the test then running, whose requests to the
  * client went to the latest connection: the disposed wrapper's, which answers nothing. So ClosedFileProblemsTest's
- * refresh once waited forever, and the four tests after it found two wrappers.
+ * refresh once waited forever, and the four tests after it found two wrappers. LSP4IJ 0.30.0 starts no disposed wrapper
+ * again (#1873); the teardown still disposes the wrappers a test leaves.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class LightEditorTest {
@@ -57,22 +58,17 @@ class LightEditorTest {
     }
 
     @Test
-    fun `an earlier test's wrapper that starts again connects to that test's server`() {
+    fun `an earlier test's disposed wrapper asked for its server does not start again`() {
         editor.open("Connected.x", "module Connected {}\n") { file -> synchronizer(file) }
         val connections = editor.server.clients.size
         val earlier = StubLanguageServer()
         // as the end of the earlier test left it, disposed with the removal of its server
         val wrapper = LanguageServerWrapper(editor.fixture.project, ExtensionLanguageServerDefinition(earlier.extension()))
         Disposer.dispose(wrapper)
-        // as getInitializedServer() does, which a request for its server makes
-        wrapper.start()
-        awaitUntil("the disposed wrapper connects") { earlier.clients.size + editor.server.clients.size > connections }
-        assertThat(earlier.clients).hasSize(1)
+        // a request for its server asks for it so; a disposed wrapper answers none, and connects to no server
+        assertThat(wrapper.initializedServer.awaited()).isNull()
+        assertThat(earlier.clients).isEmpty()
         assertThat(editor.server.clients).hasSize(connections)
-        // the disposed wrapper answers nothing, so a refresh sent on its connection would wait forever
-        editor.server.languageClient
-            .refreshDiagnostics()
-            .awaited()
     }
 
     @Test
