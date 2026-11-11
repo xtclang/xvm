@@ -56,7 +56,10 @@ interface DiagnosticReportsProbe {
     ): Int
 }
 
-/** IntelliJ's problem files, which the Project view marks red, and the errors LSP4IJ holds for a closed document. */
+/**
+ * IntelliJ's problem files, which the Project view marks red, the errors LSP4IJ holds for a closed document, and what
+ * the Problems window's Project Errors lists in a file.
+ */
 @Remote("org.xtclang.idea.playbook.probe.ProblemFiles", plugin = "org.xtclang.playbook.probe")
 interface ProblemFilesProbe {
     fun problem(
@@ -68,6 +71,11 @@ interface ProblemFilesProbe {
         project: Project,
         path: String,
     ): Int
+
+    fun projectErrors(
+        project: Project,
+        path: String,
+    ): List<String>
 }
 
 /** Copies the client's received diagnostic coordinates and classification into the test process. */

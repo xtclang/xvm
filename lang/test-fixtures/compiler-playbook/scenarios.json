@@ -10624,15 +10624,17 @@
       }
     },
     "X341": {
-      "title": "a root edit that breaks a closed member reports the member's errors without opening it, also once it is opened and closed again, and undoing it clears them",
+      "title": "a root edit that breaks a closed member reports the member's errors without opening it, also once it is opened and closed again, and undoing it clears them; IntelliJ's Project Errors lists them without a Build, once after one, and none after the undo",
       "manual": [
-        "The case checks IntelliJ's problem files, which its Project view and editor tabs draw red, and the errors LSP4IJ holds for the closed member, and VS Code's diagnostics of it; that the Project view draws Project/Child.x red, and that VS Code's Problems panel lists its errors, is seen by eye"
+        "The case checks IntelliJ's problem files, which its Project view and editor tabs draw red, the errors LSP4IJ holds for the closed member, and what the Problems window's Project Errors lists in it, and VS Code's diagnostics of it; that the Project view draws Project/Child.x red, and that VS Code's Problems panel lists its errors, is seen by eye",
+        "IntelliJ: after the first break, a Build in embedded mode, of the root's module configured as a source module, reports the member's errors too and, as IntelliJ does after a failed build, opens the member at its first error; Project Errors still lists each of them once, at its place with its text, and again once the member is closed; the undo's report clears them, the Build's included"
       ],
       "values": {
         "memberFile": "Project/Child.x",
         "rootFile": "Project.x",
         "replaceFrom": "class Base",
-        "replaceWith": "class Renamed"
+        "replaceWith": "class Renamed",
+        "module": "Project"
       },
       "intellij": {
         "coverage": "full",
