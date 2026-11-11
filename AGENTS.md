@@ -40,9 +40,12 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 - `settings.gradle.kts` is an aggregator root; root `build` is an aggregate lifecycle over the included builds.
 - Always included: `javatools`, `javatools_jitbridge`, `javatools_utils`, `javatools_unicode`, `plugin`, `xdk`, `docker`.
 - Optional builds are gated by `includeBuildLang` / `includeBuildManualTests` (visibility) and attached to the
-  root lifecycle by `includeBuildAttachLang` / `includeBuildAttachManualTests`. All default to `false`.
+  root lifecycle by `includeBuildAttachLang` / `includeBuildAttachManualTests`. `gradle.properties` turns both
+  lang flags on, since the language server compiles through javatools; CI's push and pull request builds turn
+  `includeBuildLang` off (`commit.yml`). The manual-tests flags default to `false`.
 - `manualTests` is a fake third-party consumer build that verifies published/composite plugin+XDK behavior.
-- Running any `:lang:*` task from root needs BOTH flags (either one alone fails with "project ':lang' not found"):
+- Running any `:lang:*` task from root needs BOTH flags on (either one alone fails with "project ':lang' not
+  found"); pass them where they may be off, such as in CI:
 
 ```bash
 ./gradlew :lang:<task> -PincludeBuildLang=true -PincludeBuildAttachLang=true
