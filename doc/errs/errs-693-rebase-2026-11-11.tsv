@@ -1,0 +1,287 @@
+old_commit	new_commit	status	subject
+067dec42a5a88343d4447223cb93b1aeecf27e09	4338dd563aa2a5b70ba1153d05a7026b6775f8df	replayed	Preserve module repository read failures without blocking usable candidates
+68c549b1dfb38bdcef9ea084c97117db5dd3c971	a0cf6c3e4ae53782f902ad66abab79a8dc9d3eff	replayed	Separate diagnostic reporting from listener abort policy
+37c68327a336a7eb0d2ef43d9eee386066433a61	88a26800b606d905d7e4c68568565ce88bb4a14e	resolved	Require explicit compiler listeners and reasons for silence
+801971d6f14cbe44dde25da70c65c20e63187967	d32938c1a42be5db615286c365c6798793edfab0	replayed	Scope parser diagnostics and restore validation listeners on every exit
+43fd81dcd022324ed6eac9a79981385bc68dabf3	caaa37f459d8e69587c4a1fe5742f88ac349ba9d	replayed	Expose host compilation outcomes, snapshots, cancellation and cached diagnostics
+1370801c579dcd7ae2d34dc455c4c1be3311b6fb	25f333209563eba308d4a7adacd5be91a551834d	replayed	Expose compilation-owned syntax and resolved semantic facts
+bf9a057c5b9340e3c40946edede1a8e28e25edcf	c3ee6be270098e70bb5a9809d55233b60c8b5709	replayed	Expose recovery, cursor fitting and declaration analysis to compiler hosts
+f0f176c9d15979eca193b125eef6457040af478d	fccf6e8b1a192cd1a6efc7f5edeb2e3f6738327e	replayed	Integrate compiler-backed language support with IntelliJ and VS Code
+cec0d2c0f7bd68eb63b430270033eca4b2e8035f	ece50a7c68ac18e0d00807424cc59cfc85e1b5a1	replayed	Report repository read attempts without inferring dependency failures
+1df5da69c4ef7f17892b4bc7a128d2f5ca9d9cf6	b29f7ea42448bf6ee90e126c7780f74ae3875098	replayed	Clarify tooling contracts and isolate partial AST helpers
+49b2bd9ea5bb5a92ff645b7be3016a17a167b5e6	e44434961a9343b3014ee8ef73b90386d054fcba	replayed	Keep unchanged repository read failures cached until file metadata changes
+142f6a237e9a15d3f53326cd375816808c420438	38d409d15c654efe964a4fbd988eb37e6721017e	replayed	Verify compiler output without binary AST dependencies
+826e32f6a7b9c90b2db5db145189a2b02ff34fa9	bee524ff45d485e852ae2b382f72651da8a5025b	replayed	Isolate parallel LSP test workers and keep CI and lint checks clean
+941ed9c8ab227e458e7d41c4ed619c95d5e5bf00	f6682e01c66fe793ce738145a26eead9bd110aec	replayed	Verify the LSP4IJ APIs the plugin uses, and prepare the runIde sandbox
+dbbff4db3136336c0257e6938a63664909ee6274	e5e433e62afcc65f0a48eec8e6a81aa57d7fdd0d	replayed	Document compiler support for the language server
+6c4fc4e0aeccad62fb3bcb69295805ba119f1ef0	6a14826c6db0486a7a64d2c934ff309810a4328c	replayed	Guard code actions and renames at synthetic bodies and locked library sources
+8d4fe769fa9286ac0691529c74d4e464c911f638	ce2b23ceec24702701446d822a5906f37de2fcc6	replayed	Restart editor-owned language servers from a project-scoped CLI
+e1b60886cccd9fc36f1fab16db86b249be35c658	16a130b98f1c986fa9d83edc19272fa448929f99	replayed	Group source bindings, clean up the compiler AST and share duplicated code
+3086b4924d7a62b82845589a7d417bb515d0c889	de18e982ecbe7e06298224954f215a098fd56b86	replayed	Route repository and runtime reports through error listeners
+04e4747ec5f1d2db0056a354ef607c121a523f1f	ffb79df15f63a45e117ff9ae0c1f87408416acc9	replayed	Build and run with the embedded compiler in the server and both editors
+4462a5a1baa015ac12d17aa641d942017d1fd803	208f152580cbcaa7d7c66ad9f9ae1ac36b1a04d4	replayed	Rename the compiler guide and testing documents, and correct stale documentation
+8a2c881e457f9442392364d34c86b475cafc746c	66a5c28f9aa43992ed1b8314ffc7972a6d65c81f	replayed	Cover embedded build, run, debug launches and the adapter chooser in the shared playbook
+8701dd9bedabf00229e2aefe5ef52e15a1424f62	2c697af5616d6a89fdd8a3ef50621d70e006624e	replayed	Keep documents current and the server responsive, and name its own diagnostics
+659d8e87d4d9e33bd124db30e1224de633489c53	fed882d1a7122eea55cb5d036e2afad3d950b254	replayed	Stop advertising features that do not work, and warn when Tree-sitter falls back to the Mock adapter
+36ceb7a0f3d0bed6f8a713a906bcc95bc64cfc5a	c039c04123b0b00465b75c1d7dec7392f3e60d74	replayed	Let embedded runs read console input in both editors
+beb1237147ca984877ebca8a6b44a68e5ab70d61	2edeb13d4ee0fe1541c2c54690149b2ded7d6263	replayed	Build the editor's snapshot and reuse unchanged modules in embedded builds
+e8f0f3f0e29fdedab1d987e55e1515c737a4d691	1b8e0ab9917fd9f1ed57a9b18eea8ae802db1f0c	replayed	Make embedded the default build mode, chosen per editor
+379af418fcc978ec5bf907511cb88fffb36fa84b	c297fe0be1834abc4f17c05a7b0d55cd129fd4ae	replayed	Judge file events against a running analysis and apply them in order
+0fa1058d58d444f966e959e3151475f7fb046f42	bb19c11a3b499f8a3e6b262b3638378daafefc46	replayed	Run programs side by side in supervised execution workers
+e8f2d5680cb112f67ebefc7397d99541ff2640e3	b969b157e2e624525ecf7096ee121df0e9084482	replayed	Find entry methods through the module's type and pass them with their arguments
+b155f3067a16470b33bfdd3c36b50c350f77fa26	ee068d8c865c267d7e1bb81e99192c537970eda6	replayed	Keep indentation while typing, and lay out switches as the XDK does
+212474acb8a357ccaec5c14398f5c175f8ecd7d4	da5e2128a56865d02f12c2f5714c3d24032d4cc4	replayed	Read in cancellable read actions where a long read could freeze IntelliJ
+0ffc0b15fbafe7380f70c87d3a107d5bd687b7e0	b39e2a8b38ab488f1d4269f9ef02828dca49569d	replayed	Fix two close races in embedded runs and cover the embedding API's runs
+90c408026f5e9ee8f98f45168290261802243cc9	e6dbde48c219daf73e2f6dbce9ddd20306de7112	replayed	Build and run the editor's text unsaved, and report why a run cannot start
+8f885e828dbce47e4d9b87df3647e1bee3657135	c069196acaefd24394edf81ea931b26dd6258ae4	replayed	Declare fields first and use plain names in the new classes
+d046e3f13ec55106f13e89bceca44ea1457fddca	b9e5fb1c83669d596d84d569f55ab22f440db410	replayed	Remove the document-color prototype
+8fb6f7f5ff55cec8e806a67c2e02942408b1f975	1bb92e99404e6f7939af6d12feff7d29c693c57e	replayed	Rename adopted properties, widen extraction, and move and rename discovered roots
+167ead03579c34237b814d77a29828fd44251168	fd9b501b9add44a82d20b78bbf58661e64d078f7	replayed	Show a Run icon in IntelliJ's gutter, and build a generated project with real Gradle
+3bbaad7f9c24b9f8392ac003e144ea2ebe3ba089	72596e06652aa0d3a8d80ddf1f38881b21f7f60b	replayed	End runs and workers cleanly, and measure them without waiting for the collector
+75733557e03d8ce6fb0d49f347092e67a01c7e7b	12352f39a0a31ce4a5874e3f4100e8ea1e7a28eb	replayed	Cancel IntelliJ requests whose connection ends
+4b2578d3fe8ec9e462aa5380f7d391ac5a72f79c	e05c3e1a5892298487a49c7e57c9d1fc2cf75797	replayed	Stop the lexer at a source's end and keep diagnostics that only look like duplicates
+dc860e226d9104a67d70407ffd35098f47ec5d1b	74e5a59656962b2c0c7e8574ce9bd856c7e4aa52	replayed	Keep the build's jars whole and its test runs focused
+ae3f76829594071dbc82598b7ff0e27279540c81	39427b8bc0da1452beb68c18d9cebe57f64a6660	replayed	Take LSP4IJ from a Marketplace channel, and keep the playbooks' checks and roots clean
+b2b8073b62e7b211b2dfdca573cb2e4a1281d518	99e608a113b40706356e67dd630c6e0bacf1e975	replayed	Synchronize the semantic token history that concurrent queries share
+cbde832e008bd0aca6ff48195200f9ca99831338	e12f827eed3c4da9fa6eddeb17816ea9bf836457	replayed	Keep moved module containers as missing inputs, and stop refetching library documents
+145634bc34996612cb3d32437a6bda22a5584beb	2efab4b70975ec22a2ab9637605f28888215ea8a	replayed	Debug programs from VS Code and IntelliJ through the language server
+945bfae38df739bca94f5cceba71b53d4ddfbde5	98d8bf9b65750fbb0616edbf3dbad70b212fde49	replayed	Show a stopped frame's variables, and step over, into and out of calls
+65e2292b4f8beedf04eff39496deea357b465ff5	e718a9f05a433a8b4692e7d224cc7d65635d8c20	replayed	Stop at exceptions, pause a running program, and stop on entry
+bfe8bcc1af7b1acadbdffe966cf558c766a5b9de	8bf7030fb12c63538c7768ae8520b08e7be2846b	replayed	Evaluate watches and hovers on paths in a stopped frame
+56a626a69941b3337040b69ed85a1e956016218d	65da67a438efe59df66942e08f7195c09ba0b1fb	replayed	Conditional breakpoints, hit counts, logpoints and exception classes
+9a13ff3116e3013bedffa787474c0ab71b5f841b	e55c9e7d1e8baa74948d3471d7536b8097f4aa30	replayed	Evaluate expressions with operators without running the program's code
+708843de66825071107ec452f126fc7a21046919	25b53b22ab9893db38152b25f0dfd0e1edc48580	replayed	Leave the runner's frames out of the debugger's stacks and traces
+5ec7bd8bfcd1388e75345f941f9cb13f95dae8b6	6aff24ab214a9822847fa703e0b7328529622c44	replayed	Run code typed in the Debug Console on the stopped fiber
+1e66dd663a519acd4aab6ab14688085e48eeb9c9	14579a15b5573c6ac127e76075f3b1f91fa9de18	replayed	Stop at the program's first line from IntelliJ's configuration
+2784155ff7701df0e301bb7869f14e7d3aa5de1d	f5a846d92bbc20f64e6d3d42c8be40be5d624341	replayed	Lazy properties, hexadecimal values, paged arrays, Set Value, completions
+8131fc3aaa98fe5c731c62596bac564f6fc7978c	e94801235c1dda1f81f3ccb93f51bd5906e26ea0	replayed	Place breakpoints on the lines a debugged program was built from
+a513a5b2dfa95550b6187921e5dcc916848fa451	15db28b7e015689b06d1e3c6c05aa0a21d381730	replayed	Soak runs and debug sessions on one worker, and let finished runtimes go
+1fb63d02b9bad043012db899c0c7de48e0ebb153	c27b81e51f1aa3f0d81e4bd84c25fc0dd2ffd8b3	replayed	Check Run to Cursor in both editors
+8d8758bb751f93e1c06f8c8b89ecfa59a3bcf9fa	bf361dc85c2ba434472a756443179d2d78236475	replayed	Show library frames in their bundled source, every fiber, and modules
+a62244c41f0c07e0cf70d225843a2f7448934c57	84c3fce3075cea92d110c7461ac1f110228c510f	replayed	Step into a chosen call of the stopped line
+8c416d5061ef252a2d134b3ec9ab76da01759830	b030ea85f8c8936ee54f1f205c324150cc97a5f5	replayed	Stop where a method of a name is entered
+3070de3434dce6a6497fe2db14ceea87278f5be4	b8e330766048f96dd3a0e039753c75da26a55ac2	replayed	Restart a stopped frame, which its caller then calls again
+8d3260eed67f102cc2748febe76b32aeda2d4fe1	19fa40c3022437ee09181edba67155c5e7c6eab4	replayed	Stop once a watched field of an object has changed
+0d0df8bb79bef0c431ee21b2817b5e140c097868	2d1446b68e4de1ae1b88121b52c4ffd8060bef33	replayed	Check Reset Frame and function breakpoints in IntelliJ, for LSP4IJ's fixes
+c76030af9e8d09c4f633e3ef4ff0c4208e17b2c5	96250d177ba97050b1280d6e9e13dd2a65c665b0	replayed	Answer inline values with the stopped method's variables
+b7311744342e32f70277b229e89d65439633d4f5	e03222a4dcd0ba32346684903ec26db63c73aae2	replayed	Check data breakpoints, Pause, exception filters and loaded sources in IntelliJ
+32abfd491b4b2860418a8a71ed39801662621adb	01ea80018385aec84b83ae8db7fe4dc0875d13c6	replayed	Check a document link's Ctrl+Click in IntelliJ's X131
+d583ca365eb17d384369a6bb56bcdeb0d3d93487	bfc417086c5f8de22df90cf1828794f1006f2bd3	replayed	Drop the references to documents and plans this branch does not carry
+d334073364a0bae55b44787d7dfb053c0afa5122	24b2f6ff97f0e09476a2588ad9a4c2403b3fde2f	replayed	Describe debugging, and the run changes, in the server and editor READMEs
+758d70fbf45458d6364f0126965547ddc3d6b8bb	5d21ae2299732e732cb36fffe5ef148b0c81ad92	replayed	Prove a rename past a register the semantic model cannot place
+841993b907fa73e485c7d518829e3c31356cdacb	28639038d0c100bf73384cecdd4b93011bad3fb2	replayed	Drop the startup workarounds that vscode-languageclient 11.0.0 makes unneeded
+287a4babf0d832436653925d018b513c683a454b	e3d0c2c50d5b0cfce12a21f682db3d02e865b181	replayed	Send a step's response before the stop where the step ends
+68276121b441e039b042b2354382cd29236066fc	293cd77aa3d7e3ea4fa3a35cf6e3a6400a9ddb7c	replayed	Inline every use of a private member and remove it
+1379239f599ef5ca6c41a20120f46eac4f442a5e	f9f990d86fe3a918da85467fa204d8bf514c37c2	replayed	Apply X103's rename as a refactoring and check the member after Undo
+2338e9c5ed7506654742166652269aefde5fcfbf	bf3244e209aa3f7e0a9293feb242d0c2745b176c	replayed	Stop at an uncaught exception that only the runner would catch
+5e578190987d4303e1acd21d242ca0b59ca53d77	848104a5435fdd853e0a6e88bd9c05532979b33d	replayed	Safely delete an unused public or protected member
+d11b671b2b4e585198c1246d9fa5fb4994386b45	c0d837a58926591dbfb5cebad52a282220b8bb0f	replayed	Apply the Ecstasy edits of an Explorer move with refactoring auto-save off
+845c3b7e873f5afcbd527d3a2fd45acee916b19c	903692b22959f4742e434e87d6b104e5aeeb3e48	replayed	Let a host give lazy variables' code longer than ON_DEMAND
+3796ec5eb2532f7019fe1d3cab0bcf8a85901f64	4e7bb541e8b9fc95fb85ed78adeb681e22dcdc18	replayed	Attach the debugger to a program run with --debug
+f4f73a4ce8e6f87716f1d1579d62b2b5660679e5	7e3cad2af020d39c3bf411617dc14d304a6d1cb7	replayed	Let SessionDebuggerTest's runs show they started before it ends them
+615f7976fe82eaef5e74e330e5c157133144012f	7f81c88d2d7e48e145977d63e8c62d63afb37d7c	replayed	Let XdkLanguageServerTest's pending analyses publish before finish() returns
+b99bd950dd5838c1a398e6bd40312f8b33a628b0	7a4f2a98b93b556ead20f2eded115ca0e1575d82	replayed	Drop the sleeps FormattingConfigRoundTripTest takes before reading a stored reply
+b400cd0a0e9f02388a4ef3e0c2960780482bc973	3734e369511cd55a6d4a8837133966dc4012abd7	replayed	Let two run tests check what they claim instead of how long they wait
+c316f2c34be467cd316363371f891aee9b321227	4ee529ce2e11851111189bbad7e15385d83abb74	replayed	Drop the change a restart's retired document synchronizer still sends
+7552bfe43d693d77c7adb8ed8fcdd99cde65aec7	899cbd948f95189d79ce557de61783ed2bffd087	replayed	Wait for LSP4IJ to reopen X259's consumer after the restart
+99e8e13b95e089567a756353646c985041610a55	0148f95064aabb2f36993faf26dd41c084b74050	replayed	Send X259's library edit to the old server before the restart
+2f501729d3e6ccdf660984c582dcba1ed4f442f3	81705c3bacf89a4364b171a6450141553d024292	replayed	Wait for X257's Invoked request to reach the LSP console
+e665522a79887ecec1ed46dc7e33b63e310285a5	93ea5d3b0fa8e545bf34319253c81c1cf1a0b58f	replayed	Reopen a popup under inspection after the IDE was deactivated
+8341478d8366ac628695ba9e0da81f74fc0b422e	71f91f622d89f10ec4471534cfbd21e5d496a869	replayed	Let the VFS find a library frame's source before LSP4IJ reads the frames
+6d9c346f0c7b788f503fc14376137f0914baedb9	a18e790e02b89db3c3d34b9e6e08aea085ec38e0	replayed	Run the IntelliJ playbook in a Linux container on a virtual display
+f49905257bf46d78f655cab4f31c546d7cab1f61	a26b14a6e3a1bfd835bff3de43955b36c4bfb879	replayed	Let two SessionDebuggerTest cases check what their sleeps waited for
+bb5fee1a1f5bae005b4f4dab9af741710aab8695	2013f1db68d6d91d22d11ff953ca289e293a9b4d	replayed	Analyze again an open document whose analysis was retired without a replacement
+7f96a361b81c5adf78fa3edad1e1dc61432d38b0	9ed555587293171141dd2eddf729962122c54a62	replayed	Let the playbooks' diagnostics waits accept only a report for the current text
+d6406917d8a57820b1d7ce21aca3ce1e8dc2a8a2	d6c8a5dc1336cf2eaedbfe82453184aa2e27162e	replayed	Fix the container's IntelliJ playbook runs: a user, an init process, JDK 25 and mavenLocal
+e661e1333900862c831950b5ce26a0e229a88ec0	7bc33ea07d88fae876198425214cfd3a95cb9cb0	replayed	Spell XtcTextDocumentService's analyze and analyzeOne the American way
+71f112b5395f3207d5f1ce58f5b33b0c40dbb65e	8ff6a92652ccb4ebdcb722aa1bc3dd17d0f002e5	replayed	Debug Gradle-mode runs in VS Code and IntelliJ
+1c2d44deca0a89956fb0b229e3c15c7a3347c674	4f9baf9c7e1989460a7bc99fbaaaa5948d29ed21	replayed	Fail the lang build on compiler warnings, and fix the ten it had
+f23edeb6f0c3e32f2c9d41b47356c477b5bbd915	0ee121e1b84a8a009535dab1ea1d043bdef3a87d	replayed	Don't reuse a module compiled in another copy of the project
+700fd26a8837165a61ac7a1dc3653c1fa0ec142c	f06e8c695fee345c84f7f62c63724f268280f2e0	replayed	Keep the language server running while a run or debug session uses it
+51a141798ad736136366a1659b9c14ef9023e168	f5609793ffc8f0da5452528103626422830c5d5f	replayed	Run the editor playbooks in the container from Gradle, with any engine
+501b41adcfe0cf890b3f997450f4bf323867f72e	b52c4f6c62d79b72cd0da6b1922eab98e3a05c9b	replayed	Continue, step or pause one fiber while the others stay stopped
+254d7d3bca1c3e13c2a611bf5fe450b36a87c47e	1bb50941a31789f74d2f1af14be93b320ca99442	replayed	Link a local's ranges when the caret is just after its name
+048cb1e9f373d0a68de18018b96ee0f8268e878e	fb9439f438f518db685cf03f139380caccc7edff	replayed	Test that a part of a value's variables from past its end is empty
+818973ecbcadd0169bfec32d0a4aae35652e9505	eb5c096a00d839267bda4f8a3653249eff00dcb6	replayed	Debug a command-line run: xtc run runs the program, which connects
+e1ab791734897c1294a49f89bb97c467ccb718b0	999270afb2ed0888630654968a9bd9c0b24ae52b	replayed	Move the debugger agent into javatools, with the protocol as records
+8498350b995812c6a57188de147d3ea1c9479cc9	05cf61cb9c8e4d06c2a7723e42944f448d598254	replayed	Keep a debugged task's last output, and X325's queued fiber
+0ab8f75eb299079846794f7c3bbf6b593a12268d	fc81583e560ce2b93694be2e4e2022bc1d3cb962	replayed	Let deduction find a named module in src/main/x beside other sources
+f73b1e125825bf6971faa14730dc9a433b0e87fb	d0b30f7412ec7dfaef4c74f06d6f25748eaa035c	replayed	Run and debug a module's xunit tests from the editors, embedded
+10bc75092523f18deb6b972a8e9d6a68dba756d0	794310330e623c2b9ef205850ef33c8110a5d29d	replayed	Compile a closure as a fold, without mutable accumulators
+ee0ae5cd88ea2914dcc8f56338714d76a8b0029f	30584c5ca227bdd1aba2d50aeb419d968c818153	replayed	Run and debug Ecstasy tests from IntelliJ, in its test console
+570eb1cf52b411528d6321a39d682bf9d17ca656	faae4e2cc6d788e244db42f5bddc14eb042a067f	replayed	Run and debug tests in Gradle and command-line mode, from both editors
+e0aad36fa723b8b3e834284b0191163a1183e650	265b08bffcaabe40aec06e2d4a6340d06bf8f708	replayed	Report tests as xunit's own JSON events, which the language server reads once
+17c4ae7f82a7d459a11531532d892fcdc33d5558	27b0fe29b107f0de146e6561ec0ce732549adafa	replayed	Lift the lazy-value time limit for the embedded execution tests' worker
+006868a89b6d89891314bb66447914de86217531	c7b93c0ce624521a482733cf8c53c68144b74f36	replayed	Debug with the agent jar's provider by its name, and javatools' own without one
+1af8c48e62bc45f5d0b62e61129b1ae85876a09c	1e0f3bf0ee64b093760422733b3f7f346f7aaed4	replayed	Keep the doc comments of properties and methods on their structures
+540081b7759652bb2b78eb9231ce8a66bac38155	28a24bf0eadccaf4c4f482b7a556a1d1400de0d1	replayed	Describe the debugger's attach and R9-R12 features in the READMEs
+afc8bb94453c1ea1bc2b086c7d09ea10eae25c4c	7c2e03fe70e92b694edc04456413260968afd0c4	replayed	Describe running and debugging tests from both editors in the READMEs
+80501087809c4a1c241b858a06351308f79401a2	a87867186a384a5fbe6ee3c49165c5477e08f4f6	replayed	Give the playbook catalog's size as its 342 cases everywhere
+dc2f0b1b452ff900dda529c83abe930f2b247e8f	f507d5002d49a849af9a0df1cd78767ab0994a40	replayed	List every VS Code command in the extension README, by its own title
+77d43af06e80e20e7eb845cf336ceefb29fa572b	dc5cd10ae4411317c6bded548e227fc90d903d48	replayed	Fix lang/README's task paths, versions and feature summary
+728e6dffde08aaccf0113e1a1639d02c0314d504	777c4eecf8453aee09220c77b77b060df30582e8	replayed	List the editors' test, attach and debug-task sources, and when xtc is needed
+fb9f34ac89fcde429d666c4ca772f0ae2cb61099	da18c7933fc33e69c719b9dd8fa254e4a0883bed	replayed	Point the playbook instructions at the playbook container
+7b54226c21e1a98c5f51097aaac2ff2bc604455c	5e1f91f2a52b79ac54484e7965e063b5003e240c	replayed	Use American spelling in the shippable docs
+8e5691258ee0420d5deccc149c6969d1d8f0357b	1ffcbd570df91b5db7fabf59391238454ed2dce3	replayed	Name testing in the embedded build and run index entry
+40a86d09beb54f28679501bf896c5debaaebff88	80d576d8a68fc4bb7f747a08c3696743900ae3be	replayed	Name the editors' UI as it reads, Ecstasy, where the docs said XTC
+34537b4d443df58ff4f6881e04b34acefcf8cf43	b52b5447b90a89eb88424d0945e96db9f6d92afa	replayed	Call the server and the IntelliJ plugin by their names in the lang docs
+adf15e7d0490193722d329842c66b7118fc66578	25bdcc4168fd92dfab0e638ff1626ecac5970c2a	replayed	List the test and debug-task messages and a test row in the playbook's 18a
+474e0914bf490f0d406ab9492c2b06e81c4a44b0	2473b26bcd32b851a2ab419795420669b1d4e683	replayed	Say that every adapter needs Java 25 in editor-setup.md
+5ab564469294ed0327d441986811389b04efbb05	8c583dadeaa669d8541225a42bcaf3ba0b9dccf5	replayed	Name javatools' debugger, agent and provider in its README
+b3cd75ae241d8c25a60b6a9045c474a7977daf50	24cd4a5435f9702091e935df9f418f3d311a5b61	replayed	Give IntelliJ's missing breakpoint pass count its own LSP4IJ fix
+4cfe9dd55f15b6489bbc5f72f7b80da6800299be	c8729d777864d718df5a61e3b329503aacba06aa	replayed	Complete a member access typed at the end of a line
+a6951723c1d777d718caa66a1185b11ddc1712e5	f10d435105d71c292d607e340c63176ad1e684df	replayed	Name a type by what it is when hovering its name
+43f59598903a915f191b980bc0ffb202a149c298	428b3059a5316bbb76b1705e855cb1b03d7975b8	replayed	Deliver a run's events to dap-server's ProgramEvents, not a copy of it
+ed7d7f6bb068d21ec8d4b738684079d83ea3e6d4	d7c92e2c734e545011a9b116d0d1ec93d6919b11	replayed	Complete with the language model's keywords and built-in types
+59f289e5732502865e371527d6efb677b79f78b5	44a3da64317655e1ff37751f431b1a36d39da3e2	replayed	Share the formatter's empty-block skeleton and whitespace edits
+dee07fed6b5c923936cd93cdba0eef7f7c1d5645	6207fe8ad4adcb56ae0ffdee8a1755ab5ccafb0c	replayed	Build an embedded run's process handler in one place
+c8b71ac365034044aa2f1e741dd7533becabf127	824bd4df5efb971b284167567bf3102e6817b765	replayed	Name the properties that hold behavior or mutable state in camel case
+1b4c18442166bb6a2f81734da6da50c35415ac10	50884af9ae79ba77e915c0cb888946319cca11fb	replayed	Split the LSP tests into a fast default tier and complete runs
+086d90041594486902284c9a3859a38699936aef	4e47bc268da29ad77e95a8c3b42c9e2972fab837	replayed	Give Ecstasy its Code Style settings page
+d95a029f672a1334f9829ae1b268e808473a5c7a	ee4977969b60b6bc956d38ea907f9e9f634fe3a9	replayed	Load the Ecstasy live templates, and offer them in Ecstasy files only
+34632c4630d35a261a45e45a9e3cf6fefc848c85	eb69d0ffda7a7fac44983f50657f57839a41f77d	replayed	Debug a program that has an interface
+4de713f1c3d73b277c5f03d02ceee4548a66b66f	35093f965684a1c300c07ba4feb363a996812392	replayed	Lift SessionDebuggerTest's time limit to an hour
+8a595ab2ae5fd809c432fd4c068a50e3cec25efe	9b6aefd6d15d76f5dbd7728688a37309db92d97c	replayed	Let the compiler-consumer gate accept the default tier's later cases
+10ef38ab1f1533f0b68dbbaea54a7270289a78dd	cf055844815590ab9cd1cfa48029fce5cc1e7c23	replayed	Complete a member with the cursor right after its dot
+605df0a39e3d3d69b78b178b2d6ee75b2d3540c2	7342c92aceb80697cb4be2ddc9afe15dc78d24fa	replayed	Offer code actions in a module that has a const with a toString
+4e530c9c6fdd9fc440a59cd8b1f38cdb2ad493df	cf31bdbe02795562fca6de2a56c391c070109fb5	replayed	Queue playbook container runs on one machine lock, each with its own export
+00673e56aa73bc6e5559eb098f9634153727cc51	b9a299e7bef0b69f82853703fc68f31b2fac50a4	replayed	Start the playbook's IDE from one place, without the plugins it does not use
+1a3f85408e14079f2bda18005fb2040f3f3e5e0a	c216617762a7c7424791b0ccffbcd48f143a178d	replayed	Let tests wait for a hang only, not for a fast machine
+f933039d364120b03f38b2b66e4ba364023f5ff1	0337534570e26793c7c0d1ba6607887827a5a96f	replayed	Wait for configurationDone before a debug session starts its program
+da2364185a437c2f66845602aa622a17ff46e81d	53d43a9f38a7d119ee0652e24dbad91b09215f86	replayed	Record a tour of the IntelliJ plugin on a card game, checking what it shows
+76a114116a9ee477509f412eba4b70ba26dffd20	1c35e690204cf2de198585c7615f5b2870dfe95d	replayed	Show a library declaration's doc comment in hover, from its source
+809bded2411a7a0e19473056179007dd9b98115b	1fdc3c76187dfd3864d3432da8b9ca00663615b0	replayed	Give Ecstasy files a PSI of the Ecstasy language
+0eb97ace4483a6ef9ba3d1f9012e6c802343f939	cb8330794259dd5a5247211aa3ec3776c46d3d51	replayed	Close a block that Enter opens after a { in an Ecstasy file
+80f2eb03dff2c1e51137712d23cbb44f5b124da8	90c877757cf6f74abf45df0984a1a1fca1fa2a3a	replayed	Remove unused imports with Organize imports, run from IntelliJ's Optimize Imports
+7d1e51b24649b90d0a8053cd72d90988b9c08be5	8b3a2cfbafedd275a2e0b6126de9cadcf5ad0057	replayed	Keep an Ecstasy file's brackets and words as plain text had them
+a9d9ab25a462b1a13030f1cb19150faa7b5e1e99	51d1799e112335ac653febbe68f07b902c678bdb	replayed	Give a constructor's finally block no references lens of its own
+558e5bc6e39d92c01c261e3624e10d801e4b6700	993666cb395834a17001babfb5086c90dc2b7a81	replayed	Name an inferred local's type in its hint as the source names it
+8021ed229947409200902224df325aaeb3b39926	bc581e829038893b0bade568eb4bc5d60d329734	replayed	Rerun only the failed Ecstasy tests from the test console
+83b3d746134eafb8fc1d757fe4b8e2c68318c742	d1eeffb73519c5e1e6e94594d44193dbd4f3530f	replayed	Take a line typed in IntelliJ's Debug console to the debug session
+05c5805b0ed1b23defcf23c57441ef396d9fe4bf	496beecd00ccbc2344832dff4d2ca6d9342133e1	replayed	Report every class's errors from an embedded compile, not only the first's
+2bfc2d2cc76370fedffd3ff39c16b6b7ce4dbc90	2c7e90c17f2fdd224f5275381c3e513b039c64ec	replayed	Complete names and show a call's signature where they are typed at a line's end
+79282ca9d9d824457d2b3ef21ca16c81fec0857c	e4e7359fdd8eac207751da832cc0b7c95d160b15	replayed	Complete a type of another module where a statement starts, with its import
+dd0e78e0dd353f88cbcacaf8471da0b361e660e0	f37bf78f0766d94ee62733321efe1680386e99d3	replayed	Copy a concurrent map's entries without failing when one goes meanwhile
+7553e2caea7375acc92c19bee6d0c5ff4aa4747c	3abc0f23b35bf24fc3cf365f8c0374ad4388e75a	replayed	Name a server's log session by the server alone, and tell a live one by its lock
+1db752a13362ce6d96a7cf66812ef378f79bcf41	e6f8d20e58c70ada4b2e509af0f6ec6e3bd3d3e9	replayed	Undo a server's edit of one file without asking, as IntelliJ's quick fixes are
+1d659c9ad1bde770e492ae8fdd6564ed1f4eda85	fe3b6d5d02d6439eaf1d4540aaaf85229fb67da7	replayed	Make SessionDebuggerTest independent of how its threads are scheduled
+48faf6942bb1df0db3149a20a52f66ce499bbe87	dc72565180202c9b0cd4fd249a88704e6854a6ea	replayed	Import a moved type where its new package's name is a property
+e4ef24978650368980847711e0ff4bb3b8ca94a5	b1f5a283d27e8b3d8d6fe0d2d16a54779b4ea39e	replayed	Extract statements that use an injected local, passing its value
+f6ae84662dc343cf5d0224c9f56ce4000a5b1d20	11eb1868ae14bea022668d9d8fcc7429581cd5a7	replayed	Keep earlier debugger stops out of a clock alarm set for a given time
+0301c98b60b942da12777f1dae60efa36724fa0d	db4ae4c0b840b3cce1b464132011bb400dafc96f	replayed	Report a Future callback that throws or that a terminated service drops
+0b62c0ea0d1a69487cb0c52d6d375f245eb2cbbb	05d5c709c86aec1e88dabf6fbc71c90211e1133d	replayed	Prove only the code actions a request asks for, and share a revision's proofs
+68feb5fa971d3d5dbfcfb1a894abe82bdf69cfe1	73aa3b40c3f5b9a81f3a41661549b19376fe5a74	replayed	Keep the execution trace's events out of stderr and server.log
+4d4dc5c71ca6e78b54bcbe8a73082dd7636ad5f6	4958be0bd3caf0a67692de31c4eb79d89ca02cf0	replayed	Let one source that discovery cannot read cost only itself
+0a1b5537a61f862ad4d824e9e74d1b132310d184	fd1c9fa6a4648c980bad3b2a939628ee3e315356	replayed	Let a debugger condition name an enum value by its enumeration
+837e40c2a57f970ed51dbdb66842ebbf499d8ef5	b1a363cbe9c29cb55b53078dafd470c118ca67ab	replayed	Give X145 a reference search that waits until it is canceled
+033d289ce0375ec1dc857441073e8e089c259286	9f5afab52f9bbaeadda868f2b23ea8ce10485e03	replayed	Offer Create class for the diagnostic of a statement that constructs it
+04fb35c3f650c3ab2262dafb67f849fbc7d3e9c6	1d06953a3f68f3394729cd144103ae96c423488e	replayed	Extract statements from a selection of whole lines
+7462f0045f551a19fca86847a195f307f5c80fa0	f1cf608280b3e2f2d39fa613c065351f7df7919e	replayed	Let xtc test, run and build take a project's test module with its modules
+7c7b205dd3d531d120825e63f4da09e527c27b66	fb6de62838177366e5a6cda592c3c39a97e8e5fd	replayed	Build a Gradle-imported project embedded in embedded mode
+766862cd7967a4e7002d2ac8ea0a279a13c8958a	9c22f3fc4403cf785d6ae66db08b09e981bcf068	replayed	Keep a project's module, source and library order the same in every JVM
+4ac031d81d4ff719624d82a88c5eb975c7caf3c9	c47e10355d7c5e2268a4863dfd4cc86ded120dbd	replayed	Send LSP4IJ's held edits before it asks for completions or a call's signature
+c4c22788622b162c68a28a7e5835a1c6a48336b7	73db21b67f1c5efd9732a71f07d18bd259e4fcaa	replayed	Indent the rest of a line that Enter moves into the block it opens
+fd114d6f8058a092d448951af3983d11a7b97c98	9f75e592bef931b9d60134c59b99f72eda1df123	replayed	Say on the debug console why a breakpoint's condition cannot be evaluated
+4c65ed305048629693d2c9b2725612460bf3acea	ffe58cba8ed98ea01c125dc6f47705b99fc67d1e	replayed	Answer requests that a restarted client sends while it opens its files again
+a9c752defc1ca238603b9e9c76ceaa12d98571f2	69a55990811853831b2673d47bd356972a7d0fd7	replayed	Insert a method's call when its completion is chosen
+614c21f0c94fc935127b3d17254890422cc9f7de	b4b92d8f451dc920361d7b64b645f0aecf0a2fff	replayed	Answer on-type formatting without waiting for the change to compile
+af3b71c5cb03ffd382ad0f30e06910a9b1765463	d006b0d833cd19d91ac65cd6ceb28168ba4af7c0	replayed	Check that Debug of Current File launches an Ecstasy configuration
+f30a83735badb6993a5e59bac78a1ab76a6a0929	3a17f02492e60d7cf6b6f6e5e0f9f06bebbcd7b1	replayed	Report a stopped run's end without the failure its stop causes
+9e2fd4a8659365bb688fa1e3e7521c2a63bd83f8	d0e9527d0171a9f720fdcc4bbba01b737c2f8ff1	replayed	Check 7a.9 against the compiler's error budget, which the server keeps
+000cbfc77d8c0b5c46705b3b6b811811eddf0e07	6bfd23dda7e81d6ec4af50333fa23a52371a9c6c	replayed	Run the VS Code playbook after the extension suite, not with it
+2f8439d6bcd0b4b5d5f84463427df99c77cb4cb6	1b3157e5ff142fb560a5faa8adc31ba9238e19d5	replayed	Get a closed file's errors to IntelliJ from the server's workspace report
+678e3290daf9e90c331af857ce107f3e783dea4e	a5d5f314c558c366a182b438387d4a3ae464fadc	replayed	Prove a code action by compiling only the modules its edit reaches
+34789c206809ec2a951dcbc431a9cc0abdbafc96	94261b1df496c566947c917cd43c0e9b244baad6	replayed	Start a revision's code action compile from the previous one's, and log its cost
+0a9382c9936bf9e7242ba06b04842983350419c7	f1fdbf2e0e3e6c9f25176e39696f44c3ead6296a	replayed	Find a test's hang by the CPU it stops using, not by an hour on the clock
+eb04e2063d189da705e85d78c1bfb1ad7855a0b9	879129f5c9686c40f056f90d7b9823a668857e13	replayed	Show a stopped run as stopped, without what its stop made it print
+713469fbb27d86cd7a3a476a520730c37efd0454	f73de34d4bcec4234e3ffdc8d652dcfdc4e7d642	replayed	Give each thread its own spare key for a hasher map's lookups
+8ced4dee8d6f8baf92e8c30d2c674929baf8c1f7	a3dd733babf72f5480ec4e89f2989d8e1c074a2a	replayed	Make the debugger's expression fragment physical, which ends a paused session's daemon loop
+e1686fc65aadad8bbc541388777da129be15decb	e4c73ee803a4145cf7f0fc0161d9e388ddff48ba	replayed	Complete a service's shutdown however it goes, and report its failure
+8768bb62cded86d18796c5221669aca55ce6afe8	93ff0a0d0b887c42c428b5f2ba6f3331107f5e4d	replayed	Report a test that throws other than by failing an assertion as aborted, keep its later exceptions, and count skipped tests
+7c874006d5d4547d0a05bd4e8175586fd12a2c67	c362bd3a481c41cdd07a0d681b9d5614e122382d	replayed	Count the code actions at the tour's unused import and unused local
+858a4a499ecd0413333e6d4423dec09248d628cb	aa4872d457aa90b53398e277da2a287080c5d25b	replayed	Answer an idle client's workspace pull of an unchanged graph without a job
+b9f564b0a3bfc3e7740f3d1bd24c3776c9e0c39f	19aeb2f719fcbe8dd7907fbc240c9a8df670de37	replayed	Show Rerun Failed Tests on an IntelliJ test run
+e5b8c685a14bf6745ab479b8fa1e62a7db6efcf3	c694c0009d8e3d5621b8954a7b6e8260b2cebdc5	replayed	Wait for LSP4IJ's automatic code action answers only a budget
+f0c99c932d2cd07074cf3ee9f16025c50adc4305	3dd695701715aa13b51ab7abff900756ce86892e	replayed	Run testXtc whenever a tool reads its test report, never from the cache
+2a2aa40300aa65444e8df6387f0849ec84484e82	bb216206e2248bb5375419e0872c4df77fbf2f5a	replayed	Keep the compiles of the modules that depend on an edited one whose API stayed
+9bdabae42b1fea161c716ac455d0efbc2cffb2c3	ea15b5b3c01459fb59b1d7d492e9ee8b99312001	replayed	Run every test module's tests at once in IntelliJ: Run 'All Ecstasy Tests'
+3ab7e4ff12963e984ce20d93c51b86bb624d071c	dfb21c1a448ff322c9173f8461ab64c2ae26d79b	replayed	Keep each light test's stub server and wrappers to that test
+2ea00e718043920f55fc0bcb83f5e7d496bb671c	82b3f56c2b32aa7b0b24361016ecd2effa9a2660	replayed	Say which requests the language server is still answering, and which diagnostics it has still to report
+509f7b163d0d5ac1f1fadf562d69cac5a955ac48	d14340d16a443fa2abb4806c5d377c18b5b73729	replayed	Tag the light tests' workarounds of two LSP4IJ gaps
+d33595f688e8729fc7bac4ac6f0b1a850c3217f4	064e37005dcf29771fe154c9885d881827348507	replayed	List a closed test module's tests from the workspace pull's compile
+ccfb78fadb4c0373d4a9b29eb32ad7cab0448f1e	02eeae344920d02558af8854ca03948eda0f115d	replayed	Declare the code action kinds the language server's actions have
+edb4305a873a51fb9543ff44648b326bd1ecfa86	027fd5c95fee1dc1dce7f25b959ea7562b63d505	replayed	Ask the server for no edit of a rename that Undo makes, and report a stale refactoring without a dialog
+13b549d0929679b27e1241e786a4cbacac5d6c91	5025737befce5c113a2abd55e72868a385c4fc94	replayed	Test that Undo takes a resolved code action's edit of one file back without asking
+08428e937115db0f5e7a5ab85b0aa673a9a71077	57139b319ef034fec6c38230a7c3715981b65b2e	replayed	Safely delete a member whose body has an annotation, as an injected local
+733cd3cd81e73497c7247b5368829ee971584d89	aa3678a7b89e2881777ddc8fb75f65cf9a1ceade	replayed	Restart a frame whose fiber ran code in its stop
+fffb261a0b7aa543674e4ec4cb69b9ee8c0e4828	cece0cd4a2e52f5cbc264c512bc4f252a2ef931c	replayed	End the tests of the modules a stopped VS Code test run did not reach
+b679b35e20890f8db1be1b8e33c6871c5c32f057	dc6f13d48c4142f2e39b0a4a3f41532f81ecf04a	replayed	Compile the VS Code extension's TypeScript into an empty out/
+c3180faf5064d41bf49d4afca2f94a61e86c577d	9eabc473f80d7601f377416ac9fb41b51b183304	replayed	Report no diagnostics for a library source's read-only copy
+4033517be8d5dc8732a4ec7c342d8dcdddaa7c05	bc1e9e8c3bf9d2e926475921696c67a8fb52c740	replayed	Offer Run 'All Ecstasy Tests' before Gradle's Tests in on Ecstasy-only test sources
+a1d0ddf301af9bb972da58e505375f9ec2c91a59	bb80014399044df08b175b4e404fa08109e55664	replayed	Ask the language server for full code action answers again, not ones within a budget, in IntelliJ
+e975ad20a235000a4d7917174b78107951d06766	6056c402c1ca44d8d113f07e846e713ef4c6a469	replayed	Put the embedded build's errors in the Problems window's Project Errors
+221910e1e07cdad41de49877d09bceb8a893b7cc	8690662a3f8b73a079966cadb64fbe9469ee77c7	replayed	Show a completion item's documentation on Ctrl+Q in IntelliJ, from its resolve
+f9159f1d0530f74929ab753afa3eee03cf6ac332	1d60c709f72a363164a60dd0d82099a9c74a85bc	replayed	Check that Ctrl+Z's Undo action takes a resolved code action's edit back
+fb475ecfadc78ab857dfb7bf836423c943fdbf55	18379f2940cf4b852bf02cc7aeb41e0e48110fae	replayed	Find Run All Ecstasy Tests' existing configuration, not make "(1)" of it
+856fea4e8c224e5c86564dd62e1406e54b9ff3e5	7dd0d427d55ddac82faa39a2080d4b45353eab7c	replayed	Keep Run to Cursor's temporary breakpoint until the program stops, in IntelliJ
+d384a759884d7e53135fe13cfcdfb31a27e28a30	41eaa37ef3fd00f6883fd6a731590853a5b90538	replayed	Answer xtc/busy with the server's open requests and its compiler's jobs
+5fe4af9f5d1ff4dcfef1ce5fd4c78105752e510b	b1d1332d7812858bbf417ea6f401fa6dfa01649c	replayed	Record a playbook run's screen as video in the container
+76e452489d6503f5576eb60c52cbdb8642641c33	64d6a8a910a7de16f84970b9b63885fb2a2b50fd	replayed	Delete a playbook run's IDE folder once its logs are copied, in the container
+0dd489c41f78607cfb199586946f0f6bac664326	3615fb341ec03686589af9e90624a20536f2815e	replayed	Check the plugin's features through the IntelliJ tour, and detect its hangs from the IDE's state
+9005493bb8ee1b9a7b8fd10b2b2309d09899bd9b	787f3f594faf520ca45e14a6b4513a280b01f1d6	replayed	Compose the tours' video from their recorded clips, each step from a run where it passed
+154081bbe6da49b6efe65d606d8d4b4055accec8	03b5120c10e87c53a0fb1be98743a076bd506f6f	replayed	Let VS Code set breakpoints in Ecstasy files
+a3d5b8b39bc4d612b0048777b2982d0ff7fe5a1b	4ce0d7cf5ece763dfdf75b0e7eef4ecdbbfed263	replayed	Debug the module of a class's file with F5
+321e4a06fc7ace778886cfaea88b5422f76998f0	d8fa10e95322f9bcf01815bbc4b0ac595eedfd57	replayed	Pass a run task's args in Gradle and command-line mode
+7a7435acb0c94a510aaef044619da1423df429ba	8a228264f60c3aced6d4a9f1b939cbd354b69d69	replayed	Trace the language server's messages when xtc.trace.server says so
+f5752cf8600dfe41d395f3e13a8eb008d654456e	5cbbddb2a4dc94c1223575a7055155bacb8afef4	replayed	Fold comments and runs of imports with the compiler adapter
+00f54dfa7e477527446c6265bb27670b40396efc	73e757982f51bb395ef9e7d90c76bd8252b093e4	replayed	Run the editor's module from its Run button and context menu
+589d59cc3a37bab211686399654e8b3aa33c0860	7ef9544620db43ef8c685116199cc7d99a2896b4	replayed	Clear a deleted file's diagnostics in the next workspace pull
+a579a4f269f07d4d30afa4438a31b6f646760328	59923104f5b24f5883eeda30776d613a52d53537	replayed	Say when a move leaves the uses of its sources as they were
+39f5300446d48c54214592489d59c91f00aae059	deb42be023804bb077f817a68a21d6078ff199b0	replayed	Say how many embedded runs the server tracks, and where a test is
+0eea01e678e7a6e6e801f2c7ac4ab716580d2255	73f1ba365d95abe2b248d594027225c3a99c874c	replayed	Fail the playbooks' diagnostics waits once their reports are final
+cd497829e4b032aa89017e53b169716bc8efef2e	28ae8fdb59cb95586d2cdf0fee9404ce0450ef36	replayed	Add playbook cases X342-X349 for xunit tests, in both editors
+2739e74f6d392389d17107262d80aa9030aac59f	7e4746aaf922b9a41a951de28a52bf2941dcc1b2	replayed	Give a VS Code tour's run its screen recording, and every run only its own, in the container
+96d638acb9cb21315050364dcee7aef6da4c38fa	b46d848fca838702fc5c8cc86b8fba64f465a02d	replayed	Record a tour of the VS Code extension that checks what it shows
+f60d965024fc3fb06ebee3a29aabf2c5ea886ef9	48cbaded9997a0aac510554f88d29f70988ef6a3	replayed	Drop XtcRunConfigurationTest's redundant casts to TaskOutputsInternal
+935a472dfa0eefa00241907239cbf29d65ce84c7	e9e935474cfbb4da6a3ec7eab4b34df280e4981d	replayed	Give a completion item's resolved documentation to Ctrl+Q through public API only, in IntelliJ
+2fdc7cd4d80f4664810dbaf5f131fe38650f21a9	e8005469e150d5b8457cd2ebfda73d11afadbdbe	replayed	Keep the compiles of modules that compiled when only private declarations move
+a30accb72721d27c7d67e07332560c589e119d72	3326cb3952b94c61263770fa485e6227347e43e0	replayed	Expect the card game's Hand to keep heading when Safe delete removes display
+84a1b38321f915730a64d4059127037e573f483c	7fc256d8654282abfd538515555866689b88f2a4	replayed	Clear a removed file's report once in workspace pulls that name its result ID
+1c564cf225f2448dbfe7530f27077a06e0191728	bdb5ae0b288ad965cc971747c487eb6fff0ffa70	replayed	Compile a library source's copy on its own even once a compile has named it
+56601450a37f33504459ba7c50e3bfbfd6b8107c	c415a66014ae2d17fa98d7fcdb4dcfa490abe10f	replayed	Ask the server again for a move's edits when a change overtook its answer
+8dffdc80add2db3abf96b2f2f43848dfc9b6c320	b869c525add7503e81c2d18d3d360420e81a3eab	replayed	Make the VS Code tour pass as one whole run, unrecorded
+643f4d7e1f3f21d38d4f5dc797f1bd451d9c6985	1d080675645a0a501c573422a0e2f3480b9ebf8d	replayed	Press the keymap's own Undo key in the IntelliJ tour
+835d8bfaa0caf3e73567e3c6de86b72e26b710dd	f9903927055827f6f751a04b3c211fc23add1563	replayed	Undo in the IntelliJ tour from the editor as the change left it
+c47bd02045e5e979d5f1003766b3cd26e0b02347	2f58765ae268415444bc5b7f3262346305bf9936	replayed	Ask before Undo takes back a rename or move that changed several files
+67c3a1cd060a9f7a96387c9fab3bb4082f45f8e9	71a2bf018a44e34cf2dbc7a6ce96703e93ed0bf1	replayed	Answer Undo's question in the IntelliJ tour and playbook as it offers
+b9ae2738f5e0f076c7265497a4f2ebb871b7bb35	90f996e67c5e7dffecef0c06ba9e4d844dd936f6	replayed	Rename a method of four files in the IntelliJ tour, and show Undo's question
+53b2e687f15556a30a3fb5f2947c72c93b1e4534	f81c2738e3257540ad3c116cc4922ddf899d2dfb	replayed	Rename cardMatches across four files in the VS Code tour, undone by Ctrl+Z
+b9bca7e582a4dd5067b1acf5632a07b50b943267	edfc5486a6ab3b9291342d261f31b5dd55c07e15	replayed	Check in the VS Code tour that Ctrl+Z takes a quick fix back whole
+69c329ce436c8cc0c428b33fad199162b0b47b3e	57ddeb4b6069d8c7c68367e6df263b0e16c647a5	replayed	Show the VS Code tour's Undo of the four-file rename as steps
+a14e4bfa3b0039c7595a54f029c60c8ae270ef11	3080a192d7ade9c643d10fec3006784280e53064	replayed	Wait in the IntelliJ tour for Go to symbol's popup to close, and never fill a file's editor
+4349ccdfc116c5a40582eb808bf06724cb4cc56e	6bea1f107740385aaa908bee71e951144cc35dca	replayed	Keep prepareLibraryPlaybook's JVM to SLF4J's warnings
+c84cc7530fae1dfaa939bf81d0ceacc7b309def8	28bbd2aaf583748a77f1870766024349779e15f6	replayed	Print the IntelliJ tour's progress in the build's output, step by step
+2a701ef89135afe87b1d50fc92591dc68fb7813b	394ea7f8c4fac56dc7f447da8aad888f97eedb73	replayed	Print both compiler playbooks' progress per case in the build's output
+26616046bf7761d245480b7ad490349f65097025	0b6ed5570c80609e07ca2bab158df37335970027	replayed	Report the written video's real length from the tour composer
+168f2577cd91dcc22a95f5ad8b1b84355e568a1d	fdf12ac5463152fc4515ddbe8460ae1f795785f1	replayed	Fail the debugger probe's waits when nothing is in progress for a minute
+dd204d311709601e37c6a8a328c03192e3363e73	a6c034b1f5bb2cae7747af894f8913720712c2ad	replayed	Remove the unused xtc/runnableTargets request
+e85ccb711f346fdcade42e4569caf05c79832e78		dropped: master has it as 973268d2a0 (#763)	Let a class's own child named Inner cover the implicit Outer.Inner
+062958eac0204146d0e3f73efcf11282effe61d6	021cee3e17e4e2ff1ea166dd6c939f650d00350d	replayed	Answer hover and Go to Definition in a library copy that the debugger opens
+729c82e0f98d10e0f4ba34fa51dce550473f9a99	7fa0f5e20abbdc42b555044fcd7b77ee9c07672a	replayed	Offer Run All Ecstasy Tests beside Gradle's Tests in on mixed test folders
+edd0c259b3f92326cecb6ecec334e2cb7f3d7b64	ad656a528403867e8583e5e3685527ad5ca70679	replayed	Compile a run's embedded build again when its files change on disk as it compiles
+f099f5414b1d88c023f80c91868fc8f61a9f4a8c	f29641e2af75ff28b85dc5a29ceb16a56e54eeb8	replayed	Wait in the IntelliJ tour for the new server's didOpen before File Structure
+d27e3b1a6c810c4c1b2e05487f26b2f9e075db57	b3b071dd7f17f6b96a50bcdd0f928b5e0d666aad	replayed	Wait in the VS Code tour for the $xtc problem matcher's error after a failed build
+a4517b4cf59185866bf109e3b06e7c1043e0823c		dropped: master has it as 973268d2a0 (#763)	Shorten the comment on the implicit Outer.Inner
+358a93f8f8a9a788d9ac75c9c37c41412c3d5e01		dropped: master has it as 973268d2a0 (#763)	Test the implicit Outer.Inner in manualTests instead of javatools
+37de86749cd62c759b613489be05180b1b68c3bf		dropped: master has it as 973268d2a0 (#763)	Let testChildNamedInner's asserts speak, its prints kept as comments
+ffe34357bb552bccd8c8ac42679a21fc0bd592e8	25774adb52140c26817921566677bdab0a4eabb3	replayed	Upgrade the VS Code extension's npm dev tools past the MSAL, glob and minimatch advisories
+4f92c0106964e6034e0243b404b7e3b0b40f8f9b	4ef539e334acde54efc1399ef455dce36da0ba09	replayed	Add IDE plugin packaging and install tasks, and quiet vsce's file tree
+c9be92b5f84df2c6a8ef6e4a11ea546a0e95e047	1f4ff0938b106ef3cf76b31a5aff1449dc73e541	replayed	Navigate the XDK's library sources: definitions from their names, frames at their methods
+2afb23929a71a4d760e06a2289f3446ca312ab74	ccfad232eab73cb567549fe06ae5933b3b6b70ac	replayed	Delete the language server's temporary directories once no server needs them
+8d22b98fdc1086761f51c3b9149c149d0d049479	2c396b0a0a089ba07898f43a4a5dbdfc140ebd00	replayed	Name the tours' video and deck after their editor, tour-intellij and tour-vscode
+2e5854af45cd673ee7093fca5c1cc18d403c36d5	4cce9ad93b3389a299c9a77f4f0bc62e77dd6420	replayed	Keep a server directory's lock beside it, where reading the directory cannot release it
+5f07a72ebac7b337048820d10429fe07b0243d89	153009d5729ca86fbce60861c34051454e0c12cd	replayed	Compile an opened XDK source with its whole library, for navigation in all of it
+94a02309e0f17209acdc2fe484edac5431d7cc91	21e356384927b15289da3c9671a41cd8301cccaa	replayed	Keep Python bytecode out of the repository
+f6be30bcc4c4609ba76d1bfa34275de7e93fbde7	b3baf979d95bd361a32ea0ecd3ce79a6a7aa9a95	replayed	Compile a library source's ecstasy-library content with its library, as its copy is
+96e5a842882b6447d4f1e1606dbadac4392ed52d	b41613bb3e8140db63ca017a8b11eaecce319f5c	replayed	Add playbook case X350 for navigation inside an XDK library's source, in both editors
+958d21cc1530ef67751e31691ef1ab074b916dcb	568a6ec3a0e611076944941a9b7f74c46310e3c3	replayed	Wait for a fully decorated editor before the UP17 probe's decorated replacement
