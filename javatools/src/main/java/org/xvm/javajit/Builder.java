@@ -1337,7 +1337,6 @@ public abstract class Builder {
 
         TypeConstant  typeOwner    = typeJit;
         JitMethodDesc jmdGet       = jitInfo.getGetterJitDesc(this, typeContainer);
-        boolean       isNative     = jitInfo.isNative();
         boolean       invokeStatic = jmdGet.isOptimizedStatic && allowUnboxing;
 
         if (!invokeStatic) {
@@ -1363,14 +1362,11 @@ public abstract class Builder {
             md = jmdGet.standardMD;
         }
 
-        // Note:
-        //   1) an optimized static getter is used only when the caller allows unboxing;
-        //   2) native accessors are hosted by their Java bridge class even when the Ecstasy owner
-        //      otherwise maps to a JIT interface
+        // an optimized static getter is used only when the caller allows unboxing
         code.aload(ctxSlot);
         if (invokeStatic) {
             code.invokestatic(ownerCD, getterName, md);
-        } else if (!isNative && typeOwner.isJitCCInterface()) {
+        } else if (typeOwner.isJitCCInterface()) {
             code.invokeinterface(ownerCD, getterName, md);
         } else {
             code.invokevirtual(ownerCD, getterName, md);
