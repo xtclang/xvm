@@ -106,6 +106,8 @@ class XtcLanguageClient(
             EmbeddedRunSessions.getInstance(project).endAll("The Ecstasy language server stopped")
             // a project that never debugged has no sessions, and its service is not created while it closes
             project.getServiceIfCreated(DebugSessions::class.java)?.endAll("The Ecstasy language server stopped, ending the debug session")
+            // as LSP4IJ clears the problem files of the documents it held for the server
+            project.getServiceIfCreated(ProjectErrors::class.java)?.disconnected()
         }
         super.dispose()
     }
@@ -303,6 +305,20 @@ class XtcLanguageClient(
             // WolfTheProblemSolver, which keeps the file red when its first pull has no errors. Report the file from
             // what LSP4IJ holds now. Remove with an LSP4IJ release that reports the file when it opens (#1861).
             LSPDiagnosticUtils.reportProblem(file, clientFeatures.serverWrapper.getOpenedDocument(clientFeatures.getFileUri(file)), project)
+        }
+
+        // TODO LSP4IJ: UP69 — the workspace report is what Project Errors lists of the server's errors while the plugin
+        // asks for it. With an LSP4IJ release that pulls it (WorkspaceDiagnosticManager) and tells its client features
+        // each file's merged diagnostics (LSPDiagnosticFeature.diagnosticsUpdated, #1704), the plugin's diagnostic feature
+        // calls ProjectErrors.reported from there instead, with its own getMessage, for open and closed files alike, and
+        // this goes with the bridge.
+        override fun reported(
+            uri: String,
+            diagnostics: List<Diagnostic>,
+        ) {
+            if (isDisposed || project.isDisposed) return
+            val file = clientFeatures.findFileByUri(uri) ?: return
+            ProjectErrors.getInstance(project).reported(file, diagnostics, clientFeatures.diagnosticFeature::getMessage)
         }
     }
 

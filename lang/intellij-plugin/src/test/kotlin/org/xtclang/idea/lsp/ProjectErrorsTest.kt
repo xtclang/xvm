@@ -1,4 +1,4 @@
-package org.xtclang.idea.run
+package org.xtclang.idea.lsp
 
 import com.intellij.analysis.problemsView.FileProblem
 import com.intellij.analysis.problemsView.ProblemsCollector
@@ -9,11 +9,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.LightEditor
-import org.xtclang.idea.lsp.BuildDiagnostic
-import org.xtclang.idea.lsp.BuildPosition
-import org.xtclang.idea.lsp.BuildRange
-import org.xtclang.idea.lsp.BuildResponse
-import org.xtclang.idea.lsp.DocumentDiagnostics
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -21,7 +16,7 @@ import java.nio.file.Path
  * The embedded build's errors in the Problems window's Project Errors, which IntelliJ fills from no BuildViewManager
  * build: each error that has a file, in that file, until the next build starts.
  */
-class EmbeddedBuildProblemsTest {
+class ProjectErrorsTest {
     @JvmField
     @RegisterExtension
     val editor = LightEditor()
@@ -34,11 +29,11 @@ class EmbeddedBuildProblemsTest {
         val eights = source("Eights.x")
         val hand = source("Hand.x")
         val project = editor.fixture.project
-        val problems = EmbeddedBuildProblems.getInstance(project)
+        val problems = ProjectErrors.getInstance(project)
         val collector = ProblemsCollector.getInstance(project)
 
-        problems.started()
-        problems.report(
+        problems.buildStarted()
+        problems.built(
             BuildResponse(
                 diagnostics =
                     listOf(
@@ -56,8 +51,8 @@ class EmbeddedBuildProblemsTest {
         assertThat(collector.getFileProblems(hand.file).map { it.text }).containsExactly("Expected \";\"")
 
         // the next build, which succeeds, starts without them
-        problems.started()
-        problems.report(BuildResponse(succeeded = true))
+        problems.buildStarted()
+        problems.built(BuildResponse(succeeded = true))
         assertThat(collector.getFileProblems(eights.file)).isEmpty()
         assertThat(collector.getFileProblems(hand.file)).isEmpty()
     }

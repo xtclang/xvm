@@ -1,5 +1,8 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.analysis.problemsView.FileProblem
+import com.intellij.analysis.problemsView.HighlightingDuplicateProblem
+import com.intellij.analysis.problemsView.ProblemsCollector
 import com.intellij.codeInsight.daemon.impl.MockWolfTheProblemSolver
 import com.intellij.codeInsight.daemon.impl.WolfTheProblemSolverImpl
 import com.intellij.openapi.application.ReadAction
@@ -42,8 +45,9 @@ import java.util.concurrent.CompletableFuture
 /**
  * The errors of an Ecstasy file that is not open, from the server's workspace report, make it one of IntelliJ's problem
  * files, the files the Project view marks red, and LSP4IJ keeps them as the closed document's; open files keep the
- * diagnostics LSP4IJ pulls for them. The server is the stub, which reports what each test gives it, and the client is
- * the plugin's own; IntelliJ's problem files are a real WolfTheProblemSolver's.
+ * diagnostics LSP4IJ pulls for them. The Problems window's Project Errors lists them too, without a build, and once
+ * after one. The server is the stub, which reports what each test gives it, and the client is the plugin's own;
+ * IntelliJ's problem files are a real WolfTheProblemSolver's, and Project Errors its ProblemsCollector's.
  */
 class ClosedFileProblemsTest {
     @JvmField
@@ -156,6 +160,71 @@ class ClosedFileProblemsTest {
         await("Child.x is no problem file") { !problems.isProblemFile(child) }
         assertThat(closedCodes(child)).isEmpty()
     }
+
+    @Test
+    fun `a closed file's error is in Project Errors without a build`() {
+        val root = file("Root.x", "module Root {}\n")
+        val child = file("Root/Child.x", "class Child extends Base {}\n")
+        server.reported[uri(child)] = listOf(error("unknown-type"))
+        open(root)
+        refresh()
+        await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
+        assertThat(projectErrors(child).map { it.text }).containsExactly("unknown-type")
+        assertThat(projectErrors(child).map { it.line to it.column }).containsExactly(0 to 0)
+    }
+
+    @Test
+    fun `a closed file's error is in Project Errors once after a build`() {
+        val root = file("Root.x", "module Root {}\n")
+        val child = file("Root/Child.x", "class Child extends Base {}\n")
+        server.reported[uri(child)] = listOf(error("unknown-type"))
+        open(root)
+        refresh()
+        await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
+
+        // the build reports the error the report has, which takes its place
+        build(child, "unknown-type")
+        assertThat(projectErrors(child)).hasSize(1)
+        assertThat(projectErrors(child).single()).isInstanceOf(HighlightingDuplicateProblem::class.java)
+
+        // and the next report's takes the build's
+        refresh()
+        await("Child.x's error is the report's") { projectErrors(child).none { it is HighlightingDuplicateProblem } }
+        assertThat(projectErrors(child).map { it.text }).containsExactly("unknown-type")
+    }
+
+    @Test
+    fun `a report that clears a closed file's error takes it out of Project Errors, the build's copy too`() {
+        val problems = problemFiles()
+        val root = file("Root.x", "module Root {}\n")
+        val child = file("Root/Child.x", "class Child extends Base {}\n")
+        server.reported[uri(child)] = listOf(error("unknown-type"))
+        open(root)
+        refresh()
+        await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
+        build(child, "unknown-type")
+        assertThat(projectErrors(child).single()).isInstanceOf(HighlightingDuplicateProblem::class.java)
+
+        server.reported[uri(child)] = emptyList()
+        refresh()
+        await("Child.x has no error in Project Errors") { projectErrors(child).isEmpty() }
+        await("Child.x is no problem file") { !problems.isProblemFile(child) }
+    }
+
+    /** A build that reports the error [code] in [file], at the start of its first line, as [error] has it. */
+    private fun build(
+        file: VirtualFile,
+        code: String,
+    ) {
+        val errors = ProjectErrors.getInstance(editor.fixture.project)
+        errors.buildStarted()
+        val range = BuildRange(BuildPosition(0, 0), BuildPosition(0, 5))
+        errors.built(BuildResponse(diagnostics = listOf(DocumentDiagnostics(uri(file), listOf(BuildDiagnostic(range, 1, code, code))))))
+    }
+
+    /** What the Problems window's Project Errors lists in [file]. */
+    private fun projectErrors(file: VirtualFile): List<FileProblem> =
+        ProblemsCollector.getInstance(editor.fixture.project).getFileProblems(file).filterIsInstance<FileProblem>()
 
     /** The project's problem files: a test application's ignores every report unless it has a real one behind it. */
     private fun problemFiles(): WolfTheProblemSolver {
