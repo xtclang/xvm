@@ -327,7 +327,7 @@ In the file tables, **A** means added and **M** means modified relative to that 
 
 ## Acceptance record and remaining scope
 
-The validation summaries above reproduce the [October 8 extraction record](docs/errs-integration-plan.md#refreshed-foundation-slices) and its C-series follow-up. No compiler/build tests were rerun to generate this report. Report generation verified each local branch tip and parent against the saved index (`build/errs-review-2026-10-08/index.json`, a local build output), and all six exported patches against their Git diffs.
+The validation summaries above reproduce the [October 8 extraction record](doc/errs-integration-plan.md#refreshed-foundation-slices) and its C-series follow-up. No compiler/build tests were rerun to generate this report. Report generation verified each local branch tip and parent against the saved index (`build/errs-review-2026-10-08/index.json`, a local build output), and all six exported patches against their Git diffs.
 
 The combined acceptance checkout at `029c93def` joined C3 with I1, I2 and I3; its required compiler consumer passed with one test and no failures or skips. It is retained at `backup/six-slice-acceptance-20261008`. This integration result does not change the individual branch bases.
 

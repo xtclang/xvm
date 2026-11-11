@@ -39,7 +39,7 @@ are already running); IntelliJ Build Module builds
 every module; older
 IntelliJ configurations store a module name from a `\w+` regex, so qualified module names need the
 new *Module source* field. The commits and validation are recorded in the
-[integration plan](../../../docs/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
+[integration plan](../../../doc/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
 
 ## What the code already does
 
@@ -467,7 +467,7 @@ this bridge; they cannot be inferred from compiler type hints.
   X321). With bounded evaluation's tier 2 done before it, R7 is complete. The debugger is
   the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
   at a time satisfies. Integration bursts are listed in the
-  [integration plan](../../../docs/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
+  [integration plan](../../../doc/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
 - [x] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
   worker PID/generation and run ID; current playbook/capability docs and independent PR validation.

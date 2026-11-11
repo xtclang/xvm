@@ -10,7 +10,7 @@ persistent execution worker JVM runs the module. It was new work **outside every
 and PR** when it landed; from 2026-10-16 on it was mirrored into #693, as the table below says, and
 its runtime parts went to master with #703 and the later runtime PRs. The commits, extraction
 targets and validation receipt are in the
-[integration plan](docs/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15); the scope
+[integration plan](doc/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15); the scope
 and the records of R1–R13 are in the
 [execution plan](lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15).
 
@@ -26,9 +26,9 @@ and the records of R1–R13 are in the
 | `4598957ce` | Shared playbook cases X280–X284 and VS Code adapter switching in X137 | With the editor commits (#693) |
 | `981e61638`, `9e7b63749`, `0f40b48ef` | Playbook: Rerun in X283, debug launches (X285), adapter chooser and shortcut (X286) | With `4598957ce` (#693) |
 | `e6157bb74` | IntelliJ macOS keymap keeps Control+Option+X for the adapter and log shortcuts | Small plugin fix; with the IntelliJ commits or standalone |
-| `a5f590c84`…`c12797b9f` | Language-server hardening: named diagnostic codes, queries off the document lock, Ecstasy labels, out-of-sync documents, rescans off the reader thread, quick-fix diagnostics and tags, syntax views for blocked modules, honest DAP placeholder and Mock capabilities, stale docs | #693 server and editors; see the [hardening map](docs/errs-integration-plan.md#language-server-hardening-2026-10-15) |
-| `b1b4ea05a`…`7886b4c1d` | Stale tracked items closed out; Mock-fallback warning; console input for embedded runs (runtime, server, both editors, X287); embedded builds from the editor snapshot with module reuse and a manifest | javatools part of `82b6ba570`: the runtime-execution PR; the rest: #693 server and editors; see the [2026-10-16 map](docs/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
-| `3046c5746`…`74606334e` | Playbook focus fix; embedded as the default build mode in both editors; file events judged against a running analysis and applied before the next message (X273, X274, X116), after two reverted attempts | #693 server and editors; see the [2026-10-16 map](docs/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
+| `a5f590c84`…`c12797b9f` | Language-server hardening: named diagnostic codes, queries off the document lock, Ecstasy labels, out-of-sync documents, rescans off the reader thread, quick-fix diagnostics and tags, syntax views for blocked modules, honest DAP placeholder and Mock capabilities, stale docs | #693 server and editors; see the [hardening map](doc/errs-integration-plan.md#language-server-hardening-2026-10-15) |
+| `b1b4ea05a`…`7886b4c1d` | Stale tracked items closed out; Mock-fallback warning; console input for embedded runs (runtime, server, both editors, X287); embedded builds from the editor snapshot with module reuse and a manifest | javatools part of `82b6ba570`: the runtime-execution PR; the rest: #693 server and editors; see the [2026-10-16 map](doc/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
+| `3046c5746`…`74606334e` | Playbook focus fix; embedded as the default build mode in both editors; file events judged against a running analysis and applied before the next message (X273, X274, X116), after two reverted attempts | #693 server and editors; see the [2026-10-16 map](doc/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
 | `e4f357f49`, `843bc1247` | VS Code build mode command and status bar; the runtime test | #693 (mirrored); the test also in #703 |
 | `27dffe40b`, `b92f689a0` | Shared cases X288 (build modes) and X289 (repeated runs); supervised execution workers running programs side by side (R4) | #693 (mirrored as `05a59b4af`, `c975116b4`) |
 | `4d0e2d225`, `c7cb85e22`, `89b3ad521` | VS Code install instructions; IntelliJ build notice links to its settings page; worker identity check, batched and bounded output, usage-based recycling (R4) | #693 (mirrored as `f830eb755`, `47e65f6a6`, `f5174d024`) |
@@ -45,9 +45,9 @@ and the records of R1–R13 are in the
 | `95c17bfb7` | `EmbeddingSupport.EntryPoint` carries the method name and arguments, `start(...)` is gone, and the old `run(...)` with a console no longer fails on `null` console input; `RunWorker` adapted | #703 (`8e036b2d3`); #693 (mirrored as `69c143a72`) |
 | `b6629bd48` | `LspTest`'s checks move into `EmbeddingSupportTest` (renamed from `EmbeddingRunMethodTest`), each run within a time limit; `LspTest` is removed | #703 (`5ae951c8b`); #693 (mirrored as `c1c134ecc`) |
 
-**2026-10-19 rebase:** #693 is rebased onto master `5bfd024cc` (`bad3add9d..09b6cfcbc` became `5bfd024cc..c1c134ecc`), so its earlier hashes in this table refer to the branch before the rebase; see the [rebase record](docs/errs-integration-plan.md) under the third #703 review round.
+**2026-10-19 rebase:** #693 is rebased onto master `5bfd024cc` (`bad3add9d..09b6cfcbc` became `5bfd024cc..c1c134ecc`), so its earlier hashes in this table refer to the branch before the rebase; see the [rebase record](doc/errs-integration-plan.md) under the third #703 review round.
 
-**2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is [#703](https://github.com/xtclang/xvm/pull/703) (`lagergren/embedded-run-runtime`); see the [sync record](docs/errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
+**2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is [#703](https://github.com/xtclang/xvm/pull/703) (`lagergren/embedded-run-runtime`); see the [sync record](doc/errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
 
 The runtime-execution PR, [#703](https://github.com/xtclang/xvm/pull/703), is small (four runtime files and its
 test) and independent of the compiler foundation PRs; it keeps the distinct `runMethod` name, which
@@ -1381,13 +1381,13 @@ not forward changes proposed for publication.
 | [changed-files.md](changed-files.md) | 962 / 0 |
 | [create-foundation-prs.py](create-foundation-prs.py) | 493 / 0 |
 | [demo.md](demo.md) | 211 / 0 |
-| [docs/errs-audit.md](docs/errs-audit.md) | 2059 / 0 |
-| [docs/errs-error-listeners.md](docs/errs-error-listeners.md) | 744 / 0 |
-| [docs/errs-integration-plan.md](docs/errs-integration-plan.md) | 13312 / 0 |
-| [docs/errs-lsp-process-lifecycle.md](docs/errs-lsp-process-lifecycle.md) | 148 / 0 |
-| [docs/errs-rebase-2026-10-05.tsv](docs/errs-rebase-2026-10-05.tsv) | 591 / 0 |
-| [docs/errs-upstream-issues.md](docs/errs-upstream-issues.md) | 903 / 0 |
-| [docs/errs.md](docs/errs.md) | 3208 / 0 |
+| [doc/errs-audit.md](doc/errs-audit.md) | 2059 / 0 |
+| [doc/errs-error-listeners.md](doc/errs-error-listeners.md) | 744 / 0 |
+| [doc/errs-integration-plan.md](doc/errs-integration-plan.md) | 13312 / 0 |
+| [doc/errs-lsp-process-lifecycle.md](doc/errs-lsp-process-lifecycle.md) | 148 / 0 |
+| [doc/errs-rebase-2026-10-05.tsv](doc/errs-rebase-2026-10-05.tsv) | 591 / 0 |
+| [doc/errs-upstream-issues.md](doc/errs-upstream-issues.md) | 903 / 0 |
+| [doc/errs.md](doc/errs.md) | 3208 / 0 |
 | [foundation-branches-report.md](foundation-branches-report.md) | 345 / 0 |
 | [gradle/wrapper/gradle-wrapper.jar](gradle/wrapper/gradle-wrapper.jar) | - / - |
 | [gradle/wrapper/gradle-wrapper.properties](gradle/wrapper/gradle-wrapper.properties) | 1 / 1 |
