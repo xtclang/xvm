@@ -1,6 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
@@ -50,30 +51,46 @@ fun Driver.largeFileEditing(
         check(!workspace.query("textDocument/hover", document, document.at("value")).isJsonNull)
         val file = document.editor.editor.getVirtualFile()
         focusEditor(document.editor)
-        // A server reply does not mean the IDE has applied its semantic highlighting yet.
-        // Replacing an undecorated document would produce a misleading fast result.
-        val before =
+        // A server reply does not mean the IDE has applied its semantic highlighting yet, and the
+        // daemon installs it a part at a time: a replacement of a partly decorated document measures
+        // less than the decorated case. The decoration is complete once LSP4IJ holds the semantic
+        // tokens of the current text, IntelliJ has finished highlighting the file, and a highlighter
+        // with semantic attributes is installed for each token.
+        val decoration =
             awaitUi(
-                "large-file highlighting is installed before replacement",
+                "large-file semantic highlighting is fully installed before replacement",
                 HANG_LIMIT,
-                getter = { withContext(OnDispatcher.EDT) { utility(LargeFileProbe::class).snapshot(file) } },
-                checker = { value ->
-                    JsonParser.parseString(value).asJsonObject["markupModels"].asJsonArray.sumOf {
-                        it.asJsonObject["highlighters"].asInt
-                    } >= 20_000
+                getter = {
+                    JsonParser
+                        .parseString(
+                            withContext(OnDispatcher.EDT) { utility(LargeFileProbe::class).decoration(singleProject(), file) },
+                        ).asJsonObject
                 },
+                checker = { it.complete() && it["highlightingDone"].asBoolean },
             )
-        record(before)
-        record(
+        check(decoration["semanticTokens"].asInt > 0) { "The server gave the large file no semantic tokens: $decoration" }
+        record(withContext(OnDispatcher.EDT) { utility(LargeFileProbe::class).snapshot(singleProject(), file) })
+        val replacement =
             withContext(OnDispatcher.EDT) {
                 utility(LargeFileProbe::class).replace(singleProject(), file, workload(5_000))
-            },
-        )
+            }
+        record(replacement)
+        // The record names the highlighters installed when the replacement started, against the tokens.
+        val started =
+            JsonParser
+                .parseString(replacement)
+                .asJsonObject["before"]
+                .asJsonObject["decoration"]
+                .asJsonObject
+        check(started.complete()) { "The replacement started on a partly decorated editor: $started" }
         workspace.settle(document)
         workspace.clean(document)
     }
     println("IntelliJ large-file editing receipt: $report")
 }
+
+/** A highlighter with semantic attributes is installed for each semantic token of the file's current text. */
+private fun JsonObject.complete(): Boolean = get("semanticTokens")?.asInt?.let { get("semanticHighlighters").asInt >= it } == true
 
 /** Measures native editor work with and without language decorations. */
 @Remote("org.xtclang.idea.playbook.probe.LargeFileProbe", plugin = "org.xtclang.playbook.probe")
@@ -83,7 +100,15 @@ interface LargeFileProbe {
         bulk: Boolean,
     ): String
 
-    fun snapshot(file: VirtualFile): String
+    fun decoration(
+        project: Project,
+        file: VirtualFile,
+    ): String
+
+    fun snapshot(
+        project: Project,
+        file: VirtualFile,
+    ): String
 
     fun replace(
         project: Project,
