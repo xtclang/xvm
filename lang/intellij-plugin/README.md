@@ -4,6 +4,7 @@ The bundled language server uses the compiler adapter by default. Tree-sitter re
 syntax-only alternative. Compiler features include diagnostics, navigation, references, completion,
 theme-based semantic highlighting and guarded refactorings over configured source and library inputs.
 See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundaries and native tests.
+The [configuration reference](../doc/configuration.md) lists the plugin's settings pages and Gradle properties, with the code that reads each.
 
 ## Features
 

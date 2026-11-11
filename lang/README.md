@@ -302,6 +302,8 @@ project/workspace limits. No external XDK installation is required.
 ## Feature and Architecture Guides
 
 - [LSP server](./lsp-server/README.md): adapter capabilities, runtime and configuration.
+- [Configuration reference](./doc/configuration.md): every editor setting, server property, environment variable,
+  build property and path of the tooling, with the code that reads each.
 - [Manual playbook](./doc/manual-test-plan.md): runnable examples, native IDE tests and feature limits.
 - [Compiler architecture](../javatools/README.md#compiler-architecture-for-language-tooling):
   why tooling needs compiler facts, diagnostic ownership and bounded partial analysis.

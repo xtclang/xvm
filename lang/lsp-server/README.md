@@ -838,6 +838,8 @@ See [tree-sitter/README.md](../tree-sitter/README.md) for details.
 
 All configurable properties for the LSP server and IntelliJ plugin, in one place.
 
+The [configuration reference](../doc/configuration.md) lists every setting, property, environment variable and path of the lang tooling, with the code that reads each.
+
 Properties are resolved via `xdkProperties` (the `ProjectXdkProperties` extension),
 which checks sources in this order (first match wins):
 

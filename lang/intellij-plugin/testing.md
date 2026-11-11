@@ -3,6 +3,8 @@
 Comprehensive reference for testing the Ecstasy IntelliJ plugin (`lang/intellij-plugin`),
 covering headless CI testing, the IntelliJ Platform Test Framework, the Starter+Driver
 E2E framework, log harvesting, and how each approach maps to the plugin's extension points.
+The [configuration reference](../doc/configuration.md#6-tests-playbooks-tours-and-the-container) lists every
+playbook, tour and container property and environment variable, with the code that reads each.
 
 ## Table of Contents
 
