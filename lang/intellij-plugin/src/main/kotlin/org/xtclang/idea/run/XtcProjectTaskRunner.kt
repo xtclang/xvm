@@ -2,17 +2,18 @@ package org.xtclang.idea.run
 
 import com.intellij.build.BuildViewManager
 import com.intellij.build.DefaultBuildDescriptor
-import com.intellij.build.FilePosition
 import com.intellij.build.events.MessageEvent
 import com.intellij.build.progress.BuildProgress
 import com.intellij.build.progress.BuildProgressDescriptor
 import com.intellij.execution.process.ProcessOutputType
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScopesCore
 import com.intellij.task.ModuleBuildTask
@@ -130,7 +131,14 @@ internal class EmbeddedBuild(
             }
     }
 
-    private fun report(
+    /**
+     * Reports [build]'s diagnostics to the Build window, each a message that goes to its file's line and column, and its
+     * errors to Project Errors through [ProjectErrors] alone. A file message would group them by file in the Build
+     * window, but IntelliJ 2026.3 copies a build view's file messages into Project Errors (BuildViewProblemsService),
+     * where they would show beside the provider's and stay after a fix until the next Build; so each message names its
+     * file and line in its title instead.
+     */
+    internal fun report(
         progress: BuildProgress<BuildProgressDescriptor>,
         build: BuildResponse,
     ) {
@@ -138,16 +146,19 @@ internal class EmbeddedBuild(
         ProjectErrors.getInstance(project).built(build)
         build.diagnostics.forEach { document ->
             val file = EmbeddedExecution.file(document.uri)
+            val source = file?.let(LocalFileSystem.getInstance()::findFileByNioFile)
             document.diagnostics.forEach { diagnostic ->
                 val message = diagnostic.message + diagnostic.code?.let { " [$it]" }.orEmpty()
-                val title = diagnostic.message.lineSequence().first()
                 val kind = kind(diagnostic.severity)
                 if (file == null) {
                     // nothing to navigate to, so the diagnostic stays in the build output
                     progress.output("${document.uri}: $message\n", ProcessOutputType.STDERR)
                 } else {
                     val start = diagnostic.range.start
-                    progress.fileMessage(title, message, kind, FilePosition(file, start.line, start.character))
+                    val place = "${file.fileName}:${start.line + 1}:${start.character + 1}"
+                    val title = "$place: ${diagnostic.message.lineSequence().first()}"
+                    val navigatable = source?.let { OpenFileDescriptor(project, it, start.line, start.character) }
+                    progress.message(title, "$file:${start.line + 1}:${start.character + 1}\n$message", kind, navigatable)
                 }
             }
         }
