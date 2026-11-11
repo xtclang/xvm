@@ -60,7 +60,7 @@ rerun for this fix. The real platform recheck passes 11 modules and 49 clean dia
 six references/callers, five subtypes, four implementations, binary-source navigation, completion,
 signature help, error recovery and three versioned rename edits. Source hashes remain unchanged.
 Local evidence is under `lang/lsp-server/build/reports/platform-demo/2026-10-06-final/`; the
-original failed probe and fail-before regression remain under `2026-10-06/`. See [demo.md](../demo.md)
+original failed probe and fail-before regression remain under `2026-10-06/`. See [demo.md](demo.md)
 for the updated manual tour and its distinction from packaged-server acceptance.
 
 **Build/test artifact retention (2026-10-06):** cleanup reduced this checkout from approximately
@@ -614,7 +614,7 @@ The probe also checked the Boolean Array translator and six nested XODB classes:
 compositions in total, with no diagnostics or exceptions. A small fresh-source anonymous Byte
 property compiled cleanly and produced the correct Boolean `assigned` metadata. The initial probes
 are now retained in
-[`TypeInfoFinalCompositionTest`](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/TypeInfoFinalCompositionTest.kt).
+[`TypeInfoFinalCompositionTest`](../../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/TypeInfoFinalCompositionTest.kt).
 The tests deserialize fresh copies of compiled modules supplied by test-only Gradle `xtc` variants,
 then inspect the linked dependencies in their owning pools. They require no installed distribution
 or `XDK_HOME`. All fifteen compositions must build without diagnostics; selected Array, XML and XODB

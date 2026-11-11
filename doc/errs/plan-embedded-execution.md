@@ -26,36 +26,36 @@ has a Gradle build, embedded otherwise), embedded, or Gradle. Decisions taken fo
 
 | Area | Delivered |
 |------|-----------|
-| Protocol | `xtc/build`, `xtc/run`, `xtc/stopRun`; `xtc/runOutput` and `xtc/runExited` notifications for a client-chosen run ID ([server README](../../lsp-server/README.md#embedded-build-and-run)) |
-| Build | [XdkBuild](../../lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkBuild.kt) compiles the module's dependency order into `build/xtc/embedded/`, with per-module outcomes, skipped consumers of failed dependencies and attributable diagnostics |
+| Protocol | `xtc/build`, `xtc/run`, `xtc/stopRun`; `xtc/runOutput` and `xtc/runExited` notifications for a client-chosen run ID ([server README](../../lang/lsp-server/README.md#embedded-build-and-run)) |
+| Build | [XdkBuild](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkBuild.kt) compiles the module's dependency order into `build/xtc/embedded/`, with per-module outcomes, skipped consumers of failed dependencies and attributable diagnostics |
 | Runnable targets | Found on the compiler worker from the module's type, including methods its annotations contribute, or, for a module that does not compile, from the `run` it declares: a `run` method with at most one required parameter. Run lenses appear only on such modules; no user code runs |
-| Execution | [RunWorkerProcess](../../lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorkerProcess.kt) starts [RunWorker](../../lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorker.kt) lazily over JSON-lines stdio, reuses it and replaces it after death; stray worker output becomes events, never protocol frames; a worker must report the server's protocol and XDK before it receives anything, its output is batched and bounded, and it reports its heap and threads after each run |
-| Embedding API | `EmbeddingSupport.runMethod` selects an entry method with the CLI runner's rule and passes exact arguments; [InterpreterControl](../../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) no longer starts the runner's HTTP host; [runner.x](../../../lib_runner/src/main/x/runner.x) tasks take a method and arguments |
-| VS Code | `xtc.build.mode`; Build/Rebuild (`Cmd`/`Ctrl+F9`), Run lens, editor title Run, `Ctrl+Shift+R`/`Ctrl+Shift+F10`, tasks and `F5` follow it; runs stream into a task terminal and closing it stops the run ([README](../../vscode-extension/README.md#building-and-running)) |
-| IntelliJ | Build, Execution, Deployment › Ecstasy; a project task runner for Build/Rebuild with Build tool window reports; run configurations with *Run with*; a process handler giving native console, Stop and Rerun; an action for the Run lens command ([README](../../intellij-plugin/README.md#running-your-application)) |
+| Execution | [RunWorkerProcess](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorkerProcess.kt) starts [RunWorker](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorker.kt) lazily over JSON-lines stdio, reuses it and replaces it after death; stray worker output becomes events, never protocol frames; a worker must report the server's protocol and XDK before it receives anything, its output is batched and bounded, and it reports its heap and threads after each run |
+| Embedding API | `EmbeddingSupport.runMethod` selects an entry method with the CLI runner's rule and passes exact arguments; [InterpreterControl](../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) no longer starts the runner's HTTP host; [runner.x](../../lib_runner/src/main/x/runner.x) tasks take a method and arguments |
+| VS Code | `xtc.build.mode`; Build/Rebuild (`Cmd`/`Ctrl+F9`), Run lens, editor title Run, `Ctrl+Shift+R`/`Ctrl+Shift+F10`, tasks and `F5` follow it; runs stream into a task terminal and closing it stops the run ([README](../../lang/vscode-extension/README.md#building-and-running)) |
+| IntelliJ | Build, Execution, Deployment › Ecstasy; a project task runner for Build/Rebuild with Build tool window reports; run configurations with *Run with*; a process handler giving native console, Stop and Rerun; an action for the Run lens command ([README](../../lang/intellij-plugin/README.md#running-your-application)) |
 
 Known limits: up to four programs at a time per server (a fifth run reports that four programs
 are already running); IntelliJ Build Module builds
 every module; older
 IntelliJ configurations store a module name from a `\w+` regex, so qualified module names need the
 new *Module source* field. The commits and validation are recorded in the
-[integration plan](../../../doc/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
+[integration plan](errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15).
 
 ## What the code already does
 
 | Area | Evidence | Consequence |
 |---|---|---|
-| Compiler Run lens | [XdkAdapter](../../lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt) creates `xtc.runModule` for module symbols | A module declaration alone currently qualifies; this is not proof of a runnable entry point or a successful build |
-| IntelliJ Run | [producer](../../intellij-plugin/src/main/kotlin/org/xtclang/idea/run/XtcRunConfigurationProducer.kt) uses a module-name regex; [configuration](../../intellij-plugin/src/main/kotlin/org/xtclang/idea/run/XtcRunConfiguration.kt) launches Gradle or `xtc` | Run shortcuts/configurations bypass the compiler session and unsaved artifact snapshot; the regex does not preserve qualified module names |
-| VS Code Run | [command](../../vscode-extension/src/commands.ts) ignores the supplied source URI; [task provider](../../vscode-extension/src/task-provider.ts) builds shell command strings | Both clients need a common launch request, including source/workspace identity and argument arrays |
-| Embedding execution | [EmbeddingSupport](../../../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) caches a connector and returns a `Control` per run | Reusable VM hosting is already the intended foundation; configuration is singleton and cannot be changed after startup |
-| Interpreter control | [InterpreterControl](../../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) loads the runner once, copies an artifact into its native container and invokes task registration/start | Compiler ASTs need not be retained for execution; startup currently also invokes runner `run`, starting its HTTP service |
-| Runner | [runner.x](../../../lib_runner/src/main/x/runner.x) maintains task IDs and creates a fresh lightweight child container per task | Reuse the runtime/runner, while giving each normal rerun fresh application state. The Java embedding path should call task methods directly without starting HTTP |
-| Current execution limits | Runner invokes `container.invoke("run", ())`; custom injections are rejected; the [external console](../../../javatools/src/main/java/org/xvm/runtime/template/_native/io/xExternalConsole.java) reads host-supplied input since 2026-10-16 | Entry-point arguments, input, output channels, asynchronous completion/stop and bounded shutdown need an explicit host API |
-| Repeat-run regressions | [EmbeddingSupportTest](../../../javatools/src/test/java/org/xvm/api/EmbeddingSupportTest.java) runs modules with a console, by name more than once, with a supplied root directory and with a failure, and closes a suspended run, each within a time limit; it also runs changed modules and dependencies, closes runs as they finish, twice and from two threads at once, and bounds what repeated runs add to the runtime's constant pools (R1) | These checks came from the removed main-based `LspTest` and now run with `:javatools:test`; its run timings and native pool sizes were only printed, and are now [measured and asserted](#additive-delivery-and-acceptance) |
-| JIT execution | [JitControl](../../../javatools/src/main/java/org/xvm/api/JitControl.java) is unsupported; embedding selects the interpreter | First delivery targets interpreter execution; do not advertise JIT parity |
-| DAP | [XtcDebugServer](../../dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt) is a placeholder: breakpoints are reported unverified with the reason, launch and attach fail with it, and there are no threads | A transport stub is not debugging. Breakpoints stay unverified until a runtime bridge confirms them |
-| Interpreter debugger | [Debugger](../../../javatools/src/main/java/org/xvm/runtime/Debugger.java) has frame/PC hooks; [ServiceContext](../../../javatools/src/main/java/org/xvm/runtime/ServiceContext.java) returns the global `DebugConsole.INSTANCE` | A real DAP bridge needs session-scoped debugger ownership and suspension/control APIs; parsing console output is not a suitable integration |
+| Compiler Run lens | [XdkAdapter](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt) creates `xtc.runModule` for module symbols | A module declaration alone currently qualifies; this is not proof of a runnable entry point or a successful build |
+| IntelliJ Run | [producer](../../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/run/XtcRunConfigurationProducer.kt) uses a module-name regex; [configuration](../../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/run/XtcRunConfiguration.kt) launches Gradle or `xtc` | Run shortcuts/configurations bypass the compiler session and unsaved artifact snapshot; the regex does not preserve qualified module names |
+| VS Code Run | [command](../../lang/vscode-extension/src/commands.ts) ignores the supplied source URI; [task provider](../../lang/vscode-extension/src/task-provider.ts) builds shell command strings | Both clients need a common launch request, including source/workspace identity and argument arrays |
+| Embedding execution | [EmbeddingSupport](../../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) caches a connector and returns a `Control` per run | Reusable VM hosting is already the intended foundation; configuration is singleton and cannot be changed after startup |
+| Interpreter control | [InterpreterControl](../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) loads the runner once, copies an artifact into its native container and invokes task registration/start | Compiler ASTs need not be retained for execution; startup currently also invokes runner `run`, starting its HTTP service |
+| Runner | [runner.x](../../lib_runner/src/main/x/runner.x) maintains task IDs and creates a fresh lightweight child container per task | Reuse the runtime/runner, while giving each normal rerun fresh application state. The Java embedding path should call task methods directly without starting HTTP |
+| Current execution limits | Runner invokes `container.invoke("run", ())`; custom injections are rejected; the [external console](../../javatools/src/main/java/org/xvm/runtime/template/_native/io/xExternalConsole.java) reads host-supplied input since 2026-10-16 | Entry-point arguments, input, output channels, asynchronous completion/stop and bounded shutdown need an explicit host API |
+| Repeat-run regressions | [EmbeddingSupportTest](../../javatools/src/test/java/org/xvm/api/EmbeddingSupportTest.java) runs modules with a console, by name more than once, with a supplied root directory and with a failure, and closes a suspended run, each within a time limit; it also runs changed modules and dependencies, closes runs as they finish, twice and from two threads at once, and bounds what repeated runs add to the runtime's constant pools (R1) | These checks came from the removed main-based `LspTest` and now run with `:javatools:test`; its run timings and native pool sizes were only printed, and are now [measured and asserted](#additive-delivery-and-acceptance) |
+| JIT execution | [JitControl](../../javatools/src/main/java/org/xvm/api/JitControl.java) is unsupported; embedding selects the interpreter | First delivery targets interpreter execution; do not advertise JIT parity |
+| DAP | [XtcDebugServer](../../lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt) is a placeholder: breakpoints are reported unverified with the reason, launch and attach fail with it, and there are no threads | A transport stub is not debugging. Breakpoints stay unverified until a runtime bridge confirms them |
+| Interpreter debugger | [Debugger](../../javatools/src/main/java/org/xvm/runtime/Debugger.java) has frame/PC hooks; [ServiceContext](../../javatools/src/main/java/org/xvm/runtime/ServiceContext.java) returns the global `DebugConsole.INSTANCE` | A real DAP bridge needs session-scoped debugger ownership and suspension/control APIs; parsing console output is not a suitable integration |
 
 ## Recommended ownership and process model
 
@@ -126,7 +126,7 @@ Names below describe proposed API roles, not existing public classes.
   running, stopping, exited, failed and canceled. Publish exactly one terminal outcome. `Control`
   compatibility can be retained behind the richer asynchronous facade.
 
-Use the existing [XdkDependency](../../lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkDependency.kt)
+Use the existing [XdkDependency](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkDependency.kt)
 artifact/revision/source-index ownership as the starting point. Extend it deliberately for an entire
 build manifest and debugger source mapping. No compiler `ModuleStructure`, AST, TypeInfo, constant
 pool or mutable repository crosses the worker boundary. Emit/copy bytes on the compiler worker;
@@ -467,7 +467,7 @@ this bridge; they cannot be inferred from compiler type hints.
   X321). With bounded evaluation's tier 2 done before it, R7 is complete. The debugger is
   the runtime's, so it debugs every run of its `EmbeddingSupport`, which the worker's one program
   at a time satisfies. Integration bursts are listed in the
-  [integration plan](../../../doc/errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
+  [integration plan](errs-integration-plan.md#r6r7-integration-bursts-2026-10-22).
 - [x] **R8 — Runtime release gate.** Repeated compile/run/stop/debug cycles and memory/process soak
   on supported platforms; client parity; logs correlating build ID, queue job, artifact revision,
   worker PID/generation and run ID; current playbook/capability docs and independent PR validation.

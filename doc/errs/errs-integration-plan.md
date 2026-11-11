@@ -432,11 +432,11 @@ That enum is a project abstraction, not a list of every LSP feature. Completion,
 rename, actions, formatting, semantic tokens, hints and hierarchies still have explicit limits.
 Separate go-to-declaration now passes backend, protocol and selected editor validation. Several
 other protocol features still have no handler.
-The [adapter matrix and absent-feature inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
+The [adapter matrix and absent-feature inventory](../../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 separate those states. Compiler mode ships by default as of October 6; Tree-sitter remains an
 explicit build alternative.
 
-The accepted [embedded execution and debugging plan](../lang/doc/plans/plan-embedded-execution.md)
+The accepted [embedded execution and debugging plan](plan-embedded-execution.md)
 extends the overall XTC tooling goal with R1–R8. Both IDEs should use one compile/build contract
 and a supervised persistent execution worker, with a fresh application container per run.
 The current branch can remain compiler-focused; runtime delivery is a separate extraction track.
@@ -577,7 +577,7 @@ The same seven VS Code cases pass with the status-bar display enabled in `run-bl
 Queue tracing now records both counts and ordered human-readable jobs, keeping debounced, queued
 and running work distinct. Nested javatools spans, process/thread IDs, compilation times and LSP
 receive-to-reply durations correlate the work without source text. See the
-[trace fields and controls](../lang/lsp-server/README.md#compiler-queue-and-api-timing).
+[trace fields and controls](../../lang/lsp-server/README.md#compiler-queue-and-api-timing).
 The clean startup run produced five per-process trace files, 491 API spans and a maximum observed
 API concurrency of one; this is evidence for that run, not a global concurrency guarantee.
 IntelliJ's service-started balloon uses the platform smart fadeout timer (eight seconds, paused
@@ -984,7 +984,7 @@ implementation gaps, not scenarios that an editor driver can truthfully mark imp
 ### Platform demo blockers (2026-09-29)
 
 **Platform bug-fix pass.** These were found while preparing
-[root `demo.md`](../demo.md), using packaged server code at `4553f43af` and sibling platform
+[root `demo.md`](demo.md), using packaged server code at `4553f43af` and sibling platform
 `b8be627b7`. No platform files were changed during discovery or revalidation. The preceding
 965-test receipt and selected native passes do not cover this workload; the implementation and
 new acceptance evidence are recorded below.
@@ -1919,7 +1919,7 @@ R5–R8. This does not add every prospective preference to the current four-code
 
 ### Embedded Run and debugging track (R1–R8)
 
-The [execution plan](../lang/doc/plans/plan-embedded-execution.md) records the source audit,
+The [execution plan](plan-embedded-execution.md) records the source audit,
 recommended process model, compiler API implications and full acceptance cases. Its task list
 is part of overall professional XTC tooling completeness; these tasks are not silently added
 to the compiler-only PR:
@@ -1932,7 +1932,7 @@ to the compiler-only PR:
   argument adds its types to the native pool once, at most 100 constants. Two races in
   `InterpreterControl.close()` are fixed: a close as the run ended on its own failed with "Task N has
   terminated", and a second close returned while the run was still going. Cold and warm latency are
-  measured in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+  measured in the [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance).
 - [x] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
   *Partial:* per-module build results and registered-structure entry points. Since `7886b4c1d` a
   build compiles the snapshot captured at the request through the analysis closure compile, reuses
@@ -1951,7 +1951,7 @@ to the compiler-only PR:
   into master on 2026-10-20 as `bdb674af5`, and mirrored here): entry selection, arguments, console input, runs with a console and closing a suspended
   run. CI runs it since `ee022b504`. Closed 2026-10-19.
 - [x] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
-  Completed 2026-10-18; see the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+  Completed 2026-10-18; see the [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance).
   Since 2026-10-19 the worker's output timer thread is no longer counted as a runtime pool thread,
   which had retired a healthy worker after the first program that printed.
 - [x] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
@@ -1961,7 +1961,7 @@ to the compiler-only PR:
   entry methods (X293) and dropped arguments (X294), and pass natively in both editors, IntelliJ with Ultimate disabled. Closed
   2026-10-20. The gaps left then (no `.x` gutter icon, no real Gradle build in a shared case, and
   three renamed-root cases) were closed on 2026-10-21 ([below](#r5-gaps-closed-2026-10-21)); soak
-  is R8's, and what stays open is in the [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+  is R8's, and what stays open is in the [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance).
 - [x] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
   The placeholder reported breakpoints unverified and refused launch (`eba208bb3`). Since
   2026-10-22 a session lives in the language server, over its connection, launches through the
@@ -1997,7 +1997,7 @@ to the compiler-only PR:
 - [x] **R9–R13** (planned 2026-10-22): the debugger features beyond R7, from DAP and from the console
   debugger's commands: breakpoint kinds (R9), values (R10), execution control (R11), program
   structure and sources (R12), and debugging beyond embedded runs (R13), listed in the
-  [execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+  [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance).
   *Done (2026-11-03):* the last were R11's single-fiber execution (2026-11-02) and R13's Gradle-mode
   and command-line Debug, attach, test runs from both editors and the debugger agent in javatools;
   each item, with its commits and cases, is in [remaining.md](remaining.md#r9r13-debugger-features-beyond-r7).
@@ -2025,11 +2025,11 @@ passing playbook is a percentage of total LSP completeness.
 Both IDEs now have an embedded build/run mode beside Gradle, like IntelliJ's *Build and run using*
 choice: the language server's compiler builds on its existing serialized compile queue, and a
 persistent execution worker JVM runs the result. Decisions, delivered scope and limits are in the
-[execution plan](../lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15); usage is in
-the [server](../lang/lsp-server/README.md#embedded-build-and-run),
-[VS Code](../lang/vscode-extension/README.md#building-and-running) and
-[IntelliJ](../lang/intellij-plugin/README.md#running-your-application) guides, with manual checks in
-[playbook section 18a](../lang/doc/manual-test-plan.md#18a-embedded-build-and-run).
+[execution plan](plan-embedded-execution.md#first-delivery-2026-10-15); usage is in
+the [server](../../lang/lsp-server/README.md#embedded-build-and-run),
+[VS Code](../../lang/vscode-extension/README.md#building-and-running) and
+[IntelliJ](../../lang/intellij-plugin/README.md#running-your-application) guides, with manual checks in
+[playbook section 18a](../../lang/doc/manual-test-plan.md#18a-embedded-build-and-run).
 
 #### Commit and extraction map
 
@@ -2044,7 +2044,7 @@ not have them. Each commit message records its own validation, problems fixed an
 | `94a1e8c19` | VS Code build mode, Build/Rebuild/Run/Stop, tasks, debug launches without a debugger | `lang/vscode-extension/**` | LSP/editor reference (#693) or the editor review branch; needs the server commit |
 | `1a89eb1a5` | IntelliJ build mode page, project task runner, run configuration modes, process handler, Run lens action | `lang/intellij-plugin/**` | Same as VS Code; needs the server commit |
 | `50fb713a0` | Plan status, playbook section 18a, plan/index notes | `lang/doc/**`, `lang/README.md` | Travels with whichever of the three commits above is extracted; the plan and playbook describe all of them |
-| `590935e77` | `javatools/LSP-COMPILER.md` → `lsp-compiler.md`; documentation links to `AGENTS.md` instead of `CLAUDE.md` | `javatools/`, `doc/errs-error-listeners.md`, `lang/README.md`, `lang/lsp-server/*.md`, `plugin/README.md` | Mirror into #693 and the outside-`lang/` comparison (both still have the old name) at their next synchronization; independent of the feature |
+| `590935e77` | `javatools/LSP-COMPILER.md` → `lsp-compiler.md`; documentation links to `AGENTS.md` instead of `CLAUDE.md` | `javatools/`, `doc/errs/errs-error-listeners.md`, `lang/README.md`, `lang/lsp-server/*.md`, `plugin/README.md` | Mirror into #693 and the outside-`lang/` comparison (both still have the old name) at their next synchronization; independent of the feature |
 
 Follow-up commits on 2026-10-15, after the five above:
 
@@ -2104,9 +2104,9 @@ suite checks command registration only; run behavior is covered by the server an
 Nine commits on `lagergren/errs` after `457fcb570` close seven problems in the language server and
 its editor-facing contract. Like the embedded run work they were mirrored into #693 on 2026-10-16
 ([#693 synchronization](#693-synchronization-and-the-runtime-pull-request-2026-10-16)); no review branch has them. All paths are under `lang/`, apart from this
-document and `doc/errs.md`. Each commit message records its own validation, problems fixed and
-limits; the behavior is documented in the [server README](../lang/lsp-server/README.md) and the
-[playbook](../lang/doc/manual-test-plan.md).
+document and `doc/errs/errs.md`. Each commit message records its own validation, problems fixed and
+limits; the behavior is documented in the [server README](../../lang/lsp-server/README.md) and the
+[playbook](../../lang/doc/manual-test-plan.md).
 
 | Commit | Problem fixed | Extraction target |
 |---|---|---|
@@ -2490,7 +2490,7 @@ fixes the old `run(...)` overloads with a console: they passed `null` console in
 checks that assert behavior into `EmbeddingSupportTest` (renamed from `EmbeddingRunMethodTest`),
 each run within a time limit. Both threads are answered and resolved, and #703's description is
 updated. Here `5af99b8ba`, `95c17bfb7` and `b6629bd48` carry them: `95c17bfb7` adapts `RunWorker`
-(`EmbeddingSupport.EntryPoint(method, args)`) and `doc/errs.md`, and `b6629bd48` points
+(`EmbeddingSupport.EntryPoint(method, args)`) and `doc/errs/errs.md`, and `b6629bd48` points
 `plan-embedded-execution.md` at the new test. Mirrored on #693 as `c8fa87338`, `b2975613b` and
 `09b6cfcbc`.
 
@@ -2717,7 +2717,7 @@ the commit after it.
 
 Mirrored into #693 on 2026-10-21 (`40f2c385e..8954d3a81`): `b5b569e52`, `bf1073970`, `19e2e5bf2`,
 `8e085a0e2`, `f51824782`, `452262dfc`, `9f256a63c`, `835caa2c8` and `8954d3a81`, the same changes in
-the same order. #693 has no `doc/errs-*.md` or `remaining.md`, so those parts are left out and the
+the same order. #693 has no `doc/errs/errs-*.md` or `remaining.md`, so those parts are left out and the
 three affected messages say so; `6be52d893`, which only records the batch, is not mirrored. On #693:
 `:lang:lsp-server:test` 2,369 tests (2 existing skips) and `:lang:intellij-plugin:test` 143, 0
 failures; `compileIntegrationTestKotlin` (forced), the VS Code compile and `spotlessCheck` pass; the
@@ -2756,7 +2756,7 @@ changed TypeScript and `spotlessCheck` pass.
 
 Mirrored into #693 on 2026-10-21 (`8954d3a81..fb4157063`): `5578994fb`, `b2929983c`, `f4805aa8e`,
 `21db0ead8` and `fb4157063`, the same changes in the same order, cherry-picked with `-x`. #693 has
-no `doc/errs-*.md`, so three of them leave out their change to this file's catalog count, and their
+no `doc/errs/errs-*.md`, so three of them leave out their change to this file's catalog count, and their
 messages say so; `670954781` and `c553468d0`, which only record work here, are not mirrored. On
 #693: `:lang:lsp-server:test` 2,374 tests (the 2 existing skips) and `:lang:intellij-plugin:test`
 143, 0 failures, from fresh JUnit XML; X280, X288, X291 and X301–X303 pass in VS Code
@@ -2830,7 +2830,7 @@ program's fibers without running more of it, and the debugger leaves the runner'
 Not covered: variables, stepping, exception stops, pause, evaluation and source revisions. The
 opt-in IntelliJ `projectLifecycle` check of the same Gradle task fails ("closed project's pending
 reply retires"), and fails the same way on `ef1491a6c`, before this work
-(`run-15132038242161374573`); it is listed as open in `doc/remaining.md`, and was fixed later the
+(`run-15132038242161374573`); it is listed as open in `doc/errs/remaining.md`, and was fixed later the
 same day in `3813e27a9` ([below](#r7-variables-and-stepping-2026-10-22)).
 
 ### R7: variables and stepping (2026-10-22)
@@ -2927,7 +2927,7 @@ are R9's rest.
 
 ### R7: expressions with operators, bounded evaluation's tier 1 (2026-10-23)
 
-The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s first tier, runtime and editors, on this
+The [design](plan-bounded-evaluation.md)'s first tier, runtime and editors, on this
 branch only:
 
 - `fda3dc3e8` (R7o, `javatools`): `PureExpression` reads an expression with the compiler's `Lexer` and
@@ -2941,7 +2941,7 @@ branch only:
   logpoint IntelliJ does not set yet (UP32).
 
 Found on the way: joining strings is not native in the runtime (a candidate for master on its own,
-in doc/remaining.md), and `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine` hung once in
+in doc/errs/remaining.md), and `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine` hung once in
 `Control.close()`, a resume/stop race recorded there too.
 
 ### R9: the runner's frames left out of stacks (2026-10-23)
@@ -2967,7 +2967,7 @@ in doc/remaining.md), and `whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine`
 
 ### R7: code run on a stopped fiber, bounded evaluation's tier 2 (2026-10-23)
 
-The [design](../lang/doc/plans/plan-bounded-evaluation.md)'s second tier, in five steps, R7r to R7v.
+The [design](plan-bounded-evaluation.md)'s second tier, in five steps, R7r to R7v.
 
 - `d77fb9b51` (R7r, `javatools`): `SessionDebugger.run()` runs an expression that `EvalCompiler`
   compiles in a stopped frame, on the fiber that waits there. The hook it waits in returns `R_CALL`
@@ -3126,7 +3126,7 @@ A third, `ab9fbddeb` (2026-10-23), is a runtime fix that master and #693 have to
 `Container.kill()` hung, with assertions on, on a service whose fiber had ended with a call still out.
 It is one `ServiceContext` change and an `EmbeddingSupportTest` case, both of which apply to master's
 code as it is, with a `SessionDebuggerTest` change that stays here. Whether it becomes a master pull
-request of its own is to be discussed (doc/remaining.md). It went into #693 on 2026-10-23
+request of its own is to be discussed (doc/errs/remaining.md). It went into #693 on 2026-10-23
 (`5955362da..e618f7a22`) as `e618f7a22`, cherry-picked with the same `ServiceContext` and
 `EmbeddingSupportTest` changes, its message without the debugger, and without the `SessionDebuggerTest`
 change, which #693 has no file for; `c7fedbe53` before it is `eddd77ee9`, the language server's test JVMs
@@ -3136,7 +3136,7 @@ A fourth, `1473c7e89` (2026-10-23), also outside every burst: an embedded run no
 until its services have nothing left to do, and its container is then killed; before, a service still at
 work when `run()` returned ran on in the worker, unreachable. It changes `lib_runner`, `Container`, the
 container control's status and `EmbeddingSupport`'s documentation, all of which master has (#703), and the
-server README's `xtc/runExited` line. A candidate for master (doc/remaining.md). It went into #693 on
+server README's `xtc/runExited` line. A candidate for master (doc/errs/remaining.md). It went into #693 on
 2026-10-23 (`e618f7a22..a6c3f519d`) as `a6c3f519d`, with the same changes in all seven files; the
 cherry-pick conflicted only in context #693 does not have, the debugger's
 `InterpreterConnector.replaceDebugger()` and the README's `xtc/debug` rows, and kept none of it. There
@@ -3209,7 +3209,7 @@ How it was done, in a worktree of #693's branch:
   `XtcDebugServer`'s class comment and four of the catalog's IntelliJ limitations; and
   `6f5f5fde1b` brings the server, VS Code, IntelliJ and lang READMEs and the IntelliJ testing
   guide up to the code. There, LSP4IJ's limits name its pull requests instead of UP numbers or
-  `doc/remaining.md`, and the server README no longer counts debug inline values as incomplete.
+  `doc/errs/remaining.md`, and the server README no longer counts debug inline values as incomplete.
   It is a commit of its own, as the request was for no Markdown beyond what the features need;
   the user had it pushed after checking what it changes.
 
@@ -5646,7 +5646,7 @@ LSP4IJ 0.20 added inline completion/color presentation and improved code actions
 IDE-freeze, timeout/deadlock, read-action and lifecycle fixes, including IntelliJ 2026.2 support.
 Those client improvements do not advertise additional XdkAdapter capabilities. See the
 [upstream release](https://github.com/redhat-developer/lsp4ij/releases/tag/0.21.0) and
-[IntelliJ run instructions](../lang/intellij-plugin/README.md#compiler-playbook-in-intellij).
+[IntelliJ run instructions](../../lang/intellij-plugin/README.md#compiler-playbook-in-intellij).
 
 Validation on 2026-09-25: all eight IntelliJ editor cases passed in
 `lang/intellij-plugin/build/reports/compiler-playbook/run-5890396026268646363/results.json`,
@@ -7221,7 +7221,7 @@ and request-version checks. Tree-sitter remains default; only XdkAdapter adverti
 Evidence: `XdkSemanticLookupTest` covers type targets, narrowing, generics, method chains, default and
 mixin/anonymous bodies, captured values, unrelated overloads, closed members, overlays, parse failure, cancellation and queries
 on another thread without a constant pool. Packaged stdio covers capabilities and cross-file lookup.
-The [manual playbook](../lang/doc/manual-test-plan.md#xdkadapter-playbook) includes matching user steps.
+The [manual playbook](../../lang/doc/manual-test-plan.md#xdkadapter-playbook) includes matching user steps.
 
 Validation: a fresh full LSP run reported 672 tests with three existing skips and zero failures or
 errors; all 13 packaged compiler-stdio tests passed. That is 682 executed tests, including all
@@ -7420,11 +7420,11 @@ Use the execution checklist at the top for current work and the capability matri
    dependency repositories and unsaved overlays need a separate design. Workspace symbols currently
    cover completed analyses of open documents only. Compiler cancellation remains cooperative.
 
-The implementation is in [XdkAdapter](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt),
-[the document service](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcTextDocumentService.kt)
-and [EmbeddingSupport](../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java).
-The build/CI contract is in [the test task](../lang/lsp-server/build.gradle.kts) and
-[the commit workflow](../.github/workflows/commit.yml).
+The implementation is in [XdkAdapter](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt),
+[the document service](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcTextDocumentService.kt)
+and [EmbeddingSupport](../../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java).
+The build/CI contract is in [the test task](../../lang/lsp-server/build.gradle.kts) and
+[the commit workflow](../../.github/workflows/commit.yml).
 
 ### Readiness review before extracting PRs, 2026-09-22
 
@@ -8882,7 +8882,7 @@ Validation after both implementation slices:
   runs. The test batch still reports the existing two Kotlin test-source warnings and JVM CDS
   warning; this migration does not claim to eliminate unrelated warnings.
 
-Current formatting commands and behavior are documented in [lang/README.md](../lang/README.md#kotlin-formatting).
+Current formatting commands and behavior are documented in [lang/README.md](../../lang/README.md#kotlin-formatting).
 
 ## Spotless/ktlint alignment with master (2026-10-01)
 
@@ -9220,7 +9220,7 @@ The mutable-state/deprecation audit and remaining deterministic race checks are 
 No new AST fields or compiler hooks were required by this protocol batch. L83 requires separate
 compiler ownership work before constant-folded initializer occurrences can be claimed complete.
 
-Pre-push documentation audit: the [protocol/lifecycle coverage map](../lang/doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
+Pre-push documentation audit: the [protocol/lifecycle coverage map](../../lang/doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
 now names each regression class, shared editor case and pending manual P1–P4 check. Both plugin
 READMEs describe the current 146-case catalog. Stale L68–L72 validation rows are reconciled with
 their recorded passing receipts; L80/L81 and L83 retain their actual open work. The listener and
@@ -14002,7 +14002,7 @@ the real platform sources and the compiler/adapter boundary. All checkpoints sta
   X136, X138/X139, X146, X162, X181–X185 and X259. `run-13248317061307858623` passes edits and
   close/reopen during startup; `run-10384868562973039188` passes independent project lifetime. All
   three have zero IDE errors. Exact plugin hashes and commands are in the upstream register
-  and [IntelliJ testing guide](../lang/intellij-plugin/testing.md).
+  and [IntelliJ testing guide](../../lang/intellij-plugin/testing.md).
 - These native runs retain production bridges. They establish combined compatibility, not that
   any individual bridge is redundant. Keep every bridge on the released default. Before
   removing one, bypass only that bridge against its upstream fix and repeat its relevant
@@ -14032,7 +14032,7 @@ error diagnostics followed by clean recovery, and exactly three versioned local-
 Source hashes remain unchanged and the server exits normally. Local results and traces are in
 `lang/lsp-server/build/reports/platform-demo/2026-10-06-final/`; the original failed probe and
 fail-before regression remain under `2026-10-06/`. This is packaged-server evidence, not a claim
-that the entire [updated manual demo](../demo.md) ran through native IntelliJ menus. No application
+that the entire [updated manual demo](demo.md) ran through native IntelliJ menus. No application
 code was executed and no external credentials or network calls were part of that probe.
 
 ### Current API and AST contract
@@ -14301,7 +14301,7 @@ retained. The operation-local ownership test is additional coverage for the new 
 compile counts, source hashes, compiler serialization and process exit. With `--workspace ../platform`,
 it opens real source documents and adds/removes an unrelated temporary source module outside that
 checkout. Each phase preserves exact document symbols and diagnostics. The
-[manual recipe](../lang/doc/manual-test-plan.md#bounded-regression-and-memory-workload)
+[manual recipe](../../lang/doc/manual-test-plan.md#bounded-regression-and-memory-workload)
 distinguishes this many-buffer evidence from selected native X147/X148/X259 acceptance.
 
 Evidence is under `lang/lsp-server/build/reports/configuration-workload/l82-2026-10-06/`.
@@ -14379,10 +14379,10 @@ constructors. Java lexical projection preserves the documentation-comment modifi
 line. All changes are in `lang`; no AST/embedding API changes, new mutable compiler fields,
 retained compiler objects, extra compilation or TypeInfo construction are required.
 
-The [demo workspace](../lang/test-fixtures/semantic-highlighting/semantic-colors.code-workspace)
+The [demo workspace](../../lang/test-fixtures/semantic-highlighting/semantic-colors.code-workspace)
 uses theme colors with optional bold declarations, underlined writes and italic static functions
 and documentation comments. Its intentionally lowercase type and uppercase parameter show why
-resolved identities are better than spelling heuristics. The [manual recipe](../lang/doc/manual-test-plan.md#compiler-semantic-color-prototype)
+resolved identities are better than spelling heuristics. The [manual recipe](../../lang/doc/manual-test-plan.md#compiler-semantic-color-prototype)
 includes TextMate comparison and token inspection. Semantic tokens now default on in the installed
 IntelliJ launcher as well as VS Code and Gradle development/playbook launches. Explicit system
 property/environment overrides still allow a TextMate-only comparison. This does not enable

@@ -7,7 +7,7 @@ not a claim that every XTC construct or LSP operation is complete. Checked again
 **Start with `auth` and `githubCLI` for a short tour.** The full eleven-module graph also compiles
 cleanly through the packaged server after configuring platformUI's generated resources below:
 49 document reports, no diagnostics. The source-location/resource and presentation fixes are tracked in
-[PLAT1–PLAT3](doc/errs-integration-plan.md#platform-demo-blockers-2026-09-29).
+[PLAT1–PLAT3](errs-integration-plan.md#platform-demo-blockers-2026-09-29).
 
 ## Launch
 
@@ -116,7 +116,7 @@ Work in **G**. Undo after each numbered experiment; `|` below marks the caret, n
 
 Member/type-header completion and argument recovery in steps 1–4 were checked against this real source. For constructor,
 generic/compound-header, literal, lambda and specialized-constructor variants, use the exact
-programs in [the shared manual playbook](lang/doc/manual-test-plan.md#xdkadapter-playbook).
+programs in [the shared manual playbook](../../lang/doc/manual-test-plan.md#xdkadapter-playbook).
 They are implemented bounded cases, not a promise of recovery for every malformed expression.
 
 ## Actions and presentation: short temporary edits
@@ -140,7 +140,7 @@ Make one edit at a time and Undo it afterward.
   Put the caret on `DemoGreeter`, invoke **Show Context Actions**, and choose the offered
   **Implement** action for `name`. Inspect the `@Override` method and `TODO()` body, then Undo.
   Existing-member override generation and unresolved public-type imports use the same action menu;
-  the precise supported/refused variants are [X105/X122 in the playbook](lang/doc/manual-test-plan.md).
+  the precise supported/refused variants are [X105/X122 in the playbook](../../lang/doc/manual-test-plan.md).
 - **Formatting:** remove the leading indentation from a few lines inside **G**'s `readLine` body;
   select those lines and invoke **Reformat Code**. Repeat for the whole file, then Undo. Press Enter
   inside a block to show on-type indentation. The formatter preserves token spellings.
@@ -197,8 +197,8 @@ Then demonstrate these real relationships, with all roots clean before trying re
    host consumer. Preview a supported family rename, inspect all proposed files, apply and Undo.
    Never count an empty/refused result as completed refactoring support.
 
-The [adapter feature matrix](lang/doc/plans/plan-ide-integration.md#adapter-capability-matrix) and
-[remaining task list](doc/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+The [adapter feature matrix](../../lang/doc/plans/plan-ide-integration.md#adapter-capability-matrix) and
+[remaining task list](errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 record the boundaries. Extract/inline/safe-delete have bounded compiler-proven implementations;
 use the shared playbook's exact examples to demonstrate those proof/refusal boundaries. A full
 pretty-printer, runtime call graph, reusable Run worker and debugger remain outside this tour.

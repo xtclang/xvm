@@ -10,9 +10,9 @@ persistent execution worker JVM runs the module. It was new work **outside every
 and PR** when it landed; from 2026-10-16 on it was mirrored into #693, as the table below says, and
 its runtime parts went to master with #703 and the later runtime PRs. The commits, extraction
 targets and validation receipt are in the
-[integration plan](doc/errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15); the scope
+[integration plan](errs-integration-plan.md#embedded-build-and-run-r2r5-2026-10-15); the scope
 and the records of R1–R13 are in the
-[execution plan](lang/doc/plans/plan-embedded-execution.md#first-delivery-2026-10-15).
+[execution plan](plan-embedded-execution.md#first-delivery-2026-10-15).
 
 | Commit | Content | Proposed home |
 |---|---|---|
@@ -26,9 +26,9 @@ and the records of R1–R13 are in the
 | `4598957ce` | Shared playbook cases X280–X284 and VS Code adapter switching in X137 | With the editor commits (#693) |
 | `981e61638`, `9e7b63749`, `0f40b48ef` | Playbook: Rerun in X283, debug launches (X285), adapter chooser and shortcut (X286) | With `4598957ce` (#693) |
 | `e6157bb74` | IntelliJ macOS keymap keeps Control+Option+X for the adapter and log shortcuts | Small plugin fix; with the IntelliJ commits or standalone |
-| `a5f590c84`…`c12797b9f` | Language-server hardening: named diagnostic codes, queries off the document lock, Ecstasy labels, out-of-sync documents, rescans off the reader thread, quick-fix diagnostics and tags, syntax views for blocked modules, honest DAP placeholder and Mock capabilities, stale docs | #693 server and editors; see the [hardening map](doc/errs-integration-plan.md#language-server-hardening-2026-10-15) |
-| `b1b4ea05a`…`7886b4c1d` | Stale tracked items closed out; Mock-fallback warning; console input for embedded runs (runtime, server, both editors, X287); embedded builds from the editor snapshot with module reuse and a manifest | javatools part of `82b6ba570`: the runtime-execution PR; the rest: #693 server and editors; see the [2026-10-16 map](doc/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
-| `3046c5746`…`74606334e` | Playbook focus fix; embedded as the default build mode in both editors; file events judged against a running analysis and applied before the next message (X273, X274, X116), after two reverted attempts | #693 server and editors; see the [2026-10-16 map](doc/errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
+| `a5f590c84`…`c12797b9f` | Language-server hardening: named diagnostic codes, queries off the document lock, Ecstasy labels, out-of-sync documents, rescans off the reader thread, quick-fix diagnostics and tags, syntax views for blocked modules, honest DAP placeholder and Mock capabilities, stale docs | #693 server and editors; see the [hardening map](errs-integration-plan.md#language-server-hardening-2026-10-15) |
+| `b1b4ea05a`…`7886b4c1d` | Stale tracked items closed out; Mock-fallback warning; console input for embedded runs (runtime, server, both editors, X287); embedded builds from the editor snapshot with module reuse and a manifest | javatools part of `82b6ba570`: the runtime-execution PR; the rest: #693 server and editors; see the [2026-10-16 map](errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
+| `3046c5746`…`74606334e` | Playbook focus fix; embedded as the default build mode in both editors; file events judged against a running analysis and applied before the next message (X273, X274, X116), after two reverted attempts | #693 server and editors; see the [2026-10-16 map](errs-integration-plan.md#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16) |
 | `e4f357f49`, `843bc1247` | VS Code build mode command and status bar; the runtime test | #693 (mirrored); the test also in #703 |
 | `27dffe40b`, `b92f689a0` | Shared cases X288 (build modes) and X289 (repeated runs); supervised execution workers running programs side by side (R4) | #693 (mirrored as `05a59b4af`, `c975116b4`) |
 | `4d0e2d225`, `c7cb85e22`, `89b3ad521` | VS Code install instructions; IntelliJ build notice links to its settings page; worker identity check, batched and bounded output, usage-based recycling (R4) | #693 (mirrored as `f830eb755`, `47e65f6a6`, `f5174d024`) |
@@ -45,9 +45,9 @@ and the records of R1–R13 are in the
 | `95c17bfb7` | `EmbeddingSupport.EntryPoint` carries the method name and arguments, `start(...)` is gone, and the old `run(...)` with a console no longer fails on `null` console input; `RunWorker` adapted | #703 (`8e036b2d3`); #693 (mirrored as `69c143a72`) |
 | `b6629bd48` | `LspTest`'s checks move into `EmbeddingSupportTest` (renamed from `EmbeddingRunMethodTest`), each run within a time limit; `LspTest` is removed | #703 (`5ae951c8b`); #693 (mirrored as `c1c134ecc`) |
 
-**2026-10-19 rebase:** #693 is rebased onto master `5bfd024cc` (`bad3add9d..09b6cfcbc` became `5bfd024cc..c1c134ecc`), so its earlier hashes in this table refer to the branch before the rebase; see the [rebase record](doc/errs-integration-plan.md) under the third #703 review round.
+**2026-10-19 rebase:** #693 is rebased onto master `5bfd024cc` (`bad3add9d..09b6cfcbc` became `5bfd024cc..c1c134ecc`), so its earlier hashes in this table refer to the branch before the rebase; see the [rebase record](errs-integration-plan.md) under the third #703 review round.
 
-**2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is [#703](https://github.com/xtclang/xvm/pull/703) (`lagergren/embedded-run-runtime`); see the [sync record](doc/errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
+**2026-10-16 synchronization:** `5a14da284`…`e4f357f49` are mirrored into #693 (`a37d5dddc..4abcfbb4f`), and the runtime part is [#703](https://github.com/xtclang/xvm/pull/703) (`lagergren/embedded-run-runtime`); see the [sync record](errs-integration-plan.md#693-synchronization-and-the-runtime-pull-request-2026-10-16).
 
 The runtime-execution PR, [#703](https://github.com/xtclang/xvm/pull/703), is small (four runtime files and its
 test) and independent of the compiler foundation PRs; it keeps the distinct `runMethod` name, which
@@ -546,14 +546,14 @@ Review the exported model against a real multi-project/composite consumer, inclu
 
 | Status | File | + / − |
 | --- | --- | ---: |
-| A | [lang/gradle/compiler-model.init.gradle](lang/gradle/compiler-model.init.gradle) | 78 / 0 |
-| M | [plugin/build.gradle.kts](plugin/build.gradle.kts) | 4 / 0 |
-| A | [plugin/src/main/java/org/xtclang/plugin/XtcLspModelIntegration.java](plugin/src/main/java/org/xtclang/plugin/XtcLspModelIntegration.java) | 87 / 0 |
-| M | [plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java](plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java) | 20 / 0 |
-| M | [plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java](plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java) | 1 / 1 |
-| A | [plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspModelTask.java](plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspModelTask.java) | 50 / 0 |
-| A | [plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspSourceSetTask.java](plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspSourceSetTask.java) | 96 / 0 |
-| A | [plugin/src/test/java/org/xtclang/plugin/XtcLspModelTest.java](plugin/src/test/java/org/xtclang/plugin/XtcLspModelTest.java) | 197 / 0 |
+| A | [lang/gradle/compiler-model.init.gradle](../../lang/gradle/compiler-model.init.gradle) | 78 / 0 |
+| M | [plugin/build.gradle.kts](../../plugin/build.gradle.kts) | 4 / 0 |
+| A | [plugin/src/main/java/org/xtclang/plugin/XtcLspModelIntegration.java](../../plugin/src/main/java/org/xtclang/plugin/XtcLspModelIntegration.java) | 87 / 0 |
+| M | [plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java](../../plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java) | 20 / 0 |
+| M | [plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java](../../plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java) | 1 / 1 |
+| A | [plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspModelTask.java](../../plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspModelTask.java) | 50 / 0 |
+| A | [plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspSourceSetTask.java](../../plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspSourceSetTask.java) | 96 / 0 |
+| A | [plugin/src/test/java/org/xtclang/plugin/XtcLspModelTest.java](../../plugin/src/test/java/org/xtclang/plugin/XtcLspModelTest.java) | 197 / 0 |
 
 </details>
 
@@ -612,9 +612,9 @@ The runtime fixture verifies exactly-once left-operand evaluation for both Boole
 
 | Status | File | + / − |
 | --- | --- | ---: |
-| M | [javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java](javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java) | 14 / 1 |
-| M | [manualTests/build.gradle.kts](manualTests/build.gradle.kts) | 1 / 0 |
-| A | [manualTests/src/main/x/conditionalEffects.x](manualTests/src/main/x/conditionalEffects.x) | 79 / 0 |
+| M | [javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java) | 14 / 1 |
+| M | [manualTests/build.gradle.kts](../../manualTests/build.gradle.kts) | 1 / 0 |
+| A | [manualTests/src/main/x/conditionalEffects.x](../../manualTests/src/main/x/conditionalEffects.x) | 79 / 0 |
 
 </details>
 
@@ -1381,116 +1381,116 @@ not forward changes proposed for publication.
 | [changed-files.md](changed-files.md) | 962 / 0 |
 | [create-foundation-prs.py](create-foundation-prs.py) | 493 / 0 |
 | [demo.md](demo.md) | 211 / 0 |
-| [doc/errs-audit.md](doc/errs-audit.md) | 2059 / 0 |
-| [doc/errs-error-listeners.md](doc/errs-error-listeners.md) | 744 / 0 |
-| [doc/errs-integration-plan.md](doc/errs-integration-plan.md) | 13312 / 0 |
-| [doc/errs-lsp-process-lifecycle.md](doc/errs-lsp-process-lifecycle.md) | 148 / 0 |
-| [doc/errs-rebase-2026-10-05.tsv](doc/errs-rebase-2026-10-05.tsv) | 591 / 0 |
-| [doc/errs-upstream-issues.md](doc/errs-upstream-issues.md) | 903 / 0 |
-| [doc/errs.md](doc/errs.md) | 3208 / 0 |
+| [doc/errs/errs-audit.md](errs-audit.md) | 2059 / 0 |
+| [doc/errs/errs-error-listeners.md](errs-error-listeners.md) | 744 / 0 |
+| [doc/errs/errs-integration-plan.md](errs-integration-plan.md) | 13312 / 0 |
+| [doc/errs/errs-lsp-process-lifecycle.md](errs-lsp-process-lifecycle.md) | 148 / 0 |
+| [doc/errs/errs-rebase-2026-10-05.tsv](errs-rebase-2026-10-05.tsv) | 591 / 0 |
+| [doc/errs/errs-upstream-issues.md](errs-upstream-issues.md) | 903 / 0 |
+| [doc/errs/errs.md](errs.md) | 3208 / 0 |
 | [foundation-branches-report.md](foundation-branches-report.md) | 345 / 0 |
-| [gradle/wrapper/gradle-wrapper.jar](gradle/wrapper/gradle-wrapper.jar) | - / - |
-| [gradle/wrapper/gradle-wrapper.properties](gradle/wrapper/gradle-wrapper.properties) | 1 / 1 |
-| [javatools/README.md](javatools/README.md) | 65 / 127 |
-| [javatools/src/main/java/org/xvm/api/EmbeddingSupport.java](javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) | 4 / 4 |
-| [javatools/src/main/java/org/xvm/api/InterpreterControl.java](javatools/src/main/java/org/xvm/api/InterpreterControl.java) | 3 / 3 |
-| [javatools/src/main/java/org/xvm/api/ModuleCompiler.java](javatools/src/main/java/org/xvm/api/ModuleCompiler.java) | 2 / 2 |
-| [javatools/src/main/java/org/xvm/asm/Annotation.java](javatools/src/main/java/org/xvm/asm/Annotation.java) | 1 / 2 |
-| [javatools/src/main/java/org/xvm/asm/Argument.java](javatools/src/main/java/org/xvm/asm/Argument.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/asm/ClassStructure.java](javatools/src/main/java/org/xvm/asm/ClassStructure.java) | 14 / 27 |
-| [javatools/src/main/java/org/xvm/asm/Component.java](javatools/src/main/java/org/xvm/asm/Component.java) | 11 / 12 |
-| [javatools/src/main/java/org/xvm/asm/ComponentResolver.java](javatools/src/main/java/org/xvm/asm/ComponentResolver.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/asm/ConstantPool.java](javatools/src/main/java/org/xvm/asm/ConstantPool.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/asm/DirRepository.java](javatools/src/main/java/org/xvm/asm/DirRepository.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/asm/ErrorListener.java](javatools/src/main/java/org/xvm/asm/ErrorListener.java) | 43 / 6 |
-| [javatools/src/main/java/org/xvm/asm/FileStructure.java](javatools/src/main/java/org/xvm/asm/FileStructure.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/asm/MethodStructure.java](javatools/src/main/java/org/xvm/asm/MethodStructure.java) | 10 / 9 |
-| [javatools/src/main/java/org/xvm/asm/OpVar.java](javatools/src/main/java/org/xvm/asm/OpVar.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java](javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java) | 1 / 2 |
-| [javatools/src/main/java/org/xvm/asm/constants/TypeCollector.java](javatools/src/main/java/org/xvm/asm/constants/TypeCollector.java) | 2 / 2 |
-| [javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java](javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java) | 22 / 26 |
-| [javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java](javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/asm/constants/UnresolvedTypeConstant.java](javatools/src/main/java/org/xvm/asm/constants/UnresolvedTypeConstant.java) | 4 / 5 |
-| [javatools/src/main/java/org/xvm/compiler/EvalCompiler.java](javatools/src/main/java/org/xvm/compiler/EvalCompiler.java) | 6 / 3 |
-| [javatools/src/main/java/org/xvm/compiler/Lexer.java](javatools/src/main/java/org/xvm/compiler/Lexer.java) | 14 / 20 |
-| [javatools/src/main/java/org/xvm/compiler/Source.java](javatools/src/main/java/org/xvm/compiler/Source.java) | 9 / 4 |
-| [javatools/src/main/java/org/xvm/compiler/Token.java](javatools/src/main/java/org/xvm/compiler/Token.java) | 3 / 3 |
-| [javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java](javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java) | 3 / 4 |
-| [javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java](javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java) | 3 / 3 |
-| [javatools/src/main/java/org/xvm/compiler/ast/CaseManager.java](javatools/src/main/java/org/xvm/compiler/ast/CaseManager.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/compiler/ast/CmpExpression.java](javatools/src/main/java/org/xvm/compiler/ast/CmpExpression.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java](javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java) | 8 / 5 |
-| [javatools/src/main/java/org/xvm/compiler/ast/StatementExpression.java](javatools/src/main/java/org/xvm/compiler/ast/StatementExpression.java) | 2 / 1 |
-| [javatools/src/main/java/org/xvm/compiler/ast/TemplateExpression.java](javatools/src/main/java/org/xvm/compiler/ast/TemplateExpression.java) | 3 / 3 |
-| [javatools/src/main/java/org/xvm/compiler/ast/TernaryExpression.java](javatools/src/main/java/org/xvm/compiler/ast/TernaryExpression.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java](javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/compiler/ast/TypeExpression.java](javatools/src/main/java/org/xvm/compiler/ast/TypeExpression.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/compiler/ast/UnaryComplementExpression.java](javatools/src/main/java/org/xvm/compiler/ast/UnaryComplementExpression.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/compiler/ast/UnaryMinusExpression.java](javatools/src/main/java/org/xvm/compiler/ast/UnaryMinusExpression.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/javajit/JitConnector.java](javatools/src/main/java/org/xvm/javajit/JitConnector.java) | 2 / 2 |
-| [javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java](javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java) | 2 / 2 |
-| [javatools/src/main/java/org/xvm/runtime/DebugConsole.java](javatools/src/main/java/org/xvm/runtime/DebugConsole.java) | 2 / 2 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/crypto/KeyStoreOperations.java](javatools/src/main/java/org/xvm/runtime/template/_native/crypto/KeyStoreOperations.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java](javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/io/xTerminalConsole.java](javatools/src/main/java/org/xvm/runtime/template/_native/io/xTerminalConsole.java) | 3 / 3 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java](javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java) | 8 / 7 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTNameService.java](javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTNameService.java) | 3 / 3 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java](javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java) | 2 / 2 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFileTemplate.java](javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFileTemplate.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java](javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java](javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java](javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java) | 8 / 8 |
-| [javatools/src/main/java/org/xvm/runtime/template/numbers/xBit.java](javatools/src/main/java/org/xvm/runtime/template/numbers/xBit.java) | 1 / 1 |
-| [javatools/src/main/java/org/xvm/runtime/template/reflect/xModule.java](javatools/src/main/java/org/xvm/runtime/template/reflect/xModule.java) | 2 / 2 |
-| [javatools/src/main/java/org/xvm/tool/Compiler.java](javatools/src/main/java/org/xvm/tool/Compiler.java) | 3 / 4 |
-| [javatools/src/main/java/org/xvm/tool/Disassembler.java](javatools/src/main/java/org/xvm/tool/Disassembler.java) | 3 / 4 |
-| [javatools/src/main/java/org/xvm/tool/Launcher.java](javatools/src/main/java/org/xvm/tool/Launcher.java) | 17 / 15 |
-| [javatools/src/main/java/org/xvm/tool/Runner.java](javatools/src/main/java/org/xvm/tool/Runner.java) | 3 / 3 |
-| [javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java](javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java) | 1 / 1 |
-| [javatools/src/test/java/org/xvm/api/EmbeddingApiCompatibilityTest.java](javatools/src/test/java/org/xvm/api/EmbeddingApiCompatibilityTest.java) | 160 / 0 |
-| [javatools/src/test/java/org/xvm/api/EmbeddingRepositoryFailureTest.java](javatools/src/test/java/org/xvm/api/EmbeddingRepositoryFailureTest.java) | 70 / 0 |
-| [javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java](javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java) | 98 / 0 |
-| [javatools/src/test/java/org/xvm/asm/ErrorListenerBranchTest.java](javatools/src/test/java/org/xvm/asm/ErrorListenerBranchTest.java) | 4 / 2 |
-| [javatools/src/test/java/org/xvm/asm/ErrorListenerCancelTest.java](javatools/src/test/java/org/xvm/asm/ErrorListenerCancelTest.java) | 155 / 0 |
-| [javatools/src/test/java/org/xvm/asm/ErrorListenerMigrationTest.java](javatools/src/test/java/org/xvm/asm/ErrorListenerMigrationTest.java) | 2 / 2 |
-| [javatools/src/test/java/org/xvm/asm/ErrorListenerSiteTest.java](javatools/src/test/java/org/xvm/asm/ErrorListenerSiteTest.java) | 3 / 1 |
-| [javatools/src/test/java/org/xvm/compiler/CompilerDiagnosticsTest.java](javatools/src/test/java/org/xvm/compiler/CompilerDiagnosticsTest.java) | 146 / 0 |
-| [javatools/src/test/java/org/xvm/compiler/CompilerDuplicateTypeTest.java](javatools/src/test/java/org/xvm/compiler/CompilerDuplicateTypeTest.java) | 74 / 0 |
-| [javatools/src/test/java/org/xvm/compiler/LspRoundTripTest.java](javatools/src/test/java/org/xvm/compiler/LspRoundTripTest.java) | 153 / 0 |
-| [javatools/src/test/java/org/xvm/compiler/ParserTest.java](javatools/src/test/java/org/xvm/compiler/ParserTest.java) | 18 / 1 |
-| [javatools/src/test/java/org/xvm/compiler/ast/DeclarationProvenanceTest.java](javatools/src/test/java/org/xvm/compiler/ast/DeclarationProvenanceTest.java) | 1 / 1 |
+| [gradle/wrapper/gradle-wrapper.jar](../../gradle/wrapper/gradle-wrapper.jar) | - / - |
+| [gradle/wrapper/gradle-wrapper.properties](../../gradle/wrapper/gradle-wrapper.properties) | 1 / 1 |
+| [javatools/README.md](../../javatools/README.md) | 65 / 127 |
+| [javatools/src/main/java/org/xvm/api/EmbeddingSupport.java](../../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) | 4 / 4 |
+| [javatools/src/main/java/org/xvm/api/InterpreterControl.java](../../javatools/src/main/java/org/xvm/api/InterpreterControl.java) | 3 / 3 |
+| [javatools/src/main/java/org/xvm/api/ModuleCompiler.java](../../javatools/src/main/java/org/xvm/api/ModuleCompiler.java) | 2 / 2 |
+| [javatools/src/main/java/org/xvm/asm/Annotation.java](../../javatools/src/main/java/org/xvm/asm/Annotation.java) | 1 / 2 |
+| [javatools/src/main/java/org/xvm/asm/Argument.java](../../javatools/src/main/java/org/xvm/asm/Argument.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/asm/ClassStructure.java](../../javatools/src/main/java/org/xvm/asm/ClassStructure.java) | 14 / 27 |
+| [javatools/src/main/java/org/xvm/asm/Component.java](../../javatools/src/main/java/org/xvm/asm/Component.java) | 11 / 12 |
+| [javatools/src/main/java/org/xvm/asm/ComponentResolver.java](../../javatools/src/main/java/org/xvm/asm/ComponentResolver.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/asm/ConstantPool.java](../../javatools/src/main/java/org/xvm/asm/ConstantPool.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/asm/DirRepository.java](../../javatools/src/main/java/org/xvm/asm/DirRepository.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/asm/ErrorListener.java](../../javatools/src/main/java/org/xvm/asm/ErrorListener.java) | 43 / 6 |
+| [javatools/src/main/java/org/xvm/asm/FileStructure.java](../../javatools/src/main/java/org/xvm/asm/FileStructure.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/asm/MethodStructure.java](../../javatools/src/main/java/org/xvm/asm/MethodStructure.java) | 10 / 9 |
+| [javatools/src/main/java/org/xvm/asm/OpVar.java](../../javatools/src/main/java/org/xvm/asm/OpVar.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java](../../javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java) | 1 / 2 |
+| [javatools/src/main/java/org/xvm/asm/constants/TypeCollector.java](../../javatools/src/main/java/org/xvm/asm/constants/TypeCollector.java) | 2 / 2 |
+| [javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java](../../javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java) | 22 / 26 |
+| [javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java](../../javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/asm/constants/UnresolvedTypeConstant.java](../../javatools/src/main/java/org/xvm/asm/constants/UnresolvedTypeConstant.java) | 4 / 5 |
+| [javatools/src/main/java/org/xvm/compiler/EvalCompiler.java](../../javatools/src/main/java/org/xvm/compiler/EvalCompiler.java) | 6 / 3 |
+| [javatools/src/main/java/org/xvm/compiler/Lexer.java](../../javatools/src/main/java/org/xvm/compiler/Lexer.java) | 14 / 20 |
+| [javatools/src/main/java/org/xvm/compiler/Source.java](../../javatools/src/main/java/org/xvm/compiler/Source.java) | 9 / 4 |
+| [javatools/src/main/java/org/xvm/compiler/Token.java](../../javatools/src/main/java/org/xvm/compiler/Token.java) | 3 / 3 |
+| [javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java](../../javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java) | 3 / 4 |
+| [javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java) | 3 / 3 |
+| [javatools/src/main/java/org/xvm/compiler/ast/CaseManager.java](../../javatools/src/main/java/org/xvm/compiler/ast/CaseManager.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/compiler/ast/CmpExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/CmpExpression.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java) | 8 / 5 |
+| [javatools/src/main/java/org/xvm/compiler/ast/StatementExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/StatementExpression.java) | 2 / 1 |
+| [javatools/src/main/java/org/xvm/compiler/ast/TemplateExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/TemplateExpression.java) | 3 / 3 |
+| [javatools/src/main/java/org/xvm/compiler/ast/TernaryExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/TernaryExpression.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/compiler/ast/TypeExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/TypeExpression.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/compiler/ast/UnaryComplementExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/UnaryComplementExpression.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/compiler/ast/UnaryMinusExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/UnaryMinusExpression.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/javajit/JitConnector.java](../../javatools/src/main/java/org/xvm/javajit/JitConnector.java) | 2 / 2 |
+| [javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java](../../javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java) | 2 / 2 |
+| [javatools/src/main/java/org/xvm/runtime/DebugConsole.java](../../javatools/src/main/java/org/xvm/runtime/DebugConsole.java) | 2 / 2 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/crypto/KeyStoreOperations.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/crypto/KeyStoreOperations.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/fs/xRawOSFileChannel.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/io/xTerminalConsole.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/io/xTerminalConsole.java) | 3 / 3 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java) | 8 / 7 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTNameService.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTNameService.java) | 3 / 3 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java) | 2 / 2 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFileTemplate.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFileTemplate.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java](../../javatools/src/main/java/org/xvm/runtime/template/_native/web/xRTServer.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java](../../javatools/src/main/java/org/xvm/runtime/template/annotations/xFuture.java) | 8 / 8 |
+| [javatools/src/main/java/org/xvm/runtime/template/numbers/xBit.java](../../javatools/src/main/java/org/xvm/runtime/template/numbers/xBit.java) | 1 / 1 |
+| [javatools/src/main/java/org/xvm/runtime/template/reflect/xModule.java](../../javatools/src/main/java/org/xvm/runtime/template/reflect/xModule.java) | 2 / 2 |
+| [javatools/src/main/java/org/xvm/tool/Compiler.java](../../javatools/src/main/java/org/xvm/tool/Compiler.java) | 3 / 4 |
+| [javatools/src/main/java/org/xvm/tool/Disassembler.java](../../javatools/src/main/java/org/xvm/tool/Disassembler.java) | 3 / 4 |
+| [javatools/src/main/java/org/xvm/tool/Launcher.java](../../javatools/src/main/java/org/xvm/tool/Launcher.java) | 17 / 15 |
+| [javatools/src/main/java/org/xvm/tool/Runner.java](../../javatools/src/main/java/org/xvm/tool/Runner.java) | 3 / 3 |
+| [javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java](../../javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java) | 1 / 1 |
+| [javatools/src/test/java/org/xvm/api/EmbeddingApiCompatibilityTest.java](../../javatools/src/test/java/org/xvm/api/EmbeddingApiCompatibilityTest.java) | 160 / 0 |
+| [javatools/src/test/java/org/xvm/api/EmbeddingRepositoryFailureTest.java](../../javatools/src/test/java/org/xvm/api/EmbeddingRepositoryFailureTest.java) | 70 / 0 |
+| [javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java](../../javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java) | 98 / 0 |
+| [javatools/src/test/java/org/xvm/asm/ErrorListenerBranchTest.java](../../javatools/src/test/java/org/xvm/asm/ErrorListenerBranchTest.java) | 4 / 2 |
+| [javatools/src/test/java/org/xvm/asm/ErrorListenerCancelTest.java](../../javatools/src/test/java/org/xvm/asm/ErrorListenerCancelTest.java) | 155 / 0 |
+| [javatools/src/test/java/org/xvm/asm/ErrorListenerMigrationTest.java](../../javatools/src/test/java/org/xvm/asm/ErrorListenerMigrationTest.java) | 2 / 2 |
+| [javatools/src/test/java/org/xvm/asm/ErrorListenerSiteTest.java](../../javatools/src/test/java/org/xvm/asm/ErrorListenerSiteTest.java) | 3 / 1 |
+| [javatools/src/test/java/org/xvm/compiler/CompilerDiagnosticsTest.java](../../javatools/src/test/java/org/xvm/compiler/CompilerDiagnosticsTest.java) | 146 / 0 |
+| [javatools/src/test/java/org/xvm/compiler/CompilerDuplicateTypeTest.java](../../javatools/src/test/java/org/xvm/compiler/CompilerDuplicateTypeTest.java) | 74 / 0 |
+| [javatools/src/test/java/org/xvm/compiler/LspRoundTripTest.java](../../javatools/src/test/java/org/xvm/compiler/LspRoundTripTest.java) | 153 / 0 |
+| [javatools/src/test/java/org/xvm/compiler/ParserTest.java](../../javatools/src/test/java/org/xvm/compiler/ParserTest.java) | 18 / 1 |
+| [javatools/src/test/java/org/xvm/compiler/ast/DeclarationProvenanceTest.java](../../javatools/src/test/java/org/xvm/compiler/ast/DeclarationProvenanceTest.java) | 1 / 1 |
 | [javatools/src/test/java/org/xvm/compiler/ast/OrdinaryAstTreeCopyTest.java](https://github.com/xtclang/xvm/blob/errs/lsp-editors-20261009/javatools/src/test/java/org/xvm/compiler/ast/OrdinaryAstTreeCopyTest.java) | 0 / 42 |
-| [javatools/src/test/java/org/xvm/runtime/TestNumber.java](javatools/src/test/java/org/xvm/runtime/TestNumber.java) | 16 / 16 |
-| [javatools/src/test/java/org/xvm/tool/BundlerTest.java](javatools/src/test/java/org/xvm/tool/BundlerTest.java) | 5 / 5 |
-| [javatools/src/test/java/org/xvm/tool/LauncherErrorHandlingTest.java](javatools/src/test/java/org/xvm/tool/LauncherErrorHandlingTest.java) | 3 / 3 |
-| [javatools/src/test/java/org/xvm/tool/LauncherVersionTest.java](javatools/src/test/java/org/xvm/tool/LauncherVersionTest.java) | 3 / 3 |
-| [javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java](javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java) | 3 / 3 |
-| [javatools_utils/src/test/java/org/xvm/util/PackedIntegerTest.java](javatools_utils/src/test/java/org/xvm/util/PackedIntegerTest.java) | 2 / 2 |
-| [javatools_utils/src/test/java/org/xvm/util/SetTest.java](javatools_utils/src/test/java/org/xvm/util/SetTest.java) | 1 / 1 |
-| [lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt](lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt) | 13 / 17 |
+| [javatools/src/test/java/org/xvm/runtime/TestNumber.java](../../javatools/src/test/java/org/xvm/runtime/TestNumber.java) | 16 / 16 |
+| [javatools/src/test/java/org/xvm/tool/BundlerTest.java](../../javatools/src/test/java/org/xvm/tool/BundlerTest.java) | 5 / 5 |
+| [javatools/src/test/java/org/xvm/tool/LauncherErrorHandlingTest.java](../../javatools/src/test/java/org/xvm/tool/LauncherErrorHandlingTest.java) | 3 / 3 |
+| [javatools/src/test/java/org/xvm/tool/LauncherVersionTest.java](../../javatools/src/test/java/org/xvm/tool/LauncherVersionTest.java) | 3 / 3 |
+| [javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java](../../javatools_jitbridge/src/main/java/org/xtclang/ecstasy/nType.java) | 3 / 3 |
+| [javatools_utils/src/test/java/org/xvm/util/PackedIntegerTest.java](../../javatools_utils/src/test/java/org/xvm/util/PackedIntegerTest.java) | 2 / 2 |
+| [javatools_utils/src/test/java/org/xvm/util/SetTest.java](../../javatools_utils/src/test/java/org/xvm/util/SetTest.java) | 1 / 1 |
+| [lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt](../../lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt) | 13 / 17 |
 | lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServerLauncher.kt | 3 / 6 |
-| [lang/doc/plans/README.md](lang/doc/plans/README.md) | 1 / 1 |
-| [lang/doc/plans/idea-specific.md](lang/doc/plans/idea-specific.md) | 47 / 18 |
-| [lang/doc/plans/lsp-feature-tiers.md](lang/doc/plans/lsp-feature-tiers.md) | 140 / 3 |
-| [lang/doc/plans/plan-embedded-execution.md](lang/doc/plans/plan-embedded-execution.md) | 182 / 0 |
-| [lang/doc/plans/plan-ide-integration.md](lang/doc/plans/plan-ide-integration.md) | 1270 / 64 |
-| [lang/doc/plans/plan-tree-sitter.md](lang/doc/plans/plan-tree-sitter.md) | 23 / 12 |
-| [lang/doc/plans/vscode-specific.md](lang/doc/plans/vscode-specific.md) | 10 / 2 |
+| [lang/doc/plans/README.md](../../lang/doc/plans/README.md) | 1 / 1 |
+| [lang/doc/plans/idea-specific.md](../../lang/doc/plans/idea-specific.md) | 47 / 18 |
+| [lang/doc/plans/lsp-feature-tiers.md](../../lang/doc/plans/lsp-feature-tiers.md) | 140 / 3 |
+| [doc/errs/plan-embedded-execution.md](plan-embedded-execution.md) | 182 / 0 |
+| [lang/doc/plans/plan-ide-integration.md](../../lang/doc/plans/plan-ide-integration.md) | 1270 / 64 |
+| [lang/doc/plans/plan-tree-sitter.md](../../lang/doc/plans/plan-tree-sitter.md) | 23 / 12 |
+| [lang/doc/plans/vscode-specific.md](../../lang/doc/plans/vscode-specific.md) | 10 / 2 |
 | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerBindingFactsTest.kt](https://github.com/xtclang/xvm/blob/errs/lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerBindingFactsTest.kt) | 0 / 90 |
 | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerPartialFactsTest.kt](https://github.com/xtclang/xvm/blob/errs/lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerPartialFactsTest.kt) | 0 / 69 |
-| [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkDocumentationTest.kt](lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkDocumentationTest.kt) | 1 / 1 |
-| [manualTests/build.gradle.kts](manualTests/build.gradle.kts) | 29 / 0 |
-| [manualTests/src/main/java/DuplicateTypesRunner.java](manualTests/src/main/java/DuplicateTypesRunner.java) | 96 / 0 |
-| [manualTests/src/main/x/archive/duplicateTypes/App.x](manualTests/src/main/x/archive/duplicateTypes/App.x) | 23 / 0 |
-| [manualTests/src/main/x/archive/duplicateTypes/App/util.x](manualTests/src/main/x/archive/duplicateTypes/App/util.x) | 3 / 0 |
-| [manualTests/src/main/x/archive/duplicateTypes/App/util/Taken.x](manualTests/src/main/x/archive/duplicateTypes/App/util/Taken.x) | 1 / 0 |
-| [manualTests/src/main/x/archive/duplicateTypes/DistinctScopes.x](manualTests/src/main/x/archive/duplicateTypes/DistinctScopes.x) | 13 / 0 |
-| [manualTests/src/main/x/archive/duplicateTypes/Inline.x](manualTests/src/main/x/archive/duplicateTypes/Inline.x) | 7 / 0 |
-| [manualTests/src/main/x/misc.x](manualTests/src/main/x/misc.x) | 65 / 0 |
-| [plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java](plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java) | 6 / 6 |
-| [plugin/src/main/java/org/xtclang/plugin/runtime/PluginRuntimeClassLoader.java](plugin/src/main/java/org/xtclang/plugin/runtime/PluginRuntimeClassLoader.java) | 1 / 1 |
-| [plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java](plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java) | 3 / 5 |
-| [plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java](plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java) | 6 / 6 |
+| [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkDocumentationTest.kt](../../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/XdkDocumentationTest.kt) | 1 / 1 |
+| [manualTests/build.gradle.kts](../../manualTests/build.gradle.kts) | 29 / 0 |
+| [manualTests/src/main/java/DuplicateTypesRunner.java](../../manualTests/src/main/java/DuplicateTypesRunner.java) | 96 / 0 |
+| [manualTests/src/main/x/archive/duplicateTypes/App.x](../../manualTests/src/main/x/archive/duplicateTypes/App.x) | 23 / 0 |
+| [manualTests/src/main/x/archive/duplicateTypes/App/util.x](../../manualTests/src/main/x/archive/duplicateTypes/App/util.x) | 3 / 0 |
+| [manualTests/src/main/x/archive/duplicateTypes/App/util/Taken.x](../../manualTests/src/main/x/archive/duplicateTypes/App/util/Taken.x) | 1 / 0 |
+| [manualTests/src/main/x/archive/duplicateTypes/DistinctScopes.x](../../manualTests/src/main/x/archive/duplicateTypes/DistinctScopes.x) | 13 / 0 |
+| [manualTests/src/main/x/archive/duplicateTypes/Inline.x](../../manualTests/src/main/x/archive/duplicateTypes/Inline.x) | 7 / 0 |
+| [manualTests/src/main/x/misc.x](../../manualTests/src/main/x/misc.x) | 65 / 0 |
+| [plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java](../../plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java) | 6 / 6 |
+| [plugin/src/main/java/org/xtclang/plugin/runtime/PluginRuntimeClassLoader.java](../../plugin/src/main/java/org/xtclang/plugin/runtime/PluginRuntimeClassLoader.java) | 1 / 1 |
+| [plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java](../../plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java) | 3 / 5 |
+| [plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java](../../plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java) | 6 / 6 |
 | [pr-roadmap.md](pr-roadmap.md) | 404 / 0 |
 
 </details>
@@ -1522,7 +1522,7 @@ The revised PR at `902460194` instead preserves two separate responsibilities:
   size/timestamp; successful retry or observed removal clears the retained issue.
 
 The runtime bridge in
-[xCoreRepository](javatools/src/main/java/org/xvm/runtime/template/_native/mgmt/xCoreRepository.java)
+[xCoreRepository](../../javatools/src/main/java/org/xvm/runtime/template/_native/mgmt/xCoreRepository.java)
 uses `loadModule` and translates absence into the language's conditional result. It need not
 adopt a throwing lookup API or inspect the new snapshot. The failure-inspection API is additive;
 retry/cache behavior and removal of stdout reporting are explicit behavior changes to review.
@@ -1573,9 +1573,9 @@ plus regressions in `manualTests/src/main/x/lambda.x` and
 
 | File | Current change |
 | --- | --- |
-| [NameExpression.java](javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java) | Bind hidden generic parameters in the callable type, retain the concrete function register type, and pass type values correctly to the runtime binding instruction. |
-| [InvocationExpression.java](javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java) | Combine argument and return fitting validity so a matching return cannot erase an argument failure. |
-| [CompilerFunctionTypingTest.kt](lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerFunctionTypingTest.kt) | Twelve cases cover serialized function execution, valid/invalid calls and the fitting contract directly, without reflection or private field names. |
+| [NameExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java) | Bind hidden generic parameters in the callable type, retain the concrete function register type, and pass type values correctly to the runtime binding instruction. |
+| [InvocationExpression.java](../../javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java) | Combine argument and return fitting validity so a matching return cannot erase an argument failure. |
+| [CompilerFunctionTypingTest.kt](../../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerFunctionTypingTest.kt) | Twelve cases cover serialized function execution, valid/invalid calls and the fitting contract directly, without reflection or private field names. |
 
 Source diagnostics alone reject invalid programs even when the fitting routine mistakenly
 returns a usable function type. The direct checks therefore test the fitting API's success or

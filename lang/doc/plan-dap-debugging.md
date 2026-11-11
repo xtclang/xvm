@@ -25,7 +25,7 @@ The session code is the `dap-server` library, hosted by the language server
 ([server README](../lsp-server/README.md#embedded-build-and-run)); sections 1, 5 and 11 below still
 describe the earlier plan, in which the adapter was a process of its own that held runtime `Frame`
 objects. As built, the session holds only snapshots the worker sends, and the runtime half lives in
-the worker; the [execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance)
+the worker; the [execution plan](../../doc/errs/plan-embedded-execution.md#additive-delivery-and-acceptance)
 has R7's steps and the records of R8–R13, which followed and were done by 2026-11-03: function and
 data breakpoints, Run to Cursor, stepping into a chosen call, restarting a frame, running one fiber
 alone, every service and fiber in Threads, library frames in their bundled sources and the loaded
@@ -232,7 +232,7 @@ The existing console debugger is a full implementation of the `Debugger` interfa
 Status (2026-10-23): line breakpoints with conditions, hit counts and log messages, stacks,
 variables, stepping, exception stops by class with the exception's details, pause, stop on entry and
 the evaluation of paths work through `SessionDebugger`; what is still to do, with its R task, is in the
-[execution plan](plans/plan-embedded-execution.md#additive-delivery-and-acceptance).
+[execution plan](../../doc/errs/plan-embedded-execution.md#additive-delivery-and-acceptance).
 
 **Step modes** (enum `StepMode`):
 - `None` — running, only breakpoints trigger

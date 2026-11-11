@@ -6,10 +6,10 @@
 - [IntelliJ plugin](../intellij-plugin/README.md) and [testing](../intellij-plugin/testing.md): native actions, settings and test harnesses.
 - [VS Code extension](../vscode-extension/README.md): installation, commands and native tests.
 - [Manual playbook](manual-test-plan.md): copyable examples, expected behavior, automated selections and client limitations.
-- [Embedded build and run](../lsp-server/README.md#embedded-build-and-run): building, running, debugging and testing with the language server's compiler in both IDEs; the [execution plan](plans/plan-embedded-execution.md) records their design and delivery.
+- [Embedded build and run](../lsp-server/README.md#embedded-build-and-run): building, running, debugging and testing with the language server's compiler in both IDEs; the [execution plan](../../doc/errs/plan-embedded-execution.md) records their design and delivery.
 - [Compiler architecture](../../javatools/README.md#compiler-architecture-for-language-tooling): why the embedding and source-analysis APIs are needed.
 
 ## Background design notes
 
-The [retained design notes](plans/) describe earlier design work. Use the feature and testing guides
+The [retained design notes](plans) describe earlier design work. Use the feature and testing guides
 above for the behavior of the current implementation.
