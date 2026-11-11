@@ -13,7 +13,7 @@ import org.xvm.javajit.Ctx;
  */
 public abstract class nEnum
         extends nConst
-        implements Object {
+        implements Enum {
     public nEnum(Ctx ctx) {
         super(ctx);
     }

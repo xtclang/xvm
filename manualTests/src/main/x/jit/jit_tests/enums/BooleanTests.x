@@ -64,19 +64,17 @@ class BooleanTests {
         Sequential s = nextAsSequential(False);
         assert s == True;
 
-// TODO see nextAsEnum below
-//        Enum e = nextAsEnum(False);
-//        assert e == True;
+        Enum e = nextAsEnum(False);
+        assert e == True;
     }
 
     conditional Sequential nextAsSequential(Sequential s) {
         return s.next();
     }
 
-//    conditional Enum nextAsEnum(Enum e) {
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//        return e.next();
-//    }
+    conditional Enum nextAsEnum(Enum e) {
+        return e.next();
+    }
 
     void testPrev() {
         Boolean hasPrev = False.prev();
