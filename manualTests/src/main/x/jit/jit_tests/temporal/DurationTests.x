@@ -229,11 +229,10 @@ class DurationTests {
     }
 
     void testMultiplyDec() {
-// TODO requires Int128 to Dec128 conversion support
-//        Int128   n1     = 97515543876234567;
-//        Duration d1     = Duration.ofPicos(n1);
-//        Dec      factor = 3.5;
-//        assert d1 * factor == new Duration(n1 * factor.toInt128());
+        Int128   n1     = 97515543876234567;
+        Duration d1     = Duration.ofPicos(n1);
+        Dec      factor = 3.5;
+        assert d1 * factor == new Duration(n1 * 7 / 2); // 3.5 = 7/2
     }
 
     void testDivInt() {
