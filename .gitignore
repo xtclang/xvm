@@ -8,6 +8,10 @@
 *.dSYM
 *.xtc
 
+# Python bytecode (the tour scripts)
+__pycache__/
+*.pyc
+
 # Packages
 *.7z
 *.dmg
