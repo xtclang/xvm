@@ -1289,7 +1289,14 @@ editor, which its probe never measured (the probe item below).
   equal errs', where `tsc` and eslint pass. Pushed on 2026-11-10 at the user's go-ahead.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
   when the user decided that #693 takes everything that completes the LSP and DAP implementation,
-  distilled per feature, without tracking documents or plans. Last synchronized 2026-11-10: #693's
+  distilled per feature, without tracking documents or plans. Last synchronized 2026-11-11: #693's
+  tip `94a02309e0`, commit 283, is errs `6a4684a033`, the tour's committed `.pyc` removed and
+  `__pycache__/` and `*.pyc` ignored, the same patch; pushed with errs (`a0780d6b85..7745ae1fff`) at
+  the user's go-ahead, and the links into errs' tracking files in #693's and xvm #741's descriptions
+  now name `doc/errs/`. errs' other commits of the day stay off #693: the two `final`s in javatools
+  (`d2ecd0a254`), which no LSP feature needs, and the records, the moves into `doc/` and
+  `doc/errs/`, and the three analyses (`cd7ff2a052`, `92302fba3b`, `9dc1a6ebb8`, `7745ae1fff`),
+  none of which #693 carries. Before that, 2026-11-10: #693's
   tip `5f07a72eba`, commit 282, has errs' work through `3b9bb74e87`, all but `8f650fe08c`, which
   master has as #764's `85de7ec12c`; 281 is `2e5854af45` (errs `663ea7cad4`), and 282 carries errs
   `4ef6532ab0` and `3b9bb74e87` together. Before that, #693's tip `8d22b98fdc`, commit 280, had
