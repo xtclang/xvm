@@ -4,7 +4,9 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
+import java.net.URI
 import java.nio.file.Files
+import java.nio.file.Path
 
 internal fun ParityScenarios.navigationCases() {
     case("X3") { data ->
@@ -294,6 +296,43 @@ internal fun ParityScenarios.navigationCases() {
             check(targets.size == data.int("targetCount"))
             assertRanges(targets.map { it["range"] }, expected)
         }
+    }
+}
+
+/**
+ * X350: in a bundled library's source, which Go to Definition opened, Go to Definition on a call goes to the method
+ * another source of the library declares, which only the library's whole compile resolves.
+ */
+internal fun ParityScenarios.libraryNavigationCases() {
+    case("X350") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        clean(document)
+        // as a user opens it: Go to Definition on a library type opens the library's source, read-only, at its declaration
+        val type = targets(document, "definition", document.at(data.string("libraryType"))).single()
+        // TODO LSP4IJ: UP25 — LSP4IJ 0.21.0 has no workspace/textDocumentContent, so the library's source is the
+        // server's protected copy on disk, not its ecstasy-library content
+        check(URI(type.string("uri")).scheme == "file") { "The library source is not a file: $type" }
+        val path = Path.of(URI(type.string("uri")))
+        check(path.endsWith(data.string("librarySource")) && !Files.isWritable(path)) { "Not the read-only library source: $path" }
+        check(Files.readAllLines(path)[type.line()].startsWith(data.string("libraryDeclaration"))) { "Not the type's declaration: $type" }
+        val library = open(path, data.string("librarySource"))
+
+        // a call in a method body to a method of another source of the library, which the copy compiled on its own,
+        // with only its imports and type names, cannot resolve; the query waits for the library's compile
+        val call = library.at(data.string("call"), data.int("callOffset"))
+        val target = targets(library, "definition", call).single()
+        val declared = Path.of(URI(target.string("uri")))
+        check(declared.endsWith(data.string("targetSource")) && !Files.isWritable(declared)) {
+            "Not the read-only library source: $declared"
+        }
+        check(names(listOf(target)) == listOf(data.string("target")))
+        check(Files.readAllLines(declared)[target.line()].contains(data.string("targetDeclaration"))) {
+            "Not the method's declaration: $target"
+        }
+
+        // hover, which also needs the whole compile: the copy on its own describes only its own declarations
+        val hover = query("textDocument/hover", library, call)
+        check(hover.toString().contains(data.string("hover"))) { "Hover of ${data.string("target")}: $hover" }
     }
 }
 

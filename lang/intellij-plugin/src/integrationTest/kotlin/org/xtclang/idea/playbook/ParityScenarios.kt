@@ -46,6 +46,7 @@ class ParityScenarios(
         testRunCases()
         gradleTestCases()
         xunitCases()
+        libraryNavigationCases()
     }
 
     internal fun case(
