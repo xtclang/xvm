@@ -25,6 +25,7 @@ import com.intellij.execution.runners.ExecutionUtil
 import com.intellij.execution.runners.ProgramRunner
 import com.intellij.execution.ui.RunContentManager
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
@@ -103,8 +104,8 @@ object EmbeddedExecutionUi {
     }
 
     /**
-     * Runs Build Project and returns its result, the Build tool window's output and file messages, and the
-     * output text its console filters link.
+     * Runs Build Project and returns its result, the Build tool window's output and messages, each that goes to a file
+     * as the file's name, line and column there, and the output text its console filters link.
      */
     @JvmStatic
     fun build(
@@ -125,9 +126,15 @@ object EmbeddedExecutionUi {
 
                         is FileMessageEvent -> {
                             val position = event.filePosition
-                            val kind = if (event.kind == MessageEvent.Kind.ERROR) "error" else event.kind.name.lowercase()
                             val name = position.path?.fileName
-                            text.append("$name:${position.startLine + 1}:${position.startColumn + 1}: $kind: ${event.message}\n")
+                            text.append("$name:${position.startLine + 1}:${position.startColumn + 1}: ${kind(event)}: ${event.message}\n")
+                        }
+
+                        // the embedded build's diagnostics, each a message that goes to its file's line and column
+                        is MessageEvent -> {
+                            val target = event.getNavigatable(project) as? OpenFileDescriptor
+                            val place = target?.let { "${it.file.name}:${it.line + 1}:${it.column + 1}: " }.orEmpty()
+                            text.append("$place${kind(event)}: ${event.message}\n")
                         }
 
                         is OutputBuildEvent -> {
@@ -268,6 +275,9 @@ object EmbeddedExecutionUi {
                 addProperty("runs", ExecutionManager.getInstance(project).getRunningProcesses().count { !it.isProcessTerminated })
                 addProperty("debugSessions", XDebuggerManager.getInstance(project).debugSessions.size)
             }.toString()
+
+    /** A Build window message's kind as the probe's text names it: error, warning, info or statistics. */
+    private fun kind(event: MessageEvent): String = if (event.kind == MessageEvent.Kind.ERROR) "error" else event.kind.name.lowercase()
 
     private fun watch(project: Project) {
         if (!watched.add(project)) return
