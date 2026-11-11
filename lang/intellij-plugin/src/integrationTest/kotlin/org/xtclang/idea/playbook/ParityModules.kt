@@ -52,7 +52,7 @@ internal fun ParityScenarios.moduleCases() {
 
         fun described() =
             "problem file ${problems.problem(ide, path)}, errors LSP4IJ holds ${problems.closedErrors(ide, path)}, " +
-                "Project Errors ${problems.projectErrors(ide, path)}"
+                "Project Errors ${problems.projectErrorSources(ide, path)}"
 
         // Project Errors lists each of the member's errors once: no two at the same place with the same text
         fun listedOnce(listed: List<String>) = listed.isNotEmpty() && listed.distinct() == listed
@@ -92,9 +92,19 @@ internal fun ParityScenarios.moduleCases() {
                 "The Build reports no error in $member: $text"
             }
         }
+        // the Build window hands each of its events to IntelliJ's listeners before the Build ends, so a copy that
+        // IntelliJ makes of a Build's error, as 2026.3 does of a build view's file message, is in Project Errors now, and
+        // stays until the next Build: only the provider's are listed
+        val built = problems.projectErrorSources(ide, path)
+        check(
+            built.all {
+                it.endsWith(" [ProjectErrors]")
+            },
+        ) { "After the Build, Project Errors lists $member's errors from another source: $built" }
         awaitUi("$id/$member's errors are listed once in Project Errors after a Build", HANG_LIMIT, errorMessage = {
             "After the Build, $id/$member: ${described()}"
         }) { listedOnce(problems.projectErrors(ide, path)) }
+        println("[playbook] $id: Project Errors in $member after the Build: ${problems.projectErrorSources(ide, path)}")
         // the failed Build opened the member at its first error, as IntelliJ does; closed again, it lists them once still
         closeEditor(open(member))
         closed(errors = true)

@@ -1,6 +1,7 @@
 package org.xtclang.idea.playbook.probe
 
 import com.intellij.analysis.problemsView.FileProblem
+import com.intellij.analysis.problemsView.Problem
 import com.intellij.analysis.problemsView.ProblemsCollector
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -45,16 +46,29 @@ object ProblemFiles {
     fun projectErrors(
         project: Project,
         path: String,
-    ): List<String> {
+    ): List<String> = listed(project, path).map(::entry)
+
+    /** [projectErrors], each with the class of the provider that reported it, for a run's record or a failure's message. */
+    @JvmStatic
+    fun projectErrorSources(
+        project: Project,
+        path: String,
+    ): List<String> = listed(project, path).map { "${entry(it)} [${it.provider.javaClass.simpleName}]" }
+
+    private fun listed(
+        project: Project,
+        path: String,
+    ): List<Problem> {
         val real = runCatching { Path.of(path).toRealPath() }.getOrNull() ?: return emptyList()
         val collector = ProblemsCollector.getInstance(project)
         return collector
             .getProblemFiles()
             .filter { file -> file.isInLocalFileSystem && runCatching { file.toNioPath().toRealPath() == real }.getOrDefault(false) }
             .flatMap(collector::getFileProblems)
-            .map { problem ->
-                val place = (problem as? FileProblem)?.let { "${it.line + 1}:${it.column + 1}" } ?: "-"
-                "$place ${problem.text}"
-            }
+    }
+
+    private fun entry(problem: Problem): String {
+        val place = (problem as? FileProblem)?.let { "${it.line + 1}:${it.column + 1}" } ?: "-"
+        return "$place ${problem.text}"
     }
 }
