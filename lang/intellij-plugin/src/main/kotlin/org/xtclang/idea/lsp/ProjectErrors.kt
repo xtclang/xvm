@@ -21,8 +21,11 @@ import org.xtclang.idea.run.EmbeddedExecution
  *
  * IntelliJ fills Project Errors from its ProblemsCollector, which neither of them reaches on its own: LSP4IJ reports a
  * file with errors to the problem files that the Project view marks red, and nothing to the collector, and IntelliJ
- * takes a build's errors to it only from a build view connected to its internal BuildViewProblemsService, as Gradle's
- * and Maven's are, and BuildViewManager's, which the embedded build reports to, is not.
+ * takes a build's errors to it only from a build view's file messages, through its internal BuildViewProblemsService:
+ * 2026.2 from Gradle's and Maven's views, 2026.3 from every view, BuildViewManager's included. The embedded build
+ * reports its errors to the Build window as messages that go to their file and line, not as file messages
+ * ([XtcProjectTaskRunner][org.xtclang.idea.run.XtcProjectTaskRunner]), so that on each version this provider is the
+ * only source of Project Errors for Ecstasy files.
  *
  * Errors are values, so the collector, which keeps a set of each file's problems, lists equal ones once, whichever
  * source reported them. The build's are [HighlightingDuplicateProblem]s, which IntelliJ leaves out for a file whose

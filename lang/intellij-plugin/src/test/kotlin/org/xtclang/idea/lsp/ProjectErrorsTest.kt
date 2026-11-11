@@ -2,6 +2,10 @@ package org.xtclang.idea.lsp
 
 import com.intellij.analysis.problemsView.FileProblem
 import com.intellij.analysis.problemsView.ProblemsCollector
+import com.intellij.build.events.MessageEvent
+import com.intellij.build.progress.BuildProgress
+import com.intellij.build.progress.BuildProgressDescriptor
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import org.assertj.core.api.Assertions.assertThat
@@ -9,6 +13,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.LightEditor
+import org.xtclang.idea.run.EmbeddedBuild
+import java.lang.reflect.Proxy
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -55,6 +61,39 @@ class ProjectErrorsTest {
         problems.built(BuildResponse(succeeded = true))
         assertThat(collector.getFileProblems(eights.file)).isEmpty()
         assertThat(collector.getFileProblems(hand.file)).isEmpty()
+    }
+
+    @Test
+    fun `a build's error goes to the Build window as a message to its file and line, and to Project Errors once`() {
+        val hand = source("Hand.x")
+        val project = editor.fixture.project
+        val build =
+            BuildResponse(diagnostics = listOf(DocumentDiagnostics(hand.uri, listOf(error("Expected \";\"\nbefore }", 18, "COMPILER-12")))))
+        val calls = buildList { EmbeddedBuild(project, false).report(recording { name, args -> add(name to args) }, build) }
+
+        // a message, not a file message, which IntelliJ 2026.3 would copy into Project Errors beside the provider's
+        val messages = calls.filter { it.first == "message" || it.first == "fileMessage" }
+        assertThat(messages.map { it.first }).containsExactly("message")
+        val (title, message, kind, navigatable) = messages.single().second
+        assertThat(title).isEqualTo("Hand.x:19:5: Expected \";\"")
+        assertThat(message as String).endsWith("Hand.x:19:5\nExpected \";\"\nbefore } [COMPILER-12]")
+        assertThat(kind).isEqualTo(MessageEvent.Kind.ERROR)
+        val target = navigatable as OpenFileDescriptor
+        assertThat(listOf(target.file, target.line, target.column)).containsExactly(hand.file, 18, 4)
+        assertThat(ProblemsCollector.getInstance(project).getFileProblems(hand.file).map { it.text }).containsExactly("Expected \";\"")
+
+        ProjectErrors.getInstance(project).buildStarted()
+    }
+
+    /** A Build window's progress that hands each call, by its method's name, to [record]. */
+    private fun recording(record: (String, List<Any?>) -> Unit): BuildProgress<BuildProgressDescriptor> {
+        val progress =
+            Proxy.newProxyInstance(javaClass.classLoader, arrayOf(BuildProgress::class.java)) { proxy, method, args ->
+                record(method.name, args?.toList().orEmpty())
+                proxy
+            }
+        @Suppress("UNCHECKED_CAST")
+        return progress as BuildProgress<BuildProgressDescriptor>
     }
 
     /** A source file on the local file system, as the embedded build names it, by its `file:` URI. */
