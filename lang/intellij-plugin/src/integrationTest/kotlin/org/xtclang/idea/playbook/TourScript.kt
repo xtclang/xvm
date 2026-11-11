@@ -2208,6 +2208,11 @@ private fun Tour.debugging() {
         expect(within(HANG) { !dialogShowing() }) { "A dialog stays open" }
         open(file(MODULE), 0)
         selectCurrentFile()
+        // the run widget shows Current File's Debug only once it updates, as a user sees before clicking: the run that
+        //  clicked at once (run-tour-5539679357901575615) pressed the button as the widget turned from the last
+        //  session's Restart Debug 'cardGame' and Stop to Current File's Debug, its buttons replaced, and nothing ran
+        val current = "text=Debug '${MODULE.substringAfterLast('/')}'"
+        expect(within(HANG) { current in toolbarState("Debug") }) { "The Debug button for Current File: ${toolbarState("Debug")}" }
         // the widget's Debug as it stands for Current File: enabled or not, and what its tooltip says
         val state = toolbarState("Debug")
         toolbar("Debug")
