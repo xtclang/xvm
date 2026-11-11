@@ -20,13 +20,14 @@ import java.util.concurrent.Executor
  * The diagnostics of the documents that are not open, from the server's workspace report, for LSP4IJ, which keeps them
  * as the closed document's and reports a file with errors to IntelliJ's problem files: the files that the Project
  * view, the editor tabs and the commit view mark red, and that LSP4IJ's batch inspection reads. Open documents stay on
- * LSP4IJ's pull path.
+ * LSP4IJ's pull path. Each document's full report, open or closed, also goes to [reported][Connection.reported], for
+ * the Problems window's Project Errors, which LSP4IJ does not fill.
  *
  * Each [refresh] asks for a full report, with no previous result IDs, so each closed document is published as it is
  * now, as a server that pushes its diagnostics does after each analysis; a document that LSP4IJ has dropped, as when it
  * was opened and closed again, is published again. At most one report is asked for at a time, and a refresh while one
- * is outstanding asks for one more once it has been applied. [publish][Connection.publish] and
- * [opened][Connection.opened] run on [executor], one report at a time.
+ * is outstanding asks for one more once it has been applied. [publish][Connection.publish],
+ * [opened][Connection.opened] and [reported][Connection.reported] run on [executor], one report at a time.
  */
 internal class ClosedDocumentDiagnostics(
     private val connection: Connection,
@@ -62,6 +63,12 @@ internal class ClosedDocumentDiagnostics(
          * diagnostics, and dropped the published ones when it opened.
          */
         fun opened(uri: String)
+
+        /** The report of the document at [uri], open or closed, for what lists the workspace's errors. */
+        fun reported(
+            uri: String,
+            diagnostics: List<Diagnostic>,
+        )
     }
 
     /** Where LSP4IJ has a document. */
@@ -153,6 +160,7 @@ internal class ClosedDocumentDiagnostics(
         uri: String,
         diagnostics: List<Diagnostic>,
     ) {
+        connection.reported(uri, diagnostics)
         when (connection.document(uri)) {
             Document.CLOSED -> {
                 connection.publish(uri, diagnostics)

@@ -26,6 +26,7 @@ import org.jetbrains.jps.model.java.JavaModuleSourceRootTypes
 import org.xtclang.idea.XtcFileType
 import org.xtclang.idea.lsp.BuildParams
 import org.xtclang.idea.lsp.BuildResponse
+import org.xtclang.idea.lsp.ProjectErrors
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
@@ -105,7 +106,7 @@ internal class EmbeddedBuild(
                 },
             )
         // the previous build's errors leave Project Errors as this one starts, as a build view's leave the Build window
-        EmbeddedBuildProblems.getInstance(project).started()
+        ProjectErrors.getInstance(project).buildStarted()
         progress.output("${if (rebuild) "Rebuilding" else "Building"} with the embedded compiler...\n", ProcessOutputType.STDOUT)
         XtcBuildSettings.gradleNotUsed(project.basePath?.let(Path::of))?.let { progress.output("$it\n", ProcessOutputType.STDOUT) }
         return EmbeddedExecution
@@ -134,7 +135,7 @@ internal class EmbeddedBuild(
         build: BuildResponse,
     ) {
         EmbeddedExecution.describe(build.copy(diagnostics = emptyList())).forEach { progress.output("$it\n", ProcessOutputType.STDOUT) }
-        EmbeddedBuildProblems.getInstance(project).report(build)
+        ProjectErrors.getInstance(project).built(build)
         build.diagnostics.forEach { document ->
             val file = EmbeddedExecution.file(document.uri)
             document.diagnostics.forEach { diagnostic ->
