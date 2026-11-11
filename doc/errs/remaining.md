@@ -743,8 +743,22 @@ passes with the workaround disabled. The gates are in
   [test harness stability](#test-harness-stability)). No IDE exception.
 - [ ] The bump is prepared on the local branch `lagergren/lsp4ij-0.30.0`: 35 commits, made on errs
   `4e3b1b65e7` (tip `a67965ede2`, 2026-10-28) and rebased on 2026-10-29 onto that day's errs history,
-  at its record of the #742 rebase (tip `9cb776697c`); errs has been rebased since, onto master
-  `2f18c1335c`, so the branch needs rebasing again before it is merged. It pins 0.30.0 and removes,
+  at its record of the #742 rebase (tip `9cb776697c`). Rebased again on 2026-11-11 onto errs
+  `f4092dbb61` (master `856fa585e4`), as `lagergren/lsp4ij-0.30.0-rebased-20261111` (`e98f38a07c`), 34
+  commits; the original branch stays at `9cb776697c` until the user takes the new one, with
+  `lagergren/lsp4ij-0.30.0-pre-rebase-20261111` as its backup. UP44's commit (`ce8867e8da`) is
+  dropped, as errs has its effect; `4b4cd424dc` keeps its X254 half, errs having X257's. UP10 keeps
+  `XtcParameterInfoHandler` for UP73 and removes `updateUI`; UP07 keeps `DiagnosticResultMessages` as
+  the playbook's report record and removes the `previousResultId` part; UP09 removes
+  `DocumentStartupMessages` with `50ee490ff8`'s guard against a retired synchronizer's late change,
+  which LSP4IJ #1728 and #1718 make unneeded (gate: X259's last step on the release); the API list
+  keeps `setServerWrapper` for UP70. Built against a plugin from LSP4IJ `main` `0daf60cf`
+  (`-Plsp4ijPlugin`): every commit compiles on the first base; at the tip, `spotlessCheck` and the
+  compiles pass, the plugin's unit tests 213 of 219, `lsp-server` 58 and `XdkStdioTest` 66. The six
+  that fail test bridges whose fixes are on `main`, UP37, UP70 (two), UP71, UP73 and UP76, and fail
+  the same way on errs with only the version bump; they go with those bridges. Removable after the
+  release besides the branch's own: UP37, UP44's plugin bridge, UP64, UP65, UP69 to UP71, UP73 to
+  UP78 and X259's UP09 flush. It pins 0.30.0 and removes,
   each in its own commit, the bridges 0.30.0 makes unnecessary; the items below name them by their
   2026-10-28 hashes, whose subjects the rebased commits keep. It is checked against a plugin
   built from LSP4IJ `main` `44675cb3` with #1790 and #1791 before their CodeRabbit fixes. Full
