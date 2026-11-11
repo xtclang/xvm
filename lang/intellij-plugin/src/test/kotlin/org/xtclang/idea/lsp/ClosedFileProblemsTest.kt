@@ -37,10 +37,6 @@ import java.util.concurrent.CompletableFuture
 // TODO LSP4IJ: UP69 — LSP4IJ 0.21.0 asks for no workspace report, so only ClosedDocumentDiagnostics gets a closed
 // file's errors to IntelliJ. Keep these tests when the bridge goes: they check what IntelliJ shows, whichever of
 // LSP4IJ and the plugin asks for the report.
-// TODO LSP4IJ: UP70 — LSP4IJ keeps a file red that opens with no errors; "a file that opens with its error fixed"
-// checks the plugin's report of it, and stays when that report goes.
-// TODO LSP4IJ: UP70 — also LSP4IJ's clear of a closing file's mark can come after the report of its errors; "a closed
-// file stays a problem file when LSP4IJ clears its mark last" checks the plugin's report after it, and stays too.
 
 /**
  * The errors of an Ecstasy file that is not open, from the server's workspace report, make it one of IntelliJ's problem
@@ -125,22 +121,27 @@ class ClosedFileProblemsTest {
         await("Child.x is a problem file") { problems.isProblemFile(child) }
 
         // as a file closes, LSP4IJ clears its mark in a task of its own, which can run after the report of the errors
-        // then published for it; run that clear now, after the report, as its announcement says it has
-        val cleared = CompletableFuture<Unit>()
+        // then published for it; run that clear now, after the report. LSP4IJ clears a file by reporting it from the
+        // errors it holds (#1868), which announces a change of a problem file, and its disappearance had it been cleared
+        val reported = CompletableFuture<String>()
         editor.fixture.project.messageBus
             .connect(editor.fixture.testRootDisposable)
             .subscribe(
                 ProblemListener.TOPIC,
                 object : ProblemListener {
+                    override fun problemsChanged(file: VirtualFile) {
+                        if (file == child) reported.complete("changed")
+                    }
+
                     override fun problemsDisappeared(file: VirtualFile) {
-                        if (file == child) cleared.complete(Unit)
+                        if (file == child) reported.complete("disappeared")
                     }
                 },
             )
         val features = connection().clientFeatures
         LSPDiagnosticUtils.clearProblem(setOf(checkNotNull(features.getFileUri(child))), features, editor.fixture.project)
-        cleared.awaited()
-        await("Child.x is a problem file again") { problems.isProblemFile(child) }
+        assertThat(reported.awaited()).isEqualTo("changed")
+        assertThat(problems.isProblemFile(child)).isTrue()
         assertThat(closedCodes(child)).containsExactly("unknown-type")
     }
 

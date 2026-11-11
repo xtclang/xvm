@@ -42,5 +42,4 @@ Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getInstance(c
 Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getLanguageServers(com.intellij.psi.PsiFile, java.util.function.Predicate, java.util.function.Predicate) : java.util.concurrent.CompletableFuture
 Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getStartedServers() : java.util.Set
 Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.hasAny(com.intellij.psi.PsiFile, java.util.function.Predicate) : boolean
-Internal method com.redhat.devtools.lsp4ij.client.LanguageClientImpl.setServerWrapper(com.redhat.devtools.lsp4ij.LanguageServerWrapper) : void
 Internal method com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures.getServerWrapper() : com.redhat.devtools.lsp4ij.LanguageServerWrapper
