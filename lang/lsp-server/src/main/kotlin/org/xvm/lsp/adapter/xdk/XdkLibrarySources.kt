@@ -122,15 +122,21 @@ internal object XdkLibrarySources {
     fun owns(uri: String): Boolean = source(uri) != null
 
     /**
-     * True when [uri] is one of the read-only copies, as navigation or a debugger's stack frame opens them: a library's
-     * own source, which belongs to no project, so its compile on its own reports errors that are not its own. [owns] is true
-     * of each copy too.
+     * True when [uri] is one of the read-only copies, as navigation or a debugger's stack frame opens them, or a copy's
+     * ecstasy-library content ([fileOf]): a library's own source, which belongs to no project, so its compile on its own
+     * reports errors that are not its own. [owns] is true of each copy too.
      */
     fun isCopy(uri: String): Boolean {
         if (copies.isEmpty()) return false
-        val file = XdkSources.file(uri)?.toPath() ?: return false
+        val file = fileOf(uri)?.toPath() ?: return false
         return copies.values.any { it == file }
     }
+
+    /**
+     * The file that [uri] names, or, for the ecstasy-library content of a library source, as VS Code shows it, the
+     * read-only copy whose text that is, so that the content compiles, and answers, as the copy does.
+     */
+    fun fileOf(uri: String): File? = if (uri.startsWith("$SCHEME:")) source(uri)?.uri?.let { File(URI(it)) } else XdkSources.file(uri)
 
     fun document(uri: String): ReadOnlyDocument? = source(uri)?.document
 
