@@ -78,7 +78,17 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   skips implementation and declaration targets, which ran out of memory for the core library. The
   setting is "Compile an XDK library as a whole" in IntelliJ's Ecstasy Server Runtime page and
   `xtc.server.compileLibraries` in VS Code, on by default (`-Dxtc.lsp.compileLibraries`).
-  `XdkLibraryDocumentsTest` covers both modes. Not seen yet in an editor or a playbook run.
+  `XdkLibraryDocumentsTest` covers both modes. Seen in both editors on 2026-11-11 as X350
+  (`642f6c83c8`): from a project file into `String.x`, then from `add` in a method body into
+  `StringBuffer.x`, and its hover. It found that VS Code never had it: VS Code opens a library
+  source as the server's `ecstasy-library:` content, which the server took for a source of no
+  library, so its whole-library compile never ran there; fixed in `42f212eba0`, whose
+  `LibraryContentProtocolTest` case fails without it. X350 passed in the container in VS Code
+  (`run-urcrr6`, 11.8 s, the library compiling in 10.1 s) and in IntelliJ (`run-14498740152730139212`
+  with 14g, `run-2367797182219195798` with 7g); before the fix VS Code failed at its second step
+  (`run-BmA5Wq`). Neither playbook sets `-Xmx`, so the server takes a quarter of the container,
+  1.75 GB at 7g. One IntelliJ run at 7g was killed out of memory: the container had just built the
+  project cold, and the library's compile came on top. 14g has room.
   Measured the same day, with nothing else running: nothing compiles until a copy opens; ecstasy's
   compile takes 8.6 s with a 2 GB heap and 10.6 s with 512 MB, its live data peaks at about 450 MB
   (heap histograms: mostly the compiler's TypeInfos, its MethodInfos and MethodBodies and their
@@ -111,7 +121,13 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 - [ ] For each host limitation, either a released fix with its acceptance passing, or a recorded
   release exception: UP16, UP23 (already accepted as an exception), UP25, UP26, UP17.
 - [ ] IntelliJ bulk replacement in a heavily decorated large file (UP17): after a platform fix,
-  pass the decorated 20,000-method X145 replacement without the EDT freeze.
+  pass the decorated 20,000-method X145 replacement without the EDT freeze. Rethink this gate
+  first (2026-11-11): with the probe's readiness fixed (`2cf2996adf`), the decorated 20,000-method
+  replacement starts fully decorated and takes 258 and 292 ms on IntelliJ 2026.2.3 without the fix,
+  since the server's tokens have shrunk, keywords and numbers no longer among them, to 60,003
+  highlighters from the 80,005 recorded; only the plain 80,000-marker controls still freeze, 6.3 to
+  7.3 s. The gate shows UP17 again only with a workload that reaches the freezing size; why the
+  decorated case no longer freezes at 60,003 is not known.
 - [ ] At closure, update together: this list, the integration plan's checklist, the capability
   matrix, the playbook, the AST/API ownership record and the extraction map.
 
@@ -1233,8 +1249,13 @@ editor, which its probe never measured (the probe item below).
   JetBrains pushed it to intellij-community `master` on 2026-11-03 as `5079f25b88`, "with more
   conservative guard for full tree rebuild" (cdracm), and closed the pull request on 2026-11-04
   (checked 2026-11-04). Unreleased; the gate is below.
-- [ ] UP17: fix the probe's readiness check. Its decorated replacement started with about 36,000
-  of 80,000 highlighters installed, so it never measured the decorated case.
+- [x] UP17: fix the probe's readiness check. Its decorated replacement started with about 36,000
+  of 80,000 highlighters installed, so it never measured the decorated case. Fixed in `2cf2996adf`
+  (2026-11-11): the replacement waits until LSP4IJ's semantic tokens for the committed document are
+  done, the daemon has finished the file, and the `LSP_*` highlighters number at least the tokens,
+  and fails if it started with fewer. In the container, `run-2693557204668213345` and
+  `run-17493816147983052741` started with 60,003 of 60,003 and took 258 and 292 ms; the gate's
+  problem that this shows is under L82 above.
 - [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881), a duplicate of the older
   [IJPL-29917](https://youtrack.jetbrains.com/issue/IJPL-29917) and [IJPL-223024](https://youtrack.jetbrains.com/issue/IJPL-223024); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28; JetBrains asked
   vobal-jb to review it on 2026-11-02). To do: get it
