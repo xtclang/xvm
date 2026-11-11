@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **351 scenarios**: X1–X349 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **352 scenarios**: X1–X350 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 351 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 352 scenarios; a partial-coverage result is not a full pass.
 
 On a desktop the playbook's editor takes the focus, and keystrokes typed elsewhere reach it. To keep
 both editors off the desktop, run the same playbooks in a Linux container on Xvfb with
@@ -1525,7 +1525,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 351 scenarios: X1–X349 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 352 scenarios: X1–X350 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1540,7 +1540,7 @@ build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 351 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 352 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -3999,6 +3999,20 @@ the embedded runs it still tracks, which is none once every run, and its program
 | X347 | Write `Located.x`, a module with a test `top` on line 3 and a class `Shelf` with a static class `Drawer` in it, with a test `deep` on line 10, whose assertion on line 11 fails with `two and two are not five`. Run the module's tests, and go to each result's source. | The Test Explorer lists `Located`, `top`, `Shelf`, `Shelf.Drawer` and `Shelf.Drawer.deep`, each test at its declaration's line (IntelliJ: the test console goes to each test's declaration). `deep`'s failure is at line 11. |
 | X348 | Write `FirstSuite.x`, a module with a test `one`, and `SecondSuite.x`, a module with a test `two`, which passes, and `three`, whose assertion fails with `three and three are not seven`. Run every module's tests (VS Code: Run All; IntelliJ: Run of each module's icon, as IntelliJ has no action yet that runs every module's tests at once). | Every module's tests run and are reported: `one` and `two` passed, `three` failed with its message. |
 | X349 | Write `CliTested.x`, a module with a test `adds`, which passes, and `fails`, whose assertion fails with `one and one are not three`. IntelliJ: run an Ecstasy test configuration for `CliTested` with **xtc command line**. VS Code, which has no command-line build mode (X338): run the XDK's `xtc test -I xvm.xunit.report=json CliTested.x` in the folder, as X336 runs the XDK's `xec`, and Run All in the Test Explorer. | IntelliJ runs `xtc test --deduce` with xunit's `json` report in the run console, which marks `adds` passed and `fails` failed with its message, as an embedded run does. VS Code: the command line's events and the Test Explorer's embedded run agree, `adds` passed and `fails` failed with the same message. |
+
+### Navigation inside an XDK library's source (X350)
+
+A bundled library's source that navigation opens is a read-only copy (IntelliJ: a protected file, UP25; VS Code: the
+server's `ecstasy-library` content). With **Compile an XDK library as a whole** on, as it is by default (IntelliJ's
+Ecstasy Server Runtime page; VS Code's `xtc.server.compileLibraries`), the server compiles the copy with every source
+of its library, which takes some 10 seconds for `ecstasy` when its first source opens, so that every name in it goes
+to its declaration. The compile needs a server heap of at least 1 GB, which the server's default heap is on a machine
+with 4 GB or more; with a smaller heap, or the setting off, the copy compiles on its own, where only its imports and
+type names go anywhere, and the server logs why, once.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X350 | Write `LibraryNavigation.x`, a module with `String echo(String text) = text;`. Go to Definition on its first `String`. In `ecstasy/text/String.x`, which opens, Go to Definition on `add` in `buffer.add(transform(ch));`, in the body of `map`, and hover it. | `String.x` opens read-only at `const String`. Go to Definition on `add` opens `ecstasy/text/StringBuffer.x` at `add` in `StringBuffer add(Char v)`, the method another source of the library declares, and the hover shows `StringBuffer add(Char v)`. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
