@@ -3976,11 +3976,12 @@ project's `testXtc`, which takes them as `--test-class` and `--test-method`, and
 
 With the Project fixtures of X21–X28: `Project.x` open, `Project/Child.x` written to disk and not opened. IntelliJ
 pulls diagnostics for open files only, so the plugin asks for the server's workspace report and gives LSP4IJ the
-closed files' (UP69); VS Code's client pulls the workspace report itself.
+closed files' (UP69), and the Problems window's Project Errors every file's; VS Code's client pulls the workspace report
+itself.
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X341 | Keep Child closed. Change Base's name to `Renamed` in the root without saving, then undo. Change it again, open Child, then undo in the root. Change it once more, close Child, then undo. | Without opening Child: IntelliJ draws `Project/Child.x` red in the Project view, and VS Code's Problems panel lists Child's errors; undo clears both. Opened while broken, Child shows its errors once, and none after the undo, with no red left on the file. Closed while broken, Child is red and listed again, and the undo clears it. IntelliJ's Problems view has the selected file's errors in its File tab and a **Build**'s errors in Project Errors, so a closed file's errors show there only after a Build. |
+| X341 | Keep Child closed. Change Base's name to `Renamed` in the root without saving; in IntelliJ, configure `Project` as a source module and run **Build** in embedded mode, which builds configured source modules only, and close Child, which the failed Build opens at its first error; then undo, and remove the source module. Change it again, open Child, then undo in the root. Change it once more, close Child, then undo. | Without opening Child: IntelliJ draws `Project/Child.x` red in the Project view and lists Child's errors in the Problems window's Project Errors, without a Build, and VS Code's Problems panel lists them; undo clears them. After the Build, which reports Child's errors too, Project Errors lists each once, also once Child is closed again, and the undo clears them, the Build's included. Opened while broken, Child shows its errors once, and none after the undo, with no red left on the file. Closed while broken, Child is red and listed again, and the undo clears it. |
 
 ### xunit tests: stopped, added, errors, skips, reruns, sources, modules and the command line (X342–X349)
 

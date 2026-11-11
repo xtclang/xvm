@@ -1868,7 +1868,7 @@ private const val EMBEDDED_BUILD = "with the embedded compiler"
 private const val SETTINGS_PAGE = "Settings | Build, Execution, Deployment | Ecstasy"
 
 /** Runs [body] with the project in embedded build mode, restoring the previous mode afterwards. */
-private fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> Unit) {
+internal fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> Unit) {
     val project = with(driver) { singleProject() }
     val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
     val previous = with(driver) { withContext(OnDispatcher.EDT) { execution.mode(project, "EMBEDDED") } }

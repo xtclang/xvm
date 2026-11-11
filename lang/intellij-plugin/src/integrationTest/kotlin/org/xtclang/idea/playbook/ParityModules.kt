@@ -1,9 +1,11 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.JsonParser
 import com.intellij.driver.client.utility
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
+import org.xtclang.idea.playbook.probe.HANG_SECONDS
 import java.nio.file.Files
 
 internal fun ParityScenarios.moduleCases() {
@@ -48,21 +50,59 @@ internal fun ParityScenarios.moduleCases() {
         val problems = with(driver) { utility(ProblemFilesProbe::class) }
         val ide = with(driver) { singleProject() }
 
+        fun described() =
+            "problem file ${problems.problem(ide, path)}, errors LSP4IJ holds ${problems.closedErrors(ide, path)}, " +
+                "Project Errors ${problems.projectErrors(ide, path)}"
+
+        // Project Errors lists each of the member's errors once: no two at the same place with the same text
+        fun listedOnce(listed: List<String>) = listed.isNotEmpty() && listed.distinct() == listed
+
+        // with errors, Project Errors lists those of the report that LSP4IJ holds for the closed member, each once
         fun closed(errors: Boolean) =
             awaitUi(
-                "closed $id/$member ${if (errors) "has errors and is" else "has none and is no"} problem file",
+                "closed $id/$member ${if (errors) "has errors and is" else "has none and is no"} problem file, " +
+                    "its errors ${if (errors) "listed once" else "not listed"} in Project Errors",
                 HANG_LIMIT,
-                errorMessage = {
-                    "Closed $id/$member: problem file ${problems.problem(ide, path)}, " +
-                        "errors LSP4IJ holds ${problems.closedErrors(ide, path)}"
-                },
-            ) { problems.problem(ide, path) == errors && (problems.closedErrors(ide, path) > 0) == errors }
+                errorMessage = { "Closed $id/$member: ${described()}" },
+            ) {
+                val held = problems.closedErrors(ide, path)
+                val listed = problems.projectErrors(ide, path)
+                problems.problem(ide, path) == errors &&
+                    (held > 0) == errors &&
+                    if (errors) listedOnce(listed) && listed.size == held else listed.isEmpty()
+            }
 
-        // the member is not open, and the root's edit breaks it
+        // the member is not open, and the root's edit breaks it: its errors are in Project Errors without a Build
         replace(root, broken)
         closed(errors = true)
+        // a Build reports them too, in place of the report's, and Project Errors still lists each once. A Build compiles
+        // the configured source modules only, so the root's module is configured for it: the Build of the broken root
+        // fails once the server has it
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(root.file), emptyList())))
+        embedded { execution, project ->
+            val text =
+                awaitUi(
+                    "the Build of the broken $id/${root.file} fails, once its module is configured",
+                    HANG_LIMIT,
+                    errorMessage = { build -> "The Build of the broken root: $build" },
+                    getter = { JsonParser.parseString(execution.build(project, HANG_SECONDS.toInt())).asJsonObject },
+                    checker = { it["errors"].asBoolean },
+                ).string("text")
+            check(text.lines().any { it.startsWith("${member.substringAfterLast('/')}:") && ": error: " in it }) {
+                "The Build reports no error in $member: $text"
+            }
+        }
+        awaitUi("$id/$member's errors are listed once in Project Errors after a Build", HANG_LIMIT, errorMessage = {
+            "After the Build, $id/$member: ${described()}"
+        }) { listedOnce(problems.projectErrors(ide, path)) }
+        // the failed Build opened the member at its first error, as IntelliJ does; closed again, it lists them once still
+        closeEditor(open(member))
+        closed(errors = true)
+        // the undo's report clears them, the Build's included
         replace(root, fixture(root.file))
         closed(errors = false)
+        // the rest of the case has the discovered module it started with
+        configure(emptyList())
         // opened while broken, it has the errors pulled for it, only those, and none once the root is restored
         replace(root, broken)
         closed(errors = true)
@@ -70,7 +110,9 @@ internal fun ParityScenarios.moduleCases() {
         diagnostics(child) { items -> items.any { it.severity == "Error" } }
         replace(root, fixture(root.file))
         clean(child)
-        awaitUi("open $id/$member is no problem file", HANG_LIMIT) { !problems.problem(ide, path) }
+        awaitUi("open $id/$member is no problem file, with no error in Project Errors", HANG_LIMIT, errorMessage = {
+            "Open $id/$member: ${described()}"
+        }) { !problems.problem(ide, path) && problems.projectErrors(ide, path).isEmpty() }
         // broken again and closed, it is a problem file with its errors again, and the undo clears it
         replace(root, broken)
         errors(child)
