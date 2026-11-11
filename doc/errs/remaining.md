@@ -30,11 +30,12 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   each with the line that reads it; linked from `lang/README.md`, `lang/doc/README.md` and the READMEs
   with partial lists. On errs and #693. AGENTS.md said the lang build flags default to `false`, which
   only master's `gradle.properties` does; corrected on both branches.
-- [ ] Six statements in other docs that the code no longer bears out, listed in the reference's
+- [x] Six statements in other docs that the code no longer bears out, listed in the reference's
   "Stale in other docs" section: `XTC_JAVA_HOME` in `lang/doc/manual-test-plan.md`, `-Dxtc.debug.lsp` in
   `lang/intellij-plugin/testing.md`, `xtc.formatting.tabSize` in the VS Code README, the
   `includeBuildLang` defaults in `lang/lsp-server/README.md` and `lang/README.md` (right for master),
   the launcher's `--socket` comment, and the DAP server's `logback.xml` comment. Fix each, or remove it.
+  All six corrected on 2026-11-11 (`4572f154e2`), on errs and #693; the reference's section now lists none.
 
 ## 2. LSP features
 
