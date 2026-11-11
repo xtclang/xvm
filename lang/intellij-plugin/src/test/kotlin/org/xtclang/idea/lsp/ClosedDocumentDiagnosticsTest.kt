@@ -96,6 +96,20 @@ class ClosedDocumentDiagnosticsTest {
     }
 
     @Test
+    fun `each document's report goes to Project Errors, open or closed, and a published one the report no longer has as cleared`() {
+        connection.documents["closed.x"] = Document.CLOSED
+        connection.documents["open.x"] = Document.OPEN
+        connection.documents["opening.x"] = Document.OPENING
+        diagnostics.refresh()
+        connection.answer(
+            report("closed.x" to listOf(diagnostic("one")), "open.x" to listOf(diagnostic("two")), "opening.x" to emptyList()),
+        )
+        diagnostics.refresh()
+        connection.answer(report("open.x" to emptyList()))
+        assertThat(connection.reports).containsExactly("closed.x [one]", "open.x [two]", "opening.x []", "open.x []", "closed.x []")
+    }
+
+    @Test
     fun `an unchanged report keeps what was published`() {
         connection.documents["a.x"] = Document.CLOSED
         diagnostics.refresh()
@@ -152,6 +166,9 @@ class ClosedDocumentDiagnosticsTest {
     private class Connection : ClosedDocumentDiagnostics.Connection {
         val documents = mutableMapOf<String, Document>()
         val events = mutableListOf<String>()
+
+        /** Each document's report, as Project Errors has it. */
+        val reports = mutableListOf<String>()
         var asked = 0
         var unavailable = false
         private var outstanding: CompletableFuture<WorkspaceDiagnosticReport>? = null
@@ -174,6 +191,13 @@ class ClosedDocumentDiagnosticsTest {
 
         override fun opened(uri: String) {
             events += "opened $uri"
+        }
+
+        override fun reported(
+            uri: String,
+            diagnostics: List<Diagnostic>,
+        ) {
+            reports += "$uri ${diagnostics.joinToString(",", "[", "]") { it.code.left }}"
         }
 
         fun answer(report: WorkspaceDiagnosticReport) = checkNotNull(outstanding).also { outstanding = null }.complete(report)
