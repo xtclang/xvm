@@ -755,8 +755,17 @@ passes with the workaround disabled. The gates are in
   keeps `setServerWrapper` for UP70. Built against a plugin from LSP4IJ `main` `0daf60cf`
   (`-Plsp4ijPlugin`): every commit compiles on the first base; at the tip, `spotlessCheck` and the
   compiles pass, the plugin's unit tests 213 of 219, `lsp-server` 58 and `XdkStdioTest` 66. The six
-  that fail test bridges whose fixes are on `main`, UP37, UP70 (two), UP71, UP73 and UP76, and fail
-  the same way on errs with only the version bump; they go with those bridges. Removable after the
+  that failed tested bridges whose fixes are on `main`, and failed the same way on errs with only the
+  version bump. As the user decided, the branch, which runs only with 0.30.0 and its nightlies, then
+  removed five bridges, one commit each, `b410dbf472` to `a362bbcf46`: UP76's tag (its teardown stays,
+  and the test checks a disposed wrapper stays stopped), UP37's `PhysicalExpressionFragments` (on
+  0.30.0 it would replace LSP4IJ's physical fragment with one that has no file), UP70's re-reports
+  and `setServerWrapper`, UP71's `DebugConsoleInput`, and UP73's `HeldEdits`,
+  `EditsBeforeCompletion` and `XtcParameterInfoHandler`. The sixth, `ClosedFileProblemsTest`'s "a file
+  the report no longer has", was the test's stub: it left a document out of its workspace report where
+  the server sends an empty one, which LSP4IJ `main`, pulling the report itself, keeps the errors of;
+  fixed on errs (`99e07387d1`), #693 and the branch, where the plugin's 216 unit tests now all pass.
+  UP69 stays. `DebugConsoleLines` is dead on 0.30.0 but untagged, and stays for now. Removable after the
   release besides the branch's own: UP37, UP44's plugin bridge, UP64, UP65, UP69 to UP71, UP73 to
   UP78 and X259's UP09 flush. It pins 0.30.0 and removes,
   each in its own commit, the bridges 0.30.0 makes unnecessary; the items below name them by their
