@@ -398,7 +398,7 @@ All settings live under the `xtc` namespace (`Cmd+,` / `Ctrl+,`):
 | `xtc.sourceRoots`                      | string[]  | `[]`    | Extra absolute directories indexed by the language server (e.g. XDK standard-library sources).           |
 | `xtc.formatting.indentSize`            | integer   | `4`     | Spaces per indentation level.                                                                            |
 | `xtc.formatting.continuationIndentSize`| integer   | `8`     | Spaces for continuation lines.                                                                           |
-| `xtc.formatting.tabSize`               | integer   | `4`     | Tab width in spaces.                                                                                     |
+| `xtc.formatting.tabSize`               | integer   | `4`     | Deprecated and unread: the formatter uses `indentSize`; `editor.tabSize` sets the visual tab width. |
 | `xtc.formatting.insertSpaces`          | boolean   | `true`  | Insert spaces instead of tabs.                                                                           |
 | `xtc.formatting.maxLineWidth`          | integer   | `120`   | Right-margin column.                                                                                     |
 

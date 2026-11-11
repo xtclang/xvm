@@ -160,10 +160,10 @@ section 2.3.
 ### 2.1 Command line
 
 The server is `java [JVM options] -jar xtc-lsp-server.jar` and speaks LSP over stdin and stdout
-only (`lsp/server/XtcLanguageServerLauncher.kt:195`). It takes no program arguments: `main` ignores
-them (`lsp/server/XtcLanguageServerLauncher.kt:145`). The main class is
+only (`lsp/server/XtcLanguageServerLauncher.kt:193`). It takes no program arguments: `main` ignores
+them (`lsp/server/XtcLanguageServerLauncher.kt:143`). The main class is
 `org.xvm.lsp.server.XtcLanguageServerLauncherKt` (`lang/lsp-server/build.gradle.kts:458`). The
-adapter is chosen before anything else (`lsp/server/XtcLanguageServerLauncher.kt:153`), and old log
+adapter is chosen before anything else (`lsp/server/XtcLanguageServerLauncher.kt:151`), and old log
 sessions are pruned at startup (`:161`).
 
 | Option | Added by | Read at |
@@ -178,7 +178,7 @@ sessions are pruned at startup (`:161`).
 
 | Property | Type, default | What it does | Read at |
 |----------|---------------|--------------|---------|
-| `xtc.lsp.adapter` | string, the jar's `lsp.adapter` (`compiler`) | The backend: `compiler` (also `xtc`, `full`), `treesitter` (also `tree-sitter`) or `mock`. Another value fails the start. Tree-sitter falls back to mock when its native library does not load, and the editor is told. | `lsp/server/XtcLanguageServerLauncher.kt:153`, values `:74` |
+| `xtc.lsp.adapter` | string, the jar's `lsp.adapter` (`compiler`) | The backend: `compiler` (also `xtc`, `full`), `treesitter` (also `tree-sitter`) or `mock`. Another value fails the start. Tree-sitter falls back to mock when its native library does not load, and the editor is told. | `lsp/server/XtcLanguageServerLauncher.kt:151`, values `:74` |
 | `xtc.lsp.semanticTokens` | boolean, else `XTC_LSP_SEMANTIC_TOKENS`, else the jar's `lsp.semanticTokens` (`true`) | Whether the server offers semantic tokens. | `lsp/server/XtcLanguageServer.kt:398` |
 | `xtc.lsp.compileLibraries` | boolean, `true` | Compile an opened XDK source's read-only copy with its whole library (section 4). Only the exact value `false` turns it off. It also needs a maximum heap of 1 GB less 64 MB; with less, each XDK source compiles alone and a warning is logged once. | `lsp/adapter/xdk/XdkLibrarySources.kt:73`, heap `:80`, `lsp/adapter/xdk/XdkAdapter.kt:691` |
 | `xtc.sourceRoots` | path list split on the platform's path separator, none | Extra source roots, merged with `xtcSourceRoots` and `XTC_SOURCE_ROOTS`. | `lsp/server/SourceRootResolver.kt:42` |
@@ -214,7 +214,7 @@ says how to set its inputs.
 
 | Key | Default | Used for | Read at |
 |-----|---------|----------|---------|
-| `lsp.adapter` | `compiler` | The backend when `-Dxtc.lsp.adapter` is absent | `lsp/server/XtcLanguageServerLauncher.kt:153` |
+| `lsp.adapter` | `compiler` | The backend when `-Dxtc.lsp.adapter` is absent | `lsp/server/XtcLanguageServerLauncher.kt:151` |
 | `lsp.semanticTokens` | `true` | Semantic tokens when neither override is set | `lsp/server/XtcLanguageServer.kt:402` |
 | `lsp.version` | the project version | The startup banner and the service status | `lsp/server/XtcLanguageServer.kt:396` |
 | `lsp.build.time` | the build's time, or `sourceDateEpoch` | The startup banner | `lsp/server/XtcLanguageServer.kt:397` |
@@ -521,11 +521,9 @@ take further Gradle arguments, such as `-Plsp4ijChannel`; the root tasks pass no
 
 ## Stale in other docs
 
-| Document | What it says | What the code does |
-|----------|--------------|--------------------|
-| `lang/doc/manual-test-plan.md:310`, `:1065` | `XTC_JAVA_HOME` points the extension at Java 25+. | Nothing reads `XTC_JAVA_HOME`. VS Code uses `xtc.java.home`, then `jdk-utils` discovery, which includes `JAVA_HOME` (`vsc/java.ts:22`). |
-| `lang/intellij-plugin/testing.md:678` to `:683` | Start the development IDE with `-Dxtc.debug.lsp=true` to debug the server. | No code reads `xtc.debug.lsp`; the snippet would have to be added. The server's debug port is LSP4IJ's setting (section 1.2). |
-| `lang/vscode-extension/README.md:401` | `xtc.formatting.tabSize` is the tab width. | The setting is deprecated and unread; the formatter uses `indentSize` (`vsc/editor-settings.ts:29`). |
-| `lang/lsp-server/README.md:861`, `:862`; `lang/README.md:31` | `includeBuildLang` and `includeBuildAttachLang` default to `false`; lang is disabled in `gradle.properties`. | Right for master, whose `gradle.properties` sets both `false` (`856fa585e4`, lines 109 and 110). This branch's `gradle.properties:114` and `:115` set both `true`, as errs and #693 have since `78249ebeaf`, so on this branch these lines are out of date. With neither property set, the code takes `true` (`settings.gradle.kts:92`, aggregator `:28`). |
-| `lsp/server/XtcLanguageServerLauncher.kt:26` (comment) | `java -jar xtc-lsp.jar --socket 5007` for socket communication. | `main` ignores its arguments; the server speaks stdio only. |
-| `lang/dap-server/src/main/resources/logback.xml:9` (comment) | The debug adapter logs to `~/.xtc/logs/dap-server.log`. | The server jar keeps its own `logback.xml`; debug sessions log to the server log (section 4). |
+None known. The survey behind this page found six statements in other documents that the code no longer bore
+out, and they were corrected on 2026-11-11: `XTC_JAVA_HOME` in the manual test plan, which nothing reads; the
+`-Dxtc.debug.lsp` toggle in the IntelliJ testing guide, which is code to add, not a property the plugin reads;
+`xtc.formatting.tabSize` in the VS Code README, deprecated and unread; the lang build flags' defaults in the
+language server's README and `lang/README.md`, which `gradle.properties` turns on; the launcher's `--socket`
+option, which it never had; and the DAP server's `logback.xml`, which applies only to that server's own tests.
