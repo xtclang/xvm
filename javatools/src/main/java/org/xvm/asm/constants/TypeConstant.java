@@ -3621,7 +3621,7 @@ public abstract class TypeConstant
                 // if we're building Object or some interface that Object depends on, then we ignore
                 // chicken-and-egg problems because the Object interface should still be able to be
                 // successfully and correctly built; specifically,  Object depends on Comparable,
-                // but in reality, Comparable "is a" Object, so we need to solve the chicken-and-egg
+                // but in reality, Comparable "isA" Object, so we need to solve the chicken-and-egg
                 // problem by allowing the creation of Object to proceed
                 return false;
             }
@@ -7712,9 +7712,6 @@ public abstract class TypeConstant
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, Loader argLoader, Label lblTrue) {
-        TypeConstant type1 = reg1.type();
-        assert type1.isA(this.removeImmutable()) || this.containsFormalType(false);
-
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {
             lblTrue = code.newLabel();
@@ -7871,9 +7868,9 @@ public abstract class TypeConstant
             }
         } else {
             // type is a non-primitive
-            TypeSystem   ts   = bctx.typeSystem;
-            ConstantPool pool = ts.pool();
-            SignatureConstant sig = switch (nOp) {
+            TypeSystem        ts   = bctx.typeSystem;
+            ConstantPool      pool = ts.pool();
+            SignatureConstant sig  = switch (nOp) {
                 case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                      Op.OP_IS_NEQ, Op.OP_JMP_NEQ  -> pool.sigEquals();
                 case Op.OP_IS_GT,  Op.OP_JMP_GT,
@@ -7884,9 +7881,8 @@ public abstract class TypeConstant
                 default                           -> throw new IllegalStateException();
             };
 
-            TypeConstant  typeFormal = isFormalType()
-                                        ? this
-                                        : type1.isFormalType() ? type1 : null;
+            TypeConstant  type1      = reg1.type();
+            TypeConstant  typeFormal = isFormalType() ? this : type1.isFormalType() ? type1 : null;
             boolean       isFormal   = typeFormal != null;
             ClassDesc     cd;
             String        sJitName;
