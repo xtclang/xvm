@@ -670,9 +670,10 @@ commands.addAll(jarIndex, listOf(
 Then attach a Remote JVM Debug configuration to `localhost:5005` from the outer IDE.
 Use `suspend=y` instead of `suspend=n` if you need to debug startup.
 
-**Option B — System property toggle:**
+**Option C — A system property toggle of your own:**
 
-A cleaner approach is to check a system property:
+Nothing in the plugin reads such a property today. To have one, add a check like this to
+`XtcLspConnectionProvider`:
 
 ```kotlin
 if (System.getProperty("xtc.debug.lsp") != null) {

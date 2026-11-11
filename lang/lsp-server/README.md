@@ -858,8 +858,8 @@ included build, which has no `gradle.properties` of its own.
 | `log` | `INFO` | Log level for the Ecstasy language and debug servers. Valid: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `lsp.adapter` | `compiler` | Parsing backend. Valid: `treesitter`, `mock`, `compiler` |
 | `lsp.semanticTokens` | `true` | Enable semantic token highlighting for the selected adapter |
-| `includeBuildLang` | `false` | Include `lang` as a composite build (IDE visibility, task addressability) |
-| `includeBuildAttachLang` | `false` | Wire lang lifecycle tasks to root build (requires `includeBuildLang=true`) |
+| `includeBuildLang` | `true` (`gradle.properties`; CI's push and pull request builds set it `false`) | Include `lang` as a composite build (IDE visibility, task addressability) |
+| `includeBuildAttachLang` | `true` (`gradle.properties`) | Wire lang lifecycle tasks to root build (requires `includeBuildLang=true`) |
 | `lsp.buildSearchableOptions` | `false` | Build IntelliJ searchable options index |
 
 ### Environment Variables
