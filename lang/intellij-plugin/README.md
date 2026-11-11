@@ -164,7 +164,7 @@ keeps the code it was built from, so once the file is edited a breakpoint is pla
 was built with, and one on a line changed since is marked invalid, saying why. Its Variables view
 shows the frame's locals and expands objects and arrays, a large array to its first 100 elements and
 how many more there are, since LSP4IJ does not read a variable's children a page at a time (UP42 in
-`doc/remaining.md`, LSP4IJ pull request [#1770](https://github.com/redhat-developer/lsp4ij/pull/1770)); LSP4IJ shows strings and numbers without their type. An object's computed properties and its `toString()` follow its fields as lazy
+`doc/errs/remaining.md`, LSP4IJ pull request [#1770](https://github.com/redhat-developer/lsp4ij/pull/1770)); LSP4IJ shows strings and numbers without their type. An object's computed properties and its `toString()` follow its fields as lazy
 variables, `(...)`, whose values run the program's code, for at most a second; expand one to show
 its value, since LSP4IJ does not show a Show value link for them yet (UP35, LSP4IJ pull request
 [#1768](https://github.com/redhat-developer/lsp4ij/pull/1768)). A mutable object's value ends with its
@@ -181,7 +181,7 @@ by LSP4IJ pull request [#1763](https://github.com/redhat-developer/lsp4ij/pull/1
 **Resume Program** runs it on and **Stop** ends it where it is. A breakpoint's condition, an
 expression such as `done` or `i % 2 == 0 && i > 0`, decides whether it stops. Its pass count and
 **Evaluate and log**, and a breakpoint whose **Suspend** is unchecked, wait on LSP4IJ, which sends only the condition (UP55
-and UP32 in `doc/remaining.md`, LSP4IJ pull requests [#1787](https://github.com/redhat-developer/lsp4ij/pull/1787)
+and UP32 in `doc/errs/remaining.md`, LSP4IJ pull requests [#1787](https://github.com/redhat-developer/lsp4ij/pull/1787)
 and [#1759](https://github.com/redhat-developer/lsp4ij/pull/1759)).
 An uncaught exception stops the program where it is thrown, by default, and the exception is the
 frame's first variable; exception filter conditions and the exception's stack in the hint wait on
@@ -195,7 +195,7 @@ not handle the `invalidated` event yet (UP40, LSP4IJ pull request [#1766](https:
 meanwhile; the configuration's **Let the program run while Evaluate Expression runs code** lets the
 rest of the program run too, without stopping at breakpoints, for code that waits on work the
 program's other fibers do. **Pause
-Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `doc/remaining.md`, fixed in
+Program** does nothing yet: LSP4IJ's DAP client does not pause (UP30 in `doc/errs/remaining.md`, fixed in
 LSP4IJ pull request [#1757](https://github.com/redhat-developer/lsp4ij/pull/1757)). The configuration's **Stop at the
 program's first line** stops it there, before the module's own code runs, as `stopOnEntry` does in VS Code.
 **Smart Step Into** (`Shift+F7`) chooses which call on the line to step into. **Run to Cursor**
