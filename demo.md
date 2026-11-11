@@ -7,7 +7,7 @@ not a claim that every XTC construct or LSP operation is complete. Checked again
 **Start with `auth` and `githubCLI` for a short tour.** The full eleven-module graph also compiles
 cleanly through the packaged server after configuring platformUI's generated resources below:
 49 document reports, no diagnostics. The source-location/resource and presentation fixes are tracked in
-[PLAT1–PLAT3](docs/errs-integration-plan.md#platform-demo-blockers-2026-09-29).
+[PLAT1–PLAT3](doc/errs-integration-plan.md#platform-demo-blockers-2026-09-29).
 
 ## Launch
 
@@ -198,7 +198,7 @@ Then demonstrate these real relationships, with all roots clean before trying re
    Never count an empty/refused result as completed refactoring support.
 
 The [adapter feature matrix](lang/doc/plans/plan-ide-integration.md#adapter-capability-matrix) and
-[remaining task list](docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+[remaining task list](doc/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 record the boundaries. Extract/inline/safe-delete have bounded compiler-proven implementations;
 use the shared playbook's exact examples to demonstrate those proof/refusal boundaries. A full
 pretty-printer, runtime call graph, reusable Run worker and debugger remain outside this tour.

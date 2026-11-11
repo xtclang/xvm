@@ -14,7 +14,7 @@
 > versioned edits. Wider rename, automatic editor project discovery, persistent workspace
 > indexing and finer-grained incremental recompilation remain open. Use
 > [the current feature matrix](plan-ide-integration.md) and
-> [the integration plan](../../../docs/errs-integration-plan.md) for current status and priorities.
+> [the integration plan](../../../doc/errs-integration-plan.md) for current status and priorities.
 
 ## Purpose
 
@@ -504,7 +504,7 @@ cycles across three self-terminating processes, recording queue identities, comp
 and sampled heap. It establishes local measurements, not prolonged soak or release budgets.
 X130 passes the selected VS Code attempt but remains intermittently unresolved; the extension-free
 probe records `not-reproduced`. See the
-[validation receipt](../../../docs/errs-integration-plan.md#reliability-validation-receipt-2026-10-01)
+[validation receipt](../../../doc/errs-integration-plan.md#reliability-validation-receipt-2026-10-01)
 for exact scope and the concrete remaining L62–L82 tasks.
 
 
@@ -514,7 +514,7 @@ fails only X130's host repaint after successful Move/Undo/Redo/resource checks; 
 is an empty edit. No compiler or production client change is warranted by that defect. A native
 window-focus guard fixes separate harness Undo failures. The upstream repair remains open and
 X130 is not relabeled as passing. See the
-[diagnosis and reproduction](../../../docs/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01).
+[diagnosis and reproduction](../../../doc/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01).
 
 
 L80 final audit (2026-10-01): all current provider/response families have a recorded capability
@@ -524,7 +524,7 @@ independently of push and related-document support. Compiler-only rename proposa
 advertised by other adapters. No language feature, embedding API or AST node is added. Exhaustive
 provider inventory and rich/reduced protocol tests cover the changes; the shared catalog remains
 152 and no new native receipt is claimed. See the
-[audit and validation](../../../docs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
+[audit and validation](../../../doc/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
 L80 is complete for current producers; L81/L82 acceptance and X130's upstream Explorer failure remain
 open. Future optional response fields require new negotiation checks.
 
@@ -534,15 +534,15 @@ shows file/workspace and live compiler queue activity, and stops periodic report
 close. All five refresh providers have controlled lifecycle regressions; X146 observes each host's
 negotiated native refresh handlers. Malformed-request recovery and two-process same-URI/token isolation
 are covered over real stdio. This adds no language capability or AST/embedding API. See the
-[L81 checkpoint](../../../docs/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
+[L81 checkpoint](../../../doc/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
 for exact validation: IntelliJ visible Cancel passes; VS Code physical-click and broader
 multi-window acceptance remain open. The larger IntelliJ fixture's bulk-replacement freeze is
 retained as an L82 scale investigation. Upstream defects and
-removable bridges are centralized in the [UP register](../../../docs/errs-upstream-issues.md).
+removable bridges are centralized in the [UP register](../../../doc/errs-upstream-issues.md).
 
 L82 scale diagnosis: UP17 is now independently reproduced in IntelliJ's range-marker tree without
 an LSP client. The decorated native replacement still fails the freeze gate; the opt-in
-[probe and receipts](../../../docs/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
+[probe and receipts](../../../doc/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
 separate marker-update time from compiler time. Large-file responsiveness remains open; no
 advertised language capability or AST/embedding API changes as a result of this diagnosis.
 
@@ -550,7 +550,7 @@ L81 acceptance update (2026-10-05): the earlier visible-Cancel and shared-proces
 closed. Both editors pass X145/X146/X147/X259; VS Code also passes real hot-exit restoration in both
 separate-instance and shared-Electron-process modes. No new compiler/API feature is implied.
 UP15's error classification and L82's release/scale work remain explicit in the
-[current receipt](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
+[current receipt](../../../doc/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
 
 
 Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
@@ -563,7 +563,7 @@ tests, three Gradle model tests and five backend build-model tests. Late daemon 
 cancellation is guarded by import identity; the configuration cache is reused across identities.
 Automatic exports require an initial imported report; VS Code uses public Gradle task events in
 trusted local workspaces. The catalog has 270 cases; this was a selected run, not a full rerun.
-See the [contract, failures and commit map](../../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
+See the [contract, failures and commit map](../../../doc/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
 
 
 UI3/UI4/UI6 now expose ordered external libraries and module-specific source attachments in both
@@ -575,12 +575,12 @@ text; matching sources are required. External attachment views do not yet export
 monikers or support arbitrary semantic queries inside library source text. IntelliJ uses protected
 fallback files (UP25); VS Code uses the virtual content provider. Shared X266–X268 cover the controls,
 persistence, navigation and invalid-input retention. See the
-[contract and validation](../../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
+[contract and validation](../../../doc/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
 Machine-local JVM settings, explicit restart, process-owned log retention and bounded live-server
 export are implemented with shared X269/X270 (selected acceptance passes in both editors). They add host support controls,
 not compiler semantics or a new advertised LSP capability. Broader multi-root/remote-workspace
 acceptance, offline export and L82 release evidence remain; Run/DAP, color and notebooks retain
-their recorded scope. See the [runtime/log contract](../../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+their recorded scope. See the [runtime/log contract](../../../doc/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
 
 
 L77's opt-in document-color prototype, which recognized only a test-fixture RGBA constructor, was
@@ -589,10 +589,10 @@ Document colors put swatches and a picker next to color values in source; they d
 code. Source highlighting is theme-based semantic tokens: X41/X154 and dark/light/high-contrast
 captures verify it, and the IDE theme chooses colors from the server's token classifications.
 Document colors would return only if Ecstasy gains a real color type. See the
-[removal record](../../../docs/errs-integration-plan.md#l77-color-prototype-removed-2026-10-21).
+[removal record](../../../doc/errs-integration-plan.md#l77-color-prototype-removed-2026-10-21).
 
 The October 7 source-highlighting follow-up adds resolved annotation occurrences and bundled-library
 ownership, retaining lexical escape/keyword/literal detail. Shared X276/X277 cover native rendering,
 shadowing and damaged-source repair. Separate VS Code startup configurations establish exact
 lexical foreground/font parity across three themes; the harness no longer changes themes live.
-See the [completion receipt](../../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).
+See the [completion receipt](../../../doc/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).
