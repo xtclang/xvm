@@ -1,0 +1,3 @@
+<!-- Nothing to register: the optional dependency on IntelliJ 2026.3's Problems view plugin only makes its classes,
+     ProblemsCollector's among them, visible to the plugin. -->
+<idea-plugin/>
