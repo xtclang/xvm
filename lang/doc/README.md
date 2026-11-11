@@ -6,6 +6,7 @@
 - [IntelliJ plugin](../intellij-plugin/README.md) and [testing](../intellij-plugin/testing.md): native actions, settings and test harnesses.
 - [VS Code extension](../vscode-extension/README.md): installation, commands and native tests.
 - [Manual playbook](manual-test-plan.md): copyable examples, expected behavior, automated selections and client limitations.
+- [Configuration reference](configuration.md): every editor setting, server property, environment variable, build property and path of the tooling, with the code that reads each.
 - [Embedded build and run](../lsp-server/README.md#embedded-build-and-run): building, running, debugging and testing with the language server's compiler in both IDEs; the [execution plan](../../doc/errs/plan-embedded-execution.md) records their design and delivery.
 - [Compiler architecture](../../javatools/README.md#compiler-architecture-for-language-tooling): why the embedding and source-analysis APIs are needed.
 
