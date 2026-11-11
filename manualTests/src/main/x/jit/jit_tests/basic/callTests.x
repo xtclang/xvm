@@ -426,8 +426,6 @@ package callTests {
             assert !source.find(False);
             assert Object found := source.find(True);
             assert found.as(String) == "value";
-            // TODO GG: equality through Object fails for the returned String under JIT
-            // assert found == "value";
         }
 
         interface Source {
