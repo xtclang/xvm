@@ -11,7 +11,10 @@ import com.intellij.openapi.editor.impl.DocumentMarkupModel
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiManager
 import com.intellij.util.DocumentUtil
+import com.redhat.devtools.lsp4ij.LSPFileSupport
 import kotlin.time.TimeSource
 
 /** Uses real platform documents, including an unattached control with no PSI, editor or LSP. */
@@ -54,9 +57,22 @@ object LargeFileProbe {
         }
     }
 
+    /**
+     * How far the editor's decoration of the file has come, for a wait for all of it: the number of semantic tokens
+     * LSP4IJ holds for the file's current text, absent until they are there, how many of the file's highlighters carry
+     * the attributes LSP4IJ paints a semantic token with, and whether IntelliJ has finished highlighting the file.
+     */
     @JvmStatic
-    fun snapshot(file: VirtualFile): String =
-        ReadAction.computeBlocking<String, RuntimeException> { Gson().toJson(snapshot(document(file))) }
+    fun decoration(
+        project: Project,
+        file: VirtualFile,
+    ): String = ReadAction.computeBlocking<String, RuntimeException> { Gson().toJson(decoration(project, document(file))) }
+
+    @JvmStatic
+    fun snapshot(
+        project: Project,
+        file: VirtualFile,
+    ): String = ReadAction.computeBlocking<String, RuntimeException> { Gson().toJson(snapshot(project, document(file))) }
 
     @JvmStatic
     fun replace(
@@ -65,7 +81,7 @@ object LargeFileProbe {
         text: String,
     ): String {
         val document = ReadAction.computeBlocking<DocumentImpl, RuntimeException> { document(file) }
-        val before = ReadAction.computeBlocking<Map<String, Any>, RuntimeException> { snapshot(document) }
+        val before = ReadAction.computeBlocking<Map<String, Any?>, RuntimeException> { snapshot(project, document) }
         val start = TimeSource.Monotonic.markNow()
         WriteCommandAction.runWriteCommandAction(project) { document.setText(text) }
         val elapsed = start.elapsedNow()
@@ -73,7 +89,7 @@ object LargeFileProbe {
             mapOf(
                 "phase" to "editor-replacement",
                 "before" to before,
-                "after" to ReadAction.computeBlocking<Map<String, Any>, RuntimeException> { snapshot(document) },
+                "after" to ReadAction.computeBlocking<Map<String, Any?>, RuntimeException> { snapshot(project, document) },
                 "milliseconds" to elapsed.inWholeMilliseconds,
             ),
         )
@@ -84,7 +100,47 @@ object LargeFileProbe {
         return requireNotNull(FileDocumentManager.getInstance().getDocument(file)) as DocumentImpl
     }
 
-    private fun snapshot(document: DocumentImpl): Map<String, Any> {
+    /**
+     * The tokens are those of the file's current text: LSP4IJ keeps a request's future only while the PSI file is as it
+     * was when the request was sent, and the PSI file is the document's text once the document is committed. Every
+     * token type of the server's legend is a standard one, which LSP4IJ's colors provider maps to an `LSP_` key, so
+     * each token of the text becomes one such highlighter.
+     */
+    private fun decoration(
+        project: Project,
+        document: DocumentImpl,
+    ): Map<String, Any?> {
+        val file = requireNotNull(FileDocumentManager.getInstance().getFile(document))
+        val tokens =
+            PsiManager
+                .getInstance(project)
+                .findFile(file)
+                ?.takeIf { PsiDocumentManager.getInstance(project).isCommitted(document) }
+                ?.let { psi ->
+                    LSPFileSupport
+                        .getSupport(psi)
+                        .semanticTokensSupport
+                        .validLSPFuture
+                        ?.takeIf { it.isDone && !it.isCompletedExceptionally }
+                        ?.getNow(null)
+                        ?.semanticTokens
+                        ?.data
+                        ?.let { it.size / 5 }
+                }
+        return mapOf(
+            "semanticTokens" to tokens,
+            "semanticHighlighters" to
+                DocumentMarkupModel.getExistingMarkupModels(document).sumOf { model ->
+                    model.allHighlighters.count { it.textAttributesKey?.externalName?.startsWith("LSP_") == true }
+                },
+            "highlightingDone" to HighlightingDone.finished(project, file.path),
+        )
+    }
+
+    private fun snapshot(
+        project: Project,
+        document: DocumentImpl,
+    ): Map<String, Any?> {
         val kinds =
             buildList {
                 document.processRangeMarkers { marker ->
@@ -94,6 +150,7 @@ object LargeFileProbe {
             }
         return mapOf(
             "phase" to "editor-snapshot",
+            "decoration" to decoration(project, document),
             "characters" to document.textLength,
             "markers" to document.rangeMarkersSize,
             "nodes" to document.rangeMarkersNodeSize,
