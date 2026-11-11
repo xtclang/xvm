@@ -32,6 +32,9 @@
     <depends>com.redhat.devtools.lsp4ij</depends>
     <!-- IntelliJ's test console, which shows xunit's tests -->
     <depends>intellij.testRunner.plugin</depends>
+    <!-- IntelliJ's Problems view, whose Project Errors ProjectErrors fills: part of the platform up to 2026.2, and from
+         2026.3 a bundled plugin of its own, whose classes a plugin sees only by depending on it -->
+    <depends optional="true" config-file="xtc-problems-view.xml">com.intellij.problemsView</depends>
 
     <actions>
         <action id="xtc.selectLanguageAdapter" class="org.xtclang.idea.lsp.SelectLanguageAdapterAction"
