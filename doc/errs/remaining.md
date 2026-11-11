@@ -131,14 +131,32 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   and passed when run again (`run-l2txtQ`, `run-gvT2Bt`, `run-CirjOs`).
 - [ ] For each host limitation, either a released fix with its acceptance passing, or a recorded
   release exception: UP16, UP23 (already accepted as an exception), UP25, UP26, UP17.
-- [ ] IntelliJ bulk replacement in a heavily decorated large file (UP17): after a platform fix,
-  pass the decorated 20,000-method X145 replacement without the EDT freeze. Rethink this gate
-  first (2026-11-11): with the probe's readiness fixed (`2cf2996adf`), the decorated 20,000-method
-  replacement starts fully decorated and takes 258 and 292 ms on IntelliJ 2026.2.3 without the fix,
-  since the server's tokens have shrunk, keywords and numbers no longer among them, to 60,003
-  highlighters from the 80,005 recorded; only the plain 80,000-marker controls still freeze, 6.3 to
-  7.3 s. The gate shows UP17 again only with a workload that reaches the freezing size; why the
-  decorated case no longer freezes at 60,003 is not known.
+- [ ] IntelliJ bulk replacement in a heavily decorated large file (UP17): a recorded comparison of
+  the large-file probe between IntelliJ 2026.2.3, which lacks the platform fix, and the first build
+  with intellij-community `5079f25b88`. Its decorated case opens a 40,000-method module, waits until
+  all its 120,003 semantic highlighters are installed and replaces its second half in one `setText`;
+  its controls replace three quarters of plain documents with 20,000 to 80,000 markers. Each record
+  gives the time and `invalidBelowValid`, the most highlighters or markers the edit invalidates
+  below one that it keeps, which sets the cost without the fix (why, and why the 20,000-method
+  replacement that kept a quarter stopped freezing: the UP17 items under
+  [our fixes](#intellij-platform-and-vs-code-our-fixes-filed-2026-10-28)). Without the fix, in the
+  container on 2026-11-11 (`run-10918673005354525358`, `run-6810812479400253317`, their receipts kept in
+  `~/shared/xtc-up17-gate-2026-11-11/`, as the container prunes old runs): 8,161 and
+  7,862 ms with 54,468 below a kept highlighter, each reported by the IDE as a UI freeze in
+  `IntervalTreeImpl.maxEndOf`, and 4.5 and 5.3 s for 80,000 plain markers with 59,521. The gate
+  passes when the fixed build's receipt starts fully decorated, with the same `invalidBelowValid`,
+  its replacement and controls take only the edit's own work instead of seconds, of the order of
+  the 276 ms that keeping a quarter of 20,000 methods took with 1,024 below a kept highlighter
+  (`run-7878288516979224096`), and the probe's marker checks hold with no IDE errors. Nothing
+  asserts a time: the two receipts are compared. No build with the fix could be had on
+  2026-11-11: 2026.2.4, 2026.3 and its 263 EAP candidates lack it, and the `master` (271) builds
+  that have it are only in JetBrains' nightly repository, which is internal. Once a 2027.1 EAP or a
+  backport has it, set `lang-intellij-ide` in `gradle/libs.versions.toml` to it, which the plugin
+  then also compiles against (an EAP needs Starter's `useEAP(<build>)` in `PlaybookIde` instead of
+  `withVersion`), and run `lang/intellij-plugin/container/playbook.sh gradle
+  :lang:intellij-plugin:testCompilerPlaybook --tests '*CompilerPlaybookTest.largeFileEditing'
+  -PintellijLargeFileProbe=true -Plsp.adapter=compiler -PincludeBuildLang=true
+  -PincludeBuildAttachLang=true`.
 - [ ] At closure, update together: this list, the integration plan's checklist, the capability
   matrix, the playbook, the AST/API ownership record and the extraction map.
 
@@ -1304,6 +1322,28 @@ editor, which its probe never measured (the probe item below).
   and fails if it started with fewer. In the container, `run-2693557204668213345` and
   `run-17493816147983052741` started with 60,003 of 60,003 and took 258 and 292 ms; the gate's
   problem that this shows is under L82 above.
+- [x] UP17: find why the decorated replacement stopped freezing, and give the probe a workload
+  that shows UP17 again (2026-11-11, `2f09c71ccd`). Read in 2026.2.3's sources: the highlighters
+  are in the markup model's own `RangeHighlighterTree`, but that is a `RangeMarkerTree` like the
+  document's, updated the same way; `setText` under `WriteCommandAction` takes no bulk path, and
+  `DocumentImpl.replaceString` trims the replacement to a deletion of the last three quarters.
+  Without the fix, the tree removes the nodes an edit invalidates one at a time and after each
+  recomputes `maxEnd` for every valid node above it, over all the invalidated nodes still below
+  that node; invalidated nodes above are skipped. The cost is the square of the most invalidated
+  nodes below one valid node, which depends on where the edit starts in the tree, not on its size.
+  The daemon installs highlighters in ascending order, which puts the red-black tree's root at
+  2^k − 1, at 0.2 to 0.4 of the nodes. Keeping a quarter of October's 80,005 highlighters (4 tokens
+  a method) left the root at 16,383 valid with about 59,500 invalidated below it (14.6 s); of
+  today's 60,003 (3 tokens a method) the 15,003 kept fall short of the root, the edit invalidates
+  the root and all joined to it, and only 1,024 hang below a kept highlighter (276 ms in
+  `run-7878288516979224096`). Plain markers do the same: with 2026.2.3's classes outside the IDE,
+  20,000/40,000/60,000/80,000 markers took 386/1,278/116/5,048 ms with 14,881/29,761/512/59,521
+  below a kept one. The probe now records that number as `invalidBelowValid` and replaces the
+  second half, which starts past the root at any size: 2,087 ms with 27,236 for 20,000 methods
+  (same run), 8,161 and 7,862 ms with 54,468 for 40,000 (`run-10918673005354525358`,
+  `run-6810812479400253317`). JetBrains' fix as committed, ported onto 2026.2.3's two classes, took
+  22 to 101 ms for all of these outside the IDE; its guard, affected nodes times the tree's depth
+  above its node count, holds for them.
 - [ ] UP24 (IntelliJ Platform): filed as [IJPL-259881](https://youtrack.jetbrains.com/issue/IJPL-259881), a duplicate of the older
   [IJPL-29917](https://youtrack.jetbrains.com/issue/IJPL-29917) and [IJPL-223024](https://youtrack.jetbrains.com/issue/IJPL-223024); our [#3727](https://github.com/JetBrains/intellij-community/pull/3727) (open, 2026-10-28; JetBrains asked
   vobal-jb to review it on 2026-11-02). To do: get it
@@ -1319,9 +1359,9 @@ editor, which its probe never measured (the probe item below).
 - [ ] UP16 (VS Code): our [microsoft/vscode#344760](https://github.com/microsoft/vscode/pull/344760) (open, 2026-10-28) for the existing
   microsoft/vscode#219122. To do: get it merged.
 - [ ] After each is fixed and released: remove the matching test or editor workaround and pass its
-  gate (UP16: X130 and the standalone reproduction; UP17: the decorated X145; UP20: Rename and focus
-  recovery cases; UP24: formatting history without the write command; UP29: restart X137/X146/X259
-  without `UiWaits`).
+  gate (UP16: X130 and the standalone reproduction; UP17: the large-file probe's decorated
+  replacement; UP20: Rename and focus recovery cases; UP24: formatting history without the write
+  command; UP29: restart X137/X146/X259 without `UiWaits`).
 - UP23 (VS Code overlapping-move Undo) has no fix; X218 stays a failed assertion and an accepted
   exception unless the host gains an API for it. Filed as [microsoft/vscode#344765](https://github.com/microsoft/vscode/issues/344765), fixed by our
   [microsoft/vscode#344772](https://github.com/microsoft/vscode/pull/344772) (2026-10-28). To do: get it merged; after a release, X218 passes with child-first moves.
