@@ -23,13 +23,13 @@ internal fun CodeInsightTestFixture.synchronizer(file: PsiFile): DocumentContent
 /**
  * Runs [typing] in [file] with its edits held, as LSP4IJ holds an edit outside a test until IntelliJ commits the
  * document, which can come after the request that the typing leads to: Ctrl+Space commits the document and then waits
- * on the EDT for the first items, so the held edit went out after the request.
+ * on the EDT for the first items. LSP4IJ sends the edits it holds before a request about the document (#1738).
  */
 internal fun CodeInsightTestFixture.holdingEdits(
     file: PsiFile,
     typing: CodeInsightTestFixture.() -> Unit,
 ) {
-    // TODO LSP4IJ: UP73 — in a test LSP4IJ sends an edit at once, so the test holds it as LSP4IJ does in the IDE
+    // in a test LSP4IJ sends an edit at once, so the test holds it as LSP4IJ does in the IDE
     val synchronizer = synchronizer(file)
     val document = editor.document
     document.removeDocumentListener(synchronizer)

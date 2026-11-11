@@ -8,6 +8,7 @@ import com.intellij.testFramework.fixtures.CompletionAutoPopupTester
 import com.intellij.testFramework.runInEdtAndGet
 import com.intellij.testFramework.runInEdtAndWait
 import com.intellij.util.ui.UIUtil
+import com.redhat.devtools.lsp4ij.features.signatureHelp.LSPParameterInfoHandler
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.SignatureHelp
@@ -40,7 +41,7 @@ class XtcParameterInfoTest {
     fun `a typed call's parenthesis shows the signature`() {
         // without a handler for the file's language nothing would ever show, which the wait below cannot tell
         assertThat(LanguageParameterInfo.INSTANCE.allForLanguage(XtcIntelliJLanguage)).hasAtLeastOneElementOfType(
-            XtcParameterInfoHandler::class.java,
+            LSPParameterInfoHandler::class.java,
         )
         editor.open("Calls.x", "module M {\n    void run(Deck deck) {\n        <caret>\n    }\n}\n") { }
         val tester = CompletionAutoPopupTester(editor.fixture)
