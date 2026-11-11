@@ -991,7 +991,11 @@ passes with the workaround disabled. The gates are in
   [#1868](https://github.com/redhat-developer/lsp4ij/pull/1868), all merged 2026-11-05 and
   unreleased, checked 2026-11-11 (see `errs-upstream-issues.md`'s UP70 row). To do: after a release
   with them, remove both parts of the bridge.
-- [ ] IntelliJ's Problems view still lists a closed file's errors only after **Build**: its Project
+- [ ] Run the IntelliJ playbook on 2026.3: its IDE Starter follows the IDE it compiles against, and
+  262's cannot drive 2026.3; the Project Errors runs on 2026.3 took an uncommitted Starter 263 patch
+  (its recipe in `b7251e99cd`'s message), and each then failed in the playbook's workspace cleanup,
+  which the 263 port does not handle.
+- [x] IntelliJ's Problems view still lists a closed file's errors only after **Build**: its Project
   Errors tab is fed by `ProblemsCollector`, which the embedded build reports to
   (`EmbeddedBuildProblems`), not by IntelliJ's problem files, which LSP4IJ reports to; LSP4IJ `main`
   (`0daf60cf`, 2026-11-11) reports nothing to `ProblemsCollector`. Designed 2026-11-11, not built:
@@ -1032,6 +1036,23 @@ passes with the workaround disabled. The gates are in
   2026.2 and twice after a Build on 2026.3. How to compare them: X341 in the container on both
   2026.2.3 and 2026.3, counting a closed member's error in Project Errors without a Build, after a
   Build, and after its fix, and the playbook's cases that navigate from a Build window error.
+  Landed 2026-11-11 on errs (`3fb8d14ea6` to `c61c06e917`) and #693, with option 1 (`b7251e99cd`:
+  the Build window's messages read `File.x:line:col: …` and navigate there, not grouped by file).
+  Found on the way: IntelliJ 2026.3 moved the Problems view into the bundled plugin
+  `com.intellij.problemsView`, so without an optional dependency on it (`1c1ba9f9c6`) the plugin
+  could not load `ProblemsCollector` there at all, errs' `EmbeddedBuildProblems` included, while
+  `verifyPlugin` said Compatible. The double listing is shown on 2026.3 (X341,
+  `run-5281959389485290655` errs, twice; `run-8704265814916614805` the provider before option 1,
+  twice; `run-356384057713571395` with it, once), from 2026.3's `BuildViewProblemsListenerRegistrar`
+  (`AbstractViewManager.java:61`, `intellij.platform.problemView.backend.xml:39`), which 2026.2.3 and
+  2026.2.4 lack; on 2026.2.3 X341 and X281 pass (`run-7835392141255911648`), and the tour's Build and
+  run (`run-tour-4914951615836343626`). The plugin's whole unit suite passes, 260 of 260, on both
+  branches, and `verifyPlugin`. A first run on errs failed seven tests from a stale
+  `build/instrumented/instrumentTestCode` of 2026-11-10: `instrumentCode` is off since #766, but the
+  IntelliJ Platform Gradle Plugin still puts that directory first on the test classpath, so old test
+  classes ran; the test task now leaves it out (`c61c06e917`). Earlier plugin unit-test runs in a
+  checkout that had it, such as the stub fix's on errs that day, may have run old classes; the full
+  suite since covers the same classes.
 
 ### LSP4IJ: a killed server comes back as several (UP72): fixed upstream; the gap left is #1863
 
