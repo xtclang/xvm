@@ -15,6 +15,8 @@ import org.eclipse.lsp4j.MonikerParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.ReferenceContext
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentContentCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
@@ -154,6 +156,66 @@ class LibraryContentProtocolTest {
                     "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it.",
                 )
             assertThat(documents.rename(RenameParams(document, method, "relativePath")).awaited()).isNull()
+        }
+    }
+
+    @Test
+    fun `a library source's content compiles with its whole library, and a call in it goes to the content of the method it calls`() {
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(mock(LanguageClient::class.java))
+            server
+                .initialize(
+                    editorInitializeParams().apply { capabilities.workspace.textDocumentContent = TextDocumentContentCapabilities() },
+                ).join()
+            server.initialized(InitializedParams())
+            // String's source, as VS Code opens it from Go to Definition: the server's ecstasy-library content of its copy
+            val string = definition(server)
+            assertThat(URI(string.uri).scheme).isEqualTo("ecstasy-library")
+            val workspace = server.workspaceService
+            val text = workspace.textDocumentContent(TextDocumentContentParams(string.uri)).join().text
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(string.uri, "xtc", 1, text)))
+            // a call in a method body to a method of another source of the library, which only the library's compile resolves
+            val lines = text.lines()
+            val row = lines.indexOfFirst { it.contains("buffer.add(transform(ch));") }
+            val call = Position(row, lines[row].indexOf("add"))
+            val document = TextDocumentIdentifier(string.uri)
+            val target =
+                documents
+                    .definition(DefinitionParams(document, call))
+                    .awaited()
+                    .left
+                    .single()
+            // in the content of StringBuffer.x, which the library's compile wrote, not in the file that holds it
+            assertThat(URI(target.uri).scheme).isEqualTo("ecstasy-library")
+            assertThat(target.uri).endsWith("/ecstasy/text/StringBuffer.x")
+            val declared = workspace.textDocumentContent(TextDocumentContentParams(target.uri)).join().text
+            assertThat(declared.lines()[target.range.start.line].substring(target.range.start.character)).startsWith("add(Char v)")
+            assertThat(
+                documents
+                    .hover(HoverParams(document, call))
+                    .awaited()
+                    ?.contents
+                    ?.right
+                    ?.value,
+            ).contains("StringBuffer add(Char v)")
+            // references, in the library's other sources too, which the library's compile wrote, are in their content
+            val references =
+                documents
+                    .references(ReferenceParams(document, call, ReferenceContext(true)))
+                    .awaited()
+            assertThat(references.map { it.uri.substringAfterLast("/ecstasy/") })
+                .contains("text/String.x", "text/StringBuffer.x")
+                .anyMatch { it != "text/String.x" && it != "text/StringBuffer.x" }
+            assertThat(references).allSatisfy { assertThat(URI(it.uri).scheme).isEqualTo("ecstasy-library") }
+            // that content is a library source as the first is: read only
+            val method = TextDocumentIdentifier(target.uri)
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, declared)))
+            assertThatThrownBy { documents.prepareRename(PrepareRenameParams(method, target.range.start)).awaited() }
+                .hasCauseInstanceOf(ResponseErrorException::class.java)
+                .hasRootCauseMessage(
+                    "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it.",
+                )
         }
     }
 

@@ -966,8 +966,8 @@ async function navigation(tour: Tour): Promise<void> {
         },
     });
     await tour.verify("One identity in the XDK's sources", 'textDocument/moniker', async () => {
-        // the library's source is a read-only view that the server does not analyze, so it has no outline and no
-        // navigation from it; its declarations still have the identities that the project's uses of them import
+        // the library's source is a read-only view; its declarations have the identities that the project's uses of
+        // them import
         const library = active().document;
         expect(path.basename(library.uri.path) === 'HashMap.x', () => `In ${library.uri.toString()}`);
         const monikers = (uri: string, position: vscode.Position) =>
