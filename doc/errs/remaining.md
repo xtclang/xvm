@@ -1310,7 +1310,14 @@ editor, which its probe never measured (the probe item below).
   equal errs', where `tsc` and eslint pass. Pushed on 2026-11-10 at the user's go-ahead.
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
   when the user decided that #693 takes everything that completes the LSP and DAP implementation,
-  distilled per feature, without tracking documents or plans. Last synchronized 2026-11-11: #693's
+  distilled per feature, without tracking documents or plans. Last synchronized 2026-11-11, later
+  that day: #693's tip `958d21cc15`, commit 286, after 284 `f6be30bcc4` and 285 `96e5a84288`, which
+  are errs `42f212eba0` (an `ecstasy-library:` source compiled with its library, which VS Code
+  never had), `642f6c83c8` (X350) and `2cf2996adf` (the UP17 probe's readiness), each the same
+  change as on errs; on #693, `LibraryContentProtocolTest` (6) and `XdkLibraryDocumentsTest` (6)
+  pass with every case, and the IntelliJ integration tests, `tsc` and `spotlessCheck` too. Pushed
+  with errs at the user's go-ahead. #693 cannot run CI meanwhile: it conflicts with master's #763 in
+  `TypeConstant.java` until it is rebased. Before that, the same day: #693's
   tip `94a02309e0`, commit 283, is errs `6a4684a033`, the tour's committed `.pyc` removed and
   `__pycache__/` and `*.pyc` ignored, the same patch; pushed with errs (`a0780d6b85..7745ae1fff`) at
   the user's go-ahead, and the links into errs' tracking files in #693's and xvm #741's descriptions
