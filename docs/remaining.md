@@ -83,7 +83,9 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   compile takes 8.6 s with a 2 GB heap and 10.6 s with 512 MB, its live data peaks at about 450 MB
   (heap histograms: mostly the compiler's TypeInfos, its MethodInfos and MethodBodies and their
   maps; the AST is about 15 MB and the LSP model 20 MB), and its analysis holds about 330 MB while
-  a copy stays open. With 384 MB it runs out of memory. Fixed in `3b9bb74e87` (local, errs):
+  a copy stays open. With 384 MB it runs out of memory. Fixed in `3b9bb74e87`, which #693's commit
+  282, `5f07a72eba`, carries together with `4ef6532ab0` (the eight files it changes are the same on
+  both branches; CI run 42904322639 passed on it):
   - each copy that opened recompiled the library (7 s more for a second file); one compile now
     serves every open copy of the library, and goes, with its memory, when the last one closes;
   - it held up the project's compiles on the one compiler worker (EmbeddingSupport asks a host to
@@ -225,8 +227,9 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   since, but errs' features since then are not in them, such as a library frame's line, and two of
   the IntelliJ video's recordings ran on `lagergren/tour-final` commits that errs does not have
   under those subjects (`91392b946d`, `45470dc5e7`), one of them a scrolling fix.
-- [ ] Remove `lang/intellij-plugin/tour/__pycache__/compose.cpython-315.pyc`, committed by
-  accident, and keep `__pycache__` out of the repository.
+- [x] Remove `lang/intellij-plugin/tour/__pycache__/compose.cpython-315.pyc`, committed by
+  accident, and keep `__pycache__` out of the repository: `6a4684a033` (2026-11-11), which also
+  ignores `*.pyc`.
 
 ### Beyond the current scope
 
@@ -870,7 +873,7 @@ passes with the workaround disabled. The gates are in
   the user's go-ahead. To do: get it merged, and after a release with it, check X285's prompt in
   IntelliJ's Debug console. Nothing of ours to remove.
 
-### LSP4IJ: a line typed in the Debug console goes nowhere (UP71): not filed
+### LSP4IJ: a line typed in the Debug console goes nowhere (UP71): filed as #1862, fixed by our #1866
 
 - [ ] UP71 (2026-11-05): LSP4IJ's `DAPConsoleView` attaches to the adapter's process for output
   only (`ConsoleViewRunningState(..., true, false)`, on 0.21.0 and `main` `1988ab6c`), so a line
@@ -878,9 +881,11 @@ passes with the workaround disabled. The gates are in
   in IntelliJ, and the console evaluates nothing. The IntelliJ tour found it with the card game, which
   waits for Enter at every turn. Worked around by `DebugConsoleInput`, which gives the console a
   running state with input; `LanguageServerDebugProcessHandler` then sends each typed line as an
-  `evaluate` with the context `repl`, as VS Code does (`DebugConsoleInputTest`). The draft of the
-  issue is in `errs-upstream-issues.md`'s UP71 row. To do: file it at the user's go-ahead, and after
-  a release that sends typed lines, remove `DebugConsoleInput`.
+  `evaluate` with the context `repl`, as VS Code does (`DebugConsoleInputTest`). Filed as
+  [#1862](https://github.com/redhat-developer/lsp4ij/issues/1862) on 2026-11-05, and fixed by our
+  [#1866](https://github.com/redhat-developer/lsp4ij/pull/1866), merged the same day (`171f1a7c`);
+  unreleased, checked 2026-11-11 (see `errs-upstream-issues.md`'s UP71 row). To do: after a release
+  with #1866, remove `DebugConsoleInput`.
 
 ### LSP4IJ: a closed file's errors never reached IntelliJ (UP69, UP70): bridged
 
@@ -898,12 +903,26 @@ passes with the workaround disabled. The gates are in
   [#1861](https://github.com/redhat-developer/lsp4ij/issues/1861). As a file closes, LSP4IJ clears
   its mark in a background task that nothing orders with the report of the errors then published
   for its closed document, so the clear could come last and leave the file unmarked; the client
-  reports the file again after each clear when LSP4IJ holds errors for it. To do: get #1861 fixed,
-  and file the closing file upstream.
+  reports the file again after each clear when LSP4IJ holds errors for it. Both halves are fixed
+  upstream: the opening file (#1861) by our [#1864](https://github.com/redhat-developer/lsp4ij/pull/1864)
+  and [#1867](https://github.com/redhat-developer/lsp4ij/pull/1867), the closing file by our
+  [#1868](https://github.com/redhat-developer/lsp4ij/pull/1868), all merged 2026-11-05 and
+  unreleased, checked 2026-11-11 (see `errs-upstream-issues.md`'s UP70 row). To do: after a release
+  with them, remove both parts of the bridge.
 - [ ] IntelliJ's Problems view still lists a closed file's errors only after **Build**: its Project
-  Errors tab is fed by the Build view's problems (`BuildViewProblemsService`), not by IntelliJ's
-  problem files, which LSP4IJ reports to. To do, if wanted: report the workspace report's errors to
-  IntelliJ's `ProblemsCollector` as well, which a Build's errors would then duplicate.
+  Errors tab is fed by `ProblemsCollector`, which the embedded build reports to
+  (`EmbeddedBuildProblems`), not by IntelliJ's problem files, which LSP4IJ reports to; LSP4IJ `main`
+  (`0daf60cf`, 2026-11-11) reports nothing to `ProblemsCollector`. Designed 2026-11-11, not built:
+  one provider takes Project Errors for Ecstasy files from both the build's errors and the workspace
+  report, per file the newest wins, so a workspace report for a file, an empty one included,
+  replaces the build's errors for it; its problems are values, so the two never show one error
+  twice (`ProjectErrorsCollector` keeps a set per file). The build's problems also become
+  `HighlightingDuplicateProblem`s (`@ApiStatus.Experimental`), which IntelliJ drops for a file with
+  highlighting problems, as it does a Gradle or Maven build's; the highlighting side,
+  `HighlightingBaseProblem`, is internal, so the workspace report's dedup has to be the provider's.
+  To check first: that the server's workspace report has an entry for a closed file without
+  errors. Gate: X341 extended, a closed file's error in Project Errors without a Build, once after
+  a Build.
 
 ### LSP4IJ: a killed server comes back as several (UP72): fixed upstream; the gap left is #1863
 
@@ -1271,9 +1290,11 @@ editor, which its probe never measured (the probe item below).
 - [ ] Keep #693 in sync with new `lagergren/errs` commits, the debugger's included since 2026-10-28,
   when the user decided that #693 takes everything that completes the LSP and DAP implementation,
   distilled per feature, without tracking documents or plans. Last synchronized 2026-11-10: #693's
-  tip `8d22b98fdc`, commit 280, has errs' work through `2e921902ce`, all but `8f650fe08c`, which
-  waits for #764; its commits 277–280 are in the integration plan's records of 2026-11-10. Before
-  that, 2026-11-09: #693's
+  tip `5f07a72eba`, commit 282, has errs' work through `3b9bb74e87`, all but `8f650fe08c`, which
+  master has as #764's `85de7ec12c`; 281 is `2e5854af45` (errs `663ea7cad4`), and 282 carries errs
+  `4ef6532ab0` and `3b9bb74e87` together. Before that, #693's tip `8d22b98fdc`, commit 280, had
+  errs' work through `2e921902ce`; its commits 277–280 are in the integration plan's records of
+  2026-11-10. Before that, 2026-11-09: #693's
   tip `ffe34357bb`, commit 276, rebased with errs onto master `8097b66a89` that day, has errs' work
   through the VS Code extension's npm upgrade, errs `623d20c12b`. Its commits 115–276 came from errs
   from 2026-11-04 to 2026-11-09, and both branches were rebased onto master `46a5536e1f` on
