@@ -2572,6 +2572,9 @@ async function debugging(tour: Tour): Promise<void> {
             await command('workbench.action.revertAndCloseActiveEditor');
         },
     });
+    // the step above makes .vscode only when it is recorded, as Build and run's tasks.json does: a run that records
+    // neither section, such as one of Tests and Settings, has none, and this section's setup runs in every run
+    await fs.mkdir(tour.file('.vscode'), { recursive: true });
     await fs.writeFile(tour.file('.vscode/launch.json'), JSON.stringify({
         version: '0.2.0',
         configurations: [
