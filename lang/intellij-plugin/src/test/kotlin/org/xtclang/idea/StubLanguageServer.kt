@@ -105,6 +105,9 @@ class StubLanguageServer(
     /** The documents of the workspace report and their diagnostics, by URI, which the report has in URI order. */
     val reported = ConcurrentHashMap<String, List<Diagnostic>>()
 
+    /** Every document a workspace report has had; a later report gives one that is gone from [reported] no diagnostics. */
+    private val everReported = ConcurrentHashMap.newKeySet<String>()
+
     /** How the server resolves a code action, as codeAction/resolve answers: by default, as it came. */
     @Volatile
     var resolve: (CodeAction) -> CodeAction = { it }
@@ -187,9 +190,15 @@ class StubLanguageServer(
 
     override fun diagnostic(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> {
         requests += "workspace/diagnostic"
+        val current = reported.toMap()
+        everReported += current.keys
+        // as the real server does (DiagnosticReports.workspace), a document no longer reported gets an empty report, so
+        // that no client keeps its errors: LSP leaves open what a client does with a document a report leaves out. The
+        // server sends it once to each client, or again to one that names its old result ID; the stub, which gives no
+        // result IDs, sends it each time
         val items =
-            reported.toSortedMap().map { (uri, diagnostics) ->
-                WorkspaceDocumentDiagnosticReport(WorkspaceFullDocumentDiagnosticReport(diagnostics, uri, null))
+            everReported.sorted().map { uri ->
+                WorkspaceDocumentDiagnosticReport(WorkspaceFullDocumentDiagnosticReport(current[uri].orEmpty(), uri, null))
             }
         return CompletableFuture.completedFuture(WorkspaceDiagnosticReport(items))
     }
