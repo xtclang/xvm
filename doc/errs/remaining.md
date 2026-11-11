@@ -1005,6 +1005,33 @@ passes with the workaround disabled. The gates are in
   To check first: that the server's workspace report has an entry for a closed file without
   errors. Gate: X341 extended, a closed file's error in Project Errors without a Build, once after
   a Build.
+  Built 2026-11-11 on `lagergren/project-errors` (`83982dea8c`, `8155cfbc67`), not yet on errs:
+  `ProjectErrors` replaces `EmbeddedBuildProblems` as the one provider; the server stopping clears
+  the report's errors; the UP69 bridge passes each document's full report, open or closed, as a
+  file and its diagnostics, the shape of LSP4IJ `main`'s `LSPDiagnosticFeature.diagnosticsUpdated`
+  (#1704), which feeds it on 0.30.0 when the bridge goes; messages are read through LSP4IJ's
+  `getMessage`, since the plugin compiles against LSP4J 0.24 and gets 1.0.0's diagnostics. The
+  check first holds: `DiagnosticReports.workspace()` gives every document of an analyzed module a
+  full report, an empty one when clean or fixed, and a removed one an empty report once. Tested:
+  37 unit tests with `StubLanguageServer` (a closed file's error without a Build, once after one,
+  a report that clears it removes the build's copy too; one bridge test), `verifyPlugin`
+  compatible, and X341 extended in the container on 2026.2.3 (`run-59451308402330961`), its root's
+  module configured for the Build, since a Build compiles configured modules only, and the member
+  closed again after it, since a failed Build opens the first error. Found then: IntelliJ 2026.3
+  (263.7307.200) copies every error of the Build window into Project Errors itself
+  (`BuildViewProblemsService`, which 2026.2 connects to Gradle's and Maven's views only), so there
+  an error shows twice after a Build, IntelliJ's copy and ours, and ours cannot retire IntelliJ's,
+  whose problems are equal only to themselves; errs' `EmbeddedBuildProblems` likely does the same
+  on 2026.3 today (inferred). Decided 2026-11-11, option 1: the embedded build sends its errors to
+  the Build window as plain messages that navigate to their file and position, not as file
+  messages, which IntelliJ does not copy, so `ProjectErrors` stays the one source on every
+  version; its cost, that the Build window lists the errors without grouping them under their
+  files. Not taken, kept here to reevaluate: (2) on 2026.3, leave the build's errors to IntelliJ's
+  copy and drop ours, where a closed file would show IntelliJ's copy and the live one, and
+  IntelliJ's copy outlives a fix until the next Build; (3) keep the change as built, right on
+  2026.2 and twice after a Build on 2026.3. How to compare them: X341 in the container on both
+  2026.2.3 and 2026.3, counting a closed member's error in Project Errors without a Build, after a
+  Build, and after its fix, and the playbook's cases that navigate from a Build window error.
 
 ### LSP4IJ: a killed server comes back as several (UP72): fixed upstream; the gap left is #1863
 
