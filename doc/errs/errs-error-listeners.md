@@ -63,7 +63,7 @@ There are three kinds of change in this branch:
 
 ## Review the foundations separately from the complete adapter
 
-The [javatools migration guide](../javatools/lsp-compiler.md#why-this-is-a-prerequisite-for-the-compiler-backed-lsp)
+The [javatools migration guide](../../javatools/lsp-compiler.md#why-this-is-a-prerequisite-for-the-compiler-backed-lsp)
 maps the listener contracts to focused tests and distinguishes required behavior from API design
 choices. [PR #680](https://github.com/xtclang/xvm/pull/680) introduces reporting/state composition.
 The explicit-listener migration moves callers to explicit destinations and suppression; the
@@ -74,10 +74,10 @@ those later paths are done.
 
 These contracts have concrete consumers in the implemented adapter:
 
-* [XdkAdapter](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt),
+* [XdkAdapter](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt),
   `runCursorAnalysis`, gives each cursor request a collector and an abort predicate based on
   whether that request is stale. The host can need to stop without emitting another error.
-* [SemanticModelBuilder](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModelBuilder.kt),
+* [SemanticModelBuilder](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModelBuilder.kt),
   `receiverMembers`, forwards TypeInfo diagnostics to the request listener while tracking whether
   this particular lookup failed. It refuses unusable results and preserves the caller's stop policy.
 
@@ -89,8 +89,8 @@ diagnostics, hiding an abort request, or treating failed lookup results as valid
 
 ## The reporting contract
 
-The contract is implemented in [ErrorListener](../javatools/src/main/java/org/xvm/asm/ErrorListener.java)
-and [ErrorList](../javatools/src/main/java/org/xvm/asm/ErrorList.java).
+The contract is implemented in [ErrorListener](../../javatools/src/main/java/org/xvm/asm/ErrorListener.java)
+and [ErrorList](../../javatools/src/main/java/org/xvm/asm/ErrorList.java).
 
 ### Recording and stopping are separate operations
 
@@ -189,7 +189,7 @@ The parser previously had its own speculative-reporting mechanism. A successful 
 could lose warnings because keeping its tokens did not keep every diagnostic. `Parser.Attempt`
 now uses a listener branch: keeping the parse merges its reports; rollback restores the tokens
 and discards them. Parser lookahead and resolver callbacks use a
-[Reporting](../javatools/src/main/java/org/xvm/asm/Reporting.java) scope so exceptional exits restore
+[Reporting](../../javatools/src/main/java/org/xvm/asm/Reporting.java) scope so exceptional exits restore
 the prior destination. The module-name scan no longer replaces the parser's listener field.
 
 Declaration and statement loops now use the parser's recovery helpers. A malformed statement can
@@ -238,7 +238,7 @@ not cached as successful absence. The embedding boundary converts these failures
 
 ### 3. Resolution and validation
 
-[StageMgr](../javatools/src/main/java/org/xvm/compiler/ast/StageMgr.java) retains the supplied
+[StageMgr](../../javatools/src/main/java/org/xvm/compiler/ast/StageMgr.java) retains the supplied
 listener and passes it into AST stage operations. Resolution collectors must expose their reporting
 destination instead of inheriting an implicit silent default. These changes prevent an AST
 validation error from losing the request's listener halfway through the call chain.
@@ -308,7 +308,7 @@ launcher abort remains an abort with a known diagnostic.
 
 ### 6. Completion, cancellation and failure handling
 
-[EmbeddingSupport](../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) returns a
+[EmbeddingSupport](../../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) returns a
 `Compilation` containing whatever was produced: a successful module, a file structure and its
 pool, and a parsed AST when available. Failure no longer discards every artifact by returning only
 null. `sourceTrees()` retains available per-file syntax, including recovery results. `parsed()`
@@ -373,7 +373,7 @@ location without a hand-built argument array. They simplify reporting; they do n
 a precise source location for a structure that never had one. The old array-shaped overloads
 remain deprecated. Diagnostic origin metadata helps trace reporting without affecting identity.
 
-The [XdkAdapter](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt) converts
+The [XdkAdapter](../../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt) converts
 compiler diagnostics into editor data and owns one analysis per module scope. An edit invalidates
 all of that module's views; only its current request may install the replacement. The server
 publishes diagnostics at each member's URI, including unchanged siblings reanalyzed because of the
@@ -391,7 +391,7 @@ information.
 
 L80/L81 also makes pending reader ownership explicit: canceling a hover/reference request does not
 cancel shared document analysis, and close retires the public request even if its analysis ignores
-cancellation. Progress tokens own only their requests. The [protocol coverage map](../lang/doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
+cancellation. Progress tokens own only their requests. The [protocol coverage map](../../lang/doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
 links the controlled cancellation, negotiation and publication tests to editor acceptance.
 
 The semantic source bindings added to AST nodes serve hover and navigation. They are a separate
@@ -588,7 +588,7 @@ problems but do not make the underlying compiler reentrant.
 ### Executable compatibility examples, 2026-09-23
 
 The integrated API examples in
-[`EmbeddingApiCompatibilityTest`](../javatools/src/test/java/org/xvm/api/EmbeddingApiCompatibilityTest.java)
+[`EmbeddingApiCompatibilityTest`](../../javatools/src/test/java/org/xvm/api/EmbeddingApiCompatibilityTest.java)
 exercise stateful `void` reporting with separate abort queries, non-null boundaries, retained
 constructor signatures/current record patterns and the deprecated runtime-pool alias. The
 [compatibility contract](errs-integration-plan.md#compatibility-and-migration-contract) explicitly

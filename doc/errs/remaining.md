@@ -2,8 +2,8 @@
 
 Everything still open on `lagergren/errs`, as one list to tick off. Checked on 2026-11-04
 against [the integration plan](errs-integration-plan.md),
-[the execution plan](../lang/doc/plans/plan-embedded-execution.md),
-[the upstream register](errs-upstream-issues.md), [the PR roadmap](../pr-roadmap.md), and the live
+[the execution plan](plan-embedded-execution.md),
+[the upstream register](errs-upstream-issues.md), [the PR roadmap](pr-roadmap.md), and the live
 state of every upstream issue and pull request named here. When you tick an item, add the commit,
 PR or run that closes it.
 
@@ -14,7 +14,7 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ## 1. Stale documentation
 
-- [x] `lang/doc/plans/plan-embedded-execution.md`: R3 ticked. Its last condition, a `javatools`
+- [x] `doc/errs/plan-embedded-execution.md`: R3 ticked. Its last condition, a `javatools`
   test of the runtime part, is `EmbeddingSupportTest`, merged with #703 (`bdb674af5`); the
   integration plan closed R3 on 2026-10-19.
 - [x] `errs-upstream-issues.md`: LSP4J #999 (Gradle 9.8.1) recorded as merged on 2026-10-20
@@ -354,7 +354,7 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   (`fda3dc3e8`, `0540055e9`; shared X313, its logpoint VS Code only, UP32).
 - [x] Bounded evaluation's tier 2: calls and properties on the stopped fiber, with the decided
   deadlines, cancellation, side effects announced by `invalidated`, and the opt-in to run the whole
-  program (the console's `E`, `EM` and `WE`; lang/doc/plans/plan-bounded-evaluation.md). In five
+  program (the console's `E`, `EM` and `WE`; doc/errs/plan-bounded-evaluation.md). In five
   steps, R7r to R7v:
   - [x] R7r, the runtime runs code on the stopped fiber (`d77fb9b51`): `SessionDebugger.run()`, the
     fiber waiting again in the same stop, exceptions and compile errors as answers, no stops inside,
@@ -403,7 +403,7 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
 
 ### R9–R13: debugger features beyond R7
 
-Planned in [the execution plan](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance),
+Planned in [the execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance),
 after the R8 gate unless one is chosen to gate the release. The console debugger's commands they
 come from are in parentheses.
 
@@ -579,7 +579,7 @@ recorded partial coverage.
   Detaching drops the debugger's breakpoints, and the program runs on. Limits: the program's XDK
   must have this javatools; its console stays its own; one debugger at a time.
   Design for all three (2026-10-27) in
-  [the execution plan's R13](../lang/doc/plans/plan-embedded-execution.md#additive-delivery-and-acceptance):
+  [the execution plan's R13](plan-embedded-execution.md#additive-delivery-and-acceptance):
   a debug agent in the program's JVM, which `Runner` and `TestRunner` install through a new
   `DebuggerProvider` SPI for `--debug`, speaks the worker protocol's debug commands over a socket
   to the language server; Gradle-mode and command-line Debug connect back, `xec` listens for an
@@ -1371,7 +1371,7 @@ editor, which its probe never measured (the probe item below).
 - [ ] Release 0.5.0, the agreed boundary for the breaking listener and embedding API, with migration
   and recompilation notes.
 - [ ] Settle the reconciliation inventory in the roadmap's
-  [remaining work outside the prepared branches](../pr-roadmap.md#remaining-work-outside-the-five-prepared-branches).
+  [remaining work outside the prepared branches](pr-roadmap.md#remaining-work-outside-the-five-prepared-branches).
 - [x] Declined for master (2026-10-26): native `toString()` for `String`,
   `Char` and the integer types, or a native `String` `+` for them. A `String`'s `+`
   (`xString.invokeAdd`) calls `Utils.callToString()`, which runs Ecstasy code for these

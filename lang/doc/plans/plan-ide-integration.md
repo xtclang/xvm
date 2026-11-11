@@ -9,19 +9,19 @@ Live workspace/source navigation (L47–L49): unsaved headers and workspace-fold
 compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
 broken neighbor. Matching bundled XDK declarations open read-only source files. Complete reference
 and refactoring proofs still fail closed. This adds no AST state or compiler listener changes.
-See [scope, ownership and validation](../../../doc/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
+See [scope, ownership and validation](../../../doc/errs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
 > **Last Updated**: 2026-11-04 (R1–R13 done; L63's wider refactorings)
 
-The latest [L82 acceptance record](../../../doc/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06)
+The latest [L82 acceptance record](../../../doc/errs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06)
 separates native harness corrections, the production unchanged-library-settings invalidation bug,
 individual upstream bridge replacement tests and full-catalog outcomes. These repairs add no LSP
 capability or Java embedding/AST API. VS Code covers all 277 scenarios across recorded runs:
 276 pass and X218 retains the UP23 Undo failure. IntelliJ completes all 277 in one uninterrupted
 released-dependency run: 275 pass, X254/X257 retain UP25/UP26 partial status, zero failures and
 zero IDE errors. The subsequent
-[configuration responsiveness batch](../../../doc/errs-integration-plan.md#l82-configuration-responsiveness-2026-10-06)
+[configuration responsiveness batch](../../../doc/errs/errs-integration-plan.md#l82-configuration-responsiveness-2026-10-06)
 reduces 56-buffer graph-reset dispatch from roughly 8.5 seconds to 0.23 seconds and preserves
 successful independent module analyses. It uses operation-local scope maps and existing lifecycle
 ownership, with no new AST state, embedding API or advertised capability. Real platform checks
@@ -34,15 +34,15 @@ new full-catalog run.
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
 capability or default adapter. Backend validation and the broader AST separation follow-ups are
-recorded in the [integration plan](../../../doc/errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax).
+recorded in the [integration plan](../../../doc/errs/errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax).
 AST5 additionally shares read-only cursor/argument syntax queries in that package, with no capability
 change or new compiler state. AST1 and AST3 consolidate scope collection and capture projection
 in the existing compiler helpers, preserving the adapter's public results. Their focused
 200-test validation and commit map are recorded in the
-[follow-up receipt](../../../doc/errs-integration-plan.md#scope-and-capture-helper-follow-ups-ast1-and-ast3).
+[follow-up receipt](../../../doc/errs/errs-integration-plan.md#scope-and-capture-helper-follow-ups-ast1-and-ast3).
 
 Post-rebase validation and the Node 24 / VS Code 1.140.0 baseline are recorded in the
-[complete acceptance receipt](../../../doc/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
+[complete acceptance receipt](../../../doc/errs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
 No advertised LSP capability changed. Known UP23/UP25/UP26 limits remain explicit; IntelliJ
 fixture setup corrections are distinct from production behavior.
 
@@ -53,14 +53,14 @@ compiler-fitted lambda argument snippets. L65 follows property redirects and con
 bodies on validated concrete source types, while refusing non-written targets and ambiguous binary
 source spans. Shared X150–X154 carry the new native checks. Backend gates and all L64/L65 shared cases pass. The full-catalog runs retain VS Code X130 and
 intermittent IntelliJ X105 acceptance issues; exact receipts and remaining boundaries are tracked in
-[the closure record](../../../doc/errs-integration-plan.md#l64-closure-audit-and-acceptance-gate).
+[the closure record](../../../doc/errs/errs-integration-plan.md#l64-closure-audit-and-acceptance-gate).
 
-The accepted [embedded Run and debugging plan](plan-embedded-execution.md) defines the shared
+The accepted [embedded Run and debugging plan](../../../doc/errs/plan-embedded-execution.md) defines the shared
 compile/build and execution contracts for both clients, a persistent execution worker and fresh
 application containers per run. R1–R13 tracked that separate implementation, done by 2026-11-03. Since 2026-10-15 both
 editors have an embedded build/run mode beside Gradle: Build, Rebuild, Run lenses, Run shortcuts and
 run configurations build with the server's compiler and run in its execution worker
-([first delivery](plan-embedded-execution.md#first-delivery-2026-10-15)), covering parts of R1–R5.
+([first delivery](../../../doc/errs/plan-embedded-execution.md#first-delivery-2026-10-15)), covering parts of R1–R5.
 Since 2026-10-22, debug sessions in the language server (R6/R7) debug embedded runs in both
 editors, and since R13 (2026-11-03) also Gradle-mode and command-line runs, programs run with
 `--debug` and the modules' xunit tests, which both editors also run.
@@ -161,7 +161,7 @@ installation is required. The three bootstrap checks are minimum health assertio
 Configured source modules also carry ordered resource roots. Conventional Gradle resources use
 compiler layout deduction; custom/unmanaged roots use explicit project settings in both hosts.
 Resource contents, creation/deletion and configuration participate in cache invalidation and
-diagnostic refresh. Evaluated Gradle import, source/resource path pickers and effective origin reports are implemented; see [PLAT2](../../../doc/errs-integration-plan.md#resource-configuration-and-build-model-integration-plat2--l67).
+diagnostic refresh. Evaluated Gradle import, source/resource path pickers and effective origin reports are implemented; see [PLAT2](../../../doc/errs/errs-integration-plan.md#resource-configuration-and-build-model-integration-plat2--l67).
 Hover identifies resolved occurrences, completed calls retain parameter mapping between written
 arguments, and inferred/narrowed nominal types retain type-definition targets. Member completion
 can retain a prefix before existing call parentheses, including chained receivers.
@@ -177,7 +177,7 @@ associate dependency declarations across consumer attempts; these are not stable
 dependency rebuilds or a persistent workspace reference index.
 
 The current verification, reporting audit and remaining work are recorded in
-[errs-integration-plan.md](../../../doc/errs-integration-plan.md).
+[errs-integration-plan.md](../../../doc/errs/errs-integration-plan.md).
 
 The adapters provide different capabilities: tree-sitter maintains error-tolerant syntax results;
 the compiler supplies validated semantic facts. A combined adapter has not been implemented.
@@ -200,7 +200,7 @@ L83 now retains detached successful constant-initializer facts before temporary-
 Hover, navigation, references, token classification and rename use those facts through the Kotlin
 semantic model, with no new AST fields. Backend regressions and shared X142 pass in both editors,
 including native rename/Undo; X140 remains the separate UTF-16 method-body check.
-See the [L83 task and ownership record](../../../doc/errs-integration-plan.md#protocol-correctness-and-the-completion-gate).
+See the [L83 task and ownership record](../../../doc/errs/errs-integration-plan.md#protocol-correctness-and-the-completion-gate).
 
 | Feature | Mock | Tree-sitter | Compiler (XdkAdapter) |
 |---------|------|-------------|----------|
@@ -242,7 +242,7 @@ The October 6 platform recheck fixes unnamed implicit-package views in the joine
 index, without changing the compiler/AST API or advertised capabilities. The regression fails
 before the fix; shared X117 now checks root/companion references before native Rename/Undo in
 both editors. Selected native checks pass on released dependencies. See the
-[diagnosis and receipts](../../../doc/errs-audit.md) and [real-project tour](../../../demo.md).
+[diagnosis and receipts](../../../doc/errs/errs-audit.md) and [real-project tour](../../../doc/errs/demo.md).
 
 Source audit at `511195564` (2026-09-27): **all 24 project-defined adapter capabilities have
 compiler implementations**, plus push diagnostics and document/workspace synchronization.
@@ -251,7 +251,7 @@ are entirely absent. L61 adds the 25th capability, explicit declaration lookup, 
 protocol and selected editor validation. The enum does not include all of LSP; substantial
 semantic and protocol work remains.
 
-The active [full completion checklist, L55–L83](../../../doc/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+The active [full completion checklist, L55–L83](../../../doc/errs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 is the task source of truth. It distinguishes implementation work, confirmed reliability gaps,
 investigations and optional features requiring a scope decision. The protocol inventory uses
 LSP 3.18 and the installed LSP4J 1.0.0 interfaces. Unadvertised optional features do not by
@@ -279,7 +279,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Constant-folded property initializer facts | Detached initializer facts survive constant folding; backend and shared X142 pass in both editors | L83 |
 
 Every absent feature above has an explicit task and a
-[next investigation step](../../../doc/errs-integration-plan.md#investigation-status-and-next-decisions-updated-2026-09-30).
+[next investigation step](../../../doc/errs/errs-integration-plan.md#investigation-status-and-next-decisions-updated-2026-09-30).
 The inventory is complete for this list; detailed implementation designs are still pending for
 several operations. Optional language/product features require an explicit implementation or
 exclusion decision, not an assumption that every protocol extension is mandatory.
@@ -305,10 +305,10 @@ two remain partial (UP25/UP26), with zero IDE errors/freeze dumps, including the
 continuation. A corrected X185 popup-harness failure prevents calling this one uninterrupted clean
 run. Generic upstream VFS waits remain. The client suite passes 98 tests. Recursive typedef
 handling, bounded worker retention and these client repairs require no new AST/embedding APIs. See the
-[L82 evidence and next tasks](../../../doc/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
+[L82 evidence and next tasks](../../../doc/errs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
 
 **Historical acceptance (2026-09-29):** the shared playbook then had 128 cases with
-assertions in both drivers. The [current IntelliJ demo record](../../../doc/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
+assertions in both drivers. The [current IntelliJ demo record](../../../doc/errs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks resumed execution and focused corrections; it does not replace the historical full-run receipt.
 All 128 cases have passing receipts across resumed runs. The final X105/X122/X123 native recheck
 passes after the client carries diagnostic result IDs across automatic pulls of the same editor
@@ -318,8 +318,8 @@ sorting. The accompanying 1,413 backend and 70 protocol tests pass; three existi
 placeholders remain disabled. IntelliJ `run-5742519770640114134` passes START and
 X60/X77/X78/X105/X122/X123 on the final code with zero IDE errors.
 X119–X121 pass in selected runs in both editors, alongside X57/X118 and configuration controls;
-see the [batch receipts](../../../doc/errs-integration-plan.md#checkpoint-and-validation-map). The ten L62 additions, X109–X118, pass in selected editor runs; see the
-[rename receipts](../../../doc/errs-integration-plan.md#shared-rename-and-native-settings-validation).
+see the [batch receipts](../../../doc/errs/errs-integration-plan.md#checkpoint-and-validation-map). The ten L62 additions, X109–X118, pass in selected editor runs; see the
+[rename receipts](../../../doc/errs/errs-integration-plan.md#shared-rename-and-native-settings-validation).
 The preceding 113-case suite includes the 50 completed parity cases and X20/X81/X82 assertion
 sets. That complete suite passes in `run-6034631232732848040`, with zero IDE errors and
 zero JUnit failures/errors/skips. X57 now verifies guarded native symbol
@@ -335,7 +335,7 @@ focus-recovery regression and seven selected native cases pass with no IDE error
 harnesses show current-case and completed/remaining counts. The final full run also passes X30
 with document readiness after restart and closes L60. Separate startup acceptance verifies all
 five edit/restart phases and disappearance of the untouched information balloon.
-See L60/L82 and the [validation record](../../../doc/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+See L60/L82 and the [validation record](../../../doc/errs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
 diagnostics untouched. Graph proofs now discard each root's compiler objects after copying
@@ -384,7 +384,7 @@ provides automatic source dependency builds for explicit roots/edges, including 
 dependencies block consumers without reusing old artifacts; corrections restore them automatically.
 Unsaved import-edge discovery, binary source attachment and persistent workspace indexing
 remain open. Cyclic source graphs are rejected. See the
-[dependency verification record](../../../doc/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23).
+[dependency verification record](../../../doc/errs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23).
 
 Call hierarchy includes written anonymous methods and recursive/overloaded calls. It requires a
 successful source graph and source locations at both ends. Runtime dispatch expansion,
@@ -423,7 +423,7 @@ constraints and module/package compositions now recover. Unregistered header for
 names without becoming invented type candidates. Native workspace/refactoring assertions are
 implemented for X99–X105. Selected native X33–X35 and X99–X108 have passing receipts across the
 checkpoint and focused rerun recorded in the
-[integration plan](../../../doc/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+[integration plan](../../../doc/errs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 This does not establish a complete native-suite pass. The run also drove server cancellation,
 publication and file-rename lifecycle fixes; no additional AST state was needed for those fixes.
 Class/interface composition headers retain the written name and body for structural queries.
@@ -532,7 +532,7 @@ unresolved runtime delegation do not acquire invented source targets (X153).
 Module-root discovery follows the source-file/same-name-directory layout. Non-file URIs remain
 single-source inputs. Workspace folders supply a discovered module/dependency graph; explicit
 source settings override it. Queries compile that graph on demand without a persistent index. Compiler mode is the shipped default. See the
-[module and recovery hardening results](../../../doc/errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22).
+[module and recovery hardening results](../../../doc/errs/errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22).
 
 **Data Model:** `lang/lsp-server/src/main/kotlin/org/xvm/lsp/model/`
 - `CompilationResult` - Compilation output with diagnostics and symbols
@@ -691,12 +691,12 @@ Full tree-sitter support for fast, incremental parsing:
    - ~~Generate doc comment~~ ✅ COMPLETE (tree-sitter)
    - XdkAdapter generates individual/all-required inherited methods from source and read-only XDK/binary contracts at a class name, with compiler-selected generic/conditional, qualified and compound signatures, atomic imports and safe defaults; whole-graph proof permits the intended call/descendant changes and preserves other bindings; generated bodies use `TODO()`. Both actions use `refactor.rewrite`, so they appear as class intentions without requiring a diagnostic at that location
    - Unvalidated computed/named defaults, unsupported constant kinds and annotated/unrenderable type spellings remain withheld; missing implementations use fresh declaration analysis, never failed-compilation TypeInfo. The current batch validation is recorded separately from previous X122 receipts
-   - Broader semantic fixes remain unimplemented (L63); wider extraction, Inline and remove and public Safe Delete followed on 2026-10-21 and 2026-10-29 ([remaining.md](../../../doc/remaining.md#beyond-the-current-scope)). Compiler doc generation is implemented: `XdkDocumentation` offers **Generate documentation comment** on written declaration headers (`XdkDocumentationTest`)
+   - Broader semantic fixes remain unimplemented (L63); wider extraction, Inline and remove and public Safe Delete followed on 2026-10-21 and 2026-10-29 ([remaining.md](../../../doc/errs/remaining.md#beyond-the-current-scope)). Compiler doc generation is implemented: `XdkDocumentation` offers **Generate documentation comment** on written declaration headers (`XdkDocumentationTest`)
 
 9. ~~**Debugging (DAP)**~~ ✅ COMPLETE (R6/R7)
    - Debug Adapter Protocol integration
    - Breakpoints, stepping, variable inspection
-   - The debugger features beyond these, R9–R13, done by 2026-11-03, are in the [execution plan](plan-embedded-execution.md#additive-delivery-and-acceptance)
+   - The debugger features beyond these, R9–R13, done by 2026-11-03, are in the [execution plan](../../../doc/errs/plan-embedded-execution.md#additive-delivery-and-acceptance)
 
 ## Architecture Principle
 
@@ -864,7 +864,7 @@ composite root's `gradle.properties` at settings time).
 - *Internal documentation* - Comprehensive architecture analysis and compiler modification plans
 
 The current acceptance batch adds shared X124 external-resource configuration/repair and X125 precise
-platform regressions in both editors. See the [current receipts](../../../doc/errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29);
+platform regressions in both editors. See the [current receipts](../../../doc/errs/errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29);
 prior 128-case receipts do not cover these additions.
 
 L69 range/delta is now implemented with negotiated capabilities, bounded detached token history,
@@ -901,7 +901,7 @@ initial import. A shared evaluated init script aggregates nested/composite build
 roots without the Ecstasy plugin. Exported-report watchers retain accepted inputs after malformed
 output, and import identities reject late daemon output after cancellation. Project/folder removal
 retires the owner; explicit overrides survive. X263–X265 cover these paths in both clients; see the
-[batch receipt](../../../doc/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
+[batch receipt](../../../doc/errs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
 Earlier X124 receipts used explicit native VFS refresh. The strengthened case creates previously
 missing external roots without opening them or manually refreshing; those earlier receipts remain
 historical and do not prove automatic watch ownership.
@@ -925,7 +925,7 @@ code action through a client command and version-checks its edit in a normal und
 working around LSP4IJ's undo-transparent application. X105/X122/X127 and new shared X131 are
 passing acceptance gates in the current receipt; earlier eager-action receipts remain historical.
 
-Editor settings follow-up: [UI1–UI7](../../../doc/errs-integration-plan.md#editor-configuration-and-feature-controls-ui1ui7)
+Editor settings follow-up: [UI1–UI7](../../../doc/errs/errs-integration-plan.md#editor-configuration-and-feature-controls-ui1ui7)
 now tracks the full settings inventory, common scope/precedence semantics, Community IntelliJ
 pages, VS Code native Settings and commands, live/restart behavior, effective capability/status
 views and shared acceptance. Both plugins now expose L72 transport preferences; VS Code also exposes
@@ -939,7 +939,7 @@ Both editors now offer **Ctrl+Alt+X, then L** (macOS: Control+Option+X, then L) 
 show/hide within UI6. IntelliJ selects LSP4IJ's Log tab in Language Servers; VS Code reveals its
 Ecstasy Language Server Output channel. X135 covers the actions; physical shortcut dispatch and
 custom docking/keymaps remain manual checks. No separate log process or editable file is created.
-The [current acceptance record](../../../doc/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30)
+The [current acceptance record](../../../doc/errs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30)
 distinguishes the 140-case catalog from selected passing runs.
 
 
@@ -949,7 +949,7 @@ UI1–UI7 now have a bounded implementation: shared preference semantics, Intell
 pages in the existing LSP4IJ store, VS Code native settings, transport restart wiring, live Code Style
 and inlay refresh, and effective configuration/queue views. X136–X139 extend the catalog to 144 cases.
 Selected X118/X132/X135–X139 pass in both editors (plus IntelliJ startup and zero IDE errors), as
-recorded in the [settings receipt](../../../doc/errs-integration-plan.md#editor-settings-implementation-batch-ui1ui7-2026-09-30).
+recorded in the [settings receipt](../../../doc/errs/errs-integration-plan.md#editor-settings-implementation-batch-ui1ui7-2026-09-30).
 This is not a full-catalog rerun. Full synchronization, native editor save ownership and
 compiler as the shipping adapter remain defaults (changed from Tree-sitter on October 6). Incremental transport does not mean incremental
 compilation. Invalid formatting settings and late replies cannot replace the last valid snapshot.
@@ -965,7 +965,7 @@ claimed complete by this checkpoint.
 
 L80/L81 protocol hardening adds shared X140/X141 (146 total scenarios): UTF-16 ranges after astral
 characters and runtime server trace switching. X136/X137/X140/X141 pass in both editors, plus
-IntelliJ startup with zero IDE errors. See the [protocol validation record](../../../doc/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
+IntelliJ startup with zero IDE errors. See the [protocol validation record](../../../doc/errs/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
 Server progress, cancellation, lifecycle and refresh have controlled protocol
 regressions; partial results and visible long-operation/cancel acceptance remain separately tracked.
 
@@ -981,8 +981,8 @@ this generic path. Save All uses a document-based formatting service for dirty c
 LSP4IJ 0.21.0's nullable-editor reply bug; shared X139 proves both open and closed documents.
 Delayed no-op directory watches preserve incomplete queries against current open overlays; real
 closed-source/resource changes still invalidate them. These corrections add no embedding or AST API.
-See the [final batch receipt](../../../doc/errs-integration-plan.md#final-native-and-batch-receipt-2026-09-30)
-and [audit](../../../doc/errs-audit.md#native-save-all-and-fixture-cleanup-follow-up-2026-09-30).
+See the [final batch receipt](../../../doc/errs/errs-integration-plan.md#final-native-and-batch-receipt-2026-09-30)
+and [audit](../../../doc/errs/errs-audit.md#native-save-all-and-fixture-cleanup-follow-up-2026-09-30).
 
 Reliability follow-up (2026-10-01): X146/X147 bring the catalog to 152, with new provider-refresh
 and late-report assertions passing in both editors after the native service-settings correction.
@@ -993,7 +993,7 @@ latency, queue names/counts, sampled heap and process exit. Thirty cycles across
 the measured local baseline does not establish release budgets or prolonged soak acceptance.
 No new language capability, embedding API or AST field is added.
 
-See the [reliability validation receipt](../../../doc/errs-integration-plan.md#reliability-validation-receipt-2026-10-01)
+See the [reliability validation receipt](../../../doc/errs/errs-integration-plan.md#reliability-validation-receipt-2026-10-01)
 for the eight selected cases, native initial failure and focused rerun. The final IntelliJ guard
 rechecks graph/service settings and original connection identity on the EDT, including restarts
 between reply arrival and publication. The extension-free Explorer probe did not reproduce X130;
@@ -1006,7 +1006,7 @@ fails only X130's host repaint after successful Move/Undo/Redo/resource checks; 
 is an empty edit. No compiler or production client change is warranted by that defect. A native
 window-focus guard fixes separate harness Undo failures. The upstream repair remains open and
 X130 is not relabeled as passing. See the
-[diagnosis and reproduction](../../../doc/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01).
+[diagnosis and reproduction](../../../doc/errs/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01).
 
 
 L80 final audit (2026-10-01): all current provider/response families have a recorded capability
@@ -1016,7 +1016,7 @@ independently of push and related-document support. Compiler-only rename proposa
 advertised by other adapters. No language feature, embedding API or AST node is added. Exhaustive
 provider inventory and rich/reduced protocol tests cover the changes; the shared catalog remains
 152 and no new native receipt is claimed. See the
-[audit and validation](../../../doc/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
+[audit and validation](../../../doc/errs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
 L80 is complete for current producers; L81/L82 acceptance and X130's upstream Explorer failure remain
 open. Future optional response fields require new negotiation checks.
 
@@ -1026,26 +1026,26 @@ shows file/workspace and live compiler queue activity, and stops periodic report
 close. All five refresh providers have controlled lifecycle regressions; X146 observes each host's
 negotiated native refresh handlers. Malformed-request recovery and two-process same-URI/token isolation
 are covered over real stdio. This adds no language capability or AST/embedding API. See the
-[L81 checkpoint](../../../doc/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
+[L81 checkpoint](../../../doc/errs/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
 for exact validation: IntelliJ visible Cancel passes; VS Code physical-click remains open.
 Two native IntelliJ project frames and two separate normal VS Code instances pass overlapping
 close/reopen, sibling reply ownership, source preservation and process-exit checks. VS Code restores
 the closed window's dirty buffer from actual hot-exit backup; shared-Electron-process windows remain
-separate coverage. See the [native lifetime receipt](../../../doc/errs-integration-plan.md#l81-native-projectwindow-lifetime-batch-2026-10-01).
+separate coverage. See the [native lifetime receipt](../../../doc/errs/errs-integration-plan.md#l81-native-projectwindow-lifetime-batch-2026-10-01).
 The larger IntelliJ fixture's bulk-replacement freeze is
 retained as an L82 scale investigation. Upstream defects and
-removable bridges are centralized in the [UP register](../../../doc/errs-upstream-issues.md).
+removable bridges are centralized in the [UP register](../../../doc/errs/errs-upstream-issues.md).
 
 L82 scale diagnosis: UP17 is now independently reproduced in IntelliJ's range-marker tree without
 an LSP client. The decorated native replacement still fails the freeze gate; the opt-in
-[probe and receipts](../../../doc/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
+[probe and receipts](../../../doc/errs/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
 separate marker-update time from compiler time. Large-file responsiveness remains open; no
 advertised language capability or AST/embedding API changes as a result of this diagnosis.
 
 L67 server response follow-up: inferred-hint rendering and lexical/semantic token merging now
 avoid repeated whole-model scans. A packaged 20,000-local fixture measures a one-line hint reply at
 11.7 ms (7.3 ms repeated), versus 132.7 seconds before; repeated full tokens take about 147–169 ms.
-The [measurement receipt](../../../doc/errs-integration-plan.md#l67l82-semantic-response-measurements-2026-10-01)
+The [measurement receipt](../../../doc/errs/errs-integration-plan.md#l67l82-semantic-response-measurements-2026-10-01)
 separates compilation, query work and output. Cold project queries still compile a separate project
 snapshot, and native highlight application/UP17 remains independent. These are local measurements,
 not agreed cross-platform latency or memory budgets; no new compiler or AST API is introduced.
@@ -1054,7 +1054,7 @@ The extended platform workload has two completed 1,200-cycle edit/cancel session
 retirement and unchanged sources. Its planned third session was deliberately interrupted, so this
 is partial acceptance, not an overall green run. Repeated post-GC growth from about 83 to 98 MiB
 still needs ownership analysis. Full combined/native validation remains a separate checkpoint;
-see the [L82 receipt](../../../doc/errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01).
+see the [L82 receipt](../../../doc/errs/errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01).
 
 L65 implementation lookup also follows existing compiler into/capped method redirects to written
 source bodies, without body generation. Two manual-module and 27 existing lookup regression
@@ -1068,7 +1068,7 @@ both editor drivers and Undo/Redo; selected acceptance passes in both editors.
 Conditional-incorporation formal names now navigate to the actual mixin formal rather than being
 classified as declarations. Rename proof retains predefined receiver class/access identity. Both
 manual-module positive rename examples, wider regression and new editor cases pass; exact
-receipts and extraction commit groups are in doc/errs-integration-plan.md.
+receipts and extraction commit groups are in doc/errs/errs-integration-plan.md.
 
 
 L64 adds declaration-name suggestions from written named types and Java-parser-owned file/member/
@@ -1079,7 +1079,7 @@ The next L64 continuation retains empty property/parameter name slots after comp
 including primary constructors and EOF. It reuses the existing partial cursor node, adding a
 factory/accessor but no AST fields or semantic bindings. Shared X151 passes in both editors;
 42 Java and 148 LSP tests pass without skips.
-Ambiguous local-name slots, compound/inferred-name suggestions and broader template contexts remain outside this boundary; see the L64 continuation in doc/errs-integration-plan.md.
+Ambiguous local-name slots, compound/inferred-name suggestions and broader template contexts remain outside this boundary; see the L64 continuation in doc/errs/errs-integration-plan.md.
 
 
 The L64 real-source continuation extends name proposals to wrapped/compound types, adds typed
@@ -1089,7 +1089,7 @@ respect callable boundaries. Platform's actual CircularBuffer class covers anony
 receivers, array dimensions and callback signature metadata. Shared X97/X108/X150/X151 are
 extended and X152 adds enclosing/indexed-call acceptance in both editors. All five selected
 cases pass in both editors, alongside 65 Java and 410 LSP tests with no failures or skips.
-Exact receipts and remaining exclusions are recorded in doc/errs-integration-plan.md; completion remains partial
+Exact receipts and remaining exclusions are recorded in doc/errs/errs-integration-plan.md; completion remains partial
 for arbitrary damaged syntax and inferred declaration names.
 
 
@@ -1145,14 +1145,14 @@ through their existing guarded Undo/Redo logic. Containers and same-name module 
 root-only moves pin resolved default resources left behind. Resource value proof includes lowered
 string/byte literals and every configured resource consumer. X162/X163 share these assertions in
 both drivers; selected receipts are in the
-[integration plan](../../../doc/errs-integration-plan.md#l62-explicit-source-graph-relocation-2026-10-02).
+[integration plan](../../../doc/errs/errs-integration-plan.md#l62-explicit-source-graph-relocation-2026-10-02).
 Standard `willRenameFiles` cannot save settings and still refuses graph changes. VS Code cannot veto
 an arbitrary host move with an empty participation reply. Combined root rename/move is extended
 in the October 3 continuation below. Resource-only graph relocation and moving workspace
 configuration ownership remain unsupported. No AST API changes.
 Selected X118/X161/X162/X163 passes in both hosts. IntelliJ required UP19's descendant-connection
 bridge for directory Move/Undo/Redo; post-Redo unsaved edits also pass without stale synchronizers.
-The bridge and its removal gate are recorded in the [upstream register](../../../doc/errs-upstream-issues.md).
+The bridge and its removal gate are recorded in the [upstream register](../../../doc/errs/errs-upstream-issues.md).
 
 
 ### L62 callable alternatives and recursive contracts (October 3)
@@ -1233,7 +1233,7 @@ Selected acceptance passes X169/X171/X173–X176 in VS Code `run-ElUMIl` and Int
 155 LSP tests, 103 Java tests and five manual CLI scenarios with no failures or skips; the
 manual task reuses configuration cache. Both drivers compile. These are selected receipts,
 not a full 181-case run. The extraction map and remaining exclusions are recorded in
-[the integration plan](../../../doc/errs-integration-plan.md#l62-empty-destination-batch-acceptance-and-extraction).
+[the integration plan](../../../doc/errs/errs-integration-plan.md#l62-empty-destination-batch-acceptance-and-extraction).
 
 
 ### L63 typed initializers and unused locals (2026-10-04)
@@ -1291,7 +1291,7 @@ checks; X122/X181/X185–X188 pass in VS Code `run-dzR5d9` and IntelliJ
 `run-16733856986922464734`, with zero editor errors. UP07 also needed a client correction for
 equal full reports that replaced lazy fixes without refreshing their annotations. The combined
 gate passes 180 backend and 89 IntelliJ unit tests. These are selected runs. Details and remaining L63 scope are in
-[the integration plan](../../../doc/errs-integration-plan.md#l63-missing-method-quick-fixes-2026-10-04).
+[the integration plan](../../../doc/errs/errs-integration-plan.md#l63-missing-method-quick-fixes-2026-10-04).
 
 
 The L63 continuation adds compiler-established block-local arguments (including validated `var`/`val`
@@ -1299,7 +1299,7 @@ initializers) and explicit local-initializer result types. Every local use must 
 original declaration after the repair. Detached evidence uses existing compiler accessors; no AST
 fields/API or failed TypeInfo inspection is added. X189–X192 extend both shared drivers with typed
 locals, inferred locals plus a static typed initializer, parameterized results and inferred-result
-refusal. See the [continuation and acceptance receipts](../../../doc/errs-integration-plan.md#l63-local-arguments-and-typed-initializer-repairs-2026-10-04).
+refusal. See the [continuation and acceptance receipts](../../../doc/errs/errs-integration-plan.md#l63-local-arguments-and-typed-initializer-repairs-2026-10-04).
 
 The continuation passes 198 backend tests and X181/X185/X189–X192 in VS Code `run-mRmX6Y`
 and IntelliJ `run-1236802406694405307` (plus START), zero editor failures. Both use the 197-case
@@ -1315,7 +1315,7 @@ instance method even inside a static caller. Full graph compilation, unchanged r
 bindings and the inserted declaration target are mandatory. X193–X196 add exact-edit/diagnostic
 Undo/Redo coverage and other-owner/public-view refusals in both shared drivers. Computed/chained
 and other-owner receivers remain outside this slice; the next continuation adds class qualifiers.
-See the [scope, commits and acceptance receipts](../../../doc/errs-integration-plan.md#l63-same-owner-receiver-repairs-2026-10-04).
+See the [scope, commits and acceptance receipts](../../../doc/errs/errs-integration-plan.md#l63-same-owner-receiver-repairs-2026-10-04).
 
 This receiver continuation passes 219 backend tests and X181/X185/X190/X193–X196 in VS Code
 `run-nvquYD` and IntelliJ `run-15968094076069950349` (plus START), zero editor failures. Both
@@ -1331,7 +1331,7 @@ bounded same-module destinations. Instance parameters that shadow a class spelli
 retain instance dispatch. The completed graph must prove both dispatch and the inserted target,
 and preserve known bindings. All evidence is detached Kotlin data using existing compiler APIs.
 X197–X200 exercise these boundaries in both shared drivers. The combined backend gate passes
-232 tests without failures/errors/skips. See the [current scope, commits and acceptance receipts](../../../doc/errs-integration-plan.md#l63-class-qualified-static-repairs-2026-10-04).
+232 tests without failures/errors/skips. See the [current scope, commits and acceptance receipts](../../../doc/errs/errs-integration-plan.md#l63-class-qualified-static-repairs-2026-10-04).
 
 
 X181/X185/X193/X197–X200 pass in VS Code `run-3Vm6C9` and IntelliJ
@@ -1354,14 +1354,14 @@ new actions and refusals in both drivers; X195 retains its specific private-acti
 No new Java AST/embedding API is needed. Companion acceptance corrected the existing IntelliJ
 diagnostic bridge to preserve decoded related reports (UP06/UP07); UP22 records the separate
 upstream disposal failure. See the
-[scope and acceptance record](../../../doc/errs-integration-plan.md#l63-cross-owner-source-destinations-2026-10-04).
+[scope and acceptance record](../../../doc/errs/errs-integration-plan.md#l63-cross-owner-source-destinations-2026-10-04).
 
 
 Final selected acceptance: **256 backend tests** and **90 IntelliJ unit tests** pass without
 failures/errors/skips. X181/X185/X195/X197/X201–X204 pass in VS Code `run-hOIsOh` and IntelliJ
 `run-18176000411609180309` (plus START), zero editor failures; Ultimate is disabled. The shared
 catalog has 209 cases. The native report-copy failure, its regression and the separate open UP22
-lifecycle defect are documented in the [upstream register](../../../doc/errs-upstream-issues.md#up06up07-companion-report-copy-correction-2026-10-04).
+lifecycle defect are documented in the [upstream register](../../../doc/errs/errs-upstream-issues.md#up06up07-companion-report-copy-correction-2026-10-04).
 These are selected acceptance runs; no full-catalog rerun or new packaged-stdio gate is claimed.
 
 
@@ -1372,14 +1372,14 @@ explicitly typed local initializers in the same module (X205–X208). Detached t
 survive destination lookup, alongside local binding and the existing complete-graph proof.
 Inferred result contexts and changed/shadowed signature identities are refused. No Java AST or
 plugin production API is added. Cross-module ownership/import policy and broader receiver forms
-remain separate tasks. See the [scope and validation record](../../../doc/errs-integration-plan.md#l63-cross-owner-local-arguments-and-initializer-results-2026-10-04).
+remain separate tasks. See the [scope and validation record](../../../doc/errs/errs-integration-plan.md#l63-cross-owner-local-arguments-and-initializer-results-2026-10-04).
 
 
 Selected acceptance: **275 backend tests** pass without failures/errors/skips. X181/X185/X190/
 X202/X205–X208 pass in VS Code `run-RpTVz1` and IntelliJ `run-14627770467027596087` (plus START),
 zero editor failures. Both use the 213-case catalog; Ultimate is disabled. Root/LSP/IntelliJ
 read-only Spotless passes. These are selected runs, not a full-catalog or new packaged-protocol gate.
-The [integration plan](../../../doc/errs-integration-plan.md#l63-cross-owner-local-arguments-and-initializer-results-2026-10-04)
+The [integration plan](../../../doc/errs/errs-integration-plan.md#l63-cross-owner-local-arguments-and-initializer-results-2026-10-04)
 records the proof boundary, receipts and commit extraction map.
 
 
@@ -1394,7 +1394,7 @@ existing bindings, with signature checks against the actual source declaration a
 
 No import/graph change is proposed. Binary source indexes, read-only targets, reverse dependencies,
 missing destination imports and unsupported owner/receiver/signature shapes remain refusals. Broader
-L63 scope remains open. See the [scope and validation record](../../../doc/errs-integration-plan.md#l63-cross-module-missing-method-destinations-2026-10-04).
+L63 scope remains open. See the [scope and validation record](../../../doc/errs/errs-integration-plan.md#l63-cross-module-missing-method-destinations-2026-10-04).
 
 
 Selected acceptance: **296 backend tests** pass without failures/errors/skips. VS Code `run-B54Y1R`
@@ -1438,7 +1438,7 @@ dispatch and embedded resource values must still match after full-graph compilat
 Shared X216–X220 have selected acceptance below, including the explicit UP23 exception. Existing namespace,
 noncyclic graph, read-only binary and known-consumer boundaries remain explicit. Runtime-only
 contracts and unresolved compiler type expressions remain refusals. See the
-[L62 closure record](../../../doc/errs-integration-plan.md#l62-ownership-and-relocation-closure-batch-2026-10-04)
+[L62 closure record](../../../doc/errs/errs-integration-plan.md#l62-ownership-and-relocation-closure-batch-2026-10-04)
 for commit grouping and validation. No new AST or embedding API is needed.
 
 L62 selected acceptance: IntelliJ `run-8069330970170232500` passes X169/X173/X216–X220.
@@ -1446,7 +1446,7 @@ VS Code `run-S7CfWP` passes six and fails X218 native Undo; do not claim all-gre
 VS Code Move parity. UP23 records the host ordering defect. The user accepted this separate
 host limitation and continuation to L63. Backend/protocol: 178 passed, final affected rerun 58
 passed; IntelliJ unit gate 7 passed. Scope boundaries and extraction grouping are in the
-[L62 closure receipt](../../../doc/errs-integration-plan.md#l62-ownership-and-relocation-closure-batch-2026-10-04).
+[L62 closure receipt](../../../doc/errs/errs-integration-plan.md#l62-ownership-and-relocation-closure-batch-2026-10-04).
 
 
 ### L63 eight-area implementation batch (2026-10-04)
@@ -1464,7 +1464,7 @@ proof of unknown external consumers. Shared X221–X242 bring the catalog to **2
 pass selected acceptance in both editors. The final combined backend/protocol gate passes
 **498 tests**, zero failures/errors/skips. L63 is closed within its documented supported/refused
 forms; this does not claim arbitrary refactorings or a full-catalog rerun. UP23 remains open.
-See the [closure and acceptance record](../../../doc/errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04).
+See the [closure and acceptance record](../../../doc/errs/errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04).
 
 ### L66 structural/editing batch (2026-10-05)
 
@@ -1474,7 +1474,7 @@ formatting. That checkpoint had 255 cases. X132/X138/X139/X158/X243–X250 have 
 receipts in both editors. Backend/protocol checks pass; the IntelliJ run exposed and repaired the
 standalone formatting Redo defect tracked as UP24. Conditional import source syntax is rejected by
 the existing parser. L66 is closed within its documented formatter/refactoring boundaries; see the
-[closure receipt](../../../doc/errs-integration-plan.md#l66-bounded-closure-and-acceptance-2026-10-05).
+[closure receipt](../../../doc/errs/errs-integration-plan.md#l66-bounded-closure-and-acceptance-2026-10-05).
 
 
 ### L67 detached navigation reuse (2026-10-05)
@@ -1484,7 +1484,7 @@ changes, broken independent neighbors and configured-root removal/restoration in
 drivers. The backend reuses exact per-module semantic builds seeded by editor/diagnostic compilation;
 complete references and edit proofs keep their existing requirements. No AST/embedding API changes,
 disk persistence or incremental compiler are introduced. See the
-[L67 receipt](../../../doc/errs-integration-plan.md#l67-module-navigation-index-2026-10-05) for measurements and acceptance.
+[L67 receipt](../../../doc/errs/errs-integration-plan.md#l67-module-navigation-index-2026-10-05) for measurements and acceptance.
 
 L67 is closed within this measured boundary: 120 backend and 78 packaged-protocol tests pass,
 followed by the canonical-key regression selection (19 tests). X45/X59/X63/X143/X251 pass in both
@@ -1542,7 +1542,7 @@ L75 implements negotiated library document content/refresh and direct bundled de
 VS Code uses its standard read-only virtual provider; IntelliJ retains protected file views until
 LSP4IJ implements the provider (UP25). X254 explicitly records this client difference. 58 distinct backend/protocol cases and the packaged content round trip pass. VS Code passes all
 six selected cases; IntelliJ passes five plus START and reports X254 partial with its file-fallback
-assertions successful and zero IDE failures; see the [contract and receipt](../../../doc/errs-integration-plan.md#l75-read-only-library-content-2026-10-05).
+assertions successful and zero IDE failures; see the [contract and receipt](../../../doc/errs/errs-integration-plan.md#l75-read-only-library-content-2026-10-05).
 
 ### L76 compiler inline completion
 
@@ -1557,7 +1557,7 @@ L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pas
 or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
 `run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
 UP26 and zero IDE failures. Both drivers compile and formatting checks pass. See the
-[L76 contract and commit map](../../../doc/errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).
+[L76 contract and commit map](../../../doc/errs/errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).
 
 L81 native acceptance closure (2026-10-05): both editors pass X145/X146/X147 and new X259.
 VS Code now activates the real visible Cancel control through the isolated renderer, without moving
@@ -1567,7 +1567,7 @@ Both VS Code lifecycle modes pass, including two windows sharing one Electron pr
 unsaved source after close while work is pending. The 19 focused backend/transport tests pass.
 UP15 remains upstream; full-catalog/scale/cross-platform evidence remains L82. This closes acceptance
 for existing providers and adds no AST, embedding or production language capability. See the
-[receipt and commit map](../../../doc/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
+[receipt and commit map](../../../doc/errs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
 The current shared catalog has 282 scenarios (X1–X277 plus the five configuration/stress IDs).
 
 
@@ -1575,12 +1575,12 @@ The October 5 UI5–UI7 continuation adds shared X260–X262 for real Gradle imp
 overlap refusal, failed/invalid output retention and retry. Both editors use a common gated
 producer and native controls; acceptance receipts are recorded in the integration plan.
 The current remaining settings work is listed explicitly in
-[the UI remainder](../../../doc/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
+[the UI remainder](../../../doc/errs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
 L77's fixture-only document-color prototype was removed on 2026-10-21, with X273–X275: the
 requested feature is theme-based source highlighting, which semantic tokens provide, and Ecstasy has
 no color type for swatches and pickers. Semantic X41/X154 pass in both editors, including reviewed
 dark/light/high-contrast captures. See the
-[removal record](../../../doc/errs-integration-plan.md#l77-color-prototype-removed-2026-10-21). The user explicitly deferred
+[removal record](../../../doc/errs/errs-integration-plan.md#l77-color-prototype-removed-2026-10-21). The user explicitly deferred
 L78 notebooks while file-based tooling is completed. L79 follows the runtime/DAP track.
 
 
@@ -1593,12 +1593,12 @@ text; matching sources are required. External attachment views do not yet export
 monikers or support arbitrary semantic queries inside library source text. IntelliJ uses protected
 fallback files (UP25); VS Code uses the virtual content provider. Shared X266–X268 cover the controls,
 persistence, navigation and invalid-input retention. See the
-[contract and validation](../../../doc/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
+[contract and validation](../../../doc/errs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
 Machine-local JVM settings, explicit restart, process-owned log retention and bounded live-server
 export are implemented with shared X269/X270 (selected acceptance passes in both editors). They add host support controls,
 not compiler semantics or a new advertised LSP capability. Broader multi-root/remote-workspace
 acceptance and L82 release evidence remain; Run/DAP, color and notebooks retain
-their recorded scope. See the [runtime/log contract](../../../doc/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+their recorded scope. See the [runtime/log contract](../../../doc/errs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
 
 
 UI1–UI7 completion adds grouped VS Code settings, vertical page navigation in IntelliJ Compiler
@@ -1608,7 +1608,7 @@ shared X271/X272 cover stopped/failing servers and recovery. Complete editor exi
 separate persistence harness in both hosts. These are client settings/support features; adapter
 capabilities are unchanged. Local desktop acceptance, both-adapter persistence, combined catalog
 coverage and explicit host limitations are recorded in the
-[UI completion receipt](../../../doc/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
+[UI completion receipt](../../../doc/errs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
 Untrusted/virtual VS Code workspaces are explicitly unsupported; remote-host acceptance is separate
 from the local desktop gate. Tree-sitter remains an explicit build alternative to default compiler.
 
@@ -1616,4 +1616,4 @@ Theme highlighting follow-up: X276/X277 pass resolved annotation/library ownersh
 recovery in both editors. The grammar ends method headers before expression bodies, preserving string
 escapes and later keywords. Native runs keep their current theme; separate VS Code startup settings
 provide dark/light/high-contrast semantic-versus-lexical comparison. See the
-[completion receipt](../../../doc/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).
+[completion receipt](../../../doc/errs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).

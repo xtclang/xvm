@@ -467,7 +467,7 @@ def main() -> int:
     mode.add_argument("--preview", action="store_true", help="Print I1–I3 PR text without commands or changes.")
     mode.add_argument("--export-diffs", type=Path, metavar="NEW_DIRECTORY", help="Export all six local review diffs; no network or publication.")
     mode.add_argument("--draft", action="store_true", help="Create new I1–I3 PRs as drafts; existing PR state is preserved.")
-    parser.add_argument("--repo-dir", type=Path, default=Path(__file__).resolve().parent)
+    parser.add_argument("--repo-dir", type=Path, default=Path(__file__).resolve().parents[2])
     args = parser.parse_args()
     if args.preview:
         urls = {item.key: f"{GITHUB}/compare/{BASE}...{item.branch}" for item in FOUNDATIONS}

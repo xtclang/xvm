@@ -14,8 +14,8 @@
 | Document | Description |
 |----------|-------------|
 | [plan-tree-sitter](./plan-tree-sitter.md) | Tree-sitter integration — all phases complete |
-| [plan-embedded-execution](./plan-embedded-execution.md) | Embedded build, Run and debugging, R1–R8 and the debugger features beyond them, R9–R13, all done by 2026-11-03; first Run/Build delivery in both IDEs |
-| [plan-bounded-evaluation](./plan-bounded-evaluation.md) | Decided and done, tiers 1 and 2: bounded evaluation in the debugger, by tier (paths, pure expressions, code on the stopped fiber with a deadline), for the Debug Console, watches, conditions, logpoints and R10 |
+| [plan-embedded-execution](../../../doc/errs/plan-embedded-execution.md) | Embedded build, Run and debugging, R1–R8 and the debugger features beyond them, R9–R13, all done by 2026-11-03; first Run/Build delivery in both IDEs |
+| [plan-bounded-evaluation](../../../doc/errs/plan-bounded-evaluation.md) | Decided and done, tiers 1 and 2: bounded evaluation in the debugger, by tier (paths, pure expressions, code on the stopped fiber with a deadline), for the Debug Console, watches, conditions, logpoints and R10 |
 | [existing-tree-sitter-functionality-missing](./existing-tree-sitter-functionality-missing.md) | Current tree-sitter implemented-vs-remaining gap summary |
 | [document-formatting-plan](./document-formatting-plan.md) | Canonical current-status doc for formatting |
 
