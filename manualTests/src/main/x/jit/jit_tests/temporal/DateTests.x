@@ -29,12 +29,10 @@ class DateTests {
     }
 
     void testCreateDateFromString() {
-// TODO fails calling String.split$p(): missing Array<Object>.freeze$p(Ctx, boolean, boolean)
-// Also review the original slash-separated input: Date(String) expects ISO-8601
-//        Date d = new Date("1976/6/20");
-//        assert d.year == 1976;
-//        assert d.month == 6;
-//        assert d.day == 20;
+        Date d = new Date("1976-6-20");
+        assert d.year == 1976;
+        assert d.month == 6;
+        assert d.day == 20;
     }
 
     void testLeapYear() {
@@ -182,5 +180,4 @@ class DateTests {
         assert supplied[1] == date;
         assert supplied[2] == date;
     }
-
 }
