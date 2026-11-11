@@ -6,8 +6,9 @@
   is reserved for JSON-RPC protocol messages. Any output to stdout
   will corrupt the protocol stream.
 
-  Log file location: ~/.xtc/logs/dap-server.log
-  Tail with: tail -f ~/.xtc/logs/dap-server.log
+  It applies only where the DAP server runs on its own, as in its tests, which log to
+  ~/.xtc/logs/dap-server.log. Debug sessions run in the language server's jar, which keeps the
+  server's logback.xml, so they log to the server's log (lang/doc/configuration.md, section 4).
 -->
 <configuration>
     <!-- Suppress logback's own status messages -->
