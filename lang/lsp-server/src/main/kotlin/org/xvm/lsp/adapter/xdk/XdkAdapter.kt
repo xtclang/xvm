@@ -193,6 +193,8 @@ class XdkAdapter
             val explicit: Boolean = false,
             val buildModel: Boolean = false,
             val problem: String? = null,
+            /** Each discovered module root whose name another root declares too, with those others' roots. */
+            val duplicates: Map<String, List<String>> = emptyMap(),
             val catalog: XdkWorkspaceDiscovery.Catalog = XdkWorkspaceDiscovery.Catalog(),
         )
 
@@ -307,7 +309,17 @@ class XdkAdapter
             current: () -> Boolean,
         ): Set<String>? {
             if (synchronized(lifecycle) { closed }) return null
-            val candidate = runCatching { XdkProject(catalog.modules(previous.modules.values)) }
+            val discovered = catalog.modules(previous.modules.values)
+            // a name that two module files declare leaves the graph, so that the rest of the workspace stays in it:
+            // each of those files is analyzed on its own, and a warning names the others
+            val duplicates =
+                discovered
+                    .groupBy { it.name }
+                    .values
+                    .filter { it.size > 1 }
+                    .flatMap { same -> same.map { module -> module.uri to same.filter { it !== module }.map { it.uri } } }
+                    .toMap()
+            val candidate = runCatching { XdkProject(discovered.filter { it.uri !in duplicates }) }
             val failure = candidate.exceptionOrNull()
             if (failure != null && failure !is IllegalArgumentException) throw failure
             val problem = failure?.message
@@ -316,7 +328,7 @@ class XdkAdapter
                 installSourceModules(
                     (candidate.getOrNull() ?: previous).modules.values.toList(),
                     explicit = false,
-                    force = settings.problem != problem,
+                    force = settings.problem != problem || settings.duplicates != duplicates,
                 ) {
                     (
                         !closed &&
@@ -324,7 +336,7 @@ class XdkAdapter
                             current() &&
                             discovery.compareAndSet(
                                 settings,
-                                settings.copy(catalog = catalog, problem = problem),
+                                settings.copy(catalog = catalog, problem = problem, duplicates = duplicates),
                             )
                     ).also { installed = it }
                 }
@@ -931,6 +943,7 @@ class XdkAdapter
                     discovery.get().problem,
                     queueTrace,
                     ::runCompilation,
+                    duplicateOf = discovery.get().duplicates[scope].orEmpty(),
                 )
             request.result.whenComplete { _, _ ->
                 if (request.result.isCancelled) {
@@ -1365,6 +1378,8 @@ class XdkAdapter
             work: (Request) -> Unit,
             /** An embedded build's compile: ends when the build is cancelled, never superseded by an edit. */
             val buildCancelled: (() -> Boolean)? = null,
+            /** The roots of the other discovered modules that declare this scope's module name; see [Discovery.duplicates]. */
+            val duplicateOf: List<String> = emptyList(),
         ) {
             val result = CompletableFuture<CompilationResult>()
 
@@ -1404,6 +1419,19 @@ class XdkAdapter
             val obsoleteQueries: List<QueryWork>,
         )
 
+        /** Says that other module files declare [request]'s module name, which keeps all of them out of the module graph. */
+        private fun duplicateWarning(request: Request): Diagnostic =
+            Diagnostic(
+                // the document's own URI, as the editor names it, as the module's other diagnostics have it
+                Location(request.uri, 0, 0, 0, 0),
+                Diagnostic.Severity.WARNING,
+                "Another module file declares this module's name too: " +
+                    request.duplicateOf.joinToString { XdkSources.file(it)?.path ?: it } +
+                    ". Neither is part of the workspace's module graph, so no module can import it; each is analyzed on its own.",
+                Diagnostic.Codes.SOURCE_GRAPH,
+                Diagnostic.SOURCE,
+            )
+
         /** Installed atomically, so all member views always belong to the same compilation. */
         private class ModuleAnalysis(
             val documents: Map<String, Analysis>,
@@ -1421,6 +1449,23 @@ class XdkAdapter
             /** The module's tests, found on the compiler worker ([XdkTests]); null when it has none. */
             val tests: XdkTest? = null,
         ) {
+            /** This analysis with [extra] among its diagnostics. */
+            fun withDiagnostic(extra: Diagnostic) =
+                ModuleAnalysis(
+                    documents,
+                    diagnostics + extra,
+                    dependencies,
+                    succeeded,
+                    dependencySources,
+                    inputs,
+                    artifact,
+                    documentUris,
+                    sourceInputs,
+                    sourceTexts,
+                    entryMethods,
+                    tests,
+                )
+
             private val semanticViews =
                 documents
                     .mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }
@@ -1737,12 +1782,14 @@ class XdkAdapter
             }
             val order = request.project.buildOrder(request.scope)
             if (order.isEmpty()) {
-                return compileOne(
-                    request,
-                    request.uri,
-                    reading(request, { it?.inputs }) { captureSources(request) { isStale(request) } },
-                    request.dependencies,
-                )
+                val analysis =
+                    compileOne(
+                        request,
+                        request.uri,
+                        reading(request, { it?.inputs }) { captureSources(request) { isStale(request) } },
+                        request.dependencies,
+                    )
+                return if (request.duplicateOf.isEmpty()) analysis else analysis.withDiagnostic(duplicateWarning(request))
             }
             val (target, kept) =
                 compileClosure(request, order, { it.uri != request.scope }) { _, analysis, _, _ ->
