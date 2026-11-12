@@ -2,6 +2,7 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
@@ -293,6 +294,40 @@ class XdkProjectServerTest {
             session.closeDocument(consumer)
             assertThat(session.published.drop(mark)).noneMatch {
                 it.uri == library.toURI().toString() && it.diagnostics.isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `discovered modules that share a name stay out of the graph with a warning each, and the rest is analyzed`() {
+        val workspace =
+            directory
+                .toRealPath()
+                .resolve("twins")
+                .toFile()
+                .also { it.mkdirs() }
+        val library = workspace.resolve("Library.x").also { it.writeText(LIBRARY) }
+        val consumer = workspace.resolve("Consumer.x").also { it.writeText(CONSUMER) }
+        val (first, second) =
+            listOf("one", "two").map { folder ->
+                workspace.resolve("$folder/Twin.x").also {
+                    it.parentFile.mkdirs()
+                    it.writeText("module Twin {}")
+                }
+            }
+        Session(library, consumer, automatic = true).use { session ->
+            // the modules that import each other are analyzed as before, without a graph error for the twins
+            session.open(consumer, CONSUMER, 1)
+            session.expect(consumer, 0, 1, false)
+            session.open(first, first.readText(), 1)
+            awaitAsserted {
+                val report = session.published.lastOrNull { it.uri == first.toURI().toString() && it.version == 1 }
+                assertThat(report).describedAs(session.published.toString()).isNotNull()
+                assertThat(report!!.diagnostics).singleElement().satisfies({ warning ->
+                    assertThat(warning.severity).isEqualTo(DiagnosticSeverity.Warning)
+                    assertThat(warning.code?.left).isEqualTo("SOURCE-GRAPH")
+                    assertThat(warning.message.left).contains(second.path)
+                })
             }
         }
     }
