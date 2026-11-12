@@ -13,10 +13,12 @@ import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.fs.FileNode;
 import org.xtclang.ecstasy.fs.Path;
 
-import org.xtclang.ecstasy.reflect.nRef;
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
+
+import org.xvm.javajit.annotations.JitFromNatural;
+import org.xvm.javajit.annotations.JitGenerated;
 
 import org.xvm.runtime.template._native.fs.xOSFileNode;
 
@@ -25,6 +27,7 @@ import static org.xtclang.ecstasy.Exception.$io;
 /**
  * Native implementation for {@code _native.fs.OSFileNode}.
  */
+@JitGenerated
 public class OSFileNode
         extends nConst
         implements FileNode {
@@ -33,13 +36,7 @@ public class OSFileNode
         super(ctx);
         this.store     = store;
         this.$javaPath = path;
-        this.path      = new nRef(ctx, Path.$fromJavaPath(ctx, path), ctx.pool().typePath(), false);
     }
-
-    /**
-     * The native property {@code @RO Path path;}
-     */
-    public nRef path;
 
     /**
      * The field for the native property {@code OSFileStore store;}.
@@ -62,12 +59,11 @@ public class OSFileNode
     /**
      * The native property getter for {@code @Lazy Path path.calc()}
      */
+    @JitFromNatural
     public Path path$get(Ctx ctx) {
-        nRef path = this.path;
-        if (path == null) {
-            path = this.path = new nRef(ctx, Path.$fromJavaPath(ctx, $javaPath), ctx.pool().typePath(), false);
-        }
-        return (Path) path.get(ctx);
+        // the JIT will generate the code for this method from the natural code in
+        // _native.fs.OSFileNode.x
+        return null;
     }
 
     /**
@@ -106,11 +102,6 @@ public class OSFileNode
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         return pathString$get(ctx).appendTo(ctx, appender);
     }
-
-//    @Override
-//    public String toString(Ctx ctx) {
-//        return path$get(ctx).toString(ctx);
-//    }
 
     // ----- OSFileNode API ------------------------------------------------------------------------
 
@@ -173,13 +164,6 @@ public class OSFileNode
     }
 
     // ----- JIT helper methods --------------------------------------------------------------------
-
-    /**
-     * @return the path from the {@link #path} ref for this node
-     */
-    protected Path $getPath(Ctx ctx) {
-        return (Path) path.get(ctx);
-    }
 
     /**
      * @return the Java {@code java.nio.file.Path} for this node

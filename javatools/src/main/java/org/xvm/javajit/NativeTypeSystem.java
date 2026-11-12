@@ -231,7 +231,7 @@ public class NativeTypeSystem
         Artifact         art    = new Artifact(type, struct, ClassfileShape.Impl, className);
         ConstantPool     pool   = pool();
 
-        Builder builder;
+        AugmentingBuilder builder;
         if (type.isArray()) {
             builder = new ArrayBuilder(this, art, model);
         } else if (type.isA(pool.typeNumber())) {
@@ -268,7 +268,7 @@ public class NativeTypeSystem
                 return;
             }
 
-            classBuilder.with(element); // copy everything else "as is"
+            builder.processElement(element, classBuilder);
 
             if (element instanceof Superclass) {
                 // augment the new classfile using the Ecstasy class structure (just once!)

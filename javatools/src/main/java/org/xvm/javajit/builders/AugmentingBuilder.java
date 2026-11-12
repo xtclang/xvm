@@ -1,27 +1,43 @@
 package org.xvm.javajit.builders;
 
+import java.lang.classfile.Annotation;
+import java.lang.classfile.AnnotationElement;
+import java.lang.classfile.AnnotationValue;
+import java.lang.classfile.AttributedElement;
+import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassBuilder;
+import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassFileElement;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.Label;
 import java.lang.classfile.MethodModel;
+
+import java.lang.classfile.attribute.RuntimeVisibleAnnotationsAttribute;
+
 import java.lang.classfile.instruction.ReturnInstruction;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitGenerated.Generator;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.NativeTypeSystem;
@@ -42,13 +58,28 @@ public class AugmentingBuilder extends CommonBuilder {
     public AugmentingBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
         super(typeSystem, art);
 
-        this.model = model;
+        this.model          = model;
+        this.isJitAnnotated = isAnnotated(model, CD_JitGenerated);
     }
 
     /**
      * The augmenting Classfile model.
      */
     public final ClassModel model;
+
+    /**
+     * A flag indicating whether the class represented by the model is annotated with the
+     * {@link JitGenerated} annotation.
+     */
+    public final boolean isJitAnnotated;
+
+    /**
+     * A cache of elements identified as being natively implemented.
+     */
+    private final Map<NativeKey, Boolean> nativeElements = new HashMap<>();
+
+    private static final ClassDesc CD_JitGenerated = ClassDesc.of(JitGenerated.class.getName());
+    private static final ClassDesc CD_JitFromNatural = ClassDesc.of(JitFromNatural.class.getName());
 
     protected NativeTypeSystem getTypeSystem() {
         return (NativeTypeSystem) typeSystem;
@@ -116,11 +147,8 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleInit(
-            ClassBuilder classBuilder,
-            List<PropertyInfo> props) {
-        MethodModel mm = findMethod(INIT_NAME, MD_xvmVoid);
-        if (mm == null) {
+    protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
+        if (!isNativeMethod(INIT_NAME, MD_xvmVoid)) {
             super.assembleInit(classBuilder, props);
         }
     }
@@ -166,16 +194,17 @@ public class AugmentingBuilder extends CommonBuilder {
     @Override
     protected void assemblePropertyAccessor(ClassBuilder classBuilder, PropertyInfo prop,
                                             String jitName, JitMethodDesc jmd, boolean isGetter) {
-        MethodTypeDesc md = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
-        MethodModel    mm = findMethod(jitName, md);
-        if (mm != null && ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
+        MethodTypeDesc md       = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
+        MethodModel    mm       = findMethod(jitName, md);
+        boolean        isNative = mm != null && isNativeElement(mm);
+        if (isNative && ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
                     prop.isAbstract() || prop.isNative())) {
             // the native accessor still need its boxed entry point
             if (jmd.isOptimized) {
                 String standardName = isGetter
                         ? prop.ensureGetterJitMethodName(typeSystem)
                         : prop.ensureSetterJitMethodName(typeSystem);
-                if (findMethod(standardName, jmd.standardMD) == null) {
+                if (!isNativeMethod(standardName, jmd.standardMD)) {
                     assembleMethodWrapper(classBuilder, standardName, jmd);
                 }
             }
@@ -192,10 +221,10 @@ public class AugmentingBuilder extends CommonBuilder {
 
         if (jmd.isOptimized && findMethod(jitName + OPT, jmd.optimizedMD) != null) {
             // the native optimized getter still needs its boxed entry point
-            if (findMethod(jitName, jmd.standardMD) == null) {
+            if (!isNativeMethod(jitName, jmd.standardMD)) {
                 assembleMethodWrapper(classBuilder, jitName, jmd);
             }
-        } else if (findMethod(jitName, jmd.standardMD) == null) {
+        } else if (!isNativeMethod(jitName, jmd.standardMD)) {
             super.assembleInflatedAccessors(classBuilder, prop);
         }
     }
@@ -205,12 +234,12 @@ public class AugmentingBuilder extends CommonBuilder {
         String        jitName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmd     = prop.getGetterJitDesc(this, thisType);
 
-        if (jmd.isOptimized && findMethod(jitName + OPT, jmd.optimizedMD) != null) {
+        if (jmd.isOptimized && isNativeMethod(jitName + OPT, jmd.optimizedMD)) {
             // the native optimized getter still needs its boxed entry point
-            if (findMethod(jitName, jmd.standardMD) == null) {
+            if (!isNativeMethod(jitName, jmd.standardMD)) {
                 assembleMethodWrapper(classBuilder, jitName, jmd);
             }
-        } else if (findMethod(jitName, jmd.standardMD) == null) {
+        } else if (!isNativeMethod(jitName, jmd.standardMD)) {
             super.generateTrivialGetter(classBuilder, prop);
         }
     }
@@ -220,19 +249,19 @@ public class AugmentingBuilder extends CommonBuilder {
         String        jitName = prop.ensureSetterJitMethodName(typeSystem);
         JitMethodDesc jmd     = prop.getSetterJitDesc(this, thisType);
 
-        if (jmd.isOptimized && findMethod(jitName + OPT, jmd.optimizedMD) != null) {
+        if (jmd.isOptimized && isNativeMethod(jitName + OPT, jmd.optimizedMD)) {
             // the native optimized setter still needs its boxed entry point
-            if (findMethod(jitName, jmd.standardMD) == null) {
+            if (!isNativeMethod(jitName, jmd.standardMD)) {
                 assembleMethodWrapper(classBuilder, jitName, jmd);
             }
-        } else if (findMethod(jitName, jmd.standardMD) == null) {
+        } else if (!isNativeMethod(jitName, jmd.standardMD)) {
             super.generateTrivialSetter(classBuilder, prop);
         }
     }
 
     @Override
     protected void assembleGenericProperty(ClassBuilder classBuilder, String name) {
-        if (findMethod(name + "$get", null) == null) {
+        if (!isNativeMethod(name + "$get", null)) {
             super.assembleGenericProperty(classBuilder, name);
         }
     }
@@ -242,12 +271,12 @@ public class AugmentingBuilder extends CommonBuilder {
             ClassBuilder classBuilder, MethodInfo method,
             String jitName, JitMethodDesc jmd) {
         if (method.isConstructorOnly()) {
-            String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-            JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmd);
-            MethodModel   newMM   = newJmd.isOptimized
-                    ? findMethod(newName + OPT, newJmd.optimizedMD)
-                    : findMethod(newName, newJmd.standardMD);
-            if (newMM != null) {
+            String        newName  = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
+            JitMethodDesc newJmd   = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmd);
+            boolean       isNative = newJmd.isOptimized
+                    ? isNativeMethod(newName + OPT, newJmd.optimizedMD)
+                    : isNativeMethod(newName, newJmd.standardMD);
+            if (isNative) {
                 // the "new" method has been natively implemented; we should not attempt to generate
                 // the constructor
                 return;
@@ -258,10 +287,11 @@ public class AugmentingBuilder extends CommonBuilder {
                 ? findMethod(jitName + OPT, jmd.optimizedMD)
                 : findMethod(jitName, jmd.standardMD);
 
-        if (mm != null &&
-                ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
+        boolean isNative = isNativeElement(mm);
+
+        if (mm != null && isNative && ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
                     method.isAbstract() || method.isNative())) {
-            if (jmd.isOptimized && findMethod(jitName, jmd.standardMD) == null) {
+            if (jmd.isOptimized && !isNativeMethod(jitName, jmd.standardMD)) {
                 // we have the optimized native method; still need to generate the standard one
                 assembleMethodWrapper(classBuilder, jitName, jmd);
             }
@@ -274,7 +304,7 @@ public class AugmentingBuilder extends CommonBuilder {
                 TypeConstant  typeDeclared = method.getJitIdentity().getClassIdentity().getType();
                 JitMethodDesc jmdDeclared  = method.getJitDesc(this, typeDeclared);
                 if (jmdDeclared.isOptimized && !jmdDeclared.isOptimizedStatic &&
-                        findMethod(jitName + OPT, jmdDeclared.optimizedMD) == null) {
+                        !isNativeMethod(jitName + OPT, jmdDeclared.optimizedMD)) {
                     assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd,
                             method.isConditionalReturn(typeInfo));
                 }
@@ -307,13 +337,48 @@ public class AugmentingBuilder extends CommonBuilder {
     @Override
     protected void assembleNew(ClassBuilder classBuilder, MethodInfo constructor, String jitName,
                                JitMethodDesc jmd, List<AnnotationConstructor> annoConstructors) {
-        MethodModel mm = jmd.isOptimized
-                ? findMethod(jitName + OPT, jmd.optimizedMD)
-                : findMethod(jitName, jmd.standardMD);
+        boolean isNative = jmd.isOptimized
+                ? isNativeMethod(jitName + OPT, jmd.optimizedMD)
+                : isNativeMethod(jitName, jmd.standardMD);
 
-        if (mm == null) {
+        if (!isNative) {
             super.assembleNew(classBuilder, constructor, jitName, jmd, annoConstructors);
         }
+    }
+
+    /**
+     * Apply any custom processing to the {@link ClassFileElement}.
+     *
+     * @param element       the {@link ClassFileElement} to customize
+     * @param classBuilder  the {@link ClassBuilder} to use to generate code
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public void processElement(ClassElement element, ClassBuilder classBuilder) {
+        if (isJitAnnotated) {
+            if (isAnnotated(element, CD_JitFromNatural)) {
+                // the element is annotated with JitNatural, let the JIT compile it
+                return;
+            }
+
+            Annotation generated = findAnnotation(element, CD_JitGenerated);
+            if (generated != null) {
+                // element has a JitGenerated annotation, so execute its generator
+                ClassDesc genCD = getGeneratorClass(generated);
+                try {
+                    var className   = genCD.packageName() + "." + genCD.displayName();
+                    var clz         = (Class<Generator>) Class.forName(className);
+                    var constructor = clz.getDeclaredConstructor();
+                    var generator   = constructor.newInstance();
+                    generator.generate(this, element, classBuilder);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return;
+            }
+        }
+
+        // element has no JIT annotations, so it is native code
+        classBuilder.with(element);
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -385,11 +450,107 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected boolean isNativeMethod(String jitName, MethodTypeDesc md) {
-        return findMethod(jitName, md) != null;
+        return nativeElements.computeIfAbsent(new NativeKey(jitName, md, false), k -> {
+                    MethodModel mm = findMethod(jitName, md);
+                    return isNativeElement(mm);
+                });
     }
 
     @Override
     protected boolean isNativeField(String jitName) {
-        return findField(jitName) != null;
+        return nativeElements.computeIfAbsent(new NativeKey(jitName, true), k -> {
+                    FieldModel fm = findField(jitName);
+                    return isNativeElement(fm);
+                });
+    }
+
+    /**
+     * Determine whether the specified element is coded natively.
+     * <p>
+     * If the element is {@code null} it is not native.
+     * <p>
+     * If the element is annotated with {@link JitFromNatural} it is not native.
+     * <p>
+     * If the element is annotated with {@link JitGenerated} then the annotation's generator class
+     * is checked. If the generator class is {@link JitGenerated.NaturalCode}, then the element
+     * is not native, otherwise for all other generator classes the element is native.
+     * <p>
+     * Otherwise if the element is not {@code null} and has neither {@link JitFromNatural} nor
+     * {@link JitGenerated} annotations then it is native.
+     *
+     * @param element  the {@link ClassFileElement} to test
+     *
+     * @return {@code true} if the element is coded natively
+     */
+    public boolean isNativeElement(ClassFileElement element) {
+        if (element == null) {
+            return false;
+        }
+        if (isAnnotated(element, CD_JitFromNatural)) {
+            return false;
+        }
+        Annotation an = findAnnotation(element, CD_JitGenerated);
+        if (an != null) {
+            ClassDesc cd = getGeneratorClass(an);
+            return !CD_JitFromNatural.equals(cd);
+        }
+        return true;
+    }
+
+    /**
+     * @return the {@link Generator} class for the specified {@link JitGenerated}
+     * annotation.
+     */
+    protected ClassDesc getGeneratorClass(Annotation annotation) {
+        List<AnnotationElement> elements = annotation.elements();
+        if (elements.isEmpty()) {
+            return CD_JitFromNatural;
+        }
+
+        for (AnnotationElement annotationElement : elements) {
+            if (annotationElement.name().equalsString("value")) {
+                return ((AnnotationValue.OfClass) annotationElement.value()).classSymbol();
+            }
+        }
+        throw new IllegalStateException("generator value not found");
+    }
+
+    /**
+     * @return {@code true} if the specified element is annotated with the specified annotation
+     */
+    public static boolean isAnnotated(ClassFileElement element, ClassDesc annotation) {
+        return findAnnotation(element, annotation) != null;
+    }
+
+    /**
+     * @return if the element is annotated with the specified annotation, then return it,
+     *         otherwise return {@code null}
+     */
+    public static Annotation findAnnotation(ClassFileElement element, ClassDesc annotation) {
+        if (element instanceof AttributedElement attributedElement) {
+            List<Annotation> annotations = attributedElement
+                    .findAttribute(Attributes.runtimeVisibleAnnotations())
+                    .map(RuntimeVisibleAnnotationsAttribute::annotations)
+                    .orElse(null);
+
+            if (annotations != null) {
+                return annotations.stream()
+                        .filter(ann -> ann.classSymbol().equals(annotation))
+                        .findFirst()
+                        .orElse(null);
+            }
+        }
+        return null;
+    }
+
+    // ----- inner record: NativeKey ---------------------------------------------------------------
+
+    /**
+     * The key used in the native element cache map {@link #nativeElements}.
+     */
+    private record NativeKey(String jitName, ConstantDesc desc, boolean isField) {
+        private NativeKey(String jitName, boolean isField) {
+            this(jitName, null, isField);
+        }
     }
 }
