@@ -4,6 +4,7 @@ import java.io.File
 import java.util.Collections
 import java.util.List.copyOf as immutableList
 import java.util.Map.copyOf as immutableMap
+import java.util.Set.copyOf as immutableSet
 
 /**
  * Explicit host configuration; dependency names may identify source modules or binary artifacts.
@@ -13,6 +14,8 @@ class XdkSourceModule(
     uri: String,
     dependencies: Set<String> = emptySet(),
     resourceRoots: List<String>? = null,
+    /** The XDK's own source of a bundled library, which replaces it in an XDK workspace ([XdkWorkspaceMode]). */
+    val shadowsBundle: Boolean = false,
 ) {
     internal val root: File =
         requireNotNull(XdkSources.file(uri)) { "A source module requires a file URI: $uri" }
@@ -38,8 +41,11 @@ class XdkSourceModule(
         require(name.isNotBlank() && root.extension == "x") {
             "A source module requires a name and an .x root"
         }
-        require(name !in XdkLibraries.moduleNames) {
+        require(shadowsBundle || name !in XdkLibraries.moduleNames) {
             "Project sources cannot replace bundled compiler libraries"
+        }
+        require(!shadowsBundle || XdkWorkspaceMode.replaces(name)) {
+            "Only the XDK's own libraries, not its bootstrap modules, replace bundled ones: $name"
         }
     }
 }
@@ -53,6 +59,9 @@ internal class XdkProject(
 ) {
     /** The modules by name, in [buildOrder]. */
     val modules: Map<String, XdkSourceModule>
+
+    /** The bundled libraries that this project's own sources replace: the XDK's, in an XDK workspace; else none. */
+    val shadowed: Set<String> = immutableSet(modules.filter { it.shadowsBundle }.map { it.name })
 
     private val configuration =
         modules.map { Configuration(it.name, it.uri, it.dependencies, it.resourceRoots) }.toSet()
