@@ -191,6 +191,19 @@ class CompilerConfigurationTest {
     }
 
     @Test
+    fun `an explicit module named as a bundled library replaces it, but a bootstrap module cannot`() {
+        val workspace = directory.toUri().toString()
+
+        fun modules(vararg names: String) =
+            CompilerConfiguration.modules(
+                mapOf("sourceModules" to names.map { mapOf("name" to it, "uri" to "${it.substringBefore('.')}.x") }),
+                listOf(workspace),
+            )
+        assertThat(modules("json.xtclang.org", "App")!!.map { it.name }).containsExactly("json.xtclang.org", "App")
+        assertThatThrownBy { modules("mack.xtclang.org") }.hasMessageContaining("bootstrap module mack.xtclang.org")
+    }
+
+    @Test
     fun `explicit null restores automatic discovery through JSON and host maps`() {
         assertThat(CompilerConfiguration.automatic(mapOf("sourceModules" to null))).isTrue()
         val settings = JsonParser.parseString("""{"xtc":{"compiler":{"sourceModules":null}}}""")
