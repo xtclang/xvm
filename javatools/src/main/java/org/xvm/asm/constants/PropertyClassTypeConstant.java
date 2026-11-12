@@ -71,6 +71,14 @@ public class PropertyClassTypeConstant
      * @param idProp      the property id
      */
     public PropertyClassTypeConstant(ConstantPool pool, TypeConstant typeParent, PropertyConstant idProp) {
+        this(pool, typeParent, idProp, false);
+    }
+
+    /**
+     * Internal constructor.
+     */
+    private PropertyClassTypeConstant(ConstantPool pool, TypeConstant typeParent,
+                                      PropertyConstant idProp, boolean fNativeRebase) {
         super(pool, typeParent);
 
         // unlike VirtualChildConstant, it's never unresolved
@@ -81,7 +89,8 @@ public class PropertyClassTypeConstant
             throw new IllegalArgumentException("property is required");
         }
 
-        m_idProp = idProp;
+        m_idProp        = idProp;
+        f_fNativeRebase = fNativeRebase;
     }
 
     /**
@@ -97,7 +106,8 @@ public class PropertyClassTypeConstant
             throws IOException {
         super(pool, format, in);
 
-        m_iProp = readIndex(in);
+        m_iProp         = readIndex(in);
+        f_fNativeRebase = false;
     }
 
     @Override
@@ -134,7 +144,33 @@ public class PropertyClassTypeConstant
      * @return the property ref type
      */
     public TypeConstant getRefType() {
-        return getPropertyInfo().getBaseRefType();
+        PropertyInfo info = getPropertyInfo();
+        TypeConstant type = info.getBaseRefType();
+
+        return f_fNativeRebase
+                ? info.getType().asNativeRef(getConstantPool(), info.isVar())
+                        .adoptAnnotations(getConstantPool(), type)
+                : type;
+    }
+
+    /**
+     * @return the runtime-only property type based on the native Ref/Var implementation
+     */
+    public PropertyClassTypeConstant asNativeRebase() {
+        return f_fNativeRebase
+                ? this
+                : getConstantPool().register(new PropertyClassTypeConstant(
+                        getConstantPool(), m_typeParent, m_idProp, true));
+    }
+
+    /**
+     * @return the property type based on the ordinary Ref/Var interface
+     */
+    public PropertyClassTypeConstant asStandardRef() {
+        return f_fNativeRebase
+                ? getConstantPool().register(new PropertyClassTypeConstant(
+                        getConstantPool(), m_typeParent, m_idProp, false))
+                : this;
     }
 
     // ----- TypeConstant methods ------------------------------------------------------------------
@@ -156,7 +192,9 @@ public class PropertyClassTypeConstant
 
     @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type) {
-        return pool.ensurePropertyClassTypeConstant(type, m_idProp);
+        PropertyClassTypeConstant typeClone = (PropertyClassTypeConstant)
+                pool.ensurePropertyClassTypeConstant(type, m_idProp);
+        return f_fNativeRebase ? typeClone.asNativeRebase() : typeClone;
     }
 
     @Override
@@ -267,8 +305,10 @@ public class PropertyClassTypeConstant
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
-    @Override
-    protected TypeInfo buildTypeInfo(ErrorListener errs) {
+    /**
+     * @return the private TypeInfo for this property class
+     */
+    protected TypeInfo buildPrivateInfo(ErrorListener errs) {
         ConstantPool   pool     = getConstantPool();
         int            cInvals  = pool.getInvalidationCount();
         PropertyInfo   infoProp = getPropertyInfo();
@@ -292,7 +332,7 @@ public class PropertyClassTypeConstant
             }
 
             if (infoBase == null) {
-                TypeConstant typeRef = infoProp.getBaseRefType().removeAutoNarrowing();
+                TypeConstant typeRef = getRefType().removeAutoNarrowing();
 
                 typeBase = pool.ensureAccessTypeConstant(typeRef, Access.PROTECTED);
                 infoBase = typeBase.ensureTypeInfoInternal(errs);
@@ -301,6 +341,7 @@ public class PropertyClassTypeConstant
                 }
                 idBase = (IdentityConstant) typeRef.getDefiningConstant();
 
+                mapTypeParams .putAll(infoBase.getTypeParams());
                 mapProps      .putAll(infoBase.getProperties());
                 mapMethods    .putAll(infoBase.getMethods());
                 mapVirtProps  .putAll(infoBase.getVirtProperties());
@@ -321,9 +362,13 @@ public class PropertyClassTypeConstant
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
                 PropertyStructure           structProp  = infoProp.getHead().getStructure();
-                collectChildInfo(idBase, false, structProp, mapTypeParams, mapContribProps,
-                        mapContribMethods, mapContribChildren, listExplode, mapVirtProps,
-                        0, 0, errs);
+
+                // collect the property's own members as ordinary Ref/Var declarations
+                IdentityConstant idRef = idBase instanceof NativeRebaseConstant idNative
+                        ? idNative.getClassConstant()
+                        : idBase;
+                collectChildInfo(idRef, false, structProp, mapTypeParams, mapContribProps,
+                        mapContribMethods, mapContribChildren, listExplode, mapVirtProps, 0, 0, errs);
 
                 for (PropertyConstant idProp : listExplode) {
                     PropertyInfo propExplode = mapContribProps.remove(idProp);
@@ -343,7 +388,7 @@ public class PropertyClassTypeConstant
                 if (mapContribProps.isEmpty() && mapContribMethods.isEmpty() &&
                         mapContribChildren.isEmpty()) {
                     // nothing has been added
-                    return infoBase;
+                    continue;
                 }
 
                 if (!mapContribProps.isEmpty()) {
@@ -401,7 +446,7 @@ public class PropertyClassTypeConstant
             }
         }
 
-        return new TypeInfoReal(this, cInvals, infoBase.getClassStructure(),
+        return new TypeInfoReal(ensureAccess(Access.PRIVATE), cInvals, infoBase.getClassStructure(),
                 idBase.getNestedDepth() + 1, false, mapTypeParams,
                 Annotation.NO_ANNOTATIONS, infoBase.getMixinAnnotations(), typeBase, null, null,
                 infoBase.getContributionList(), infoBase.getClassChain(), infoBase.getDefaultChain(),
@@ -413,7 +458,7 @@ public class PropertyClassTypeConstant
 
     @Override
     public TypeConstant getJitCCType() {
-        return getRefType().getJitCCType();
+        return this;
     }
 
     @Override
@@ -422,9 +467,24 @@ public class PropertyClassTypeConstant
     }
 
     @Override
+    public String getJitCCName(TypeSystem ts) {
+        return f_fNativeRebase ? getJitICName(ts) : getRefType().getJitCCName(ts);
+    }
+
+    @Override
+    public boolean isJitL2Specialized() {
+        return getRefType().isJitL2Specialized();
+    }
+
+    @Override
+    public boolean isJitAnnotatedRef() {
+        return getRefType().isJitAnnotatedRef();
+    }
+
+    @Override
     public String getJitICName(TypeSystem ts) {
-        ModuleLoader  loader = ts.findOwnerLoader(getParentType());
-        TypeConstant  type   = loader.typeSystem.pool().register(this);
+        ModuleLoader loader  = ts.findOwnerLoader(getParentType());
+        TypeConstant type    = loader.typeSystem.pool().register(asStandardRef());
         StringBuilder sbName = new StringBuilder(getProperty().getClassJitName(ts));
 
         TypeSystem.appendJitSuffix(sbName, type.getPosition());
@@ -477,6 +537,9 @@ public class PropertyClassTypeConstant
             }
 
             n = this.m_idProp.compareTo(that.m_idProp);
+            if (n == 0) {
+                n = Boolean.compare(this.f_fNativeRebase, that.f_fNativeRebase);
+            }
         }
         return n;
     }
@@ -498,6 +561,9 @@ public class PropertyClassTypeConstant
     @Override
     protected void assemble(DataOutput out)
             throws IOException {
+        if (f_fNativeRebase) {
+            throw new IllegalStateException("Native property class types cannot be serialized");
+        }
         super.assemble(out);
 
         writeMagnitude(out, m_idProp.getPosition());
@@ -508,7 +574,8 @@ public class PropertyClassTypeConstant
     @Override
     protected int computeHashCode() {
         return Hash.of(m_typeParent,
-               Hash.of(m_idProp));
+               Hash.of(m_idProp,
+               Hash.of(f_fNativeRebase)));
     }
 
     // ----- data fields ---------------------------------------------------------------------------
@@ -527,4 +594,9 @@ public class PropertyClassTypeConstant
      * Cached property info.
      */
     private transient PropertyInfo m_info;
+
+    /**
+     * Indicates that the property type uses the native Ref/Var implementation at runtime.
+     */
+    private final transient boolean f_fNativeRebase;
 }

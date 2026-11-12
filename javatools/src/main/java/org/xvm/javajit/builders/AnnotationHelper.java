@@ -48,23 +48,25 @@ public class AnnotationHelper {
     /**
      * Create a helper for a type whose composition contains annotations.
      *
-     * @param builder      the builder assembling the incorporating type
-     * @param annotations  the nonempty TypeInfo annotation array, in invocation order
+     * @param builder             the builder assembling the incorporating type
+     * @param annotations         the nonempty TypeInfo annotation array, in invocation order
+     * @param isConstructionSite  true iff the type has construction site annotations
      */
-    public AnnotationHelper(CommonBuilder builder, Annotation[] annotations) {
+    public AnnotationHelper(CommonBuilder builder, Annotation[] annotations, boolean isConstructionSite) {
         assert annotations.length > 0;
 
         this.builder            = builder;
         this.annotations        = annotations;
         this.thisType           = builder.thisType;
-        this.isConstructionSite = thisType.isAnnotated();
+        this.isConstructionSite = isConstructionSite;
 
         TypeConstant baseType = isConstructionSite
                 ? thisType.removeAnnotations()
                 : builder.typeInfo.getExtends();
         if (baseType == null) {
             baseType = thisType.isConst()
-                    ? builder.pool().typeConstRB() : builder.pool().typeObject();
+                    ? builder.pool().typeConstRB()
+                    : builder.pool().typeObject();
         }
         this.baseType              = baseType.ensureAccess(Access.PRIVATE);
         this.constructionSiteCount = isConstructionSite ? thisType.getAnnotations().length : 0;

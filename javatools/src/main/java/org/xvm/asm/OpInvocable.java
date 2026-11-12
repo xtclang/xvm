@@ -492,15 +492,9 @@ public abstract class OpInvocable extends Op {
             call = bctx.builder.resolvePrivateDetachedCall(infoMethod, typeInvoke);
         }
 
-        JitMethodDesc jmd;
-        if (call == null) {
-            jmd = infoMethod.getJitDesc(bctx.builder, typeInvoke);
-        } else {
-            jmd = call.jmd();
-            code.checkcast(call.receiverCD() == null ? call.owner() : call.receiverCD());
-        }
-
-        String methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
+        JitMethodDesc jmd = call == null
+                ? infoMethod.getJitDesc(bctx.builder, typeInvoke)
+                : call.jmd();
 
         if (isTupleReturn()) {
             if (jmd.isPrimitivized() && fUnboxed) {
@@ -521,11 +515,17 @@ public abstract class OpInvocable extends Op {
             Builder.unbox(code, typeInvoke);
         }
 
-        if (!isPropCall && (bodyHead.getIdentity().getNestedDepth() > 2 ||
-                                 infoMethod.getTypeInfo() == null)) {
-            // nested and private mixin methods absent from TypeInfo need to be built here;
-            // the second check is based on the synthetic info produced by computeMethodInfo()
-            bctx.buildMethod(methodName, bodyHead);
+        String   methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
+        TypeInfo infoOwner  = infoMethod.getTypeInfo();
+        if (!isPropCall) {
+            IdentityConstant idNamespace = bodyHead.getIdentity().getNamespace();
+            if (infoOwner == null ||
+                    idNamespace.isNested() &&
+                        !idNamespace.equals(infoOwner.getType().getDefiningConstant())) {
+                // direct members are assembled by their type's method loop; nested methods
+                // and methods absent from TypeInfo are assembled on demand
+                bctx.buildMethod(methodName, bodyHead);
+            }
         }
 
         MethodTypeDesc md;

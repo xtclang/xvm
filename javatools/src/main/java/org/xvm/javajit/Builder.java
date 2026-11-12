@@ -138,8 +138,7 @@ public abstract class Builder {
      * @return true iff the property's Ref annotations are implemented on its containing class
      */
     public boolean isHostedProperty(PropertyInfo property) {
-        return property.isRefAnnotated() && !property.isJitInflated() &&
-                AnnotationHelper.hasRuntimeAnnotations(property.getRefAnnotations());
+        return property.isJitRefAnnotated() && !property.isJitInflated();
     }
 
     /**
@@ -282,8 +281,8 @@ public abstract class Builder {
                 ? id.getClassIdentity()
                 : id.getNamespace();
 
-        return containerId.equals(getThisType().getSingleUnderlyingClass(true)) ||
-                isEmbedded(containerId.getComponent().getFormat());
+        IdentityConstant thisId = (IdentityConstant) getThisType().getDefiningConstant();
+        return containerId.equals(thisId) || isEmbedded(containerId.getComponent().getFormat());
     }
 
     /**
@@ -585,6 +584,7 @@ public abstract class Builder {
             if (singleton.getClassConstant() instanceof PropertyConstant propId) {
                 TypeConstant ownerType = propId.getClassIdentity().getType();
                 PropertyInfo propInfo  = propId.getPropertyInfo(ownerType);
+
                 if (!propInfo.isConstant()) {
                     // an instance property on a runtime constant (e.g. singleton)
                     RegisterInfo targetReg = loadConstant(bctx, code,
@@ -592,10 +592,39 @@ public abstract class Builder {
                     return loadPropertyValue(code, targetReg, propId, bctx.ctxSlot(code));
                 }
 
-                TypeConstant propType = singleton.getType();
-                JitTypeDesc  jtd      = propType.getJitDesc(this);
-
+                TypeConstant propType     = singleton.getType();
+                JitTypeDesc  jtd          = propType.getJitDesc(this);
                 RegisterInfo singletonReg = new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+
+                if (propInfo.isJitInflated()) {
+                    int ctxSlot = bctx == null ? code.parameterSlot(0) : bctx.ctxSlot(code);
+
+                    loadStaticRef(code, propInfo, ctxSlot);
+                    code.aload(ctxSlot)
+                        .invokevirtual(CD_nRef, "get", md(CD_Object, CD_Ctx))
+                        .checkcast(getCCDesc(propType));
+
+                    if (jtd.flavor.isOptimized) {
+                        if (propType.isNullable()) {
+                            unboxNullable(code, propType, getCCDesc(propType.removeNullable()));
+                        } else {
+                            unbox(code, propType);
+                        }
+                    }
+
+                    return switch (jtd.flavor) {
+                        case NullablePrimitive ->
+                            new ExtendedSlot(Op.A_STACK, 0, 0, jtd.flavor, propType, jtd.cd, "");
+
+                        case XvmPrimitive, NullableXvmPrimitive ->
+                            new MultiSlot(jtd.flavor, propType, jtd.cd,
+                                    JitTypeDesc.getXvmPrimitiveClasses(propType));
+
+                        default ->
+                            singletonReg;
+                    };
+                }
+
                 if (isContainerScoped(propInfo)) {
                     assert !jtd.flavor.isOptimized;
 
@@ -985,12 +1014,26 @@ public abstract class Builder {
      * a service; unless its declared type guarantees a const result, the value must be assumed to be
      * a service and initialized separately for each Container.
      *
+     * Static properties with declaration site Ref annotations retain their Ref instance and
+     * annotation state separately for each Container as well.
+     *
      * @return true iff the static field holds a computation handle instead of the property value
      */
     protected boolean isContainerScoped(PropertyInfo prop) {
         return prop.isConstant() &&
-                (prop.isInjected() ||
+                (prop.isJitInflated() || prop.isInjected() ||
                  prop.getInitializer() != null && !prop.getType().isConst());
+    }
+
+    /**
+     * Load the container's shared Ref instance for an inflated static property.
+     */
+    public void loadStaticRef(CodeBuilder code, PropertyInfo prop, int ctxSlot) {
+        TypeConstant ownerType = prop.getIdentity().getClassIdentity().getType();
+        code.aload(ctxSlot)
+            .getstatic(getCCDesc(ownerType), prop.ensureJitName(typeSystem), CD_MethodHandle)
+            .invokevirtual(CD_Ctx, "getStatic", Ctx.MD_getStatic)
+            .checkcast(CD_nRef);
     }
 
     /**

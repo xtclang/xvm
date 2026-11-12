@@ -2267,7 +2267,7 @@ public abstract class TypeConstant
         }
 
         if (typeUnderlying instanceof PropertyClassTypeConstant typePropClass) {
-            return typePropClass.buildTypeInfo(errs);
+            return typePropClass.buildPrivateInfo(errs);
         }
 
         // this implementation only deals with modifying (not including immutable) and terminal type
@@ -7546,7 +7546,8 @@ public abstract class TypeConstant
         // likewise, for an annotation A into C:
         // Ecstasy: A --into--> C, so A.isA(C), but
         // Java:    JCC(A) is not a subtype of JCC(C); A -> C requires a checkcast
-        boolean fIntoCast = Builder.isEmbedded(typeThisJit.getExplicitClassFormat()) &&
+        boolean fIntoCast = typeThisJit.isExplicitClassIdentity(true) &&
+                Builder.isEmbedded(typeThisJit.getExplicitClassFormat()) &&
                 typeThisJit.getExplicitClassInto(true).isA(typeThatJit);
 
         return typeThisJit.equals(typeThatJit) || !fIntoCast &&
@@ -7561,7 +7562,8 @@ public abstract class TypeConstant
      * @return true iff this type's JCC is a Java interface
      */
     public boolean isJitCCInterface() {
-        return isJitImplInterface() || isDerivedVirtualChildClass();
+        TypeConstant typeJit = getJitCCType();
+        return typeJit.isJitImplInterface() || typeJit.isDerivedVirtualChildClass();
     }
 
     /**
@@ -7573,7 +7575,8 @@ public abstract class TypeConstant
         TypeConstant typeJit = getJitCCType();
         return (typeJit.isInterfaceType() || Builder.isEmbedded(typeJit.getExplicitClassFormat()))
                 && !typeJit.isTuple()
-                && !typeJit.isTypeOfType();
+                && !typeJit.isTypeOfType()
+                && !typeJit.isNativeRef();
     }
 
     /**
@@ -7616,8 +7619,9 @@ public abstract class TypeConstant
      * the corresponding type. It's the minimal (the widest) type that produces the same "JIT Call
      * Class Name' CC(T).
      *
-     * <p>The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying
-     * class} that could parameterized by non-parameterized callable JIT types as parameters.
+     * <p>For class types, CC(T) is a {@link #isSingleUnderlyingClass single underlying class} that
+     * could be parameterized by non-parameterized callable JIT types as parameters. Property class
+     * types retain their property identity.
      *
      * <p>The following should hold :
      *  <ul>
