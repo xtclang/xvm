@@ -1,6 +1,7 @@
 package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
@@ -339,6 +340,46 @@ class XdkProjectServerTest {
             val mark = session.published.size
             session.change(first, first.readText(), 2)
             session.expect(first, mark, 2, false)
+        }
+    }
+
+    @Test
+    fun `a workspace's own json replaces the bundled one, the client hears so each time that changes, and builds refuse`() {
+        val workspace =
+            directory
+                .toRealPath()
+                .resolve("own")
+                .toFile()
+                .also { it.mkdirs() }
+        val json = workspace.resolve("json.x").also { it.writeText("module json.xtclang.org {}") }
+        val app = workspace.resolve("App.x").also { it.writeText("module App { package json import json.xtclang.org; }") }
+        val heard = CopyOnWriteArrayList<List<String>>()
+        val client =
+            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+                override fun runOutput(params: RunOutputParams) {}
+
+                override fun runExited(params: RunExitedParams) {}
+
+                override fun replacedLibraries(params: ReplacedLibrariesParams) {
+                    heard += params.libraries
+                }
+            }
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(client)
+            server
+                .initialize(
+                    editorInitializeParams().apply { workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "own")) },
+                ).awaited()
+            server.textDocumentService.didOpen(
+                DidOpenTextDocumentParams(TextDocumentItem(app.toURI().toString(), "ecstasy", 1, app.readText())),
+            )
+            awaitAsserted { assertThat(heard.lastOrNull()).isEqualTo(listOf("json.xtclang.org")) }
+            assertThatThrownBy { server.build(BuildParams()).awaited() }.hasStackTraceContaining("own modules replace bundled libraries")
+            json.delete()
+            server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(listOf(FileEvent(json.toURI().toString(), FileChangeType.Deleted))),
+            )
+            awaitAsserted { assertThat(heard.lastOrNull()).isEmpty() }
         }
     }
 

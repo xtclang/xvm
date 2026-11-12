@@ -23,10 +23,47 @@ export function hasGradleBuild(folder: vscode.WorkspaceFolder | undefined): bool
 }
 
 /**
- * The effective mode for a folder: the setting, embedded by default even with a Gradle build, or with `auto`,
- * Gradle exactly when the folder has a Gradle build.
+ * The bundled libraries that the language server says the workspace's own modules replace, as the XVM repository's
+ * replace them all. While there are any, builds and runs use Gradle: the server builds and runs only with the bundled
+ * XDK. Each server says it again.
+ */
+let replaced: readonly string[] = [];
+/** Whether the user was told that the replaced libraries make builds use Gradle, once per session. */
+let told = false;
+const replacedChanges = new vscode.EventEmitter<readonly string[]>();
+
+/** Fires when the libraries that the workspace's own modules replace change. */
+export const onDidChangeReplacedLibraries = replacedChanges.event;
+
+export function replacedLibraries(): readonly string[] {
+    return replaced;
+}
+
+/** A stopped language server's libraries are no longer replaced; the next server says again what it replaces. */
+export function forgetReplacedLibraries(): void {
+    replace([]);
+}
+
+function replace(libraries: readonly string[]): void {
+    replaced = libraries;
+    replacedChanges.fire(libraries);
+    if (libraries.length > 0 && !told) {
+        told = true;
+        void vscode.window.showInformationMessage(
+            `This workspace's own modules replace the bundled libraries ${libraries.join(', ')}, and the language `
+            + 'server builds and runs only with the bundled XDK, so Ecstasy builds, runs and debug sessions use Gradle.');
+    }
+}
+
+/**
+ * The effective mode for a folder: Gradle while the workspace's own modules replace bundled libraries; else the
+ * setting, embedded by default even with a Gradle build, or with `auto`, Gradle exactly when the folder has a
+ * Gradle build.
  */
 export function buildMode(folder: vscode.WorkspaceFolder | undefined): BuildMode {
+    if (replaced.length > 0) {
+        return 'gradle';
+    }
     const setting = vscode.workspace.getConfiguration('xtc', folder).get<string>('build.mode', 'embedded');
     if (setting === 'embedded' || setting === 'gradle') {
         return setting;
@@ -111,7 +148,9 @@ export function attachEmbeddedExecution(client: LanguageClient): vscode.Disposab
         'xtc/runExited',
         (params: { runId: string; exitCode?: number | null; error?: string | null }) =>
             sessions.get(params.runId)?.exited(params.exitCode ?? undefined, params.error ?? undefined));
-    return vscode.Disposable.from(output, tested, exited);
+    const libraries = client.onNotification('xtc/replacedLibraries', (params: { libraries?: string[] }) =>
+        replace(params.libraries ?? []));
+    return vscode.Disposable.from(output, tested, exited, libraries);
 }
 
 /** A stopped or restarted language server takes its execution worker with it. */
