@@ -1408,8 +1408,8 @@ class XtcLanguageServer internal constructor(
                         null
                     },
                 "compilerLibraries" to (adapter as? XdkAdapter)?.libraryConfiguration(),
-                // the bundled libraries that the workspace's own sources replace: the XDK's, in its own repository
-                "xdkWorkspace" to (adapter as? XdkAdapter)?.shadowedLibraries().orEmpty().sorted(),
+                // the bundled libraries that the workspace's own modules replace, as the XVM repository's replace them all
+                "replacedLibraries" to (adapter as? XdkAdapter)?.replacedLibraries().orEmpty().sorted(),
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
                 // the runs it still tracks, builds, programs and test runs, which is none once each, and its program, ended
                 "embeddedRuns" to embeddedRuns.tracked(),
