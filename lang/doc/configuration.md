@@ -438,7 +438,8 @@ properties of the Starter test JVM. All are `providers` properties.
 | Gradle property | System property | Default | What it does | Read at |
 |-----------------|-----------------|---------|--------------|---------|
 | `intellijPlaybookCases` | `xtc.playbook.cases` | all cases | Comma-separated case IDs. | `ideaIt/CompilerPlaybookTest.kt:210` |
-| `intellijPlaybookIde` | `xtc.playbook.ideVersion` | `2026.2.3`, the IDE the plugin builds against | The IntelliJ the playbook drives: the default, or `2026.3`, with IDE Starter and its driver for that IDE (the `lang-intellij-next-*` versions in `gradle/libs.versions.toml`). The plugin still builds against the default; only the playbook's IDE changes. | `lang/intellij-plugin/build.gradle.kts:259`, `ideaIt/PlaybookIde.kt:37` |
+| `intellijPlaybookIde` | `xtc.playbook.ideVersion` | `2026.2.3`, the IDE the plugin builds against | The IntelliJ the playbook drives: the default, or `2026.3`, with IDE Starter and its driver for that IDE (the `lang-intellij-next-*` versions in `gradle/libs.versions.toml`). The plugin still builds against the default; only the playbook's IDE changes. | `lang/intellij-plugin/build.gradle.kts:259`, `ideaIt/PlaybookIde.kt:38` |
+| `intellijPlaybookHang` | `xtc.playbook.hang` | an hour | Seconds before a case counts as hung, in the playbook and in the IDE's probes; shorter only for a quicker look at a case that hangs. | `lang/intellij-plugin/build.gradle.kts:1067`, `lang/intellij-plugin/src/playbookProbe/kotlin/org/xtclang/idea/playbook/probe/HangLimit.kt:14` |
 | `intellijPlaybookReplacementGates` | `xtc.playbook.replacementGates` | none | Upstream replacement gates to run; needs `-Plsp4ijPlugin` or `-Plsp4ijChannel`. | `ideaIt/CompilerPlaybookTest.kt:201` |
 | `intellijLargeFileProbe` | `xtc.playbook.largeFileProbe` | `false` | Run the large-file editing probe. | `ideaIt/CompilerPlaybookTest.kt:25` |
 | `intellijTour` | `xtc.tour` | `false` | Run the tour, which records and checks the plugin's features. | `ideaIt/TourTest.kt:20` |
@@ -446,7 +447,7 @@ properties of the Starter test JVM. All are `providers` properties.
 | `intellijTourVisible` | `xtc.tour.visible` | `false` | Show the pointer, keys and typing without a recording. | `ideaIt/TourTest.kt:43` |
 | `intellijTourHang` | `xtc.tour.hang` | an hour | Seconds before a tour step counts as hung. | `ideaIt/Tour.kt:439` |
 | `lsp.adapter` | `xtc.playbook.adapter` | `compiler` | The adapter the playbook expects; `treesitter` only for the settings-persistence session. | `ideaIt/CompilerPlaybookTest.kt:29` |
-| `lsp4ijPlugin`, `lsp4ijVersion`, `lsp4ijChannel` | `xtc.playbook.lsp4ijPlugin`, `xtc.playbook.lsp4ijVersion`, `xtc.playbook.lsp4ijChannel` | the release | The LSP4IJ the test IDE installs. | `ideaIt/PlaybookIde.kt:38`, `:41`, `:42` |
+| `lsp4ijPlugin`, `lsp4ijVersion`, `lsp4ijChannel` | `xtc.playbook.lsp4ijPlugin`, `xtc.playbook.lsp4ijVersion`, `xtc.playbook.lsp4ijChannel` | the release | The LSP4IJ the test IDE installs. | `ideaIt/PlaybookIde.kt:39`, `:42`, `:43` |
 | none | `xtc.playbook.scenarios`, `xtc.playbook.manual`, `xtc.playbook.reports`, `allure.results.directory` | from the build | `lang/test-fixtures/compiler-playbook/scenarios.json`, `lang/doc/manual-test-plan.md`, and `build/reports/compiler-playbook` | `ideaIt/CompilerPlaybookTest.kt:33`, `:36`, `:39` |
 | `playbookRetainedRuns` | none | `5` | Completed run directories kept under `build/reports/compiler-playbook`; also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1041`, `lang/vscode-extension/build.gradle.kts:338` |
 
