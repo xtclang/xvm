@@ -5,7 +5,9 @@ import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.FileEditorManager
 import com.intellij.driver.sdk.Project
+import com.intellij.driver.sdk.VirtualFile
 import com.intellij.driver.sdk.singleProject
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
@@ -196,6 +198,36 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
     )
 }
 
+/**
+ * Closes the editors of [files] as their tabs' close buttons do, through [ProjectLifecycle.closeEditors]: IntelliJ 2026.3
+ * closes a file only under the write-intent lock, which the driver's calls on the EDT do not take there.
+ */
+internal fun Driver.closeEditors(files: List<VirtualFile>) {
+    val paths = files.map { it.getPath() }.distinct()
+    withContext(OnDispatcher.EDT) { utility(ProjectLifecycle::class).closeEditors(singleProject(), paths) }
+}
+
+/** Closes every editor, as [closeEditors] does. */
+internal fun Driver.closeAllEditors() =
+    closeEditors(withContext(OnDispatcher.EDT) { service<FileEditorManager>(singleProject()).getAllEditors().map { it.getFile() } })
+
+/** Reverts the documents of the files at [paths] to their text on disk, through [ProjectLifecycle.reloadFromDisk]. */
+internal fun Driver.reloadFromDisk(paths: List<String>) =
+    withContext(OnDispatcher.EDT) { utility(ProjectLifecycle::class).reloadFromDisk(paths) }
+
+/** Reverts the unsaved documents of the files under [directory] to their text on disk, as [reloadFromDisk] does. */
+internal fun Driver.reloadUnsaved(directory: Path) {
+    val paths =
+        withContext(OnDispatcher.EDT) {
+            val documents = service<ParityDocuments>()
+            documents
+                .getUnsavedDocuments()
+                .mapNotNull { documents.getFile(it)?.getPath() }
+                .filter { it.startsWith("$directory/") }
+        }
+    reloadFromDisk(paths)
+}
+
 /** Opens and closes native projects through the lifecycle test probe. */
 @Remote("org.xtclang.idea.playbook.probe.ProjectLifecycle", plugin = "org.xtclang.playbook.probe")
 internal interface ProjectLifecycle {
@@ -213,6 +245,15 @@ internal interface ProjectLifecycle {
         path: String,
         text: String,
     )
+
+    /** Closes the editors of the files at [paths]; called on the EDT. */
+    fun closeEditors(
+        project: Project,
+        paths: List<String>,
+    )
+
+    /** Reverts the documents of the files at [paths] to their text on disk; called on the EDT. */
+    fun reloadFromDisk(paths: List<String>)
 
     fun text(path: String): String
 

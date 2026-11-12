@@ -58,10 +58,19 @@ interface DiagnosticReportsProbe {
 
 /**
  * IntelliJ's problem files, which the Project view marks red, the errors LSP4IJ holds for a closed document, and what
- * the Problems window's Project Errors lists in a file.
+ * the Problems window's File and Project Errors tabs list in a file.
  */
 @Remote("org.xtclang.idea.playbook.probe.ProblemFiles", plugin = "org.xtclang.playbook.probe")
 interface ProblemFilesProbe {
+    fun windowVisible(project: Project): Boolean
+
+    fun selectFileTab(project: Project)
+
+    fun fileTab(
+        project: Project,
+        path: String,
+    ): List<String>?
+
     fun problem(
         project: Project,
         path: String,

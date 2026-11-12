@@ -3,6 +3,8 @@ package org.xtclang.idea.playbook.probe
 import com.intellij.analysis.problemsView.FileProblem
 import com.intellij.analysis.problemsView.Problem
 import com.intellij.analysis.problemsView.ProblemsCollector
+import com.intellij.analysis.problemsView.toolWindow.HighlightingPanel
+import com.intellij.analysis.problemsView.toolWindow.ProblemsViewToolWindowUtils
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.problems.WolfTheProblemSolver
@@ -13,9 +15,39 @@ import java.nio.file.Path
 /**
  * Loaded only in the disposable test IDE; never included in the distributed XTC plugin. IntelliJ's problem files, which
  * the Project view and the editor tabs mark red, the errors LSP4IJ holds for a closed document, and what the Problems
- * window's Project Errors lists.
+ * window's File and Project Errors tabs list. The Problems window's classes are the same in IntelliJ 2026.2 and 2026.3,
+ * where they moved into a plugin of their own, so these read it on both, which the driver's helpers of Starter 262 and
+ * 263 do not.
  */
 object ProblemFiles {
+    /** Whether the Problems window is visible. Called on the EDT. */
+    @JvmStatic
+    fun windowVisible(project: Project): Boolean = ProblemsViewToolWindowUtils.getToolWindow(project)?.isVisible == true
+
+    /** Selects the Problems window's File tab, which lists the problems of the file in the editor. Called on the EDT. */
+    @JvmStatic
+    fun selectFileTab(project: Project) = ProblemsViewToolWindowUtils.selectTab(project, HighlightingPanel.ID)
+
+    /**
+     * What the File tab lists for the file at [path], each as its zero-based line and column, `line:column`, in line and
+     * column order; null while the tab shows another file or none. Called on the EDT.
+     */
+    @JvmStatic
+    fun fileTab(
+        project: Project,
+        path: String,
+    ): List<String>? {
+        val file = LocalFileSystem.getInstance().findFileByPath(path) ?: return null
+        val panel = ProblemsViewToolWindowUtils.getTabById(project, HighlightingPanel.ID) as? HighlightingPanel ?: return null
+        // the tab's root for its file is a ProblemsCollector of that file's problems, on 2026.2 and 2026.3 alike
+        val root = panel.currentRoot?.takeIf { it.file == file } as? ProblemsCollector ?: return null
+        return root
+            .getFileProblems(file)
+            .filterIsInstance<FileProblem>()
+            .sortedWith(compareBy({ it.line }, { it.column }))
+            .map { "${it.line}:${it.column}" }
+    }
+
     /** Whether the file at [path] is one of the project's problem files. */
     @JvmStatic
     fun problem(

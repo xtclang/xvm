@@ -6,21 +6,15 @@ import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.FileEditorManager
-import com.intellij.driver.sdk.HIGHLIGHTING_PANEL_ID
-import com.intellij.driver.sdk.ProblemsViewToolWindowUtils
 import com.intellij.driver.sdk.findFile
 import com.intellij.driver.sdk.getPlugin
-import com.intellij.driver.sdk.getProblemsViewProblems
 import com.intellij.driver.sdk.getToolWindow
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.isPluginLoaded
-import com.intellij.driver.sdk.selectProblemsViewTab
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.codeEditorForFile
 import com.intellij.driver.sdk.ui.components.common.ideFrame
-import com.intellij.driver.sdk.waitForIndicators
-import com.intellij.driver.sdk.waitForProblemsViewFile
 import com.intellij.openapi.progress.ProcessCanceledException
 import org.xtclang.idea.playbook.SharedScenarios.Companion.offset
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
@@ -113,7 +107,7 @@ class CompilerPlaybook(
     ) {
         with(driver) {
             case(if (persistencePhase == 0) "START" else "START_REOPEN", "Packaged XTC and pinned LSP4IJ load") {
-                waitForIndicators(HANG_LIMIT)
+                awaitStartupIndicators()
                 withContext(OnDispatcher.EDT) {
                     utility(PlaybookProgress::class).install(singleProject())
                 }
@@ -1307,31 +1301,22 @@ class CompilerPlaybook(
                     preceding.count { it == '\n' } to
                         (diagnostic.start - preceding.lastIndexOf('\n') - 1)
                 }.sortedWith(compareBy({ it.first }, { it.second }))
-        val file =
+                .map { (line, column) -> "$line:$column" }
+        val path =
             withContext(OnDispatcher.EDT) {
                 requireNotNull(service<FileEditorManager>(singleProject()).getSelectedTextEditor())
                     .getVirtualFile()
+                    .getPath()
             }
-        val visible =
-            withContext(OnDispatcher.EDT) {
-                utility(ProblemsViewToolWindowUtils::class)
-                    .getToolWindow(singleProject())
-                    ?.isVisible() == true
-            }
+        val problems = utility(ProblemFilesProbe::class)
+        val visible = withContext(OnDispatcher.EDT) { problems.windowVisible(singleProject()) }
         if (!visible) invokeAction("ActivateProblemsViewToolWindow", component = editor.component)
-        selectProblemsViewTab(HIGHLIGHTING_PANEL_ID)
+        withContext(OnDispatcher.EDT) { problems.selectFileTab(singleProject()) }
         awaitUi("Problems tool window is visible", HANG_LIMIT) {
-            withContext(OnDispatcher.EDT) {
-                utility(ProblemsViewToolWindowUtils::class)
-                    .getToolWindow(singleProject())
-                    ?.isVisible() == true
-            }
+            withContext(OnDispatcher.EDT) { problems.windowVisible(singleProject()) }
         }
-        waitForProblemsViewFile(file)
         awaitUi("Problems rows match editor diagnostic locations, including clearing", HANG_LIMIT) {
-            getProblemsViewProblems(file)
-                .map { it.getLine() to it.getColumn() }
-                .sortedWith(compareBy({ it.first }, { it.second })) == expected
+            withContext(OnDispatcher.EDT) { problems.fileTab(singleProject(), path) } == expected
         }
     }
 
@@ -1538,10 +1523,7 @@ class CompilerPlaybook(
                         data.text("libraryText"),
                 )
                 discarded.text = data.text("libraryText")
-                withContext(OnDispatcher.EDT) {
-                    service<FileEditorManager>(singleProject())
-                        .closeFile(discarded.editor.getVirtualFile())
-                }
+                closeEditors(listOf(discarded.editor.getVirtualFile()))
                 val restored = open(data.text("file"))
                 restored.awaitDiagnostics(emptyList())
                 check(
@@ -1888,14 +1870,7 @@ class CompilerPlaybook(
         // TODO LSP4IJ: UP07 — keeping unrelated broken fixtures open during replacement can
         // cancel the new caller's lazy intentions after a successful server action reply.
         // This isolates fixtures; it does not claim to repair that production delivery race.
-        withContext(OnDispatcher.EDT) {
-            val manager = service<FileEditorManager>(singleProject())
-            manager
-                .getAllEditors()
-                .map { it.getFile() }
-                .distinctBy { it.getPath() }
-                .forEach(manager::closeFile)
-        }
+        closeAllEditors()
         // Match VS Code's per-case discovery workspace so unrelated teaching fixtures cannot
         // silently alter this scenario's graph or the scope of its refactoring proof.
         val root = Path.of(singleProject().getBasePath())

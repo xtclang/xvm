@@ -24,10 +24,16 @@ object DiagnosticProbePlugin {
                   <depends>com.redhat.devtools.lsp4ij</depends>
                   <depends>org.xtclang.idea</depends>
                   <depends>intellij.testRunner.plugin</depends>
+                  <!-- the Problems window, which ProblemFiles reads: part of the platform up to 2026.2, and from 2026.3 a
+                       bundled plugin of its own, whose classes a plugin sees only by depending on it -->
+                  <depends optional="true" config-file="probe-problems-view.xml">com.intellij.problemsView</depends>
                 </idea-plugin>
                 """.trimIndent()
                     .toByteArray(),
             )
+            jar.closeEntry()
+            jar.putNextEntry(JarEntry("META-INF/probe-problems-view.xml"))
+            jar.write("<idea-plugin/>".toByteArray())
             jar.closeEntry()
             val packagePath = "org/xtclang/idea/playbook/probe"
             val classes = Path.of(requireNotNull(javaClass.getResource("/$packagePath")).toURI())
