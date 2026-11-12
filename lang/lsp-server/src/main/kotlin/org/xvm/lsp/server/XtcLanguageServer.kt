@@ -155,6 +155,9 @@ class XtcLanguageServer internal constructor(
     private val embeddedRuns = EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = workerLimits))
     private val debugSessions = DebugSessions(embeddedRuns, { client })
 
+    /** The heap the garbage collections leave in use and the compile queue's waits, which the status reports. */
+    private val health = ServerHealth { (adapter as? XdkAdapter)?.compilerQueueSnapshot() }
+
     /** Rescans walk the workspace on disk, so they run here, coalesced, never on the JSON-RPC reader thread. */
     private val discoveryRefresh = CoalescingTask("xtc-discovery") { rescans(::rediscover) }
 
@@ -1208,6 +1211,7 @@ class XtcLanguageServer internal constructor(
         clientReady.cancel(false)
         indexing.cancel(false)
         discoveryRefresh.close()
+        health.close()
         debugSessions.close()
         embeddedRuns.close()
         formattingState.close()
@@ -1411,14 +1415,9 @@ class XtcLanguageServer internal constructor(
                 "openRequests" to openRequests.values.filter { it != "xtc/languageServiceStatus" }.sorted(),
                 // the documents whose current diagnostics the client has still to pull, which a pushing server has none of
                 "unreportedDiagnostics" to if (usesPullDiagnostics) textDocumentService.unreportedDiagnostics() else emptyList(),
-                "heap" to
-                    ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
-                        mapOf(
-                            "usedBytes" to it.used,
-                            "committedBytes" to it.committed,
-                            "maxBytes" to it.max,
-                        )
-                    },
+                "heap" to health.heapStatus(),
+                // the latest lines the server logged about its heap and its compile queue, oldest first
+                "health" to health.events(),
             ),
         )
 
