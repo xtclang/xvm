@@ -18,6 +18,7 @@ import com.intellij.driver.sdk.ui.components.common.codeEditorForFile
 import com.intellij.driver.sdk.ui.components.common.ideFrame
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
+import java.io.File
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -145,15 +146,39 @@ class ParityWorkspace(
         refresh(path)
     }
 
-    fun delete(file: String) {
-        val path = directory.resolve(file)
-        Files.delete(path)
-        refresh(path.parent)
+    fun delete(file: String) = changeOnDisk(directory.resolve(file), Files::delete)
+
+    /**
+     * Changes [path] on disk with [change], outside IntelliJ, and waits until LSP4IJ has told the server of it, in a
+     * watched-file notification that names it or a directory above it. Until then the server has nothing to do, and a
+     * wait for the diagnostics that the change brings would find their report final.
+     */
+    fun changeOnDisk(
+        path: Path,
+        change: (Path) -> Unit,
+    ) {
+        val before = watched(path)
+        change(path)
+        refresh(path)
+        with(driver) {
+            awaitUi("LSP4IJ tells the server of the change to $path", HANG_LIMIT) { watched(path) > before }
+        }
     }
 
+    /** The watched-file notifications LSP4IJ has sent that name [path] or a directory above it. */
+    private fun watched(path: Path): Int {
+        val target = path.toFile().canonicalFile.toPath()
+        return trace.notifications("workspace/didChangeWatchedFiles", received = false).count { params ->
+            params["changes"]?.takeIf { it.isJsonArray }?.asJsonArray?.any { change ->
+                runCatching { target.startsWith(File(URI(change.asJsonObject["uri"].asString)).canonicalFile.toPath()) }.getOrDefault(false)
+            } == true
+        }
+    }
+
+    /** Tells IntelliJ of [path] as it is on disk now, whether it had the file or not, and finds the file. */
     fun refresh(path: Path): VirtualFile? =
         with(driver) {
-            utility(ParityFiles::class).getInstance().refreshAndFindFileByPath(path.toString())
+            utility(DiskChangesProbe::class).refresh(path.toString())
         }
 
     fun open(
@@ -526,6 +551,12 @@ internal fun JsonObject.pattern(name: String): Regex =
             if (it.string("flags").contains('i')) setOf(RegexOption.IGNORE_CASE) else emptySet(),
         )
     }
+
+/** Tells IntelliJ's virtual file system of a change on disk at once, as its file watcher would later. */
+@Remote("org.xtclang.idea.playbook.probe.DiskChanges", plugin = "org.xtclang.playbook.probe")
+interface DiskChangesProbe {
+    fun refresh(path: String): VirtualFile?
+}
 
 /** Finds fixture files through IntelliJ's virtual filesystem. */
 @Remote("com.intellij.openapi.vfs.LocalFileSystem")

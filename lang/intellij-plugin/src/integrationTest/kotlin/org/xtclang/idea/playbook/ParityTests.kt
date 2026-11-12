@@ -42,7 +42,7 @@ internal fun ParityScenarios.testRunCases() {
                 HANG_LIMIT,
                 errorMessage = { it.toString() },
                 getter = ::results,
-                checker = { all -> (data.strings("passed") + data.string("failed")).all { all.has(location(it)) } },
+                checker = { all -> (data.strings("passed") + data.string("failed")).all { all.finished(location(it)) } },
             )
         data.strings("passed").forEach { id ->
             check(ran.result(location(id)).string("state") == "passed") { "$id did not pass: $ran" }
@@ -76,7 +76,7 @@ internal fun ParityScenarios.testRunCases() {
                     HANG_LIMIT,
                     errorMessage = { it.toString() },
                     getter = ::results,
-                    checker = { it.has(location(data.string("debugged"))) },
+                    checker = { it.finished(location(data.string("debugged"))) },
                 )
             check(debugged.result(location(data.string("debugged"))).string("state") == "passed") { "Debugged: $debugged" }
             check(debugged.keySet() == setOf(location(data.string("debugged")))) { "Debug of the test runs it alone: $debugged" }
@@ -124,7 +124,7 @@ internal fun ParityScenarios.gradleTestCases() {
                     HANG_LIMIT,
                     errorMessage = { it.toString() },
                     getter = ::results,
-                    checker = { all -> (data.strings("passed") + data.string("failed")).all { all.has(location(it)) } },
+                    checker = { all -> (data.strings("passed") + data.string("failed")).all { all.finished(location(it)) } },
                 )
             data.strings("passed").forEach { id ->
                 check(ran.result(location(id)).string("state") == "passed") { "$id did not pass: $ran" }
@@ -155,7 +155,7 @@ internal fun ParityScenarios.gradleTestCases() {
                         HANG_LIMIT,
                         errorMessage = { it.toString() },
                         getter = ::results,
-                        checker = { it.has(location(data.string("debugged"))) },
+                        checker = { it.finished(location(data.string("debugged"))) },
                     )
                 check(debugged.result(location(data.string("debugged"))).string("state") == "passed") { "Debugged: $debugged" }
                 check(debugged.keySet() == setOf(location(data.string("debugged")))) { "Debug of the test runs it alone: $debugged" }
@@ -210,3 +210,10 @@ internal interface TestRunProbe {
         uri: String,
     )
 }
+
+/** Whether the results hold the test at [location] as finished: the probe also lists a test while it runs. */
+private fun JsonObject.finished(location: String): Boolean =
+    getAsJsonObject(location)?.get("state")?.asString.let {
+        it != null &&
+            it != "running"
+    }
