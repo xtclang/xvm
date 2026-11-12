@@ -949,7 +949,14 @@ class XdkAdapter
                     discovery.get().problem,
                     queueTrace,
                     ::runCompilation,
-                    duplicateOf = discovery.get().duplicates[scope].orEmpty(),
+                    // only while the discovered graph is the one in use: a host's explicit modules have no duplicates
+                    duplicateOf =
+                        discovery
+                            .get()
+                            .takeUnless { it.explicit }
+                            ?.duplicates
+                            ?.get(scope)
+                            .orEmpty(),
                 )
             request.result.whenComplete { _, _ ->
                 if (request.result.isCancelled) {
@@ -1534,6 +1541,7 @@ class XdkAdapter
                             explicit = explicit,
                             buildModel = false,
                             problem = if (explicit) null else it.problem,
+                            duplicates = if (explicit) emptyMap() else it.duplicates,
                         )
                     }
                     if (
@@ -1651,7 +1659,7 @@ class XdkAdapter
                 synchronized(lifecycle) {
                     check(!closed) { "XDK adapter is closed" }
                     discovery.updateAndGet {
-                        it.copy(explicit = !automatic, buildModel = !automatic, problem = null)
+                        it.copy(explicit = !automatic, buildModel = !automatic, problem = null, duplicates = emptyMap())
                     }
                     if (
                         project.sameConfiguration(replacement) &&
