@@ -329,6 +329,16 @@ class XdkProjectServerTest {
                     assertThat(warning.message.left).contains(second.path)
                 })
             }
+            // once the host names the modules itself, no discovered duplicate remains to warn of
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", library.toURI().toString()),
+                    XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                ),
+            )
+            val mark = session.published.size
+            session.change(first, first.readText(), 2)
+            session.expect(first, mark, 2, false)
         }
     }
 
