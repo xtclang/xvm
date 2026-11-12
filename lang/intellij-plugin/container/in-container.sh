@@ -95,8 +95,12 @@ copy_runs() {
                 cp /out/screen.mp4 /out/screen.start "/out/runs/$name/"
             fi
             local ide="$reports/out/ide-tests/tests"
-            for logs in "$ide"/*/"XtcCompilerPlaybook-$name"/log; do
-                [ -d "$logs" ] && rsync -a --exclude 'indexing-diagnostic/' "$logs/" "/out/runs/$name/ide-log/"
+            # Starter 262 keeps the IDE's log in the run's folder, Starter 263 in a folder of the test below it
+            for folder in "$ide"/*/"XtcCompilerPlaybook-$name"; do
+                [ -d "$folder" ] || continue
+                find "$folder" -maxdepth 3 -type d -name log -print0 | while IFS= read -r -d '' logs; do
+                    rsync -a --exclude 'indexing-diagnostic/' "$logs/" "/out/runs/$name/ide-log/"
+                done
             done
             # the run's own IDE folder, its config, system and logs, once its logs are copied: about 240 MB a run,
             # which filled the machine's disk; the IDE build cache beside them stays

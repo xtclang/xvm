@@ -249,6 +249,19 @@ val ideVersion =
     libs.versions.lang.intellij.ide
         .get()
 
+// The IDE that the playbook and the tour drive: the one the plugin compiles against, or with
+// -PintellijPlaybookIde=2026.3 the catalog's next one, lang-intellij-next-ide. The plugin is built for ideVersion
+// either way, as a user's copy is. IDE Starter and its driver follow the IDE they drive, so the driver code that differs
+// between their versions is in src/starter<line>/kotlin, such as src/starter262/kotlin.
+val nextIdeVersion =
+    libs.versions.lang.intellij.next.ide
+        .get()
+val playbookIdeVersion: String = providers.gradleProperty("intellijPlaybookIde").getOrElse(ideVersion)
+require(playbookIdeVersion == ideVersion || playbookIdeVersion == nextIdeVersion) {
+    "intellijPlaybookIde is $ideVersion, the default, or $nextIdeVersion, not $playbookIdeVersion"
+}
+val playbookOnNextIde = playbookIdeVersion == nextIdeVersion
+
 logger.info("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
 logger.info("[ide]   First-time download may take several minutes if not already cached.")
 
@@ -370,12 +383,29 @@ val lspVersionProperties =
         }
     }
 
+// The playbook's IDE-side probes, which a plugin of their own loads into the test IDE: compiled as the plugin is, against
+// ideVersion and LSP4IJ, and never against IDE Starter, whose version follows the IDE that the playbook drives.
+val playbookProbeSourceSet =
+    sourceSets.create("playbookProbe") {
+        compileClasspath += sourceSets.main.get().output
+        compileClasspath += sourceSets.main.get().compileClasspath
+    }
+
+// The playbook's driver, which runs in the test JVM on IDE Starter, and the probes it starts in the test IDE.
 val integrationTestSourceSet =
     sourceSets.create("integrationTest") {
-        compileClasspath += sourceSets.main.get().output
-        // IDE-side probes compile against the same platform/plugin APIs as production.
+        val starterLine =
+            if (playbookOnNextIde) {
+                libs.versions.lang.intellij.next.starter
+                    .get()
+                    .substringBefore('.')
+            } else {
+                intellijSinceBuild
+            }
+        kotlin.srcDir("src/starter$starterLine/kotlin")
+        compileClasspath += sourceSets.main.get().output + playbookProbeSourceSet.output
         compileClasspath += sourceSets.main.get().compileClasspath
-        runtimeClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output + playbookProbeSourceSet.output
     }
 
 configurations[integrationTestSourceSet.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
@@ -390,8 +420,14 @@ dependencies {
     testImplementation(libs.assertj)
     // the waits that go through the watchdog of hangs (org.xvm.testing.Await)
     testImplementation(testFixtures(libs.javatools.utils))
-    add(integrationTestSourceSet.implementationConfigurationName, libs.lang.intellij.kodein)
-    add(integrationTestSourceSet.implementationConfigurationName, libs.lang.intellij.coroutines)
+    add(
+        integrationTestSourceSet.implementationConfigurationName,
+        if (playbookOnNextIde) libs.lang.intellij.next.kodein else libs.lang.intellij.kodein,
+    )
+    add(
+        integrationTestSourceSet.implementationConfigurationName,
+        if (playbookOnNextIde) libs.lang.intellij.next.coroutines else libs.lang.intellij.coroutines,
+    )
     // The standalone Starter JVM has no IDE classloader to supply Kotlin's standard library.
     add(integrationTestSourceSet.runtimeOnlyConfigurationName, kotlin("stdlib"))
     // Starter 262 reports run metadata through this API even for local, non-TeamCity runs.
@@ -430,7 +466,16 @@ dependencies {
         pluginVerifier()
         // Light platform tests open .x files in an in-memory project, with the plugin and its dependencies loaded.
         testFramework(TestFrameworkType.Platform)
-        testFramework(TestFrameworkType.Starter, configurationName = integrationTestSourceSet.implementationConfigurationName)
+        if (playbookOnNextIde) {
+            testFramework(
+                TestFrameworkType.Starter,
+                libs.versions.lang.intellij.next.starter
+                    .get(),
+                integrationTestSourceSet.implementationConfigurationName,
+            )
+        } else {
+            testFramework(TestFrameworkType.Starter, configurationName = integrationTestSourceSet.implementationConfigurationName)
+        }
     }
 
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
@@ -1010,7 +1055,7 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         // IDE-side probes load only inside the sandbox plugin classloader, not Starter's JVM.
         include("**/*Test.class")
         useJUnitPlatform()
-        systemProperty("xtc.playbook.ideVersion", ideVersion)
+        systemProperty("xtc.playbook.ideVersion", playbookIdeVersion)
         localLsp4ijPlugin.orNull?.let { pluginDirectory ->
             inputs.dir(pluginDirectory).withPropertyName("localLsp4ijPlugin")
             systemProperty("xtc.playbook.lsp4ijPlugin", pluginDirectory.absolutePath)

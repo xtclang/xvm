@@ -94,6 +94,12 @@ lang-intellij-lsp4ij = "0.21.0"
 lang-intellij-kodein = "7.26.1"
 lang-intellij-coroutines = "1.10.2-intellij-2"
 lang-intellij-service-messages = "2024.07"
+# The newer IDE the playbook can also drive, with -PintellijPlaybookIde=2026.3: the plugin still compiles against
+# lang-intellij-ide, while IDE Starter and its driver follow the IDE they drive, and kodein and coroutines follow Starter.
+lang-intellij-next-ide = "2026.3"
+lang-intellij-next-starter = "263.7307.200"
+lang-intellij-next-kodein = "7.33.0"
+lang-intellij-next-coroutines = "1.11.0-intellij-1"
 
 # =============================================================================
 # Lang tooling - Tree-sitter native library
@@ -234,6 +240,8 @@ lang-slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "lang-slf
 lang-intellij-junit4-compat = { module = "junit:junit", version.ref = "lang-intellij-junit4-compat" }
 lang-intellij-kodein = { module = "org.kodein.di:kodein-di-jvm", version.ref = "lang-intellij-kodein" }
 lang-intellij-coroutines = { module = "org.jetbrains.intellij.deps.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "lang-intellij-coroutines" }
+lang-intellij-next-kodein = { module = "org.kodein.di:kodein-di-jvm", version.ref = "lang-intellij-next-kodein" }
+lang-intellij-next-coroutines = { module = "org.jetbrains.intellij.deps.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "lang-intellij-next-coroutines" }
 lang-intellij-service-messages = { module = "org.jetbrains.teamcity:serviceMessages", version.ref = "lang-intellij-service-messages" }
 
 # =============================================================================
