@@ -2487,14 +2487,12 @@ public class BuildContext {
         }
 
         TypeConstant publicType = thisType.removeAccess();
-        if (type.equals(publicType) || type instanceof CastTypeConstant castType &&
+        if (type.removeAccess().equals(publicType) || type instanceof CastTypeConstant castType &&
                 castType.getUnderlyingType2().removeAccess().isEquivalent(publicType)) {
             return typeInfo;
         }
 
-        assert publicType.isSingleUnderlyingClass(true);
-
-        if (type.isSingleUnderlyingClass(true)) {
+        if (publicType.isSingleUnderlyingClass(true) && type.isSingleUnderlyingClass(true)) {
             IdentityConstant thisId = publicType.getSingleUnderlyingClass(true);
             IdentityConstant thatId = type.getSingleUnderlyingClass(true);
 
@@ -2635,6 +2633,12 @@ public class BuildContext {
         RegisterInfo     refReg       = realizeRef(code, retId, referentType, isVar);
 
         if (propInfo.isConstant()) {
+            if (propInfo.isJitInflated()) {
+                builder.loadStaticRef(code, propInfo, ctxSlot(code));
+                code.astore(refReg.slot());
+                return;
+            }
+
             assert !isVar;
 
             Constant initial  = propInfo.getInitialValue();

@@ -39,13 +39,10 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
 /**
  * Builds a reference view that routes property operations to the containing object.
  */
-public class PropertyRefBuilder extends Builder {
-    public PropertyRefBuilder(TypeSystem typeSystem, Artifact art) {
+public class HostedPropertyRefBuilder extends Builder {
+    public HostedPropertyRefBuilder(TypeSystem typeSystem, Artifact art) {
         super(typeSystem, art);
-        propertyType = (PropertyClassTypeConstant) art.type();
     }
-
-    private final PropertyClassTypeConstant propertyType;
 
     @Override
     public ClassDesc getSuperCD() {
@@ -54,8 +51,7 @@ public class PropertyRefBuilder extends Builder {
 
     @Override
     public void build(ClassBuilder classBuilder) {
-        classBuilder.withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_SUPER)
-                    .withSuperclass(CD_nRefProp);
+        PropertyClassTypeConstant propertyType = (PropertyClassTypeConstant) art.type();
 
         PropertyInfo     property = propertyType.getPropertyInfo();
         PropertyConstant propId   = property.getIdentity();
@@ -70,7 +66,10 @@ public class PropertyRefBuilder extends Builder {
                 AnnotationHelper.filterAnnotations(property.getBaseRefType()).getAnnotations()) {
             interfaces.add(getCCDesc(annotation.getAnnotationType()));
         }
-        classBuilder.withInterfaceSymbols(interfaces);
+
+        classBuilder.withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_SUPER)
+                    .withSuperclass(CD_nRefProp)
+                    .withInterfaceSymbols(interfaces);
 
         MethodTypeDesc init = md(CD_void, CD_Ctx, CD_TypeConstant, CD_boolean,
                 CD_nObject, CD_MethodHandle, CD_MethodHandle, CD_MethodHandle);

@@ -19,20 +19,23 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.builders.AnnotationHelper;
 import org.xvm.javajit.builders.CommonBuilder;
 import org.xvm.javajit.builders.EnumBuilder;
 import org.xvm.javajit.builders.EnumValueBuilder;
 import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.ExceptionBuilder;
+import org.xvm.javajit.builders.HostedPropertyRefBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 import org.xvm.javajit.builders.PackageBuilder;
-import org.xvm.javajit.builders.PropertyRefBuilder;
 import org.xvm.javajit.builders.PureBuilder;
 import org.xvm.javajit.builders.PureVirtualChildBuilder;
 import org.xvm.javajit.builders.RefBuilder;
+import org.xvm.javajit.builders.StaticPropertyRefBuilder;
 import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import static org.xvm.javajit.Builder.CD_Class;
@@ -430,8 +433,10 @@ public class TypeSystem {
         ConstantPool pool = pool();
         TypeConstant type = art.type();
 
-        if (type instanceof PropertyClassTypeConstant) {
-            return new PropertyRefBuilder(this, art);
+        if (art.type() instanceof PropertyClassTypeConstant propType) {
+            return propType.getPropertyInfo().isConstant()
+                    ? new StaticPropertyRefBuilder(this, art)
+                    : new HostedPropertyRefBuilder(this, art);
         }
 
         if (art.shape() == ClassfileShape.Pure) {
@@ -569,10 +574,17 @@ public class TypeSystem {
             // e.g. org.xtclang.ecstasy.numbers.Number$compare$Family$UIntegerꖛ7503
             Constant constant = pool().getConstant(id);
             if (constant instanceof TypeConstant type) {
-                if (type instanceof PropertyClassTypeConstant property) {
-                    ClassStructure struct = (ClassStructure) property.getParentType()
-                            .getSingleUnderlyingClass(true).getComponent();
-                    return new Artifact(type, struct, shape, className);
+                if (type instanceof PropertyClassTypeConstant propType) {
+                    ClassStructure struct = (ClassStructure) propType.getParentType().
+                                            getSingleUnderlyingClass(true).getComponent();
+                    PropertyInfo prop = propType.getPropertyInfo();
+                    if (prop.isConstant()) {
+                        // use the native Ref composition; retain the property's class name
+                        assert AnnotationHelper.hasRuntimeAnnotations(prop.getRefAnnotations());
+
+                        propType = propType.asNativeRebase();
+                    }
+                    return new Artifact(propType, struct, shape, className);
                 }
 
                 // the type suffix identifies the class even when it is nested inside a method
@@ -801,7 +813,7 @@ public class TypeSystem {
      */
     public static String addJitSuffix(String name, int id) {
         assert id >= 0;
-        return name + HASH + String.valueOf(id);
+        return name + HASH + id;
     }
 
     /**

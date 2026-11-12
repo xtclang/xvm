@@ -231,17 +231,23 @@ package propertyInitTests {
         Var<Int?> asNullableVar(Object value) = value.as(Var<Int?>);
     }
 
-    @Lazy Int lazyInstance.calc() = 42;
-    // TODO: static annotated properties need shared annotation storage and initialization support
-//    static @Lazy Int lazyStatic.calc() = 42;
+    @Lazy Int lazyInstance {
+        @Override Int calc() = compute();
+        Int compute() = 42;
+    }
+
+    static @Lazy Int lazyStatic {
+        @Override Int calc() = compute();
+        Int compute() = 42;
+    }
 
     void testLazyProperty() {
         assert !&lazyInstance.assigned;
         assert lazyInstance == 42;
         assert &lazyInstance.assigned;
-//        assert !&lazyStatic.assigned;
-//        assert lazyStatic == 42;
-//        assert &lazyStatic.assigned;
+        assert !&lazyStatic.assigned;
+        assert lazyStatic == 42;
+        assert &lazyStatic.assigned;
 
         const Point(Int x, Int y) {
             @Lazy Int hypo.calc() = x*x + y*y;

@@ -30,6 +30,8 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
+import org.xvm.javajit.builders.AnnotationHelper;
+
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
@@ -1385,11 +1387,20 @@ public class PropertyInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * @return true iff the JIT requires a field that stores a Ref object for this property
+     * @return true iff the JIT requires Ref storage for this property, on the containing object
+     *         or in the container for a static property
      */
     public boolean isJitInflated() {
         // TODO: handle Future in a later phase; keep its stored-Ref implementation for now
-        return containsRefAnnotation(pool().clzFuture());
+        return isConstant() && isJitRefAnnotated() ||
+               containsRefAnnotation(pool().clzFuture());
+    }
+
+    /**
+     * @return true iff the property contains any runtime reference annotations
+     */
+    public boolean isJitRefAnnotated() {
+        return isRefAnnotated() && AnnotationHelper.hasRuntimeAnnotations(getRefAnnotations());
     }
 
     /**

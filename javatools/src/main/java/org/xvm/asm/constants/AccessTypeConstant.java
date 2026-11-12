@@ -210,6 +210,11 @@ public class AccessTypeConstant
         return m_constType.getJitICName(ts);
     }
 
+    @Override
+    public String getJitImplName(TypeSystem ts) {
+        return m_constType.getJitImplName(ts);
+    }
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
