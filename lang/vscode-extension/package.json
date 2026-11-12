@@ -545,7 +545,7 @@
                         },
                         "default": [],
                         "scope": "machine",
-                        "description": "Advanced LSP JVM options, one argument per item. Supports -Xms/-Xmx/-Xss sizes (K/M/G), MaxMetaspaceSize, ReservedCodeCacheSize, ActiveProcessorCount and G1/Serial/Parallel/Z collectors. Restart Language Server to apply. Workspace overrides are ignored."
+                        "description": "Advanced LSP JVM options, one argument per item. Supports -Xms/-Xmx/-Xss sizes (K/M/G), MaxMetaspaceSize, ReservedCodeCacheSize, ActiveProcessorCount and G1/Serial/Parallel/Z collectors. Without a collector or -Xmx, the server runs ZGC with a 1 GB soft heap limit. Restart Language Server to apply. Workspace overrides are ignored."
                     },
                     "xtc.server.compileLibraries": {
                         "type": "boolean",
