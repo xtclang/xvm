@@ -22,6 +22,16 @@ export function validateJvmOptions(raw: unknown): string[] {
     return [...raw];
 }
 
+/**
+ * What the server runs with unless the options choose a collector or a maximum heap: ZGC, which keeps the heap near a
+ * 1 GB soft limit, grows past it only as far as the live data needs, up to the JVM's own maximum, and gives back the
+ * memory it no longer uses. A maximum heap the user chose keeps the JVM's default collector, since ZGC's uncompressed
+ * pointers make the same data take about half as much heap again.
+ */
+export function defaultJvmOptions(options: readonly string[]): string[] {
+    return options.some(option => /^-XX:\+Use(G1|Serial|Parallel|Z)GC$/.test(option) || option.startsWith('-Xmx')) ? [] : ['-XX:+UseZGC', '-XX:SoftMaxHeapSize=1G'];
+}
+
 export function runtimeJvmOptions(): string[] {
     // Ignore workspace JSON even if written manually: runtime tuning is machine-local.
     return validateJvmOptions(vscode.workspace.getConfiguration('xtc').inspect('java.vmOptions')?.globalValue ?? []);

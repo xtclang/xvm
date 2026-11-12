@@ -35,7 +35,11 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
             )
     }
 
-    fun launchArguments(): List<String> = state.let { it.arguments() + it.logArguments() + it.libraryArguments() }
+    fun launchArguments(): List<String> =
+        state.let {
+            it.arguments().let { options -> ServerJvmOptions.defaults(options) + options } + it.logArguments() +
+                it.libraryArguments()
+        }
 
     fun install(
         expected: Options,

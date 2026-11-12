@@ -5,6 +5,15 @@ internal object ServerJvmOptions {
     private val memory = Regex("(-Xms|-Xmx|-Xss|-XX:MaxMetaspaceSize=|-XX:ReservedCodeCacheSize=)([1-9][0-9]*)([kKmMgG])")
     private val collector = Regex("-XX:\\+Use(G1|Serial|Parallel|Z)GC")
 
+    /**
+     * What the server runs with unless [options] choose a collector or a maximum heap: ZGC, which keeps the heap near a
+     * 1 GB soft limit, grows past it only as far as the live data needs, up to the JVM's own maximum, and gives back the
+     * memory it no longer uses. A maximum heap the user chose keeps the JVM's default collector, since ZGC's uncompressed
+     * pointers make the same data take about half as much heap again.
+     */
+    fun defaults(options: List<String>): List<String> =
+        if (options.any { collector.matches(it) || it.startsWith("-Xmx") }) emptyList() else listOf("-XX:+UseZGC", "-XX:SoftMaxHeapSize=1G")
+
     fun validate(options: List<String>): List<String> {
         val keys =
             options.map { option ->
