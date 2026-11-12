@@ -16,6 +16,7 @@ import com.intellij.ide.starter.runner.Starter
 import com.intellij.tools.ide.starter.product.idea.ultimate.IdeaUltimate
 import org.kodein.di.DI
 import org.kodein.di.bindSingleton
+import org.xtclang.idea.playbook.probe.HANG_SECONDS
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -125,6 +126,8 @@ internal class PlaybookIde(
                         addSystemProperty("request.trial", false)
                         addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
                         addSystemProperty("xtc.lsp.semanticTokens", true)
+                        // the IDE's probes wait as long as the playbook does
+                        addSystemProperty("xtc.playbook.hang", HANG_SECONDS.toString())
                         addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
                         addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
                         addSystemProperty("idea.auto.reload.plugins", false)
