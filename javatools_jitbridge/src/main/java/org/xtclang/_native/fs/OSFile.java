@@ -73,7 +73,7 @@ public class OSFile
         try {
             java.io.File file = path.toFile();
             if (!file.exists()) {
-                throw $fileNotFound(ctx, $getPath(ctx));
+                throw $fileNotFound(ctx, path$get(ctx));
             }
             return ArrayᐸUInt8ᐳ.$makeArray(ctx, Handy.readFileBytes(file));
         } catch (IOException e) {
@@ -108,7 +108,7 @@ public class OSFile
         java.io.File       file = path.toFile();
 
         if (!file.exists() || !file.isFile()) {
-            throw $fileNotFound(ctx, $getPath(ctx));
+            throw $fileNotFound(ctx, path$get(ctx));
         }
 
         long start = range.effectiveLowerBound$get$p(ctx);
@@ -145,7 +145,7 @@ public class OSFile
         java.io.File       file = path.toFile();
 
         if (!file.exists() || !file.isFile()) {
-            throw $fileNotFound(ctx, $getPath(ctx));
+            throw $fileNotFound(ctx, path$get(ctx));
         }
 
         long length = file.length();

@@ -1121,7 +1121,7 @@ public class NumberBuilder extends AugmentingBuilder {
         int            flags     = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
         String         jitName   = "compare";
 
-        if (findMethod(jitName, mdCompare) != null) {
+        if (isNativeMethod(jitName, mdCompare)) {
             return;
         }
 
