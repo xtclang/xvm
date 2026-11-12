@@ -143,7 +143,7 @@ class ParityWorkspace(
         val path = directory.resolve(file)
         Files.createDirectories(path.parent)
         Files.writeString(path, text)
-        refresh(path)
+        changed(path)
     }
 
     fun delete(file: String) = changeOnDisk(directory.resolve(file), Files::delete)
@@ -159,7 +159,7 @@ class ParityWorkspace(
     ) {
         val before = watched(path)
         change(path)
-        refresh(path)
+        changed(path)
         with(driver) {
             awaitUi("LSP4IJ tells the server of the change to $path", HANG_LIMIT) { watched(path) > before }
         }
@@ -175,8 +175,18 @@ class ParityWorkspace(
         }
     }
 
-    /** Tells IntelliJ of [path] as it is on disk now, whether it had the file or not, and finds the file. */
+    /**
+     * Finds the file at [path], refreshing only a path that IntelliJ does not have yet. A file it has is read as it
+     * knows it: refreshing one the IDE has just written itself, as a move does, would count as a change outside the
+     * IDE, which ends the project's Undo of it.
+     */
     fun refresh(path: Path): VirtualFile? =
+        with(driver) {
+            utility(ParityFiles::class).getInstance().refreshAndFindFileByPath(path.toString())
+        }
+
+    /** Tells IntelliJ of [path] as it is on disk now, after this case changed it there, whether it had the file or not. */
+    private fun changed(path: Path): VirtualFile? =
         with(driver) {
             utility(DiskChangesProbe::class).refresh(path.toString())
         }
