@@ -62,6 +62,14 @@
                 icon="AllIcons.Actions.Execute">
             <add-to-group group-id="ProjectViewPopupMenuRunGroup" anchor="last"/>
         </action>
+        <action id="xtc.selectBuildMode" class="org.xtclang.idea.run.SelectBuildModeAction"
+                text="Select Ecstasy Build Mode"
+                description="Choose whether Ecstasy Build, Rebuild and Run use the embedded compiler or Gradle">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt X" second-keystroke="B"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl alt X" second-keystroke="B"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl alt X" second-keystroke="B"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
         <action id="xtc.restartLanguageServer" class="org.xtclang.idea.lsp.RestartLanguageServerAction"
                 text="Restart Ecstasy Language Server"
                 description="Restart the Ecstasy language server with its adapter and the saved runtime settings">
