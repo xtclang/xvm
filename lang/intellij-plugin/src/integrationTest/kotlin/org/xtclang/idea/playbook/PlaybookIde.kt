@@ -3,7 +3,6 @@ package org.xtclang.idea.playbook
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
 import com.intellij.ide.starter.ci.CIServer
-import com.intellij.ide.starter.ci.NoCIServer
 import com.intellij.ide.starter.config.ConfigurationStorage
 import com.intellij.ide.starter.config.monitoringDumpsIntervalSeconds
 import com.intellij.ide.starter.di.di
@@ -14,7 +13,6 @@ import com.intellij.ide.starter.path.GlobalPaths
 import com.intellij.ide.starter.plugins.PluginConfigurator
 import com.intellij.ide.starter.project.LocalProjectInfo
 import com.intellij.ide.starter.runner.Starter
-import com.intellij.platform.testFramework.teamCity.TeamCityReporter.SyntheticTestKind
 import com.intellij.tools.ide.starter.product.idea.ultimate.IdeaUltimate
 import org.kodein.di.DI
 import org.kodein.di.bindSingleton
@@ -62,20 +60,7 @@ internal class PlaybookIde(
             DI {
                 extend(previousDi)
                 bindSingleton<GlobalPaths>(overrides = true) { object : GlobalPaths(reports) {} }
-                bindSingleton<CIServer>(overrides = true) {
-                    object : CIServer by NoCIServer {
-                        override fun reportTestFailure(
-                            testName: String,
-                            message: String,
-                            details: String,
-                            linkToLogs: String?,
-                            kind: SyntheticTestKind,
-                            generifyTestName: Boolean,
-                        ) {
-                            ideFailures += "$testName: $message\n$details\n$linkToLogs"
-                        }
-                    }
-                }
+                bindSingleton<CIServer>(overrides = true) { FailureCollector(ideFailures) }
             }
         try {
             val testCase = TestCase(IdeInfo.IdeaUltimate, LocalProjectInfo(workspace)).withVersion(ideVersion)
