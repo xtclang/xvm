@@ -368,7 +368,7 @@ definition and monikers in a library copy walk its pool and components
 (`lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkLibrarySources.kt:169-232`,
 `:361-367`), and so does semantic model building (`SemanticModelBuilder.kt:1550`). Today those
 queries go through the same single worker ("Library queries share compiler serialization",
-`XdkAdapter.kt:389-421`). They read like a copy does, so their safety class is section 3.2.
+`XdkAdapter.kt:395-421`). They read like a copy does, so their safety class is section 3.2.
 
 ### 4.c A compile during a run or debug session
 
@@ -529,7 +529,7 @@ Making everything else concurrent buys nothing for (b), because it is already pr
 
 ### 5.4 Locking
 
-- **One lock for every compile** is today's single worker (`XdkAdapter.kt:3211-3219`).
+- **One lock for every compile** is today's single worker (`XdkAdapter.kt:3215-3219`).
 - **A lock per source module while it is copied** would serialize the copy step and the library
   queries, and let everything after linking overlap. That closes section 3.2 without trusting the
   benign-race argument, at the cost of the copies' share of compile time (not measured). Every
@@ -633,18 +633,18 @@ module that a concurrent compile reads (section 4.c).
 
 Changes:
 
-- A second lane in `XdkAdapter`: the `compiles` executor (`XdkAdapter.kt:3211-3219`) becomes a
+- A second lane in `XdkAdapter`: the `compiles` executor (`XdkAdapter.kt:3215-3219`) becomes a
   project lane and a library lane. Library-copy compiles and library queries (`:389-421`) go to the
   library lane.
 - **Drop preemption:**
-  - `yieldCopyCompiles` and its call (`XdkAdapter.kt:1207`, `:1211-1226`);
+  - `yieldCopyCompiles` and its call (`XdkAdapter.kt:1209`, `:1211-1226`);
   - `requeued` (`:1232-1240`);
   - the `preempted` field and its checks (`:1300-1303`, `:1381`, `:1690`).
 
   A library compile no longer stops and starts again behind project work, so the 8.6 s compile is
   not repeated (`doc/errs/remaining.md:83`, `:89-92`).
 - Check the adapter state that assumed one worker. `scheduled`, `overlays` and `scopes` are plain
-  maps (`XdkAdapter.kt:3181`, `:3192-3193`); find out whether only the worker touches them or
+  maps (`XdkAdapter.kt:3183`, `:3192-3193`); find out whether only the worker touches them or
   whether they are under `lifecycle`. The same goes for `runningCopy`.
 - Raise the heap gate for the second lane (`XdkLibrarySources.kt:80-83`) to the library compile's
   peak plus a project compile's peak plus headroom, about 1.5 GB *(inferred until Stage 0 measures
