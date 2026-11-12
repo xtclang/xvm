@@ -68,15 +68,17 @@ internal class XdkBuildModel private constructor(
                 .mapTo(linkedSetOf()) { it.name }
         }
         val modules =
-            discovered.map { module ->
-                val owner = owners.getValue(module)
-                XdkSourceModule(
-                    module.name,
-                    module.uri,
-                    module.dependencies.intersect(allowed(owner)),
-                    owner.resources,
-                )
-            }
+            XdkLibraryReplacement.apply(
+                discovered.map { module ->
+                    val owner = owners.getValue(module)
+                    XdkSourceModule(
+                        module.name,
+                        module.uri,
+                        module.dependencies.intersect(allowed(owner)),
+                        owner.resources,
+                    )
+                },
+            )
         // Validate the complete source graph before a live configuration is replaced.
         XdkProject(modules)
         val binaries =

@@ -148,8 +148,8 @@ class XdkAdapter
 
         internal fun compilerQueueSnapshot(): Map<String, Any> = queueTrace.snapshot()
 
-        /** The bundled libraries that the workspace's own sources replace ([XdkWorkspaceMode]). */
-        internal fun shadowedLibraries(): Set<String> = synchronized(lifecycle) { project.shadowed }
+        /** The bundled libraries that the workspace's own modules replace ([XdkLibraryReplacement]). */
+        internal fun replacedLibraries(): Set<String> = synchronized(lifecycle) { project.replaced }
 
         internal fun compilerProgressDescription(): String? = queueTrace.progressDescription()
 
@@ -452,8 +452,8 @@ class XdkAdapter
         ): CompletableFuture<XdkBuildResult> =
             synchronized(lifecycle) {
                 if (closed) return closedAdapter()
-                if (project.shadowed.isNotEmpty()) {
-                    return CompletableFuture.failedFuture(IllegalStateException(XdkWorkspaceMode.NO_EMBEDDED_RUNS))
+                if (project.replaced.isNotEmpty()) {
+                    return CompletableFuture.failedFuture(IllegalStateException(XdkLibraryReplacement.NO_EMBEDDED_RUNS))
                 }
                 val graph = project
                 val inputs = dependencies
