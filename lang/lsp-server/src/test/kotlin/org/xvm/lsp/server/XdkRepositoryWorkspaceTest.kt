@@ -31,7 +31,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * case compiles ecstasy from source.
  */
 @Heavy
-class XdkWorkspaceModeTest {
+class XdkRepositoryWorkspaceTest {
     @TempDir lateinit var directory: Path
 
     @Test
@@ -89,10 +89,10 @@ class XdkWorkspaceModeTest {
             val int64 = workspace.resolve("lib_ecstasy/src/main/x/ecstasy/numbers/Int64.x")
             assertThat(File(URI(uri)).canonicalFile).isEqualTo(int64.canonicalFile)
 
-            assertThat(server.languageServiceStatus().awaited()["xdkWorkspace"] as List<*>)
+            assertThat(server.languageServiceStatus().awaited()["replacedLibraries"] as List<*>)
                 .contains("ecstasy.xtclang.org", "json.xtclang.org")
                 .doesNotContain("mack.xtclang.org")
-            assertThatThrownBy { server.build(BuildParams()).awaited() }.hasStackTraceContaining("holds the XDK's own sources")
+            assertThatThrownBy { server.build(BuildParams()).awaited() }.hasStackTraceContaining("own modules replace bundled libraries")
         }
     }
 }

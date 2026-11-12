@@ -237,7 +237,7 @@ internal class XdkDependencies(
 
     init {
         require(modules.size == dependencies.size) { "Duplicate dependency module" }
-        // only the XDK's own sources, compiled by the server, replace a bundled library ([XdkWorkspaceMode])
+        // only a workspace's own modules, compiled by the server, replace a bundled library ([XdkLibraryReplacement])
         require(modules.values.none { it.module in XdkLibraries.moduleNames && !it.fromSource }) {
             "Project dependencies cannot replace the bundled compiler libraries"
         }

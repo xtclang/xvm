@@ -129,6 +129,20 @@ class XdkBuildModelTest {
     }
 
     @Test
+    fun `the XDK's libraries in Gradle's model replace the bundled ones, each depending on ecstasy without saying so`() {
+        val ecstasy = source("lib_ecstasy/src/main/x/ecstasy.x", "module ecstasy.xtclang.org {}")
+        val json = source("lib_json/src/main/x/json.x", "module json.xtclang.org {}")
+        val inputs =
+            model(
+                entry(":lib_ecstasy", "main", listOf(ecstasy)),
+                entry(":lib_json", "main", listOf(json)),
+            ).resolve()
+        assertThat(inputs.modules.associate { it.name to it.dependencies }).isEqualTo(
+            mapOf("ecstasy.xtclang.org" to emptySet(), "json.xtclang.org" to setOf("ecstasy.xtclang.org")),
+        )
+    }
+
+    @Test
     fun `member imports contribute dependencies and excluded files are not mistaken for roots`() {
         val library = source("Library.x", "module Library {}")
         val app = source("App.x", "module App {}")

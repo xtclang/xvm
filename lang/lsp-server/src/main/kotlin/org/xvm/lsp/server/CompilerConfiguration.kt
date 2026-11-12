@@ -3,6 +3,7 @@ package org.xvm.lsp.server
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
+import org.xvm.lsp.adapter.xdk.XdkLibraryReplacement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.net.URI
 
@@ -55,49 +56,50 @@ internal object CompilerConfiguration {
         val entries = config.get("sourceModules") ?: return null
         if (entries.isJsonNull) return null
         require(entries.isJsonArray) { "sourceModules must be an array" }
-        return entries.asJsonArray.map { entry ->
-            require(entry.isJsonObject) { "Each source module must be an object" }
-            val module = entry.asJsonObject
-            val name = string(module.get("name"), "name")
+        return entries.asJsonArray
+            .map { entry ->
+                require(entry.isJsonObject) { "Each source module must be an object" }
+                val module = entry.asJsonObject
+                val name = string(module.get("name"), "name")
 
-            fun resolve(value: String): String {
-                val path = URI.create(value)
-                val resolved =
-                    if (path.isAbsolute) {
-                        path
-                    } else {
-                        require(workspaceUris.size == 1) {
-                            "Relative source/resource URIs require exactly one workspace folder; use file URIs otherwise"
+                fun resolve(value: String): String {
+                    val path = URI.create(value)
+                    val resolved =
+                        if (path.isAbsolute) {
+                            path
+                        } else {
+                            require(workspaceUris.size == 1) {
+                                "Relative source/resource URIs require exactly one workspace folder; use file URIs otherwise"
+                            }
+                            URI.create(workspaceUris.single().trimEnd('/') + "/").resolve(path)
                         }
-                        URI.create(workspaceUris.single().trimEnd('/') + "/").resolve(path)
+                    require(resolved.scheme == "file") {
+                        "Source and resource roots must use file URIs"
                     }
-                require(resolved.scheme == "file") {
-                    "Source and resource roots must use file URIs"
+                    return resolved.toString()
                 }
-                return resolved.toString()
-            }
-            val uri = resolve(string(module.get("uri"), "uri"))
-            val resources =
-                module
-                    .get("resourceRoots")
-                    ?.takeUnless { it.isJsonNull }
-                    ?.let { values ->
-                        require(values.isJsonArray) {
-                            "resourceRoots must be an array of file URIs"
+                val uri = resolve(string(module.get("uri"), "uri"))
+                val resources =
+                    module
+                        .get("resourceRoots")
+                        ?.takeUnless { it.isJsonNull }
+                        ?.let { values ->
+                            require(values.isJsonArray) {
+                                "resourceRoots must be an array of file URIs"
+                            }
+                            values.asJsonArray.map { resolve(string(it, "resource root")) }
                         }
-                        values.asJsonArray.map { resolve(string(it, "resource root")) }
-                    }
-            val dependencies =
-                module
-                    .get("dependencies")
-                    ?.let { values ->
-                        require(values.isJsonArray) {
-                            "dependencies must be an array of module names"
-                        }
-                        values.asJsonArray.map { string(it, "dependency") }.toSet()
-                    }.orEmpty()
-            XdkSourceModule(name, uri, dependencies, resources)
-        }
+                val dependencies =
+                    module
+                        .get("dependencies")
+                        ?.let { values ->
+                            require(values.isJsonArray) {
+                                "dependencies must be an array of module names"
+                            }
+                            values.asJsonArray.map { string(it, "dependency") }.toSet()
+                        }.orEmpty()
+                XdkSourceModule(name, uri, dependencies, resources)
+            }.let(XdkLibraryReplacement::apply)
     }
 
     private fun objectValue(raw: Any?) =
