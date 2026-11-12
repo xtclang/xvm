@@ -198,10 +198,10 @@ The plumbing is already in place:
 
 | Component | File | Status |
 |-----------|------|--------|
-| LSP handler | `XtcLanguageServer.kt:1306` | Complete -- delegates to adapter |
+| LSP handler | `XtcTextDocumentService.kt:1915` | Complete -- delegates to adapter |
 | Adapter interface | `Adapter.kt:883` | Complete -- `onTypeFormatting()` signature defined |
 | Base adapter stub | `AbstractAdapter.kt:366` | Returns `emptyList()` with `NOT IMPLEMENTED` warning |
-| Capability registration | `XtcLanguageServer.kt:337-393` | Commented out -- needs `DocumentOnTypeFormattingOptions` |
+| Capability registration | `XtcLanguageServer.kt:1000-393` | Commented out -- needs `DocumentOnTypeFormattingOptions` |
 | Client-side wiring | LSP4IJ | Built-in handlers activate automatically when server advertises the capability |
 
 The `onTypeFormatting` request flow is:
