@@ -2719,6 +2719,19 @@ to hide that tool window. VS Code selects **Ecstasy Language Server** in Output;
 that output view. Remap the actions in native Keymap/Keyboard Shortcuts settings. Showing logs
 does not start another server, clear history or change the logging level.
 
+### Server restart shortcut acceptance
+
+In an IntelliJ Ecstasy editor press **Ctrl+Alt+X, then R** (macOS: **Control+Option+X, then R**),
+or choose **Tools → Restart Ecstasy Language Server**. The project's server stops and starts
+again with the same adapter and the saved **Ecstasy Server Runtime and Logs** settings; the
+Language Servers view shows it, and open buffers get their diagnostics again. **Restart running
+Ecstasy servers with saved settings** on that settings page restarts the servers of every open
+project the same way. In a project where no Ecstasy file has been opened yet, the shortcut
+starts nothing and a notification says that no server runs there. Search Everywhere (Shift
+twice) and Find Action find **Restart Ecstasy Language Server**, **Switch Ecstasy Language
+Adapter** and **Toggle Ecstasy Language Server Log** by name. VS Code's counterpart is
+**Ecstasy: Restart Language Server** in the Command Palette.
+
 - Open the log from a source editor and verify recent queue/job, compile and request timing lines.
 - Toggle closed/open; manually close the panel and invoke the shortcut again.
 - Select a different VS Code output channel, then invoke the shortcut: select Ecstasy output.

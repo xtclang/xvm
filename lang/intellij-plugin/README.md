@@ -918,6 +918,13 @@ The server defaults to full synchronization and no save-time edits; custom LSP h
 `initializationOptions.xtcDocumentSync` with independent `incremental` and `formatOnSave` booleans.
 No additional compiler process or compilation is needed for save formatting.
 
+### Restarting the server
+
+Press **Ctrl+Alt+X, then R** (**Control+Option+X, then R** on macOS), or use **Tools → Restart Ecstasy
+Language Server**, to restart the project's language server with its adapter and the saved **Ecstasy
+Server Runtime and Logs** settings. Settings that do not validate leave the running server alone, and a
+notification says why. To restart with the other adapter, use **Ctrl+Alt+X, then A**.
+
 ### Quick server log access
 
 Press **Ctrl+Alt+X, then L** (**Control+Option+X, then L** on macOS) to show/hide the server log.

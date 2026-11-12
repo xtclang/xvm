@@ -62,6 +62,14 @@
                 icon="AllIcons.Actions.Execute">
             <add-to-group group-id="ProjectViewPopupMenuRunGroup" anchor="last"/>
         </action>
+        <action id="xtc.restartLanguageServer" class="org.xtclang.idea.lsp.RestartLanguageServerAction"
+                text="Restart Ecstasy Language Server"
+                description="Restart the Ecstasy language server with its adapter and the saved runtime settings">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt X" second-keystroke="R"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl alt X" second-keystroke="R"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl alt X" second-keystroke="R"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
         <action id="xtc.toggleServerLog" class="org.xtclang.idea.lsp.XtcServerLogAction"
                 text="Toggle Ecstasy Language Server Log"
                 description="Show the Ecstasy server log or hide the Language Servers tool window">
