@@ -77,6 +77,38 @@ object ProjectLifecycle {
             FileEditorManager.getInstance(project).openFile(it, false)
         }
 
+    /**
+     * Closes the editors of the files at [paths] as a tab's close button does, under the write-intent lock, which IntelliJ
+     * 2026.3 requires of closing a file and which the driver's calls on the EDT do not take there.
+     */
+    @JvmStatic
+    fun closeEditors(
+        project: Project,
+        paths: List<String>,
+    ) {
+        ApplicationManager.getApplication().assertIsDispatchThread()
+        val manager = FileEditorManager.getInstance(project)
+        WriteIntentReadAction.run {
+            paths.mapNotNull(LocalFileSystem.getInstance()::findFileByPath).forEach(manager::closeFile)
+        }
+    }
+
+    /**
+     * Reverts the documents of the files at [paths] to their text on disk, as Reload from Disk does, under the
+     * write-intent lock, which IntelliJ 2026.3 requires of it as of closing a file.
+     */
+    @JvmStatic
+    fun reloadFromDisk(paths: List<String>) {
+        ApplicationManager.getApplication().assertIsDispatchThread()
+        val manager = FileDocumentManager.getInstance()
+        WriteIntentReadAction.run {
+            paths
+                .mapNotNull(LocalFileSystem.getInstance()::findFileByPath)
+                .mapNotNull(manager::getCachedDocument)
+                .forEach(manager::reloadFromDisk)
+        }
+    }
+
     @JvmStatic
     fun text(path: String): String =
         ReadAction.computeBlocking<String, RuntimeException> {

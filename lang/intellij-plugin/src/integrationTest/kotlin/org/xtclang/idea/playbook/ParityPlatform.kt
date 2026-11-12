@@ -300,12 +300,7 @@ internal fun ParityScenarios.platformCases() {
     case("X139") { data ->
         val closed = open(data.string("closedFile"), data.string("closedSource"))
         replace(closed, data.string("closedSource") + "\n")
-        with(driver) {
-            withContext(OnDispatcher.EDT) {
-                service<FileEditorManager>(singleProject())
-                    .closeFile(closed.editor.editor.getVirtualFile())
-            }
-        }
+        with(driver) { closeEditors(listOf(closed.editor.editor.getVirtualFile())) }
         val document = open(data.string("file"), data.string("source"))
         clean(document)
         val previous =

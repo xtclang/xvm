@@ -364,7 +364,7 @@ Gradle property with dots as underscores, the JVM system property, and the compo
 | `includeBuildAttachIntellijPlugin` | `false` | Attach the IntelliJ plugin to lang's lifecycle (`build` runs `buildPlugin`) (`providers`). | `lang/build.gradle.kts:134` |
 | `includeBuildAttachVsCodeExtension` | `false` | Attach the VS Code extension to lang's lifecycle (`providers`). | `lang/build.gradle.kts:140` |
 | `idePluginsDir` | unset | `assembleIdePlugins` also copies both plugin packages there; relative to the directory `gradlew` runs in (`providers`). | `lang/build.gradle.kts:214` |
-| `CI` (environment) | unset | When set, `check` runs `spotlessCheck` instead of `spotlessApply`, and the IntelliJ build keeps its IDE downloads in the checkout. | `lang/build.gradle.kts:31`, `lang/intellij-plugin/build.gradle.kts:450` |
+| `CI` (environment) | unset | When set, `check` runs `spotlessCheck` instead of `spotlessApply`, and the IntelliJ build keeps its IDE downloads in the checkout. | `lang/build.gradle.kts:31`, `lang/intellij-plugin/build.gradle.kts:495` |
 | `org.xtclang.java.jdk` | `25` (`version.properties`) | The JDK toolchain of every lang project. | `build-logic/common-plugins/src/main/kotlin/org.xtclang.build.xdk.properties.gradle.kts:53`, `version.properties:26` |
 | `XTC_COMPILER_IMPORT_ID` (environment) | `""` | Set by the editors when they import a Gradle model; the init script records it in the model. | `lang/gradle/compiler-model.init.gradle:67`, set at `vsc/compiler-paths.ts:71`, `idea/lsp/CompilerBuildModel.kt:259` |
 
@@ -390,15 +390,15 @@ Gradle property with dots as underscores, the JVM system property, and the compo
 | `lsp4ijVersion` | the catalog's version | An LSP4IJ version from the Marketplace (`providers`). | `lang/intellij-plugin/build.gradle.kts:73` |
 | `log` | `XTC_LOG_LEVEL`, else `INFO` | Passed to `runIde`'s IDE as `xtc.logLevel` and `XTC_LOG_LEVEL`, which the plugin forwards to the server. | `lang/intellij-plugin/build.gradle.kts:116`, `:922` |
 | `xtc.intellij.semanticTokens` | `true` | Passed to `runIde`'s IDE as `xtc.lsp.semanticTokens` and `XTC_LSP_SEMANTIC_TOKENS`. | `lang/intellij-plugin/build.gradle.kts:125`, `:924` |
-| `XTC_LSP_LOG_DIR` (environment) | `~/.xtc/logs/lsp` | The directory whose server log `runIde` tails into its console. | `lang/intellij-plugin/build.gradle.kts:858` |
-| `lsp.buildSearchableOptions` | `false` (also in the root `gradle.properties`) | Build the settings search index. | `lang/intellij-plugin/build.gradle.kts:583` |
-| `org.xtclang.idea.home` | unset; required by `installPlugin` | The installed IntelliJ that `installPlugin` and `installIntellijPlugin` install into; it must be closed (`providers`). | `lang/intellij-plugin/build.gradle.kts:644` |
-| `org.xtclang.idea.pluginsDir` | the plugins directory from the IDE's own log | Its plugins directory, when the IDE's report of it fails (`providers`). | `lang/intellij-plugin/build.gradle.kts:645`, `build-logic/common-plugins/src/main/kotlin/InstallIntellijPluginTask.kt:83` |
+| `XTC_LSP_LOG_DIR` (environment) | `~/.xtc/logs/lsp` | The directory whose server log `runIde` tails into its console. | `lang/intellij-plugin/build.gradle.kts:903` |
+| `lsp.buildSearchableOptions` | `false` (also in the root `gradle.properties`) | Build the settings search index. | `lang/intellij-plugin/build.gradle.kts:628` |
+| `org.xtclang.idea.home` | unset; required by `installPlugin` | The installed IntelliJ that `installPlugin` and `installIntellijPlugin` install into; it must be closed (`providers`). | `lang/intellij-plugin/build.gradle.kts:689` |
+| `org.xtclang.idea.pluginsDir` | the plugins directory from the IDE's own log | Its plugins directory, when the IDE's report of it fails (`providers`). | `lang/intellij-plugin/build.gradle.kts:690`, `build-logic/common-plugins/src/main/kotlin/InstallIntellijPluginTask.kt:83` |
 | `enablePublish` | `false` | Allow `publishPlugin` (`providers`). | `lang/intellij-plugin/build.gradle.kts:89` |
 | `xdk.intellij.release.channel` | `alpha` | The Marketplace channel to publish to. | `lang/intellij-plugin/build.gradle.kts:40` |
 | `jetbrains.token` | `""` | The Marketplace token; the environment variable is `JETBRAINS_TOKEN`. | `lang/intellij-plugin/build.gradle.kts:95` |
 | `jetbrains.publish.suffix` | `""`; required for a published snapshot | Suffix of a snapshot's Marketplace version. | `lang/intellij-plugin/build.gradle.kts:96` |
-| `JETBRAINS_CERTIFICATE_CHAIN`, `JETBRAINS_PRIVATE_KEY`, `JETBRAINS_PRIVATE_KEY_PASSWORD` (environment) | unset | Plugin signing. | `lang/intellij-plugin/build.gradle.kts:496` |
+| `JETBRAINS_CERTIFICATE_CHAIN`, `JETBRAINS_PRIVATE_KEY`, `JETBRAINS_PRIVATE_KEY_PASSWORD` (environment) | unset | Plugin signing. | `lang/intellij-plugin/build.gradle.kts:541` |
 
 ### 5.4 VS Code extension and Tree-sitter
 
@@ -432,12 +432,13 @@ The test JVMs get a 1 GB heap, so that the library compile of `xtc.lsp.compileLi
 
 ### 6.2 IntelliJ playbook and tour
 
-`testCompilerPlaybook` (`lang/intellij-plugin/build.gradle.kts:990`) turns Gradle properties into JVM
+`testCompilerPlaybook` (`lang/intellij-plugin/build.gradle.kts:1046`) turns Gradle properties into JVM
 properties of the Starter test JVM. All are `providers` properties.
 
 | Gradle property | System property | Default | What it does | Read at |
 |-----------------|-----------------|---------|--------------|---------|
 | `intellijPlaybookCases` | `xtc.playbook.cases` | all cases | Comma-separated case IDs. | `ideaIt/CompilerPlaybookTest.kt:210` |
+| `intellijPlaybookIde` | `xtc.playbook.ideVersion` | `2026.2.3`, the IDE the plugin builds against | The IntelliJ the playbook drives: the default, or `2026.3`, with IDE Starter and its driver for that IDE (the `lang-intellij-next-*` versions in `gradle/libs.versions.toml`). The plugin still builds against the default; only the playbook's IDE changes. | `lang/intellij-plugin/build.gradle.kts:259`, `ideaIt/PlaybookIde.kt:37` |
 | `intellijPlaybookReplacementGates` | `xtc.playbook.replacementGates` | none | Upstream replacement gates to run; needs `-Plsp4ijPlugin` or `-Plsp4ijChannel`. | `ideaIt/CompilerPlaybookTest.kt:201` |
 | `intellijLargeFileProbe` | `xtc.playbook.largeFileProbe` | `false` | Run the large-file editing probe. | `ideaIt/CompilerPlaybookTest.kt:25` |
 | `intellijTour` | `xtc.tour` | `false` | Run the tour, which records and checks the plugin's features. | `ideaIt/TourTest.kt:20` |
@@ -445,15 +446,15 @@ properties of the Starter test JVM. All are `providers` properties.
 | `intellijTourVisible` | `xtc.tour.visible` | `false` | Show the pointer, keys and typing without a recording. | `ideaIt/TourTest.kt:43` |
 | `intellijTourHang` | `xtc.tour.hang` | an hour | Seconds before a tour step counts as hung. | `ideaIt/Tour.kt:439` |
 | `lsp.adapter` | `xtc.playbook.adapter` | `compiler` | The adapter the playbook expects; `treesitter` only for the settings-persistence session. | `ideaIt/CompilerPlaybookTest.kt:29` |
-| `lsp4ijPlugin`, `lsp4ijVersion`, `lsp4ijChannel` | `xtc.playbook.lsp4ijPlugin`, `xtc.playbook.lsp4ijVersion`, `xtc.playbook.lsp4ijChannel` | the release | The LSP4IJ the test IDE installs. | `ideaIt/PlaybookIde.kt:40`, `:43`, `:44` |
-| none | `xtc.playbook.ideVersion`, `xtc.playbook.scenarios`, `xtc.playbook.manual`, `xtc.playbook.reports`, `allure.results.directory` | from the build | The IDE version, `lang/test-fixtures/compiler-playbook/scenarios.json`, `lang/doc/manual-test-plan.md`, and `build/reports/compiler-playbook` | `ideaIt/PlaybookIde.kt:39`, `ideaIt/CompilerPlaybookTest.kt:33`, `:36`, `:39` |
-| `playbookRetainedRuns` | none | `5` | Completed run directories kept under `build/reports/compiler-playbook`; also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:985`, `lang/vscode-extension/build.gradle.kts:338` |
+| `lsp4ijPlugin`, `lsp4ijVersion`, `lsp4ijChannel` | `xtc.playbook.lsp4ijPlugin`, `xtc.playbook.lsp4ijVersion`, `xtc.playbook.lsp4ijChannel` | the release | The LSP4IJ the test IDE installs. | `ideaIt/PlaybookIde.kt:38`, `:41`, `:42` |
+| none | `xtc.playbook.scenarios`, `xtc.playbook.manual`, `xtc.playbook.reports`, `allure.results.directory` | from the build | `lang/test-fixtures/compiler-playbook/scenarios.json`, `lang/doc/manual-test-plan.md`, and `build/reports/compiler-playbook` | `ideaIt/CompilerPlaybookTest.kt:33`, `:36`, `:39` |
+| `playbookRetainedRuns` | none | `5` | Completed run directories kept under `build/reports/compiler-playbook`; also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1041`, `lang/vscode-extension/build.gradle.kts:338` |
 
 | Name | Kind | What it does | Read at |
 |------|------|--------------|---------|
 | `XTC_RECORD_VIDEO` | environment | `1`: the tour shows its actions for the screen recording. | `ideaIt/TourTest.kt:43` |
 | `XTC_RECORDING_START_FILE` | environment, default `/out/screen.start` | The recording's start time, for the tour's clips. | `ideaIt/TourTest.kt:60` |
-| `xtc.test.textmate` | system property, set by `test` | The TextMate bundle for the light platform tests. | `lang/intellij-plugin/build.gradle.kts:974`, `lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/LightEditor.kt:46` |
+| `xtc.test.textmate` | system property, set by `test` | The TextMate bundle for the light platform tests. | `lang/intellij-plugin/build.gradle.kts:1019`, `lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/LightEditor.kt:46` |
 
 ### 6.3 VS Code tests
 
