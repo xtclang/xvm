@@ -13,6 +13,7 @@ import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.toolwindows.structureToolWindow
 import com.intellij.driver.sdk.ui.ui
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
+import java.util.concurrent.TimeoutException
 
 /**
  * Inspect the actual Structure tree populated by LSP4IJ, including deliberately absent
@@ -27,7 +28,14 @@ fun Driver.structure(
     if (!visible) invokeAction("ActivateStructureToolWindow", component = editor.component)
     val tree = ui.structureToolWindow().waitAndGetStructureTree()
     awaitUi("Structure contains $include and excludes $exclude", HANG_LIMIT) {
-        tree.expandAll()
+        // the driver gives a tree's expansion a few seconds of its own, which a loaded machine can exceed; expanding
+        // again is harmless, so its timeout means only that the rows are not all there yet, and the hang bound ends a
+        // tree that never expands
+        val expanded =
+            runCatching { tree.expandAll() }
+                .onFailure { failure -> if (generateSequence(failure, Throwable::cause).none { it is TimeoutException }) throw failure }
+                .isSuccess
+        if (!expanded) return@awaitUi false
         val rows = tree.collectExpandedPaths().map { it.path.last() }
 
         fun contains(name: String) =
