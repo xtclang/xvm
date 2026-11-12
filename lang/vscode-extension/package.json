@@ -162,6 +162,10 @@
                 "when": "editorLangId == xtc"
             },
             {
+                "command": "xtc.restartServer",
+                "key": "ctrl+alt+x r"
+            },
+            {
                 "command": "xtc.showServerOutput",
                 "key": "ctrl+alt+x l"
             },

@@ -345,7 +345,7 @@ Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **Ecsta
 | `Ecstasy: Build`                         | Build the folder's modules, per `xtc.build.mode`        |
 | `Ecstasy: Rebuild`                       | Rebuild the folder's modules from scratch               |
 | `Ecstasy: Select Build Mode`             | Choose embedded, Gradle or automatic for the folder     |
-| `Ecstasy: Restart Language Server`       | Stop and restart the LSP server                        |
+| `Ecstasy: Restart Language Server`       | Stop and restart the LSP server (`Ctrl+Alt+X`, then `R`) |
 | `Ecstasy: Switch Language Adapter`       | Choose the compiler or Tree-sitter adapter ([details](#lsp-adapter-selection)) |
 | `Ecstasy: Show Language Server Output`   | Open the LSP output channel                            |
 | `Ecstasy: Hide Language Server Output`   | Close it again (both are on `Ctrl+Alt+X`, then `L`)    |
