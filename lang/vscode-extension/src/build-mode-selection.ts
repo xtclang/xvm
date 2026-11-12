@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { buildMode, hasGradleBuild, type BuildMode } from './embedded-execution';
+import {
+    buildMode, hasGradleBuild, onDidChangeReplacedLibraries, replacedLibraries, type BuildMode,
+} from './embedded-execution';
 
 type BuildModeSetting = BuildMode | 'auto';
 
@@ -78,7 +80,11 @@ export function createBuildModeStatus(): vscode.Disposable {
         const mode = buildMode(folder);
         item.text = buildModeStatusText(mode);
         shown = item.text;
-        item.tooltip = mode === 'gradle'
+        const replaced = replacedLibraries();
+        item.tooltip = replaced.length > 0
+            ? `Ecstasy builds and runs ${folder.name} through its Gradle build while its own modules replace the bundled `
+                + `libraries ${replaced.join(', ')}.`
+            : mode === 'gradle'
             ? `Ecstasy builds and runs ${folder.name} through its Gradle build. Click to choose the embedded compiler.`
             : `Ecstasy builds and runs ${folder.name} with the embedded compiler; its Gradle build's settings do not apply. Click to choose Gradle.`;
         item.show();
@@ -89,6 +95,7 @@ export function createBuildModeStatus(): vscode.Disposable {
         { dispose: () => { shown = undefined; } },
         vscode.window.onDidChangeActiveTextEditor(update),
         vscode.workspace.onDidChangeWorkspaceFolders(update),
+        onDidChangeReplacedLibraries(update),
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('xtc.build.mode')) update();
         }),

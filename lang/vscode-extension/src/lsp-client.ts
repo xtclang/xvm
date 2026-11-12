@@ -20,7 +20,7 @@ import { BuildModel } from './build-model';
 import { LibraryOptions } from './library-configuration';
 import { libraryOptions } from './library-settings';
 import { attachDebugSessions, endAllDebugSessions } from './debug-adapter';
-import { attachEmbeddedExecution, endAllRuns } from './embedded-execution';
+import { attachEmbeddedExecution, endAllRuns, forgetReplacedLibraries } from './embedded-execution';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
@@ -335,6 +335,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         
         if (newState === State.Stopped) {
             endAllRuns('The Ecstasy language server stopped, ending the run.');
+            forgetReplacedLibraries();
             endAllDebugSessions('The Ecstasy language server stopped, ending the debug session.');
         }
 

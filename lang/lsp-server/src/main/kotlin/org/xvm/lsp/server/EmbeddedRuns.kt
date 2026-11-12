@@ -115,6 +115,11 @@ data class RunInputParams(
     val end: Boolean? = null,
 )
 
+/** `xtc/replacedLibraries` parameters: the bundled libraries that the workspace's own modules replace, by name. */
+data class ReplacedLibrariesParams(
+    val libraries: List<String> = emptyList(),
+)
+
 data class RunOutputParams(
     val runId: String,
     val text: String,
@@ -171,6 +176,13 @@ interface XtcLanguageClient : LanguageClient {
     /** One DAP message from a debug session to the client; see [DebugSessions]. */
     @JsonNotification("xtc/debugMessage")
     fun debugMessage(params: DebugMessageParams) {}
+
+    /**
+     * The bundled libraries that the workspace's own modules replace, each time they change: while there are any, the
+     * client builds and runs with Gradle, as the server builds and runs only with the bundled XDK.
+     */
+    @JsonNotification("xtc/replacedLibraries")
+    fun replacedLibraries(params: ReplacedLibrariesParams) {}
 
     /**
      * Runs a debug session's module with its Gradle task or the xtc command, as [DebugTaskParams] says, and answers

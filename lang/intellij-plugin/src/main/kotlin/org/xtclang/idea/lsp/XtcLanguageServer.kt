@@ -234,6 +234,11 @@ data class RunInputParams(
     val end: Boolean? = null,
 )
 
+/** `xtc/replacedLibraries` parameters: the bundled libraries that the workspace's own modules replace, by name. */
+data class ReplacedLibrariesParams(
+    val libraries: List<String> = emptyList(),
+)
+
 data class RunOutputParams(
     val runId: String = "",
     val text: String = "",

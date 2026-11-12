@@ -48,6 +48,16 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a project whose own modules replace bundled libraries builds with Gradle whatever the mode`(
+        @TempDir root: Path,
+    ) {
+        val replaced = listOf("ecstasy.xtclang.org", "json.xtclang.org")
+        XtcBuildMode.entries.forEach {
+            assertThat(XtcBuildSettings.resolve(it, root, replaced)).describedAs(it.name).isEqualTo(XtcBuildMode.GRADLE)
+        }
+    }
+
+    @Test
     fun `embedded is the default, also in a project with a Gradle build, and its runs say Gradle settings do not apply`(
         @TempDir root: Path,
     ) {

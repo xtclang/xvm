@@ -31,10 +31,16 @@ class SelectBuildModeAction : DumbAwareAction() {
                 if (!project.isDisposed && settings.mode != mode) {
                     settings.mode = mode
                     val effective = if (XtcBuildSettings.effective(project) == XtcBuildMode.GRADLE) "Gradle" else "the embedded compiler"
+                    val replaced = settings.replacedLibraries
                     Notification(
                         XtcFileOperations.NOTIFICATIONS,
                         "Ecstasy build mode: $mode",
-                        "Build, Rebuild and Run now use $effective.",
+                        if (replaced.isEmpty() || mode == XtcBuildMode.GRADLE) {
+                            "Build, Rebuild and Run now use $effective."
+                        } else {
+                            "Build, Rebuild and Run still use Gradle while this project's own modules replace the bundled " +
+                                "libraries ${replaced.joinToString()}."
+                        },
                         NotificationType.INFORMATION,
                     ).notify(project)
                 }

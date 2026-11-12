@@ -20,6 +20,7 @@ import org.xtclang.idea.dap.DebugTasks
 import org.xtclang.idea.run.EmbeddedRunSessions
 import org.xtclang.idea.run.RunGutterIcons
 import org.xtclang.idea.run.TestGutterIcons
+import org.xtclang.idea.run.XtcBuildSettings
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -90,6 +91,8 @@ class XtcLanguageClient(
             project.getServiceIfCreated(DebugSessions::class.java)?.endAll("The Ecstasy language server stopped, ending the debug session")
             // as LSP4IJ clears the problem files of the documents it held for the server
             project.getServiceIfCreated(ProjectErrors::class.java)?.disconnected()
+            // the next server says again which libraries the project's modules replace
+            project.getServiceIfCreated(XtcBuildSettings::class.java)?.replaced(project, emptyList())
         }
         super.dispose()
     }
@@ -104,6 +107,12 @@ class XtcLanguageClient(
     @JsonNotification("xtc/testEvent")
     fun testEvent(params: TestEventParams) {
         if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).tested(params)
+    }
+
+    /** The bundled libraries this project's own modules replace, which make its builds and runs use Gradle. */
+    @JsonNotification("xtc/replacedLibraries")
+    fun replacedLibraries(params: ReplacedLibrariesParams) {
+        if (!project.isDisposed) XtcBuildSettings.getInstance(project).replaced(project, params.libraries)
     }
 
     @JsonNotification("xtc/runExited")
