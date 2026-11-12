@@ -162,6 +162,10 @@
                 "when": "editorLangId == xtc"
             },
             {
+                "command": "xtc.selectBuildMode",
+                "key": "ctrl+alt+x b"
+            },
+            {
                 "command": "xtc.restartServer",
                 "key": "ctrl+alt+x r"
             },

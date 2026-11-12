@@ -918,6 +918,15 @@ The server defaults to full synchronization and no save-time edits; custom LSP h
 `initializationOptions.xtcDocumentSync` with independent `incremental` and `formatOnSave` booleans.
 No additional compiler process or compilation is needed for save formatting.
 
+### Choosing the build mode
+
+Press **Ctrl+Alt+X, then B** (**Control+Option+X, then B** on macOS), or use **Tools → Select Ecstasy
+Build Mode**, to choose whether Build, Rebuild and Run use the embedded compiler, Gradle, or Gradle only
+when the project has a Gradle build; it is the same choice as **Build and run using** in **Settings →
+Build, Execution, Deployment → Ecstasy**. The next build or run uses it: nothing restarts, syncs or
+reindexes. Build in Gradle mode goes through IntelliJ's Gradle integration, so the project's Gradle build
+must be linked. VS Code has the same shortcut for **Ecstasy: Select Build Mode**.
+
 ### Restarting the server
 
 Press **Ctrl+Alt+X, then R** (**Control+Option+X, then R** on macOS), or use **Tools → Restart Ecstasy
