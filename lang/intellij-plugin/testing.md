@@ -221,6 +221,18 @@ intellijPlatform {
 }
 ```
 
+### Driving a newer IntelliJ
+
+IDE Starter and its driver follow the IDE they drive: 262's cannot drive 2026.3. The playbook
+drives the IDE the plugin builds against, 2026.2.3, unless `-PintellijPlaybookIde=2026.3` says
+otherwise; then Starter, its driver, Kodein and the coroutines come from the
+`lang-intellij-next-*` versions in `gradle/libs.versions.toml`, and the plugin itself still
+builds against 2026.2.3. The few classes that touch an API that differs between the two lines
+have one copy per line, under `src/starter262` and `src/starter263`, and the build compiles
+the one that matches. The probes that run inside the IDE are a source set of their own,
+`src/playbookProbe`, compiled against the plugin's IDE, so that either line's driver calls the
+same probes.
+
 ### Example E2E Test
 
 ```kotlin
