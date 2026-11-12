@@ -617,13 +617,15 @@ internal fun ParityScenarios.platformCases() {
             }
             val document = open(data.string("file"))
             errors(document)
-            Files.createDirectories(resourceRoot)
             val resource = resourceRoot.resolve(data.string("resource"))
-            Files.writeString(resource, data.string("contents"))
+            changeOnDisk(resource) {
+                Files.createDirectories(it.parent)
+                Files.writeString(it, data.string("contents"))
+            }
             clean(document)
-            Files.delete(resource)
+            changeOnDisk(resource, Files::delete)
             errors(document)
-            Files.writeString(resource, data.string("contents"))
+            changeOnDisk(resource) { Files.writeString(it, data.string("contents")) }
             clean(document)
             val replacement = external.resolve("replacement")
             configure(
@@ -637,8 +639,10 @@ internal fun ParityScenarios.platformCases() {
                 ),
             )
             errors(document)
-            Files.createDirectories(replacement)
-            Files.writeString(replacement.resolve(data.string("resource")), data.string("contents"))
+            changeOnDisk(replacement.resolve(data.string("resource"))) {
+                Files.createDirectories(it.parent)
+                Files.writeString(it, data.string("contents"))
+            }
             clean(document)
         } finally {
             with(driver) {
@@ -1163,13 +1167,13 @@ internal fun ParityScenarios.platformCases() {
             )
             val document = open(data.string("file"))
             clean(document)
-            Files.writeString(library, data.string("brokenLibrary"))
+            changeOnDisk(library) { Files.writeString(it, data.string("brokenLibrary")) }
             errors(document)
-            Files.writeString(library, data.string("library"))
+            changeOnDisk(library) { Files.writeString(it, data.string("library")) }
             clean(document)
-            Files.delete(library)
+            changeOnDisk(library, Files::delete)
             errors(document)
-            Files.writeString(library, data.string("library"))
+            changeOnDisk(library) { Files.writeString(it, data.string("library")) }
             clean(document)
         } finally {
             configure(emptyList())
