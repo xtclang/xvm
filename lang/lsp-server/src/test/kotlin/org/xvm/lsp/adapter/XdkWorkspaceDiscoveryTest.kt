@@ -5,6 +5,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibraryReplacement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
 import java.nio.file.Path
@@ -18,12 +19,11 @@ class XdkWorkspaceDiscoveryTest {
     @TempDir lateinit var directory: Path
 
     @Test
-    fun `discovery reads module imports ignores generated and bundled sources and honors buffers`() {
+    fun `discovery reads module imports ignores generated sources and honors buffers`() {
         val base = source("Base.x", "module Base { class Box {} }")
         val app = source("App.x", "module App { package lib import Base; }")
         source("App/Member.x", "class Member {}")
         source("build/Generated.x", "module Generated {}")
-        source("Xml.x", "module xml.xtclang.org {}")
         source("Comment.x", "// module Fake {}\nclass Ordinary {}")
         val modules =
             XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) {
@@ -46,24 +46,27 @@ class XdkWorkspaceDiscoveryTest {
     }
 
     @Test
-    fun `the XDK's own sources discover its libraries but not its bootstrap modules, each module depending on ecstasy`() {
-        source("lib_ecstasy/ecstasy.x", "module ecstasy.xtclang.org {}")
-        source("lib_json/json.x", "module json.xtclang.org {}")
-        source("javatools_turtle/mack.x", "module mack.xtclang.org {}")
-        source("App.x", "module App {}")
+    fun `a workspace's own module replaces the bundled library of its name, and its own ecstasy is everyone's`() {
+        val json = "json.xtclang.org"
         val ecstasy = "ecstasy.xtclang.org"
-        val modules = XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }
-        assertThat(modules.associate { it.name to it.dependencies }).isEqualTo(
-            mapOf("App" to setOf(ecstasy), ecstasy to emptySet(), "json.xtclang.org" to setOf(ecstasy)),
-        )
-        assertThat(modules.filter { it.shadowsBundle }.map { it.name }).containsExactlyInAnyOrder(ecstasy, "json.xtclang.org")
-        // turned off, the libraries stay bundled, as in any other workspace
-        System.setProperty("xtc.lsp.xdkWorkspace", "false")
+        source("lib_json/json.x", "module json.xtclang.org {}")
+        source("App.x", "module App { package json import json.xtclang.org; }")
+        source("javatools_turtle/mack.x", "module mack.xtclang.org {}")
+
+        fun graph() =
+            XdkWorkspaceDiscovery
+                .scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }
+                .associate { it.name to it.dependencies }
+        assertThat(graph()).isEqualTo(mapOf("App" to setOf(json), json to emptySet()))
+        // as in the XVM repository: every module imports ecstasy without saying so, and mack stays bundled
+        source("lib_ecstasy/ecstasy.x", "module ecstasy.xtclang.org {}")
+        assertThat(graph()).isEqualTo(mapOf("App" to setOf(ecstasy, json), ecstasy to emptySet(), json to setOf(ecstasy)))
+        // turned off, the libraries stay bundled, and no module depends on their sources
+        System.setProperty(XdkLibraryReplacement.PROPERTY, "false")
         try {
-            val bundled = XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }
-            assertThat(bundled.associate { it.name to it.dependencies }).isEqualTo(mapOf("App" to emptySet<String>()))
+            assertThat(graph()).isEqualTo(mapOf("App" to emptySet<String>()))
         } finally {
-            System.clearProperty("xtc.lsp.xdkWorkspace")
+            System.clearProperty(XdkLibraryReplacement.PROPERTY)
         }
     }
 
