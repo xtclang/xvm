@@ -62,8 +62,8 @@ import java.util.UUID
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
@@ -96,6 +96,12 @@ class XdkAdapter
             ModuleRepository?,
             ErrorListener,
         ) -> EmbeddingSupport.PartialAnalysis,
+        /**
+         * Runs a submitted compile once the editing it debounces has paused, and returns what cancels it; null for the
+         * adapter's own timer of [DEBOUNCE_MILLIS]. A test passes one that it releases itself, so that what the debounce
+         * coalesces does not depend on the machine's speed.
+         */
+        debounce: ((Runnable) -> Future<*>)? = null,
     ) : AbstractAdapter() {
         private val compiler = CompilerCalls(compileSource, compileTree, analyzeCursor)
         private val formattingPreferences = AtomicReference<FormattingConfig?>()
@@ -944,18 +950,14 @@ class XdkAdapter
             val (retired, obsoleteQueries) = if (retire) retireRequests(project.affected(scope)) else emptyList<Request>() to emptyList()
             requests[scope] = request
             scheduled[request] =
-                debouncer.schedule(
-                    {
-                        synchronized(lifecycle) {
-                            if (scheduled.remove(request) != null && !isStale(request)) {
-                                compiles.execute(request.task.ready())
-                                if (!XdkLibrarySources.isCopy(scope)) yieldCopyCompiles()
-                            }
+                schedule {
+                    synchronized(lifecycle) {
+                        if (scheduled.remove(request) != null && !isStale(request)) {
+                            compiles.execute(request.task.ready())
+                            if (!XdkLibrarySources.isCopy(scope)) yieldCopyCompiles()
                         }
-                    },
-                    DEBOUNCE_MILLIS,
-                    TimeUnit.MILLISECONDS,
-                )
+                    }
+                }
             return Submission(request = request, retired = retired, obsoleteQueries = obsoleteQueries)
         }
 
@@ -3178,11 +3180,13 @@ class XdkAdapter
         private var dependencies = XdkDependencies(emptyList())
         private var project = XdkProject(emptyList())
         private val builds = ConcurrentHashMap<String, CachedBuild>()
-        private val scheduled = mutableMapOf<Request, ScheduledFuture<*>>()
+        private val scheduled = mutableMapOf<Request, Future<*>>()
         private val debouncer =
             ScheduledThreadPoolExecutor(1) { work ->
                 Thread(work, "xtc-debounce").apply { isDaemon = true }
             }.apply { removeOnCancelPolicy = true }
+        private val schedule: (Runnable) -> Future<*> =
+            debounce ?: { work -> debouncer.schedule(work, DEBOUNCE_MILLIS, TimeUnit.MILLISECONDS) }
 
         /**
          * Only current, completed module analyses belong here; a member edit drops all previous views.
