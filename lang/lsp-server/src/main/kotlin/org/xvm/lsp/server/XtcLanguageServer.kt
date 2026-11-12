@@ -466,6 +466,16 @@ class XtcLanguageServer internal constructor(
 
     override fun connect(client: LanguageClient) {
         connectedClient.set(client)
+        // read when sent, under one lock, so the last one sent is the current set
+        (adapter as? XdkAdapter)?.let { xdk ->
+            xdk.onReplacedLibraries {
+                CompletableFuture.runAsync {
+                    synchronized(connectedClient) {
+                        (this.client as? XtcLanguageClient)?.replacedLibraries(ReplacedLibrariesParams(xdk.replacedLibraries().sorted()))
+                    }
+                }
+            }
+        }
         logger.info("connect: connected to language client")
     }
 

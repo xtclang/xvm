@@ -149,6 +149,15 @@ class XdkAdapter
         /** The bundled libraries that the workspace's own modules replace ([XdkLibraryReplacement]). */
         internal fun replacedLibraries(): Set<String> = synchronized(lifecycle) { project.replaced }
 
+        /** Called each time [replacedLibraries] changes, under the adapter's lock, so it must not block. */
+        @Volatile
+        private var replacedLibrariesChanged: () -> Unit = {}
+
+        /** Has [listener] called each time [replacedLibraries] changes, under the adapter's lock: it must not block. */
+        internal fun onReplacedLibraries(listener: () -> Unit) {
+            replacedLibrariesChanged = listener
+        }
+
         internal fun compilerProgressDescription(): String? = queueTrace.progressDescription()
 
         override val displayName: String = "XDK"
@@ -1582,8 +1591,10 @@ class XdkAdapter
                             replacement.buildOrder(request.scope).any { it.name in changed } ||
                             request.overlays.keys.any { project.scope(it) != replacement.scope(it) }
                     }.mapTo(linkedSetOf()) { it.scope }
+            val replaced = project.replaced != replacement.replaced
             project = replacement
             dependencies = artifacts
+            if (replaced) replacedLibrariesChanged()
             if (force) builds.clear() else builds.keys.removeAll { it in changed || it !in replacement.modules }
             return retireRequests(retired)
         }
