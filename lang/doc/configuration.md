@@ -71,7 +71,7 @@ entries start at lines 292 to 556. The three machine-scoped ones, `xtc.java.vmOp
 
 ### 1.2 IntelliJ
 
-The plugin registers five settings pages (`lang/intellij-plugin/src/main/resources/META-INF/plugin.xml:76`
+The plugin registers five settings pages (`lang/intellij-plugin/src/main/resources/META-INF/plugin.xml:84`
 to `:88`) and a code style. LSP4IJ's own Language Servers page holds the rest.
 
 **Languages & Frameworks | Ecstasy Server Runtime and Logs** (`ServerRuntimeConfigurable`). Stored per
@@ -179,8 +179,8 @@ sessions are pruned at startup (`:161`).
 | Property | Type, default | What it does | Read at |
 |----------|---------------|--------------|---------|
 | `xtc.lsp.adapter` | string, the jar's `lsp.adapter` (`compiler`) | The backend: `compiler` (also `xtc`, `full`), `treesitter` (also `tree-sitter`) or `mock`. Another value fails the start. Tree-sitter falls back to mock when its native library does not load, and the editor is told. | `lsp/server/XtcLanguageServerLauncher.kt:151`, values `:74` |
-| `xtc.lsp.semanticTokens` | boolean, else `XTC_LSP_SEMANTIC_TOKENS`, else the jar's `lsp.semanticTokens` (`true`) | Whether the server offers semantic tokens. | `lsp/server/XtcLanguageServer.kt:398` |
-| `xtc.lsp.compileLibraries` | boolean, `true` | Compile an opened XDK source's read-only copy with its whole library (section 4). Only the exact value `false` turns it off. It also needs a maximum heap of 1 GB less 64 MB; with less, each XDK source compiles alone and a warning is logged once. | `lsp/adapter/xdk/XdkLibrarySources.kt:73`, heap `:80`, `lsp/adapter/xdk/XdkAdapter.kt:691` |
+| `xtc.lsp.semanticTokens` | boolean, else `XTC_LSP_SEMANTIC_TOKENS`, else the jar's `lsp.semanticTokens` (`true`) | Whether the server offers semantic tokens. | `lsp/server/XtcLanguageServer.kt:401` |
+| `xtc.lsp.compileLibraries` | boolean, `true` | Compile an opened XDK source's read-only copy with its whole library (section 4). Only the exact value `false` turns it off. It also needs a maximum heap of 1 GB less 64 MB; with less, each XDK source compiles alone and a warning is logged once. | `lsp/adapter/xdk/XdkLibrarySources.kt:73`, heap `:80`, `lsp/adapter/xdk/XdkAdapter.kt:697` |
 | `xtc.sourceRoots` | path list split on the platform's path separator, none | Extra source roots, merged with `xtcSourceRoots` and `XTC_SOURCE_ROOTS`. | `lsp/server/SourceRootResolver.kt:42` |
 | `xtc.logLevel` | `TRACE`, `DEBUG`, `INFO`, `WARN` or `ERROR`; else `XTC_LOG_LEVEL`, else `INFO` | Level of the `org.xvm.lsp` loggers. Other loggers stay at `WARN`, LSP4J's at `ERROR`. | `lang/lsp-server/src/main/resources/logback.xml:43` |
 | `xtc.logs.directory` | path, else `XTC_LSP_LOG_DIR`, else `~/.xtc/logs/lsp` | Root of the log sessions (section 4). | `lsp/util/ServerLogs.kt:197` |
@@ -200,7 +200,7 @@ the server. The JDK's `java.io.tmpdir` and `user.home` place the files of sectio
 
 | Variable | Default | What it does | Read at |
 |----------|---------|--------------|---------|
-| `XTC_LSP_SEMANTIC_TOKENS` | unset | As `xtc.lsp.semanticTokens`, which wins over it. | `lsp/server/XtcLanguageServer.kt:401` |
+| `XTC_LSP_SEMANTIC_TOKENS` | unset | As `xtc.lsp.semanticTokens`, which wins over it. | `lsp/server/XtcLanguageServer.kt:404` |
 | `XTC_SOURCE_ROOTS` | unset | As `xtc.sourceRoots`; all three sources are merged. | `lsp/server/SourceRootResolver.kt:43` |
 | `XTC_LOG_LEVEL` | unset | As `xtc.logLevel`, which wins over it. | `logback.xml:43` |
 | `XTC_LSP_LOG_DIR` | unset | As `xtc.logs.directory`, which wins over it. | `lsp/util/ServerLogs.kt:199` |
@@ -215,9 +215,9 @@ says how to set its inputs.
 | Key | Default | Used for | Read at |
 |-----|---------|----------|---------|
 | `lsp.adapter` | `compiler` | The backend when `-Dxtc.lsp.adapter` is absent | `lsp/server/XtcLanguageServerLauncher.kt:151` |
-| `lsp.semanticTokens` | `true` | Semantic tokens when neither override is set | `lsp/server/XtcLanguageServer.kt:402` |
-| `lsp.version` | the project version | The startup banner and the service status | `lsp/server/XtcLanguageServer.kt:396` |
-| `lsp.build.time` | the build's time, or `sourceDateEpoch` | The startup banner | `lsp/server/XtcLanguageServer.kt:397` |
+| `lsp.semanticTokens` | `true` | Semantic tokens when neither override is set | `lsp/server/XtcLanguageServer.kt:405` |
+| `lsp.version` | the project version | The startup banner and the service status | `lsp/server/XtcLanguageServer.kt:399` |
+| `lsp.build.time` | the build's time, or `sourceDateEpoch` | The startup banner | `lsp/server/XtcLanguageServer.kt:400` |
 
 ### 2.5 Initialization options
 
@@ -226,11 +226,11 @@ says how to set its inputs.
 | `xtcDocumentSync.incremental` | boolean, `false` | Incremental rather than full document synchronization. A non-boolean fails `initialize`. | Both editors | `lsp/server/DocumentSynchronization.kt:45` |
 | `xtcDocumentSync.formatOnSave` | boolean, `false` | The server formats on save. | VS Code; IntelliJ always sends `false` | `lsp/server/DocumentSynchronization.kt:46` |
 | `xtcSourceRoots` | string array, `[]` | Extra source roots (section 2.2). | VS Code | `lsp/server/SourceRootResolver.kt:45` |
-| `xtcCompiler` | object, absent | The first compiler configuration, the shape of the `xtc.compiler` section (2.6). Invalid content fails `initialize` with `InvalidParams`. | VS Code | `lsp/server/CompilerConfiguration.kt:17`, `lsp/server/XtcLanguageServer.kt:481` |
+| `xtcCompiler` | object, absent | The first compiler configuration, the shape of the `xtc.compiler` section (2.6). Invalid content fails `initialize` with `InvalidParams`. | VS Code | `lsp/server/CompilerConfiguration.kt:17`, `lsp/server/XtcLanguageServer.kt:484` |
 | `xtcCodeActions.quickFixesPerDiagnostic` | boolean, `false` | Quick fixes are asked for per diagnostic. | IntelliJ (`true`) | `lsp/server/ClientPresentation.kt:169`, sent at `idea/lsp/XtcLspServerSupportProvider.kt:117` |
 | `xtcCodeActions.automaticFromCache` | boolean, `false` | Automatic code action requests are answered from what is proved already. | Neither | `lsp/server/ClientPresentation.kt:170` |
 | `xtcCodeActions.automaticWaitMillis` | integer, 500 | How long an Automatic code action request waits for its full answer. | Neither | `lsp/server/ClientPresentation.kt:171`, default `:95` |
-| `trace` (LSP's own) | `off`, `messages` or `verbose` | The server's protocol trace; `$/setTrace` changes it later. | Both | `lsp/server/XtcLanguageServer.kt:469`, `:165` |
+| `trace` (LSP's own) | `off`, `messages` or `verbose` | The server's protocol trace; `$/setTrace` changes it later. | Both | `lsp/server/XtcLanguageServer.kt:472`, `:168` |
 
 ### 2.6 `workspace/configuration` sections
 
@@ -238,21 +238,21 @@ The server asks only when the client declares `workspace.configuration`.
 
 | Section and field | Type, default | What it does | Requested at, parsed at |
 |-------------------|---------------|--------------|-------------------------|
-| `xtc.compiler` `sourceModules` | null or array, `null` | `null` discovers modules (from `buildModels` when present), `[]` none; each entry is `{name, uri, dependencies, resourceRoots}`. Relative URIs need exactly one workspace folder. | `lsp/server/XtcLanguageServer.kt:749`, `lsp/server/CompilerConfiguration.kt:55` |
+| `xtc.compiler` `sourceModules` | null or array, `null` | `null` discovers modules (from `buildModels` when present), `[]` none; each entry is `{name, uri, dependencies, resourceRoots}`. Relative URIs need exactly one workspace folder. | `lsp/server/XtcLanguageServer.kt:752`, `lsp/server/CompilerConfiguration.kt:55` |
 | `xtc.compiler` `buildModels` | array, absent | Gradle source sets from `.gradle/xtc/lsp-model.json`; used when `sourceModules` is `null`. | `lsp/server/CompilerConfiguration.kt:36` |
 | `xtc.compiler` `libraries.modulePath` | null or path array, `null` | Binary libraries; `null` inherits the build model's. | `lsp/server/CompilerLibraries.kt:109` |
 | `xtc.compiler` `libraries.sourceAttachments` | array, `[]` | `[{module, roots}]`: read-only sources for binary modules. | `lsp/server/CompilerLibraries.kt:111` |
-| `xtc.formatting` `indentSize` | integer 1 to 32, `4` | Formatter indent. | `lsp/server/XtcLanguageServer.kt:846`, `lsp/server/EditorFormattingState.kt:72` |
+| `xtc.formatting` `indentSize` | integer 1 to 32, `4` | Formatter indent. | `lsp/server/XtcLanguageServer.kt:849`, `lsp/server/EditorFormattingState.kt:72` |
 | `xtc.formatting` `continuationIndentSize` | integer 1 to 32, `8` | Continuation indent. | `lsp/server/EditorFormattingState.kt:73` |
 | `xtc.formatting` `insertSpaces` | boolean, `true` | Spaces or tabs. | `lsp/server/EditorFormattingState.kt:65` |
 | `xtc.formatting` `maxLineWidth` | integer 1 to 1000, `120` | Wrapping width. | `lsp/server/EditorFormattingState.kt:75` |
-| `xtc.codeLens` `references` | boolean, `true` | Reference-count lenses, asked per document (`scopeUri`); after 10 seconds without an answer the lenses are off. | `lsp/server/XtcLanguageServer.kt:424`, `lsp/server/CodeLensSettings.kt:11` |
+| `xtc.codeLens` `references` | boolean, `true` | Reference-count lenses, asked per document (`scopeUri`); after 10 seconds without an answer the lenses are off. | `lsp/server/XtcLanguageServer.kt:427`, `lsp/server/CodeLensSettings.kt:11` |
 
 On `workspace/didChangeConfiguration` the server asks for `xtc.formatting` again, refreshes inlay
 hints and lenses, and takes `settings.xtc.compiler` as given; when the notification has only
 `formatting`, `presentation` or `languageService` under `xtc`, the compiler configuration stays, and
 otherwise the server asks for `xtc.compiler` (`lsp/server/XtcWorkspaceService.kt:51`,
-`lsp/server/CompilerConfiguration.kt:22`, `lsp/server/XtcLanguageServer.kt:722`). An invalid
+`lsp/server/CompilerConfiguration.kt:22`, `lsp/server/XtcLanguageServer.kt:725`). An invalid
 compiler configuration after initialization keeps the previous one and shows an error.
 
 ## 3. Debug adapter and run workers
@@ -421,7 +421,7 @@ The test tasks set these JVM properties for the test code.
 | Property | Set from | Read at |
 |----------|----------|---------|
 | `xtc.lsp.parameterizedCases` | `-PlspTests`: `first` for `default`, else `all` (`lang/lsp-server/build.gradle.kts:355`) | `lspTest/ParameterizedCases.kt:40` |
-| `xtc.lsp.retentionCycles` | `-Plsp.retentionCycles` (`:356`) | `lspTest/adapter/XdkRetentionTest.kt:196` |
+| `xtc.lsp.retentionCycles` | `-Plsp.retentionCycles` (`:356`) | `lspTest/adapter/XdkRetentionTest.kt:226` |
 | `xtc.lsp.soakRounds` | `-Plsp.soakRounds` (`:360`) | `lspTest/run/EmbeddedExecutionTest.kt:2661` |
 | `xtc.composite.root` | The directory with `version.properties` above lsp-server (`:397`) | `lspTest/server/LspIntegrationTest.kt:146` |
 | `xtc.lsp.jar` | The fat jar, for the process tests (`:408`, `:481`) | `lspTest/server/LspProcessLifecycleTest.kt:49` |
