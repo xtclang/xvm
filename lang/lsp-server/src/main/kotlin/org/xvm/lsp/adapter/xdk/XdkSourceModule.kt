@@ -60,7 +60,13 @@ internal class XdkProject(
 
     init {
         val named = immutableMap(modules.associateBy { it.name })
-        require(named.size == modules.size) { "Duplicate source module name" }
+        require(named.size == modules.size) {
+            modules
+                .groupBy { it.name }
+                .filterValues { it.size > 1 }
+                .entries
+                .joinToString("; ", "Duplicate source module name ") { (name, same) -> "$name: ${same.joinToString { it.uri }}" }
+        }
         require(modules.map { it.root }.distinct().size == modules.size) {
             "Duplicate source module root"
         }
