@@ -42,7 +42,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * Exercises connection-owned virtual library content. Only registered current artifact URIs may
@@ -312,9 +311,13 @@ class LibraryContentProtocolTest {
                 DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(target.uri, 4), listOf(TextDocumentContentChangeEvent(text))),
             )
             assertThat(documents.moniker(moniker).awaited()).isEqualTo(original)
-            // A library URI's text cannot change, so a dependency change asks the client to fetch no view again.
+            // A library URI's text cannot change, so a dependency change asks the client to fetch no view again: not as
+            // the server takes the change, whose refreshes it sends before it returns, nor once the document's analysis
+            // after the change is current.
             server.replaceCompilerDependencies(emptyList())
-            assertThat(notifications.poll(2, SECONDS)).isNull()
+            assertThat(notifications).isEmpty()
+            documents.moniker(moniker).awaited()
+            assertThat(notifications).isEmpty()
             assertThat(workspace.textDocumentContent(params).join().text).isEqualTo(text)
         }
     }

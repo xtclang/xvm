@@ -15,6 +15,10 @@ import org.xvm.lsp.util.Watched
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.NANOSECONDS
 
 /**
@@ -68,9 +72,18 @@ class XdkRetentionTest {
         val consumer = directory.resolve("Consumer.x").toFile().apply { writeText(CONSUMER) }
         val uri = consumer.toURI().toString()
         val timings = mutableListOf<Long>()
+        // an edit storm's compiles wait for its last edit, as the debounce has them wait for an editor's pause, so that
+        // which of them the storm cancels does not depend on how fast the edits arrive; other compiles run at once
+        val debounces = Executors.newSingleThreadExecutor()
+        val held = mutableListOf<FutureTask<Unit>>()
+        var storming = false
+        // Other.x's compile holds the adapter's one compile worker until the test opens the gate it hands over
+        val gates = LinkedBlockingQueue<CountDownLatch>()
+        val other = directory.resolve("Other.x").toUri().toString()
         val adapter =
             XdkAdapter(
                 { source, repository, errors ->
+                    if (source.fileName.endsWith("Other.x")) CountDownLatch(1).also(gates::add).awaited()
                     support.compileModule(source, repository, errors).observe()
                 },
                 { sources, repository, errors ->
@@ -89,6 +102,9 @@ class XdkRetentionTest {
                             watched.add(it.pool())
                             it.sourceTrees().forEach(watched::add)
                         }
+                },
+                { work ->
+                    FutureTask(work, Unit).also { task -> synchronized(held) { if (storming) held += task else debounces.execute(task) } }
                 },
             )
         try {
@@ -113,8 +129,14 @@ class XdkRetentionTest {
             repeat(cycles) { cycle ->
                 adapter.replaceDependencies(listOf(artifacts[cycle % artifacts.size]))
                 val started = System.nanoTime()
+                synchronized(held) { storming = true }
                 val storm =
                     (0..7).map { edit -> adapter.compileAsync(uri, "$CONSUMER // $cycle:$edit") }
+                synchronized(held) {
+                    storming = false
+                    held.forEach(debounces::execute)
+                    held.clear()
+                }
                 assertThat(storm.last().awaited().success).isTrue()
                 assertThat(storm.dropLast(1)).allMatch { it.isCancelled }
                 timings += System.nanoTime() - started
@@ -163,20 +185,28 @@ class XdkRetentionTest {
                 val cancelled = adapter.getCompletionsAsync(uri, 0, column)
                 cancelled.cancel(false)
                 assertThat(adapter.compile(uri, CONSUMER).success).isTrue()
+                // the rename waits behind another module's compile, so the close finds it queued however fast the
+                // worker would have run it
+                val occupying = adapter.compileAsync(other, "module Other {}")
+                val gate = gates.awaited()
                 val rename = adapter.renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed")
                 adapter.closeDocument(uri)
                 assertThat(rename.isCancelled).isTrue()
+                gate.countDown()
+                assertThat(occupying.awaited().success).isTrue()
+                adapter.closeDocument(other)
                 assertThat(adapter.getCachedResult(uri)).isNull()
             }
             assertReleased(watched, adapter, support)
         } finally {
             adapter.close()
+            debounces.shutdownNow()
         }
         assertReleased(watched, adapter, support)
         val millis = timings.map(NANOSECONDS::toMillis).sorted()
         println(
             "Retention workload: cycles=$cycles, edit requests=${cycles * 8}, compiler objects=${watched.size}, reached=0, " +
-                "rebuild p50=${millis[millis.size / 2]}ms, p95=${millis[(millis.size * 0.95).toInt()]}ms (includes debounce)",
+                "rebuild p50=${millis[millis.size / 2]}ms, p95=${millis[(millis.size * 0.95).toInt()]}ms",
         )
     }
 
