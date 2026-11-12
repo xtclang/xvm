@@ -117,7 +117,7 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   - with a maximum heap under 1 GB a copy compiles on its own, and the server logs why once; the
     server's tests run with 1 GB (Gradle's default for a test JVM is 512 MB).
 
-### The XDK's own sources as a workspace
+### A workspace's own modules replace bundled libraries
 
 - [x] Analyze the XDK's libraries from the XVM repository's sources, not the bundled XDK. Done
   2026-11-12 (`ba3bb43353`, `f670e99225` on errs; `afb56f6538`, `9c9a6053c0` on #693; pushed): a
@@ -125,14 +125,43 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   module depending on the workspace's `ecstasy`; source-built libraries replace the bundled ones in
   the compiler's repository, so `json` compiles against the repository's `ecstasy`, unsaved edits
   included, and Go to Definition opens the repository's files. `mack` and `_native` stay bundled.
-  Embedded builds and runs are refused there (they would run the bundled runtime); Gradle mode builds
-  and runs it. `-Dxtc.lsp.xdkWorkspace=false`, or a heap under a library's whole compile, keeps the
-  bundle. `XdkWorkspaceModeTest` (heavy) and `XdkWorkspaceDiscoveryTest` cover it. Before it, the
-  same day, discovered modules that share a name (seven in the repository) failed every file with
-  "Duplicate source module name" (`6cad3509aa`).
+  Before it, the same day, discovered modules that share a name (seven in the repository) failed
+  every file with "Duplicate source module name" (`6cad3509aa`).
+- [x] The XDK as a general rule rather than a detected case, and Gradle as its build mode. Done
+  2026-11-12: any workspace module named as a bundled library replaces it (`XdkLibraryReplacement`),
+  in all three ways a project is configured: discovery, Gradle's model (`.gradle/xtc/lsp-model.json`,
+  which before refused the XDK's library names) and explicit `sourceModules`. A replaced `ecstasy` is
+  a dependency of every other module; `mack` and `_native` are never replaced.
+  `-Dxtc.lsp.replaceLibraries=false`, or a heap under ecstasy's whole compile, keeps the bundle. The
+  server tells the editors which libraries the workspace replaces (`xtc/replacedLibraries`); while
+  there are any, both editors build, run and debug with Gradle whatever the chosen mode, and say so
+  once, as the server builds and runs only with the bundled XDK and refuses embedded builds there.
+  The debug agent's handshake already carries the protocol version, and a session refuses an agent
+  of another (`AttachedProgram.kt:185`). `XdkRepositoryWorkspaceTest` (heavy),
+  `XdkWorkspaceDiscoveryTest`, `XdkBuildModelTest`, `CompilerConfigurationTest`,
+  `XdkProjectServerTest` and `EmbeddedExecutionTest` cover it.
+- [ ] Run and Debug in Gradle mode do not resolve in a composite build such as the XVM repository:
+  both editors run `gradlew -q runXtc` (or `testXtc`) `--module=<m>` from the project's root, and
+  the XVM root only aggregates its included builds, so Gradle answers "Task 'testXtc' not found in
+  root project 'xvm'". The full path does resolve, with the task's options:
+  `:xdk:lib-json:testXtc --module=json.xtclang.org -PxtcDebug=...` (checked 2026-11-12, dry run).
+  Alternatives: the plugin's model export names each source set's project by its build-tree path
+  (`Project.getBuildTreePath()`, `:xdk:lib-json`), the root aggregator runs every included build's
+  export and merges them into the root's `.gradle/xtc/lsp-model.json`, and the editors address the
+  module's task by that path, keeping the bare name where no model says otherwise (general: any
+  composite build; a few days across the plugin, the aggregator and both editors); or IntelliJ asks
+  its Gradle integration for the module's project path (IntelliJ only, and needs Gradle for Java);
+  or the root aggregator forwards `runXtc` and `testXtc` (no: task options cannot be passed on to
+  included builds' tasks).
+- [ ] Embedded builds, runs and debug sessions with the workspace's own toolchain instead of the
+  bundled XDK, for a project on another XDK version as much as for the XVM repository: run workers
+  started from the toolchain the build model names, which compile and run with it
+  (`RunWorkerProcess.kt:523` starts them from the server's classpath today; their identity check
+  takes only the bundled XDK). Not needed for the XVM repository, whose core developers change
+  javatools with the libraries and build, run and debug with Gradle.
 - [ ] Renames of an XDK library's symbols in such a workspace are still proven against the bundled
   library (`CompilerRenameFacts.kt:358`), so they treat the repository's `ecstasy` as the bundle.
-  Fix: give the rename facts the project's replaced libraries (`XdkProject.shadowed`) and treat those
+  Fix: give the rename facts the project's replaced libraries (`XdkProject.replaced`) and treat those
   modules as sources. A rename of a public `ecstasy` API then edits every dependent in the
   repository, the largest rename the server makes, so it wants a heavy test over the whole XDK.
 - [ ] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
@@ -142,11 +171,11 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 - [ ] The server reads the repository's `ecstasy` with its own compiler, the plugin's, so a compiler
   change newer than the plugin's build is not understood. Alternatives: build the plugin from the
   repository, as Gridman does (works now, by hand); have the server load the repository's built
-  javatools for an XDK workspace, in a class loader of its own as the Gradle plugin's in-process mode
+  javatools for such a workspace, in a class loader of its own as the Gradle plugin's in-process mode
   does (large: the server's adapter is compiled against one javatools); or at least say plainly, when
   the workspace's `ecstasy` fails to compile, that the plugin may be older than the compiler.
-- [ ] An editor setting for `xtc.lsp.xdkWorkspace`, as `compileLibraries` has one in both editors;
-  today only the server property turns the mode off.
+- [ ] An editor setting for `xtc.lsp.replaceLibraries`, as `compileLibraries` has one in both
+  editors; today only the server property turns replacement off.
 
 ### L82: completion evidence and release gates
 
