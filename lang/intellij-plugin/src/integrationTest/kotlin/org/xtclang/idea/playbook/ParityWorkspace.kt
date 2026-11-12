@@ -50,23 +50,11 @@ class ParityWorkspace(
         // are opened; otherwise editor lookup by tab name can bind to a different source buffer.
         with(driver) {
             dismissPopups()
-            withContext(OnDispatcher.EDT) {
-                val manager = service<FileEditorManager>(singleProject())
-                manager
-                    .getAllEditors()
-                    .map { it.getFile() }
-                    .distinctBy { it.getPath() }
-                    .forEach(manager::closeFile)
-                // The common-workspace cases also leave closed dirty buffers. Retire them
-                // before this independent case, just as close() retires our own buffers;
-                // otherwise a later native Save All formats every preceding fixture first.
-                val documents = service<ParityDocuments>()
-                documents
-                    .getUnsavedDocuments()
-                    .filter {
-                        documents.getFile(it)?.getPath()?.startsWith(projectRoot.toString() + "/") == true
-                    }.forEach(documents::reloadFromDisk)
-            }
+            closeAllEditors()
+            // The common-workspace cases also leave closed dirty buffers. Retire them
+            // before this independent case, just as close() retires our own buffers;
+            // otherwise a later native Save All formats every preceding fixture first.
+            reloadUnsaved(projectRoot)
         }
         configure(emptyList())
         with(driver) {
@@ -449,10 +437,13 @@ class ParityWorkspace(
     fun discard(document: Document) =
         with(driver) {
             // Revert via IntelliJ's file/document manager, preserving the disk line separator.
-            withContext(OnDispatcher.EDT) {
-                service<ParityDocuments>()
-                    .reloadFromDisk(cast(document.editor.document, ParityDocument::class))
-            }
+            reloadFromDisk(
+                listOf(
+                    document.editor.editor
+                        .getVirtualFile()
+                        .getPath(),
+                ),
+            )
             closeEditor(document)
         }
 
@@ -460,10 +451,7 @@ class ParityWorkspace(
     fun closeEditor(document: Document) =
         with(driver) {
             val connection = protocol.server()
-            withContext(OnDispatcher.EDT) {
-                service<FileEditorManager>(singleProject())
-                    .closeFile(document.editor.editor.getVirtualFile())
-            }
+            closeEditors(listOf(document.editor.editor.getVirtualFile()))
             awaitUi("client closes ${document.file}", HANG_LIMIT) {
                 connection.getOpenedDocuments().none {
                     it.getFile().getPath() == Path.of(URI(document.uri)).toString()
@@ -490,18 +478,10 @@ class ParityWorkspace(
                         it.getFile()
                     }.filter { it.getPath().startsWith(directory.toString() + "/") }
                     .distinctBy { it.getPath() }
-            withContext(OnDispatcher.EDT) { files.forEach(manager::closeFile) }
-            withContext(OnDispatcher.EDT) {
-                // Closing a tab does not discard its dirty document. A later Save All must
-                // not format or save fixtures belonging to an already completed scenario.
-                val documents = service<ParityDocuments>()
-                documents
-                    .getUnsavedDocuments()
-                    .filter {
-                        documents.getFile(it)?.getPath()?.startsWith(directory.toString() + "/") ==
-                            true
-                    }.forEach(documents::reloadFromDisk)
-            }
+            closeEditors(files)
+            // Closing a tab does not discard its dirty document. A later Save All must
+            // not format or save fixtures belonging to an already completed scenario.
+            reloadUnsaved(directory)
         }
         configure(
             shared.common.sourceModules.map {
@@ -584,8 +564,6 @@ interface ParityDocuments {
     fun getUnsavedDocuments(): Array<ParityDocument>
 
     fun getFile(document: ParityDocument): VirtualFile?
-
-    fun reloadFromDisk(document: ParityDocument)
 
     fun saveDocument(document: ParityDocument)
 }
