@@ -33,6 +33,8 @@ class XdkDependency
         declarations: Map<Int, SemanticModel.SourceLocation>,
         documents: Map<String, ReadOnlyDocument> = emptyMap(),
         documentation: Map<Int, String> = emptyMap(),
+        /** Emitted by the server's compiler from a source module, not read from a binary on disk. */
+        internal val fromSource: Boolean = false,
     ) {
         /** By URI, in URI order, as the server's info lists them; a Map.copyOf's order changes with each JVM. */
         internal val documents: Map<String, ReadOnlyDocument> = Collections.unmodifiableMap(documents.toSortedMap())
@@ -45,7 +47,7 @@ class XdkDependency
 
         internal fun withSources(roots: List<File>): XdkDependency {
             val index = XdkAttachedSources.read(this, roots)
-            return XdkDependency(module, artifact, index.declarations, index.documents, index.documentation)
+            return XdkDependency(module, artifact, index.declarations, index.documents, index.documentation, fromSource)
         }
 
         internal val symbolIndex: XdkArtifactSymbols by lazy { XdkArtifactSymbols.capture(artifact) }
@@ -207,7 +209,7 @@ class XdkDependency
                                 ?.position
                                 ?.let { it to location }
                         }.toMap()
-                return XdkDependency(file.module.name, artifact, declarations)
+                return XdkDependency(file.module.name, artifact, declarations, fromSource = true)
             }
         }
     }
@@ -235,7 +237,8 @@ internal class XdkDependencies(
 
     init {
         require(modules.size == dependencies.size) { "Duplicate dependency module" }
-        require(modules.keys.none { it in XdkLibraries.moduleNames }) {
+        // only the XDK's own sources, compiled by the server, replace a bundled library ([XdkWorkspaceMode])
+        require(modules.values.none { it.module in XdkLibraries.moduleNames && !it.fromSource }) {
             "Project dependencies cannot replace the bundled compiler libraries"
         }
     }

@@ -19,6 +19,7 @@ import org.xvm.asm.constants.DeferredValueConstant
 import org.xvm.asm.constants.FormalConstant
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
+import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.PropertyConstant
 import org.xvm.asm.constants.PseudoConstant
 import org.xvm.asm.constants.SignatureConstant
@@ -391,6 +392,9 @@ private class SemanticModelBuilder(
         errors: ErrorListener,
     ): List<CompilerMemberAction> = compilerMemberActions(nodesIn(requireNotNull(compilation.parsed())), errors)
 
+    /** The module that [build] builds the model of, whose identities are its own declarations. */
+    private var module: ModuleConstant? = null
+
     fun declarations(): Map<IdentityConstant, SourceLocation> =
         constants.entries
             .mapNotNull { (constant, id) ->
@@ -418,6 +422,9 @@ private class SemanticModelBuilder(
         errors: ErrorListener? = null,
     ): List<SemanticModel> {
         val root = compilation.parsed() ?: return listOf(unavailable())
+        // the XDK's own sources declare a bundled library's identities themselves; a bundled library's read-only copy
+        // keeps answering with the bundled declarations' content, as it is the bundled library
+        module = compilation.file()?.moduleId?.takeUnless { root.source?.fileName?.let(XdkLibrarySources::isCopy) == true }
         val nodes = nodesIn(root)
         collect(
             nodes,
@@ -1547,7 +1554,9 @@ private class SemanticModelBuilder(
         val symbol = SymbolId(id, symbols.size)
         val dependency =
             (target as? IdentityConstant)?.let {
-                dependencies[it] ?: XdkLibrarySources.declaration(it)
+                // the module being built declares its own identities, also one that a bundled library has: the XDK's
+                // own sources compile a module of a bundled library's name
+                dependencies[it] ?: it.takeUnless { identity -> identity.moduleConstant == module }?.let(XdkLibrarySources::declaration)
             }
         val location = declaration ?: dependency?.location
         val component = (target as? IdentityConstant)?.component

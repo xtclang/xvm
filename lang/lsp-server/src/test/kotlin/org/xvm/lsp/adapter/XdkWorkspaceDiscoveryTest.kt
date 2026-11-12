@@ -46,6 +46,28 @@ class XdkWorkspaceDiscoveryTest {
     }
 
     @Test
+    fun `the XDK's own sources discover its libraries but not its bootstrap modules, each module depending on ecstasy`() {
+        source("lib_ecstasy/ecstasy.x", "module ecstasy.xtclang.org {}")
+        source("lib_json/json.x", "module json.xtclang.org {}")
+        source("javatools_turtle/mack.x", "module mack.xtclang.org {}")
+        source("App.x", "module App {}")
+        val ecstasy = "ecstasy.xtclang.org"
+        val modules = XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }
+        assertThat(modules.associate { it.name to it.dependencies }).isEqualTo(
+            mapOf("App" to setOf(ecstasy), ecstasy to emptySet(), "json.xtclang.org" to setOf(ecstasy)),
+        )
+        assertThat(modules.filter { it.shadowsBundle }.map { it.name }).containsExactlyInAnyOrder(ecstasy, "json.xtclang.org")
+        // turned off, the libraries stay bundled, as in any other workspace
+        System.setProperty("xtc.lsp.xdkWorkspace", "false")
+        try {
+            val bundled = XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }
+            assertThat(bundled.associate { it.name to it.dependencies }).isEqualTo(mapOf("App" to emptySet<String>()))
+        } finally {
+            System.clearProperty("xtc.lsp.xdkWorkspace")
+        }
+    }
+
+    @Test
     fun `unopened graph resolves imports and indexes independent healthy modules despite a broken neighbor`() {
         val base = source("Base.x", "module Base { static Int answer() = 42; }")
         val appText = "module App { package lib import Base; Int run() = lib.answer(); }"

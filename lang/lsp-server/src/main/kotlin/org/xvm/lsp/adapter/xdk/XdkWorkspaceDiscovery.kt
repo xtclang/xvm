@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter.xdk
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.xvm.asm.Constants.ECSTASY_MODULE
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.CompilerException
@@ -52,12 +53,13 @@ internal object XdkWorkspaceDiscovery {
             }
 
         fun modules(previous: Collection<XdkSourceModule>): List<XdkSourceModule> {
-            val roots =
+            val declared =
                 files
-                    .mapNotNull { (file, header) ->
-                        val name = header.module ?: previousAt(file, previous)?.name
-                        name?.takeUnless(XdkLibraries.moduleNames::contains)?.let { file to it }
-                    }.toMap()
+                    .mapNotNull { (file, header) -> (header.module ?: previousAt(file, previous)?.name)?.let { file to it } }
+                    .toMap()
+            // the XDK's own sources replace its bundled libraries; any other workspace's never do
+            val xdk = XdkWorkspaceMode.applies(declared.values)
+            val roots = declared.filterValues { it !in XdkLibraries.moduleNames || (xdk && XdkWorkspaceMode.replaces(it)) }
             val names = roots.values.toSet()
             return roots.entries
                 .sortedBy { it.key.path }
@@ -75,7 +77,11 @@ internal object XdkWorkspaceDiscovery {
                     XdkSourceModule(
                         name,
                         root.toURI().toString(),
-                        imports.filterTo(linkedSetOf()) { it in names && it != name },
+                        imports.filterTo(linkedSetOf()) { it in names && it != name }.apply {
+                            // every module imports ecstasy without saying so
+                            if (xdk && name != ECSTASY_MODULE) add(ECSTASY_MODULE)
+                        },
+                        shadowsBundle = name in XdkLibraries.moduleNames,
                     )
                 }
         }
