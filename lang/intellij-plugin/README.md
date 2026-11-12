@@ -921,7 +921,8 @@ No additional compiler process or compilation is needed for save formatting.
 Press **Ctrl+Alt+X, then R** (**Control+Option+X, then R** on macOS), or use **Tools → Restart Ecstasy
 Language Server**, to restart the project's language server with its adapter and the saved **Ecstasy
 Server Runtime and Logs** settings. Settings that do not validate leave the running server alone, and a
-notification says why. To restart with the other adapter, use **Ctrl+Alt+X, then A**.
+notification says why. To restart with the other adapter, use **Ctrl+Alt+X, then A**. VS Code has the same
+shortcut for **Ecstasy: Restart Language Server**.
 
 ### Quick server log access
 

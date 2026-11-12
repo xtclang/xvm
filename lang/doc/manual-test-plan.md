@@ -2729,8 +2729,8 @@ Ecstasy servers with saved settings** on that settings page restarts the servers
 project the same way. In a project where no Ecstasy file has been opened yet, the shortcut
 starts nothing and a notification says that no server runs there. Search Everywhere (Shift
 twice) and Find Action find **Restart Ecstasy Language Server**, **Switch Ecstasy Language
-Adapter** and **Toggle Ecstasy Language Server Log** by name. VS Code's counterpart is
-**Ecstasy: Restart Language Server** in the Command Palette.
+Adapter** and **Toggle Ecstasy Language Server Log** by name. In VS Code the same shortcut, or
+**Ecstasy: Restart Language Server** in the Command Palette, restarts its server the same way.
 
 - Open the log from a source editor and verify recent queue/job, compile and request timing lines.
 - Toggle closed/open; manually close the panel and invoke the shortcut again.
