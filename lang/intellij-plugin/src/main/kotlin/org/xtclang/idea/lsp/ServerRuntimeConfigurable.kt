@@ -6,7 +6,6 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
-import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import java.awt.BorderLayout
 import java.awt.GridLayout
 import javax.swing.JButton
@@ -71,16 +70,11 @@ class ServerRuntimeConfigurable : Configurable {
                 JButton("Restart running Ecstasy servers with saved settings").apply {
                     name = "xtc.runtime.restart"
                     addActionListener {
-                        ServerRuntimeSettings.getInstance().launchArguments()
-                        ProjectManager.getInstance().openProjects.filterNot { it.isDisposed }.forEach { project ->
-                            LanguageServiceAccessor
-                                .getInstance(project)
-                                .startedServers
-                                .filter {
-                                    it.serverDefinition.id ==
-                                        CompilerSettings.SERVER_ID
-                                }.forEach { it.restart() }
-                        }
+                        ProjectManager
+                            .getInstance()
+                            .openProjects
+                            .filterNot { it.isDisposed }
+                            .forEach(::restartEcstasyServers)
                     }
                 },
                 BorderLayout.SOUTH,
