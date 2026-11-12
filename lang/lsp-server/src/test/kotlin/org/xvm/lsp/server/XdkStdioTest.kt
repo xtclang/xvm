@@ -424,6 +424,10 @@ class XdkStdioTest {
                 .isPositive()
                 .isLessThanOrEqualTo(heap["committedBytes"].asLong)
             assertThat(heap["committedBytes"].asLong).isLessThanOrEqualTo(heap["maxBytes"].asLong)
+            assertThat(heap["collectors"].asJsonArray).isNotEmpty()
+            assertThat(heap["collections"].asLong).isNotNegative()
+            assertThat(status["compilerQueue"].asJsonObject["oldestQueuedMs"].asLong).isZero()
+            assertThat(status["health"].isJsonArray).isTrue()
             val source = "module Stdio { // 😀\r\nInt value = 1;\r\n}"
             session.open(source)
             assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()

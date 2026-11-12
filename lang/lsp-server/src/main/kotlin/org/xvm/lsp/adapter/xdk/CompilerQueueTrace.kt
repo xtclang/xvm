@@ -23,11 +23,12 @@ internal class CompilerQueueTrace {
         RUNNING,
     }
 
-    /** Trace span, submission time and current scheduling phase for one request. */
+    /** Trace span, submission order and current scheduling phase for one request, and when it entered that phase. */
     private data class Job(
         val span: ExecutionTrace.Span,
         val submission: Long,
         val phase: Phase,
+        val entered: Long = System.nanoTime(),
     )
 
     fun task(
@@ -86,7 +87,7 @@ internal class CompilerQueueTrace {
             fun ready(): Work =
                 apply {
                     synchronized(lock) {
-                        jobs[span.id]?.let { jobs[span.id] = it.copy(phase = Phase.QUEUED) }
+                        jobs[span.id]?.let { jobs[span.id] = it.copy(phase = Phase.QUEUED, entered = System.nanoTime()) }
                         if (span.id in jobs) readyOrder += span.id
                         log(span, "queued", mapOf("enqueueOrder" to enqueued.incrementAndGet()))
                     }
@@ -114,7 +115,7 @@ internal class CompilerQueueTrace {
                         if (job == null) {
                             false
                         } else {
-                            jobs[span.id] = job.copy(phase = Phase.RUNNING)
+                            jobs[span.id] = job.copy(phase = Phase.RUNNING, entered = System.nanoTime())
                             readyOrder.remove(span.id)
                             log(
                                 span,
@@ -162,6 +163,9 @@ internal class CompilerQueueTrace {
             val queued = readyOrder.mapNotNull(jobs::get).map { it.label() }
             val waiting = jobs.values.filter { it.phase == Phase.DEBOUNCING }.map { it.label() }
             val running = jobs.values.filter { it.phase == Phase.RUNNING }.map { it.label() }
+            val now = System.nanoTime()
+
+            fun longest(phase: Phase): Long = jobs.values.filter { it.phase == phase }.maxOfOrNull { (now - it.entered) / 1_000_000 } ?: 0L
             mapOf(
                 "queue" to queue,
                 "submittedTotal" to submitted.get(),
@@ -172,6 +176,9 @@ internal class CompilerQueueTrace {
                 "debouncingJobs" to waiting,
                 "runningSize" to running.size,
                 "runningJobs" to running,
+                // how long, in milliseconds, the job queued longest has waited, and the job running longest has run
+                "oldestQueuedMs" to longest(Phase.QUEUED),
+                "longestRunningMs" to longest(Phase.RUNNING),
             )
         }
 
