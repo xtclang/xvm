@@ -116,6 +116,37 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   - with a maximum heap under 1 GB a copy compiles on its own, and the server logs why once; the
     server's tests run with 1 GB (Gradle's default for a test JVM is 512 MB).
 
+### The XDK's own sources as a workspace
+
+- [x] Analyze the XDK's libraries from the XVM repository's sources, not the bundled XDK. Done
+  2026-11-12 (`ba3bb43353`, `f670e99225` on errs; `afb56f6538`, `9c9a6053c0` on #693; pushed): a
+  workspace whose modules declare `ecstasy.xtclang.org` keeps its library modules in the graph, each
+  module depending on the workspace's `ecstasy`; source-built libraries replace the bundled ones in
+  the compiler's repository, so `json` compiles against the repository's `ecstasy`, unsaved edits
+  included, and Go to Definition opens the repository's files. `mack` and `_native` stay bundled.
+  Embedded builds and runs are refused there (they would run the bundled runtime); Gradle mode builds
+  and runs it. `-Dxtc.lsp.xdkWorkspace=false`, or a heap under a library's whole compile, keeps the
+  bundle. `XdkWorkspaceModeTest` (heavy) and `XdkWorkspaceDiscoveryTest` cover it. Before it, the
+  same day, discovered modules that share a name (seven in the repository) failed every file with
+  "Duplicate source module name" (`6cad3509aa`).
+- [ ] Renames of an XDK library's symbols in such a workspace are still proven against the bundled
+  library (`CompilerRenameFacts.kt:358`), so they treat the repository's `ecstasy` as the bundle.
+  Fix: give the rename facts the project's replaced libraries (`XdkProject.shadowed`) and treat those
+  modules as sources. A rename of a public `ecstasy` API then edits every dependent in the
+  repository, the largest rename the server makes, so it wants a heavy test over the whole XDK.
+- [ ] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
+  (`XdkLibrarySources`) still read the bundle, and may offer its older names. Alternatives: index
+  the workspace's compiled `ecstasy` instead, whose declarations its artifact already maps; or keep
+  the bundle's and say so.
+- [ ] The server reads the repository's `ecstasy` with its own compiler, the plugin's, so a compiler
+  change newer than the plugin's build is not understood. Alternatives: build the plugin from the
+  repository, as Gridman does (works now, by hand); have the server load the repository's built
+  javatools for an XDK workspace, in a class loader of its own as the Gradle plugin's in-process mode
+  does (large: the server's adapter is compiled against one javatools); or at least say plainly, when
+  the workspace's `ecstasy` fails to compile, that the plugin may be older than the compiler.
+- [ ] An editor setting for `xtc.lsp.xdkWorkspace`, as `compileLibraries` has one in both editors;
+  today only the server property turns the mode off.
+
 ### L82: completion evidence and release gates
 
 - [ ] Agree response-time and memory budgets per supported hardware and platform. The current
@@ -1690,3 +1721,68 @@ Cam; the publishing job is [#711](https://github.com/xtclang/xvm/pull/711).
   first-publish checks in #710.
 - [ ] About six months after the first publish: check that `xtclang` shows as verified, and apply
   again if the request was turned down.
+
+## 7. One compile path for editors and builds
+
+Today the two compile differently. The XDK's Gradle build compiles each of its 21 libraries with the
+command-line compiler (`org.xvm.tool.Compiler`), by default in a forked JVM per library
+(`ExecutionMode.ATTACHED`, `plugin/.../XtcPluginConstants.java:73`); the language server compiles
+in-process through `EmbeddingSupport`. Measured on 2026-11-12 on an M-series Mac, the libraries'
+`compileXtc` tasks forced to rerun, and a harness that compiles them through `EmbeddingSupport`:
+
+| Way | Fresh daemon or JVM | Warm |
+|-----|---------------------|------|
+| Gradle, forked per library (today) | 35 s | 32 s |
+| Gradle, in-process (`ExecutionMode.DIRECT`) | 38 s | 23 s |
+| Gradle, either with `--parallel` | | 40 s forked, 23 s in-process |
+| One JVM, the libraries in import order, each against the ones before it in memory | 15.5 s | 12.1 s |
+
+The last row compiles 20 libraries (`lib_runner`, with two roots, was left out) without Gradle's own
+work, and starts from the build's `ecstasy.xtc`, as the language server's bundle does. Its modules
+have the same structure as Gradle's for all 20: every component's format and identity, with the
+compiler's numbered `_` names made equal. Bytes cannot be compared: a `_` variable's name comes from a
+JVM-wide counter, so even serial compiles differ ([parallel-compiler.md](../parallel-compiler.md),
+`MethodDeclarationStatement.COUNTER`).
+
+The ways, and what each needs:
+
+- **Build the XDK with the language server's embedded build.** Not a fit: it compiles with the
+  server's bundled javatools, not the repository's, which core developers change together with the
+  libraries; it compiles `.x` modules only, not javatools, the natives or the distribution; and what
+  it builds would run on the bundled runtime.
+- **In-process compiles in Gradle by default** (`ExecutionMode.DIRECT`, which exists): about 28%
+  faster from the second build in a daemon, slower in a fresh one. It runs the command-line compiler
+  in the daemon, in a class loader per javatools classpath (`DirectRuntimeBuildService`). Before it
+  can be the default: javatools' JVM-wide static state is shared by every compile in that class
+  loader, across tasks and parallel workers ([parallel-runtime.md](../parallel-runtime.md) has a
+  deterministic failure from it), so compiles must be serialized (a build service with
+  `maxParallelUsages = 1`) or the statics removed; the daemon needs the heap of an `ecstasy`
+  compile, about 0.5–1 GB live; and a compiler crash or `System.exit` takes the daemon down, where a
+  fork loses only itself. A quick win for the XDK's own build, on those terms.
+- **Port the plugin's in-process compile to `EmbeddingSupport`**, the API the language server uses,
+  so that editors and builds compile one way and report the same diagnostics. Needs:
+  `EmbeddingSupport` as instances, one per core repository, instead of a JVM-wide singleton
+  configured once (`javatools/.../EmbeddingSupport.java:120-121`, `:304`, `:327`), which a daemon
+  serving builds of different module paths cannot share; and a "compile this source set" call on it
+  for what the command-line compiler does today: order the modules by their imports, compile
+  mutually dependent modules together (`mack` and `ecstasy` refer to each other, and one module at a
+  time needs a binary `ecstasy` to start from), the resource folder, version stamping
+  (`--set-version`), qualified output names, `strict` and warnings, and errors per module. The
+  language server's embedded build would use the same call. Runs and tests keep forking: they run
+  user code, which isolation protects.
+- **One pass over the XDK's libraries**, on top of that call: a single task that compiles them in
+  import order, each against the ones before it in memory, as in the table's last row, about twice as
+  fast as the warm in-process build. It gives up Gradle's per-library up-to-date checks, so it skips
+  a library whose sources and dependencies are unchanged itself, reusing its previous `.xtc`; it runs
+  on one thread, which costs little as most libraries wait for `ecstasy`; it holds the compiled
+  modules in memory; and it must still say which library failed. Checked by structure, as above,
+  until the output is deterministic (parallel-compiler.md, Stage 1).
+
+Recommended order: `EmbeddingSupport` as instances, then the source-set call, then the plugin on it
+with one pass for the XDK; in-process compiles for the XDK's own build in the meantime, if serialized.
+
+- [ ] `EmbeddingSupport` as instances, one per core repository.
+- [ ] A source-set compile on `EmbeddingSupport`, mutually dependent modules included; the language
+  server's embedded build on it.
+- [ ] The Gradle plugin's in-process compile on it, and one pass over the XDK's libraries.
+- [ ] Meanwhile, if wanted: `ExecutionMode.DIRECT` for the XDK's own build, its compiles serialized.
