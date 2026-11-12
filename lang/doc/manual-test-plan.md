@@ -1254,7 +1254,10 @@ and VS Code render them automatically from the LSP server response — no plugin
 `xtc/testEvent`, `xtc/debugMessage` (both ways), `xtc/debugEnd`
 **Status:** Implemented 2026-10-15 for the compiler adapter, in both editors
 **Mode:** VS Code `xtc.build.mode`, **Ecstasy: Select Build Mode** or the status bar's build mode (shown in a folder
-with a Gradle build); IntelliJ Settings › Build, Execution, Deployment › Ecstasy
+with a Gradle build); IntelliJ Settings › Build, Execution, Deployment › Ecstasy, or **Tools → Select Ecstasy Build
+Mode**. **Ctrl+Alt+X, then B** (macOS: **Control+Option+X, then B**) chooses it in either editor; after a choice in
+IntelliJ a notification says what Build and Run now use. The next build or run uses the mode, with no restart, Gradle
+sync or reindexing; Build in Gradle mode needs the Gradle project linked in IntelliJ.
 
 Embedded is the default mode, also in a folder with a Gradle build; there, embedded builds and runs print a line saying the
 Gradle build's own settings do not apply.

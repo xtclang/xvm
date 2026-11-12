@@ -266,7 +266,7 @@ class PluginManifestTest {
                     action.getAttribute("id")
                 }
             }
-        assertThat(checked).contains("xtc.selectLanguageAdapter", "xtc.restartLanguageServer", "xtc.toggleServerLog")
+        assertThat(checked).contains("xtc.selectLanguageAdapter", "xtc.selectBuildMode", "xtc.restartLanguageServer", "xtc.toggleServerLog")
     }
 
     @Test
