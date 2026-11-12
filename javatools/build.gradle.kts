@@ -57,6 +57,8 @@ dependencies {
     implementation(libs.slf4j.nop) // to avoid startup warnings while preserving no-op logging
     testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
+    // the waits that go through the watchdog of hangs (org.xvm.testing.Await)
+    testImplementation(testFixtures(libs.javatools.utils))
     // the runner and the runtime's system modules; the runner brings the libraries it needs
     testXtcModules(libs.xdk.ecstasy)
     testXtcModules(libs.xdk.runner)
@@ -165,9 +167,11 @@ val generateBuildInfo = tasks.register<GenerateBuildInfo>("generateBuildInfo") {
         (project.extensions.extraProperties["versionDetails"] as groovy.lang.Closure<com.palantir.gradle.gitversion.VersionDetails>).call()
     }
 
-    gitCommit.set(versionDetailsProvider.map { it.gitHashFull ?: "unknown" })
+    // A copy of the tree without .git, such as the playbook container's, names its commit and branch in XTC_COMMIT
+    // and XTC_BRANCH: asking git there finds no repository, and its version plugin prints a stack trace for each.
+    gitCommit.set(providers.environmentVariable("XTC_COMMIT").orElse(versionDetailsProvider.map { it.gitHashFull ?: "unknown" }))
 
-    gitStatus.set(versionDetailsProvider.map { it.branchName ?: "detached-head" })
+    gitStatus.set(providers.environmentVariable("XTC_BRANCH").orElse(versionDetailsProvider.map { it.branchName ?: "detached-head" }))
 
     // Put it under build/, so Gradle owns it
     outputFile.set(layout.buildDirectory.file("generated/resources/build-info/build-info.properties"))
@@ -257,5 +261,21 @@ val versionOutputTest = tasks.register<Test>("versionOutputTest") {
 
     doFirst {
         logger.info("[javatools] Verifying version output contains expected git and API information")
+    }
+}
+
+// The error listeners' tests, which javatools/lsp-compiler.md runs on their own; they need no installed XDK modules
+tasks.register<Test>("errorListenerTest") {
+    description = "Test the error listeners: branches, sites, silence, aborts, cancellation, the host boundary and the launcher"
+    group = VERIFICATION_GROUP
+
+    val testSourceSet = sourceSets.test.get()
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching("org.xvm.asm.ErrorListener*Test")
+        includeTestsMatching("org.xvm.api.ErrorListenerBoundaryTest")
+        includeTestsMatching("org.xvm.tool.LauncherErrorHandlingTest")
     }
 }

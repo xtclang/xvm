@@ -2,7 +2,7 @@ import com.diffplug.gradle.spotless.SpotlessCheck
 import com.diffplug.gradle.spotless.SpotlessExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-/**
+/*
  * Root project for XTC language tooling.
  *
  * Subprojects:
@@ -22,12 +22,20 @@ plugins {
 // =============================================================================
 // Kotlin formatting
 // =============================================================================
-// Spotless runs ktlint with its default rules, as the ktlint Gradle plugin did. Each Kotlin
-// subproject checks its own sources, tests and build script; generated and synced build outputs
-// stay excluded. The lang root, tree-sitter and vscode-extension scripts were never under ktlint
-// and would need a one-off reformat to join.
-val ktlintVersion = libs.versions.lang.ktlint.get()
+// Build scripts are owned by the lang root; each Kotlin subproject owns its sources,
+// including tests and integration tests. Generated and synced build outputs stay excluded.
+// Match master's Spotless integration; do not restore the separate ktlint Gradle plugin.
+val ktlintVersion =
+    libs.versions.lang.ktlint
+        .get()
 val ci = providers.environmentVariable("CI").isPresent
+
+spotless {
+    kotlinGradle {
+        target("*.gradle.kts", "*/build.gradle.kts")
+        ktlint(ktlintVersion)
+    }
+}
 
 allprojects {
     pluginManager.withPlugin("com.diffplug.spotless") {
@@ -46,9 +54,6 @@ subprojects {
                 target("src/**/*.kt", "src/**/*.kts")
                 ktlint(ktlintVersion)
             }
-            kotlinGradle {
-                ktlint(ktlintVersion)
-            }
         }
         val applyFormatting = tasks.named("spotlessApply")
         val checkFormatting = tasks.named("spotlessCheck")
@@ -56,6 +61,19 @@ subprojects {
         tasks.withType<KotlinCompile>().configureEach { dependsOn(formatting) }
         rootProject.tasks.named("spotlessApply") { dependsOn(applyFormatting) }
         rootProject.tasks.named("spotlessCheck") { dependsOn(checkFormatting) }
+    }
+}
+
+// =============================================================================
+// Compiler warnings
+// =============================================================================
+// A compiler warning fails the build in the lang tree, in Kotlin and Java alike, so that none is pushed.
+subprojects {
+    tasks.withType<KotlinCompile>().configureEach {
+        compilerOptions.allWarningsAsErrors.set(true)
+    }
+    tasks.withType<JavaCompile>().configureEach {
+        options.compilerArgs.add("-Werror")
     }
 }
 
@@ -78,24 +96,25 @@ subprojects {
 // after modifying the language model or generators.
 // =============================================================================
 
-val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
-    group = "generation"
-    description = "Update the generated-examples directory with freshly generated files"
+val updateGeneratedExamples =
+    tasks.register<Copy>("updateGeneratedExamples") {
+        group = "generation"
+        description = "Update the generated-examples directory with freshly generated files"
 
-    dependsOn(project(":dsl").tasks.named("generateEditorSupport"))
+        dependsOn(project(":dsl").tasks.named("generateEditorSupport"))
 
-    from(project(":dsl").layout.buildDirectory.dir("generated")) {
-        include("xtc.tmLanguage.json")
-        include("language-configuration.json")
-        include("xtc.vim")
-        include("xtc-mode.el")
-        include("grammar.js")
-        include("highlights.scm")
-        include("xtc.sublime-syntax")
+        from(project(":dsl").layout.buildDirectory.dir("generated")) {
+            include("xtc.tmLanguage.json")
+            include("language-configuration.json")
+            include("xtc.vim")
+            include("xtc-mode.el")
+            include("grammar.js")
+            include("highlights.scm")
+            include("xtc.sublime-syntax")
+        }
+
+        into(layout.projectDirectory.dir("generated-examples"))
     }
-
-    into(layout.projectDirectory.dir("generated-examples"))
-}
 
 // =============================================================================
 // Aggregate subproject tasks
@@ -111,9 +130,17 @@ val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
 // Turn one on with -PincludeBuildAttachIntellijPlugin=true or -PincludeBuildAttachVsCodeExtension=true,
 // or build it directly: ./gradlew :lang:intellij-plugin:buildPlugin
 val attachIntellijPlugin =
-    providers.gradleProperty("includeBuildAttachIntellijPlugin").orElse("false").get().toBoolean()
+    providers
+        .gradleProperty("includeBuildAttachIntellijPlugin")
+        .orElse("false")
+        .get()
+        .toBoolean()
 val attachVsCodeExtension =
-    providers.gradleProperty("includeBuildAttachVsCodeExtension").orElse("false").get().toBoolean()
+    providers
+        .gradleProperty("includeBuildAttachVsCodeExtension")
+        .orElse("false")
+        .get()
+        .toBoolean()
 
 // Projects to aggregate standard lifecycle tasks from
 val coreProjects =
@@ -131,12 +158,13 @@ val allProjects =
     listOf(":dsl", ":tree-sitter", ":lsp-server", ":dap-server", ":intellij-plugin", ":vscode-extension")
 
 // Map of aggregate task -> subproject task (null means same name)
-val taskMappings = mapOf(
-    "build" to mapOf(":intellij-plugin" to "buildPlugin"),  // intellij uses buildPlugin
-    "assemble" to emptyMap(),
-    "check" to emptyMap(),
-    "clean" to emptyMap()
-)
+val taskMappings =
+    mapOf(
+        "build" to mapOf(":intellij-plugin" to "buildPlugin"), // intellij uses buildPlugin
+        "assemble" to emptyMap(),
+        "check" to emptyMap(),
+        "clean" to emptyMap(),
+    )
 
 taskMappings.forEach { (aggregateTask, overrides) ->
     val projects = if (aggregateTask == "clean") allProjects else coreProjects
@@ -152,14 +180,64 @@ taskMappings.forEach { (aggregateTask, overrides) ->
 // IDE run tasks - convenience aliases for subproject tasks
 // =============================================================================
 
-val runIntellijPlugin = tasks.register("runIntellijPlugin") {
-    group = "run"
-    description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
-    dependsOn(project(":intellij-plugin").tasks.named("runIde"))
-}
+val runIntellijPlugin =
+    tasks.register("runIntellijPlugin") {
+        group = "run"
+        description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
+        dependsOn(project(":intellij-plugin").tasks.named("runIde"))
+    }
 
-val runVsCodeExtension = tasks.register("runVsCodeExtension") {
-    group = "run"
-    description = "Launch VS Code with the XTC extension loaded for testing"
-    dependsOn(project(":vscode-extension").tasks.named("runCode"))
-}
+val installIntellijPlugin =
+    tasks.register("installIntellijPlugin") {
+        group = "run"
+        description = "Install the XTC plugin into the closed IntelliJ IDE that org.xtclang.idea.home names"
+        dependsOn(project(":intellij-plugin").tasks.named("installPlugin"))
+    }
+
+val runVsCodePlugin =
+    tasks.register("runVsCodePlugin") {
+        group = "run"
+        description = "Launch VS Code with the XTC extension loaded for testing"
+        dependsOn(project(":vscode-extension").tasks.named("runCode"))
+    }
+
+// Called from task configuration only: the subprojects' tasks do not exist yet when this script runs
+fun idePluginPackages() =
+    files(
+        project(":intellij-plugin").tasks.named("buildPlugin"),
+        project(":vscode-extension").tasks.named("packageExtension"),
+    )
+
+// in a composite, only the outermost build's start parameter has the directory gradlew runs in
+val idePluginsDir =
+    generateSequence(gradle) { it.parent }.last().startParameter.currentDir.let { invocationDir ->
+        providers.gradleProperty("idePluginsDir").map { invocationDir.resolve(it) }
+    }
+
+// Copy rather than Sync, since Sync would delete whatever else is in a directory the user names
+val copyIdePlugins =
+    tasks.register<Copy>("copyIdePlugins") {
+        description = "Copy the IDE plugin packages into -PidePluginsDir=<dir>"
+        from(idePluginPackages())
+        into(idePluginsDir)
+    }
+
+// Both IDE plugins as installable packages, whether or not they are attached to lang's build. They
+// stay in each project's build/distributions, and -PidePluginsDir=<dir> also copies them into <dir>,
+// created if missing; a relative <dir> is taken from the directory gradlew runs in. Either way, the
+// task ends by printing each package's full path.
+val assembleIdePlugins =
+    tasks.register("assembleIdePlugins") {
+        group = "build"
+        description =
+            "Assemble the IntelliJ plugin zip and the VS Code extension vsix, and copy them into " +
+            "-PidePluginsDir=<dir> if given"
+        val packages = idePluginPackages()
+        val destination = idePluginsDir.orNull
+        dependsOn(packages)
+        if (destination != null) dependsOn(copyIdePlugins)
+        doLast {
+            val paths = packages.files.map { destination?.resolve(it.name) ?: it }
+            logger.lifecycle(paths.joinToString("\n", "Installable IDE plugins:\n") { "  ${it.absolutePath}" })
+        }
+    }

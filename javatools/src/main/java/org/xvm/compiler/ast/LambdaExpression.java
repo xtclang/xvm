@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -51,11 +52,17 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Context.CaptureContext;
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
+import org.xvm.compiler.ast.bindings.LambdaBindings;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
+
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Lambda expression is an inlined function. This version uses parameters that are assumed to be
@@ -73,13 +80,11 @@ public class LambdaExpression
      * @param body       the StatementBlock of the lambda
      * @param lStartPos  the expression's start position in the source code
      */
-    public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos) {
-        if (!params.isEmpty() && params.get(0) instanceof Expression) {
-            assert params.stream().allMatch(Expression.class::isInstance);
-            this.paramNames = params;
+    public LambdaExpression(List<? extends AstNode> params, Token operator, StatementBlock body, long lStartPos) {
+        if (!params.isEmpty() && params.getFirst() instanceof Expression) {
+            this.paramNames = params.stream().map(Expression.class::cast).collect(Collectors.toCollection(ArrayList::new));
         } else {
-            assert params.stream().allMatch(Parameter.class::isInstance);
-            this.params = params;
+            this.params = params.stream().map(Parameter.class::cast).collect(Collectors.toCollection(ArrayList::new));
         }
 
         this.operator  = operator;
@@ -107,6 +112,28 @@ public class LambdaExpression
      */
     public MethodStructure getLambda() {
         return m_lambda;
+    }
+
+    /**
+     * The written arrow token, for source-position consumers.
+     *
+     * @return the lambda's written arrow token
+     */
+    public Token getOperator() {
+        return operator;
+    }
+
+    /**
+     * @return the source bindings retained by this lambda's compilation context, or null before
+     *         its generated method has been validated
+     */
+    public LambdaBindings getSourceBindings() {
+        return m_ctxLambda == null ? null : m_ctxLambda.f_bindings.getBindings(m_lambda);
+    }
+
+    /** Record a generated parameter through the context that owns its source associations. */
+    void bindSourceParameter(int index, Register register) {
+        m_ctxLambda.f_bindings.bind(this, m_ctxLambda, index, register);
     }
 
     /**
@@ -276,8 +303,8 @@ public class LambdaExpression
         //   passed to the lambda (via FBIND)
         // - so now, at this point, we have the signature, we have the method structure, and we just
         //   have to emit the code corresponding to the lambda
-        if (catchUpChildren(errs)) {
-            if (!body.compileMethod(method.createCode(), errs)) {
+        if (catchUpChildren(errs, mgr.getInvocationBindings(), mgr.getCursorBindings())) {
+            if (!body.compileMethod(method.createCode(), errs, mgr.getInvocationBindings(), mgr.getCursorBindings())) {
                 mgr.deferChildren();
             }
         }
@@ -287,7 +314,9 @@ public class LambdaExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        if (!ensurePrepared(ErrorListener.BLACKHOLE)) {
+        ErrorListener probe = silent(PROBE);
+
+        if (!ensurePrepared(probe)) {
             return null;
         }
 
@@ -311,12 +340,12 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE)) {
+        if (!collectParamNamesAndTypes(null, atypeParams, asParams, probe)) {
             return null;
         }
 
         TypeConstant[] atypeReturns =
-                extractReturnTypes(ctx, atypeParams, asParams, null, false, ErrorListener.BLACKHOLE);
+                extractReturnTypes(ctx, atypeParams, asParams, null, false, probe);
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);
@@ -324,10 +353,6 @@ public class LambdaExpression
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
-
         if (!ensurePrepared(errs)) {
             return TypeFit.NoFit;
         }
@@ -466,9 +491,8 @@ public class LambdaExpression
         int     cParams     = getParamCount();
 
         if (cReqParams != -1 && cParams != cReqParams) {
-            errs.log(Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
-                    new Object[]{cReqParams, cParams},
-                    getSource(), getStartPosition(), operator.getStartPosition());
+            errs.error(Compiler.ARGUMENT_WRONG_COUNT, in(getSource(), getStartPosition(), operator.getStartPosition()),
+                    cReqParams, cParams);
             fValid = false;
         }
 
@@ -546,6 +570,8 @@ public class LambdaExpression
         TypeConstant   typeActual = null;
         MethodConstant constVal   = null;
         if (fit.isFit()) {
+            assert atypeRets != null;
+
             // while we have enough info at this point to build a signature, what we lack is the
             // effectively final data that will only get reported (via exit() on the context) as
             // the variables go out of scope in the method body that contains this lambda, so we need
@@ -588,9 +614,8 @@ public class LambdaExpression
 
         if (hasOnlyParamNames()) {
             if (atypeReqParams == null) {
-                errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED, null,
-                        getSource(), paramNames.get(0).getStartPosition(),
-                        paramNames.get(cParams - 1).getEndPosition());
+                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, in(getSource(), paramNames.getFirst().getStartPosition(),
+                        paramNames.getLast().getEndPosition()));
                 fValid = false;
             }
 
@@ -724,7 +749,7 @@ public class LambdaExpression
             ctx = ctxOrig.enter();
             ctx.merge(mapAsnBefore, mapArgBefore);
 
-            LambdaContext  ctxLambda = enterCapture(ctx, blockTemp, atypeParams, asParams);
+            LambdaContext  ctxLambda = enterCapture(ctx, atypeParams, asParams);
             StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errsTemp);
 
             if (blockNew != blockTemp) {
@@ -833,9 +858,9 @@ public class LambdaExpression
     }
 
     @Override
-    public AstNode clone() {
+    public LambdaExpression copyTree() {
         // the reference to the lambda's method structure should not be a part of the cloned state
-        LambdaExpression that = (LambdaExpression) super.clone();
+        LambdaExpression that = (LambdaExpression) super.copyTree();
         that.m_lambda = null;
         return that;
     }
@@ -1067,9 +1092,7 @@ public class LambdaExpression
                         // we have a read-only non-injected capture; if it's a Var already, use that
                         // type; otherwise, since we were unable to prove that the register was
                         // effectively final, we need to capture the Ref implicitly
-                        typeCapture = fVar
-                                ? typeVar
-                                : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
+                        typeCapture = typeVar;
                         Register regVal = regCapture;
                         Register regVar = code.createRegister(typeCapture, null);
                         code.add(new MoveRef(regVal, regVar));
@@ -1202,18 +1225,9 @@ public class LambdaExpression
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
-        StringBuilder sb = new StringBuilder();
-
         List<?> source = params == null ? paramNames : params;
-        sb.append('(')
-          .append(source.stream()
-                  .map(Object::toString)
-                  .collect(Collectors.joining(", ")))
-          .append(')')
-          .append(' ')
-          .append(operator.getId().TEXT);
-
-        return sb.toString();
+        return source.stream().map(Object::toString).collect(Collectors.joining(", ", "(", ") "))
+                + operator.getId().TEXT;
     }
 
     @Override
@@ -1246,15 +1260,13 @@ public class LambdaExpression
      * which the values (or references / variables) of the outer context can be <i>captured</i>.
      *
      * @param ctx          the current (soon to be outer) context
-     * @param body         the StatementBlock of the lambda or anonymous inner class
      * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
      * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
      *
      * @return a capturing context
      */
-    protected static LambdaContext enterCapture(Context ctx, StatementBlock body,
-                                                TypeConstant[] atypeParams, String[] asParams) {
-        return new LambdaContext(ctx, body, atypeParams, asParams);
+    protected static LambdaContext enterCapture(Context ctx, TypeConstant[] atypeParams, String[] asParams) {
+        return new LambdaContext(ctx, atypeParams, asParams);
     }
 
     /**
@@ -1266,13 +1278,10 @@ public class LambdaExpression
          * Construct a Lambda CaptureContext.
          *
          * @param ctxOuter     the context within which this context is nested
-         * @param body         the StatementBlock of the lambda / inner class, whose parent is one
-         *                     of: NewExpression, LambdaExpression, or StatementExpression
          * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
          * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
          */
-        public LambdaContext(Context ctxOuter, StatementBlock body, TypeConstant[] atypeParams,
-                             String[] asParams) {
+        public LambdaContext(Context ctxOuter, TypeConstant[] atypeParams, String[] asParams) {
             super(ctxOuter);
 
             assert atypeParams == null && asParams == null
@@ -1400,6 +1409,8 @@ public class LambdaExpression
                 }
             }
         }
+
+        private final LambdaBindings.Collector f_bindings = new LambdaBindings.Collector();
 
         private final TypeConstant[] f_atypeParams;
         private final String[]       f_asParams;

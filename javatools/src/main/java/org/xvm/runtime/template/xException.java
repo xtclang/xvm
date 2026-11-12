@@ -188,13 +188,12 @@ public class xException
     }
 
     public static ExceptionHandle readOnly(Frame frame, xArray.Mutability mutability) {
-        String sMsg = switch (mutability) {
+        return makeHandle(frame, s_clzReadOnly, switch (mutability) {
             case Constant   -> "Constant array";
             case Fixed      -> "Fixed size array";
             case Persistent -> "Persistent array";
             default         -> throw new IllegalStateException();
-        };
-        return makeHandle(frame, s_clzReadOnly, sMsg);
+        });
     }
 
     public static ExceptionHandle readOnly(Frame frame, String sMsg) {

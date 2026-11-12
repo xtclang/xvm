@@ -1,0 +1,65 @@
+package org.xtclang.idea.lsp
+
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
+
+/**
+ * Validates server launch options and retention limits before publishing machine settings. Rejects launch
+ * overrides, contradictory arguments and impossible heap policies while preserving each accepted option as
+ * one argument.
+ */
+class ServerJvmOptionsTest {
+    @Test fun `supported options remain separate arguments`() {
+        val options = listOf("-Xms256M", "-Xmx2G", "-Xss1M", "-XX:ActiveProcessorCount=4", "-XX:+UseG1GC")
+        assertThat(ServerJvmOptions.validate(options)).isEqualTo(options)
+    }
+
+    @Test fun `reject launch overrides duplicates conflicts and impossible heaps`() {
+        listOf(
+            listOf("-jar"),
+            listOf("@options"),
+            listOf("-Dxtc.adapter=mock"),
+            listOf("-javaagent:agent.jar"),
+            listOf("-Xmx1G -Xss1M"),
+            listOf("-Xmx2G", "-Xmx1G"),
+            listOf("-Xms2G", "-Xmx1G"),
+            listOf("-XX:+UseG1GC", "-XX:+UseZGC"),
+            listOf("-Xmx999999999999999999999G"),
+        ).forEach {
+            assertThatThrownBy { ServerJvmOptions.validate(it) }.isInstanceOf(IllegalArgumentException::class.java)
+        }
+    }
+
+    @Test fun `the server runs ZGC under a 1 GB soft limit unless the options choose a collector or a maximum heap`() {
+        val defaults = listOf("-XX:+UseZGC", "-XX:SoftMaxHeapSize=1G")
+        assertThat(ServerJvmOptions.defaults(emptyList())).isEqualTo(defaults)
+        assertThat(ServerJvmOptions.defaults(listOf("-Xms256M", "-Xss1M"))).isEqualTo(defaults)
+        assertThat(ServerJvmOptions.defaults(listOf("-Xmx4G"))).isEmpty()
+        assertThat(ServerJvmOptions.defaults(listOf("-XX:+UseG1GC"))).isEmpty()
+        assertThat(ServerJvmOptions.defaults(listOf("-XX:+UseZGC"))).isEmpty()
+        assertThat(ServerRuntimeSettings().launchArguments()).startsWith("-XX:+UseZGC", "-XX:SoftMaxHeapSize=1G")
+    }
+
+    @Test fun `retention validates before publishing the immutable machine snapshot`() {
+        val store = ServerRuntimeSettings()
+        val before = store.state
+        assertThatThrownBy { store.install(before, before.copy(logTotalSizeMb = 1)) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(store.state).isEqualTo(before)
+        val next = before.copy(vmOptions = "-Xmx1G", logHistoryDays = 2, logMaxFileMb = 1, logTotalSizeMb = 3, logRetainedSessions = 2)
+        store.install(before, next)
+        assertThat(store.launchArguments())
+            .contains("-Xmx1G", "-Dxtc.logs.historyDays=2", "-Dxtc.logs.totalSizeMb=3")
+            .doesNotContain("-XX:+UseZGC")
+        assertThatThrownBy { store.install(before, before) }.hasMessageContaining("changed")
+        assertThat(store.state).isEqualTo(next)
+    }
+
+    @Test fun `an opened XDK source is compiled with its whole library unless the setting turns it off`() {
+        val store = ServerRuntimeSettings()
+        val before = store.state
+        assertThat(store.launchArguments()).contains("-Dxtc.lsp.compileLibraries=true")
+        store.install(before, before.copy(compileLibraries = false))
+        assertThat(store.launchArguments()).contains("-Dxtc.lsp.compileLibraries=false").doesNotContain("-Dxtc.lsp.compileLibraries=true")
+    }
+}

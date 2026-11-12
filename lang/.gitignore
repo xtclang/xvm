@@ -17,3 +17,6 @@
 # lang/dsl). package-lock.json IS tracked at the subpackage level for
 # reproducible installs; node_modules/ is the install output.
 node_modules/
+
+# Shared Kotlin formatting rules are part of this build, unlike the personal root config.
+!.editorconfig

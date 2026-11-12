@@ -1,6 +1,6 @@
 package org.xvm.lsp.adapter
 
-import org.xvm.lsp.adapter.CompletionItem
+import org.xtclang.tooling.xtcLanguage
 import org.xvm.lsp.adapter.CompletionItem.CompletionKind
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
@@ -27,157 +27,20 @@ object LanguageConstants {
         )
 
     /**
-     * Ecstasy language keywords for code completion.
-     *
-     * Sourced from the Ecstasy language specification.
-     * See: javatools/src/main/java/org/xvm/compiler/Token.java
+     * Ecstasy's keywords for code completion, reserved and context-sensitive, from the language model that the
+     * grammars are generated from ([xtcLanguage]).
      */
-    val KEYWORDS: List<String> =
-        listOf(
-            // Module structure
-            "module",
-            "package",
-            "import",
-            "as",
-            // Type declarations
-            "class",
-            "interface",
-            "mixin",
-            "service",
-            "const",
-            "enum",
-            // Access modifiers
-            "public",
-            "private",
-            "protected",
-            "static",
-            "abstract",
-            // Inheritance
-            "extends",
-            "implements",
-            "incorporates",
-            "delegates",
-            "into",
-            // Control flow
-            "if",
-            "else",
-            "switch",
-            "case",
-            "default",
-            "for",
-            "while",
-            "do",
-            "break",
-            "continue",
-            "return",
-            // Exception handling
-            "try",
-            "catch",
-            "finally",
-            "throw",
-            // Other
-            "using",
-            "assert",
-            "new",
-            "this",
-            "super",
-            "outer",
-            "is",
-            "val",
-            "var",
-            "construct",
-            "function",
-            "typedef",
-            // Literals
-            "true",
-            "false",
-            "null",
-        )
+    private val KEYWORDS: List<String> = (xtcLanguage.keywords + xtcLanguage.contextKeywords).distinct()
 
-    /**
-     * XTC built-in types for code completion.
-     *
-     * Sourced from the Ecstasy standard library (lib_ecstasy).
-     */
-    val builtInTypes: List<String> =
-        listOf(
-            // Integer types
-            "Int",
-            "Int8",
-            "Int16",
-            "Int32",
-            "Int64",
-            "Int128",
-            "IntN",
-            "UInt",
-            "UInt8",
-            "UInt16",
-            "UInt32",
-            "UInt64",
-            "UInt128",
-            "UIntN",
-            // Decimal types
-            "Dec",
-            "Dec32",
-            "Dec64",
-            "Dec128",
-            "DecN",
-            // Floating point types
-            "Float",
-            "Float16",
-            "Float32",
-            "Float64",
-            "Float128",
-            "FloatN",
-            // Basic types
-            "String",
-            "Char",
-            "Boolean",
-            "Bit",
-            "Byte",
-            "Object",
-            "Enum",
-            "Exception",
-            "Const",
-            "Service",
-            "Module",
-            "Package",
-            // Collections
-            "Array",
-            "List",
-            "Set",
-            "Map",
-            "Range",
-            "Interval",
-            "Tuple",
-            // Reflection
-            "Function",
-            "Method",
-            "Property",
-            "Type",
-            "Class",
-            // Interfaces
-            "Nullable",
-            "Orderable",
-            "Hashable",
-            "Stringable",
-            "Iterator",
-            "Iterable",
-            "Collection",
-            "Sequence",
-            // Special
-            "void",
-            "Null",
-            "True",
-            "False",
-        )
+    /** Ecstasy's built-in types for code completion, from the language model ([xtcLanguage]). */
+    private val builtInTypes: List<String> = xtcLanguage.builtinTypes.distinct()
 
     /**
      * Maps XTC symbol kinds to LSP completion item kinds.
      *
      * Used to convert internal symbol representations to LSP protocol values.
      */
-    val SYMBOL_TO_COMPLETION_KIND: Map<SymbolKind, CompletionKind> =
+    private val SYMBOL_TO_COMPLETION_KIND: Map<SymbolKind, CompletionKind> =
         mapOf(
             SymbolKind.MODULE to CompletionKind.MODULE,
             SymbolKind.PACKAGE to CompletionKind.MODULE,
@@ -195,8 +58,8 @@ object LanguageConstants {
         )
 
     /**
-     * Convert a symbol kind to a completion kind using the mapping.
-     * Falls back to VARIABLE for unmapped kinds.
+     * Convert a symbol kind to a completion kind using the mapping. Falls back to VARIABLE for
+     * unmapped kinds.
      */
     fun toCompletionKind(kind: SymbolKind): CompletionKind = SYMBOL_TO_COMPLETION_KIND[kind] ?: CompletionKind.VARIABLE
 
@@ -232,8 +95,19 @@ object LanguageConstants {
 
     fun declarationContextBuiltInTypeCompletions(): List<CompletionItem> =
         builtInTypes
-            .filterNot { it in setOf("Class", "Module", "Package", "Service", "Const", "Type", "Property", "Method") }
-            .map { type ->
+            .filterNot {
+                it in
+                    setOf(
+                        "Class",
+                        "Module",
+                        "Package",
+                        "Service",
+                        "Const",
+                        "Type",
+                        "Property",
+                        "Method",
+                    )
+            }.map { type ->
                 CompletionItem(
                     label = type,
                     kind = CompletionKind.CLASS,
@@ -259,8 +133,8 @@ object LanguageConstants {
     /**
      * Format a symbol as Markdown hover text.
      *
-     * Produces a code block with the symbol's type signature (or kind + name),
-     * followed by documentation if available.
+     * Produces a code block with the symbol's type signature (or kind + name), followed by
+     * documentation if available.
      *
      * @return Markdown-formatted hover text
      */

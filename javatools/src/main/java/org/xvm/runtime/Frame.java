@@ -7,6 +7,7 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Injection;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -567,6 +568,20 @@ public class Frame
         return Op.R_EXCEPTION;
     }
 
+    // whether a guard in effect now would catch the exception; nothing is changed, and a
+    // "finally" does not count, since it passes the exception on
+    public boolean catches(ExceptionHandle hException) {
+        Guard[] aGuard = m_aGuard;
+        if (aGuard != null) {
+            for (int iGuard = m_iGuard; iGuard >= 0; iGuard--) {
+                if (aGuard[iGuard].catches(this, hException)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // find the closest "AllGuard" and continue with execution of the corresponding code
     public int processAllGuard(DeferredGuardAction deferredAction) {
         Guard[] aGuard = m_aGuard;
@@ -734,6 +749,62 @@ public class Frame
                 f_ahVar[i] = null;
             }
         }
+    }
+
+    /**
+     * @return the function this frame runs, or null for a native frame that runs none
+     */
+    public MethodStructure getFunction() {
+        return f_function;
+    }
+
+    /**
+     * @return the class of the function this frame runs, or null if it runs none
+     */
+    public ClassStructure getContainingClass() {
+        return f_function == null ? null : f_function.getContainingClass();
+    }
+
+    /**
+     * @return the ops this frame runs, or null if it has none
+     */
+    public Op[] getOps() {
+        return f_aOp;
+    }
+
+    /**
+     * @return the index of the op this frame runs, or ran last before it called another frame
+     */
+    public int getPC() {
+        return m_iPC;
+    }
+
+    /**
+     * @return the fiber this frame runs on
+     */
+    public Fiber getFiber() {
+        return f_fiber;
+    }
+
+    /**
+     * @return the service context this frame runs in
+     */
+    public ServiceContext getContext() {
+        return f_context;
+    }
+
+    /**
+     * @return the frame that called this one, or null for the first frame of its fiber
+     */
+    public Frame getCaller() {
+        return f_framePrev;
+    }
+
+    /**
+     * @return true if code runs after this frame returns, before its caller goes on
+     */
+    public boolean hasContinuation() {
+        return m_continuation != null;
     }
 
     /**
@@ -2256,6 +2327,14 @@ public class Frame
         public abstract int handleException(Frame frame, ExceptionHandle hException, int iGuard);
 
         /**
+         * @return true if this guard catches the exception; unlike {@link #handleException}, this
+         *         changes nothing
+         */
+        public boolean catches(Frame frame, ExceptionHandle hException) {
+            return false;
+        }
+
+        /**
          * Drop to the scope of the exception/finally handler;
          * perform an implicit "enter" with a variable introduction (exception or Null)
          */
@@ -2332,6 +2411,17 @@ public class Frame
                 }
             }
             return Op.R_EXCEPTION;
+        }
+
+        @Override
+        public boolean catches(Frame frame, ExceptionHandle hException) {
+            TypeConstant typeException = hException.getType();
+            for (int nClassId : f_anClassConstId) {
+                if (typeException.isA(frame.resolveType(nClassId))) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

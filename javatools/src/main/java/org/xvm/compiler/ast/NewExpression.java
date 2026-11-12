@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -25,11 +27,9 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
-import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -42,10 +42,18 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Context.CaptureContext;
+import org.xvm.compiler.ast.bindings.AnonymousClassBindings;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
+
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * "New object" expression.
@@ -107,6 +115,24 @@ public class NewExpression
         return Math.max(dims, 0);
     }
 
+    /**
+     * @return a snapshot of the written constructor arguments, including array dimensions
+     */
+    public List<Expression> getArguments() {
+        return List.copyOf(args);
+    }
+
+    /**
+     * Written anonymous body before an anonymous class owns it. It is deliberately not a compiler
+     * child yet: registering/validating it requires the construction's inferred type and context.
+     * Syntax readers may inspect this borrowed node; they must not adopt or validate it themselves.
+     *
+     * @return the retained anonymous source body, or empty when none remains unregistered
+     */
+    public Optional<StatementBlock> getUnregisteredBody() {
+        return anon == null ? Optional.ofNullable(body) : Optional.empty();
+    }
+
     @Override
     public boolean isAutoNarrowingAllowed(TypeExpression type) {
         // auto-narrowing is allowed for type parameters, but not the type itself
@@ -131,12 +157,12 @@ public class NewExpression
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode clone() {
-        NewExpression that = (NewExpression) super.clone();
+    public NewExpression copyTree() {
+        NewExpression that = (NewExpression) super.copyTree();
         // the "body" is not a child and has to be handled manually
         if (body != null) {
             that.body = anon == null
-                    ? (StatementBlock) body.clone()
+                    ? body.copyTree()
                     : that.anon.body;
         }
         return that;
@@ -167,20 +193,41 @@ public class NewExpression
         return m_ctxCapture;
     }
 
+    /**
+     * @return source bindings collected by capture analysis, or null before it completes
+     */
+    public AnonymousClassBindings getSourceBindings() {
+        return m_captureBindings == null ? null : m_captureBindings.getBindings(this);
+    }
+
+    void bindSourceCapture(String name, Register captured) {
+        m_captureBindings.bind(name, captured);
+    }
+
+    /**
+     * Obtain source origins for the generated properties of a validated anonymous class.
+     * This reads existing capture data; it does not resume compilation or retain another cache.
+     *
+     * @return a snapshot of captured properties and their enclosing source registers
+     */
+    public Map<PropertyConstant, Register> getCaptureOrigins() {
+        if (!isValidated() || anon == null || anon.getComponent() == null || getSourceBindings() == null) {
+            return Map.of();
+        }
+
+        return m_captureBindings.propertyOrigins(anon.getComponent());
+    }
+
     // ----- compilation (Expression) --------------------------------------------------------------
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return calculateTargetType(ctx, null);
+        return calculateTargetType(ctx, silent(PROBE));
     }
 
     private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
         if (isValidated()) {
             return getType();
-        }
-
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
         }
 
         TypeConstant typeTarget = null;
@@ -207,7 +254,7 @@ public class NewExpression
                 typeTarget = type.ensureTypeConstant(ctx, errs);
             } else {
                 // there must be an anonymous inner class skeleton by this point
-                assert anon != null && anon.getComponent() != null;
+                assert anon.getComponent() != null;
                 return ((ClassStructure) anon.getComponent()).getFormalType();
             }
         }
@@ -237,8 +284,9 @@ public class NewExpression
         return super.calcFit(ctx, typeIn, typeOut);
     }
 
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+    /** Resolve the written construction type using the same rules for validation and cursor probes. */
+    Construction prepareConstruction(Context ctx, TypeConstant typeRequired, ErrorListener errs,
+                                     boolean incomplete) {
         ConstantPool pool       = pool();
         TypeConstant typeSuper  = null;   // the super class type of the anon inner class
         TypeConstant typeTarget = null;   // the type to look for a constructor at (could be private)
@@ -512,7 +560,7 @@ public class NewExpression
                         // we will emit the second constructor in leu of the first one
                         // using the default value for the element type as the second argument
                         int cArgs = args.size();
-                        if (cArgs == 1) {
+                        if (cArgs == 1 && !incomplete) {
                             // array[capacity] is a fixed size array and is allowed only for
                             // types with default values
                             TypeConstant typeElement = typeTarget.getParamType(0);
@@ -553,6 +601,31 @@ public class NewExpression
             }
         }
 
+        return new Construction(typeResult, typeTarget, typeSuper, plan);
+    }
+
+    /** Stack-owned preparation result; no new state is retained on a syntax node. */
+    record Construction(TypeConstant result, TypeConstant target, TypeConstant superType, Plan plan) {
+        boolean requiresNewable() {
+            return plan == Plan.Regular || plan == Plan.Child;
+        }
+    }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+        var bindings = ctx.getInvocationBindings();
+        var writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.<Expression>of();
+        bindings.begin(this);
+        var construction = prepareConstruction(ctx, typeRequired, errs, false);
+        if (construction == null) {
+            return null;
+        }
+        TypeConstant typeResult = construction.result();
+        TypeConstant typeTarget = construction.target();
+        TypeConstant typeSuper  = construction.superType();
+        Plan         plan       = construction.plan();
+        boolean      fAnonymous = body != null;
+
         ErrorListener errsTemp = errs.branch(this);
         TypeInfo infoTarget = fAnonymous
                 ? typeTarget.ensureTypeInfo(errsTemp)
@@ -565,8 +638,7 @@ public class NewExpression
         }
 
         // for a regular or virtual child construction, the target type must be new-able
-        if ((plan == Plan.Regular || plan == Plan.Child) &&
-                !infoTarget.isNewable(false, errsTemp)) {
+        if (construction.requiresNewable() && !infoTarget.isNewable(false, errsTemp)) {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
             infoTarget.reportNotNewable(sTarget, null, false, errsTemp);
             errsTemp.merge();
@@ -657,6 +729,7 @@ public class NewExpression
             args = listArgs;
         }
 
+        var sourceArguments = InvocationBinding.arguments(writtenArgs, listArgs);
         if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null) {
             return null;
         }
@@ -675,6 +748,22 @@ public class NewExpression
         }
 
         if (fAnonymous) {
+            if (ctx.getCursorBindings().isEnabled() && PartialSyntax.contains(body)) {
+                // A body cursor needs the actual source nodes and their enclosing-instance
+                // context. Capture analysis below validates disposable clones and then drops
+                // them; publishing those identities would lose the cursor or leak trial facts.
+                var capture = new AnonInnerClassContext(ctx);
+                m_ctxCapture = capture;
+                try {
+                    new StageMgr(anon, Stage.Emitted, errs, bindings, ctx.getCursorBindings()).fastForward(20);
+                } finally {
+                    capture.exit();
+                    m_ctxCapture = null;
+                }
+                // The cursor is never a valid value, and must not start capture rewriting or
+                // produce a constructor binding/emittable construction.
+                return null;
+            }
             // at this point, we need to create a temporary copy of the anonymous inner class for
             // the purpose of determining which local variables from this context will be "captured"
             // by the code in the anonymous inner class; to determine the captures, we need to go
@@ -684,7 +773,7 @@ public class NewExpression
             // structures, such that we can revert it after we collect the information about the
             // captures; force a temp clone of the inner class to go through its validate() stage so
             // that we can determine what variables get captured (and if they are effectively final)
-            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.BLACKHOLE);
+            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, silent(PROBE));
 
             // the capture information gets collected in a specialized Context that was created with
             // the inner class
@@ -705,10 +794,10 @@ public class NewExpression
             // nested contexts in which the captured variables were declared go through their exit()
             // logic (as the variables go out of scope in the method body that contains this
             // NewExpression); for now, store off the data from the capture context
-            m_mapCapture     = ctxAnon.getCaptureMap();
-            m_mapRegisters   = ctxAnon.ensureRegisterMap();
-            m_fInstanceChild = ctxAnon.isInstanceChild();
-            m_ctxCapture     = null;
+            m_mapCapture      = ctxAnon.getCaptureMap();
+            m_captureBindings = new AnonymousClassBindings.Collector(this, ctxAnon.ensureRegisterMap());
+            m_fInstanceChild  = ctxAnon.isInstanceChild();
+            m_ctxCapture      = null;
 
             // make sure the capture names don't collide
             ClassStructure clzAnon = ctxAnon.getThisClass();
@@ -723,6 +812,11 @@ public class NewExpression
         m_plan = plan;
 
         Expression exprResult = finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, null, errs);
+        if (exprResult == this && bindings.isEnabled()) {
+            MethodConstant selected = constructor.getIdentityConstant();
+            sourceArguments.ifPresent(arguments -> bindings.record(this,
+                    new InvocationBinding(selected, selected.getSignature(), arguments)));
+        }
         clearAnonTypeInfos();
         return exprResult;
     }
@@ -854,141 +948,136 @@ public class NewExpression
         int            cArgs       = aArgs.length;
         int            cDefaults   = cParams - cArgs;
 
-        if (m_fTupleArg) {
-            // TODO
-            throw notImplemented();
-        } else {
-            if (cDefaults > 0) {
-                Argument[] aArgAll = new Argument[cParams];
-                System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
-                aArgs = aArgAll;
+        if (cDefaults > 0) {
+            Argument[] aArgAll = new Argument[cParams];
+            System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
+            aArgs = aArgAll;
 
-                for (int i = 0; i < cDefaults; i++) {
-                    aArgs[cArgs + i] = Register.DEFAULT;
-                }
+            for (int i = 0; i < cDefaults; i++) {
+                aArgs[cArgs + i] = Register.DEFAULT;
             }
+        }
 
-            Argument argOuter = null;
-            if (m_plan == Plan.Child) {
+        Argument argOuter = null;
+        if (m_plan == Plan.Child) {
+            if (left == null) {
+                if (m_nParentSteps == 0) {
+                    argOuter = ctx.getThisRegister();
+                } else {
+                    TypeConstant typeParent = typeTarget.getParentType();
+                    int          cSteps     = m_nParentSteps;
+
+                    argOuter = code.createRegister(typeParent);
+                    code.add(new MoveThis(cSteps, argOuter));
+                }
+            } else {
+                argOuter = left.generateArgument(ctx, code, true, errs);
+            }
+        }
+
+        if (m_plan == Plan.Virtual || m_plan == Plan.Formal) {
+            Register regType;
+            if (m_plan == Plan.Virtual) {
+                Argument argTarget;
                 if (left == null) {
-                    if (m_nParentSteps == 0) {
-                        argOuter = ctx.getThisRegister();
-                    } else {
-                        TypeConstant typeParent = typeTarget.getParentType();
-                        int          cSteps     = m_nParentSteps;
-
-                        argOuter = code.createRegister(typeParent);
-                        code.add(new MoveThis(cSteps, argOuter));
-                    }
+                    argTarget = new Register(ctx.getThisType(), null, Op.A_TARGET);
                 } else {
-                    argOuter = left.generateArgument(ctx, code, true, errs);
+                    argTarget = left.generateArgument(ctx, code, true, errs);
+                }
+
+                regType = code.createRegister(pool().typeType());
+
+                // it's a responsibility of the MoveType op to ensure that the explicit
+                // immutability aspect of the target should not be carried over
+                code.add(new MoveType(argTarget, regType));
+            } else {
+                if (typeTarget.isGenericType()) {
+                    regType = code.createRegister(pool().typeType());
+                    code.add(new L_Get(m_idFormal, regType));
+                } else {
+                    regType = m_regFormal;
                 }
             }
+            switch (cParams) {
+            case 0:
+                code.add(new NewV_0(idConstruct, regType, argResult));
+                break;
 
-            if (m_plan == Plan.Virtual || m_plan == Plan.Formal) {
-                Register regType;
-                if (m_plan == Plan.Virtual) {
-                    Argument argTarget;
-                    if (left == null) {
-                        argTarget = new Register(ctx.getThisType(), null, Op.A_TARGET);
-                    } else {
-                        argTarget = left.generateArgument(ctx, code, true, errs);
-                    }
+            case 1:
+                code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
+                break;
 
-                    regType = code.createRegister(pool().typeType());
-
-                    // it's a responsibility of the MoveType op to ensure that the explicit
-                    // immutability aspect of the target should not be carried over
-                    code.add(new MoveType(argTarget, regType));
-                } else {
-                    if (typeTarget.isGenericType()) {
-                        regType = code.createRegister(pool().typeType());
-                        code.add(new L_Get(m_idFormal, regType));
-                    } else {
-                        regType = m_regFormal;
-                    }
-                }
+            default:
+                code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
+                break;
+            }
+        } else if (isTypeRequired(typeTarget)) {
+            if (argOuter == null) {
                 switch (cParams) {
                 case 0:
-                    code.add(new NewV_0(idConstruct, regType, argResult));
+                    code.add(new NewG_0(idConstruct, typeTarget, argResult));
                     break;
 
                 case 1:
-                    code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
+                    if (m_fFixedSizeArray) {
+                        Argument[] aArg2 = new Argument[2];
+                        aArg2[0] = aArgs[0];
+                        aArg2[1] = Register.DEFAULT;
+                        idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
+
+                        code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
+                    } else {
+                        code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                    }
                     break;
 
                 default:
-                    code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
+                    code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
                     break;
                 }
-            } else if (isTypeRequired(typeTarget)) {
-                if (argOuter == null) {
-                    switch (cParams) {
-                    case 0:
-                        code.add(new NewG_0(idConstruct, typeTarget, argResult));
-                        break;
+            } else {
+                switch (cParams) {
+                case 0:
+                    code.add(new NewCG_0(idConstruct, argOuter, typeTarget, argResult));
+                    break;
 
-                    case 1:
-                        if (m_fFixedSizeArray) {
-                            Argument[] aArg2 = new Argument[2];
-                            aArg2[0] = aArgs[0];
-                            aArg2[1] = Register.DEFAULT;
-                            idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
+                case 1:
+                    code.add(new NewCG_1(idConstruct, argOuter, typeTarget, aArgs[0], argResult));
+                    break;
 
-                            code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
-                        } else {
-                            code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
-                        }
-                        break;
+                default:
+                    code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
+                    break;
+                }
+            }
+        } else {
+            if (argOuter == null) {
+                switch (cParams) {
+                case 0:
+                    code.add(new New_0(idConstruct, argResult));
+                    break;
 
-                    default:
-                        code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
-                        break;
-                    }
-                } else {
-                    switch (cParams) {
-                    case 0:
-                        code.add(new NewCG_0(idConstruct, argOuter, typeTarget, argResult));
-                        break;
+                case 1:
+                    code.add(new New_1(idConstruct, aArgs[0], argResult));
+                    break;
 
-                    case 1:
-                        code.add(new NewCG_1(idConstruct, argOuter, typeTarget, aArgs[0], argResult));
-                        break;
-
-                    default:
-                        code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
-                        break;
-                    }
+                default:
+                    code.add(new New_N(idConstruct, aArgs, argResult));
+                    break;
                 }
             } else {
-                if (argOuter == null) {
-                    switch (cParams) {
-                    case 0:
-                        code.add(new New_0(idConstruct, argResult));
-                        break;
+                switch (cParams) {
+                case 0:
+                    code.add(new NewC_0(idConstruct, argOuter, argResult));
+                    break;
 
-                    case 1:
-                        code.add(new New_1(idConstruct, aArgs[0], argResult));
-                        break;
+                case 1:
+                    code.add(new NewC_1(idConstruct, argOuter, aArgs[0], argResult));
+                    break;
 
-                    default:
-                        code.add(new New_N(idConstruct, aArgs, argResult));
-                        break;
-                    }
-                } else {
-                    switch (cParams) {
-                    case 0:
-                        code.add(new NewC_0(idConstruct, argOuter, argResult));
-                        break;
-
-                    case 1:
-                        code.add(new NewC_1(idConstruct, argOuter, aArgs[0], argResult));
-                        break;
-
-                    default:
-                        code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
-                        break;
-                    }
+                default:
+                    code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
+                    break;
                 }
             }
         }
@@ -1008,24 +1097,7 @@ public class NewExpression
         }
 
         Constant[] aConst = typeAnno.getAnnotationParams();
-        boolean    fDiff  = false;
-        for (int j = 0, c = aConst.length; j < c; j++) {
-            Constant constArg = aConst[j];
-            if (constArg instanceof ExpressionConstant constExpr) {
-                Expression exprArg = constExpr.getExpression();
-                Argument   argArg  = exprArg.generateArgument(ctx, code, true, errs);
-                Register   regArg;
-                if (argArg instanceof Register regA) {
-                    regArg = regA;
-                } else {
-                    regArg = code.createRegister(exprArg.getType());
-                    code.add(new Var(regArg));
-                    code.add(new Move(argArg, regArg));
-                }
-                aConst[j] = new RegisterConstant(pool, regArg);
-                fDiff     = true;
-            }
-        }
+        boolean    fDiff  = generateAnnotationArguments(ctx, code, aConst, errs);
         return fDiff
                 ? pool.ensureAnnotatedTypeConstant(typeAnno.getAnnotationClass(), aConst, typeUnderlying)
                 : typeAnno;
@@ -1083,13 +1155,13 @@ public class NewExpression
             assert m_purposeCurrent == AnonPurpose.None;
             anon = adopt(new TypeCompositionStatement(
                     this,
-                    clone(inner.getAnnotations()),
+                    copyNodes(inner.getAnnotations(), AnnotationExpression::copyTree),
                     inner.getCategory(),
                     tokName,
                     null,
-                    clone(inner.getCompositions()),
-                    clone(args),
-                    (StatementBlock) body.clone(),
+                    copyNodes(inner.getCompositions(), CompositionNode::copyTree),
+                    copyNodes(args, Expression::copyTree),
+                    body.copyTree(),
                     type.getStartPosition(),
                     body.getEndPosition()));
             break;
@@ -1120,7 +1192,7 @@ public class NewExpression
 
         m_ctxCapture = new AnonInnerClassContext(ctx);
 
-        catchUpChildren(errs);
+        catchUpChildren(errs, ctx.getInvocationBindings(), ctx.getCursorBindings());
 
         if (purpose != AnonPurpose.CaptureAnalysis) {
             // the context is ONLY retained to provide capture information
@@ -1179,23 +1251,10 @@ public class NewExpression
         }
     }
 
-    /**
-     * Helper to clone a list of AST nodes.
-     *
-     * @param list  the list of AST nodes (may be null)
-     *
-     * @return a deeply cloned list
-     */
-    private <T extends AstNode> List<T> clone(List<? extends AstNode> list) {
-        if (list == null || list.isEmpty()) {
-            return (List<T>) list;
-        }
-
-        List listCopy = new ArrayList<>(list.size());
-        for (AstNode node : list) {
-            listCopy.add(node.clone());
-        }
-        return listCopy;
+    /** Copy a homogeneous node list while preserving null and empty optional lists. */
+    private static <T extends AstNode> List<T> copyNodes(List<T> nodes, UnaryOperator<T> copy) {
+        return nodes == null || nodes.isEmpty() ? nodes
+                : nodes.stream().map(copy).collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -1255,11 +1314,11 @@ public class NewExpression
         anon.getComponent().setStatic(!m_fInstanceChild);
 
         // if nothing else is captured, then we're done
-        Map<String, Boolean>  mapCapture   = m_mapCapture;
-        Map<String, Register> mapRegisters = m_mapRegisters;
+        Map<String, Boolean> mapCapture = m_mapCapture;
         if (mapCapture == null || mapCapture.isEmpty()) {
             return aOldArgs;
         }
+        Map<String, Register> mapRegisters = m_captureBindings.registers();
 
         // we're going to replace the constructor by creating a new constructor that calls the old
         // one, but that first stores off all the passed-in binding values
@@ -1390,18 +1449,18 @@ public class NewExpression
      * @return the type of the value (not the Ref or Var, if implicit deref is used)
      */
     protected TypeConstant getCaptureType(String sCaptureName) {
-        assert m_mapRegisters.containsKey(sCaptureName);
+        assert m_captureBindings.registers().containsKey(sCaptureName);
 
-        return m_mapRegisters.get(sCaptureName).getType();
+        return m_captureBindings.registers().get(sCaptureName).getType();
     }
 
     /**
      * @return true iff the captured variable has been marked as being effectively final
      */
     protected boolean isCaptureFinal(String sCaptureName) {
-        assert m_mapRegisters.containsKey(sCaptureName);
+        assert m_captureBindings.registers().containsKey(sCaptureName);
 
-        return m_mapRegisters.get(sCaptureName).isEffectivelyFinal();
+        return m_captureBindings.registers().get(sCaptureName).isEffectivelyFinal();
     }
 
     /**
@@ -1410,7 +1469,7 @@ public class NewExpression
     protected boolean isImplicitDeref(String sCaptureName) {
         assert m_mapCapture.containsKey(sCaptureName);
 
-        Register reg  = m_mapRegisters.get(sCaptureName);
+        Register reg  = m_captureBindings.registers().get(sCaptureName);
         Boolean  FVar = m_mapCapture  .get(sCaptureName);
         return FVar || !reg.isEffectivelyFinal();
     }
@@ -1523,9 +1582,7 @@ public class NewExpression
         @Override
         public boolean requireThis(long lPos, ErrorListener errs) {
             if (getMethod().isStatic()) {
-                if (errs != null) {
-                    errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
-                }
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
                 return false;
             }
 
@@ -1556,8 +1613,6 @@ public class NewExpression
     protected long                     lEndPos;
 
     private transient MethodStructure m_constructor;
-    private transient boolean         m_fTupleArg;  // indicates that arguments come from a tuple
-                                                    // (currently not implemented)
 
     private transient AnonPurpose              m_purposeCurrent = AnonPurpose.None;
     private transient TypeCompositionStatement m_anonActualBackup;
@@ -1573,9 +1628,10 @@ public class NewExpression
      */
     private transient Map<String, Boolean>  m_mapCapture;
     /**
-     * A map from variable name to register, built by the anonymous inner class context.
+     * The capture-analysis result: enclosing registers and source origins for their local reads.
+     * Replaces the former name-to-register map; created when capture analysis completes.
      */
-    private transient Map<String, Register> m_mapRegisters;
+    private transient AnonymousClassBindings.Collector m_captureBindings;
 
     /**
      * The construction plan:

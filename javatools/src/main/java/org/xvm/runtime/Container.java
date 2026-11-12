@@ -133,6 +133,10 @@ public abstract class Container
         return f_setServices;
     }
 
+    public Container getParent() {
+        return f_parent;
+    }
+
     /**
      * Terminate every service that belongs to this container.
      *
@@ -172,8 +176,7 @@ public abstract class Container
                 service.execute(true);
             } catch (Throwable e) {
                 // must not happen
-                System.err.println("Unexpected service scheduling failure: " + service.f_sName);
-                e.printStackTrace(System.err);
+                Runtime.reportFailure("Unexpected service scheduling failure: " + service.f_sName, e);
             } finally {
                 f_pendingWorkCount.decrementAndGet();
             }
@@ -533,9 +536,10 @@ public abstract class Container
     }
 
     /**
-     * @return the time (in milliseconds) this container has been frozen for
+     * @return the time (in milliseconds) this container has been frozen for, which
+     *         {@link #currentTimeMillis} leaves out of the wall-clock time
      */
-    private long getTimeFrozen() {
+    public long getTimeFrozen() {
         long      cFrozen   = 0L;
         Container container = this;
         do {

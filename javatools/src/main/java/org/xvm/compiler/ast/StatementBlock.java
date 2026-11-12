@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
@@ -54,9 +55,13 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.NameResolver.Result;
 import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.in;
 
 /**
  * A block statement specifies a series of statements.
@@ -97,6 +102,11 @@ public class StatementBlock
     }
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public StatementBlock copyTree() {
+        return (StatementBlock) super.copyTree();
+    }
 
     public List<Statement> getStatements() {
         return stmts;
@@ -291,7 +301,35 @@ public class StatementBlock
      * @return true if nothing occurred during the compilation that should stop further progress
      */
     public boolean compileMethod(Code code, ErrorListener errs) {
-        return compileMethod(new RootContext(this, code.getMethodStructure()), code, errs);
+        return compileMethod(code, errs, InvocationBinding.Collector.NONE);
+    }
+
+    /**
+     * Compile a method with the collector owned by its enclosing compilation attempt.
+     *
+     * @param code      the method code object receiving generated instructions
+     * @param errs      the diagnostic listener and abort policy for this operation
+     * @param bindings  the attempt-owned call-fact collector, or its NONE instance to disable collection
+     *
+     * @return whether compilation completed without a condition that must stop further progress
+     */
+    public boolean compileMethod(Code code, ErrorListener errs, InvocationBinding.Collector bindings) {
+        return compileMethod(code, errs, bindings, CursorBinding.Collector.NONE);
+    }
+
+    /**
+     * Compile a method while preserving both of the enclosing attempt's fact collectors.
+     *
+     * @param code      the method code object receiving generated instructions
+     * @param errs      the diagnostic listener and abort policy for this operation
+     * @param bindings  the attempt-owned call-fact collector, or its NONE instance to disable collection
+     * @param cursors   the attempt-owned cursor-fact collector, or its NONE instance to disable collection
+     *
+     * @return whether compilation completed without a condition that must stop further progress
+     */
+    public boolean compileMethod(Code code, ErrorListener errs, InvocationBinding.Collector bindings,
+                                 CursorBinding.Collector cursors) {
+        return compileMethod(new RootContext(this, code.getMethodStructure(), bindings, cursors), code, errs);
     }
 
     /**
@@ -314,7 +352,7 @@ public class StatementBlock
             return false;
         }
 
-        boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
+        boolean fCompletes = that.completes(ctx.emittingContext(), true, code, errs);
 
         if (fCompletes) {
             TypeConstant[] atypeReturn = code.getMethodStructure().getReturnTypes();
@@ -322,8 +360,7 @@ public class StatementBlock
                 // a void method has an implicit "return;" at the end of it
                 code.add(new Return_0());
             } else {
-                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
-                        getEndPosition(), getEndPosition());
+                errs.error(Compiler.RETURN_REQUIRED, in(getSource(), getEndPosition(), getEndPosition()));
             }
         } else {
             // it is possible that there is a dangling label at the end that is unreachable,
@@ -358,6 +395,7 @@ public class StatementBlock
                             Assignment asnVar = ctx.getVarAssignment(sName);
                             Register   regVal = param.deref(regVar, method);
 
+                            exprLambda.bindSourceParameter(param.getIndex(), regVal);
                             ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
                             ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment
                         }
@@ -498,7 +536,7 @@ public class StatementBlock
         sb.append('{');
 
         int firstNonEnum = 0;
-        if (stmts.get(0) instanceof TypeCompositionStatement stmtType
+        if (stmts.getFirst() instanceof TypeCompositionStatement stmtType
                 && stmtType.category.getId() == Token.Id.ENUM_VAL) {
             boolean multiline = false;
             for (Statement stmt : stmts) {
@@ -542,9 +580,46 @@ public class StatementBlock
     public static class RootContext
             extends Context {
         public RootContext(StatementBlock stmt, MethodStructure method) {
+            this(stmt, method, InvocationBinding.Collector.NONE);
+        }
+
+        /**
+         * Create a method-body context that shares the enclosing attempt's fact collectors.
+         *
+         * @param stmt      the method body whose context is being created
+         * @param method    the method whose body is being compiled
+         * @param bindings  the attempt-owned call-fact collector, or its NONE instance to disable collection
+         */
+        public RootContext(StatementBlock stmt, MethodStructure method,
+                           InvocationBinding.Collector bindings) {
+            this(stmt, method, bindings, CursorBinding.Collector.NONE);
+        }
+
+        /**
+         * Create a method-body context that shares the enclosing attempt's fact collectors.
+         *
+         * @param stmt      the method body whose context is being created
+         * @param method    the method whose body is being compiled
+         * @param bindings  the attempt-owned call-fact collector, or its NONE instance to disable collection
+         * @param cursors   the attempt-owned cursor-fact collector, or its NONE instance to disable collection
+         */
+        public RootContext(StatementBlock stmt, MethodStructure method,
+                           InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
             super(null, false);
-            f_stmt   = stmt;
-            f_method = method;
+            f_stmt     = Objects.requireNonNull(stmt, "stmt");
+            f_method   = method;
+            f_bindings = Objects.requireNonNull(bindings, "bindings");
+            f_cursors  = Objects.requireNonNull(cursors, "cursors");
+        }
+
+        @Override
+        public CursorBinding.Collector getCursorBindings() {
+            return f_cursors;
+        }
+
+        @Override
+        public InvocationBinding.Collector getInvocationBindings() {
+            return f_bindings;
         }
 
         @Override
@@ -737,8 +812,8 @@ public class StatementBlock
                     ? exprLambda.isRequiredThis()
                     : !isFunction();
 
-            if (!fHasThis && errs != null) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+            if (!fHasThis) {
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
             }
             return fHasThis;
         }
@@ -761,18 +836,14 @@ public class StatementBlock
             if (arg instanceof Register reg) {
                 return reg.isWritable();
             }
-            if (arg instanceof PropertyConstant) {
-                // the context only answers the question of what the _first_ name is, so
-                // in the case of "a.b.c", this method is called only for "a", so if someone
-                // is asking if it's settable, then obviously there is no ".b.c" following;
-                // it's obviously a local property (since there is no "target." before it),
-                // so the only check to do here is to make sure that it is settable, i.e. not
-                // a calculated property
-                // TODO: check for a calculated property
-                return true;
-            }
-
-            return false;
+            // the context only answers the question of what the _first_ name is, so
+            // in the case of "a.b.c", this method is called only for "a", so if someone
+            // is asking if it's settable, then obviously there is no ".b.c" following;
+            // it's obviously a local property (since there is no "target." before it),
+            // so the only check to do here is to make sure that it is settable, i.e. not
+            // a calculated property
+            // TODO: check for a calculated property
+            return arg instanceof PropertyConstant;
         }
 
         @Override
@@ -814,6 +885,7 @@ public class StatementBlock
                     Register     reg    = createRegister(type, sName);
                     mapByName.put(sName, reg);
                     ensureCaptureVars().put(sName, reg);
+                    exprNew.bindSourceCapture(sName, reg);
 
                     // TODO REVIEW CP
                     //      we need to know the definite assignment of the variable at the point
@@ -1166,7 +1238,7 @@ public class StatementBlock
                 MethodConstant    idMethod   = method.getIdentityConstant();
                 Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
                 TypeConstant      typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
-                TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                TypeInfo          infoType   = typeCtx.ensureTypeInfo(errs);
                 MethodInfo        infoMethod = infoType.getMethodById(idMethod);
                 SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
 
@@ -1226,6 +1298,20 @@ public class StatementBlock
                         reg = new Register(param.getType(), sName, i);
                     }
                     mapByName.put(sName, reg);
+
+                    // Retain the binding on the source parameter for hosts reading the validated
+                    // tree. Generated methods and captured parameters may have no source parameter.
+                    if (!param.isTypeParameter() &&
+                            f_stmt.getParent() instanceof MethodDeclarationStatement declaration &&
+                            declaration.getComponent() == method && declaration.params != null) {
+                        int index = i - method.getTypeParamCount();
+                        if (index < declaration.params.size()) {
+                            declaration.params.get(index).setResolvedTarget(reg);
+                        }
+                    } else if (f_stmt.getParent() instanceof LambdaExpression lambda &&
+                            lambda.getLambda() == method) {
+                        lambda.bindSourceParameter(i, reg);
+                    }
 
                     // the variable has been definitely assigned, but not multiple times (i.e. it's
                     // still effectively final)
@@ -1315,11 +1401,9 @@ public class StatementBlock
         /**
          * Generate an emitting context, and emit the preamble, if any.
          *
-         * @param code  the code that is being emitted to
-         *
          * @return a Context that can be used while emitting code
          */
-        public RootContext emittingContext(Code code) {
+        public RootContext emittingContext() {
             if (m_fEmitting) {
                 return this;
             }
@@ -1397,10 +1481,12 @@ public class StatementBlock
             return map;
         }
 
-        private final StatementBlock  f_stmt;
-        private final MethodStructure f_method;
-        private       Context         m_ctxValidating;
-        private       boolean         m_fEmitting;
+        private final StatementBlock              f_stmt;
+        private final MethodStructure             f_method;
+        private final InvocationBinding.Collector f_bindings;
+        private final CursorBinding.Collector     f_cursors;
+        private       Context                     m_ctxValidating;
+        private       boolean                     m_fEmitting;
 
         /**
          * A lazily created mapping of captured variables that is collected during the validation

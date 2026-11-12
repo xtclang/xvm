@@ -11,11 +11,8 @@ package org.xtclang.tooling.scanner
  * - Tree-sitter specific patterns (token emission, lexer operations)
  */
 
-/**
- * Marker annotation for DSL scope control.
- */
-@DslMarker
-annotation class CCodeDsl
+/** Marker annotation for DSL scope control. */
+@DslMarker annotation class CCodeDsl
 
 /**
  * Builder for C code blocks with automatic indentation.
@@ -374,9 +371,7 @@ fun cFunction(
     return builder.build()
 }
 
-/**
- * Builder for C enums.
- */
+/** Builder for C enums. */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 @CCodeDsl
 class CEnumBuilder(
@@ -418,9 +413,7 @@ fun cEnum(
     return builder.build()
 }
 
-/**
- * Builder for C struct definitions.
- */
+/** Builder for C struct definitions. */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 @CCodeDsl
 class CStructBuilder(

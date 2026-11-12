@@ -1,5 +1,8 @@
 package org.xvm.runtime;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -13,6 +16,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.atomic.AtomicLong;
+
+import java.util.function.Consumer;
 
 import org.xvm.asm.ConstantPool;
 
@@ -54,6 +59,39 @@ public class Runtime {
     }
 
     public void start() {
+    }
+
+    /**
+     * Report a failure of the runtime itself, one that no program caused, such as an exception that
+     * ends a service's shutdown: to {@link #setFailureReporter the failure reporter}, which is
+     * System.err unless an embedder sets one.
+     *
+     * @param sMessage  what failed
+     * @param e         the failure
+     */
+    public static void reportFailure(String sMessage, Throwable e) {
+        StringWriter trace = new StringWriter();
+        try (PrintWriter writer = new PrintWriter(trace)) {
+            writer.println(sMessage);
+            e.printStackTrace(writer);
+        }
+        s_failureReporter.accept(trace.toString());
+    }
+
+    /**
+     * Send the runtime's own failures, each as its message and stack trace, to the specified
+     * reporter instead of System.err. An embedder whose System.err is a program's output, as a run
+     * worker's is, sends them where its own failures go: that output can be dropped, as a stopped
+     * run's is, and these failures are not the program's.
+     *
+     * @param reporter  the reporter
+     *
+     * @return the reporter before this one
+     */
+    public static Consumer<String> setFailureReporter(Consumer<String> reporter) {
+        Consumer<String> prior = s_failureReporter;
+        s_failureReporter = Objects.requireNonNull(reporter);
+        return prior;
     }
 
     /**
@@ -146,10 +184,22 @@ public class Runtime {
      * Set the debugger of this runtime's services.
      */
     public void setDebugger(Debugger debugger) {
-        m_debugger = Objects.requireNonNull(debugger);
+        Objects.requireNonNull(debugger);
+        Debugger previous = m_debugger;
+        m_debugger = debugger;
+        if (previous != null && previous != debugger) {
+            previous.detach();
+        }
+        m_fDebugger = false;
+        debugger.attach(this);
     }
 
     // ----- constants and fields ------------------------------------------------------------------
+
+    /**
+     * Where {@link #reportFailure} sends the runtime's own failures.
+     */
+    private static volatile Consumer<String> s_failureReporter = text -> System.err.print(text);
 
     /**
      * The executor for XVM services.
@@ -177,9 +227,9 @@ public class Runtime {
     private volatile long m_lastXvmSubmitNanos;
 
     /**
-     * The "debugger is active" flag.
+     * The "debugger is active" flag; a host's debugger sets it from the host's own threads.
      */
-    private boolean m_fDebugger;
+    private volatile boolean m_fDebugger;
 
     /**
      * The debugger instance; null until it is set explicitly or lazily assigned.

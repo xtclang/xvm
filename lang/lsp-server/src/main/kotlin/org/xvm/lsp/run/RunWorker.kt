@@ -1,0 +1,563 @@
+package org.xvm.lsp.run
+
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
+import org.xvm.asm.ErrorListener
+import org.xvm.asm.LinkedRepository
+import org.xvm.asm.ModuleRepository
+import org.xvm.lsp.adapter.xdk.XdkLibraries
+import org.xvm.lsp.util.snapshot
+import org.xvm.runtime.SessionDebugger
+import org.xvm.runtime.debug.DebugChannel
+import org.xvm.runtime.debug.DebugCommands
+import org.xvm.runtime.debug.DebugProtocol
+import org.xvm.util.Severity
+import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileDescriptor
+import java.io.FileOutputStream
+import java.io.InputStreamReader
+import java.io.OutputStream
+import java.io.PrintStream
+import java.io.PrintWriter
+import java.io.Reader
+import java.io.Writer
+import java.lang.management.ManagementFactory
+import java.lang.management.MemoryType
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+import kotlin.system.exitProcess
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
+import org.xvm.runtime.Runtime as XvmRuntime
+
+/**
+ * Entry point of the execution worker JVM. The language server starts it on demand and exchanges one
+ * JSON object per line over stdin and stdout. Program output, including anything the runtime writes to
+ * the process streams directly, travels as events and so can never corrupt the protocol. Stdin closing,
+ * which is also what happens when the language server exits or dies, stops any run and ends the worker.
+ *
+ * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and the `setup` of a run under the
+ * debugger, javatools' `DebugProtocol.Setup`), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`,
+ * and the commands to a run's debugger, `DebugProtocol`'s. Events: `output` (`id`, `text`) and `usage` (`id`,
+ * `heapUsed`, `heapMax`, `threads`, `poolThreads`, `consoles`, `runs`, sent after the run's exit), and
+ * `DebugProtocol`'s: `ready` (see [RunWorkerIdentity]), `started`, `exit` and `log`, and those of a run's debugger.
+ */
+object RunWorker {
+    /** How long a worker whose input has ended, as when its server dies, waits for its programs to end before it exits. */
+    private val STOP_LIMIT = 5.seconds
+
+    /** The exit code of a run that was stopped, as a process that a stop terminates reports it: 128 and SIGTERM's 15. */
+    const val STOPPED = 143L
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val channel = RunWorkerChannel(PrintStream(FileOutputStream(FileDescriptor.out), false, Charsets.UTF_8))
+        val runs = Runs(channel)
+        System.setOut(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
+        System.setErr(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
+        // the runtime's own failures, such as one that ends a service's shutdown, are not the program's: they go to the
+        // worker's log, where a stopped run, whose output is dropped, cannot hide them
+        XvmRuntime.setFailureReporter { channel.log(it.trimEnd()) }
+        XdkLibraries.configure()
+        channel.debug.send(RunWorkerIdentity.current().ready(ProcessHandle.current().pid()))
+
+        BufferedReader(InputStreamReader(System.`in`, Charsets.UTF_8)).useLines { lines ->
+            for (line in lines) {
+                if (line.isBlank()) continue
+                val command = JsonParser.parseString(line).asJsonObject
+                when (command["command"]?.asString) {
+                    "run" -> runs.start(command)
+                    "input" -> runs.input(command["id"].asLong, command["text"].asString)
+                    "endInput" -> runs.endInput(command["id"].asLong)
+                    "stop" -> runs.stop(command["id"].asLong)
+                    "shutdown" -> break
+                    else -> if (!runs.debug(command)) channel.log("Unknown worker command: $line")
+                }
+            }
+        }
+        // nothing waits for the programs any more: they get a while to end, and the worker exits after it in any case
+        runs.stopAll(STOP_LIMIT)
+        // runtime service threads are not daemons, so a finished worker exits explicitly
+        exitProcess(0)
+    }
+
+    /**
+     * One run at a time, each a fresh application container in the shared runtime; the server starts a
+     * worker for each program it runs, so a second run here is refused only if a client bypasses it.
+     */
+    private class Runs(
+        private val channel: RunWorkerChannel,
+    ) {
+        private val active = ConcurrentHashMap<Long, EmbeddingSupport.Control>()
+        private val inputs = ConcurrentHashMap<Long, ConsoleInput>()
+
+        /**
+         * The runs asked to stop. A stop terminates the program's container, which makes whatever the program does next
+         * fail, as making or calling a service does: that failure is the stop's, not the program's, so it is no error,
+         * the program's output after the stop, such as the runtime's report of its unhandled exception, is not shown,
+         * and the run exits with [STOPPED].
+         */
+        private val stopped = ConcurrentHashMap.newKeySet<Long>()
+
+        /** The runtime debugger of each run started with breakpoints. */
+        private val debuggers = DebugCommands(channel.debug)
+
+        /** The running program's output, which text the runtime prints directly joins in order. */
+        @Volatile
+        private var output: OutputBatches? = null
+
+        /** Text the runtime prints to System.out or System.err: shown with the running program, or logged. */
+        fun stray(text: String) {
+            output?.write(text) ?: channel.log(text.trimEnd())
+        }
+
+        fun start(command: JsonObject) {
+            val id = command["id"].asLong
+            if (active.isNotEmpty()) {
+                channel.exit(id, null, "Another program is still running")
+                return
+            }
+            val output = OutputBatches({ channel.output(id, it) })
+            val console = PrintWriter(output, true)
+            val errors = RunErrors(console)
+            // registered before the run starts: commands are read in order, so input for this run
+            // can only arrive after this
+            val input = ConsoleInput().also { inputs[id] = it }
+            val control =
+                try {
+                    val repositories = command.strings("modulePath").map { ModuleRepository.of(File(it), true) }
+                    val debugger =
+                        command["setup"]?.let(DebugProtocol::setup)?.let {
+                            debugger(id, repositories, it, output, command["onDemandMillis"]?.asLong)
+                        }
+                    EmbeddingSupport.instance().runMethod(
+                        LinkedRepository(*repositories.toTypedArray()),
+                        command["module"].asString,
+                        null,
+                        EmbeddingSupport.EntryPoint(command.string("method") ?: "run", command.strings("args")),
+                        console,
+                        // the editors always show what is typed: the echo request is not passed on to them yet
+                        EmbeddingSupport.ConsoleInput.of(BufferedReader(input)),
+                        command.string("rootDir")?.let(::File),
+                        debugger,
+                        errors,
+                    )
+                } catch (failure: Exception) {
+                    inputs.remove(id)
+                    debuggers.remove(id)
+                    channel.exit(id, null, failure.toString())
+                    return
+                }
+            if (control == null) {
+                inputs.remove(id)
+                debuggers.remove(id)
+                channel.exit(id, null, errors.failure() ?: "The module could not be started")
+                return
+            }
+
+            active[id] = control
+            this.output = output
+            channel.debug.send(DebugProtocol.Started(id))
+            Thread
+                .ofPlatform()
+                .name("xtc-run-$id")
+                .daemon(true)
+                .start {
+                    try {
+                        control.join()
+                        control.close()
+                    } finally {
+                        this.output = null
+                        output.close()
+                        inputs.remove(id)?.end()
+                        debuggers.remove(id)
+                        active.remove(id)
+                        // counted before the exit, so the next run, which may start right after it, is not
+                        val kept =
+                            Kept(
+                                poolThreads(),
+                                EmbeddingSupport.instance().registeredConsoles(),
+                                active.size + inputs.size + debuggers.held(),
+                            )
+                        val stop = stopped.remove(id)
+                        channel.exit(id, if (stop) STOPPED else control.result(), if (stop) null else errors.failure())
+                        channel.usage(id, kept)
+                    }
+                }
+        }
+
+        fun input(
+            id: Long,
+            text: String,
+        ) {
+            inputs[id]?.offer(text)
+        }
+
+        fun endInput(id: Long) {
+            inputs[id]?.end()
+        }
+
+        fun stop(id: Long) {
+            if (active.containsKey(id)) {
+                stopped += id
+                output?.mute()
+            }
+            // a program waiting for a line gets the end of input, so nothing stays blocked on it
+            inputs[id]?.end()
+            // closing kills the task and waits for it, so keep the command reader responsive; it also
+            // releases a program its debugger holds stopped
+            active[id]?.let { control -> Thread.ofVirtual().start { control.close() } }
+        }
+
+        /**
+         * The runtime debugger of a run started with breakpoints: it knows the program's own modules, the run's, and is
+         * set up as the `run` command asks before the program starts. Its stops are reported as `stopped` events, after
+         * the program's output so far.
+         */
+        private fun debugger(
+            id: Long,
+            repositories: List<ModuleRepository>,
+            setup: DebugProtocol.Setup,
+            output: OutputBatches,
+            onDemandMillis: Long?,
+        ): SessionDebugger {
+            val debugger = SessionDebugger(debuggers.listener(id, output::sendNow))
+            onDemandMillis?.let { debugger.setOnDemandLimit(it.milliseconds.toJavaDuration()) }
+            repositories.forEach { repository ->
+                repository.moduleNames.forEach { name -> repository.loadModule(name)?.let(debugger::addModule) }
+            }
+            debuggers.start(id, debugger, setup)
+            return debugger
+        }
+
+        /** Handles a command to a run's debugger; false when it is not one. A command without what it needs fails alone. */
+        fun debug(command: JsonObject): Boolean =
+            try {
+                DebugProtocol.command(command)?.let(debuggers::handle) == true
+            } catch (failure: IllegalArgumentException) {
+                channel.log("The debugger command ${DebugProtocol.commandName(command)} failed: $failure")
+                true
+            }
+
+        /**
+         * Threads of the runtime's own worker pool, which is fixed in size. Not those in its thread group: a thread that a
+         * pool thread starts joins it, such as the JDK's for the debugger's time limits, which it starts when needed.
+         */
+        private fun poolThreads(): Int = EmbeddingSupport.instance().poolThreads()
+
+        /** Ends each run's input and closes the runs, waiting at most [limit] for them to end. */
+        fun stopAll(limit: Duration) {
+            inputs.values.forEach(ConsoleInput::end)
+            closeAll(active.values.snapshot(), limit)
+        }
+
+        private fun ErrorList.failure(): String? =
+            errors
+                .filter { it.severity.isAtLeast(Severity.ERROR) }
+                .joinToString("\n") { it.messageText }
+                .ifEmpty { null }
+    }
+
+    /**
+     * Console input for one run: text the client sends, in order, until the client ends it or the run
+     * stops. A read waits for text; after the end, it returns end of input.
+     */
+    private class ConsoleInput : Reader() {
+        private val inputLock = ReentrantLock()
+        private val available = inputLock.newCondition()
+        private val pending = StringBuilder()
+        private var ended = false
+
+        fun offer(text: String) =
+            inputLock.withLock {
+                if (!ended) {
+                    pending.append(text)
+                    available.signalAll()
+                }
+            }
+
+        fun end() =
+            inputLock.withLock {
+                ended = true
+                available.signalAll()
+            }
+
+        override fun read(
+            buffer: CharArray,
+            offset: Int,
+            length: Int,
+        ): Int =
+            inputLock.withLock {
+                try {
+                    while (pending.isEmpty() && !ended) available.await()
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return -1
+                }
+                if (pending.isEmpty()) return -1
+                val count = minOf(length, pending.length)
+                pending.toCharArray(buffer, offset, 0, count)
+                pending.delete(0, count)
+                count
+            }
+
+        override fun close() = end()
+    }
+
+    /** Text the runtime prints to the process streams, passed on a line at a time, or in bounded pieces. */
+    private class StrayOutput(
+        private val text: (String) -> Unit,
+    ) : OutputStream() {
+        private val line = ByteArrayOutputStream()
+
+        @Synchronized
+        override fun write(byte: Int) {
+            line.write(byte)
+            if (byte == '\n'.code || line.size() >= OutputBatches.LIMIT) flush()
+        }
+
+        @Synchronized
+        override fun flush() {
+            if (line.size() == 0) return
+            val pending = line.toString(Charsets.UTF_8)
+            line.reset()
+            text(pending)
+        }
+    }
+
+    private fun JsonObject.string(name: String): String? = get(name)?.takeUnless { it.isJsonNull }?.asString
+
+    private fun JsonObject.strings(name: String): List<String> = getAsJsonArray(name)?.map { it.asString }.orEmpty()
+}
+
+/**
+ * One run's program output, sent in batches so that a program printing in a loop sends a few events rather
+ * than one per print: text goes out [delay] after it is written, or as soon as [limit] characters wait. No
+ * more than [limit] characters ever wait, so a program printing faster than the server reads blocks in its
+ * print until the server catches up, and its output never piles up in the worker. A flush does not end a
+ * batch; [close] sends the rest.
+ */
+internal class OutputBatches(
+    private val send: (String) -> Unit,
+    private val limit: Int = LIMIT,
+    private val delay: Duration = DELAY,
+) : Writer() {
+    private val pending = StringBuilder()
+    private var scheduled = false
+
+    /** Whether what is written from now on is dropped, as a stopped run's is. */
+    private var muted = false
+
+    @Synchronized
+    override fun write(
+        buffer: CharArray,
+        offset: Int,
+        length: Int,
+    ) {
+        if (muted) return
+        var from = offset
+        val end = offset + length
+        while (from < end) {
+            val count = minOf(end - from, limit - pending.length)
+            pending.appendRange(buffer, from, from + count)
+            from += count
+            if (pending.length >= limit) sendPending(all = false)
+        }
+        if (pending.isNotEmpty() && !scheduled) {
+            scheduled = true
+            timers.schedule(
+                {
+                    synchronized(this) {
+                        scheduled = false
+                        sendPending(all = false)
+                    }
+                },
+                delay.inWholeMilliseconds,
+                TimeUnit.MILLISECONDS,
+            )
+        }
+    }
+
+    override fun flush() {}
+
+    /** Sends what waits at once: when the program stops at a breakpoint, its output so far comes before the stop. */
+    @Synchronized
+    fun sendNow() = sendPending(all = false)
+
+    /** Sends everything still waiting; the run's exit follows its output. */
+    @Synchronized
+    override fun close() = sendPending(all = true)
+
+    /** Sends what was written so far, and drops whatever is written after it. */
+    @Synchronized
+    fun mute() {
+        sendPending(all = true)
+        muted = true
+    }
+
+    /** Sends what waits, keeping a trailing high surrogate for the next batch unless [all]. */
+    private fun sendPending(all: Boolean) {
+        var count = pending.length
+        // a surrogate pair stays in one event
+        if (!all && count > 1 && pending[count - 1].isHighSurrogate()) count--
+        if (count == 0) return
+        val text = pending.substring(0, count)
+        pending.delete(0, count)
+        send(text)
+    }
+
+    companion object {
+        /** The most characters one output event carries and a run's output holds while it waits. */
+        const val LIMIT = 16_384
+
+        /** How long written text waits for more before it is sent. */
+        val DELAY = 20.milliseconds
+
+        // the thread starts when a program first prints, on one of the runtime's pool threads, and would join
+        // their group, which is what the worker reports as the runtime's pool; it has a group of its own
+        private val timers =
+            Executors.newSingleThreadScheduledExecutor(
+                Thread
+                    .ofPlatform()
+                    .group(ThreadGroup("xtc-run-output"))
+                    .name("xtc-run-output")
+                    .daemon(true)
+                    .factory(),
+            )
+    }
+}
+
+/**
+ * What a worker reports in `ready`, and the server requires before it sends the worker anything: the
+ * protocol both sides speak and the bundled XDK the worker runs, which must be the one the server compiles
+ * with. They differ when the server's files are replaced while it runs, e.g. by an IDE plugin update.
+ */
+internal data class RunWorkerIdentity(
+    val protocol: Int,
+    val xdk: String,
+) {
+    /** The `ready` event of a worker [pid] with this identity. */
+    fun ready(pid: Long) = DebugProtocol.Ready(pid, protocol, xdk, null)
+
+    override fun toString() = "protocol $protocol with XDK ${xdk.take(12)}"
+
+    companion object {
+        /** javatools' [DebugProtocol.VERSION], which its debug agent reports too; the first protocol had no number. */
+        const val PROTOCOL = DebugProtocol.VERSION
+
+        /** This JVM's identity. */
+        fun current() = RunWorkerIdentity(PROTOCOL, XdkLibraries.fingerprint)
+
+        /** The identity a `ready` event reports, or null when it has none, as from a first-protocol worker. */
+        fun of(ready: DebugProtocol.Ready): RunWorkerIdentity? {
+            val protocol = ready.protocol() ?: return null
+            val xdk = ready.xdk() ?: return null
+            return RunWorkerIdentity(protocol, xdk)
+        }
+    }
+}
+
+/**
+ * What a run reports. A warning, such as one for arguments the entry method does not take, is also
+ * shown in the run's output when it is reported, which is before the program starts.
+ */
+private class RunErrors(
+    private val console: PrintWriter,
+) : ErrorList(100) {
+    override fun log(err: ErrorListener.ErrorInfo) {
+        if (err.severity == Severity.WARNING) console.println("Warning: ${err.messageText}")
+        super.log(err)
+    }
+}
+
+/**
+ * Closes each of [closeables] on a thread of its own and waits at most [limit] for all of them, for a worker that
+ * exits after it: a run whose close waits for a program that does not end must not keep the worker alive.
+ *
+ * @return whether every one of them was closed in time
+ */
+internal fun closeAll(
+    closeables: Collection<AutoCloseable>,
+    limit: Duration,
+): Boolean {
+    val closing = closeables.map { closeable -> Thread.ofVirtual().start { runCatching { closeable.close() } } }
+    val deadline = System.nanoTime() + limit.inWholeNanoseconds
+    closing.forEach { it.join((deadline - System.nanoTime()).coerceAtLeast(0).nanoseconds.toJavaDuration()) }
+    return closing.none(Thread::isAlive)
+}
+
+/**
+ * What a run left behind: the runtime's pool threads, and the consoles and runs still registered for
+ * programs that have ended, which should be none. A run's control, its input, its debugger and each
+ * piece of console code running in one of its frames count as one each.
+ */
+internal data class Kept(
+    val poolThreads: Int,
+    val consoles: Int,
+    val runs: Int,
+)
+
+/**
+ * Writes worker events, one JSON object per line, to the protocol stream, through [debug], over which the runtime
+ * debugger's commands answer too.
+ */
+internal class RunWorkerChannel(
+    out: PrintStream,
+) {
+    /** The protocol stream, as javatools' debug commands write to it. */
+    val debug = DebugChannel(out)
+
+    fun send(
+        event: String,
+        fill: JsonObject.() -> Unit = {},
+    ) = debug.send(event) { it.fill() }
+
+    fun output(
+        id: Long,
+        text: String,
+    ) = send("output") {
+        addProperty("id", id)
+        addProperty("text", text)
+    }
+
+    fun exit(
+        id: Long,
+        code: Long?,
+        error: String?,
+    ) = debug.send(DebugProtocol.Exit(id, code, error))
+
+    fun log(text: String) = debug.log(text)
+
+    /**
+     * Reports what the worker holds once a run has ended: the heap the JVM left in use after its latest
+     * collection of each heap pool, the live threads, and what the run [kept]. No collection is forced here:
+     * the JVM collects when it needs to, so a pool it has not collected yet counts nothing, and the figure
+     * can be from before the run. The server retires a worker whose runs leave too much behind.
+     */
+    fun usage(
+        id: Long,
+        kept: Kept,
+    ) {
+        val collected =
+            ManagementFactory.getMemoryPoolMXBeans().filter { it.type == MemoryType.HEAP }.sumOf { it.collectionUsage?.used ?: 0L }
+        send("usage") {
+            addProperty("id", id)
+            addProperty("heapUsed", collected)
+            addProperty("heapMax", ManagementFactory.getMemoryMXBean().heapMemoryUsage.max)
+            addProperty("threads", ManagementFactory.getThreadMXBean().threadCount)
+            addProperty("poolThreads", kept.poolThreads)
+            addProperty("consoles", kept.consoles)
+            addProperty("runs", kept.runs)
+        }
+    }
+}

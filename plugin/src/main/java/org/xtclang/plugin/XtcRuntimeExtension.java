@@ -38,6 +38,24 @@ public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
     Property<@NotNull Boolean> getJit();
 
     /**
+     * Debug the program with a debugger outside it, such as an IDE's: the launcher's {@code --debug}
+     * option, such as {@code connect:127.0.0.1:5005,suspend,token=<token>}. Defaults to the Gradle
+     * property {@code xtcDebug}, which an IDE sets when it debugs a run. A {@code DIRECT} run
+     * refuses it, since the debugger's agent would run in the Gradle daemon.
+     *
+     * @return the debug property, unset when the program is not debugged
+     */
+    Property<@NotNull String> getDebug();
+
+    /**
+     * The jar of the debugger's agent, which the launcher loads for {@link #getDebug() debug}, as
+     * its {@code agent=} option. Defaults to the Gradle property {@code xtcDebugAgent}.
+     *
+     * @return the debug agent property, unset when the agent is on the launcher's class path
+     */
+    Property<@NotNull String> getDebugAgent();
+
+    /**
      * Return the plugin internal representation of a module execution config. This
      * is a tuple with a module name (mandatory), a method name for the execution
      * to start with (defaults to "run"), and a list of arguments to pass to the

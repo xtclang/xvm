@@ -40,11 +40,13 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.ast.bindings.InitializerBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
 /**
@@ -111,6 +113,18 @@ public class PropertyDeclarationStatement
         return name.getValueText();
     }
 
+    /**
+     * @return the property name token
+     */
+    public Token getNameToken() {
+        return name;
+    }
+
+    /** @return the written documentation text, or null when no documentation comment is present */
+    public String getDocumentation() {
+        return TypeCompositionStatement.extractDocumentation(doc);
+    }
+
     public TypeExpression getType() {
         return type;
     }
@@ -126,16 +140,7 @@ public class PropertyDeclarationStatement
      * @return true iff the property is declared as static
      */
     public boolean isStatic() {
-        List<Token> list = modifiers;
-        if (list != null && !list.isEmpty()) {
-            for (Token token : list) {
-                if (token.getId() == Token.Id.STATIC) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return isStatic(modifiers);
     }
 
     @Override
@@ -308,6 +313,11 @@ public class PropertyDeclarationStatement
         prop.setSynthetic(m_fSynthetic);
         setComponent(prop);
 
+        // documentation, which a tool reads from the structure, as from a class's
+        if (doc != null) {
+            prop.setDocumentation(TypeCompositionStatement.extractDocumentation(doc));
+        }
+
         // the annotations either have to be registered on the type or on the property, so
         // register them on the property for now (they'll get sorted out later after we
         // can resolve the types to figure out what the annotation targets actually are)
@@ -349,7 +359,7 @@ public class PropertyDeclarationStatement
                 MethodStructure methodGetter = prop.getGetter();
                 if (methodGetter != null && !methodGetter.usesSuper()) {
                     // property marked as @Unassigned must not have a getter that doesn't "super()"
-                    AnnotationExpression exprAnno = annotations.get(0);
+                    AnnotationExpression exprAnno = annotations.getFirst();
                     exprAnno.log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
                             pool().clzUnassigned().getName(),
                             prop.getIdentityConstant().getValueString());
@@ -409,6 +419,15 @@ public class PropertyDeclarationStatement
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                 } else {
+                    if (mgr.getCursorBindings().isEnabled() && PartialSyntax.contains(value)) {
+                        // A cursor hole cannot become a constant. Validate the source-owned
+                        // initializer so its facts survive; disposable clones are never published.
+                        initializer = createAstNodeFor(createInitializer());
+                        value = null;
+                        new StageMgr(initializer, Stage.Emitted, errs,
+                                mgr.getInvocationBindings(), mgr.getCursorBindings()).fastForward(10);
+                        return;
+                    }
                     // create a clone of ourselves
                     PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) clone();
 
@@ -420,8 +439,11 @@ public class PropertyDeclarationStatement
                     // if it could be discarded and replaced with a constant
                     // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
                     // must be ready to resolve the corresponding names (e.g. see NewExpression)
+                    var bindings = mgr.getInvocationBindings().isEnabled()
+                            ? new InvocationBinding.Collector() : InvocationBinding.Collector.NONE;
+                    var written = bindings.isEnabled() ? InitializerBinding.writtenNodes(stmtInit) : List.<AstNode>of();
                     ErrorListener errsTmp = errs.branch(this);
-                    if (!(new StageMgr(stmtInit, Stage.Emitted, errsTmp).fastForward(10)) ||
+                    if (!(new StageMgr(stmtInit, Stage.Emitted, errsTmp, bindings).fastForward(10)) ||
                             errsTmp.hasSeriousErrors()) {
                         stmtClone.discardInitializer(methodInit);
                         stmtInit.discard(true);
@@ -488,6 +510,13 @@ public class PropertyDeclarationStatement
                         prop.setInitialValue(null);
                     }
 
+                    // Only successful constant folding publishes clone-free facts. Real methods
+                    // validate their source-owned initializer below; failed/revisited probes publish none.
+                    if (!fMethodRequired && bindings.isEnabled() && !errs.isAbortDesired() && !errs.hasSeriousErrors()) {
+                        mgr.getInvocationBindings().record(this,
+                                InitializerBinding.capture(written, bindings.finishFacts(List.of(stmtInit))));
+                    }
+
                     // at this point, we are done with the "test clone"
                     stmtClone.discardInitializer(methodInit);
                     stmtInit.discard(true);
@@ -503,7 +532,7 @@ public class PropertyDeclarationStatement
                         value = null;
 
                         // "catch up" the newly created initializer to our stage
-                        if (!new StageMgr(initializer, Stage.Validated, errs).fastForward(10)) {
+                        if (!new StageMgr(initializer, Stage.Validated, errs, mgr.getInvocationBindings(), mgr.getCursorBindings()).fastForward(10)) {
                             // basically an assertion
                             log(errs, Severity.FATAL, Compiler.FATAL_ERROR, initializer);
                         }
@@ -559,8 +588,8 @@ public class PropertyDeclarationStatement
     /**
      * Validate the specified property annotations.
      *
-     * Note: this method is similar to {@link TypeCompositionStatement#validateAnnotations} logic,
-     *       but differs in the way that it could force the node revisit.
+     * <p>This method is similar to the annotation validation in {@link TypeCompositionStatement},
+     * but differs in the way that it can force the node to be revisited.
      *
      * @param aAnno     the annotations
      * @param typeProp  the annotated property type
@@ -761,21 +790,8 @@ public class PropertyDeclarationStatement
     public String toSignatureString() {
         StringBuilder sb = new StringBuilder();
 
-        if (modifiers != null) {
-            for (Token token : modifiers) {
-                sb.append(token.getId().TEXT)
-                  .append(' ');
-            }
-        }
+        appendDeclarationPrefix(sb, modifiers, annotations);
 
-        // this is not quite correct; if there were annotations extracted from the type, we will
-        // see them doubled in the string; very rare inconvenience, not worth any effort atm
-        if (annotations != null) {
-            for (AnnotationExpression annotation : annotations) {
-                sb.append(annotation)
-                  .append(' ');
-            }
-        }
         sb.append(type)
                 .append(' ')
           .append(name.getValueText());
@@ -787,13 +803,7 @@ public class PropertyDeclarationStatement
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        if (doc != null) {
-            String sDoc = String.valueOf(doc.getValue());
-            if (sDoc.length() > 100) {
-                sDoc = sDoc.substring(0, 97) + "...";
-            }
-            appendString(sb.append("/*"), sDoc).append("*/\n");
-        }
+        appendDocComment(sb, doc);
 
         sb.append(toSignatureString());
 

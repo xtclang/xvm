@@ -1,5 +1,14 @@
 # Ecstasy Language Tooling
 
+The compiler-backed LSP is the default server for the IntelliJ and VS Code integrations.
+It provides diagnostics, semantic highlighting, navigation, completion and compiler-checked
+refactorings, including analysis of incomplete source. Both editors can also build, run, debug and
+test modules with that compiler (embedded mode), beside Gradle and, in IntelliJ, `xtc` itself, and
+debug a program run outside the editor; see
+[embedded build and run](lsp-server/README.md#embedded-build-and-run). Tree-sitter remains a
+selectable syntax-only adapter. See the [manual playbook](doc/manual-test-plan.md) for feature
+boundaries, test fixtures, native harness commands and client compatibility limits.
+
 Language tooling for the Ecstasy programming language, including LSP server, IDE plugins,
 and editor support.
 
@@ -15,12 +24,12 @@ and editor support.
 >
 > We are actively working to improve stability and move toward a supported beta release.
 
-> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../CLAUDE.md) in the project CLAUDE.md for details.
+> **Note:** The root `gradle.properties` turns on both lang build flags, so `./gradlew :lang:*` commands work from the project root as they are. Where the flags are off, as in CI's push and pull request builds, pass `-PincludeBuildLang=true -PincludeBuildAttachLang=true`. See [Composite build semantics](../AGENTS.md#composite-build-semantics) in the project AGENTS.md for details.
 
 ## Enabling the Lang Build
 
-By default, the lang build is **disabled** in `gradle.properties`. To include it in the XVM composite build,
-you need to set two properties:
+The root `gradle.properties` turns the lang build on, since the language server compiles through javatools and a
+compiler change can break it. CI's push and pull request builds turn `includeBuildLang` off. Two properties control it:
 
 | Property | Purpose |
 |----------|---------|
@@ -30,7 +39,7 @@ you need to set two properties:
 ### Option 1: Command Line (Temporary)
 
 ```bash
-./gradlew build
+./gradlew build -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
 ### Option 2: Environment Variables (Session/Shell)
@@ -55,7 +64,7 @@ includeBuildAttachLang=true
 
 ## Testing the Tree-sitter Parser
 
-The tree-sitter adapter is tested against the entire XDK corpus (692 `.x` files from `lib_*` directories).
+The tree-sitter adapter is tested against the entire XDK corpus (the `.x` files of the `lib_*` directories and `manualTests`).
 This ensures the grammar can parse real-world Ecstasy code.
 
 ```bash
@@ -78,6 +87,7 @@ The test outputs parse timing sorted by slowest files, helping identify grammar 
 | [dsl](./dsl/) | Language model DSL and editor support generators |
 | [tree-sitter](./tree-sitter/) | Tree-sitter grammar for incremental parsing |
 | [lsp-server](./lsp-server/) | Language Server Protocol implementation |
+| [dap-server](./dap-server/) | Debug Adapter Protocol implementation, which the language server hosts |
 | [intellij-plugin](./intellij-plugin/) | IntelliJ IDEA plugin |
 | [vscode-extension](./vscode-extension/) | VS Code extension |
 
@@ -88,11 +98,32 @@ The test outputs parse timing sorted by slowest files, helping identify grammar 
 ./gradlew build
 
 # Build specific projects
-./gradlew :dsl:build
-./gradlew :lsp-server:build
-./gradlew :intellij-plugin:buildPlugin
-./gradlew :vscode-extension:build
+./gradlew :lang:dsl:build
+./gradlew :lang:lsp-server:build
+./gradlew :lang:intellij-plugin:buildPlugin
+./gradlew :lang:vscode-extension:build
 ```
+
+## Kotlin Formatting
+
+Spotless runs ktlint over Kotlin sources, tests, IntelliJ integration tests
+and the `lang` Gradle scripts, using the same formatter versions as master. Versions are pinned in
+the shared version catalog. The local `.editorconfig` permits concise single-expression `when`
+entries alongside entries that need blocks. Generated build outputs are excluded. From the repository root:
+
+```bash
+# Format all lang Kotlin sources and Gradle scripts
+./gradlew :lang:spotlessApply -PincludeBuildLang=true -PincludeBuildAttachLang=true
+
+# Verify without modifying files
+./gradlew :lang:spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
+
+For one module, use a task such as `:lang:lsp-server:spotlessCheck`. Local Kotlin compilation
+formats that module's sources before compiling, and local `check` also applies formatting first.
+When `CI` is set, compilation and checks only verify formatting. Explicit `spotlessCheck` is always
+read-only. Spotless invokes the ktlint engine directly; the separate ktlint Gradle plugin is not
+used. Formatting and ktlint's non-formatting rules (such as naming) are both checked.
 
 ## Native Library Build (Tree-sitter)
 
@@ -137,7 +168,7 @@ you cannot find or install the plugin through the normal "Install from
 Marketplace" flow. To install or auto-update from the alpha channel you
 need to add it as a **custom plugin repository** in IntelliJ:
 
-1. Open IntelliJ IDEA (2026.1 or later)
+1. Open IntelliJ IDEA (2026.2 or later)
 2. **Settings → Plugins → ⚙ (gear icon) → Manage Plugin Repositories…**
 3. Click **+** and add:
 
@@ -155,7 +186,7 @@ UI. The "Not compatible with the version of your running IDE" warning that
 appears on the public marketplace web page (https://plugins.jetbrains.com/plugin/31202-xtc-language-support)
 is a **stable-channel-filter quirk** and does not reflect actual compatibility —
 the alpha builds are verified by JetBrains' Plugin Verifier against current
-2026.1.x releases. The in-IDE install flow above bypasses that warning.
+2026.2.x releases. The in-IDE install flow above bypasses that warning.
 
 If you prefer not to add a custom repo, the same builds can be installed
 manually from a downloaded ZIP — see [Installing the ZIP Manually](#installing-the-zip-manually)
@@ -170,7 +201,7 @@ To test the plugin during development, run a sandboxed IntelliJ IDEA instance wi
 ```
 
 This launches a separate IntelliJ IDEA with:
-- The XTC plugin installed
+- The Ecstasy plugin installed
 - A fresh sandbox environment (settings, caches, etc.)
 - Isolated from your main IDE installation
 
@@ -178,7 +209,7 @@ The sandbox IDE data is stored in `lang/intellij-plugin/build/idea-sandbox/`.
 
 ### Building a Distributable Plugin ZIP
 
-To create a plugin ZIP that can be installed in any IntelliJ IDEA 2026.1+ instance:
+To create a plugin ZIP that can be installed in any IntelliJ IDEA 2026.2+ instance:
 
 ```bash
 ./gradlew :lang:intellij-plugin:buildPlugin
@@ -217,10 +248,10 @@ The DSL project generates syntax highlighting files for multiple editors:
 
 ```bash
 # Generate all editor support files
-./gradlew :dsl:generateEditorSupport
+./gradlew :lang:dsl:generateEditorSupport
 
 # Update the checked-in examples
-./gradlew updateGeneratedExamples
+./gradlew :lang:updateGeneratedExamples
 ```
 
 Generated files:
@@ -245,7 +276,7 @@ Generated files:
 │  │                  Adapter (interface)                    │    │
 │  │  ┌──────────────┬──────────────┬──────────────┐         │    │
 │  │  │ Mock         │ TreeSitter   │ Xdk          │         │    │
-│  │  │ (regex)      │ (syntax)     │ (future)     │         │    │
+│  │  │ (regex)      │ (syntax)     │ (compiler)   │         │    │
 │  │  └──────────────┴──────────────┴──────────────┘         │    │
 │  └─────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
@@ -254,31 +285,31 @@ Generated files:
 ### LSP Adapter Selection
 
 ```bash
-# Tree-sitter (default) - syntax-aware, ~70% LSP features
+# Tree-sitter (explicit syntax-only alternative) - syntax-aware features and workspace index
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=treesitter
 
 # Mock - regex-based, for testing without native libraries
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# XDK adapter stub - placeholder for future compiler / semantic integration
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=xdk
+# Compiler (default) - diagnostics and semantic features, with bundled XDK modules
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 ```
 
-## Canonical Status Documents
+Compiler mode is the default. Its bounded semantic features and dependency host API are described in the
+[LSP server README](./lsp-server/README.md), including supported requests and remaining
+project/workspace limits. No external XDK installation is required.
 
-To avoid duplicating stale implementation matrices across multiple READMEs, the canonical
-status documents are:
+## Feature and Architecture Guides
 
-- [`doc/plans/plan-ide-integration.md`](./doc/plans/plan-ide-integration.md)
-  - current implementation matrix across adapters and IDE integration status
-- [`doc/plans/plan-tree-sitter.md`](./doc/plans/plan-tree-sitter.md)
-  - tree-sitter architecture and implementation status
-- [`doc/plans/existing-tree-sitter-functionality-missing.md`](./doc/plans/existing-tree-sitter-functionality-missing.md)
-  - current tree-sitter implemented vs remaining functionality
-- [`lsp-server/README.md`](./lsp-server/README.md)
-  - LSP-server-specific build, runtime, and configuration details
-- [`intellij-plugin/README.md`](./intellij-plugin/README.md)
-  - IntelliJ-plugin-specific build/testing/runtime details
+- [LSP server](./lsp-server/README.md): adapter capabilities, runtime and configuration.
+- [Configuration reference](./doc/configuration.md): every editor setting, server property, environment variable,
+  build property and path of the tooling, with the code that reads each.
+- [Manual playbook](./doc/manual-test-plan.md): runnable examples, native IDE tests and feature limits.
+- [Compiler architecture](../javatools/README.md#compiler-architecture-for-language-tooling):
+  why tooling needs compiler facts, diagnostic ownership and bounded partial analysis.
+- [IntelliJ plugin](./intellij-plugin/README.md) and [VS Code extension](./vscode-extension/README.md):
+  installation, settings and publication.
+- [Tree-sitter](./tree-sitter/README.md): grammar and native library builds.
 
 ## Dependency Versions & Compatibility
 
@@ -288,8 +319,8 @@ The lang tooling uses several interdependent libraries. This section documents v
 
 | Library | Version | Purpose | Notes |
 |---------|---------|---------|-------|
-| **lsp4j** | 0.24.0 | LSP protocol types & JSON-RPC | Eclipse's Java LSP implementation |
-| **lsp4ij** | 0.19.1 | IntelliJ LSP client plugin | Red Hat's plugin, uses lsp4j internally |
+| **lsp4j** | 1.0.0 | LSP and DAP protocol types & JSON-RPC | Eclipse's Java LSP implementation, with its debug modules |
+| **lsp4ij** | 0.21.0 | IntelliJ LSP and DAP client plugin | Red Hat's plugin, uses lsp4j internally |
 
 **How they work together:**
 - **lsp4j** provides the LSP protocol implementation (types, JSON-RPC, message handling)
@@ -301,13 +332,13 @@ The lang tooling uses several interdependent libraries. This section documents v
 
 | Library | Version | Purpose | Notes |
 |---------|---------|---------|-------|
-| **jtreesitter** | 0.26.0 | Java bindings for tree-sitter | JVM FFI to native tree-sitter |
-| **tree-sitter-cli** | 0.26.5 | Parser generator CLI | Must match jtreesitter major.minor |
+| **jtreesitter** | 0.26.1 | Java bindings for tree-sitter | JVM FFI to native tree-sitter |
+| **tree-sitter-cli** | 0.26.13 | Parser generator CLI | Must match jtreesitter major.minor |
 
 **Version Constraint (Java 25):**
 ```
 ⚠️  jtreesitter 0.26.x requires Java 23+ (FFM API)
-✅  IntelliJ 2026.1 ships with JBR 25, which supports FFM natively
+✅  IntelliJ 2026.2 ships with JBR 25, which supports FFM natively
 ✅  The LSP server runs OUT-OF-PROCESS using IntelliJ's JBR for classloader isolation
 ```
 
@@ -320,29 +351,28 @@ crash/memory isolation.
 
 | Library | Version | Purpose |
 |---------|---------|---------|
-| **intellij-ide** | 2026.1 | Target IDE version |
+| **intellij-ide** | 2026.2.3 | Target IDE version; the plugin's since-build is 262 |
 | **intellij-jdk** | 25 | Plugin JDK requirement |
-| **intellij-platform-gradle-plugin** | 2.17.0 | Build plugin for IntelliJ plugins |
+| **intellij-platform-gradle-plugin** | 2.19.0 | Build plugin for IntelliJ plugins |
 
 ### Compatibility Matrix
 
 | Component | Requires | Provides |
 |-----------|----------|----------|
-| IntelliJ 2026.1 | JBR 25 | Plugin runtime |
-| lsp4ij 0.19.2 | IntelliJ 2024.2+ | LSP client |
-| lsp4j 1.0.0 | Java 11+ | LSP protocol |
-| jtreesitter 0.26.0 | Java 23+ | Native parsing (runs in out-of-process LSP server) |
-| tree-sitter-cli 0.26.5 | - | Parser generation |
+| IntelliJ 2026.2 | JBR 25 | Plugin runtime |
+| lsp4ij 0.21.0 | IntelliJ 2024.2+ | LSP and DAP client |
+| lsp4j 1.0.0 | Java 11+ | LSP and DAP protocol |
+| jtreesitter 0.26.1 | Java 23+ | Native parsing (runs in out-of-process LSP server) |
+| tree-sitter-cli 0.26.13 | - | Parser generation |
 
 All versions are defined in `/gradle/libs.versions.toml`.
 
 ## Documentation
 
-- [Implementation Plans](./doc/plans/README.md) - Current plans, status docs, and retained design notes for language tooling
+- [Historical design notes](./doc/plans/README.md) - Background proposals; use the feature guides above for current behavior
 - [LSP Implementation Survey](./doc/lsp-implementations-survey.md) - Survey of how other languages implement language server support
-
-Architecture analysis and research documentation: *Internal documentation*
 
 ## TODOs
 
-- [ ] **Language naming consistency**: The formal language name is "Ecstasy", but the codebase currently uses "xtc" for technical identifiers (scope names, language IDs, file names). A future PR should audit and unify the naming to use "Ecstasy" where appropriate for user-facing elements while keeping "xtc" for technical identifiers where consistency is important (e.g., `source.xtc` scope name, `xtc.tmLanguage.json` file names).
+- [x] **Language naming consistency**: The formal language name is "Ecstasy", but the codebase currently uses "xtc" for technical identifiers (scope names, language IDs, file names). A future PR should audit and unify the naming to use "Ecstasy" where appropriate for user-facing elements while keeping "xtc" for technical identifiers where consistency is important (e.g., `source.xtc` scope name, `xtc.tmLanguage.json` file names).
+  Done (2026-10-16): VS Code's display name, command titles/categories, settings groups and debugger label say Ecstasy, as do IntelliJ's language, wizard and run-configuration names; `xtc` remains in identifiers.
