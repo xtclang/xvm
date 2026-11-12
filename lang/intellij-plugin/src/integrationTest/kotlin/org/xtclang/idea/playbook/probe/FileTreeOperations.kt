@@ -2,10 +2,10 @@ package org.xtclang.idea.playbook.probe
 
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiManager
@@ -64,7 +64,9 @@ object FileTreeOperations {
                     "; sources=" +
                     files.joinToString { "${it.path}: ${it.children?.map { child -> child.name }}" }
             }
-            ApplicationManager.getApplication().invokeLater {
+            // once indexing has finished: during it, the platform asks whether to move without updating usages, and
+            // its modal question holds the event thread that indexing needs to finish
+            DumbService.getInstance(project).smartInvokeLater {
                 WriteIntentReadAction.run {
                     MoveHandler.doMove(project, elements, directory, context, null)
                 }
@@ -102,7 +104,8 @@ object FileTreeOperations {
                     .add(CommonDataKeys.VIRTUAL_FILE_ARRAY, arrayOf(file))
                     .add(CommonDataKeys.PSI_ELEMENT, psi)
                     .build()
-            ApplicationManager.getApplication().invokeLater {
+            // once indexing has finished, as a move is
+            DumbService.getInstance(project).smartInvokeLater {
                 WriteIntentReadAction.run {
                     val handler = RenameHandlerRegistry.getInstance().getRenameHandler(context)
                     check(handler is XtcFileRenameHandler) {
