@@ -31,6 +31,16 @@ class ServerJvmOptionsTest {
         }
     }
 
+    @Test fun `the server runs ZGC under a 1 GB soft limit unless the options choose a collector or a maximum heap`() {
+        val defaults = listOf("-XX:+UseZGC", "-XX:SoftMaxHeapSize=1G")
+        assertThat(ServerJvmOptions.defaults(emptyList())).isEqualTo(defaults)
+        assertThat(ServerJvmOptions.defaults(listOf("-Xms256M", "-Xss1M"))).isEqualTo(defaults)
+        assertThat(ServerJvmOptions.defaults(listOf("-Xmx4G"))).isEmpty()
+        assertThat(ServerJvmOptions.defaults(listOf("-XX:+UseG1GC"))).isEmpty()
+        assertThat(ServerJvmOptions.defaults(listOf("-XX:+UseZGC"))).isEmpty()
+        assertThat(ServerRuntimeSettings().launchArguments()).startsWith("-XX:+UseZGC", "-XX:SoftMaxHeapSize=1G")
+    }
+
     @Test fun `retention validates before publishing the immutable machine snapshot`() {
         val store = ServerRuntimeSettings()
         val before = store.state
@@ -38,7 +48,9 @@ class ServerJvmOptionsTest {
         assertThat(store.state).isEqualTo(before)
         val next = before.copy(vmOptions = "-Xmx1G", logHistoryDays = 2, logMaxFileMb = 1, logTotalSizeMb = 3, logRetainedSessions = 2)
         store.install(before, next)
-        assertThat(store.launchArguments()).contains("-Xmx1G", "-Dxtc.logs.historyDays=2", "-Dxtc.logs.totalSizeMb=3")
+        assertThat(store.launchArguments())
+            .contains("-Xmx1G", "-Dxtc.logs.historyDays=2", "-Dxtc.logs.totalSizeMb=3")
+            .doesNotContain("-XX:+UseZGC")
         assertThatThrownBy { store.install(before, before) }.hasMessageContaining("changed")
         assertThat(store.state).isEqualTo(next)
     }

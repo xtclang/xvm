@@ -675,6 +675,9 @@ Use machine-scoped User Settings `xtc.java.vmOptions` (e.g. `["-Xmx2G"]`) and
 `xtc.server.logs`. Workspace JSON cannot override these launch controls. Saving leaves the
 current server running; use **Ecstasy: Restart Language Server** to apply them.
 
+Without a collector or `-Xmx` in `xtc.java.vmOptions`, the server runs ZGC with a 1 GB soft heap limit
+(`-XX:+UseZGC -XX:SoftMaxHeapSize=1G`), which it grows past only as far as its live data needs.
+
 Retention defaults: 7 days, 10 MB/file, 50 MB archived per stream and five stopped-server sessions.
 Logs live under `~/.xtc/logs/lsp/server-<PID>-<start-time>/`; active files are additional to archive
 caps, active processes are protected and stopped sessions are pruned on the next server start.

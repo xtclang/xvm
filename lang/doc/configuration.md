@@ -47,13 +47,13 @@ entries start at lines 292 to 556. The three machine-scoped ones, `xtc.java.vmOp
 | Setting | Type, default | What it does | Reaches the server as | Read at |
 |---------|---------------|--------------|-----------------------|---------|
 | `xtc.compiler.sourceModules` | array or null, `null` | The compiler's source graph: `null` discovers the workspace's modules, `[]` turns discovery off, an array lists modules as `{name, uri, dependencies, resourceRoots}`. Window scope; applies without a restart. | `xtcCompiler.sourceModules` initialization option and the `xtc.compiler` section; changes are pushed with `workspace/didChangeConfiguration` | `vsc/rename-proposal.ts:53`, `vsc/lsp-client.ts:83`, `vsc/lsp-client.ts:94` |
-| `xtc.sourceRoots` | string array, `[]` | Extra directories of `.x` sources outside the workspace for the server to index. Machine-overridable; a change restarts the server. | `xtcSourceRoots` initialization option | `vsc/lsp-client.ts:164`, restart key `vsc/lsp-client.ts:37` |
+| `xtc.sourceRoots` | string array, `[]` | Extra directories of `.x` sources outside the workspace for the server to index. Machine-overridable; a change restarts the server. | `xtcSourceRoots` initialization option | `vsc/lsp-client.ts:165`, restart key `vsc/lsp-client.ts:37` |
 | `xtc.compiler.libraries` | object, `{"modulePath": null, "sourceAttachments": []}` | Binary libraries (`modulePath`; `null` inherits the Gradle model) and read-only source attachments (`[{module, roots}]`). The bundled XDK is always included. Window scope; applies without a restart. | `xtcCompiler.libraries` initialization option and the `xtc.compiler` section | `vsc/library-settings.ts:6`, `vsc/lsp-client.ts:83` |
 | `xtc.languageService.adapter` | `default`, `compiler` or `treesitter`; `default` | The server's backend. `default` keeps the one built into the server jar. A change restarts the server. | `-Dxtc.lsp.adapter=<value>`, left out for `default` | `vsc/editor-settings.ts:7`, `vsc/lsp-client.ts:133` |
 | `xtc.build.mode` | `auto`, `embedded` or `gradle`; `embedded` | How Build, Run and Rebuild work: the server's embedded compiler, Gradle, or Gradle when the folder has a Gradle build. Resource scope. | Not sent; a debug launch in Gradle mode carries `buildMode: "gradle"` (section 3.1) | `vsc/embedded-execution.ts:30`, `vsc/build-mode-selection.ts:40` |
-| `xtc.trace.server` | `off`, `messages` or `verbose`; `off` | Protocol tracing in the output channel. Read by `vscode-languageclient` for the client ID `xtc`. | `trace` in `initialize`, then `$/setTrace` | `vsc/lsp-client.ts:299`, `vsc/lsp-client.ts:399` |
-| `xtc.codeLens.references` | boolean, `true` | Reference-count lenses on declarations. Resource scope; applies immediately. | `xtc.codeLens` section, field `references` | `vsc/lsp-client.ts:227` |
-| `xtc.inlayHints.enabled` | boolean, `true` | Inlay hints. The client drops the request when off; the server is not told. | Not sent | `vsc/lsp-client.ts:203` |
+| `xtc.trace.server` | `off`, `messages` or `verbose`; `off` | Protocol tracing in the output channel. Read by `vscode-languageclient` for the client ID `xtc`. | `trace` in `initialize`, then `$/setTrace` | `vsc/lsp-client.ts:300`, `vsc/lsp-client.ts:400` |
+| `xtc.codeLens.references` | boolean, `true` | Reference-count lenses on declarations. Resource scope; applies immediately. | `xtc.codeLens` section, field `references` | `vsc/lsp-client.ts:228` |
+| `xtc.inlayHints.enabled` | boolean, `true` | Inlay hints. The client drops the request when off; the server is not told. | Not sent | `vsc/lsp-client.ts:204` |
 | `xtc.languageService.textSynchronization` | `full` or `incremental`; `full` | Whether edits are sent as whole documents or as changes. A change restarts the server. | `xtcDocumentSync.incremental` initialization option | `vsc/editor-settings.ts:8`, `vsc/service-settings.ts:32` |
 | `xtc.languageService.saveFormatting` | `editor` or `server`; `editor` | Who formats on save. Native `editor.formatOnSave` wins, so two formatters never run. A change restarts the server. | `xtcDocumentSync.formatOnSave` initialization option | `vsc/editor-settings.ts:9`, `vsc/service-settings.ts:33`, per-save check `vsc/editor-settings.ts:15` |
 | `xtc.formatting.indentSize` | integer 1 to 32, `4` | Spaces per indentation level. | `xtc.formatting` section | `vsc/editor-settings.ts:29` |
@@ -62,9 +62,9 @@ entries start at lines 292 to 556. The three machine-scoped ones, `xtc.java.vmOp
 | `xtc.formatting.insertSpaces` | boolean, `true` | Spaces instead of tabs. | `xtc.formatting` section | `vsc/editor-settings.ts:27` |
 | `xtc.formatting.maxLineWidth` | integer 1 to 1000, `120` | Target width for the compiler adapter's wrapping. | `xtc.formatting` section | `vsc/editor-settings.ts:29` |
 | `xtc.java.home` | string, `""` | The Java 25+ installation that runs the server. Empty: `jdk-utils` discovery (`JAVA_HOME`, `PATH`, SDKMAN and others), then a JRE downloaded earlier, then a download from Adoptium. A path without `bin/java` is an error. A change restarts the server. | The `java` executable of the command line | `vsc/java.ts:54`, order `vsc/java.ts:22` |
-| `xtc.java.vmOptions` | string array, `[]` | JVM options, one per item: `-Xms`, `-Xmx`, `-Xss`, `-XX:MaxMetaspaceSize=`, `-XX:ReservedCodeCacheSize=` (K, M or G), `-XX:ActiveProcessorCount=`, `-XX:+UseG1GC`, `UseSerialGC`, `UseParallelGC`, `UseZGC`. Anything else is rejected. Machine scope. | JVM options | `vsc/runtime-settings.ts:27`, validation `vsc/runtime-settings.ts:4` |
-| `xtc.server.compileLibraries` | boolean, `true` | Compile an opened XDK source with its whole library, so that navigation works for every name in it. Needs a server heap of about 1 GB. Machine scope. | `-Dxtc.lsp.compileLibraries=<value>` | `vsc/runtime-settings.ts:49` |
-| `xtc.server.logs` | object, `{"historyDays": 7, "maxFileMb": 10, "totalSizeMb": 50, "retainedSessions": 5}` | Server log retention (section 4). Ranges: days 1 to 90, file MB 1 to 100, archive MB from the file MB to 1000, sessions 1 to 20. Machine scope. | `-Dxtc.logs.historyDays`, `-Dxtc.logs.maxFileMb`, `-Dxtc.logs.totalSizeMb`, `-Dxtc.logs.retainedSessions` | `vsc/runtime-settings.ts:42`, `vsc/runtime-settings.ts:45` |
+| `xtc.java.vmOptions` | string array, `[]` | JVM options, one per item: `-Xms`, `-Xmx`, `-Xss`, `-XX:MaxMetaspaceSize=`, `-XX:ReservedCodeCacheSize=` (K, M or G), `-XX:ActiveProcessorCount=`, `-XX:+UseG1GC`, `UseSerialGC`, `UseParallelGC`, `UseZGC`. Anything else is rejected. Without a collector or `-Xmx` among them, the server runs `-XX:+UseZGC -XX:SoftMaxHeapSize=1G`: ZGC keeps the heap near 1 GB and grows past it only as far as the live data needs. Machine scope. | JVM options | `vsc/runtime-settings.ts:37`, validation `vsc/runtime-settings.ts:4`, default `vsc/runtime-settings.ts:31` |
+| `xtc.server.compileLibraries` | boolean, `true` | Compile an opened XDK source with its whole library, so that navigation works for every name in it. Needs a server heap of about 1 GB. Machine scope. | `-Dxtc.lsp.compileLibraries=<value>` | `vsc/runtime-settings.ts:59` |
+| `xtc.server.logs` | object, `{"historyDays": 7, "maxFileMb": 10, "totalSizeMb": 50, "retainedSessions": 5}` | Server log retention (section 4). Ranges: days 1 to 90, file MB 1 to 100, archive MB from the file MB to 1000, sessions 1 to 20. Machine scope. | `-Dxtc.logs.historyDays`, `-Dxtc.logs.maxFileMb`, `-Dxtc.logs.totalSizeMb`, `-Dxtc.logs.retainedSessions` | `vsc/runtime-settings.ts:52`, `vsc/runtime-settings.ts:55` |
 
 `package.json` also sets editor defaults for `[xtc]` files in `configurationDefaults`, such as
 `editor.tabSize` 4 and `editor.formatOnType` true; those are VS Code's own settings.
@@ -81,7 +81,7 @@ running servers. The server runs on IntelliJ's bundled Java runtime.
 
 | Field | Type, default | Reaches the server as | Read at |
 |-------|---------------|-----------------------|---------|
-| JVM options (`vmOptions`) | text, one option per line, `""`; the same options as VS Code's `xtc.java.vmOptions` | JVM options | `idea/lsp/ServerRuntimeSettings.kt:21`, validation `idea/lsp/ServerJvmOptions.kt:8` |
+| JVM options (`vmOptions`) | text, one option per line, `""`; the same options and the same default as VS Code's `xtc.java.vmOptions` | JVM options | `idea/lsp/ServerRuntimeSettings.kt:21`, validation `idea/lsp/ServerJvmOptions.kt:17`, default `idea/lsp/ServerJvmOptions.kt:14` |
 | Log history (days) (`logHistoryDays`) | 1 to 90, `7` | `-Dxtc.logs.historyDays` | `idea/lsp/ServerRuntimeSettings.kt:22`, `:65` |
 | Each log file (MB) (`logMaxFileMb`) | 1 to 100, `10` | `-Dxtc.logs.maxFileMb` | `idea/lsp/ServerRuntimeSettings.kt:23`, `:66` |
 | Rolled archive cap per stream (MB) (`logTotalSizeMb`) | file MB to 1000, `50` | `-Dxtc.logs.totalSizeMb` | `idea/lsp/ServerRuntimeSettings.kt:24`, `:67` |
@@ -170,9 +170,9 @@ sessions are pruned at startup (`:161`).
 |--------|----------|---------|
 | `--enable-native-access=ALL-UNNAMED`, `-Dapple.awt.UIElement=true`, `-Djava.awt.headless=true` | VS Code | `vsc/java.ts:289` |
 | `-Dapple.awt.UIElement=true`, `-Djava.awt.headless=true` | IntelliJ | `idea/lsp/XtcLspServerSupportProvider.kt:163` |
-| `-agentlib:jdwp=...,address=5005` | VS Code, when the extension itself runs in debug mode | `vsc/lsp-client.ts:152` |
+| `-agentlib:jdwp=...,address=5005` | VS Code, when the extension itself runs in debug mode | `vsc/lsp-client.ts:153` |
 | Debug options | IntelliJ, from LSP4IJ's debug port setting | `idea/lsp/XtcLspServerSupportProvider.kt:151` |
-| Working directory | VS Code: the extension's directory; IntelliJ: the project's base path | `vsc/lsp-client.ts:147`, `idea/lsp/XtcLspServerSupportProvider.kt:180` |
+| Working directory | VS Code: the extension's directory; IntelliJ: the project's base path | `vsc/lsp-client.ts:148`, `idea/lsp/XtcLspServerSupportProvider.kt:180` |
 
 ### 2.2 JVM system properties
 
