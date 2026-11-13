@@ -32,12 +32,13 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.javajit.Builder;
 import org.xvm.javajit.annotations.JitFromNatural;
-import org.xvm.javajit.JitCtorDesc;
-import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitGenerated.Generator;
+
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitCtorDesc;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.NativeTypeSystem;
@@ -59,7 +60,7 @@ public class AugmentingBuilder extends CommonBuilder {
         super(typeSystem, art);
 
         this.model          = model;
-        this.isJitAnnotated = isAnnotated(model, CD_JitGenerated);
+        this.isJitGenerated = isAnnotated(model, CD_JitGenerated);
     }
 
     /**
@@ -71,7 +72,7 @@ public class AugmentingBuilder extends CommonBuilder {
      * A flag indicating whether the class represented by the model is annotated with the
      * {@link JitGenerated} annotation.
      */
-    public final boolean isJitAnnotated;
+    public final boolean isJitGenerated;
 
     /**
      * A cache of elements identified as being natively implemented.
@@ -352,17 +353,16 @@ public class AugmentingBuilder extends CommonBuilder {
      * @param element       the {@link ClassFileElement} to customize
      * @param classBuilder  the {@link ClassBuilder} to use to generate code
      */
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void processElement(ClassElement element, ClassBuilder classBuilder) {
-        if (isJitAnnotated) {
+        if (isJitGenerated) {
             if (isAnnotated(element, CD_JitFromNatural)) {
-                // the element is annotated with JitNatural, let the JIT compile it
+                // the element is annotated with JitFromNatural, let the JIT compile it
                 return;
             }
 
             Annotation generated = findAnnotation(element, CD_JitGenerated);
             if (generated != null) {
-                // element has a JitGenerated annotation, so execute its generator
+                // element has a JitGenerated annotation; execute its generator
                 ClassDesc genCD = getGeneratorClass(generated);
                 try {
                     var className   = genCD.packageName() + "." + genCD.displayName();
@@ -370,7 +370,7 @@ public class AugmentingBuilder extends CommonBuilder {
                     var constructor = clz.getDeclaredConstructor();
                     var generator   = constructor.newInstance();
                     generator.generate(this, element, classBuilder);
-                } catch (Exception e) {
+                } catch (ReflectiveOperationException e) {
                     throw new RuntimeException(e);
                 }
                 return;
@@ -458,7 +458,7 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected boolean isNativeField(String jitName) {
-        return nativeElements.computeIfAbsent(new NativeKey(jitName, true), k -> {
+        return nativeElements.computeIfAbsent(new NativeKey(jitName, null, true), k -> {
                     FieldModel fm = findField(jitName);
                     return isNativeElement(fm);
                 });
@@ -466,17 +466,15 @@ public class AugmentingBuilder extends CommonBuilder {
 
     /**
      * Determine whether the specified element is coded natively.
-     * <p>
-     * If the element is {@code null} it is not native.
-     * <p>
-     * If the element is annotated with {@link JitFromNatural} it is not native.
-     * <p>
-     * If the element is annotated with {@link JitGenerated} then the annotation's generator class
-     * is checked. If the generator class is {@link JitGenerated.NaturalCode}, then the element
-     * is not native, otherwise for all other generator classes the element is native.
-     * <p>
-     * Otherwise if the element is not {@code null} and has neither {@link JitFromNatural} nor
-     * {@link JitGenerated} annotations then it is native.
+     * <ul>
+     *   <li>If the element is {@code null} it is not native.
+     *   <li>If the element is annotated with {@link JitFromNatural} it is not native.
+     *   <li>If the element is annotated with {@link JitGenerated} then the annotation's generator
+     *       class is checked. If the generator class is {@link JitGenerated.NaturalCode}, then the
+     *       element is not native, otherwise for all other generator classes the element is native.
+     *   <li>Otherwise if the element is not {@code null} and has neither {@link JitFromNatural} nor
+     *       {@link JitGenerated} annotations then it is native.
+     * </ul>
      *
      * @param element  the {@link ClassFileElement} to test
      *
@@ -498,8 +496,7 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     /**
-     * @return the {@link Generator} class for the specified {@link JitGenerated}
-     * annotation.
+     * @return the {@link Generator} class for the specified {@link JitGenerated} annotation.
      */
     protected ClassDesc getGeneratorClass(Annotation annotation) {
         List<AnnotationElement> elements = annotation.elements();
@@ -523,8 +520,8 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     /**
-     * @return if the element is annotated with the specified annotation, then return it,
-     *         otherwise return {@code null}
+     * @return if the element is annotated with the specified annotation, then return it, otherwise
+     *         return {@code null}
      */
     public static Annotation findAnnotation(ClassFileElement element, ClassDesc annotation) {
         if (element instanceof AttributedElement attributedElement) {
@@ -548,9 +545,5 @@ public class AugmentingBuilder extends CommonBuilder {
     /**
      * The key used in the native element cache map {@link #nativeElements}.
      */
-    private record NativeKey(String jitName, ConstantDesc desc, boolean isField) {
-        private NativeKey(String jitName, boolean isField) {
-            this(jitName, null, isField);
-        }
-    }
+    private record NativeKey(String jitName, ConstantDesc desc, boolean isField) {}
 }
