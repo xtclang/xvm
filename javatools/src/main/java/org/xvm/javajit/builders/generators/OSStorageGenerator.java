@@ -2,6 +2,7 @@ package org.xvm.javajit.builders.generators;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.MethodModel;
+
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
@@ -10,11 +11,12 @@ import org.xvm.javajit.builders.AugmentingBuilder;
 
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
+
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.md;
 
 /**
- * The {@link JitGenerated.Generator} implementation for the {@code ecstasy.fs.OSStorage} type.
+ * The {@link JitGenerated.Generator} implementation for native {@code ecstasy.fs.OSStorage} class.
  */
 public class OSStorageGenerator
         implements JitGenerated.Generator<MethodModel> {

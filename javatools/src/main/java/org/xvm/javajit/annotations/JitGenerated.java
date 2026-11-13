@@ -6,7 +6,6 @@ import java.lang.annotation.RetentionPolicy;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
-import java.lang.classfile.ClassFileElement;
 
 import org.xvm.javajit.builders.AugmentingBuilder;
 
