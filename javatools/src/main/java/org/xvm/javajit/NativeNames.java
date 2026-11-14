@@ -70,35 +70,37 @@ public class NativeNames {
         reservedMethodName.put("numbers.Random/float32/0", "float32");
         reservedMethodName.put("numbers.Random/float64/0", "float64");
 
-        reservedMethodName.put("collections.Array/add/1",        "add");
-        reservedMethodName.put("collections.Array/addAll/1",     "addAll");
-        reservedMethodName.put("collections.Array/delete/1",     "delete");
-        reservedMethodName.put("collections.Array/elementAt/1",  "elementAt");
-        reservedMethodName.put("collections.Array/getElement/1", "getElement");
-        reservedMethodName.put("collections.Array/insert/2",     "insert");
-        reservedMethodName.put("collections.Array/insertAll/2",  "insertAll");
-        reservedMethodName.put("collections.Array/reify/1",      "reify");
-        reservedMethodName.put("collections.Array/removeAll/1",  "removeAll");
-        reservedMethodName.put("collections.Array/slice/1",      "slice");
+        reservedMethodName.put("collections.Array/add/1",                   "add");
+        reservedMethodName.put("collections.Array/addAll/1",                "addAll");
+        reservedMethodName.put("collections.Array/delete/1",                "delete");
+        reservedMethodName.put("collections.Array/elementAt/1",             "elementAt");
+        reservedMethodName.put("collections.Array/getElement/1",            "getElement");
+        reservedMethodName.put("collections.Array/insert/2",                "insert");
+        reservedMethodName.put("collections.Array/insertAll/2",             "insertAll");
+        reservedMethodName.put("collections.Array/makeImmutable/0",         "makeImmutable");
+        reservedMethodName.put("collections.Array/reify/1",                 "reify");
+        reservedMethodName.put("collections.Array/removeAll/1",             "removeAll");
+        reservedMethodName.put("collections.Array/slice/1",                 "slice");
         reservedMethodName.put("collections.Array.FreezableArray/freeze/1", "freeze");
-        reservedMethodName.put("collections.Collection/reify/0", "reify");
-        reservedMethodName.put("collections.Hashable/hashCode/2", "hashCode");
-        reservedMethodName.put("collections.HashCollector/compute/0", "compute");
-        reservedMethodName.put("collections.HashCollector/reset/0",   "reset");
-        reservedMethodName.put("collections.Tuple/add/2",         "add");
-        reservedMethodName.put("collections.Tuple/addAll/1",      "addAll");
-        reservedMethodName.put("collections.Tuple/elementAt/1",   "elementAt");
-        reservedMethodName.put("collections.Tuple/equals/2",      "equals");
-        reservedMethodName.put("collections.Tuple/freeze/1",      "freeze");
-        reservedMethodName.put("collections.Tuple/getElement/1",  "getElement");
-        reservedMethodName.put("collections.Tuple/remove/1",      "remove");
-        reservedMethodName.put("collections.Tuple/removeAll/1",   "removeAll");
-        reservedMethodName.put("collections.Tuple/replace/2",     "replace");
-        reservedMethodName.put("collections.Tuple/slice/1",       "slice");
+        reservedMethodName.put("collections.Collection/reify/0",            "reify");
+        reservedMethodName.put("collections.Hashable/hashCode/2",           "hashCode");
+        reservedMethodName.put("collections.HashCollector/compute/0",        "compute");
+        reservedMethodName.put("collections.HashCollector/reset/0",          "reset");
+        reservedMethodName.put("collections.Tuple/add/2",                    "add");
+        reservedMethodName.put("collections.Tuple/addAll/1",                 "addAll");
+        reservedMethodName.put("collections.Tuple/elementAt/1",              "elementAt");
+        reservedMethodName.put("collections.Tuple/equals/2",                 "equals");
+        reservedMethodName.put("collections.Tuple/freeze/1",                 "freeze");
+        reservedMethodName.put("collections.Tuple/getElement/1",             "getElement");
+        reservedMethodName.put("collections.Tuple/remove/1",                 "remove");
+        reservedMethodName.put("collections.Tuple/removeAll/1",              "removeAll");
+        reservedMethodName.put("collections.Tuple/replace/2",                "replace");
+        reservedMethodName.put("collections.Tuple/slice/1",                  "slice");
+        reservedMethodName.put("collections.UniformIndexed/getElement/1",    "getElement");
 
-        reservedMethodName.put("collections.UniformIndexed/getElement/1", "getElement");
-        reservedMethodName.put("Range/getElement/1",       "getElement");
-        reservedMethodName.put("text.String/getElement/1", "getElement");
+        reservedMethodName.put("Range/getElement/1",                         "getElement");
+        reservedMethodName.put("text.Destringable/construct/1",              "construct");
+        reservedMethodName.put("text.String/getElement/1",                   "getElement");
 
         reservedMethodName.put("numbers.Number/toInt8/2",    "toInt8$FP");
         reservedMethodName.put("numbers.Number/toInt16/2",   "toInt16$FP");
@@ -175,19 +177,18 @@ public class NativeNames {
 
         // JavaTools Bridge _native types
 
-        reservedMethodName.put("fs.OSStorage/createDir/1",    "createDir");
-        reservedMethodName.put("fs.OSStorage/createFile/1",   "createFile");
-        reservedMethodName.put("fs.OSStorage/delete/1",       "delete");
-        reservedMethodName.put("fs.OSStorage/find/2",         "find");
-        reservedMethodName.put("fs.OSFileStore/dirFor/1",     "dirFor");
-        reservedMethodName.put("fs.OSFileStore/fileFor/1",    "fileFor");
-        reservedMethodName.put("fs.OSStorage/instance/0",     "instance");
-        reservedMethodName.put("fs.OSStorage/names/1",        "names");
-        reservedMethodName.put("fs.OSStorage/unwatch/1",      "unwatch");
-        reservedMethodName.put("fs.OSStorage/watch/1",        "watch");
-        reservedMethodName.put("fs.OSFileStore/copyOrMove/5", "copyOrMove");
-        reservedMethodName.put("fs.OSFileStore/linkAsFile/1", "linkAsFile");
-
+        reservedMethodName.put("fs.OSStorage/createDir/1",          "createDir");
+        reservedMethodName.put("fs.OSStorage/createFile/1",         "createFile");
+        reservedMethodName.put("fs.OSStorage/delete/1",             "delete");
+        reservedMethodName.put("fs.OSStorage/find/2",               "find");
+        reservedMethodName.put("fs.OSFileStore/dirFor/1",           "dirFor");
+        reservedMethodName.put("fs.OSFileStore/fileFor/1",          "fileFor");
+        reservedMethodName.put("fs.OSStorage/instance/0",           "instance");
+        reservedMethodName.put("fs.OSStorage/names/1",              "names");
+        reservedMethodName.put("fs.OSStorage/unwatch/1",            "unwatch");
+        reservedMethodName.put("fs.OSStorage/watch/1",              "watch");
+        reservedMethodName.put("fs.OSFileStore/copyOrMove/5",       "copyOrMove");
+        reservedMethodName.put("fs.OSFileStore/linkAsFile/1",       "linkAsFile");
         reservedMethodName.put("fs.OSDirectory/dirs/0",             "dirs");
         reservedMethodName.put("fs.OSDirectory/files/0",            "files");
         reservedMethodName.put("fs.OSDirectory/filesRecursively/0", "filesRecursively");
