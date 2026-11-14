@@ -152,12 +152,15 @@ public abstract class OpCallable extends Op {
     public String toString() {
         return super.toString() + ' ' + getFunctionString() + '(' + getParamsString() + ") -> " + getReturnsString();
     }
+
     protected String getFunctionString() {
         return Argument.toIdString(m_argFunction, m_nFunctionId);
     }
+
     protected String getParamsString() {
         return "";
     }
+
     protected static String getParamsString(int[] anArgValue, Argument[] aArgValue) {
         StringBuilder sb = new StringBuilder();
         int cArgNums = anArgValue == null ? 0 : anArgValue.length;
@@ -171,6 +174,7 @@ public abstract class OpCallable extends Op {
         }
         return sb.toString();
     }
+
     protected String getReturnsString() {
         if (m_anRetValue != null || m_aArgReturn != null) {
             // multi-return
@@ -193,6 +197,13 @@ public abstract class OpCallable extends Op {
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * @return the encoded function argument id
+     */
+    public int getFunctionId() {
+        return m_nFunctionId;
+    }
 
     /**
      * This Op holds a constant for the constructor of a child of the compile-time parent.

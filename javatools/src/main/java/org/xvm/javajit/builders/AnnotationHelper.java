@@ -37,7 +37,6 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.RegisterInfo;
 
 import static org.xvm.javajit.Builder.CD_CtorCtx;
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.TypeSystem.AT;
 
@@ -453,16 +452,18 @@ public class AnnotationHelper {
                 continue;
             }
 
-            if (jmd.hasCtorCtx() && cctxSlot < 0) {
-                cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
-                code.aload(ctxSlot)
-                    .invokevirtual(CD_Ctx, "ctorCtx", Builder.md(CD_CtorCtx))
-                    .astore(cctxSlot);
+            int chainedCctxSlot = -1;
+            if (jmd.hasCtorCtx()) {
+                assert cctxSlot >= 0;
+                chainedCctxSlot = code.allocateLocal(TypeKind.REFERENCE);
+                code.aload(cctxSlot)
+                    .invokevirtual(CD_CtorCtx, "addChain", Builder.md(CD_CtorCtx))
+                    .astore(chainedCctxSlot);
             }
 
             code.aload(ctxSlot);
             if (jmd.hasCtorCtx()) {
-                code.aload(cctxSlot);
+                code.aload(chainedCctxSlot);
             }
             code.aload(thisSlot);
             if (constructor.isConstructionSite()) {

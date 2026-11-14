@@ -7,6 +7,7 @@ package annoTests {
         testIntoClass();
         testIntoChild();
         testIntoInheritedChild();
+        testChildConstructorFinalizers();
         testNestedChildDispatch();
         testIntoInterface();
         testIntoException();
@@ -46,62 +47,55 @@ package annoTests {
         console.reset();
 
         Int age = 26;
-        val p1  = new Named("Jane");
-        val p2  = new @Aged(age + 1) Named("Joe");
-        val p3  = new @Aged(age) @Skilled("Java") Named("Jon");
-        val p4  = new @Skilled("Ecstasy") @Aged(21) Named("Joanne");
 
-//      TODO: this is the ultimate target - with finalizers
-//        assert console.output() == \|construct name Jane
-//                                    |assert name Jane
-//                                    |finally name Jane
-//                                    |construct aged 27
-//                                    |construct name Joe
-//                                    |assert aged 27
-//                                    |assert name Joe
-//                                    |finally aged 27
-//                                    |finally name Joe
-//                                    |construct aged 26
-//                                    |construct skill Java
-//                                    |construct name Jon
-//                                    |assert aged 26
-//                                    |assert skill Java
-//                                    |assert name Jon
-//                                    |finally aged 26
-//                                    |finally skill Java
-//                                    |finally name Jon
-//                                    |construct skill Ecstasy
-//                                    |construct aged 21
-//                                    |construct name Joanne
-//                                    |assert skill Ecstasy
-//                                    |assert aged 21
-//                                    |assert name Joanne
-//                                    |finally skill Ecstasy
-//                                    |finally aged 21
-//                                    |finally name Joanne
-//                                    |
-//                                    ;
+        // finalizers follow all validators, in annotation order and then the class
+        val p1 = new Named("Jane");
         assert console.output() == \|construct name Jane
                                     |assert name Jane
-                                    |construct aged 27
+                                    |finally name Jane
+                                    |
+                                    ;
+
+        console.reset();
+        val p2 = new @Aged(age + 1) Named("Joe");
+        assert console.output() == \|construct aged 27
                                     |construct name Joe
                                     |assert aged 27
                                     |assert name Joe
-                                    |construct aged 26
+                                    |finally aged 27
+                                    |finally name Joe
+                                    |
+                                    ;
+
+        console.reset();
+        val p3 = new @Aged(age) @Skilled("Java") Named("Jon");
+        assert console.output() == \|construct aged 26
                                     |construct skill Java
                                     |construct name Jon
                                     |assert aged 26
                                     |assert skill Java
                                     |assert name Jon
-                                    |construct skill Ecstasy
+                                    |finally aged 26
+                                    |finally skill Java
+                                    |finally name Jon
+                                    |
+                                    ;
+
+        console.reset();
+        val p4 = new @Skilled("Ecstasy") @Aged(21) Named("Joanne");
+        assert console.output() == \|construct skill Ecstasy
                                     |construct aged 21
                                     |construct name Joanne
                                     |assert skill Ecstasy
                                     |assert aged 21
                                     |assert name Joanne
+                                    |finally skill Ecstasy
+                                    |finally aged 21
+                                    |finally name Joanne
                                     |
                                     ;
 
+        console.reset();
         Boolean rejected = False;
         try {
             new @Aged(-1) Named("Joe");
@@ -109,6 +103,7 @@ package annoTests {
             rejected = True;
         }
         assert rejected;
+        assert console.output() == "construct aged -1\nconstruct name Joe\n";
 
         assert asNamed(p4).name == "Joanne";
         assert asSkilled(p4).skill == "Ecstasy";
@@ -118,25 +113,33 @@ package annoTests {
         Skilled asSkilled(Object value) = value.as(Skilled);
         Aged asAged(Object value) = value.as(Aged);
 
+        console.reset();
         rejected = False;
         try {
-            new @Skilled("Ecstasy") @Aged(21) Named("");
+            new @Skilled("Ecstasy") @Aged(21) Named("?");
         } catch (IllegalState e) {
             rejected = True;
         }
         assert rejected;
+        assert console.output() == \|construct skill Ecstasy
+                                    |construct aged 21
+                                    |construct name ?
+                                    |assert skill Ecstasy
+                                    |assert aged 21
+                                    |
+                                    ;
     }
 
     const Named {
         construct(String name) {
             console.print($"construct name {name}");
             this.name = name;
-//        } finally {
-//            console.print($"finally name {name}");
+        } finally {
+            console.print($"finally name {name}");
         }
 
         assert() {
-            assert name.size > 0;
+            assert name.size > 1;
             console.print($"assert name {name}");
         }
 
@@ -147,8 +150,8 @@ package annoTests {
         construct(Int age) {
             console.print($"construct aged {age}");
             this.age = age;
-//        } finally {
-//            console.print($"finally aged {age}");
+        } finally {
+            console.print($"finally aged {age}");
         }
 
         assert() {
@@ -163,8 +166,8 @@ package annoTests {
         construct(String skill) {
             console.print($"construct skill {skill}");
             this.skill = skill;
-//        } finally {
-//            console.print($"finally skill {skill}");
+        } finally {
+            console.print($"finally skill {skill}");
         }
 
         assert() {
@@ -372,6 +375,59 @@ package annoTests {
 
                 @Override
                 String describe() = $"derived:{tag}:{super()}";
+            }
+        }
+    }
+
+    void testChildConstructorFinalizers() {
+        console.reset();
+        new Base().new C1(3);
+        assert console.output() == \|base 3
+                                    |child 3
+                                    |
+                                    ;
+
+        console.reset();
+        new Derived().new C0(5);
+        assert console.output() == \|base 5
+                                    |derived ready 5
+                                    |
+                                    ;
+
+        class Base {
+            class C0 {
+                construct(Int value) {
+                    this.value = value;
+                } finally {
+                    assert this.value == value;
+                    console.print($"base {value}");
+                }
+
+                Int value;
+            }
+
+            class C1 extends C0 {
+                construct(Int value) {
+                    construct C0(value);
+                } finally {
+                    assert this.value == value;
+                    console.print($"child {value}");
+                }
+            }
+        }
+
+        class Derived extends Base {
+            @Override
+            class C0 {
+                construct(Int value) {
+                    construct Base.C0(value);
+                    tag = "ready";
+                } finally {
+                    assert this.value == value;
+                    console.print($"derived {tag} {value}");
+                }
+
+                String tag = "unset";
             }
         }
     }
@@ -729,18 +785,34 @@ package annoTests {
     }
 
     void testOptimizedConstructors() {
+        console.reset();
+
         Int128 wide = 123;
         Int? marker = 17;
 
         val explicit = new @Count(4, marker) Counter(9, wide);
+        assert console.output() == \|finally Count
+                                    |finally Counter
+                                    |
+                                    ;
         assert explicit.seed == 9 && explicit.wide == wide;
         assert explicit.amount == 4 && explicit.marker == marker;
 
+        console.reset();
         val defaults = new @Count Counter();
+        assert console.output() == \|finally Count
+                                    |finally Counter
+                                    |
+                                    ;
         assert defaults.seed == 3 && defaults.wide == 0;
         assert defaults.amount == 5 && defaults.marker == Null;
 
+        console.reset();
         val chained = new @Ignored(wide) @Count(8, Null) Counter(2, wide);
+        assert console.output() == \|finally Count
+                                    |finally Counter
+                                    |
+                                    ;
         assert chained.seed == 2 && chained.wide == wide;
         assert chained.amount == 8 && chained.marker == Null;
 
@@ -748,6 +820,9 @@ package annoTests {
             construct(Int seed = 3, Int128 wide = 0) {
                 this.seed = seed;
                 this.wide = wide;
+            } finally {
+                assert seed == this.seed && wide == this.wide;
+                console.print("finally Counter");
             }
 
             Int seed;
@@ -758,6 +833,9 @@ package annoTests {
             construct(Int amount = 5, Int? marker = Null) {
                 this.amount = amount;
                 this.marker = marker;
+            } finally {
+                assert amount == this.amount && marker == this.marker;
+                console.print("finally Count");
             }
 
             Int amount;

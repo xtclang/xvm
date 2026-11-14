@@ -1272,6 +1272,53 @@ public class MethodStructure
     }
 
     /**
+     * @return true iff this constructor or a constructor it invokes has a finalizer
+     */
+    public boolean hasConstructorFinalizers() {
+        assert isConstructor();
+        return hasConstructorFinalizers(new HashSet<>());
+    }
+
+    /**
+     * @return true iff this constructor or any constructor it invokes has a finalizer (recursively)
+     */
+    private boolean hasConstructorFinalizers(Set<MethodConstant> setVisited) {
+        // constructor cycles are not expected; this guard is simply defensive
+        if (!setVisited.add(getIdentityConstant())) {
+            return false;
+        }
+
+        if (getConstructFinally() != null) {
+            return true;
+        }
+
+        if (hasCode()) {
+            Constant[] aconst = getLocalConstants();
+            for (Op op : getOps()) {
+                op = op.ensureOp();
+
+                switch (op.getOpCode()) {
+                    case Op.OP_CONSTR_0, Op.OP_CONSTR_1, Op.OP_CONSTR_N, Op.OP_CONSTR_T:
+                        int nCtorId = ((OpCallable) op).getFunctionId();
+                        assert nCtorId <= Op.CONSTANT_OFFSET;
+
+                        MethodConstant  idCtor = (MethodConstant) aconst[Op.CONSTANT_OFFSET - nCtorId];
+                        MethodStructure ctor   = (MethodStructure) idCtor.getComponent();
+
+                        if (ctor.hasConstructorFinalizers(setVisited)) {
+                            return true;
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * @return true iff this method has code
      */
     public boolean hasCode() {

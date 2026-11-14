@@ -9,8 +9,8 @@ import java.util.List;
 
 import java.util.stream.IntStream;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -280,7 +280,7 @@ public class JitMethodDesc {
     public static int flagsFor(MethodStructure method) {
         if ((method.isConstructor() || method.isValidator()) && !method.isPropertyInitializer()) {
             int flags = JMD_CONSTRUCTOR;
-            if (method.isConstructor() && method.getConstructFinally() != null) {
+            if (method.isConstructor() && method.hasConstructorFinalizers()) {
                 flags |= JMD_FINALIZER;
             }
             return flags;

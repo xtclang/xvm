@@ -4,6 +4,11 @@ import java.lang.invoke.MethodHandle;
 
 import java.lang.constant.MethodTypeDesc;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+
 import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
@@ -124,7 +129,40 @@ public final class Ctx {
      * The constructor context is required if a “finally” chain exists.
      */
     public static class CtorCtx {
-        // TODO CP:
+        private final Deque<Runnable> finalizers  = new ArrayDeque<>();
+        private final List<CtorCtx>   annotations = new ArrayList<>();
+
+        /**
+         * Add a finalizer with its constructor's receiver and arguments captured.
+         */
+        public void push(Runnable finalizer) {
+            finalizers.push(finalizer);
+        }
+
+        /**
+         * @return a new annotation constructor chain, preceding this class's finalizers
+         *
+         * @see org.xvm.javajit.builders.AnnotationHelper#invokeAnnotationConstructors
+         */
+        public CtorCtx addChain() {
+            CtorCtx chain = new CtorCtx();
+            annotations.add(chain);
+            return chain;
+        }
+
+        /**
+         * Run annotation chains in construction order, followed by the class chain. Each chain
+         * runs in reverse constructor invocation order. A failing finalizer prevents the remaining
+         * finalizers from running.
+         */
+        public void run() {
+            for (CtorCtx annotation : annotations) {
+                annotation.run();
+            }
+            while (!finalizers.isEmpty()) {
+                finalizers.pop().run();
+            }
+        }
     }
 
     // ----- Container and Service support ---------------------------------------------------------

@@ -4602,8 +4602,8 @@ public class CommonBuilder
      *    // step 5: annotation constructors are called
      *
      *    // step 6: the constructor gets called
-     *    // - we do NOT have to save off the arguments for the `finally()` call
-     *    //   in the constructor context because we have the arguments right here
+     *    // - each constructor captures its finalizer's receiver and arguments in cctx
+     *    //   before executing its body or calling another constructor
      *    // note: cctx argument is optional
      *    construct$17(ctx, cctx, thi$, x, y, z);
      *
@@ -4628,39 +4628,31 @@ public class CommonBuilder
      *    // step 9: post construction work e.g. const freezing
      *    //    TODO GG define
      *
-     *    // step 10: any `finally {...}` methods corresponding to constructors
-     *    // from #3 and #4 are executed, in reverse order of what the constructors
-     *    // were called in
-     *    // note: cctx argument is optional
-     *    finally$17(ctx, cctx, thi$, x, y, z);
+     *    // step 10: annotation finalizer chains run in annotation construction order,
+     *    // followed by the class chain; each chain runs in reverse constructor invocation order
+     *    // - cctx is absent if no constructor in these chains has a finalizer
+     *    cctx.run();
      * }
      *
      * // assuming C extends B and B has a finally that takes some (P p, Q q):
-     * public static construct$17(CtorCtx cctx, C thi$, X x, Y y, Z z) {
-     *    // user logic before the `construct B(p,q);`
+     * public static void construct$17(Ctx ctx, CtorCtx cctx, C thi$, X x, Y y, Z z) {
+     *    cctx.push(() -> thi$.finally$17(ctx, x, y, z));
+     *
+     *    // user logic before the `construct B(p, q);`
      *    P p;
      *    Q q;
      *    // ...
      *
-     *    // this is the translation of the call to `construct B(p,q);`
-     *    cctx.push(p);
-     *    cctx.push(q);
-     *    B.construct$17(cctx, thi$, p, q);
+     *    // this is the translation of the call to `construct B(p, q);`
+     *    // B captures its own finalizer and arguments in the same context
+     *    B.construct$17(ctx, cctx, thi$, p, q);
      *
-     *    // user logic after the `construct B(p,q);`
+     *    // user logic after the `construct B(p, q);`
      *    // ...
      * }
      *
-     * public static finally$17(CtorCtx cctx, C thi$, X x, Y y, Z z) {
-     *    // run the `finally` on B before running the `finally` on D
-     *    // (we saved off the args in the constructor .. it's basically
-     *    // a hand-rolled closure)
-     *    {
-     *    Q q = cctx.pop();
-     *    P p = cctx.pop();
-     *    B.finally$17(cctx, thi$, p, q);
-     *    }
-     *
+     * public void finally$17(Ctx ctx, X x, Y y, Z z) {
+     *    // CtorCtx has already run B's captured finalizer before invoking this body
      *    // user logic from C.finally goes here
      *    // ...
      * }
@@ -4764,8 +4756,12 @@ public class CommonBuilder
 
             TypeConstant ownerType  = hasConstructionSiteAnnotations() ? annotated.getBaseType() : thisType;
             JitCtorDesc  ctorDesc   = (JitCtorDesc) constructor.getJitDesc(this, ownerType);
-            boolean      hasCtorCtx = ctorDesc.hasCtorCtx();
-            int          cctxSlot   = -1;
+            boolean      hasCtorCtx = ctorDesc.hasCtorCtx() ||
+                                        annotationConstructors != null &&
+                                        annotationConstructors.stream().
+                                                anyMatch(ctor -> ctor.desc().hasCtorCtx());
+
+            int cctxSlot = -1;
             if (hasCtorCtx) {
                 cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
                 if (debugInfo) {
@@ -4851,7 +4847,13 @@ public class CommonBuilder
                 }
             }
 
-            // steps 8, 9, 10: TODO
+            // steps 8, 9: TODO
+
+            // step 10: run captured annotation and class finalizers on the completed object
+            if (cctxSlot >= 0) {
+                code.aload(cctxSlot)
+                    .invokevirtual(CD_CtorCtx, "run", md(CD_void));
+            }
 
             code.labelBinding(endScope)
                 .aload(thisSlot)
@@ -5068,8 +5070,11 @@ public class CommonBuilder
                 // TODO: conditional ListMapIndex super calls and MapFreezer
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin
+        Map.entry("org.xtclang.ecstasy.maps.HasherMap",
+            Set.of("finally")), // TODO: &hasher lookup in the constructor finalizer
         Map.entry("org.xtclang.ecstasy.Timeout",
-            Set.of("construct")), // TODO: invokes nService with invokeinterface although nService is a Java class
+            Set.of("construct", "finally")),
+                // TODO: invokes nService with invokeinterface although nService is a Java class
         Map.entry("org.xtclang.ecstasy.io.Channel",
                 Set.of("write")), // TODO: Future support
         Map.entry("org.xtclang._native.fs.OSStorage",
