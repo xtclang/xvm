@@ -35,7 +35,7 @@ slf4j = "2.0.20"
 download = "5.7.0"
 foojay-resolver = "1.0.0"
 gradle-portal-publish = "2.2.1"
-palantir-git-version = "5.1.0"
+palantir-git-version = "5.2.0"
 spotless = "8.11.0"
 vanniktech-maven-publish = "0.37.0"
 
@@ -82,7 +82,7 @@ lang-node-gradle-plugin = "7.1.0"
 # Lang tooling - IntelliJ plugin
 # =============================================================================
 lang-intellij-ide = "2026.1"
-lang-intellij-platform-gradle-plugin = "2.19.0"
+lang-intellij-platform-gradle-plugin = "2.20.1"
 # JUnit 4.x is required at RUNTIME by the IntelliJ Platform test harness
 # (com.intellij.testFramework). IntelliJ's test infrastructure internally depends on JUnit 4
 # runners and rules, even when tests themselves are written with JUnit 5/Jupiter. Without this
@@ -99,7 +99,7 @@ lang-intellij-lsp4ij = "0.19.4"
 apache-commons-compress = "1.28.0"
 # jtreesitter 0.26.x requires Java 23+ (FFM API)
 # The LSP server runs OUT-OF-PROCESS for classloader isolation (avoids lsp4j conflicts with LSP4IJ).
-lang-jtreesitter = "0.26.1"
+lang-jtreesitter = "0.27.0"
 # tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
 lang-tree-sitter-cli = "0.26.13"
 tukaani-xz = "1.12"
@@ -112,7 +112,7 @@ lang-zig = "0.15.2"
 # Not a project dependency. The IntelliJ Platform and node-gradle Gradle plugins put
 # vulnerable Jackson versions on their build script classpaths, and both are already
 # at their latest release. The Jackson BOM raises that floor without pinning.
-lang-jackson = "2.22.4"
+lang-jackson = "2.23.0"
 
 [plugins]
 
