@@ -233,7 +233,7 @@ public class BuildContext {
         this.methodStruct    = body.getMethodStructure();
         this.callDepth       = callDepth;
         this.methodDesc      = bctx.methodDesc instanceof JitDetachedBodyDesc detached
-                ? new JitDetachedBodyDesc(jmd, detached.receiverCD) : jmd;
+                                    ? jmd.asDetached(detached.receiverCD) : jmd;
         this.methodJitName   = jitName;
         this.isStatic        = bctx.isStatic;
         this.isConstructor   = bctx.isConstructor;
@@ -3649,7 +3649,7 @@ public class BuildContext {
         if (methodDesc instanceof JitDetachedBodyDesc detached &&
                 !body.getMethodStructure().isStatic()) {
             // nested methods must accept the same interface receiver as their enclosing body
-            jmd     = new JitDetachedBodyDesc(jmd, detached.receiverCD);
+            jmd     = jmd.asDetached(detached.receiverCD);
             jitName = DetachedBody + jitName;
         }
         deferAssembly(new BuildContext(this, jitName, body, jmd));

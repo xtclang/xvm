@@ -824,7 +824,7 @@ public abstract class OpCallable extends Op {
 
             boolean fTuple = isTupleReturn();
             if (fTuple) {
-                jmdCall = jmdCall.standardOnly();
+                jmdCall = jmdCall.asStandardOnly();
             }
 
             int[] anRet = isMultiReturn()
@@ -888,7 +888,7 @@ public abstract class OpCallable extends Op {
         }
 
         if (isTupleReturn()) {
-            jmdCall = jmdCall.standardOnly();
+            jmdCall = jmdCall.asStandardOnly();
         }
 
         MethodTypeDesc mdCall;

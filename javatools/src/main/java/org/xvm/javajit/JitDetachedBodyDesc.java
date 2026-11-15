@@ -28,11 +28,7 @@ public class JitDetachedBodyDesc extends JitMethodDesc {
      * @param method      the logical Ecstasy instance-method descriptor
      * @param receiverCD  the leading receiver of the detached body
      */
-    public JitDetachedBodyDesc(JitMethodDesc method, ClassDesc receiverCD) {
-        this(method, receiverCD, false);
-    }
-
-    private JitDetachedBodyDesc(JitMethodDesc method, ClassDesc receiverCD, boolean isStatic) {
+    protected JitDetachedBodyDesc(JitMethodDesc method, ClassDesc receiverCD, boolean isStatic) {
         this.receiverCD = receiverCD;
         super(method.typeTarget, method.standardReturns, method.standardParams,
                 method.optimizedReturns, method.optimizedParams, isStatic);

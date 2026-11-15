@@ -502,7 +502,7 @@ public abstract class OpInvocable extends Op {
                 cdInvoke = bctx.builder.getCCDesc(typeInvoke);
                 fUnboxed = false;
             }
-            jmd = jmd.standardOnly();
+            jmd = jmd.asStandardOnly();
         }
 
         boolean fOptimized = jmd.isOptimized;

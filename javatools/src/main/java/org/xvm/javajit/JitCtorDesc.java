@@ -86,7 +86,7 @@ public class JitCtorDesc
     }
 
     @Override
-    public JitCtorDesc standardOnly() {
+    public JitCtorDesc asStandardOnly() {
         return isOptimized
                 ? new JitCtorDesc(typeTarget, targetCD, addCtorCtx, addType, addOuter,
                                   standardReturns, standardParams, null, null)
