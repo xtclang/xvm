@@ -119,11 +119,11 @@ To customise the launch, add a configuration to `.vscode/launch.json`:
 
 For any workspace folder containing a `build.gradle.kts`, the following tasks appear under **Terminal → Run Task…**:
 
-| Task     | Command            |
-|----------|--------------------|
-| Build    | `./gradlew build`  |
-| Test     | `./gradlew test`   |
-| Clean    | `./gradlew clean`  |
+| Task     | Command             |
+|----------|---------------------|
+| Build    | `./gradlew build`   |
+| Test     | `./gradlew testXtc` |
+| Clean    | `./gradlew clean`   |
 
 Custom run tasks can be added to `.vscode/tasks.json`:
 
