@@ -11,13 +11,42 @@
 // keystroke + completion-accept. The keystroke path involves a settle
 // race in @vscode/test-electron that's flaky on CI; the provider-level
 // query is deterministic.
+//
+// The query still polls: VS Code starts the extension host before it has
+// registered the extensions' contributes.snippets, so this suite can run
+// while VS Code knows no xtc snippets yet, and the first query then
+// returns none (seen on CI with VS Code 1.146).
 
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 
 const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
+const SNIPPETS_TIMEOUT_MS = 10_000;
+const POLL_INTERVAL_MS = 250;
 
-suite('Snippet contributions', () => {
+async function waitForSnippets(uri: vscode.Uri, position: vscode.Position): Promise<vscode.CompletionItem[]> {
+    const deadline = Date.now() + SNIPPETS_TIMEOUT_MS;
+    let snippets: vscode.CompletionItem[] = [];
+    while (Date.now() < deadline) {
+        const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+            'vscode.executeCompletionItemProvider',
+            uri,
+            position,
+        );
+        assert.ok(list, 'executeCompletionItemProvider returned undefined');
+        snippets = list.items.filter(i => i.kind === vscode.CompletionItemKind.Snippet);
+        if (snippets.length > 0) {
+            return snippets;
+        }
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+    }
+    return snippets;
+}
+
+suite('Snippet contributions', function () {
+    // Mocha-level timeout: headroom over the SNIPPETS_TIMEOUT_MS poll.
+    this.timeout(20_000);
+
     suiteSetup(async () => {
         const ext = vscode.extensions.getExtension(PUBLISHER_AND_NAME);
         assert.ok(ext, `extension ${PUBLISHER_AND_NAME} not found`);
@@ -32,18 +61,11 @@ suite('Snippet contributions', () => {
         await vscode.window.showTextDocument(doc);
 
         const position = new vscode.Position(0, 3); // end of "mod"
-        const list = await vscode.commands.executeCommand<vscode.CompletionList>(
-            'vscode.executeCompletionItemProvider',
-            doc.uri,
-            position,
-        );
-        assert.ok(list, 'executeCompletionItemProvider returned undefined');
-
-        const snippets = list.items.filter(i => i.kind === vscode.CompletionItemKind.Snippet);
+        const snippets = await waitForSnippets(doc.uri, position);
         assert.ok(
             snippets.length > 0,
-            `no snippet-kind completions returned at "mod|" — package.json's contributes.snippets ` +
-                'mapping to snippets/xtc.json appears broken.',
+            `no snippet-kind completions returned at "mod|" within ${SNIPPETS_TIMEOUT_MS} ms — package.json's ` +
+                'contributes.snippets mapping to snippets/xtc.json appears broken.',
         );
 
         // The Module snippet's prefix is "mod"; the label VS Code shows is
