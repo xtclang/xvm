@@ -2922,8 +2922,6 @@ public class CommonBuilder
         }
         // the reason we need to generate "hashCode" for primitive types is to produce
         // non-predictable implementations
-        // TODO JK: consider implementing them natively via a Ctx-based facility, in which
-        //  case we can simplify the code production
         assembleConstHashCode(classBuilder);
     }
 
@@ -4611,8 +4609,7 @@ public class CommonBuilder
      *    // base classes, mixins, annotations -- of the composition)
      *    // - there is no assert method if this class has no assert() defined and
      *    //   none of its supers has an assert() defined
-     *    // - each calls its super first (TODO GG verify)
-     *    // - TODO GG define mixin and annotation assert() order
+     *    // - each calls its super first
      *    //   - depending on ordering requirements this could be a method (not a
      *    //     "static")
      *    $assert();
