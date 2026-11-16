@@ -315,7 +315,7 @@ Each workspace folder contributes tasks under **Terminal → Run Task…**, foll
 | Mode | Tasks |
 |------|-------|
 | Embedded | **Build** and **Rebuild**, run by the language server's compiler |
-| Gradle (folder has `build.gradle.kts`) | **Build** (`./gradlew build`), **Test** (`./gradlew test`), **Clean** (`./gradlew clean`) |
+| Gradle (folder has `build.gradle.kts`) | **Build** (`./gradlew build`), **Test** (`./gradlew testXtc`), **Clean** (`./gradlew clean`) |
 
 Custom run tasks can be added to `.vscode/tasks.json`:
 
