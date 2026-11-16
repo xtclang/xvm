@@ -64,7 +64,7 @@ class XdkLibrariesTest {
     }
 
     @Test
-    fun `bundled library source is navigable read only and cannot be renamed or replaced`() {
+    fun `bundled library source is navigable read only and cannot be renamed or replaced by a binary`() {
         val uri = directory.resolve("App.x").toUri().toString()
         val source =
             "module App { package xml import xml.xtclang.org; void accept(xml.Document doc) {} }"
@@ -93,7 +93,9 @@ class XdkLibrariesTest {
                 ),
             ).isEmpty()
         }
-        assertThatThrownBy { XdkSourceModule("xml.xtclang.org", uri) }
+        // A source module of a bundled library's name replaces it (XdkLibraryReplacement); only the
+        // bootstrap modules' names are refused
+        assertThatThrownBy { XdkSourceModule("mack.xtclang.org", uri) }
             .isInstanceOf(IllegalArgumentException::class.java)
         val binary =
             checkNotNull(javaClass.getResourceAsStream("/org/xvm/lsp/xdk/xml.xtc")).use {
