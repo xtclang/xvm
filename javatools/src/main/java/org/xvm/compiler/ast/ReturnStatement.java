@@ -326,6 +326,9 @@ public class ReturnStatement
                 // return only as many as the caller expects
                 Expression expr   = listExprs.get(0);
                 boolean    fCheck = fConditional && !expr.isConditionalResult();
+                // TODO: if the expr is InvocationExpression then
+                // Assignable[] ass = new Assignable[expr.getValueCount()];
+                // expr.generateAssignments();
                 Argument[] aArgs  = expr.generateArguments(ctx, code, true, errs);
                 int        cArgs  = aArgs.length;
 
