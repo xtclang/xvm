@@ -196,8 +196,6 @@ module TestInnerOuter {
     }
 
     void testVirtualChildConstructorCache() {
-        // seed the construct C0(value) op with the base parent composition first
-        // the inherited child shares its template, but needs the derived parent's C0 constructor
         BaseParent.C1 base = new BaseParent().new C1(3);
         assert base.value == 3;
         assert base.order == "base,child";
@@ -205,7 +203,6 @@ module TestInnerOuter {
         BaseParent parent = asBase(new DerivedParent());
         BaseParent.C1 child = parent.new C1(5);
         assert child.value == 5;
-        // the interpreter currently produces "base,child" and leaves tag "unset"
         assert child.order == "base,derived,child";
         assert asDerived(child).tag == "ready";
 
@@ -236,7 +233,6 @@ module TestInnerOuter {
         }
 
         class DerivedParent extends BaseParent {
-            // C1 is inherited; its constructor must enter this C0 override
             @Override
             class C0 {
                 construct(Int value) {
