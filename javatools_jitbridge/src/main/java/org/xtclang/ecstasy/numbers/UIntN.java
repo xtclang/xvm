@@ -240,7 +240,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *     UIntN magnitude.get()
      */
-    public UIntN magnitude$get(Ctx ctx) {
+    public Number magnitude$get(Ctx ctx) {
         return this;
     }
 
@@ -307,14 +307,6 @@ public class UIntN extends UIntNumber {
      */
     public int bitCount$get$p(Ctx ctx) {
         return $value.bitCount();
-    }
-
-    /**
-     * The native implementation of:
-     *     IntNumber bitCount.get()
-     */
-    public UIntN magnitude$get$p(Ctx ctx) {
-        return this;
     }
 
     /**
