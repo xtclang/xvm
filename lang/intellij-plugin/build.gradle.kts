@@ -387,6 +387,17 @@ val intellijSinceBuild: String =
 // the run, while transform output would land in the Gradle user home that CI caches.
 val extractIdesIntoCheckout = providers.environmentVariable("CI").isPresent
 
+// Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
+// this plugin's settings pages and configuration UI text. When disabled, users cannot find
+// plugin settings via the search bar — they must navigate to them manually. Enabling it adds
+// ~30-60s to the build because it launches a headless IDE to index all settings pages.
+// Enable with: -Plsp.buildSearchableOptions=true
+val buildSearchableOptionsEnabled = xdkProperties.booleanValue("lsp.buildSearchableOptions", false)
+
+val searchableOptionsStatus =
+    if (buildSearchableOptionsEnabled) "enabled" else "disabled (use -Plsp.buildSearchableOptions=true to enable)"
+logger.info("[ide] Searchable options: $searchableOptionsStatus")
+
 intellijPlatform {
     caching {
         ides {
@@ -402,6 +413,12 @@ intellijPlatform {
     // javatools.jar copy has never had them. The task runs through Gradle's Ant integration,
     // deprecated in Gradle 9.9 and removed in Gradle 10, and printed that deprecation on every build.
     instrumentCode = false
+
+    // Off unless -Plsp.buildSearchableOptions=true. The platform plugin's own switch also skips
+    // prepareJarSearchableOptions and jarSearchableOptions: since IntelliJ Platform Gradle Plugin
+    // 2.20.0, disabling only the buildSearchableOptions task leaves prepareJarSearchableOptions
+    // with an input directory that nothing creates, and the build fails.
+    buildSearchableOptions = buildSearchableOptionsEnabled
 
     pluginConfiguration {
         id = "org.xtclang.idea"
@@ -504,17 +521,6 @@ val publishPlugin =
         // changed APIs and missing dependencies that would otherwise reach users.
         dependsOn(verifyPlugin)
     }
-
-// Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
-// this plugin's settings pages and configuration UI text. When disabled, users cannot find
-// plugin settings via the search bar — they must navigate to them manually. Enabling it adds
-// ~30-60s to the build because it launches a headless IDE to index all settings pages.
-// Enable with: -Plsp.buildSearchableOptions=true
-val buildSearchableOptionsEnabled = xdkProperties.booleanValue("lsp.buildSearchableOptions", false)
-
-val searchableOptionsStatus =
-    if (buildSearchableOptionsEnabled) "enabled" else "disabled (use -Plsp.buildSearchableOptions=true to enable)"
-logger.info("[ide] Searchable options: $searchableOptionsStatus")
 
 val buildSearchableOptions =
     tasks.named<JavaExec>("buildSearchableOptions") {
