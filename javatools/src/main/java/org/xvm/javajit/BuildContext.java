@@ -7,7 +7,6 @@ import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
 import java.lang.constant.DirectMethodHandleDesc.Kind;
-import java.lang.constant.DynamicCallSiteDesc;
 import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
@@ -81,12 +80,7 @@ import org.xvm.javajit.registers.Narrowed;
 import org.xvm.javajit.registers.Ref;
 import org.xvm.javajit.registers.SingleSlot;
 
-import static java.lang.constant.ConstantDescs.CD_CallSite;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
-import static java.lang.constant.ConstantDescs.CD_MethodHandles_Lookup;
-import static java.lang.constant.ConstantDescs.CD_MethodType;
-import static java.lang.constant.ConstantDescs.CD_Object;
-import static java.lang.constant.ConstantDescs.CD_String;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -446,12 +440,12 @@ public class BuildContext {
         Deque<List<Integer>> jumpAddrStack = new ArrayDeque<>();
         Deque<List<Integer>> jumpDestStack = new ArrayDeque<>();
 
-        int                   guardAddr  = -1;                // the address of the last GuardAll op
-        int                   finAddr    = -1;                // the address of the last FinallyEnd op
-        List<Integer>         jumpsAddr  = new ArrayList<>(); // the addresses of Jump ops
-        List<Integer>         jumpsDest  = new ArrayList<>(); // the addresses of jump destinations
-        Map<Integer, Boolean> refs       = null;              // the ids of registers that need to be boxed as Refs
-        boolean               doReturn   = false;             // indicates whether FinallyEnd should generate returns
+        int                   guardAddr = -1;                // the address of the last GuardAll op
+        int                   finAddr   = -1;                // the address of the last FinallyEnd op
+        List<Integer>         jumpsAddr = new ArrayList<>(); // the addresses of Jump ops
+        List<Integer>         jumpsDest = new ArrayList<>(); // the addresses of jump destinations
+        Map<Integer, Boolean> refs      = null;              // the ids of registers that need to be boxed as Refs
+        boolean               doReturn  = false;             // indicates whether FinallyEnd should generate returns
         for (int iPC = 0, opsCount = ops.length; iPC < opsCount; iPC++) {
             Op op = ops[currOpAddr = iPC];
             switch (op) {
@@ -813,10 +807,10 @@ public class BuildContext {
                 type     = thisType;
                 slot     = code.parameterSlot(0);
             } else {
-                param    = methodStruct.getParam(varIndex);
-                name     = param.getName();
-                type     = resolveSpecialized(param.getType());
-                slot     = code.parameterSlot(extraArgs + i); // compensate for implicits
+                param = methodStruct.getParam(varIndex);
+                name  = param.getName();
+                type  = resolveSpecialized(param.getType());
+                slot  = code.parameterSlot(extraArgs + i); // compensate for implicits
             }
 
             if (debugInfo) {
@@ -2087,8 +2081,8 @@ public class BuildContext {
                 Constant[]   params       = anno.getParams();
                 int          paramCount   = params.length;
 
-                Constant nameConst = paramCount > 0 ? params[0] : null;
-                Constant optsConst = paramCount > 1 ? params[1] : null;
+                Constant nameConst    = paramCount > 0 ? params[0] : null;
+                Constant optsConst    = paramCount > 1 ? params[1] : null;
                 String   resourceName = nameConst instanceof StringConstant stringConst
                                 ? stringConst.getValue()
                                 : name;
@@ -2849,7 +2843,7 @@ public class BuildContext {
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {
-            md         = jmd.optimizedMD;
+            md          = jmd.optimizedMD;
             setterName += Builder.OPT;
         } else {
             md = jmd.standardMD;
@@ -3514,47 +3508,6 @@ public class BuildContext {
     }
 
     /**
-     * Create a String and store the reference to the String on the stack.
-     *
-     * <p>The String template is formatted with values from the provided slots.
-     * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
-     * argSlots} array.
-     *
-     * @param code       the {@link CodeBuilder} to use
-     * @param text       the String template to inject values into
-     * @param argsTypes  the types of the arguments to inject into the String. The array must
-     */
-    public void buildString(CodeBuilder code, String text, ClassDesc... argsTypes) {
-        DirectMethodHandleDesc bsm = MethodHandleDesc.ofMethod(
-                DirectMethodHandleDesc.Kind.STATIC,
-                ClassDesc.of("java.lang.invoke.StringConcatFactory"),
-                "makeConcatWithConstants",
-                md(CD_CallSite, CD_MethodHandles_Lookup, CD_String,
-                        CD_MethodType, CD_String, CD_Object.arrayType())
-        );
-        code.invokedynamic(DynamicCallSiteDesc.of(bsm, "makeConcat",
-                md(CD_String, argsTypes), text));
-    }
-
-    /**
-     * Create a String and store the reference to the String in a new local variable slot.
-     *
-     * <p>The String template is formatted with values from the provided slots.
-     * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
-     * argSlots} array.
-     *
-     * @param code       the {@link CodeBuilder} to use
-     * @param text       the String template to inject values into
-     * @param argsTypes  the types of the arguments to inject into the String. The array must
-     *
-     * @return the identifier of the local variable slot that the String has been stored into
-     */
-    public int buildAndStoreString(CodeBuilder  code, String text, ClassDesc... argsTypes) {
-        buildString(code, text, argsTypes);
-        return storeTempValue(code, CD_String);
-    }
-
-    /**
      * Create a temporary {@link RegisterInfo} for internal "use once within a scope" scenarios.
      * This register can only be addressed via the synthetic register -1, at which point it will be
      * "popped".
@@ -3847,7 +3800,7 @@ public class BuildContext {
         case TypeParameter: {
             // look for a match only amongst the method's formal type parameters
             TypeParameterConstant typeParam = (TypeParameterConstant) formalConst;
-            MethodConstant        methodId = typeParam.getMethod();
+            MethodConstant        methodId  = typeParam.getMethod();
 
             if (methodId.equals(methodStruct.getIdentityConstant())) {
                 regId = typeParam.getRegister();

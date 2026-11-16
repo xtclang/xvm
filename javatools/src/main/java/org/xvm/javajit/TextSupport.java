@@ -2,8 +2,18 @@ package org.xvm.javajit;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.DynamicCallSiteDesc;
+import java.lang.constant.MethodHandleDesc;
+
 import org.xvm.asm.constants.TypeConstant;
 
+import static java.lang.constant.ConstantDescs.CD_CallSite;
+import static java.lang.constant.ConstantDescs.CD_MethodHandles_Lookup;
+import static java.lang.constant.ConstantDescs.CD_MethodType;
+import static java.lang.constant.ConstantDescs.CD_Object;
 import static java.lang.constant.ConstantDescs.CD_char;
 
 import static org.xvm.javajit.Builder.CD_Char;
@@ -11,6 +21,7 @@ import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.MD_Char_addInt;
 import static org.xvm.javajit.Builder.MD_Char_subInt;
 import static org.xvm.javajit.Builder.MD_StringOf;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy text types such as Char
@@ -80,13 +91,12 @@ public interface TextSupport {
      */
     default TypeConstant buildAddCharToChar(BuildContext bctx, CodeBuilder code,
                                             RegisterInfo regTarget, int nArgId) {
+        bctx.loadCtx(code);
         regTarget.load(code);
         code.i2c();
         bctx.loadArgument(code, nArgId);
         code.i2c();
-        int slot = bctx.buildAndStoreString(code, "\u0001\u0001", CD_char, CD_char);
-        bctx.loadCtx(code);
-        code.aload(slot);
+        buildString(code, "\u0001\u0001", CD_char, CD_char);
         code.invokestatic(CD_String, "of", MD_StringOf);
         return bctx.pool().typeString();
     }
@@ -105,14 +115,35 @@ public interface TextSupport {
      */
     default TypeConstant buildAddStringToChar(BuildContext bctx, CodeBuilder code,
                                               RegisterInfo regTarget, int nArgId) {
+        bctx.loadCtx(code);
         regTarget.load(code);
         code.i2c();
         bctx.loadArgument(code, nArgId);
-        int slot = bctx.buildAndStoreString(code, "\u0001\u0001", CD_char, CD_String);
-        bctx.loadCtx(code);
-        code.aload(slot);
+        buildString(code, "\u0001\u0001", CD_char, CD_String);
         code.invokestatic(CD_String, "of", MD_StringOf);
         return bctx.pool().typeString();
+    }
+
+    /**
+     * Create a String and store the reference to the String on the stack.
+     *
+     * <p>The String template is formatted with values from the provided slots. Each occurrence of
+     * {@code "\u0001"} is replaced with the value from an entry in the {@code argSlots} array.
+     *
+     * @param code       the {@link CodeBuilder} to use
+     * @param text       the String template to inject values into
+     * @param argsTypes  the types of the arguments to inject into the String. The array must
+     */
+    default void buildString(CodeBuilder code, String text, ClassDesc... argsTypes) {
+        DirectMethodHandleDesc bsm = MethodHandleDesc.ofMethod(
+                DirectMethodHandleDesc.Kind.STATIC,
+                ClassDesc.of("java.lang.invoke.StringConcatFactory"),
+                "makeConcatWithConstants",
+                md(CD_CallSite, CD_MethodHandles_Lookup, ConstantDescs.CD_String,
+                        CD_MethodType, ConstantDescs.CD_String, CD_Object.arrayType())
+        );
+        code.invokedynamic(DynamicCallSiteDesc.of(bsm, "makeConcat",
+                md(ConstantDescs.CD_String, argsTypes), text));
     }
 
     /**
