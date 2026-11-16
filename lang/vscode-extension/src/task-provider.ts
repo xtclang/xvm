@@ -40,7 +40,7 @@ export class XtcTaskProvider implements vscode.TaskProvider {
                 // embedded mode has no tests or clean of its own, so a Gradle build keeps offering them
                 if (gradle) {
                     tasks.push(
-                        this.createLifecycleTask('Test', `${gradlew} test`, folder, vscode.TaskGroup.Test),
+                        this.createLifecycleTask('Test', `${gradlew} testXtc`, folder, vscode.TaskGroup.Test),
                         this.createLifecycleTask('Clean', `${gradlew} clean`, folder, vscode.TaskGroup.Clean)
                     );
                 }
