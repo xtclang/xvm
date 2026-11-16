@@ -24,7 +24,7 @@ export class XtcTaskProvider implements vscode.TaskProvider {
                 if (fs.existsSync(buildFile)) {
                     tasks.push(
                         this.createLifecycleTask('Build', `${gradlew} build`, folder, vscode.TaskGroup.Build),
-                        this.createLifecycleTask('Test', `${gradlew} test`, folder, vscode.TaskGroup.Test),
+                        this.createLifecycleTask('Test', `${gradlew} testXtc`, folder, vscode.TaskGroup.Test),
                         this.createLifecycleTask('Clean', `${gradlew} clean`, folder, vscode.TaskGroup.Clean)
                     );
                 }
