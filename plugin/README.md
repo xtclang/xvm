@@ -70,26 +70,25 @@ The plugin uses **JavaClasspathLauncher** for all XTC tool execution, providing 
 #### JavaClasspathLauncher
 **File**: `org.xtclang.plugin.launchers.JavaClasspathLauncher`
 
-Invokes javatools classes directly, either in-process or in a forked JVM based on the `fork` setting. Supports detached background processes for long-running applications.
+Invokes javatools classes directly, either in-process or in a forked JVM based on the execution mode. Supports detached background processes for long-running applications.
 
-**Execution Modes:**
+**Execution Modes** (`executionMode` on a task or extension, or the Gradle property `xtcDefaultExecutionMode`):
 
-1. **In-Process (fork=false)** - Default for compilation
-   - Instant startup (~0ms)
-   - Shares Gradle daemon JVM
-   - Full IDE debugging support
-   - Configuration cache compatible
+1. **`ATTACHED`**, the default: a forked JVM for each task, whose output goes to the build's
+   - Isolated from the Gradle daemon: a compiler crash or a large heap stays in that JVM
+   - About a second of JVM startup for each task
+   - Its JVM can be debugged with JDWP options, see [Debugging](#debugging)
 
-2. **Forked Process (fork=true)** - For runtime isolation
-   - Complete isolation from Gradle JVM
-   - Independent JVM arguments
-   - ~1-2s JVM startup time
-   - Supports JDWP remote debugging
+2. **`DIRECT`**: in the Gradle daemon, through an isolated classloader for each javatools runtime and build
+   - No JVM startup, and the compiler stays loaded for the rest of the build
+   - A compile takes the library modules, such as ecstasy, that an earlier compile of the build loaded from
+     memory, as long as their files have the same content. The compiles of a build run one at a time
+   - One debugger session steps from the plugin into javatools, see [Debugging](#debugging)
+   - A compiler crash or an out-of-memory error takes the daemon down, and runs and tests in the daemon share the
+     interpreter's JVM-wide state
 
-3. **Detached Process (detach=true)** - For background services
-   - Automatically enables forking
-   - Process continues after Gradle exits
-   - Output redirected to timestamped log file
+3. **`DETACHED`**: a forked JVM that keeps running after Gradle exits, for background services
+   - Output redirected to timestamped log files
    - Returns immediately without waiting
 
 **Implementation Details:**
@@ -112,79 +111,49 @@ XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
 
 **Configuration:**
 ```kotlin
+import org.xtclang.plugin.launchers.ExecutionMode
+
 xtcCompile {
-    fork.set(false)  // In-process (fast, default)
+    executionMode = ExecutionMode.DIRECT
 }
 
 xtcRun {
-    fork.set(true)    // Separate process (isolation)
-    // OR
-    detach.set(true)  // Background process (fork automatically enabled)
+    executionMode = ExecutionMode.DETACHED
 }
 ```
-
-**Benefits:**
-- Direct type-safe calls (`Compiler.launch(args)`) - no reflection
-- Full IDE debugging support (fork=false)
-- JDWP remote debugging support (fork=true)
-- Configuration cache compatible
-- Single launcher for all scenarios
 
 ### Debugging
 
 The plugin supports debugging XTC code through standard Java debugging tools.
 
-#### In-Process Debugging (fork=false)
+#### Stepping from the Plugin into javatools (`DIRECT`)
 
-When using `fork=false` (default for compilation), you can debug directly in your IDE by attaching to the Gradle daemon:
+A `DIRECT` task runs javatools in the Gradle daemon, so one debugger session sees the plugin and the compiler or
+runtime it calls:
 
 1. Start Gradle with debug enabled:
    ```bash
-   ./gradlew compileXtc --no-daemon -Dorg.gradle.debug=true
+   ./gradlew compileXtc --rerun -PxtcDefaultExecutionMode=DIRECT -Dorg.gradle.debug=true
    ```
 
-2. Gradle will wait for debugger connection on port 5005
+2. Gradle waits for a debugger connection on port 5005
 
 3. Attach your IDE debugger to `localhost:5005`
 
 This allows stepping through both plugin code and javatools (compiler/runtime) code.
 
-#### Remote Debugging (fork=true)
+#### Debugging a Forked JVM (`ATTACHED`, `DETACHED`)
 
-For forked processes, use standard JDWP arguments with `jvmArgs`:
+A forked task's JVM takes standard JDWP options from `jvmArgs`:
 
 ```kotlin
 xtcRun {
-    fork.set(true)
-    jvmArgs(
-        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
-    )
-
-    module {
-        moduleName = "MyApp"
-    }
+    jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
 }
 ```
 
-**JDWP Parameters:**
-- `transport=dt_socket`: Use TCP/IP sockets
-- `server=y`: Listen for debugger connection
-- `suspend=y`: Wait for debugger before starting (use `suspend=n` to start immediately)
-- `address=5005`: Port number for debugger connection
-
-**Steps:**
-1. Run the task: `./gradlew runXtc`
-2. The process will suspend and wait for debugger
-3. Attach your IDE debugger to `localhost:5005`
-4. Debug your XTC code as it executes
-
-**Example with Different Port:**
-```kotlin
-xtcCompile {
-    fork.set(true)
-    jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8000")
-}
-```
+The plugin code runs in the Gradle daemon and javatools in the forked JVM, so stepping does not cross from one into
+the other: set a breakpoint where javatools starts, such as `Launcher.launch`.
 
 #### Debugging Tips
 
