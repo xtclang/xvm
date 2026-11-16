@@ -7,6 +7,7 @@ module TestInnerOuter {
         testAnonInner();
         testFunky();
         testChildNamedInner();
+        testVirtualChildConstructorCache();
     }
 
     interface IfaceOuter {
@@ -190,6 +191,63 @@ module TestInnerOuter {
             @Override
             String kind() {
                 return "crate";
+            }
+        }
+    }
+
+    void testVirtualChildConstructorCache() {
+        // seed the construct C0(value) op with the base parent composition first
+        // the inherited child shares its template, but needs the derived parent's C0 constructor
+        BaseParent.C1 base = new BaseParent().new C1(3);
+        assert base.value == 3;
+        assert base.order == "base,child";
+
+        BaseParent parent = asBase(new DerivedParent());
+        BaseParent.C1 child = parent.new C1(5);
+        assert child.value == 5;
+        // the interpreter currently produces "base,child" and leaves tag "unset"
+        assert child.order == "base,derived,child";
+        assert asDerived(child).tag == "ready";
+
+        BaseParent asBase(Object o) = o.as(BaseParent);
+        DerivedParent.C0 asDerived(Object o) = o.as(DerivedParent.C0);
+
+        class BaseParent {
+            class C0 {
+                construct(Int value) {
+                    this.value = value;
+                } finally {
+                    assert this.value == value;
+                    order += "base,";
+                }
+
+                Int value;
+                String order = "";
+            }
+
+            class C1 extends C0 {
+                construct(Int value) {
+                    construct C0(value);
+                } finally {
+                    assert this.value == value;
+                    order += "child";
+                }
+            }
+        }
+
+        class DerivedParent extends BaseParent {
+            // C1 is inherited; its constructor must enter this C0 override
+            @Override
+            class C0 {
+                construct(Int value) {
+                    construct BaseParent.C0(value);
+                    tag = "ready";
+                } finally {
+                    assert this.value == value;
+                    order += "derived,";
+                }
+
+                String tag = "unset";
             }
         }
     }
