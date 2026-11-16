@@ -330,14 +330,15 @@ public abstract class OpCallable extends Op {
     protected MethodStructure getConstructor(Frame frame) {
         assert frame.f_function.isConstructor();
 
-        ServiceContext   context     = frame.f_context;
-        MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Function);
-        IdentityConstant idPrev      = (IdentityConstant) context.getOpInfo(this, Category.TargetClass);
-        IdentityConstant idThis      = frame.getThis().getTemplate().getClassConstant();
+        ServiceContext  context     = frame.f_context;
+        MethodStructure constructor = (MethodStructure) context.getOpInfo(this, Category.Function);
+        TypeConstant    typePrev    = (TypeConstant) context.getOpInfo(this, Category.TargetType);
+        TypeConstant    typeThis    = frame.getThis().getType();
 
-        if (constructor != null && idPrev.equals(idThis)) {
+        if (constructor != null && typeThis.equals(typePrev)) {
             return constructor;
         }
+        constructor = null;
 
         ConstantPool        pool       = frame.poolContext();
         GenericTypeResolver resolver   = frame.getGenericsResolver(false);
@@ -347,7 +348,6 @@ public abstract class OpCallable extends Op {
 
         Virtual:
         if (typeTarget.isVirtualChild()) {
-            TypeConstant typeThis = frame.getThis().getType();
             if (!typeThis.isVirtualChild()) {
                 frame.raiseException("Not a virtual child: \"" + typeTarget.getValueString() + '"');
                 return null;
@@ -384,7 +384,7 @@ public abstract class OpCallable extends Op {
         }
 
         context.setOpInfo(this, Category.Function, constructor);
-        context.setOpInfo(this, Category.TargetClass, idThis);
+        context.setOpInfo(this, Category.TargetType, typeThis);
 
         return constructor;
     }
