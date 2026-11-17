@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -284,9 +283,14 @@ public class MethodDeclarationStatement
         return null;
     }
 
+    /**
+     * Numbers within this method, so that the names they make, such as those of variables named
+     * {@code _}, depend only on the method's own source: a counter shared by every compile in the JVM
+     * would make a module's bytes depend on what else the JVM has compiled.
+     */
     @Override
     protected int getCodeContainerCounter() {
-        return COUNTER.getAndIncrement();
+        return m_counter++;
     }
 
     // ----- compile phases ------------------------------------------------------------------------
@@ -1257,7 +1261,10 @@ public class MethodDeclarationStatement
     // complementary statement for the constructor points to the finalizer and vice versa
     private transient MethodDeclarationStatement m_stmtComplement;
 
-    private static final AtomicInteger COUNTER = new AtomicInteger();
+    /**
+     * The next number of {@link #getCodeContainerCounter()}.
+     */
+    private transient int m_counter;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
             "condition", "annotations", "typeParams", "returns", "redundant", "params", "body");

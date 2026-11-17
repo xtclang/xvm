@@ -431,7 +431,7 @@ public class TypeCompositionStatement
                 }
 
                 // create the FileStructure and "this" ModuleStructure
-                FileStructure struct = new FileStructure(sModule);
+                FileStructure struct = new FileStructure(sModule, null);
                 component = struct.getModule();
                 pool      = struct.getConstantPool();
 
