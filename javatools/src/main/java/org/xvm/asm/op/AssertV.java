@@ -36,13 +36,13 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_nUtil;
 import static org.xvm.javajit.Builder.MD_StringOf;
 import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 /**
  * ASSERT_V rvalue, STRING, #vals(rvalue)
@@ -389,7 +389,7 @@ public class AssertV
     private static final ClassDesc      CD_StringBuilder = ClassDesc.of(StringBuilder.class.getName());
     private static final MethodTypeDesc MD_BuilderInit   = md(CD_void);
     private static final MethodTypeDesc MD_AppendText    = md(CD_void, CD_StringBuilder, CD_JavaString);
-    private static final MethodTypeDesc MD_AppendValue   = md(CD_void, CD_Ctx, CD_StringBuilder, CD_Object);
+    private static final MethodTypeDesc MD_AppendValue   = mdx(CD_void, CD_StringBuilder, CD_Object);
     private static final MethodTypeDesc MD_JavaToString  = md(CD_JavaString);
 
     private int[] m_anValue;

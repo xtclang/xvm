@@ -40,10 +40,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
-import static java.lang.constant.ConstantDescs.CD_long;
-
-import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.MD_xvmLong;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -726,7 +723,7 @@ public class JumpVal
         // enumValue -> enumValue.ordinal;
         regArg.load(code);
         bctx.loadCtx(code);
-        code.invokevirtual(regArg.cd(), "ordinal$get$p", md(CD_long, CD_Ctx))
+        code.invokevirtual(regArg.cd(), "ordinal$get$p", MD_xvmLong)
             .l2i();
 
         Label labelDflt = bctx.ensureLabel(code, nThis + m_ofDefault);

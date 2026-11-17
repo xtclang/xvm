@@ -71,7 +71,7 @@ public class HostedPropertyRefBuilder extends Builder {
                     .withSuperclass(CD_nRefProp)
                     .withInterfaceSymbols(interfaces);
 
-        MethodTypeDesc init = md(CD_void, CD_Ctx, CD_TypeConstant, CD_boolean,
+        MethodTypeDesc init = mdx(CD_void, CD_TypeConstant, CD_boolean,
                 CD_nObject, CD_MethodHandle, CD_MethodHandle, CD_MethodHandle);
         classBuilder.withMethodBody(INIT_NAME, init, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0);
@@ -197,9 +197,10 @@ public class HostedPropertyRefBuilder extends Builder {
                         box(code, type);
                     }
                 }
-                code.invokespecial(CD_nRefProp, "set", md(CD_void, CD_Ctx, CD_Object)).return_();
+                code.invokespecial(CD_nRefProp, "set", mdx(CD_void, CD_Object))
+                    .return_();
             } else {
-                code.invokespecial(CD_nRefProp, "get", md(CD_Object, CD_Ctx));
+                code.invokespecial(CD_nRefProp, "get", MD_xvmObject);
                 if (optimized) {
                     if (type.isNullable()) {
                         unboxNullable(code, type, getCCDesc(type.removeNullable()));

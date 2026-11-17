@@ -91,6 +91,7 @@ import static java.lang.constant.ConstantDescs.CD_String;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
+import static java.lang.constant.ConstantDescs.MTD_void;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_ConstantPool;
@@ -111,9 +112,11 @@ import static org.xvm.javajit.Builder.DetachedBody;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.MD_EnsureType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
+import static org.xvm.javajit.Builder.MD_xvmBoolean;
 import static org.xvm.javajit.Builder.MD_xvmType;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
@@ -1048,7 +1051,7 @@ public class BuildContext {
         // runMD:     () -> void; Runnable.run() forwards those values to the finalizer body
         // primitive body parameters remain primitive factory parameters; no boxing is needed
         ClassDesc      CD_runnable = ClassDesc.of(Runnable.class.getName());
-        MethodTypeDesc runMD       = md(CD_void);
+        MethodTypeDesc runMD       = MTD_void;
         MethodTypeDesc factoryMD   = finalizerHandle.invocationType().changeReturnType(CD_runnable);
 
         // describe the bootstrap method the JVM uses to link the factory
@@ -1734,7 +1737,7 @@ public class BuildContext {
             // incoming nType's $dataType, and then resolve Element on that type
             loadCtx(code);
             code.ldc(child.getName())
-                .invokevirtual(CD_nType, "$dataTypeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+                .invokevirtual(CD_nType, "$dataTypeForName", mdx(CD_nType, CD_JavaString));
             return new SingleSlot(child.getFormalValueType(), Specific, CD_nType, "");
         }
 
@@ -1835,7 +1838,7 @@ public class BuildContext {
             }
         }
         code.iconst_1() // immutable = true
-            .invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
+            .invokespecial(cd, INIT_NAME, mdx(CD_void, CD_TypeConstant,
                 CD_MethodHandle, CD_MethodHandle, CD_boolean));
         return new SingleSlot(fnType, Specific, cd, "");
     }
@@ -2789,9 +2792,9 @@ public class BuildContext {
         loadPropertyAssigned(code, targetReg, propInfo);
 
         MethodTypeDesc init = isHosted
-                ? md(CD_void, CD_Ctx, CD_TypeConstant, CD_boolean, CD_nObject,
+                ? mdx(CD_void, CD_TypeConstant, CD_boolean, CD_nObject,
                         CD_MethodHandle, CD_MethodHandle, CD_MethodHandle)
-                : md(CD_void, CD_Ctx, CD_TypeConstant, CD_boolean,
+                : mdx(CD_void, CD_TypeConstant, CD_boolean,
                         CD_MethodHandle, CD_MethodHandle, CD_MethodHandle);
         code.invokespecial(refClass, INIT_NAME, init)
             .astore(refReg.slot());
@@ -2833,7 +2836,7 @@ public class BuildContext {
 
         // -> prop$assigned$get()
         code.ldc(MethodHandleDesc.ofMethod(kind, builder.getCCDesc(ownerType),
-                prop.ensureJitName(typeSystem) + Builder.AssignedGet, md(CD_boolean, CD_Ctx)));
+                prop.ensureJitName(typeSystem) + Builder.AssignedGet, MD_xvmBoolean));
         targetReg.load(code);
         code.invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject));
     }
@@ -3389,7 +3392,7 @@ public class BuildContext {
         }
 
         code.invokespecial(CD_nTuple, INIT_NAME,
-                md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+                mdx(CD_void, CD_TypeConstant, CD_nObject.arrayType()));
         storeValue(code, regId, tupleType);
     }
 
@@ -3612,7 +3615,7 @@ public class BuildContext {
     public void throwUnsupported(CodeBuilder code) {
         loadCtx(code);
         code.aconst_null()
-            .invokestatic(CD_Exception, "$unsupported", md(CD_nException, CD_Ctx, CD_JavaString))
+            .invokestatic(CD_Exception, "$unsupported", mdx(CD_nException, CD_JavaString))
             .athrow();
     }
 
@@ -3817,8 +3820,7 @@ public class BuildContext {
         }
         loadTypeConstant(code, referentType);
         Builder.loadBoolean(code, isVar);
-        code.invokespecial(cd, INIT_NAME,
-            md(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
+        code.invokespecial(cd, INIT_NAME, mdx(CD_void, CD_nObject, CD_TypeConstant, CD_boolean));
     }
 
     /**
