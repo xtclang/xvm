@@ -31,7 +31,9 @@ import static org.xvm.javajit.Builder.CD_Enumeration;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_nEnum;
 import static org.xvm.javajit.Builder.Instance;
+import static org.xvm.javajit.Builder.MD_xvmLong;
 import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy enum types.
@@ -171,8 +173,7 @@ public interface EnumBuilderSupport {
             .aload(1)
             .aload(2)
             .aload(3)
-            .invokestatic(CD_nEnum, "equals$p",
-                    md(CD_boolean, CD_Ctx, CD_nType, CD_nEnum, CD_nEnum))
+            .invokestatic(CD_nEnum, "equals$p", mdx(CD_boolean, CD_nType, CD_nEnum, CD_nEnum))
             .ireturn();
     }
 
@@ -206,8 +207,7 @@ public interface EnumBuilderSupport {
             .aload(1)
             .aload(2)
             .aload(3)
-            .invokestatic(CD_nEnum, "compare$p",
-                    md(CD_long, CD_Ctx, CD_nType, CD_nEnum, CD_nEnum))
+            .invokestatic(CD_nEnum, "compare$p", mdx(CD_long, CD_nType, CD_nEnum, CD_nEnum))
             .l2i();
         builder.returnIntToOrdered(code);
     }
@@ -412,7 +412,7 @@ public interface EnumBuilderSupport {
      */
     default void assemblePrimitiveIntSkip(CommonBuilder builder, ClassBuilder classBuilder,
                                           JitMethodDesc jmd, String jitName) {
-        MethodTypeDesc mdHelper = MethodTypeDesc.of(CD_int, CD_int, CD_Ctx, CD_long, CD_int);
+        MethodTypeDesc mdHelper = md(CD_int, CD_int, CD_Ctx, CD_long, CD_int);
         int            flags    = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
 
         classBuilder.withMethodBody(jitName, jmd.optimizedMD, flags, code -> {
@@ -436,11 +436,11 @@ public interface EnumBuilderSupport {
      */
     default void assembleEnumSkip(CommonBuilder builder, ClassBuilder classBuilder,
                                   JitMethodDesc jmd, String jitName) {
-        MethodTypeDesc mdEnum     = MethodTypeDesc.of(CD_Enumeration, CD_Ctx);
-        MethodTypeDesc mdValues   = MethodTypeDesc.of(CD_ArrayObj, CD_Ctx);
-        MethodTypeDesc mdOrdinal  = MethodTypeDesc.of(CD_long, CD_Ctx);
-        MethodTypeDesc mdHelper   = MethodTypeDesc.of(CD_long, CD_long, CD_Ctx, CD_long, CD_int);
-        MethodTypeDesc mdGetElem  = MethodTypeDesc.of(CD_Object, CD_Ctx, CD_long);
+        MethodTypeDesc mdEnum     = mdx(CD_Enumeration);
+        MethodTypeDesc mdValues   = mdx(CD_ArrayObj);
+        MethodTypeDesc mdOrdinal  = MD_xvmLong;
+        MethodTypeDesc mdHelper   = md(CD_long, CD_long, CD_Ctx, CD_long, CD_int);
+        MethodTypeDesc mdGetElem  = mdx(CD_Object, CD_long);
         int            flags      = ClassFile.ACC_PUBLIC;
         ClassDesc      thisCD     = builder.art.CD();
         int            valueCount = getValueCount(builder);
@@ -496,7 +496,7 @@ public interface EnumBuilderSupport {
             } else {
                 int flags = ClassFile.ACC_PUBLIC;
                 classBuilder.withMethodBody(optimizedName, jmd.optimizedMD, flags, code -> {
-                    MethodTypeDesc mdOrdinal = MethodTypeDesc.of(CD_long, CD_Ctx);
+                    MethodTypeDesc mdOrdinal = MD_xvmLong;
                     ClassDesc      thisCD    = builder.art.CD();
                     int            thisSLot  = 0;
                     int            ctxSlot   = code.parameterSlot(0);

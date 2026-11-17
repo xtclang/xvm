@@ -91,9 +91,8 @@ import org.xvm.util.TransientThreadLocal;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 
-import static org.xvm.javajit.Builder.CD_Class;
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nType;
+import static org.xvm.javajit.Builder.MD_xvmClass;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_COMPARE;
 import static org.xvm.javajit.Builder.XVM_PRIMITIVE_EQUALS;
@@ -7938,7 +7937,7 @@ public abstract class TypeConstant
                 // generated class-of-class extends Class and implements "sComparable" and "sOrderable"
                 Builder.load(code, regType.cd(), slotType);
                 bctx.loadCtx(code);
-                code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
+                code.invokevirtual(CD_nType, "$xvmClass", MD_xvmClass)
                     .checkcast(cd);
 
                 bctx.loadCtx(code);

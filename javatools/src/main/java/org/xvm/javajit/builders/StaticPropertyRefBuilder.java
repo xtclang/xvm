@@ -46,7 +46,6 @@ public class StaticPropertyRefBuilder extends RefBuilder {
             .aconst_null();
         loadTypeConstant(code, prop.getType());
         loadBoolean(code, prop.isVar());
-        code.invokespecial(CD_nRef, INIT_NAME,
-                md(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
+        code.invokespecial(CD_nRef, INIT_NAME, mdx(CD_void, CD_nObject, CD_TypeConstant, CD_boolean));
     }
 }

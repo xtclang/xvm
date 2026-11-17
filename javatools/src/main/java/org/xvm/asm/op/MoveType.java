@@ -18,10 +18,9 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nType;
-import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 /**
  * MOV_TYPE rvalue-src, lvalue-dest; place the type of the r-value (sans explicit immutability) into the l-value
@@ -96,7 +95,7 @@ public class MoveType
         }
 
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nObject, "$type", md(CD_nType, CD_Ctx));
+        code.invokevirtual(CD_nObject, "$type", mdx(CD_nType));
 
         bctx.storeValue(code, m_nToValue, regFrom.type().getType());
         return -1;
