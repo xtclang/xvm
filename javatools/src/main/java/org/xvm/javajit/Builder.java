@@ -1393,7 +1393,7 @@ public abstract class Builder {
         String    getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
         ClassDesc ownerCD    = getCCDesc(typeOwner);
         if (!invokeStatic && !typeContainer.isJitAssignableTo(typeOwner)) {
-            // a derived child's interface receiver can call a getter hosted by a hard-left class
+            // the resolved property owner may be narrower than the receiver's JVM type
             code.checkcast(ownerCD);
         }
 
