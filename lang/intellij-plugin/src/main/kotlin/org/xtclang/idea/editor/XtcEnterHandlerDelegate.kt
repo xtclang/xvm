@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler
@@ -15,10 +16,10 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 
 /**
- * Repairs IntelliJ's local brace-split behavior for `.x` files when Enter is pressed
- * after a declaration ending in `{`. LSP on-type formatting does not reliably receive
- * the first Enter in this path, so we normalize the editor-local result here using the
- * current IntelliJ code style settings.
+ * Repairs IntelliJ's local brace-split behavior for `.x` files when Enter is pressed after a
+ * declaration ending in `{`. LSP on-type formatting does not reliably receive the first Enter in
+ * this path, so we normalize the editor-local result here using the current IntelliJ code style
+ * settings.
  */
 class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
     private val logger = logger<XtcEnterHandlerDelegate>()
@@ -71,6 +72,10 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                     rewriteEmptyBlock(document, currentLine - 2, currentLine - 1, currentLine)
                 }
 
+                isLineMovedIntoBlock(document, currentLine) -> {
+                    Triple(currentLine - 1, currentLine, currentLine + 1)
+                }
+
                 else -> {
                     null
                 }
@@ -81,10 +86,10 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         }
 
         val (declarationLine, bodyLine, closingLine) = fix
-        val declarationIndent = lineIndent(document, declarationLine)
+        val declarationIndent = lineIndent(document, declarationStart(declarationLine) { lineText(document, it) })
         val bodyIndent = declarationIndent + indentUnit(file)
 
-        replaceLineWithIndent(document, bodyLine, bodyIndent)
+        replaceLineWithIndent(document, bodyLine, bodyIndent, suffix = lineText(document, bodyLine).trimStart())
         replaceLineWithIndent(document, closingLine, declarationIndent, suffix = "}")
 
         val bodyCaretOffset = document.getLineStartOffset(bodyLine) + bodyIndent.length
@@ -93,7 +98,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         PsiDocumentManager.getInstance(file.project).commitDocument(document)
 
         logger.info(
-            "postProcessEnter: repaired empty-block split " +
+            "postProcessEnter: repaired block split " +
                 "declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
                 "declarationIndent='${visualizeIndent(declarationIndent)}' bodyIndent='${visualizeIndent(bodyIndent)}'",
         )
@@ -149,6 +154,28 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         val bodyText = lineText(document, currentLine - 1)
         val closingText = lineText(document, currentLine)
         return declarationText.endsWith("{") && bodyText.isBlank() && closingText.trim() == "}"
+    }
+
+    /**
+     * Enter after a `{` that more of its line followed, as in `if (x) {return 1;`: the rest of the line moved into the
+     * block that the `}` on the next line closes, but kept the indentation of the `{`'s line. The language server's
+     * on-type formatting indents it only when IntelliJ has its answer in time, which a compile in progress delays.
+     */
+    private fun isLineMovedIntoBlock(
+        document: Document,
+        currentLine: Int,
+    ): Boolean {
+        if (currentLine <= 0 || currentLine + 1 >= document.lineCount) {
+            return false
+        }
+        val previousText = lineText(document, currentLine - 1).trimEnd()
+        val currentText = lineText(document, currentLine).trim()
+        val nextText = lineText(document, currentLine + 1)
+        if (!previousText.endsWith("{") || currentText.isEmpty() || currentText.startsWith("}") || nextText.trim() != "}") {
+            return false
+        }
+        val declarationIndent = lineIndent(document, declarationStart(currentLine - 1) { lineText(document, it) })
+        return lineIndent(document, currentLine).length <= declarationIndent.length
     }
 
     private fun lineText(
@@ -211,11 +238,25 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                 val fix =
                     when {
                         isCompactEmptyBlockSplit(document, currentLine) -> {
-                            rewriteEmptyBlock(document, currentLine - 1, currentLine, currentLine + 1)
+                            rewriteEmptyBlock(
+                                document,
+                                currentLine - 1,
+                                currentLine,
+                                currentLine + 1,
+                            )
                         }
 
                         isClosingBraceCaretAfterBadSplit(document, currentLine) -> {
-                            rewriteEmptyBlock(document, currentLine - 2, currentLine - 1, currentLine)
+                            rewriteEmptyBlock(
+                                document,
+                                currentLine - 2,
+                                currentLine - 1,
+                                currentLine,
+                            )
+                        }
+
+                        isLineMovedIntoBlock(document, currentLine) -> {
+                            Triple(currentLine - 1, currentLine, currentLine + 1)
                         }
 
                         else -> {
@@ -233,10 +274,10 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                 }
 
                 val (declarationLine, bodyLine, closingLine) = fix
-                val declarationIndent = lineIndent(document, declarationLine)
+                val declarationIndent = lineIndent(document, declarationStart(declarationLine) { lineText(document, it) })
                 val bodyIndent = declarationIndent + indentUnit(file)
 
-                replaceLineWithIndent(document, bodyLine, bodyIndent)
+                replaceLineWithIndent(document, bodyLine, bodyIndent, suffix = lineText(document, bodyLine).trimStart())
                 replaceLineWithIndent(document, closingLine, declarationIndent, suffix = "}")
 
                 val bodyCaretOffset = document.getLineStartOffset(bodyLine) + bodyIndent.length
@@ -245,7 +286,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                 PsiDocumentManager.getInstance(project).commitDocument(document)
 
                 logger.warn(
-                    "deferredRepair: repaired empty-block split " +
+                    "deferredRepair: repaired block split " +
                         "declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
                         "declarationIndent='${visualizeIndent(declarationIndent)}' " +
                         "bodyIndent='${visualizeIndent(bodyIndent)}'",
@@ -265,4 +306,25 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         }
 
     private fun visualizeIndent(indent: String): String = indent.replace("\t", "\\t").replace(" ", "·")
+}
+
+/**
+ * The first line of the declaration whose `{` ends [braceLine], given each line's text by [line]. A
+ * declaration continued over several lines (`class Point` then `implements Const {`) indents its body
+ * from its first line, as the language server's formatter does, not from the line holding the brace.
+ * A line continues the declaration below it unless it is blank, a comment, or ends a statement or block.
+ */
+internal fun declarationStart(
+    braceLine: Int,
+    line: (Int) -> String,
+): Int {
+    var start = braceLine
+    while (start > 0) {
+        val previous = line(start - 1).trim()
+        val ends = previous.isEmpty() || previous.endsWith(";") || previous.endsWith("{") || previous.endsWith("}")
+        val comment = previous.startsWith("//") || previous.startsWith("*") || previous.endsWith("*/")
+        if (ends || comment) break
+        start--
+    }
+    return start
 }

@@ -1,0 +1,129 @@
+package org.xvm.lsp.adapter.xdk
+
+import org.xvm.lsp.adapter.CodeAction
+import java.util.concurrent.atomic.AtomicReference
+
+/**
+ * What the code action requests of one project revision share: the compile of its sources, each file's import cleanup,
+ * which does not depend on the range a request asks about, the latest proof compiles, and the latest answers. Editors
+ * ask for code actions each time the cursor moves, and more than one request can prove the same candidate, so the
+ * requests of one revision share these instead of compiling them again; a request that may not wait long for a compile
+ * answers from them alone. Only detached facts, artifacts and actions are kept, for the latest revision only.
+ */
+internal class XdkCodeActionCache {
+    private val current = AtomicReference(Entry(""))
+
+    /**
+     * One revision's compile, once compiled, the import cleanup of each source proved so far, its latest proof
+     * compiles, newest first, each with what it compiled and its facts, or null when it did not compile, and its latest
+     * answers, newest first, each with the request it answers.
+     */
+    private data class Entry(
+        val revision: String,
+        val base: Base? = null,
+        val imports: Map<String, List<CodeAction>> = emptyMap(),
+        val proofs: List<Pair<Any, CompilerRenameFacts?>> = emptyList(),
+        val answers: List<Pair<Any, List<CodeAction>>> = emptyList(),
+    )
+
+    /**
+     * A revision's compile: its facts, and what lets a proof, or the next revision's compile, compile only the modules
+     * an edit affects, the others being as they were. By module name: the artifact of each module that compiled, the
+     * missing-method destinations of each, the errors each compile reported, and the sources each was compiled from;
+     * and the graph and the binary dependencies' revisions that they were compiled with.
+     */
+    data class Base(
+        val facts: CompilerRenameFacts,
+        val artifacts: Map<String, XdkDependency>,
+        val destinations: Map<String, Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination>>,
+        val errors: Map<String, List<String>> = emptyMap(),
+        val inputs: Map<String, XdkSources.Inputs> = emptyMap(),
+        val project: XdkProject? = null,
+        val dependencies: Map<String, String> = emptyMap(),
+    )
+
+    /**
+     * The compile of [revision]: [compile]'s, unless a request of the revision already compiled it. [compile] gets the
+     * latest compile of an earlier revision, if one is kept, to start from.
+     */
+    fun base(
+        revision: String,
+        compile: (Base?) -> Base?,
+    ): Base? = base(revision) ?: compile(base())?.also { base -> update(revision) { it.copy(base = base) } }
+
+    /** The compile of [revision], if a request of the revision compiled it. */
+    fun base(revision: String): Base? = entry(revision).base
+
+    /** The latest revision's compile, whichever revision that is, if a request compiled it. */
+    fun base(): Base? = current.get().base
+
+    /** The import cleanup of [source] in [revision]: [prove]'s, unless a request of the revision already proved it. */
+    fun imports(
+        revision: String,
+        source: String,
+        prove: () -> List<CodeAction>,
+    ): List<CodeAction> =
+        imports(revision, source)
+            ?: prove().also { actions -> update(revision) { it.copy(imports = it.imports + (source to actions)) } }
+
+    /** The import cleanup of [source] in [revision], if a request of the revision proved it. */
+    fun imports(
+        revision: String,
+        source: String,
+    ): List<CodeAction>? = entry(revision).imports[source]
+
+    /**
+     * A proof compile of what [key] names, the proposed sources and how they compile, in [revision]: [compile]'s,
+     * unless one of the revision's latest [PROOFS] compiled the same. A compile that failed is kept too, as it costs
+     * as much.
+     */
+    fun compiled(
+        revision: String,
+        key: Any,
+        compile: () -> CompilerRenameFacts?,
+    ): CompilerRenameFacts? {
+        entry(revision).proofs.firstOrNull { it.first == key }?.let { return it.second }
+        return compile().also { facts -> update(revision) { it.copy(proofs = (listOf(key to facts) + it.proofs).take(PROOFS)) } }
+    }
+
+    /** The facts of the proof compile that [key] names in [revision], if one of its latest compiled them and it compiled. */
+    fun compiled(
+        revision: String,
+        key: Any,
+    ): CompilerRenameFacts? = entry(revision).proofs.firstOrNull { it.first == key }?.second
+
+    /** The answer to the request that [key] names in [revision], if one of its latest [ANSWERS] answered it. */
+    fun answer(
+        revision: String,
+        key: Any,
+    ): List<CodeAction>? = entry(revision).answers.firstOrNull { it.first == key }?.second
+
+    /** Keeps [actions], the answer to the request that [key] names in [revision], with its latest [ANSWERS]. */
+    fun answered(
+        revision: String,
+        key: Any,
+        actions: List<CodeAction>,
+    ) {
+        update(revision) { it.copy(answers = (listOf(key to actions) + it.answers.filter { (other, _) -> other != key }).take(ANSWERS)) }
+    }
+
+    fun clear() = current.set(Entry(""))
+
+    private fun entry(revision: String): Entry = current.get().takeIf { it.revision == revision } ?: Entry(revision)
+
+    /** A later revision's facts replace the previous revision's; facts of the same revision add to them. */
+    private fun update(
+        revision: String,
+        change: (Entry) -> Entry,
+    ) {
+        current.updateAndGet { change(if (it.revision == revision) it else Entry(revision)) }
+    }
+
+    private companion object {
+        /** Each is a whole project's facts: enough for the candidates of a few cursor positions, and no more. */
+        const val PROOFS = 4
+
+        /** Each is a few actions: enough for the positions a cursor goes back and forth between. */
+        const val ANSWERS = 32
+    }
+}

@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.internal.TaskInternal;
 import org.gradle.testfixtures.ProjectBuilder;
 
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,44 @@ class XtcRunConfigurationTest {
         assertFalse(run.getJit().get());
         assertFalse(run.getVerbose().get());
         assertFalse(run.hasStdoutRedirect());
+    }
+
+    @Test
+    void debugIsInheritedAndRefusedForDirectRuns() {
+        final var project = newProject();
+        final var tasks = project.getTasks();
+        final var run = tasks.named("runXtc", XtcRunTask.class).get();
+        final var test = tasks.named("testXtc", XtcTestTask.class).get();
+        XtcProjectDelegate.resolveXtcRuntimeExtension(project).getDebug().set("connect:127.0.0.1:5005,suspend");
+
+        assertEquals("connect:127.0.0.1:5005,suspend", run.getDebug().get());
+        assertFalse(test.getDebug().isPresent());
+
+        run.getExecutionMode().set(ExecutionMode.DIRECT);
+        final var refusal = assertThrows(GradleException.class, run::createStrategy);
+        assertTrue(refusal.getMessage().contains("--mode=ATTACHED"), refusal.getMessage());
+    }
+
+    /**
+     * A run whose tests a tool watches, by their report or a debugger, always runs and is not cached: the report is
+     * the output that the tool reads as the tests run, which an up-to-date or cached result never prints. A plain run
+     * stays up to date and cacheable.
+     */
+    @Test
+    void reportedAndDebuggedTestRunsAlwaysRun() {
+        final var task = newProject().getTasks().named("testXtc", XtcTestTask.class).get();
+        final var outputs = task.getOutputs();
+        assertTrue(outputs.getUpToDateSpec().isSatisfiedBy((TaskInternal) task));
+        assertTrue(outputs.getDoNotCacheIfSpecs().stream().noneMatch(spec -> spec.isSatisfiedBy((TaskInternal) task)));
+
+        task.setTestReportOption("json");
+        assertFalse(outputs.getUpToDateSpec().isSatisfiedBy((TaskInternal) task));
+        assertTrue(outputs.getDoNotCacheIfSpecs().stream().anyMatch(spec -> spec.isSatisfiedBy((TaskInternal) task)));
+
+        final var debugged = newProject().getTasks().named("testXtc", XtcTestTask.class).get();
+        debugged.getDebug().set("listen:5005");
+        final var debuggedOutputs = debugged.getOutputs();
+        assertFalse(debuggedOutputs.getUpToDateSpec().isSatisfiedBy((TaskInternal) debugged));
     }
 
     @Test

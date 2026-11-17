@@ -13,6 +13,7 @@ import org.gradle.api.provider.ProviderFactory;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.xtclang.plugin.XtcPluginConstants;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 
@@ -20,6 +21,8 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
     private final ListProperty<@NotNull XtcRunModule> modules;
     private final Property<@NotNull Boolean> parallel;
     private final Property<@NotNull Boolean> jit;
+    private final Property<@NotNull String> debug;
+    private final Property<@NotNull String> debugAgent;
 
     @Inject
     @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
@@ -28,11 +31,23 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
         this.modules = objects.listProperty(XtcRunModule.class).value(List.of());
         this.parallel = objects.property(Boolean.class).convention(false);
         this.jit = objects.property(Boolean.class).convention(false);
+        this.debug = objects.property(String.class).convention(providers.gradleProperty(XtcPluginConstants.PROPERTY_DEBUG));
+        this.debugAgent = objects.property(String.class).convention(providers.gradleProperty(XtcPluginConstants.PROPERTY_DEBUG_AGENT));
     }
 
     @Override
     public Property<@NotNull Boolean> getJit() {
         return jit;
+    }
+
+    @Override
+    public Property<@NotNull String> getDebug() {
+        return debug;
+    }
+
+    @Override
+    public Property<@NotNull String> getDebugAgent() {
+        return debugAgent;
     }
 
     private XtcRunModule createModule(final String moduleName) {

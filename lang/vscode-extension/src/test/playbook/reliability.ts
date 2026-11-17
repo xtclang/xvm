@@ -1,0 +1,160 @@
+import * as assert from 'node:assert';
+import * as vscode from 'vscode';
+import { WorkbenchUi } from '../workbenchUi';
+import { CloseAction } from 'vscode-languageclient/node';
+import { client, eventually, noErrors, playbook } from './support';
+
+export function reliabilityCases(): void {
+    playbook('X146', async (workspace, data) => {
+        await workspace.write(data.library, data.original);
+        await workspace.write(data.consumer, data.source);
+        await workspace.configure([
+            { name: data.libraryModule, uri: workspace.uri(data.library).toString() },
+            { name: data.consumerModule, uri: workspace.uri(data.consumer).toString(), dependencies: [data.libraryModule] }
+        ]);
+        const library = await workspace.open(data.library);
+        const consumer = await workspace.open(data.consumer);
+        const version = consumer.version;
+        const connection = client();
+        const hints = connection.getFeature('textDocument/inlayHint').getProvider(consumer)!;
+        const tokens = connection.getFeature('textDocument/semanticTokens').getProvider(consumer)!;
+        const lenses = connection.getFeature('textDocument/codeLens').getProvider(consumer)!;
+        const folding = connection.getFeature('textDocument/foldingRange').getProvider(consumer)!;
+        const diagnostics = connection.getFeature('textDocument/diagnostic').getProvider(consumer)!;
+        const events: string[] = [];
+        const subscriptions = [hints.onDidChangeInlayHints.event(() => events.push('hints')),
+            tokens.onDidChangeSemanticTokensEmitter.event(() => events.push('tokens')),
+            lenses.onDidChangeCodeLensEmitter.event(() => events.push('lenses')),
+            folding.onDidChangeFoldingRange.event(() => events.push('folding')),
+            diagnostics.onDidChangeDiagnosticsEmitter.event(() => events.push('diagnostics'))];
+        const cancellation = new vscode.CancellationTokenSource();
+        async function verify(expected: string) {
+            await eventually(async () => {
+                const values = await hints.provider.provideInlayHints(consumer, new vscode.Range(0, 0, consumer.lineCount, 0), cancellation.token);
+                return values?.map(hint => typeof hint.label === 'string' ? hint.label : hint.label.map(part => part.value).join('')) ?? [];
+            }, labels => labels.some(label => label.includes(expected)), `Untouched consumer receives ${expected} inlay`);
+            assert.strictEqual(consumer.version, version);
+            assert.strictEqual(consumer.getText(), data.source);
+        }
+        try {
+            await verify(data.before);
+            for (const [source, expected] of [[data.changed, data.after], [data.original, data.before]]) {
+                events.length = 0;
+                await workspace.replace(library, source);
+                await eventually(async () => [...events], values =>
+                    ['hints', 'tokens', 'lenses', 'folding', 'diagnostics'].every(feature => values.includes(feature)),
+                    'All five negotiated native providers receive dependency refresh');
+                await verify(expected);
+                assert.ok((await lenses.provider!.provideCodeLenses(consumer, cancellation.token))!.length > 0);
+                assert.ok((await folding.provider.provideFoldingRanges(consumer, {}, cancellation.token))!.length > 0);
+                await noErrors(consumer.uri);
+            }
+        } finally { subscriptions.forEach(subscription => subscription.dispose()); cancellation.dispose(); }
+    });
+
+    playbook('X147', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        const config = vscode.workspace.getConfiguration('xtc');
+        const originalSettings = config.inspect('inlayHints.enabled')?.workspaceValue;
+        const connection = client();
+        const originalRequest = connection.sendRequest;
+        const releases = new Set<() => void>();
+        let hold = true;
+        // Hold a real reply at the UI boundary, so the older command actually finishes last.
+        connection.sendRequest = ((...args: unknown[]) => {
+            const response = Reflect.apply(originalRequest, connection, args) as Promise<unknown>;
+            return hold && args[0] === 'xtc/languageServiceStatus'
+                ? response.then(value => new Promise(resolve => {
+                    const release = () => { releases.delete(release); resolve(value); };
+                    releases.add(release);
+                })) : response;
+        }) as typeof connection.sendRequest;
+        async function delayed() {
+            hold = true;
+            const pending = vscode.commands.executeCommand('xtc.showLanguageServiceStatus');
+            await eventually(async () => releases.size, count => count === 1, 'Older status reply is held');
+            hold = false;
+            return { pending, release: [...releases][0] };
+        }
+        try {
+            const older = await delayed();
+            assert.ok(await vscode.commands.executeCommand('xtc.showLanguageServiceStatus'));
+            older.release();
+            assert.strictEqual(await older.pending, undefined, 'Older command cannot replace newer report');
+            const settings = await delayed();
+            await config.update('inlayHints.enabled', !config.get('inlayHints.enabled', true), vscode.ConfigurationTarget.Workspace);
+            settings.release();
+            assert.strictEqual(await settings.pending, undefined, 'Old report cannot publish after settings change');
+            const retired = await delayed();
+            const before = await Reflect.apply(originalRequest, connection, ['xtc/languageServiceStatus']) as { pid: number };
+            await vscode.commands.executeCommand('xtc.restartServer');
+            retired.release();
+            assert.strictEqual(await retired.pending, undefined, 'Retired connection cannot publish its old report');
+            assert.strictEqual((await connection.clientOptions.errorHandler!.closed()).action, CloseAction.DoNotRestart);
+            const current = await vscode.commands.executeCommand<{ effective: { pid: number } }>('xtc.showLanguageServiceStatus');
+            assert.notStrictEqual(current!.effective.pid, before.pid);
+            await eventually(async () => { try { process.kill(before.pid, 0); return false; } catch { return true; } }, value => value, 'Retired server exits');
+            assert.strictEqual(document.getText(), data.source);
+        } finally {
+            connection.sendRequest = originalRequest;
+            releases.forEach(release => release());
+            await config.update('inlayHints.enabled', originalSettings, vscode.ConfigurationTarget.Workspace);
+        }
+    });
+}
+
+export function refreshOverlapCases(): void {
+    playbook('X259', async (workspace, data) => {
+        await workspace.write(data.library, data.original);
+        await workspace.write(data.consumer, data.source);
+        await workspace.configure([
+            { name: data.libraryModule, uri: workspace.uri(data.library).toString() },
+            { name: data.consumerModule, uri: workspace.uri(data.consumer).toString(), dependencies: [data.libraryModule] }
+        ]);
+        const library = await workspace.open(data.library);
+        const consumer = await workspace.open(data.consumer);
+        const version = consumer.version;
+        const config = vscode.workspace.getConfiguration('xtc');
+        const original = config.inspect('inlayHints.enabled')?.workspaceValue;
+        const ui = await WorkbenchUi.connect();
+        const hints = (enabled: boolean) => config.update('inlayHints.enabled', enabled, vscode.ConfigurationTarget.Workspace);
+        async function visible(expected?: string) {
+            // Inspect the renderer's installed hint labels, without executing an inlay provider.
+            await eventually(() => ui.inlayLabels(), labels => expected === undefined ? labels.length === 0 :
+                labels.some(label => label.includes(expected)) &&
+                !labels.some(label => label.includes(expected === data.before ? data.after : data.before)),
+            `Untouched consumer displays ${expected ?? 'no'} inlay hints`);
+            assert.strictEqual(consumer.getText(), data.source);
+            assert.strictEqual(consumer.version, version);
+            await ui.screenshot(`X259-${expected ?? 'disabled'}`);
+        }
+        try {
+            await hints(true);
+            await visible(data.before);
+            await hints(false);
+            await visible();
+            const previous = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+            await workspace.replace(library, data.changed, false);
+            await hints(true);
+            await vscode.commands.executeCommand('xtc.restartServer');
+            await eventually(async () => {
+                try { process.kill(previous.pid, 0); return false; }
+                catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return true; throw error; }
+            }, Boolean, 'Retired refresh producer exits');
+            assert.notStrictEqual((await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus')).pid, previous.pid);
+            await visible(data.after);
+            await noErrors(consumer.uri);
+            await hints(false);
+            await workspace.replace(library, data.original, false);
+            await hints(true);
+            await visible(data.before);
+            await noErrors(consumer.uri);
+        } finally {
+            await config.update('inlayHints.enabled', original, vscode.ConfigurationTarget.Workspace);
+            await ui.close();
+        }
+    });
+}

@@ -104,6 +104,16 @@ public abstract class OpCallable extends Op {
     }
 
     /**
+     * @return the function or constructor that this op calls, as the specified frame has it, or
+     *         null if the op calls a function that a register holds, or the super function
+     */
+    public MethodConstant getCalledMethod(Frame frame) {
+        return m_nFunctionId <= CONSTANT_OFFSET
+                ? frame.getConstant(m_nFunctionId, MethodConstant.class)
+                : null;
+    }
+
+    /**
      * A "virtual constant" indicating whether or not this op has multiple return values.
      *
      * @return true iff the op has multiple return values.

@@ -1,0 +1,227 @@
+package org.xvm.lsp.server
+
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.AppenderBase
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
+import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
+import org.xvm.lsp.adapter.xdk.CompilerQueueTrace
+import org.xvm.lsp.awaited
+import org.xvm.lsp.util.ExecutionTrace
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+
+/**
+ * Checks trace ownership across queued, nested and asynchronous operations. Cancellation must not pretend
+ * work stopped, and protocol spans must distinguish request direction and end at actual reply delivery.
+ */
+class ExecutionTraceTest {
+    /**
+     * The trace's events are lines of its own file only: on stderr, which VS Code shows as the server's errors, and in
+     * server.log they would bury the server's own messages, as every trace event did.
+     */
+    @Test
+    fun `trace events go to the trace file and not to stderr or the server log`() {
+        val trace = LoggerFactory.getLogger("org.xvm.lsp.trace") as Logger
+        val root = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
+        val seen = CopyOnWriteArrayList<ILoggingEvent>()
+        val appender =
+            object : AppenderBase<ILoggingEvent>() {
+                override fun append(event: ILoggingEvent) {
+                    seen += event
+                }
+            }.apply { start() }
+        root.addAppender(appender)
+        try {
+            ExecutionTrace.api("ExecutionTraceTest.probe") {}
+            assertThat(seen.filter { it.loggerName == trace.name }).isEmpty()
+            assertThat(trace.getAppender("EXECUTION_TRACE")).isNotNull()
+            assertThat(root.getAppender("STDERR")).isNotNull()
+        } finally {
+            root.detachAppender(appender)
+            appender.stop()
+        }
+    }
+
+    @Test
+    fun `queue lists preserve order and cancellation does not pretend running work stopped`() {
+        TraceRecording().use { trace ->
+            val queue = CompilerQueueTrace()
+            val running = CompletableFuture<Unit>()
+            val next = CompletableFuture<Unit>()
+            val retired = CompletableFuture<Unit>()
+            val entered = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            val first =
+                queue.task("compile", "file:///Alpha.x", running) {
+                    entered.countDown()
+                    check(release.awaited())
+                }
+            val second =
+                queue.task("cursor-COMPLETION", "file:///Beta.x", next) { next.complete(Unit) }
+            queue
+                .task("compile", "file:///Gamma.x", retired) { error("Retired job executed") }
+                .also { it.ready() }
+            second.ready()
+            Executors.newSingleThreadExecutor().use { executor ->
+                val execution = executor.submit(first.ready())
+                try {
+                    check(entered.awaited())
+                    running.cancel(false)
+                    val snapshot = trace.entries.last()
+                    assertThat(snapshot["queueSize"].asInt).isEqualTo(2)
+                    val status = queue.snapshot()
+                    assertThat(status["queueSize"]).isEqualTo(2)
+                    assertThat(status["runningSize"]).isEqualTo(1)
+                    assertThat(queue.progressDescription()).isEqualTo("compiling Alpha.x; 2 jobs queued")
+                    assertThat(status["queuedJobs"].toString()).contains("Gamma.x", "Beta.x")
+                    assertThat(snapshot["queuedJobs"].asJsonArray.map { it.asString })
+                        .satisfiesExactly(
+                            { assertThat(it).contains("compile", "Gamma.x") },
+                            { assertThat(it).contains("cursor-COMPLETION", "Beta.x") },
+                        )
+                    assertThat(snapshot["runningSize"].asInt).isEqualTo(1)
+                    assertThat(snapshot["runningJobs"].toString()).contains("Alpha.x")
+                    retired.cancel(false)
+                    assertThat(trace.entries.last()["queueSize"].asInt).isEqualTo(1)
+                } finally {
+                    release.countDown()
+                }
+                execution.awaited()
+            }
+            second.run()
+            assertThat(queue.progressDescription()).isNull()
+            val final = trace.entries.last()
+            assertThat(final["queueSize"].asInt).isZero()
+            assertThat(final["runningSize"].asInt).isZero()
+            assertThat(final["debouncingSize"].asInt).isZero()
+            assertThat(final["startedTotal"].asInt).isEqualTo(2)
+            assertThat(
+                trace.entries
+                    .filter { it["event"].asString == "end" }
+                    .first()["outcome"]
+                    .asString,
+            ).isEqualTo("cancelled")
+        }
+    }
+
+    @Test
+    fun `API trace exposes overlap without counting nesting as parallel threads`() {
+        TraceRecording().use { trace ->
+            val entered = CountDownLatch(2)
+            val release = CountDownLatch(1)
+            Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+                val work =
+                    (1..2).map { index ->
+                        executor.submit {
+                            ExecutionTrace.api("overlap-$index") {
+                                entered.countDown()
+                                check(release.awaited())
+                                ExecutionTrace.api("nested-$index") {}
+                            }
+                        }
+                    }
+                try {
+                    check(entered.awaited())
+                    assertThat(
+                        trace.entries
+                            .filter { it["event"].asString == "start" }
+                            .map { it["activeApiThreads"].asInt },
+                    ).contains(2)
+                } finally {
+                    release.countDown()
+                }
+                work.forEach { it.awaited() }
+            }
+            assertThat(
+                trace.entries.filter {
+                    it["operation"].asString.startsWith("nested") &&
+                        it["event"].asString == "start"
+                },
+            ).allSatisfy { assertThat(it["depth"].asInt).isEqualTo(1) }
+            assertThat(trace.entries).allSatisfy {
+                assertThat(it["thread"].asString).isEqualTo("virtual-${it["threadId"].asLong}")
+            }
+            assertThatThrownBy {
+                ExecutionTrace.api("exceptional") { error("source text must not be logged") }
+            }.isInstanceOf(IllegalStateException::class.java)
+            ExecutionTrace.api("after-failure") { Unit }
+            assertThat(trace.entries.toString()).doesNotContain("source text must not be logged")
+            assertThat(
+                trace.entries
+                    .last {
+                        it["operation"].asString == "after-failure" &&
+                            it["event"].asString == "start"
+                    }["activeApiThreads"]
+                    .asInt,
+            ).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun `protocol trace ends at the reply and separates bidirectional IDs`() {
+        TraceRecording().use { trace ->
+            val open = ConcurrentHashMap<Any, String>()
+            ProtocolTrace(open = open).use { protocol ->
+                val received = protocol.wrap(MessageConsumer {}, received = true)
+                val sent = protocol.wrap(MessageConsumer {}, received = false)
+                received.consume(
+                    RequestMessage().apply {
+                        setId(7)
+                        method = "textDocument/hover"
+                    },
+                )
+                sent.consume(
+                    RequestMessage().apply {
+                        setId(7)
+                        method = "workspace/configuration"
+                    },
+                )
+                assertThat(trace.entries.map { it["event"].asString })
+                    .containsExactly("start", "start")
+                // the client's request is open until the server's reply, and the server's own request is not one
+                assertThat(open.values).containsExactly("textDocument/hover")
+                sent.consume(
+                    ResponseMessage().apply {
+                        setId(7)
+                        result = "hover"
+                    },
+                )
+                assertThat(open).isEmpty()
+                received.consume(
+                    ResponseMessage().apply {
+                        setId(7)
+                        result = emptyList<String>()
+                    },
+                )
+                val replies = trace.entries.filter { it["event"].asString == "end" }
+                assertThat(replies.map { it["operation"].asString })
+                    .containsExactly("textDocument/hover", "workspace/configuration")
+                assertThat(replies.map { it["boundary"].asString })
+                    .containsExactly("server-reply-written", "client-reply-received")
+                assertThat(replies).allSatisfy {
+                    assertThat(it["elapsedMs"].asDouble).isGreaterThanOrEqualTo(0.0)
+                }
+                assertThat(replies.first()["writeMs"].asDouble).isGreaterThanOrEqualTo(0.0)
+                assertThat(replies.last().has("writeMs")).isFalse()
+                assertThat(trace.entries.filter { it["event"].asString == "reply-ready" }.map { it["operation"].asString })
+                    .containsExactly("textDocument/hover")
+                received.consume(
+                    RequestMessage().apply {
+                        id = "pending"
+                        method = "textDocument/completion"
+                    },
+                )
+            }
+            assertThat(trace.entries.last()["outcome"].asString).isEqualTo("transport-closed")
+        }
+    }
+}

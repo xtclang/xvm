@@ -186,6 +186,24 @@ xtcCompile {
 }
 ```
 
+#### Debugging with an Ecstasy Debugger
+
+To debug the Ecstasy program itself, with breakpoints in its `.x` sources, a run task can run it under
+the launcher's `--debug`, which an IDE's Ecstasy debugger attaches to. The Gradle properties `xtcDebug`
+and `xtcDebugAgent` set it for `runXtc`, the other run tasks and `testXtc`; the `debug` and
+`debugAgent` properties of `xtcRun`, `xtcTest` or a task set it in the build script:
+
+```bash
+./gradlew runXtc --module=MyApp -PxtcDebug=listen:127.0.0.1:5005,suspend
+```
+
+The program then waits for a debugger, such as VS Code's or IntelliJ's Ecstasy Attach configuration on
+port 5005. The IDEs set `xtcDebug` themselves when they debug a module in Gradle mode, with `connect:` to
+their own port. The XDK's javatools has the debugger's agent; `xtcDebugAgent` names a jar with another
+one, which the launcher then loads instead.
+A `DIRECT` run cannot be debugged so, since the agent would run in the Gradle daemon; run it with
+`--mode=ATTACHED`. A debugged `testXtc` always runs, and its results are not cached.
+
 #### Debugging Tips
 
 - **In-Process (fork=false)**: Best for debugging plugin code and compiler internals
@@ -344,6 +362,25 @@ xtcTest {
     module.set("myapp.xtc")
 }
 ```
+
+**Running Chosen Tests**:
+
+`testXtc` runs all of the test module's tests unless its options choose some, by their paths in the
+module; each option can be given more than once, and xunit runs the tests that any of them selects:
+
+| Option | Effect |
+|--------|--------|
+| `--test-package=<path>` | Runs the tests of a package, such as `tests` |
+| `--test-class=<path>` | Runs the tests of a class, such as `tests.MathTest` |
+| `--test-method=<path>` | Runs one test method, such as `tests.MathTest.adds`, or a module-level test by its name |
+| `--test-report=json` | Also prints xunit's `json` report, an event per line, for a tool that reads the execution from the output, such as an IDE; xunit refuses a report it does not know |
+
+```bash
+./gradlew testXtc --test-class=tests.MathTest --test-method=tests.OtherTest.works
+./gradlew testXtc --module=MyAppTest --test-report=json
+```
+
+The editors' test runs in Gradle mode use these options.
 
 **Skipping Tests**:
 
@@ -679,7 +716,7 @@ When modifying the plugin, follow these guidelines:
 1. **Configuration Cache First**: Always design for configuration cache compatibility
 2. **Capture Early**: Capture all configuration state in task constructors, but it's better to find a way where this doesn't matter
 3. **No Project in Actions**: Never access `Project` in `@TaskAction` methods
-4. **Newlines**: Always add newline at end of files (enforced by `CLAUDE.md`)
+4. **Newlines**: Always add newline at end of files (required by `AGENTS.md`)
 5. **Final State**: Fields are final if they don't MUST be anything else. Try to create all state as final during construction
 
 ### Testing

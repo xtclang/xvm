@@ -31,7 +31,7 @@ public class ImportStatement
     /**
      * Construct an import statement.
      *
-     * @param cond
+     * @param cond           the optional condition guarding the import, or null
      * @param keyword        the "import" keyword
      * @param alias          the simple name that represents the qualified name
      * @param qualifiedName  the qualified name as a list of identifier tokens
@@ -48,7 +48,7 @@ public class ImportStatement
     /**
      * Construct an import statement for an "import all" style statement.
      *
-     * @param cond
+     * @param cond           the optional condition guarding the import, or null
      * @param keyword        the "import" keyword
      * @param qualifiedName  the qualified name as a list of identifier tokens
      * @param star           the "*" token
@@ -69,6 +69,21 @@ public class ImportStatement
      */
     public String getAliasName() {
         return alias == null ? null : alias.getValueText();
+    }
+
+    /**
+     * @return the written alias token, or null for a wildcard import
+     */
+    public Token getAliasToken() {
+        return alias;
+    }
+
+    /**
+     * @return the resolved import identity without initiating or resuming name resolution
+     */
+    public IdentityConstant getImportedIdentity() {
+        return m_resolver != null && m_resolver.getConstant() instanceof IdentityConstant identity
+                ? identity : null;
     }
 
     /**
@@ -104,6 +119,13 @@ public class ImportStatement
             asName[i] = getQualifiedNamePart(i);
         }
         return asName;
+    }
+
+    /**
+     * @return an immutable copy of the written name tokens, excluding the alias and wildcard
+     */
+    public List<Token> getQualifiedNameTokens() {
+        return List.copyOf(qualifiedName);
     }
 
     /**
@@ -226,12 +248,12 @@ public class ImportStatement
         sb.append("import ");
 
         String last = qualifiedName.isEmpty() ? null :
-            String.valueOf(qualifiedName.get(qualifiedName.size() - 1).getValue());
+            String.valueOf(qualifiedName.getLast().getValue());
         sb.append(qualifiedName.stream()
             .map(token -> String.valueOf(token.getValue()))
             .collect(Collectors.joining(".")));
 
-        if (alias != null && !last.equals(alias.getValue())) {
+        if (alias != null && !Objects.equals(last, alias.getValue())) {
             sb.append(" as ")
               .append(alias.getValue());
         } else if (star != null) {

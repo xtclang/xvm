@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import java.util.stream.Stream;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -27,6 +29,8 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.NOWHERE;
 
 import static org.xvm.compiler.Compiler.MODULE_MISSING;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
@@ -113,12 +117,12 @@ public class Compiler extends Launcher<CompilerOptions> {
     /**
      * Compiler constructor for programmatic use.
      *
-     * @param options     pre-configured compiler options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured compiler options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Compiler(CompilerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Compiler(CompilerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**
@@ -152,9 +156,17 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         List<File>       resDirs   = opts.getResourceLocations();
         File             outputLoc = opts.getOutputLocation().orElse(null);
-        List<ModuleInfo> targets   = selectTargets(opts.getInputLocations(), resDirs, outputLoc);
+        List<ModuleInfo> targets   = withProjectModules(selectTargets(opts.getInputLocations(), resDirs, outputLoc), outputLoc);
 
         prevModules = targets;
+        // a test module's project modules link from the project's binary directory when up to date
+        var path = Stream.concat(
+                targets.stream().flatMap(info -> info.withProjectBinaries(List.of()).stream()),
+                opts.getModulePath().stream()).distinct().toList();
+        if (!path.equals(opts.getModulePath())) {
+            libraryPath = path;
+            repoLib     = null;
+        }
 
         int cTargets = targets.size();
         if (cTargets == 0) {
@@ -210,7 +222,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         }
         checkErrors("target selection");
 
-        boolean fRebuild = opts.isForcedRebuild();
+        // a test module compiles again with a project module that changed, which it imports
+        boolean fRebuild = opts.isForcedRebuild() || targets.stream().anyMatch(ModuleInfo::isProjectChanged);
         var     verStamp = opts.getVersion();
         log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
@@ -297,14 +310,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @return 0 for success, non-zero for failure
      */
     protected int compile(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repoLib) {
-        linkModules(compilers, repoLib);
-        flushAndCheckErrors(compilers, "module linking");
-
-        resolveNames(compilers);
-        flushAndCheckErrors(compilers, "name resolution");
-
-        injectNativeTurtle(repoLib);
-        checkErrors("native turtle injection");
+        resolveDeclarations(compilers, repoLib);
 
         log(INFO, "Validating expressions");
         validateExpressions(compilers);
@@ -315,6 +321,25 @@ public class Compiler extends Launcher<CompilerOptions> {
         flushAndCheckErrors(compilers, "code generation");
 
         return hasSeriousErrors() ? 1 : 0;
+    }
+
+    /**
+     * Run the normal declaration phases without validating bodies or generating code.
+     * Embedding hosts may stop here, but must not treat the resulting structures as artifacts.
+     *
+     * @param compilers  the fresh module compilers
+     * @param repoLib    the linked library repository
+     */
+    protected void resolveDeclarations(List<org.xvm.compiler.Compiler> compilers,
+                                       ModuleRepository repoLib) {
+        linkModules(compilers, repoLib);
+        flushAndCheckErrors(compilers, "module linking");
+
+        resolveNames(compilers);
+        flushAndCheckErrors(compilers, "name resolution");
+
+        injectNativeTurtle(repoLib);
+        checkErrors("native turtle injection");
     }
 
     /**
@@ -409,10 +434,33 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return the library repository
      */
+    /**
+     * Add the modules of the projects that test modules among the targets import, as
+     * {@link ModuleInfo#getProjectModuleFiles()} names them, unless they are targets already: a
+     * test module in its project's test source directory compiles with them, whether "xtc build",
+     * "xtc run" or "xtc test" compiles it.
+     *
+     * @param targets    the selected targets
+     * @param outputLoc  the output location, if one was specified
+     *
+     * @return the targets, with the project modules after them
+     */
+    protected List<ModuleInfo> withProjectModules(List<ModuleInfo> targets, File outputLoc) {
+        var sources = targets.stream().map(ModuleInfo::getSourceFile).toList();
+        var added   = targets.stream()
+                .flatMap(info -> info.getProjectModuleFiles().stream())
+                .distinct()
+                .filter(file -> !sources.contains(file))
+                .toList();
+        return added.isEmpty()
+                ? targets
+                : Stream.concat(targets.stream(), selectTargets(added, List.of(), outputLoc).stream()).toList();
+    }
+
     protected ModuleRepository ensureLibraryRepo() {
         if (repoLib == null) {
             log(INFO, "Creating and pre-populating library and build repositories");
-            repoLib = configureLibraryRepo(options().getModulePath());
+            repoLib = configureLibraryRepo(libraryPath == null ? options().getModulePath() : libraryPath);
         }
         return repoLib;
     }
@@ -426,8 +474,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         for (var compiler : compilers) {
             ModuleConstant idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
-                compiler.getErrorListener().log(FATAL, MODULE_MISSING,
-                        new String[]{idMissing.getName()}, null);
+                compiler.getErrorListener().fatal(MODULE_MISSING, NOWHERE, idMissing.getName());
                 return;
             }
         }
@@ -645,8 +692,9 @@ public class Compiler extends Launcher<CompilerOptions> {
     public boolean isAbortDesired() {
         // Check BOTH Console (tool errors) AND ErrorListener delegate (compiler errors)
         // Use Compiler's strictness-aware abort threshold
-        return isBadEnoughToAbort(m_sevWorst) ||
-                (m_errors != ErrorListener.BLACKHOLE && m_errors.isAbortDesired());
+        // no sentinel comparison: a silent listener answers false to isAbortDesired anyway, so
+        // the guard could never change the answer - and there is now more than one silent listener
+        return isBadEnoughToAbort(m_sevWorst) || m_errors.isAbortDesired();
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -755,6 +803,11 @@ public class Compiler extends Launcher<CompilerOptions> {
     protected Strictness strictLevel = Strictness.Normal;
 
     protected ModuleRepository repoLib;
+    /**
+     * The module path of the library repository: the options' module path, behind the binary
+     * directories of the projects whose test modules compile here; null until targets are known.
+     */
+    protected List<File>       libraryPath;
     protected List<ModuleInfo> prevModules;
     protected ModuleRepository prevLibs;
     protected ModuleRepository prevOutput;

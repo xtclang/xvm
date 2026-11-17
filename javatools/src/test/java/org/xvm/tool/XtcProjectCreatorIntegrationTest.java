@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -16,6 +15,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.BuildInfo;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,8 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
     disabledReason = "Spawns multiple Gradle builds which are slow with empty cache")
 public class XtcProjectCreatorIntegrationTest {
-
-    private static final int GRADLE_TIMEOUT_SECONDS = 120;
 
     @TempDir
     Path tempDir;
@@ -171,12 +169,7 @@ public class XtcProjectCreatorIntegrationTest {
             }
         }
 
-        boolean completed = process.waitFor(GRADLE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        if (!completed) {
-            process.destroyForcibly();
-            return new GradleResult(-1, "Gradle timed out after " + GRADLE_TIMEOUT_SECONDS + " seconds\n" + output);
-        }
-
+        Await.waitFor(process, "the generated project's Gradle build");
         return new GradleResult(process.exitValue(), output.toString());
     }
 

@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
+import java.util.function.BiFunction;
+
 import java.util.stream.Stream;
 
 import org.xvm.asm.ErrorList;
@@ -27,7 +29,6 @@ import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
@@ -46,6 +47,12 @@ import static org.xvm.util.Handy.readFileChars;
 import static org.xvm.util.Handy.removeExtension;
 import static org.xvm.util.Handy.resolveFile;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * Information gleaned about a module from a single specified file. This is a lazily populated
  * structure, not a point-in-time snapshot; as a result, in the presence of realtime changes
@@ -56,6 +63,34 @@ import static org.xvm.util.Handy.resolveFile;
  */
 public class ModuleInfo {
     // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Construct host-supplied source identity without discovering or requiring physical files.
+     * This supports immutable overlays and proposed source layouts before a file operation.
+     * Subclasses supply {@link #readSource}, {@link #sourceEntries}, {@link #isSourceTree}, and
+     * {@link #getResourceDir} from the same snapshot. Ordinary file constructors retain discovery.
+     *
+     * @param sourceFile  the logical module root, including its source extension
+     * @param moduleName  the module identity obtained from the host's source snapshot
+     */
+    protected ModuleInfo(File sourceFile, String moduleName) {
+        this.fileSpec   = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
+        this.moduleName = Objects.requireNonNull(moduleName, "moduleName");
+        if (moduleName.isBlank() || !isExplicitSourceFile(this.fileSpec.getName())) {
+            throw new IllegalArgumentException("A module name and .x source root are required");
+        }
+        this.sourceFile    = this.fileSpec;
+        this.deduce        = false;
+        this.fileName      = removeExtension(this.fileSpec.getName());
+        this.sourceDir     = this.fileSpec.getParentFile();
+        this.projectDir    = this.sourceDir;
+        this.sourceStatus  = Status.Exists;
+        this.sourceContent = Content.Module;
+        this.resourceDir   = NoResources;
+        this.binaryDir     = this.sourceDir;
+        this.binaryStatus  = Status.NotExists;
+        this.binaryContent = Content.Invalid;
+    }
 
     /**
      * Construct the module information from the specified file.
@@ -230,6 +265,27 @@ public class ModuleInfo {
 
                 if (fileName != null) {
                     sourceFile = new File(sourceDir, fileName + ".x");
+                }
+            }
+        }
+
+        if (deduce && fileName != null && (sourceFile == null || !sourceFile.exists())) {
+            // the module's source may be in the project's conventional source directory, such as
+            // ./src/main/x, even when the directory searched first, such as the current one, has
+            // other source files of its own, which made it the source directory
+            String name  = fileName;
+            File   found = sourceDirFromPrjDir(projectDir, name);
+            if (found == null && shorterName != null) {
+                name  = shorterName;
+                found = sourceDirFromPrjDir(projectDir, name);
+            }
+            if (found != null) {
+                fileName   = name;
+                sourceDir  = found;
+                sourceFile = new File(found, name + ".x");
+                if (binaryDir != null && binaryDir.equals(dirSpec) && binarySpec == null) {
+                    // the binary goes where the project's does, not beside the other sources
+                    binaryDir = null;
                 }
             }
         }
@@ -435,6 +491,59 @@ public class ModuleInfo {
     }
 
     /**
+     * @return true iff the locations were deduced and the module's source is in its project's
+     *         conventional test source directory, such as ./src/test/x, where "xtc init" puts the
+     *         test module that imports the project's module
+     */
+    public boolean isTestSource() {
+        return deduce && sourceDir != null && projectDir != null
+                && sourceDir.equals(conventionalSourceDir(projectDir, "test"));
+    }
+
+    /**
+     * @return for a test module in its project's test source directory ({@link #isTestSource()}),
+     *         the module source files in the project's conventional main source directory, such as
+     *         ./src/main/x, which it can import, and which compile with it: "xtc build", "xtc run"
+     *         and "xtc test" all take them; for any other module, none
+     */
+    public List<File> getProjectModuleFiles() {
+        File mainDir = isTestSource() ? conventionalSourceDir(projectDir, "main") : null;
+        return mainDir == null
+                ? List.of()
+                : sourceFiles(mainDir).stream()
+                        .filter(file -> file.isFile() && extractModuleName(file) != null)
+                        .toList();
+    }
+
+    /**
+     * @return true iff one of the {@link #getProjectModuleFiles() project's modules} that this
+     *         test module compiles with is not up to date, so that the test module compiles again
+     *         with it
+     */
+    public boolean isProjectChanged() {
+        return getProjectModuleFiles().stream().anyMatch(file -> !new ModuleInfo(file, true).isUpToDate());
+    }
+
+    /**
+     * @param path  a module path
+     *
+     * @return the module path to compile or run this module with: for a test module that has
+     *         {@link #getProjectModuleFiles() project's modules}, the project's binary directory,
+     *         once it exists, ahead of the given path, where they are compiled to; otherwise the
+     *         given path
+     */
+    public List<File> withProjectBinaries(List<File> path) {
+        File dir = getBinaryDir();
+        if (getProjectModuleFiles().isEmpty() || dir == null || !dir.isDirectory() || path.contains(dir)) {
+            return path;
+        }
+        var result = new ArrayList<File>(path.size() + 1);
+        result.add(dir);
+        result.addAll(path);
+        return result;
+    }
+
+    /**
      * @return true iff the source code appears to be organized using the multiple-file,
      *         hierarchical, name-spaced tree
      */
@@ -552,7 +661,7 @@ public class ModuleInfo {
                     binaryVersion = struct.getModule().getVersion();
                     binaryContent = Content.Module;
                     return true;
-                } catch (Exception ignore) {}
+                } catch (Exception _) {}
             } else {
                 binaryStatus = Status.NotExists;
             }
@@ -628,15 +737,73 @@ public class ModuleInfo {
     // ----- source tree ---------------------------------------------------------------------------
 
     /**
+     * A source-tree entry. The directory flag describes the input snapshot, so a host can supply
+     * files and packages that have not yet been saved to disk.
+     */
+    public record SourceEntry(File file, boolean directory) {}
+
+    /**
+     * List the immediate source-tree entries of a directory. Hosts overriding this together with
+     * {@link #readSource} must use one consistent input snapshot for the entire compilation.
+     * Resource lookup remains based on the original disk locations.
+     *
+     * @param directory  the directory to enumerate
+     * @return the entries, including directories needed to assemble nested packages
+     */
+    protected List<SourceEntry> sourceEntries(File directory) {
+        return listFiles(directory).stream()
+                .map(file -> new SourceEntry(file, file.isDirectory()))
+                .toList();
+    }
+
+    /**
+     * Read the text of a discovered source file. Hosts may override this to supply unsaved text
+     * while retaining the file's identity and resource directory. Use a fresh ModuleInfo for each
+     * compilation; source trees and their text are cached for this instance.
+     *
+     * @param file  the discovered source file, resolved by ModuleInfo; hosts should normalize
+     *              overlay keys to the same canonical paths
+     *
+     * @return the source characters, owned by the caller
+     *
+     * @throws IOException if the source cannot be read
+     */
+    protected char[] readSource(File file)
+            throws IOException {
+        return readFileChars(file);
+    }
+
+    /**
      * When working with a source code tree and given a "module file", produce a source tree of
      * the desired processing stage.
      *
-     * @param errs  an optional error listener
+     * @param errs  the reporting and cancellation listener for this attempt
      *
      * @return the root {@link Node} of the tree, or null if the ModuleInfo does not know the source
      *         location, or if serious errors occur loading the source tree
      */
     public Node getSourceTree(ErrorListener errs) {
+        return getSourceTree(errs, STANDARD_PARSER);
+    }
+
+    /**
+     * Assemble the source tree using an attempt-owned source parser. This supports explicit
+     * partial analysis while retaining the same source snapshot, resources and package assembly.
+     * The parser must report other syntax errors to its supplied listener; incomplete syntax
+     * must never be passed to ordinary compilation. Use a fresh ModuleInfo for each attempt.
+     *
+     * @param errs   the diagnostic listener and abort policy for this operation
+     * @param parse  the parser factory applied to each discovered source with its diagnostic listener
+     *
+     * @return the assembled source root, or null if loading or parsing prevented assembly
+     */
+    public Node getSourceTree(ErrorListener errs,
+                              BiFunction<Source, ErrorListener, StatementBlock> parse) {
+        Objects.requireNonNull(errs, "errs");
+        Objects.requireNonNull(parse, "parse");
+        if (errs.isAbortDesired()) {
+            return null;
+        }
         if (sourceNode != null) {
             return sourceNode;
         }
@@ -650,7 +817,6 @@ public class ModuleInfo {
         if (isSourceTree()) {
             assert fileName != null;
             File subDir = new File(srcDir, fileName);
-            assert subDir.exists();
             DirNode dirNode = new DirNode(/*parent=*/null, subDir, srcFile);
             dirNode.buildSourceTree();
             sourceNode = dirNode;
@@ -662,7 +828,7 @@ public class ModuleInfo {
             return null;
         }
 
-        sourceNode.parse();
+        sourceNode.parse(errs, parse);
         sourceNode.logErrors(errs);
         if (errs.hasSeriousErrors() || errs.isAbortDesired()) {
             return null;
@@ -681,6 +847,31 @@ public class ModuleInfo {
         }
 
         return sourceNode;
+    }
+
+    /**
+     * Read the source trees retained by the last loading attempt, including recovered syntax
+     * when {@link #getSourceTree(ErrorListener)} could not assemble the module. This does not load,
+     * parse, register names or link trees. Synthetic package sources are excluded.
+     *
+     * @return a snapshot of the available per-file syntax; these trees may be incomplete and
+     *         must not be used for semantic compilation after a loading/parsing error
+     */
+    public List<StatementBlock> getParsedSources() {
+        List<StatementBlock> sources = new ArrayList<>();
+        collectParsedSources(sourceNode, sources);
+        return List.copyOf(sources);
+    }
+
+    private void collectParsedSources(Node node, List<StatementBlock> sources) {
+        if (node instanceof DirNode dir) {
+            collectParsedSources(dir.sourceNode(), sources);
+            dir.classNodes().values().forEach(file -> collectParsedSources(file, sources));
+            dir.packageNodes().forEach(pkg -> collectParsedSources(pkg, sources));
+        } else if (node instanceof FileNode file && file.file() != null &&
+                   file.ast() instanceof StatementBlock block) {
+            sources.add(block);
+        }
     }
 
     /**
@@ -770,6 +961,28 @@ public class ModuleInfo {
         public abstract void parse();
 
         /**
+         * Parse while observing the host's abort request. The no-argument entry point is retained
+         * for CLI consumers that drain the node's diagnostics themselves.
+         *
+         * @param errs  the diagnostic listener and abort policy for this operation
+         */
+        public void parse(ErrorListener errs) {
+            if (!errs.isAbortDesired()) {
+                parse();
+            }
+        }
+
+        /**
+         * Parse with an attempt-owned strategy; existing custom nodes retain their own parser.
+         *
+         * @param errs   the diagnostic listener and abort policy for this operation
+         * @param parse  the parser factory applied to each discovered source with its diagnostic listener
+         */
+        public void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse) {
+            parse(errs);
+        }
+
+        /**
          * Collect the various top-level type names within the module.
          */
         public abstract void registerNames();
@@ -802,47 +1015,38 @@ public class ModuleInfo {
         public abstract TypeCompositionStatement type();
 
         @Override
-        public boolean log(ErrorInfo err) {
-            return errs().log(err);
+        public void log(ErrorInfo err) {
+            errs().log(err);
         }
 
         @Override
         public boolean isAbortDesired() {
-            return m_errs != null && m_errs.isAbortDesired();
+            return f_errs.isAbortDesired();
         }
 
         @Override
         public boolean hasSeriousErrors() {
-            return m_errs != null && m_errs.hasSeriousErrors();
+            return f_errs.hasSeriousErrors();
         }
 
         @Override
         public boolean hasError(String sCode) {
-            return m_errs != null && m_errs.hasError(sCode);
+            return f_errs.hasError(sCode);
         }
 
         /**
          * @return the list containing any errors accumulated on (or under) this node
          */
         public ErrorList errs() {
-            ErrorList errs = m_errs;
-            if (errs == null) {
-                m_errs = errs = new ErrorList(ErrorListener.DEFAULT_MAX_ERRORS);
-            }
-            return errs;
+            return f_errs;
         }
 
         /**
          * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
-            ErrorList deferred = m_errs;
-            if (deferred != null) {
-                for (ErrorInfo err : deferred.getErrors()) {
-                    errs.log(err);
-                }
-                deferred.clear();
-            }
+            f_errs.logTo(errs);
+            f_errs.clear();
         }
 
         // ----- fields ------------------------------------------------------------------------
@@ -863,16 +1067,54 @@ public class ModuleInfo {
         protected ResourceDir m_resdir;
 
         /**
-         * The error list which buffers errors for the file node, if any.
+         * The errors accumulated on (or under) this node. A Node is an ErrorListener, so it has
+         * to be able to answer for what it has seen from the moment it exists: the list used to be
+         * built on first use, which left the three queries above answering "nothing" for a node
+         * nobody had logged to yet, and left two threads able to build two lists and keep
+         * different halves of the errors.
          */
-        private ErrorList m_errs;
+        private final ErrorList f_errs = new ErrorList();
+    }
+
+    /**
+     * A source directory or file node. Its parsing goes through a caller-selected parser; the
+     * shorter entry points use the standard parser, and the no-argument form discards the
+     * diagnostics it would report.
+     */
+    public abstract class SourceNode
+            extends Node {
+        /**
+         * Construct a SourceNode.
+         *
+         * @param parent  the parent node
+         * @param file    the file that this node will represent
+         */
+        protected SourceNode(DirNode parent, File file) {
+            super(parent, file);
+        }
+
+        /**
+         * Parse this node and all nodes it contains.
+         */
+        @Override
+        public void parse() {
+            parse(silent(DISCARD));
+        }
+
+        @Override
+        public void parse(ErrorListener errs) {
+            parse(errs, STANDARD_PARSER);
+        }
+
+        @Override
+        public abstract void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse);
     }
 
     /**
      * A DirNode represents a source directory, which corresponds to a module or package.
      */
     public class DirNode
-            extends Node {
+            extends SourceNode {
         /**
          * Construct the root DirNode.
          *
@@ -882,7 +1124,6 @@ public class ModuleInfo {
          */
         DirNode(DirNode parent, File dir, File fileSrc) {
             super(parent, dir);
-            assert dir.isDirectory();
 
             if (fileSrc != null) {
                 m_fileSrc = fileSrc;
@@ -895,12 +1136,18 @@ public class ModuleInfo {
          */
         void buildSourceTree() {
             File thisDir = file();
-            for (File file : listFiles(thisDir)) {
+            List<SourceEntry> entries = sourceEntries(thisDir);
+            var directories = entries.stream().filter(SourceEntry::directory)
+                    .map(entry -> entry.file().getName()).toList();
+            var files = entries.stream().filter(entry -> !entry.directory())
+                    .map(entry -> entry.file().getName()).toList();
+            for (SourceEntry entry : entries) {
+                File file = entry.file();
                 String name = file.getName();
-                if (file.isDirectory()) {
+                if (entry.directory()) {
                     // if the directory has no corresponding ".x" file, then it is an implied package;
                     // ignore invalid package names; they wouldn't have compiled anyway
-                    if (!new File(thisDir, name + ".x").exists() && Lexer.isValidIdentifier(name)) {
+                    if (!files.contains(name + ".x") && Lexer.isValidIdentifier(name)) {
                         DirNode child = new DirNode(this, file, null);
                         packageNodes().add(child);
                         child.buildSourceTree();
@@ -909,7 +1156,7 @@ public class ModuleInfo {
                     // if there is a directory by the same name (minus the ".x"), then recurse to create
                     // a subtree
                     File subDir = new File(thisDir, removeExtension(name));
-                    if (subDir.exists() && subDir.isDirectory()) {
+                    if (directories.contains(subDir.getName())) {
                         // create a subtree
                         DirNode child = new DirNode(this, subDir, file);
                         packageNodes().add(child);
@@ -975,24 +1222,24 @@ public class ModuleInfo {
             return dot >= 0 ? name.substring(0, dot) : name;
         }
 
-        /**
-         * Parse this node and all nodes it contains.
-         */
         @Override
-        public void parse() {
+        public void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse) {
+            if (errs.isAbortDesired()) {
+                return;
+            }
             if (m_nodeSrc == null) {
                 // provide a default implementation
                 assert m_parent != null;
                 m_nodeSrc = new FileNode(this, "package " + file().getName() + "{}");
             }
-            m_nodeSrc.parse();
+            m_nodeSrc.parse(errs, parse);
 
             for (FileNode cmpFile : m_mapClzNodes.values()) {
-                cmpFile.parse();
+                cmpFile.parse(errs, parse);
             }
 
             for (DirNode child : m_listPkgNodes) {
-                child.parse();
+                child.parse(errs, parse);
             }
         }
 
@@ -1027,7 +1274,7 @@ public class ModuleInfo {
         public void registerName(String name, Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
-                    log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
+                    error(DUP_NAME, NOWHERE, name, descriptiveName());
                 } else {
                     children().put(name, node);
                 }
@@ -1038,7 +1285,7 @@ public class ModuleInfo {
         public void linkParseTrees() {
             Node nodePkg = sourceNode();
             if (nodePkg == null) {
-                log(Severity.ERROR, MISSING_PKG_NODE, new Object[]{descriptiveName()}, null);
+                error(MISSING_PKG_NODE, NOWHERE, descriptiveName());
             } else {
                 TypeCompositionStatement typePkg = nodePkg.type();
 
@@ -1168,7 +1415,7 @@ public class ModuleInfo {
      * A FileNode represents an individual ".x" source file.
      */
     public class FileNode
-            extends Node {
+            extends SourceNode {
         /**
          * Construct a FileNode.
          *
@@ -1264,9 +1511,9 @@ public class ModuleInfo {
             }
 
             try {
-                return readFileChars(m_file);
+                return readSource(m_file);
             } catch (IOException e) {
-                log(Severity.ERROR, READ_FAILURE, new Object[] {m_file}, null);
+                error(READ_FAILURE, NOWHERE, m_file, e);
             }
 
             return new char[0];
@@ -1342,14 +1589,16 @@ public class ModuleInfo {
         }
 
         @Override
-        public void parse() {
+        public void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse) {
+            if (errs.isAbortDesired()) {
+                return;
+            }
             Source source = source();
             try {
-                m_stmtAST = new Parser(source, this).parseSource();
+                m_stmtAST = parse.apply(source, ErrorListener.cancellable(this, errs::isAbortDesired));
             } catch (CompilerException e) {
-                if (!hasSeriousErrors()) {
-                    log(Severity.FATAL, Parser.FATAL_ERROR, null, source,
-                            source.getPosition(), source.getPosition());
+                if (!hasSeriousErrors() && !errs.isAbortDesired()) {
+                    fatal(Parser.FATAL_ERROR, in(source, source.getPosition(), source.getPosition()));
                 }
             }
         }
@@ -1429,13 +1678,13 @@ public class ModuleInfo {
             if (isExplicitSourceFile(name)) {
                 try {
                     Source source = new Source(file);
-                    Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
+                    Parser parser = new Parser(source, silent(DISCARD));
                     return parser.parseModuleNameIgnoreEverythingElse();
-                } catch (CompilerException | IOException ignore) {}
+                } catch (CompilerException | IOException _) {}
             } else if (isExplicitCompiledFile(name)) {
                 try {
                     return new FileStructure(file).getModuleId().getName();
-                } catch (IOException ignore) {}
+                } catch (IOException _) {}
             }
         }
 
@@ -1607,6 +1856,67 @@ public class ModuleInfo {
     }
 
     /**
+     * Given a project directory, find the conventional source directory, as
+     * {@link #sourceDirFromPrjDir(File)} does, that has the source file of the specified name,
+     * also past directories with other source files; or else the project's conventional test
+     * source directory, such as ./src/test/x, when it has the file, as it has a test module that
+     * "xtc init" makes.
+     *
+     * @param prjDir    the project directory
+     * @param fileName  the name of the source file, without its ".x" extension
+     *
+     * @return the source directory with that file, or null if none has it
+     */
+    public static File sourceDirFromPrjDir(File prjDir, String fileName) {
+        assert prjDir != null && fileName != null;
+        File found = mainSourceDirWith(prjDir, fileName);
+        if (found == null) {
+            File testDir = conventionalSourceDir(prjDir, "test");
+            if (testDir != null && new File(testDir, fileName + ".x").isFile()) {
+                found = testDir;
+            }
+        }
+        return found;
+    }
+
+    private static File mainSourceDirWith(File prjDir, String fileName) {
+        File curDir = prjDir;
+        for (int level = 0; level <= 2; level++) {
+            if (new File(curDir, fileName + ".x").isFile()) {
+                return curDir;
+            }
+            File subDir = findSourceSubDir(curDir, level);
+            if (subDir == null) {
+                return null;
+            }
+            curDir = subDir;
+        }
+        return new File(curDir, fileName + ".x").isFile() ? curDir : null;
+    }
+
+    /**
+     * Find the project's conventional source directory of a source set, such as ./src/main/x or
+     * ./src/test/x: one of "src" or "source", then the set's name, then one of "x", "xtc" or
+     * "ecstasy".
+     *
+     * @param prjDir  the project directory
+     * @param set     the name of the source set, such as "main" or "test"
+     *
+     * @return the directory, or null if the project has none
+     */
+    private static File conventionalSourceDir(File prjDir, String set) {
+        for (String src : List.of("src", "source")) {
+            for (String lang : List.of("x", "xtc", "ecstasy")) {
+                File dir = new File(new File(new File(prjDir, src), set), lang);
+                if (dir.isDirectory()) {
+                    return dir;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Find a conventional source subdirectory starting from the given level.
      * Levels represent the typical project structure:
      * <ul>
@@ -1680,6 +1990,12 @@ public class ModuleInfo {
 
     private enum Status  {Unknown, NotExists, Exists}
     private enum Content {Unknown, Invalid, Module}
+
+    /**
+     * The parser used when a caller does not supply its own.
+     */
+    private static final BiFunction<Source, ErrorListener, StatementBlock> STANDARD_PARSER =
+            (source, listener) -> new Parser(source, listener).parseSource();
 
     private final File    fileSpec;       // original file spec that was used to create this info
     private final boolean deduce;         // use knowledge of common file layouts to find locations

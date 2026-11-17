@@ -321,8 +321,8 @@ public class Annotation
 
         // it must be an annotation type
         if (getAnnotationType().getExplicitClassFormat() != Component.Format.ANNOTATION) {
-            fHalt |= log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION,
-                    getAnnotationClass().getValueString());
+            log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION, getAnnotationClass().getValueString());
+            fHalt |= errs.isAbortDesired();
         }
 
         return fHalt;

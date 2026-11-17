@@ -18,7 +18,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import java.util.function.BiConsumer;
+
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -51,11 +55,19 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Expression.TypeFit;
 import org.xvm.compiler.ast.NameExpression.Meaning;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
+
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Common base class for all statements and expressions.
@@ -124,13 +136,27 @@ public abstract class AstNode
     }
 
     /**
-     * Return an Iterable/Iterator that represents all the child nodes of this node.
+     * Return a one-shot cursor over the child nodes of this node. The cursor supports replacement
+     * and removal during compiler traversal. Its Iterable view uses the same cursor, not a new
+     * traversal; use {@link #childNodes()} when an independently iterable view is needed.
      *
-     * @return an Iterable of child nodes (from whence an Iterator can be obtained)
+     * @return a mutable traversal cursor
      */
     public ChildIterator children() {
         Field[] fields = getChildFields();
         return fields.length == 0 ? ChildIterator.EMPTY : new ChildIteratorImpl(fields);
+    }
+
+    /**
+     * Return a view of this node's children that starts an independent traversal for each iterator.
+     * This is a live view, not a snapshot: subsequent traversals see subsequent AST changes.
+     * Callers that need a stable list must copy it while they own the tree; iteration does not
+     * provide synchronization with compiler mutation.
+     *
+     * @return an iterable view of the child nodes
+     */
+    public Iterable<AstNode> childNodes() {
+        return this::children;
     }
 
     /**
@@ -201,8 +227,39 @@ public abstract class AstNode
         return NO_FIELDS;
     }
 
+    /**
+     * Compatibility entry point for {@link #copyTree()}.
+     *
+     * @return  a tree copy of this node
+     */
     @Override
+    @SuppressWarnings("MethodDoesntCallSuperMethod") // copyTree owns allocation and copying.
     public AstNode clone() {
+        return copyTree();
+    }
+
+    /**
+     * Copy this node and its registered syntax children, preserving the concrete node type, source
+     * positions and compilation stage. Copied children belong to their copied owners. The root
+     * retains its original parent until a caller adopts it into another tree; copying does not
+     * replace or reparent any original node.
+     *
+     * <p>This is not a fresh parse or an isolated copy of all compiler state. The default
+     * implementation shallow-copies non-child fields, including resolved bindings and transient
+     * fields. Overrides must handle owned state that cannot be shared, such as a lambda's
+     * generated method. Recovery nodes construct fresh shells and copy their written syntax
+     * without carrying inherited validation or emission state.
+     *
+     * <p>The default implementation still uses shallow cloning followed by reflective copying of
+     * registered children; copied child lists are mutable. Constructor-based overrides must copy
+     * and adopt their children and preserve root metadata with {@link #copyTreeMetadataTo(AstNode)}.
+     * Specialize this method rather than {@link #clone()} so both entry points behave alike.
+     * Declare a covariant return type when specializing, so callers can copy that node type without
+     * a cast. A caller-selected method type parameter would not enforce that relationship.
+     *
+     * @return  a tree copy of this node
+     */
+    public AstNode copyTree() {
         AstNode that;
         try {
             that = (AstNode) super.clone();
@@ -222,21 +279,19 @@ public abstract class AstNode
 
             if (oVal != null) {
                 if (oVal instanceof AstNode node) {
-                    AstNode nodeNew = node.clone();
+                    var nodeNew = node.copyTree();
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
-                } else if (oVal instanceof List list) {
-                    ArrayList<AstNode> listNew = new ArrayList<>();
-                    for (AstNode node : (List<AstNode>) list) {
-                        listNew.add(node.clone());
-                    }
-
+                } else if (oVal instanceof List<?> list) {
+                    var listNew = list.stream()
+                            .map(AstNode.class::cast)
+                            .map(AstNode::copyTree)
+                            .collect(Collectors.toCollection(ArrayList::new));
                     that.adopt(listNew);
                     oVal = listNew;
                 } else {
-                    throw new IllegalStateException(
-                            "unsupported container type: " + oVal.getClass().getSimpleName());
+                    throw new IllegalStateException("unsupported container type: " + oVal.getClass().getSimpleName());
                 }
 
                 try {
@@ -248,6 +303,21 @@ public abstract class AstNode
         }
 
         return that;
+    }
+
+    /**
+     * Preserve the root metadata of a constructor-based tree copy. The caller is responsible for
+     * copying and adopting children; this method does not transfer validation or emission state.
+     *
+     * @param copy  the newly constructed node
+     * @param <T>   the concrete node type
+     *
+     * @return  the supplied copy with this node's parent and compilation stage
+     */
+    protected final <T extends AstNode> T copyTreeMetadataTo(T copy) {
+        copy.setParent(getParent());
+        copy.setStage(getStage());
+        return copy;
     }
 
     /**
@@ -371,12 +441,15 @@ public abstract class AstNode
 
     /**
      * @return a unique counter in the context of the code container
+     *
+     * @throws IllegalStateException if this node has no enclosing code container
      */
     protected int getCodeContainerCounter() {
         AstNode parent = getParent();
-        return parent == null
-                ? null
-                : parent.getCodeContainerCounter();
+        if (parent == null) {
+            throw new IllegalStateException("No enclosing code container for " + getClass().getSimpleName());
+        }
+        return parent.getCodeContainerCounter();
     }
 
     /**
@@ -638,16 +711,12 @@ public abstract class AstNode
      * @param sCode       the error code that identifies the error message
      * @param aoParam     the parameters for the error message; may be null
      *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt to continue the process
      */
-    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
+    public void log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
         Source source = getSource();
-        return errs == null
-                ? severity.ordinal() >= Severity.ERROR.ordinal()
-                : errs.log(severity, sCode, aoParam, source,
-                source == null ? 0L : getStartPosition(),
-                source == null ? 0L : getEndPosition());
+        errs.log(severity, sCode, source == null
+                ? NOWHERE
+                : in(source, getStartPosition(), getEndPosition()), aoParam);
     }
 
     // ----- compile phases ------------------------------------------------------------------------
@@ -660,9 +729,9 @@ public abstract class AstNode
      * checking for errors that are obvious from "this point down" (no lateral evaluation of
      * structures, because we can't count on them even existing yet.)</li>
      *
-     * <li>The general idea is that this method recurses through the structure, allowing each node
-     * to introduce itself as the parent of each node under it, and that the nodes which will be
-     * structures in the resulting FileStructure will register themselves.</li>
+     * <li>This method recurses through the tree, establishing each node as the parent of its
+     * children. Nodes that represent structures in the resulting FileStructure also register
+     * themselves.</li>
      *
      * <li>Type parameters for the types must also be registered, because they are also types, and
      * they will be required to already be present when the second pass begins.</li>
@@ -683,9 +752,8 @@ public abstract class AstNode
      * compilation is not only unpredictable, but the potential exists for dependencies in either
      * direction (first to last and/or vice versa).
      *
-     * <p>As a result, some questions may come to an AstNode to resolve that it is not yet prepared to
-     * resolve, in which case the caller (another AstNode) has to add itself to the list of nodes
-     * that require another pass.
+     * <p>A node may be asked to resolve a name before its dependencies are ready. In that case,
+     * the calling node must defer its own resolution to another pass.
      *
      * <ul>
      * <li>Packages that import modules are able to verify that those modules are available to
@@ -733,19 +801,20 @@ public abstract class AstNode
     /**
      * If any of the children of this node have been previously deferred, catch them up now.
      *
-     * @param errs  the error list to log to
+     * @param errs      the error list to log to
+     * @param bindings  the enclosing compilation attempt's invocation collector
+     * @param cursors   the enclosing compilation attempt's cursor collector
      *
      * @return true if the children got caught up; false if the catch-up aborted
      */
-    protected boolean catchUpChildren(ErrorListener errs) {
+    protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings,
+                                       CursorBinding.Collector cursors) {
         // determine what stage we're trying to catch the children up to
         Stage stageTarget = getStage();
         if (!stageTarget.isTargetable()) {
-            // we want to catch up to the last target that this component completed, and not
-            // actually pass the stage that this component is at, which can be accomplished using
-            // StageMgr processChildrenExcept() or processChildren() if the children need to
-            // complete the stage that this node is currently working on (if this node is currently
-            // in a transition stage)
+            // catch up only to the last completed target stage
+            // use StageMgr.processChildrenExcept() or processChildren() when children must
+            // complete the stage this node is currently processing
             stageTarget = stageTarget.prevTarget();
             if (!stageTarget.isTargetable()) {
                 assert stageTarget == Stage.Initial;
@@ -777,7 +846,7 @@ public abstract class AstNode
         ErrorListener errsTemp = errs.branch(this);
         while (stageOldest.compareTo(stageTarget) < 0) {
             Stage    stageNext = stageOldest.nextTarget();
-            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp);
+            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp, bindings, cursors);
             for (int cTries = 0; !mgrKids.processComplete(); cTries++) {
                 if (errsTemp.isAbortDesired() || cTries > 20) {
                     mgrKids.logDeferredAsErrors(errsTemp);
@@ -824,9 +893,8 @@ public abstract class AstNode
             return !resolver.getNameResolver().isFirstTime();
         }
 
-        // for all other components (that don't override this method because they know more about
-        // whether or not they can resolve names), we'll assume that if they haven't been resolved,
-        // then they don't know how to resolve names
+        // other components must have reached name resolution before they can resolve names
+        // subclasses can override this method when they have more specific readiness checks
         return alreadyReached(Stage.Resolving);
     }
 
@@ -902,10 +970,10 @@ public abstract class AstNode
      * that are not explicitly specified are considered to be assigned to their default values. In
      * the case of a non-call, the default method parameters are treated in the same manner as
      * others, and any parameter that is not explicitly specified remains un-bound. For example,
-     * having a function void foo(Int a, Int b = 0, Boolean c = False, Int d = 1) a [call]
-     * expression "foo(1, c=True)" will result into a function call "foo(1, 0, True, 1)", while the
-     * equivalent [bind] expression {@code &foo(1, c=True)} will result into a function of type
-     * "function void (Int, Int)", where parameters "b" and "d" remain unbound.
+     * given {@code void foo(Int a, Int b = 0, Boolean c = False, Int d = 1)}, the call expression
+     * {@code foo(1, c=True)} invokes {@code foo(1, 0, True, 1)}, while the equivalent binding
+     * expression {@code &foo(1, c=True)} produces a function of type {@code function void (Int, Int)},
+     * where parameters {@code b} and {@code d} remain unbound.
      *
      * @param ctx           the compilation context
      * @param typeTarget    the type to search the method or function for
@@ -973,7 +1041,7 @@ public abstract class AstNode
                     mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errsTemp);
 
             // now choose the best match
-            boolean fArgsComplete = cArgs == 0 || listExprArgs.stream().allMatch(Expression::isCompletable);
+            boolean fArgsComplete = listExprArgs == null || listExprArgs.stream().allMatch(Expression::isCompletable);
             if (!setIs.isEmpty()) {
                 return fArgsComplete
                         ? chooseBest(setIs, typeTarget, mapMethods, errs)
@@ -1074,6 +1142,29 @@ public abstract class AstNode
             Set<MethodConstant>                  setConvert,
             Map<MethodConstant, MethodStructure> mapMethods,
             ErrorListener                        errs) {
+        collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
+                mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errs, (_, _) -> {});
+    }
+
+    /**
+     * Reuse ordinary argument fitting. The package-private observer lets partial-call queries copy
+     * tentative signatures and argument order without adding cursor-result policy to the fitter.
+     * The callback runs synchronously after a match is recorded in the supplied collections.
+     */
+    final void collectMatchingMethods(
+            Context                              ctx,
+            TypeConstant                         typeTarget,
+            TypeInfo                             infoTarget,
+            Set<MethodConstant>                  setMethods,
+            List<Expression>                     listExprArgs,
+            boolean                              fCall,
+            Map<String, Expression>              mapNamedExpr,
+            TypeConstant[]                       atypeReturn,
+            Set<MethodConstant>                  setIs,
+            Set<MethodConstant>                  setConvert,
+            Map<MethodConstant, MethodStructure> mapMethods,
+            ErrorListener                        errs,
+            BiConsumer<SignatureConstant, List<Expression>> matching) {
         ConstantPool  pool     = pool();
         int           cExprs   = listExprArgs == null ? 0 : listExprArgs.size();
         int           cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
@@ -1217,7 +1308,7 @@ public abstract class AstNode
                                 lit.getLiteral().getValueText());
                     } else {
                         if (exprArg instanceof NameExpression exprName) {
-                            typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
+                            typeExpr = exprName.getImplicitType(ctx, typeParam, silent(PROBE));
                         }
 
                         log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
@@ -1289,6 +1380,7 @@ public abstract class AstNode
                 setIs.add(idMethod);
             }
             mapMethods.put(idMethod, method);
+            matching.accept(sigMethod, listArgs);
         }
 
         // if there is any ambiguity, don't report anything; the caller will log a generic
@@ -1327,7 +1419,7 @@ public abstract class AstNode
     protected TypeConstant transformType(Context ctx, NameExpression exprName) {
         ConstantPool pool = pool();
         TypeConstant type = pool.typeType();
-        Argument     arg  = exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+        Argument     arg  = exprName.resolveRawArgument(ctx, false, silent(PROBE));
         if (arg instanceof Register reg) {
             PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
             FormalConstant   idFormal = pool.ensureDynamicFormal(
@@ -1648,12 +1740,12 @@ public abstract class AstNode
             Object value = entry.getValue();
             switch (value) {
             case null -> iter.remove();
-            case Map map -> {
+            case Map<?, ?> map -> {
                 if (map.isEmpty()) {
                     iter.remove();
                 }
             }
-            case Collection coll -> {
+            case Collection<?> coll -> {
                 if (coll.isEmpty()) {
                     iter.remove();
                 }
@@ -1700,14 +1792,14 @@ public abstract class AstNode
             out.print(sIndentCat + sCat);
 
             // find the kids
-            int      cKids;
-            Iterator iterK;
+            int         cKids;
+            Iterator<?> iterK;
             switch (value) {
-            case Map kids -> {
+            case Map<?, ?> kids -> {
                 cKids = kids.size();
                 iterK = kids.entrySet().iterator();
             }
-            case Collection kids -> {
+            case Collection<?> kids -> {
                 cKids = kids.size();
                 iterK = kids.iterator();
             }
@@ -1733,7 +1825,7 @@ public abstract class AstNode
                         out.println();
                     }
                     node.dump(out, sIndent1, sIndent2);
-                } else if (kid instanceof Map.Entry) {
+                } else if (kid instanceof Map.Entry<?, ?>) {
                     if (fFirstK) {
                         out.println();
                     }
@@ -1772,11 +1864,9 @@ public abstract class AstNode
     /**
      * Build and return a map that allows the caller to navigate the children of this node.
      *
-     * <p>Assume some type T which represents either an AstNode instance, or an object that implements
-     * toString(). The keys of the map should be strings that describe the categories of the
-     * children, while the values should provide the info about the children of this AstNode,
-     * either as an object of type T, a Collection of type T, an array of type T, or a Map whose
-     * keys and values are of type T.
+     * <p>Keys describe the categories of children. Each value is a child, a collection or array
+     * of children, or a map whose keys and values describe children. A child can be an AstNode
+     * or another object with a useful {@code toString()} representation.
      *
      * @return a map containing all the child information to dump
      */
@@ -1817,13 +1907,14 @@ public abstract class AstNode
      * @return an ArrayList
      */
     protected static <T> ArrayList<T> ensureArrayList(List<T> list) {
-        return list instanceof ArrayList alist
+        return list instanceof ArrayList<T> alist
                 ? alist
                 : new ArrayList<>(list);
     }
 
     /**
-     * Collect fields by name.
+     * Collect fields by name. Nodes in another package of this compiler module grant access only
+     * to these explicitly registered child fields; their representation need not become public.
      *
      * @param clz    the class on which the fields exist
      * @param names  the field names
@@ -1842,13 +1933,20 @@ public abstract class AstNode
             while (clzTry != null) {
                 try {
                     Field field = clzTry.getDeclaredField(names[i]);
-                    assert field != null;
                     Class<?> clzField = field.getType();
                     if (!AstNode.class.isAssignableFrom(clzField)
                             && !List.class.isAssignableFrom(clzField)) {
                         throw new IllegalStateException("unsupported field type "
                                 + clzField.getSimpleName() + " on field "
                                 + clzTry.getSimpleName() + '.' + names[i]);
+                    }
+                    if (!clzTry.getPackageName().equals(AstNode.class.getPackageName())
+                            && (!AstNode.class.isAssignableFrom(clz)
+                                || clz.getModule() != AstNode.class.getModule()
+                                || clzTry.getModule() != AstNode.class.getModule()
+                                || !field.trySetAccessible())) {
+                        throw new IllegalStateException("cannot access registered child field "
+                                + clzTry.getName() + '.' + names[i]);
                     }
                     fields[i] = field;
                     continue NextField;
@@ -1873,11 +1971,15 @@ public abstract class AstNode
     // ----- inner class: ChildIterator ------------------------------------------------------------
 
     /**
-     * Represents an Iterator that can also replace the most recently iterated element.
+     * Represents an Iterator that can also replace the most recently iterated element. Iterable
+     * is retained for compatibility with enhanced-for loops that mutate through this same cursor.
+     * Calling {@link #iterator()} does not restart traversal; readers can use
+     * {@link AstNode#childNodes()} for independent iterations.
      */
     public interface ChildIterator
             extends Iterable<AstNode>, Iterator<AstNode> {
         @Override
+        @NotNull
         default Iterator<AstNode> iterator() {
             return this;
         }
@@ -1905,6 +2007,7 @@ public abstract class AstNode
         };
     }
 
+    /** Traverses registered child fields, retaining their mutation cursor for replacement/removal. */
     protected final class ChildIteratorImpl
             implements ChildIterator {
         /**
@@ -1917,17 +2020,19 @@ public abstract class AstNode
             this.fields = fields;
         }
 
+        @Override
         public boolean hasNext() {
             return state == HAS_NEXT || prepareNextElement();
         }
 
+        @Override
         public AstNode next() {
             if (state == HAS_NEXT || prepareNextElement()) {
                 state = HAS_PREV;
                 if (value instanceof AstNode node) {
                     return node;
                 } else {
-                    return (AstNode) ((Iterator) value).next();
+                    return (AstNode) ((Iterator<?>) value).next();
                 }
             }
 
@@ -1935,7 +2040,7 @@ public abstract class AstNode
         }
 
         private boolean prepareNextElement() {
-            if (value instanceof Iterator iter && iter.hasNext()) {
+            if (value instanceof Iterator<?> iter && iter.hasNext()) {
                 state = HAS_NEXT;
                 return true;
             }
@@ -1959,12 +2064,12 @@ public abstract class AstNode
                 }
 
                 if (next != null) {
-                    if (next instanceof List list) {
+                    if (next instanceof List<?> list) {
                         if (!list.isEmpty()) {
                             value = list.listIterator();
                             return true;
                         }
-                    } else if (next instanceof Collection coll) {
+                    } else if (next instanceof Collection<?> coll) {
                         if (!coll.isEmpty()) {
                             value = coll.iterator();
                             return true;
@@ -1981,6 +2086,7 @@ public abstract class AstNode
             return false;
         }
 
+        @Override
         public void remove() {
             if (state == HAS_PREV) {
                 if (value instanceof AstNode) {
@@ -1994,7 +2100,7 @@ public abstract class AstNode
                     return;
                 }
 
-                if (value instanceof Iterator iter) {
+                if (value instanceof Iterator<?> iter) {
                     // tell the underlying iterator to remove the value
                     iter.remove();
                     state = NOT_PREP;
@@ -2005,6 +2111,7 @@ public abstract class AstNode
             throw new IllegalStateException();
         }
 
+        @Override
         public void replaceWith(AstNode newChild) {
             if (state == HAS_PREV) {
                 if (value instanceof AstNode) {
@@ -2017,8 +2124,11 @@ public abstract class AstNode
                     return;
                 }
 
-                if (value instanceof ListIterator iter) {
-                    iter.set(newChild);
+                if (value instanceof ListIterator<?> iter) {
+                    // Registered child lists contain AstNodes; reflection erases their element type.
+                    @SuppressWarnings("unchecked")
+                    var children = (ListIterator<AstNode>) iter;
+                    children.set(newChild);
                     return;
                 }
             }

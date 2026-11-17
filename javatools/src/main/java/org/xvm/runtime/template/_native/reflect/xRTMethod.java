@@ -339,10 +339,10 @@ public class xRTMethod
      * @return the ArrayConstant for an empty Array of Method
      */
     public static ArrayConstant ensureEmptyArrayConstant() {
-        ArrayConstant constant = EMPTY_ARRAY;
+        ArrayConstant constant = INSTANCE.m_constEmptyArray;
         if (constant == null) {
             ConstantPool pool = INSTANCE.pool();
-            EMPTY_ARRAY = constant = new ArrayConstant(pool, Constant.Format.Array,
+            INSTANCE.m_constEmptyArray = constant = new ArrayConstant(pool, Constant.Format.Array,
                                             pool.ensureArrayType(pool.typeMethod()));
         }
         return constant;
@@ -376,5 +376,5 @@ public class xRTMethod
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static ArrayConstant EMPTY_ARRAY;
+    private ArrayConstant m_constEmptyArray;
 }

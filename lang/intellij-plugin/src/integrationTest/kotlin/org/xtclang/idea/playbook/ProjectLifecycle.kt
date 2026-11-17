@@ -1,0 +1,273 @@
+package org.xtclang.idea.playbook
+
+import com.google.gson.Gson
+import com.intellij.driver.client.Driver
+import com.intellij.driver.client.Remote
+import com.intellij.driver.client.service
+import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.FileEditorManager
+import com.intellij.driver.sdk.Project
+import com.intellij.driver.sdk.VirtualFile
+import com.intellij.driver.sdk.singleProject
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.xtclang.idea.playbook.probe.HANG_LIMIT
+import java.nio.file.Files
+import java.nio.file.Path
+
+/** Two real frames share the IDE while their compiler processes and pending replies stay isolated. */
+internal fun Driver.projectLifecycle(shared: SharedScenarios) {
+    val primary = singleProject()
+    val root = Path.of(primary.getBasePath())
+    val directory = Files.createDirectories(root.parent.resolve("second-project"))
+    val data = shared.scenarios.getValue("X145")
+    val module = data.text("module")
+    val name = data.text("file")
+    val firstFile = root.resolve(name)
+    val secondFile = directory.resolve(name)
+    val initial = data.text("source")
+    listOf(firstFile, secondFile).forEach { Files.writeString(it, initial) }
+    val first = ClientProtocol(this) { primary }
+    val probe = utility(ProjectLifecycle::class)
+
+    fun configure(
+        project: Project,
+        file: Path,
+    ) = withContext(OnDispatcher.EDT) {
+        val settings = new(LspServerSettings::class)
+        settings.setConfigurationContent(
+            Gson().toJson(
+                mapOf(
+                    "xtc" to
+                        mapOf(
+                            "compiler" to
+                                mapOf(
+                                    "sourceModules" to listOf(mapOf("name" to module, "uri" to file.toUri().toString())),
+                                ),
+                        ),
+                ),
+            ),
+        )
+        service<ProjectLspSettings>(project).updateSettings("xtcLanguageServer", settings)
+    }
+
+    fun edit(
+        project: Project,
+        file: Path,
+        text: String,
+    ) = withContext(OnDispatcher.EDT) {
+        probe.edit(project, file.toString(), text)
+    }
+
+    fun params(file: Path) =
+        mapOf(
+            "textDocument" to mapOf("uri" to file.toUri().toString()),
+            "position" to
+                mapOf(
+                    "line" to 1,
+                    "character" to
+                        probe
+                            .text(file.toString())
+                            .lineSequence()
+                            .elementAt(1)
+                            .indexOf("value"),
+                ),
+        )
+
+    fun hover(
+        client: ClientProtocol,
+        file: Path,
+        type: String,
+    ) {
+        awaitUi("$type hover in ${file.parent.fileName}", HANG_LIMIT) {
+            try {
+                client.query("textDocument/hover", params(file)).toString().contains("$type value")
+            } catch (failure: ClientRequestFailure) {
+                if (failure.code != ResponseErrorCode.ContentModified.value) throw failure
+                false
+            }
+        }
+    }
+
+    fun openSecond(): Project {
+        val opened = probe.open(directory.toString())
+        awaitUi("second project opens", HANG_LIMIT) { opened.isDone() }
+        val project = requireNotNull(opened.get())
+        awaitUi("both native project frames are visible", HANG_LIMIT) {
+            withContext(OnDispatcher.EDT) { probe.visible(primary) && probe.visible(project) }
+        }
+        return project
+    }
+
+    fun close(
+        project: Project,
+        pid: Long,
+    ) {
+        val closed = probe.close(project)
+        awaitUi("project closes and owns server retirement", HANG_LIMIT) {
+            closed.isDone() && !utility(ProgressUi::class).alive(pid)
+        }
+        check(closed.get())
+    }
+
+    // LSP4IJ sends an edit once IntelliJ commits the document; a protocol request sent before that reads the old text
+    fun flush(
+        client: ClientProtocol,
+        file: Path,
+    ) {
+        val pending =
+            requireNotNull(
+                client
+                    .server()
+                    .getOpenedDocuments()
+                    .singleOrNull { it.getFile().getPath() == file.toString() }
+                    ?.getSynchronizer(),
+            ) {
+                "No document synchronizer for $file"
+            }.flushPendingChanges()
+        awaitUi("client sends the edited ${file.parent.fileName}/${file.fileName}", HANG_LIMIT) { pending.isDone() }
+        check(!pending.isCompletedExceptionally()) { "Document synchronization failed for $file" }
+    }
+
+    fun workload(
+        type: String,
+        value: String,
+    ) = "module $module {\n    static $type value = $value;\n" +
+        (0 until data.values["methods"].asInt).joinToString("\n") { "    $type read$it() { return value; }" } + "\n}\n"
+
+    configure(primary, firstFile)
+    val firstText = "module $module {\n    static Int value = 7;\n}\n"
+    edit(primary, firstFile, firstText)
+    hover(first, firstFile, "Int")
+    val firstPid = requireNotNull(first.server().getCurrentProcessId())
+    val secondary = openSecond()
+    configure(secondary, secondFile)
+    edit(secondary, secondFile, "module $module {\n    static String value = \"second\";\n}\n")
+    val second = ClientProtocol(this) { secondary }
+    hover(second, secondFile, "String")
+    val secondPid = requireNotNull(second.server().getCurrentProcessId())
+    check(firstPid != secondPid)
+    val firstPendingText = workload("Int", "7") + "// unsaved primary\n"
+    val secondPendingText = workload("String", "\"second\"") + "// pending close\n"
+    edit(primary, firstFile, firstPendingText)
+    flush(first, firstFile)
+    val firstPending = first.request("textDocument/references", params(firstFile) + mapOf("context" to mapOf("includeDeclaration" to true)))
+    edit(secondary, secondFile, secondPendingText)
+    flush(second, secondFile)
+    val secondPending =
+        second.request(
+            "textDocument/references",
+            params(secondFile) + mapOf("context" to mapOf("includeDeclaration" to true)),
+        )
+    awaitUi("compiler is working when its project closes", HANG_LIMIT) {
+        check(!secondPending.isDone()) { "Close must overlap a pending native request" }
+        second
+            .query("xtc/languageServiceStatus", emptyMap<String, Any>())
+            .asJsonObject["compilerQueue"]
+            .asJsonObject["runningSize"]
+            .asInt > 0
+    }
+    close(secondary, secondPid)
+    awaitUi("closed project's pending reply retires", HANG_LIMIT) { secondPending.isDone() }
+    check(first.await("textDocument/references", firstPending).asJsonArray.size() == data.values["methods"].asInt + 1)
+    check(first.server().getCurrentProcessId() == firstPid)
+    check(probe.text(firstFile.toString()) == firstPendingText)
+    hover(first, firstFile, "Int")
+    check(Files.readString(secondFile) == secondPendingText) { "Native project close must preserve edited source" }
+    val reopened = openSecond()
+    withContext(OnDispatcher.EDT) { probe.show(reopened, secondFile.toString()) }
+    check(probe.text(secondFile.toString()) == secondPendingText) { "Reopening must restore source without replaying edits" }
+    val reconnected = ClientProtocol(this) { reopened }
+    hover(reconnected, secondFile, "String")
+    val reopenedPid = requireNotNull(reconnected.server().getCurrentProcessId())
+    check(reopenedPid != secondPid && reopenedPid != firstPid)
+    close(reopened, reopenedPid)
+    hover(first, firstFile, "Int")
+    Files.writeString(
+        root.parent.resolve("project-lifecycle.json"),
+        Gson().toJson(
+            mapOf(
+                "primaryPid" to firstPid,
+                "closedPid" to secondPid,
+                "reopenedPid" to reopenedPid,
+                "closedPendingRetired" to secondPending.isDone(),
+                "primaryTextPreserved" to true,
+                "reopenedTextPreserved" to true,
+                "status" to "passed",
+            ),
+        ) + "\n",
+    )
+}
+
+/**
+ * Closes the editors of [files] as their tabs' close buttons do, through [ProjectLifecycle.closeEditors]: IntelliJ 2026.3
+ * closes a file only under the write-intent lock, which the driver's calls on the EDT do not take there.
+ */
+internal fun Driver.closeEditors(files: List<VirtualFile>) {
+    val paths = files.map { it.getPath() }.distinct()
+    withContext(OnDispatcher.EDT) { utility(ProjectLifecycle::class).closeEditors(singleProject(), paths) }
+}
+
+/** Closes every editor, as [closeEditors] does. */
+internal fun Driver.closeAllEditors() =
+    closeEditors(withContext(OnDispatcher.EDT) { service<FileEditorManager>(singleProject()).getAllEditors().map { it.getFile() } })
+
+/** Reverts the documents of the files at [paths] to their text on disk, through [ProjectLifecycle.reloadFromDisk]. */
+internal fun Driver.reloadFromDisk(paths: List<String>) =
+    withContext(OnDispatcher.EDT) { utility(ProjectLifecycle::class).reloadFromDisk(paths) }
+
+/** Reverts the unsaved documents of the files under [directory] to their text on disk, as [reloadFromDisk] does. */
+internal fun Driver.reloadUnsaved(directory: Path) {
+    val paths =
+        withContext(OnDispatcher.EDT) {
+            val documents = service<ParityDocuments>()
+            documents
+                .getUnsavedDocuments()
+                .mapNotNull { documents.getFile(it)?.getPath() }
+                .filter { it.startsWith("$directory/") }
+        }
+    reloadFromDisk(paths)
+}
+
+/** Opens and closes native projects through the lifecycle test probe. */
+@Remote("org.xtclang.idea.playbook.probe.ProjectLifecycle", plugin = "org.xtclang.playbook.probe")
+internal interface ProjectLifecycle {
+    fun open(path: String): OpenProjectFuture
+
+    fun close(project: Project): CloseProjectFuture
+
+    fun show(
+        project: Project,
+        path: String,
+    )
+
+    fun edit(
+        project: Project,
+        path: String,
+        text: String,
+    )
+
+    /** Closes the editors of the files at [paths]; called on the EDT. */
+    fun closeEditors(
+        project: Project,
+        paths: List<String>,
+    )
+
+    /** Reverts the documents of the files at [paths] to their text on disk; called on the EDT. */
+    fun reloadFromDisk(paths: List<String>)
+
+    fun text(path: String): String
+
+    fun visible(project: Project): Boolean
+}
+
+/** Polls native project opening before subsequent playbook actions use the project. */
+@Remote("java.util.concurrent.CompletableFuture")
+internal interface OpenProjectFuture : ClientFuture {
+    fun get(): Project?
+}
+
+/** Polls native project disposal before lifecycle assertions continue. */
+@Remote("java.util.concurrent.CompletableFuture")
+internal interface CloseProjectFuture : ClientFuture {
+    fun get(): Boolean
+}

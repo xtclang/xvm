@@ -15,8 +15,8 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
-import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ValueConstant;
 
@@ -38,6 +38,9 @@ import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * The CaseManager is shared compilation logic used by both the "switch" statement and  expression.
@@ -168,13 +171,6 @@ public class CaseManager<CookieType> {
      */
     public Label getSwitchConstantLabel() {
         return m_labelConstant;
-    }
-
-    /**
-     * @return the number of case constants (including default)
-     */
-    public int getCaseCount() {
-        return m_aconstCase.length + (hasDefaultCase() ? 1 : 0);
     }
 
     /**
@@ -336,7 +332,7 @@ public class CaseManager<CookieType> {
                 }
 
                 if (fAllConst) {
-                    if (aconst == null) {
+                    if (aconst == null || atype == null) {
                         fAllConst = false;
                     } else {
                         assert aconst.length == atype.length;
@@ -416,6 +412,8 @@ public class CaseManager<CookieType> {
         // allow case values to infer based on the expected type from the switch condition
         ctx = ctx.enterInferring(m_typeCase);
 
+        ErrorListener probe = silent(PROBE);
+
         // validate each separate value in the case label
         ConstantPool pool       = pool();
         boolean      fIfSwitch  = usesIfLadder();
@@ -435,9 +433,9 @@ public class CaseManager<CookieType> {
                     Expression exprField = listFields.get(i);
                     if (exprField instanceof IgnoredNameExpression) {
                         lIgnore |= 1L << i;
-                    } else if (!exprField.testFit(ctx, m_atypeCond[i], false, null).isFit()) {
+                    } else if (!exprField.testFit(ctx, m_atypeCond[i], false, probe).isFit()) {
                         TypeConstant typeRange = pool.ensureRangeType(m_atypeCond[i]);
-                        if (exprField.testFit(ctx, typeRange, false, null).isFit()) {
+                        if (exprField.testFit(ctx, typeRange, false, probe).isFit()) {
                             lRange |= 1L << i;
 
                             if (atypeAlt == null) {
@@ -450,9 +448,9 @@ public class CaseManager<CookieType> {
             } else if (getConditionCount() == 1) {
                 if (exprCase instanceof IgnoredNameExpression) {
                     lIgnore = 1;
-                } else if (!exprCase.testFit(ctx, m_typeCase, false, null).isFit()) {
+                } else if (!exprCase.testFit(ctx, m_typeCase, false, probe).isFit()) {
                     TypeConstant typeRange = pool.ensureRangeType(m_typeCase);
-                    if (exprCase.testFit(ctx, typeRange, false, null).isFit()) {
+                    if (exprCase.testFit(ctx, typeRange, false, probe).isFit()) {
                         lRange    = 1;
                         typeMatch = typeRange;
                     }
@@ -519,10 +517,9 @@ public class CaseManager<CookieType> {
                         m_listsetCase.add(constCase);
                         m_listLabels.add(m_labelCurrent);
 
-                        if (fIntConsts) {
-                            if (constCase instanceof MatchAnyConstant) {
-                                // treated as "default:", so ignore
-                            } else if (constCase instanceof RangeConstant constRange) {
+                        // match-any constants are handled by the default label
+                        if (fIntConsts && !(constCase instanceof MatchAnyConstant)) {
+                            if (constCase instanceof RangeConstant constRange) {
                                 incorporateInt(constRange.getFirst().getIntValue());
                                 incorporateInt(constRange.getLast() .getIntValue());
                             } else {
@@ -533,7 +530,7 @@ public class CaseManager<CookieType> {
                         // validate "is(_)" type constants
                         if (getConditionCount() == 1) {
                             if ((m_afIsSwitch & 1L) != 0 &&
-                                    m_listCond.get(0) instanceof Expression exprTest) {
+                                    m_listCond.getFirst() instanceof Expression exprTest) {
                                 if (constCase instanceof TypeConstant typeCase &&
                                         typeCase.isTypeOfType()) {
                                     typeCase = typeCase.getParamType(0);
@@ -610,13 +607,11 @@ public class CaseManager<CookieType> {
     /**
      * Add any existing type inference information to the specified context.
      *
-     * @param ctx       the context to use
-     * @param stmtCase  the corresponding case statement (used for error reporting only)
-     * @param errs      the error list to log to
+     * @param ctx  the context to use
      *
      * @return true iff the switch contains any type inferring conditions
      */
-    protected boolean addTypeInference(Context ctx, CaseStatement stmtCase, ErrorListener errs) {
+    protected boolean addTypeInference(Context ctx) {
         if (m_lTypeExpr == 0L) {
             return false;
         }
@@ -625,7 +620,7 @@ public class CaseManager<CookieType> {
         Constant     constCase = m_listsetCase.last();
         if (getConditionCount() == 1) {
             if ((m_lTypeExpr & 1L) != 0L &&
-                    m_listCond.get(0) instanceof NameExpression exprTest &&
+                    m_listCond.getFirst() instanceof NameExpression exprTest &&
                     constCase instanceof TypeConstant typeCase) {
                 assert typeCase.isTypeOfType();
 
@@ -694,12 +689,11 @@ public class CaseManager<CookieType> {
     /**
      * Finish the switch validation.
      *
-     * @param ctx     the validation context
-     * @param errs    the error list to log to
+     * @param errs  the error list to log to
      *
      * @return true iff the validation succeeded
      */
-    public boolean validateEnd(Context ctx, ErrorListener errs) {
+    public boolean validateEnd(ErrorListener errs) {
         boolean fValid = true;
 
         if (m_labelCurrent != null) {
@@ -896,62 +890,49 @@ public class CaseManager<CookieType> {
             return false;
         }
 
-        Object oThisLo, oThisHi;
-        if (fRangeThis) {
-            if (constThis instanceof RangeConstant constRange) {
-                oThisLo = constRange.getEffectiveLow();
-                oThisHi = constRange.getEffectiveHigh();
-                if (oThisLo instanceof ValueConstant valLo &&
-                    oThisHi instanceof ValueConstant valHi) {
-                    oThisLo = valLo.getValue();
-                    oThisHi = valHi.getValue();
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        } else {
-            oThisLo = oThisHi = ((ValueConstant) constThis).getValue();
-        }
-
-        if (!(oThisLo instanceof Comparable cmpThisLo &&
-              oThisHi instanceof Comparable cmpThisHi)) {
-            return false;
-        }
-
-        Object oThatLo, oThatHi;
-        if (fRangeThat) {
-            if (constThat instanceof RangeConstant constRange) {
-                oThatLo = constRange.getEffectiveLow();
-                oThatHi = constRange.getEffectiveHigh();
-                if (oThatLo instanceof ValueConstant valueLo &&
-                    oThatHi instanceof ValueConstant valueHi) {
-                    oThatLo = valueLo.getValue();
-                    oThatHi = valueHi.getValue();
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        } else {
-            oThatLo = oThatHi = ((ValueConstant) constThat).getValue();
-        }
-        if (!(oThatLo instanceof Comparable cmpThatLo &&
-              oThatHi instanceof Comparable cmpThatHi)) {
+        CaseBounds boundsThis = caseBounds((ValueConstant) constThis, fRangeThis);
+        CaseBounds boundsThat = caseBounds((ValueConstant) constThat, fRangeThat);
+        if (boundsThis == null || boundsThat == null) {
             return false;
         }
 
         try {
-            // this range covers that range if "this lo" <= "that lo" and "this hi" >= "that hi"
-
-            // this automatically works for ValueConstant types that have a corresponding Java type,
-            // like Int, String, etc., while enums use their ordinal values (see EnumValueConstant).
-            return cmpThisLo.compareTo(cmpThatLo) <= 0 && cmpThisHi.compareTo(cmpThatHi) >= 0;
+            return compareValues(boundsThis.low(), boundsThat.low()) <= 0
+                    && compareValues(boundsThis.high(), boundsThat.high()) >= 0;
         } catch (Exception e) {
+            // incompatible or unsupported values cannot prove coverage
             return false;
         }
+    }
+
+    /** Comparable Java values for a scalar case or the inclusive bounds of a range case. */
+    private record CaseBounds(Comparable<?> low, Comparable<?> high) {}
+
+    /** Extract the same effective bounds for both sides of a coverage check. */
+    private static CaseBounds caseBounds(ValueConstant constant, boolean range) {
+        Object low;
+        Object high;
+        if (range) {
+            if (!(constant instanceof RangeConstant bounds)
+                    || !(bounds.getEffectiveLow() instanceof ValueConstant first)
+                    || !(bounds.getEffectiveHigh() instanceof ValueConstant last)) {
+                return null;
+            }
+            low  = first.getValue();
+            high = last.getValue();
+        } else {
+            low = high = constant.getValue();
+        }
+        return low instanceof Comparable<?> first && high instanceof Comparable<?> last
+                ? new CaseBounds(first, last) : null;
+    }
+
+    /** Compare erased constant values; the caller treats incompatible value types as no match. */
+    private static int compareValues(Comparable<?> first, Comparable<?> second) {
+        // ValueConstant exposes Object; retain natural ordering, including enum ordinals
+        @SuppressWarnings("unchecked")
+        var comparable = (Comparable<Object>) first;
+        return comparable.compareTo(second);
     }
 
     /**

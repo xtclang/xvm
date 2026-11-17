@@ -78,7 +78,17 @@ public abstract class LauncherOptions {
         .addOption(builder("o").argName("file").hasArg()
             .desc("If compilation is necessary, the file or directory to write compiler output to").get())
         .addOption(builder("I").longOpt("inject").argName("name=value").hasArg()
-            .desc("Specifies name/value pairs for injection; format is 'name=value'").get());
+            .desc("Specifies name/value pairs for injection; format is 'name=value'").get())
+        .addOption(builder().longOpt("debug").argName("options").hasArg()
+            .desc("Debug the program with a debugger outside it, such as an IDE's:\n"
+                + "listen|connect:<host>:<port>[,suspend][,token=<token>][,agent=<jar>]\n"
+                + "  listen   wait for a debugger to attach, and for the next once one has left\n"
+                + "  connect  connect to a debugger that waits for the program\n"
+                + "  <host>   this machine's; listen on port 0 takes a free port, and prints it\n"
+                + "  suspend  hold the program at its first line until a debugger has set it up\n"
+                + "  token    refuse a debugger that does not send this token\n"
+                + "  agent    load another debugger agent than the XDK's\n"
+                + "for example: --debug listen:127.0.0.1:5005,suspend").get());
 
     /**
      * Apache Commons CLI Options schema for the runner.
@@ -944,6 +954,14 @@ public abstract class LauncherOptions {
             return hasOption("J");
         }
 
+        /**
+         * @return the options of {@code --debug}, which ask for the program to run under a
+         *         debugger outside it, such as an IDE's, through a debugger provider
+         */
+        public Optional<String> getDebug() {
+            return optionValue("debug");
+        }
+
         public Optional<File> getTarget() {
             // First trailing arg is the module/file to execute
             final var trailing = getTrailingArgs();
@@ -1000,6 +1018,7 @@ public abstract class LauncherOptions {
             if (isCompileDisabled()) {
                 args.add("--no-recompile");
             }
+            getDebug().ifPresent(debug -> args.addAll(List.of("--debug", debug)));
 
             args.addAll(additionalRunnerCommandLine());
 
@@ -1088,6 +1107,17 @@ public abstract class LauncherOptions {
                 if (disable) {
                     args.add("--no-recompile");
                 }
+                return this;
+            }
+
+            /**
+             * Run the program under a debugger outside it, as {@code --debug} does.
+             *
+             * @param options  the options, such as {@code listen:127.0.0.1:5005,suspend}
+             */
+            public Builder setDebug(final String options) {
+                removeeArgsAndValues("--debug");
+                args.addAll(List.of("--debug", options));
                 return this;
             }
 

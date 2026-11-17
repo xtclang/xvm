@@ -251,6 +251,7 @@ xtc run [options] <module> [args...]
 | `-I <name=value>` | Injection values |
 | `-J, --jit` | Enable JIT compiler |
 | `--no-recompile` | Disable automatic recompilation |
+| `--debug <options>` | Run under a debugger outside the program, such as an IDE's (see below) |
 
 ### Examples
 
@@ -259,7 +260,25 @@ xtc run myapp.xtc
 xtc run -L lib/ myapp.xtc
 xtc run -M main myapp.xtc
 xtc run -I config=prod myapp.xtc arg1 arg2
+xtc run --debug listen:127.0.0.1:5005,suspend myapp.xtc
 ```
+
+### Debugging from an editor
+
+`--debug listen|connect:<host>:<port>[,suspend][,token=<token>][,agent=<jar>]` runs the program,
+with `xtc run`, `xec` or `xtc test`, under a debugger outside it, such as VS Code's or IntelliJ's:
+
+| Part | Meaning |
+|------|---------|
+| `listen` | Wait for a debugger to attach, as an editor's attach configuration does, and for the next once one has left |
+| `connect` | Connect to a debugger that waits for the program, as the editors' Gradle-mode and command-line Debug do |
+| `<host>:<port>` | This machine's; `listen` on port 0 takes a free port and prints it |
+| `suspend` | Hold the program at its first line until a debugger has set it up |
+| `token` | Refuse a debugger that does not send this token |
+| `agent` | Load another debugger agent than the XDK's |
+
+The XDK's javatools has the debugger's agent, so `--debug` needs no `agent=`. A program run with
+`--jit` cannot be debugged.
 
 ## xtc test - Testing
 
@@ -279,7 +298,9 @@ xtc test [options] <module>
 | `-g, --test-group <group>` | Run tests with specific @Test group |
 | `-p, --test-package <pkg>` | Run tests in specific package |
 | `-t, --test-method <method>` | Run specific test method |
-| `--xunit-out <dir>` | Output directory for test results |
+| `-x, --xunit-out <dir>` | Output directory for test results |
+| `-I xvm.xunit.report=json` | Also print xunit's `json` report, an event per line, for a tool that reads the run's output, such as an IDE |
+| `--debug <options>` | Run the tests under a debugger outside the program, as `xtc run` does |
 
 ### Examples
 
@@ -287,7 +308,16 @@ xtc test [options] <module>
 xtc test myapp.xtc
 xtc test -c MyTests myapp.xtc
 xtc test --test-group integration myapp.xtc
+xtc test -t tests.MathTest.adds -I xvm.xunit.report=json myapp.xtc
 ```
+
+With `--deduce`, `xtc test` also finds a test module by its name in the project's `src/test/x`, where
+`xtc init` puts it, such as `xtc test --deduce myappTest` in the project's directory. Such a module
+compiles with the project's modules in `src/main/x`, which it imports, into the project's `build`
+directory, and again when one of them has changed; `xtc build --deduce myappTest` and `xtc run`
+compile it the same way.
+
+See the [xunit README](../lib_xunit/README.md#running-tests) for selecting tests and the report's events.
 
 ## xtc disass - Disassembly
 
@@ -372,10 +402,10 @@ java -jar javatools.jar run -L xdk.xtc -L myapp.xtc myapp.xtc
 
 ## IntelliJ IDEA Integration
 
-The XTC IntelliJ plugin provides a **New Project** wizard that offers the same project types and options as `xtc init`:
+The Ecstasy IntelliJ plugin provides a **New Project** wizard that offers the same project types and options as `xtc init`:
 
 1. **File → New → Project**
-2. Select **XTC** from the generators list
+2. Select **Ecstasy** from the generators list
 3. Configure:
    - **Project name** and **Location**
    - **Project type**: Application, Library, or Service

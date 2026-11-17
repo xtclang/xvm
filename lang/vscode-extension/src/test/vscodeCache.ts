@@ -4,17 +4,38 @@
 // so every checkout and worktree kept its own copy of every version it ever tested, and each new
 // stable release added another ~500 MB that nothing removed. The builds now live in one per-user
 // cache, one copy per version, and builds no test run has used for PRUNE_AFTER_DAYS are removed.
-// The throwaway test profile (user data, extensions) stays in the checkout's .vscode-test/.
+// Test profiles are separate temporary directories; only immutable IDE builds are reused.
 
-import { mkdirSync, readdirSync, rmSync, statSync, utimesSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, utimesSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 
 const PRUNE_AFTER_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Longer than any download takes: a lock this old was left by a run that died.
 const STALE_LOCK_MS = 15 * 60 * 1000;
 const LOCK_POLL_MS = 1000;
+
+/** Smoke, playbook and lifecycle tests all run once on the declared minimum supported IDE. */
+export async function testVSCodeBuild(extensionRoot: string): Promise<{ version: string; executable: string }> {
+    const manifest = JSON.parse(readFileSync(path.join(extensionRoot, 'package.json'), 'utf8')) as {
+        engines: { vscode: string };
+    };
+    const version = manifest.engines.vscode.replace(/^\^/, '');
+    const cachePath = sharedCachePath();
+    for (const build of removeCheckoutBuilds(path.join(extensionRoot, '.vscode-test'))) {
+        console.log(`[vscode-test] Removed ${build}: builds now live in ${cachePath}`);
+    }
+    const executable = await withDownloadLock(cachePath, async () => {
+        const executable = await downloadAndUnzipVSCode({ version, cachePath });
+        for (const build of markUsedAndPrune(cachePath, [buildDirectory(cachePath, executable)])) {
+            console.log(`[vscode-test] Removed ${build}: unused for 30 days`);
+        }
+        return executable;
+    });
+    return { version, executable };
+}
 
 /** The per-user VS Code build cache, or XTC_VSCODE_TEST_CACHE when set. */
 export function sharedCachePath(): string {
