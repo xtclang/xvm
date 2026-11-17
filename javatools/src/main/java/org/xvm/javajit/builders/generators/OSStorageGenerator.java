@@ -7,13 +7,12 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.javajit.annotations.JitGenerated;
+
 import org.xvm.javajit.builders.AugmentingBuilder;
 
-import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.MD_xvmVoid;
 
 /**
  * The {@link JitGenerated.Generator} implementation for native {@code ecstasy.fs.OSStorage} class.
@@ -36,7 +35,7 @@ public class OSStorageGenerator
             code.new_(cd)
                 .dup()
                 .aload(code.parameterSlot(0))
-                .invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx))
+                .invokespecial(cd, INIT_NAME, MD_xvmVoid)
                 .areturn();
         });
     }
