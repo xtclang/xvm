@@ -40,7 +40,7 @@ import org.xvm.javajit.registers.SingleSlot;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.MD_xvmBoolean;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.md;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -314,9 +314,9 @@ public class PropertyHosting {
 
                 bctx.loadCtx(code);
                 if (targetType.isJitCCInterface()) {
-                    code.invokeinterface(targetCD, name, md(CD_boolean, CD_Ctx));
+                    code.invokeinterface(targetCD, name, MD_xvmBoolean);
                 } else {
-                    code.invokevirtual(targetCD, name, md(CD_boolean, CD_Ctx));
+                    code.invokevirtual(targetCD, name, MD_xvmBoolean);
                 }
             } else {
                 code.pop()

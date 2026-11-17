@@ -267,7 +267,7 @@ public class NumberBuilder extends AugmentingBuilder {
     protected void generateUnsupported(CodeBuilder code, JitMethodDesc jmd, String jitName) {
         code.aload(code.parameterSlot(jmd.optimizedCtx()))
             .ldc(jitName)
-            .invokestatic(CD_Exception, "$unsupported", md(CD_nException, CD_Ctx, CD_JavaString))
+            .invokestatic(CD_Exception, "$unsupported", mdx(CD_nException, CD_JavaString))
             .athrow();
     }
 
@@ -322,7 +322,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
             code.aload(arraySlot)
                 .aload(ctxSlot)
-                .invokevirtual(CD_Array, "size$get$p", md(CD_long, CD_Ctx))
+                .invokevirtual(CD_Array, "size$get$p", MD_xvmLong)
                 .loadConstant(expectedSize)
                 .lcmp()
                 .ifeq(validSize);
@@ -426,10 +426,10 @@ public class NumberBuilder extends AugmentingBuilder {
 
         MethodTypeDesc md;
         if (isBitArray) {
-            md = md(CD_long, CD_Ctx, CD_int);
+            md = mdx(CD_long, CD_int);
         } else {
             code.loadConstant(bitLength);
-            md = md(CD_long, CD_Ctx, CD_int, CD_int);
+            md = mdx(CD_long, CD_int, CD_int);
         }
         return code.invokevirtual(arrayCD, "$toLong", md);
     }
@@ -526,7 +526,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
         // the populated long array is on the top of the stack
         // create the ArrayᐸBitᐳ and return it
-        MethodTypeDesc mdFromLongs = md(CD_ArrayBit, CD_Ctx, CD_long, CD_long.arrayType());
+        MethodTypeDesc mdFromLongs = mdx(CD_ArrayBit, CD_long, CD_long.arrayType());
         code.invokestatic(CD_ArrayBit, "$fromLongs", mdFromLongs)
             .areturn();
     }
@@ -1111,13 +1111,13 @@ public class NumberBuilder extends AugmentingBuilder {
         loadLongValues(code, jmd);
 
         code.invokestatic(arrayCD, "$fromLongs",
-                        md(arrayCD, CD_Ctx, mutabilityCD, CD_long, CD_long.arrayType()))
+                        mdx(arrayCD, mutabilityCD, CD_long, CD_long.arrayType()))
                 .areturn();
     }
 
     protected void generateCompare(ClassBuilder classBuilder) {
         ClassDesc      thisCD    = art.CD();
-        MethodTypeDesc mdCompare = md(CD_Ordered, CD_Ctx, CD_nType, thisCD, thisCD);
+        MethodTypeDesc mdCompare = mdx(CD_Ordered, CD_nType, thisCD, thisCD);
         int            flags     = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
         String         jitName   = "compare";
 

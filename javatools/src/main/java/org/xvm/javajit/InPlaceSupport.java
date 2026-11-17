@@ -13,8 +13,7 @@ import org.xvm.javajit.registers.Ref;
 
 import static org.xvm.asm.Op.*;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 /**
  * An interface of default utility methods for implementing in-place operations.
@@ -443,7 +442,7 @@ public interface InPlaceSupport
         int            op       = getOpCode();
         int            slot     = reg.slot();
         ClassDesc      cd       = bctx.builder.getCCDesc(baseType);
-        MethodTypeDesc mdSeqOp  = md(cd, CD_Ctx);
+        MethodTypeDesc mdSeqOp  = mdx(cd);
         switch (getOpCode()) {
             case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                 reg.load(code);

@@ -601,7 +601,7 @@ public abstract class Builder {
 
                     loadStaticRef(code, propInfo, ctxSlot);
                     code.aload(ctxSlot)
-                        .invokevirtual(CD_nRef, "get", md(CD_Object, CD_Ctx))
+                        .invokevirtual(CD_nRef, "get", MD_xvmObject)
                         .checkcast(getCCDesc(propType));
 
                     if (jtd.flavor.isOptimized) {
@@ -736,7 +736,7 @@ public abstract class Builder {
                 bctx.loadType(code, type.getParamType(0));
                 loadCtx(bctx, code);
             }
-            code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx));
+            code.invokevirtual(CD_nType, "$xvmClass", MD_xvmClass);
             return new SingleSlot(type, Specific, CD_Class, "");
         }
 
@@ -957,10 +957,10 @@ public abstract class Builder {
             } else {
                 code.iconst_1(); // immutable = true
             }
-            code.invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
+            code.invokespecial(cd, INIT_NAME, mdx(CD_void, CD_TypeConstant,
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
         } else {
-            code.invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
+            code.invokespecial(cd, INIT_NAME, mdx(CD_void, CD_TypeConstant,
                     CD_MethodHandle, CD_MethodHandle));
         }
         return new SingleSlot(sigType, Specific, cd, "");
@@ -1085,7 +1085,7 @@ public abstract class Builder {
         }
 
         code.invokestatic(CD_ArrayUInt8, "$fromLongs",
-                md(CD_ArrayUInt8, CD_Ctx, CD_long, CD_long.arrayType()));
+                mdx(CD_ArrayUInt8, CD_long, CD_long.arrayType()));
         return new SingleSlot(bytesConstant.getType(), Specific, CD_ArrayUInt8, "");
     }
 
@@ -1112,7 +1112,7 @@ public abstract class Builder {
         }
 
         code.invokespecial(CD_nTuple, INIT_NAME,
-                md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+                mdx(CD_void, CD_TypeConstant, CD_nObject.arrayType()));
         return new SingleSlot(type, Specific, CD_nTuple, "");
     }
 
@@ -1131,142 +1131,142 @@ public abstract class Builder {
             case "Bit":
                 // ArrayᐸBitᐳ array = ArrayᐸBitᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayBit;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "Boolean":
                 // ArrayᐸBooleanᐳ array = ArrayᐸBooleanᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayBoolean;
-                mdAdd   = md(cdArray, CD_Ctx, CD_boolean);
+                mdAdd   = mdx(cdArray, CD_boolean);
                 break;
 
             case "Char":
                 // ArrayᐸCharᐳ array = ArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayChar;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "Dec32":
                 // ArrayᐸDec32ᐳ array = ArrayᐸDec32ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayDec32;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "Dec64":
                 // ArrayᐸDec64ᐳ array = ArrayᐸDec64ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayDec64;
-                mdAdd   = md(cdArray, CD_Ctx, CD_long);
+                mdAdd   = mdx(cdArray, CD_long);
                 break;
 
             case "Dec128":
                 // ArrayᐸDec128ᐳ array = ArrayᐸDec128ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayDec128;
-                mdAdd   = md(cdArray, CD_Ctx, CD_long, CD_long);
+                mdAdd   = mdx(cdArray, CD_long, CD_long);
                 break;
 
             case "Float8e4":
                 cdArray = CD_ArrayFloat8e4;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "Float8e5":
                 cdArray = CD_ArrayFloat8e5;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "BFloat16":
                 cdArray = CD_ArrayBFloat16;
-                mdAdd   = md(cdArray, CD_Ctx, CD_float);
+                mdAdd   = mdx(cdArray, CD_float);
                 break;
 
             case "Float32":
                 // ArrayᐸFloat32ᐳ array = ArrayᐸFloat32ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayFloat32;
-                mdAdd   = md(cdArray, CD_Ctx, CD_float);
+                mdAdd   = mdx(cdArray, CD_float);
                 break;
 
             case "Float64":
                 // ArrayᐸFloat64ᐳ array = ArrayᐸFloat64ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayFloat64;
-                mdAdd   = md(cdArray, CD_Ctx, CD_double);
+                mdAdd   = mdx(cdArray, CD_double);
                 break;
 
             case "Int8":
                 // ArrayᐸInt8ᐳ array = ArrayᐸInt8ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayInt8;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "Int16":
                 // ArrayᐸInt16ᐳ array = ArrayᐸInt16ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayInt16;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "Int32":
                 // ArrayᐸInt32ᐳ array = ArrayᐸInt32ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayInt32;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "Int64":
                 // ArrayᐸIntᐳ array = ArrayᐸIntᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayInt64;
-                mdAdd   = md(cdArray, CD_Ctx, CD_long);
+                mdAdd   = mdx(cdArray, CD_long);
                 break;
 
             case "Int128":
                 // ArrayᐸInt128ᐳ array = ArrayᐸInt128ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayInt128;
-                mdAdd   = md(cdArray, CD_Ctx, CD_long, CD_long);
+                mdAdd   = mdx(cdArray, CD_long, CD_long);
                 break;
 
             case "Nibble":
                 // ArrayᐸNibbleᐳ array = ArrayᐸNibbleᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayNibble;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "UInt8":
                 // ArrayᐸUInt8ᐳ array = ArrayᐸUInt8ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayUInt8;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "UInt16":
                 // ArrayᐸUInt16ᐳ array = ArrayᐸUInt16ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayUInt16;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "UInt32":
                 // ArrayᐸUInt32ᐳ array = ArrayᐸUInt32ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayUInt32;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "UInt64":
                 // ArrayᐸUIntᐳ array = ArrayᐸUIntᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayUInt64;
-                mdAdd   = md(cdArray, CD_Ctx, CD_long);
+                mdAdd   = mdx(cdArray, CD_long);
                 break;
 
             case "UInt128":
                 // ArrayᐸUInt128ᐳ array = ArrayᐸUInt128ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayUInt128;
-                mdAdd   = md(cdArray, CD_Ctx, CD_long, CD_long);
+                mdAdd   = mdx(cdArray, CD_long, CD_long);
                 break;
 
             case "Date":
                 // array = ArrayᐸDateᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayDate;
-                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                mdAdd   = mdx(cdArray, CD_int);
                 break;
 
             case "Duration":
                 // array = ArrayᐸDurationᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayDuration;
-                mdAdd   = md(cdArray, CD_Ctx, CD_long, CD_long);
+                mdAdd   = mdx(cdArray, CD_long, CD_long);
                 break;
 
             default:
@@ -1276,7 +1276,7 @@ public abstract class Builder {
             // ArrayᐸObjectᐳ array = ArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
             cdArray   = CD_ArrayObj;
             addMethod = "add";
-            mdAdd     = md(cdArray, CD_Ctx, CD_Object);
+            mdAdd     = mdx(cdArray, CD_Object);
         }
 
         // Note: we remove the immutability here; it will be added back upon "$makeImmut"
@@ -1284,8 +1284,7 @@ public abstract class Builder {
         loadTypeConstant(bctx, code, arrayType.removeImmutable());
         code.loadConstant((long) values.length)
             .iconst_0()
-            .invokestatic(cdArray, "$new$p",
-                    md(cdArray, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+            .invokestatic(cdArray, "$new$p", mdx(cdArray, CD_TypeConstant, CD_long, CD_boolean));
 
         for (Constant value : values) {
             // array.add(ctx, loadConstant(constValue));
@@ -1454,6 +1453,14 @@ public abstract class Builder {
      */
     public static MethodTypeDesc md(ClassDesc cdReturn, ClassDesc... cdParams) {
         return MethodTypeDesc.of(cdReturn, cdParams);
+    }
+
+    /**
+     * Create a method descriptor with explicit arguments after the implicit {@link Ctx}.
+     */
+    public static MethodTypeDesc mdx(ClassDesc returnCD, ClassDesc... argCDs) {
+        MethodTypeDesc md = md(returnCD, CD_Ctx);
+        return argCDs.length == 0 ? md : md.insertParameterTypes(1, argCDs);
     }
 
     /**
@@ -1634,7 +1641,7 @@ public abstract class Builder {
     public static CodeBuilder loadTypeForName(CodeBuilder code, String name, int ctxSlot) {
         return code.aload(ctxSlot)
                    .ldc(name)
-                   .invokevirtual(CD_nObject, "$typeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+                   .invokevirtual(CD_nObject, "$typeForName", mdx(CD_nType, CD_JavaString));
     }
 
     /**
@@ -2214,8 +2221,7 @@ public abstract class Builder {
         code.aload(ctxSlot);
         code.loadConstant(text)
             .aconst_null()
-            .invokevirtual(exCD, "$init", md(
-                CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
+            .invokevirtual(exCD, "$init", mdx(CD_nException, CD_JavaString, CD_Throwable))
             .athrow();
         return code;
     }
@@ -2385,7 +2391,7 @@ public abstract class Builder {
                 .aload(typeSlot)
                 .invokestatic(CD_nType, "$ensureType", MD_EnsureType)
                 .aload(ctxSlot)
-                .invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
+                .invokevirtual(CD_nType, "$xvmClass", MD_xvmClass)
                 .checkcast(instorIface)
                 .aload(ctxSlot)
                 .aload(typeSlot)
@@ -3092,9 +3098,9 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_UInt128_box  = md(CD_UInt128, CD_long, CD_long);
     public static final MethodTypeDesc MD_Date_box     = md(CD_Date, CD_int);
     public static final MethodTypeDesc MD_Duration_box = md(CD_Duration, CD_long, CD_long);
-    public static final MethodTypeDesc MD_StringOf     = md(CD_String, CD_Ctx, CD_JavaString);
+    public static final MethodTypeDesc MD_StringOf     = mdx(CD_String, CD_JavaString);
     public static final MethodTypeDesc MD_TypeIsA      = md(CD_boolean, CD_TypeConstant);
-    public static final MethodTypeDesc MD_EnsureType   = md(CD_nType, CD_Ctx, CD_TypeConstant);
+    public static final MethodTypeDesc MD_EnsureType   = mdx(CD_nType, CD_TypeConstant);
     public static final MethodTypeDesc MD_FloorModI    = md(CD_int, CD_int, CD_int);
     public static final MethodTypeDesc MD_FloorModJ    = md(CD_long, CD_long, CD_long);
     public static final MethodTypeDesc MD_UDivInt      = md(CD_int, CD_int, CD_int);
@@ -3105,9 +3111,13 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_L2D          = md(CD_double, CD_long);
     public static final MethodTypeDesc MD_F2I          = md(CD_int, CD_float);
     public static final MethodTypeDesc MD_I2F          = md(CD_float, CD_int);
-    public static final MethodTypeDesc MD_xvmType      = md(CD_TypeConstant, CD_Ctx);
-    public static final MethodTypeDesc MD_xvmVoid      = md(CD_void, CD_Ctx);
-    public static final MethodTypeDesc MD_xvmOuterVoid = md(CD_void, CD_Ctx, CD_nObject);
-    public static final MethodTypeDesc MD_xvmInitType  = md(CD_void, CD_Ctx, CD_TypeConstant);
-    public static final MethodTypeDesc MD_xvmChildType = md(CD_TypeConstant, CD_Ctx, CD_TypeConstant);
+    public static final MethodTypeDesc MD_xvmBoolean   = mdx(CD_boolean);
+    public static final MethodTypeDesc MD_xvmClass     = mdx(CD_Class);
+    public static final MethodTypeDesc MD_xvmLong      = mdx(CD_long);
+    public static final MethodTypeDesc MD_xvmObject    = mdx(CD_Object);
+    public static final MethodTypeDesc MD_xvmType      = mdx(CD_TypeConstant);
+    public static final MethodTypeDesc MD_xvmVoid      = mdx(CD_void);
+    public static final MethodTypeDesc MD_xvmOuterVoid = mdx(CD_void, CD_nObject);
+    public static final MethodTypeDesc MD_xvmInitType  = mdx(CD_void, CD_TypeConstant);
+    public static final MethodTypeDesc MD_xvmChildType = mdx(CD_TypeConstant, CD_TypeConstant);
 }
