@@ -85,22 +85,47 @@ module TestInnerOuter {
 
         class Inner {
             construct(String s) {}
+            Int inc() = 0;
         }
 
         Int i = 4;
 
-        // var o = new Object()
-        var o = new Inner("hello") {
+        var inner = new Inner("hello") {
             void run() {
                 console.print($"in run (i={i})");
                 ++i;
-                // foo();
             }
         };
 
-        o.run();
+        inner.run();
 
-        console.print($"done (i={i})");
+        console.print($"done ({i=})");
+
+        class Outer {
+            Inner inner;
+
+            construct() {
+                Int count = 0;
+                var value = new Inner("") {
+                    @Override
+                    Int inc() {
+                        return ++count;
+                    }
+                };
+
+                inner = value;
+                assert this.toString().size > 0;
+            }
+
+            @Override
+            String toString() {
+                assert as "should no be called";
+            }
+        }
+
+        Outer o = new Outer();
+        assert o.inner.inc() == 1;
+        assert o.inner.inc() == 2;
     }
 
     interface FunkyOuter<Element extends Orderable> {
@@ -255,7 +280,6 @@ module TestInnerOuter {
         Holder.Inner inner  = holder.new Inner();
         assert inner.textByOuter == "Held";
         assert inner.outer.text == "Held";
-        // console.print($"inner.textByOuter={inner.textByOuter}");
 
         Shelf.Inner item = new Shelf.Inner(3);
         assert item.size == 3;
@@ -263,12 +287,10 @@ module TestInnerOuter {
         Shelf        shelf  = new Shelf("Top");
         Shelf.Drawer drawer = shelf.new Drawer();
         assert drawer.labelByOuter == "Top";
-        // console.print($"item={item}, drawer.labelByOuter={drawer.labelByOuter}");
 
         Box box = new Box();
         assert box.new Inner().kind() == "box";
         Box crate = new Crate();
         assert crate.new Inner().kind() == "crate";
-        // console.print($"box={box.new Inner().kind()}, crate={crate.new Inner().kind()}");
     }
 }
