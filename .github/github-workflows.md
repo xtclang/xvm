@@ -927,12 +927,7 @@ gh workflow run commit.yml \
 ./gradlew manualTests:runXtc
 ```
 
-**Environment Configuration**:
-```groovy
-// In settings.gradle.kts or gradle.properties
-org.gradle.project.includeBuildManualTests=true
-org.gradle.project.includeBuildAttachManualTests=true
-```
+`manualTests` is always part of the build and attached to its lifecycle, so `./gradlew build` compiles it and runs its tests.
 
 ---
 

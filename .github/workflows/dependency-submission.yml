@@ -13,8 +13,6 @@ concurrency:
     cancel-in-progress: true
 
 env:
-    ORG_GRADLE_PROJECT_includeBuildManualTests: false
-    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: false
     ORG_GRADLE_PROJECT_includeBuildLang: true
     ORG_GRADLE_PROJECT_includeBuildAttachLang: false
 

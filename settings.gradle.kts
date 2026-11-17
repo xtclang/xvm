@@ -88,8 +88,7 @@ coreBuilds.forEach(::includeBuild)
  * and negligible with configuration caching.
  */
 val optionalBuilds = mapOf(
-    "lang" to "includeBuildLang",
-    "manualTests" to "includeBuildManualTests"
+    "lang" to "includeBuildLang"
 )
 
 optionalBuilds.forEach { (buildName, propertyName) ->
@@ -104,6 +103,9 @@ optionalBuilds.forEach { (buildName, propertyName) ->
         includeBuild(buildName)
     }
 }
+
+// manualTests is always part of the build and of its lifecycle: a root build compiles it and runs its tests.
+includeBuild("manualTests")
 
 // Disable problematic test distribution websocket check task
 gradle.taskGraph.whenReady {
