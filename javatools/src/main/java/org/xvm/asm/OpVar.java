@@ -314,7 +314,7 @@ public abstract class OpVar
             RegisterInfo arg = bctx.loadArgument(code, anArgValue[i]);
             if (arg.flavor().isOptimized) {
                 Builder.box(code, arg);
-            } else if (arg.type().isJitCCInterface()) {
+            } else if (arg.type().isJitCCInterface(bctx.typeSystem)) {
                 code.checkcast(CD_nObject);
             }
             code.aastore();

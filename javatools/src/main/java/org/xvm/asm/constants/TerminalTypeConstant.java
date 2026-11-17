@@ -23,6 +23,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.runtime.ClassTemplate;
 
 import org.xvm.runtime.Container;
@@ -1928,6 +1932,57 @@ public class TerminalTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public ModuleConstant peekJitModuleOwner() {
+        TypeConstant type = resolveTypedefs();
+        if (type != this) {
+            return type.peekJitModuleOwner();
+        }
+
+        Constant constant = getDefiningConstant();
+        if (constant instanceof KeywordConstant constKeyword) {
+            constant = constKeyword.getBaseType().getDefiningConstant();
+        }
+        if (constant instanceof PseudoConstant pseudo) {
+            constant = pseudo.getDeclarationLevelClass();
+        }
+        if (constant instanceof IdentityConstant id) {
+            return id.getModuleConstant();
+        }
+        throw new UnsupportedOperationException("type=" + getValueString());
+    }
+
+    @Override
+    public Set<ModuleConstant> collectJitModuleOwners(Set<ModuleConstant> modules) {
+        TypeConstant type = resolveTypedefs();
+        if (type != this) {
+            return type.collectJitModuleOwners(modules);
+        }
+
+        modules.add(peekJitModuleOwner());
+        return modules;
+    }
+
+    @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        TypeConstant type = resolveTypedefs();
+        if (type != this) {
+            return type.ensureJitInfo(loader.typeSystem);
+        }
+
+        if (isFormalType()) {
+            return resolveConstraints().ensureJitInfo(loader.typeSystem).withoutJic(this);
+        }
+
+        type = removeAutoNarrowing();
+        boolean newable = isNativeRef() || !isInterfaceType() && !isTuple() && !isTypeOfType()
+                && !isFunction() && !isMethod()
+                && !getSingleUnderlyingClass(true).equals(getConstantPool().clzClass())
+                && !Builder.isEmbedded(getExplicitClassFormat())
+                && ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        return new JitInfo(this, loader, type, newable ? type : null, type);
+    }
+
+    @Override
     public boolean isJavaPrimitive() {
         if (isEnumValue()) {
             TypeConstant enumType = getSingleUnderlyingClass(false)
@@ -1975,17 +2030,10 @@ public class TerminalTypeConstant
     }
 
     @Override
-    public boolean isJitImplInterface() {
+    public boolean isJitImplInterface(TypeSystem ts) {
         return isFormalType()
-                ? resolveConstraints().isJitImplInterface()
-                : super.isJitImplInterface();
-    }
-
-    @Override
-    public TypeConstant getJitCCType() {
-        return isFormalType()
-                ? resolveConstraints().getJitCCType()
-                : super.getJitCCType();
+                ? resolveConstraints().isJitImplInterface(ts)
+                : super.isJitImplInterface(ts);
     }
 
     // ----- run-time support ----------------------------------------------------------------------

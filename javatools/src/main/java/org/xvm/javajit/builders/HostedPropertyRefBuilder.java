@@ -113,7 +113,7 @@ public class HostedPropertyRefBuilder extends Builder {
                     assembleAccessor(classBuilder, property, opName, name + OPT, desc, true, emitted);
                 }
 
-                TypeConstant  targetType = methodId.getClassIdentity().getFormalType().getJitCCType();
+                TypeConstant  targetType = methodId.getClassIdentity().getFormalType().getJitCCType(typeSystem);
                 JitMethodDesc jmd        = body.getJitDesc(this, targetType);
 
                 assembleAccessor(classBuilder, property, opName, name, jmd, false, emitted);
@@ -137,7 +137,7 @@ public class HostedPropertyRefBuilder extends Builder {
             }
 
             String        methodName = method.ensureJitMethodName(typeSystem);
-            TypeConstant  targetType = methodId.getClassIdentity().getFormalType().getJitCCType();
+            TypeConstant  targetType = methodId.getClassIdentity().getFormalType().getJitCCType(typeSystem);
             JitMethodDesc jmd        = method.getJitDesc(this, targetType);
             String        targetName = prefix + '$' + methodName;
 
@@ -162,7 +162,7 @@ public class HostedPropertyRefBuilder extends Builder {
                 load(code, md.parameterType(i), code.parameterSlot(i));
             }
             String target = targetName + (optimized ? OPT : "");
-            if (owner.isJitCCInterface()) {
+            if (owner.isJitCCInterface(typeSystem)) {
                 code.invokeinterface(ownerCD, target, md);
             } else {
                 code.invokevirtual(ownerCD, target, md);

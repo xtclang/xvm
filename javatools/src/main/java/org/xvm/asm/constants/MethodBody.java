@@ -11,6 +11,7 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 
@@ -825,7 +826,8 @@ public class MethodBody {
         }
 
         MethodStructure   method = getClassifyingMethodStructure();
-        SignatureConstant sig    = method.resolveJitSignature(builder.pool(), typeTarget.getJitCCType());
+        SignatureConstant sig    = method.resolveJitSignature(builder.pool(), builder.typeSystem,
+                typeTarget.getJitCCType(builder.typeSystem));
 
         // TODO consider caching this
         return JitMethodDesc.of(builder, typeTarget, JitMethodDesc.flagsFor(method),
@@ -851,8 +853,8 @@ public class MethodBody {
     /**
      * @return the function or method type for the function or method represented by this body
      */
-    public TypeConstant asJitFunctionType(ConstantPool pool, TypeConstant typeContainer) {
-        SignatureConstant sig = getMethodStructure().resolveJitSignature(pool, typeContainer);
+    public TypeConstant asJitFunctionType(ConstantPool pool, TypeSystem ts, TypeConstant typeContainer) {
+        SignatureConstant sig = getMethodStructure().resolveJitSignature(pool, ts, typeContainer);
         return isFunction()
                 ? sig.asFunctionType()
                 : sig.asMethodType(pool, typeContainer);

@@ -117,8 +117,8 @@ public class CommonBuilder
 
         this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId        = classStruct.getIdentityConstant();
-        this.jitType       = thisType.getJitCCType();
-        this.isSpecialized = jitType.isJitL2Specialized();
+        this.jitType       = thisType.getJitCCType(typeSystem);
+        this.isSpecialized = jitType.isJitL2Specialized(typeSystem);
         this.isPrimitive   = type.isJitPrimitive();
 
         Annotation[] annotations = typeInfo.getMixinAnnotations();
@@ -482,7 +482,7 @@ public class CommonBuilder
                 }
             }
 
-            code.invokestatic(targetCD, targetName, targetMD, thisType.isJitImplInterface());
+            code.invokestatic(targetCD, targetName, targetMD, thisType.isJitImplInterface(typeSystem));
 
             ClassDesc funkyRetCD  = funkyMD.returnType();
             ClassDesc targetRetCD = targetMD.returnType();
@@ -1607,7 +1607,7 @@ public class CommonBuilder
                             ? new MethodBody((MethodStructure) methodId.getComponent())
                             : typeInfo.getMethodById(methodId).getHead();
 
-                    TypeConstant type = body.asJitFunctionType(pool(), thisType);
+                    TypeConstant type = body.asJitFunctionType(pool(), typeSystem, thisType);
                     types[i] = type.isMethod() ? pool().bindMethodTarget(type) : type;
                 } else {
                     types[i] = args[i].getType();
@@ -2357,7 +2357,26 @@ public class CommonBuilder
             }
 
             if (method.isNative()) {
-                continue; // not our responsibility
+                // TODO GG REVIEW chet work
+                // a native body can be supplied by a Java implementation class, but its Ecstasy
+                // interface still needs to declare the method when the Java interface does not.
+                if (isInterface() && !method.isFunction() && !method.isCtorOrValidator()
+                        && shouldGenerate(method.getIdentity())) {
+                    String        name = method.ensureJitMethodName(typeSystem);
+                    JitMethodDesc jmd  = method.getJitDesc(this);
+                    if (jmd.isOptimized && !isNativeMethod(name, jmd.standardMD)) {
+                        assembleMethodWrapper(classBuilder, name, jmd);
+                    }
+                    if (jmd.isOptimized) {
+                        name += OPT;
+                    }
+                    MethodTypeDesc md = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
+                    if (!isNativeMethod(name, md)) {
+                        classBuilder.withMethod(name, md,
+                                ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT, ignored -> {});
+                    }
+                }
+                continue; // the native body is supplied elsewhere
             }
 
             if (method.isCapped() && method.containsVirtualConstructor()) {
@@ -3174,7 +3193,7 @@ public class CommonBuilder
                     code.checkcast(cdProp);
                 }
 
-                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD, targetType.isJitImplInterface())
+                code.invokestatic(cdTarget, eqOptName, eqJmd.optimizedMD, targetType.isJitImplInterface(typeSystem))
                     .ifeq(returnFalse);
             }
             // we jump here if the prop is nullable and the null check determined both were null
@@ -4227,7 +4246,7 @@ public class CommonBuilder
             TypeConstant   srcRetType = srcReturns[0].type;
             TypeConstant   dstRetType = dstReturns[0].type;
 
-            if (!dstRetType.isJitAssignableTo(srcRetType)) {
+            if (!dstRetType.isJitAssignableTo(typeSystem, srcRetType)) {
                 generateCheckCast(code, srcRetType);
             }
 
@@ -4405,7 +4424,7 @@ public class CommonBuilder
                 JitFlavor    dstFlavor = dstPd.flavor;
 
                 if (srcFlavor == dstFlavor) {
-                    if (!srcPd.cd.isPrimitive() && !dstPd.type.isJitAssignableTo(srcPd.type)) {
+                    if (!srcPd.cd.isPrimitive() && !dstPd.type.isJitAssignableTo(typeSystem, srcPd.type)) {
                         generateCheckCast(code, srcPd.type, ctxSlot);
                     }
                 } else {
@@ -4507,7 +4526,7 @@ public class CommonBuilder
 
             // abstract and default interface methods require invokeinterface
             TypeConstant dstType = dstMethod.getJitIdentity().getNamespace().getType();
-            if (dstType.isJitCCInterface()) {
+            if (dstType.isJitCCInterface(typeSystem)) {
                 code.invokeinterface(getCCDesc(dstType), dstName, md);
             } else {
                 code.invokevirtual(getCCDesc(dstType), dstName, md);

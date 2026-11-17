@@ -17,6 +17,8 @@ import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.javajit.ModuleLoader;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
@@ -470,7 +472,15 @@ public class DifferenceTypeConstant
             && !m_constType2.containsSubstitutableMethod(signature, access, fFunction, listParams);
     }
 
-    // ----- run-time support ----------------------------------------------------------------------
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        // just use the "left" side (since the "right" side is what is being taken away)
+        return m_constType1.ensureJitInfo(loader.typeSystem).withoutJic(this);
+    }
+
+    // ----- interpreter support -------------------------------------------------------------------
 
     @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
