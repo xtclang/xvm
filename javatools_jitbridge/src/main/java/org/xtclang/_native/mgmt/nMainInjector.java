@@ -18,8 +18,6 @@ import org.xtclang._native.temporal.NanosTimer;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Nullable;
 
-import org.xtclang.ecstasy.text.String;
-
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -89,7 +87,6 @@ public class nMainInjector
         ConstantPool pool = xvm.ecstasyPool;
 
         TypeConstant consoleType = pool.ensureEcstasyTypeConstant("io.Console");
-        java.lang.Class temporaryLoadStringClassToPrimeConstTypeInfo = String.class;
         suppliers.put(new Resource(consoleType, "console"), TerminalConsole::$create);
 
         TypeConstant randomType = pool.ensureEcstasyTypeConstant("numbers.Random");

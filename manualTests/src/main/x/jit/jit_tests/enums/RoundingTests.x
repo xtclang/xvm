@@ -67,27 +67,25 @@ class RoundingTests {
         hasNext = nextAsSequential(Rounding.TowardNegative);
         assert hasNext == False;
 
-// TODO see nextAsEnum below
-//        assert Enum e := nextAsEnum(Rounding.TiesToEven);
-//        assert e == Rounding.TiesToAway;
-//        assert e := nextAsEnum(Rounding.TiesToAway);
-//        assert e == Rounding.TowardPositive;
-//        assert e := nextAsEnum(Rounding.TowardPositive);
-//        assert e == Rounding.TowardZero;
-//        assert e := nextAsEnum(Rounding.TowardZero);
-//        assert e == Rounding.TowardNegative;
-//        hasNext = nextAsEnum(Rounding.TowardNegative);
-//        assert hasNext == False;
+        assert Enum e := nextAsEnum(Rounding.TiesToEven);
+        assert e == Rounding.TiesToAway;
+        assert e := nextAsEnum(Rounding.TiesToAway);
+        assert e == Rounding.TowardPositive;
+        assert e := nextAsEnum(Rounding.TowardPositive);
+        assert e == Rounding.TowardZero;
+        assert e := nextAsEnum(Rounding.TowardZero);
+        assert e == Rounding.TowardNegative;
+        hasNext = nextAsEnum(Rounding.TowardNegative);
+        assert hasNext == False;
     }
 
     conditional Sequential nextAsSequential(Sequential s) {
         return s.next();
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    conditional Enum nextAsEnum(Enum e) {
-//        return e.next();
-//    }
+    conditional Enum nextAsEnum(Enum e) {
+        return e.next();
+    }
 
     void testPrev() {
         Boolean hasPrev = Rounding.TiesToEven.prev();
@@ -112,27 +110,25 @@ class RoundingTests {
         assert s := prevAsSequential(Rounding.TowardNegative);
         assert s == Rounding.TowardZero;
 
-// TODO see prevAsEnum below
-//        hasPrev = prevAsEnum(Rounding.TiesToEven);
-//        assert hasPrev == False;
-//        assert Enum e := prevAsEnum(Rounding.TiesToAway);
-//        assert e == Rounding.TiesToEven;
-//        assert e := prevAsEnum(Rounding.TowardPositive);
-//        assert e == Rounding.TiesToAway;
-//        assert e := prevAsEnum(Rounding.TowardZero);
-//        assert e == Rounding.TowardPositive;
-//        assert e := prevAsEnum(Rounding.TowardNegative);
-//        assert e == Rounding.TowardZero;
+        hasPrev = prevAsEnum(Rounding.TiesToEven);
+        assert hasPrev == False;
+        assert Enum e := prevAsEnum(Rounding.TiesToAway);
+        assert e == Rounding.TiesToEven;
+        assert e := prevAsEnum(Rounding.TowardPositive);
+        assert e == Rounding.TiesToAway;
+        assert e := prevAsEnum(Rounding.TowardZero);
+        assert e == Rounding.TowardPositive;
+        assert e := prevAsEnum(Rounding.TowardNegative);
+        assert e == Rounding.TowardZero;
     }
 
     conditional Sequential prevAsSequential(Sequential s) {
         return s.prev();
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    conditional Enum prevAsEnum(Enum e) {
-//        return e.next();
-//    }
+    conditional Enum prevAsEnum(Enum e) {
+        return e.prev();
+    }
 
     void testSkip() {
         Rounding b = Rounding.TiesToEven.skip(0);
@@ -242,26 +238,24 @@ class RoundingTests {
             // expected
         }
 
-// TODO see skipAsEnum below
-//        Enum e = skipAsEnum(Rounding.TiesToEven, 2);
-//        assert e == Rounding.TowardPositive;
-//
-//        try {
-//            skipAsEnum(Rounding.TiesToAway, -3);
-//            assert as "should have thrown OOB";
-//        } catch (OutOfBounds _) {
-//            // expected
-//        }
+        Enum e = skipAsEnum(Rounding.TiesToEven, 2);
+        assert e == Rounding.TowardPositive;
+
+        try {
+            skipAsEnum(Rounding.TiesToAway, -3);
+            assert as "should have thrown OOB";
+        } catch (OutOfBounds _) {
+            // expected
+        }
     }
 
     Sequential skipAsSequential(Sequential s, Int steps) {
         return s.skip(steps);
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    Enum skipAsEnum(Enum e, Int steps) {
-//        return e.skip(steps);
-//    }
+    Enum skipAsEnum(Enum e, Int steps) {
+        return e.skip(steps);
+    }
 
     void testStepsTo() {
         Rounding e = TiesToEven;
@@ -303,19 +297,17 @@ class RoundingTests {
         assert stepsToAsSequential(Rounding.TiesToEven, Rounding.TowardPositive) == 2;
         assert stepsToAsSequential(Rounding.TowardPositive, Rounding.TiesToAway) == -1;
 
-// TODO see stepsToAsEnum below
-//        assert stepsToAsEnum(Rounding.TiesToEven, Rounding.TowardPositive) == 2;
-//        assert stepsToAsEnum(Rounding.TowardPositive, Rounding.TiesToAway) == -1;
+        assert stepsToAsEnum(Rounding.TiesToEven, Rounding.TowardPositive) == 2;
+        assert stepsToAsEnum(Rounding.TowardPositive, Rounding.TiesToAway) == -1;
     }
 
     Int stepsToAsSequential(Sequential s1, Sequential s2) {
         return s1.stepsTo(s2);
     }
 
-// TODO requires calls to methods on nEnum to be invokevirtual instead of invokeinterface
-//    Int stepsToAsEnum(Enum e1, Enum e2) {
-//        return e1.stepsTo(e2);
-//    }
+    Int stepsToAsEnum(Enum e1, Enum e2) {
+        return e1.stepsTo(e2);
+    }
 
     void testTiesToEven() {
         assert Rounding.TiesToEven.name == "TiesToEven";

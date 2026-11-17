@@ -1074,13 +1074,12 @@ class IntNTests {
     }
 
     void testMagnitude() {
-// TODO fix IntN.magnitude
-//        IntN n = 0;
-//        assert n.magnitude == 0;
-//        n = 100;
-//        assert n.magnitude == 100;
-//        n = -100;
-//        assert n.magnitude == 100;
+        IntN n = 0;
+        assert n.magnitude == 0;
+        n = 100;
+        assert n.magnitude == 100;
+        n = -100;
+        assert n.magnitude == 100;
     }
 
     // ----- As Number tests -----------------------------------------------------------------------
@@ -1325,26 +1324,24 @@ class IntNTests {
     }
 
     void testMagnitudeAsNumber() {
-// TODO fix IntN.magnitude
-//        IntN   n1 = 0;
-//        Number n2 = getNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 0;
-//
-//        n1 = 100;
-//        n2 = getNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 100;
-//
-//        n1 = -100;
-//        n2 = getNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 100;
+        IntN   n1 = 0;
+        Number n2 = getNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 0;
+
+        n1 = 100;
+        n2 = getNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 100;
+
+        n1 = -100;
+        n2 = getNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 100;
     }
 
     Number getNumberMagnitude(Number n) {
-     TODO fix IntN.magnitude
-//        return n.magnitude;
+        return n.magnitude;
     }
 
     // ----- As IntNumber tests --------------------------------------------------------------------
@@ -1805,26 +1802,24 @@ class IntNTests {
     }
 
     void testMagnitudeAsIntNumber() {
-// TODO fix IntN.magnitude
-//        IntN   n1 = 0;
-//        IntNumber n2 = getIntNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 0;
-//
-//        n1 = 100;
-//        n2 = getIntNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 100;
-//
-//        n1 = -100;
-//        n2 = getIntNumberMagnitude(n1);
-//        assert n2.is(UIntN);
-//        assert n2 == 100;
+        IntN   n1 = 0;
+        IntNumber n2 = getIntNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 0;
+
+        n1 = 100;
+        n2 = getIntNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 100;
+
+        n1 = -100;
+        n2 = getIntNumberMagnitude(n1);
+        assert n2.is(UIntN);
+        assert n2 == 100;
     }
 
     IntNumber getIntNumberMagnitude(IntNumber n) {
-     TODO fix IntN.magnitude
-//        return n.magnitude;
+        return n.magnitude;
     }
 
     // ----- As Sequential tests -------------------------------------------------------------------

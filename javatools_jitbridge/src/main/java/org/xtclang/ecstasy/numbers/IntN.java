@@ -136,14 +136,6 @@ public class IntN extends IntNumber {
     }
 
     /**
-     * The native implementation of:
-     *     IntNumber bitCount.get()
-     */
-    public UIntN magnitude$get$p(Ctx ctx) {
-        return abs(ctx).toUIntN(ctx);
-    }
-
-    /**
      * The primitive implementation of:
      *     Int byteLength.get()
      */
@@ -251,7 +243,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     UIntN magnitude.get()
      */
-    public UIntN magnitude$get(Ctx ctx) {
+    public Number magnitude$get(Ctx ctx) {
         return UIntN.$box($value.abs());
     }
 

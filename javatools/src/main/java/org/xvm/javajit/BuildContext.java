@@ -11,6 +11,8 @@ import java.lang.constant.DynamicCallSiteDesc;
 import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.lang.invoke.LambdaMetafactory;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,7 +87,6 @@ import static java.lang.constant.ConstantDescs.CD_CallSite;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_MethodHandles_Lookup;
 import static java.lang.constant.ConstantDescs.CD_MethodType;
-import static java.lang.constant.ConstantDescs.CD_Object;
 import static java.lang.constant.ConstantDescs.CD_String;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
@@ -111,6 +112,7 @@ import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.MD_EnsureType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
+import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
@@ -233,7 +235,7 @@ public class BuildContext {
         this.methodStruct    = body.getMethodStructure();
         this.callDepth       = callDepth;
         this.methodDesc      = bctx.methodDesc instanceof JitDetachedBodyDesc detached
-                ? new JitDetachedBodyDesc(jmd, detached.receiverCD) : jmd;
+                                    ? jmd.asDetached(detached.receiverCD) : jmd;
         this.methodJitName   = jitName;
         this.isStatic        = bctx.isStatic;
         this.isConstructor   = bctx.isConstructor;
@@ -244,18 +246,23 @@ public class BuildContext {
     }
 
     /**
-     * Construct {@link BuildContext} for a synthetic function.
+     * Construct {@link BuildContext} for a synthetic function or a constructor finalizer.
      *
-     * Note, a synthetic body has its own calling convention, e.g. a static lambda in a constructor.
+     * Note: a synthetic body has its own calling convention, e.g. a static lambda in a constructor.
+     * Note 2: constructors operate on STRUCT view, but finalizers operate on PRIVATE
      */
     private BuildContext(BuildContext bctx, String jitName, MethodBody body, JitMethodDesc jmd) {
+        boolean isFinalizer = body.getMethodStructure().isConstructorFinalizer();
+
         this.builder         = bctx.builder;
         this.typeSystem      = bctx.builder.typeSystem;
         this.className       = bctx.className;
-        this.typeInfo        = bctx.typeInfo;
+        this.typeInfo        = isFinalizer
+                ? bctx.typeInfo.getType().ensureAccess(Access.PRIVATE).ensureTypeInfo()
+                : bctx.typeInfo;
         this.thisType        = bctx.thisType;
         this.jitType         = bctx.jitType;
-        this.callChain       = bctx.callChain;
+        this.callChain       = isFinalizer ? new MethodBody[] {body} : bctx.callChain;
         this.methodStruct    = body.getMethodStructure();
         this.callDepth       = 0;
         this.methodDesc      = jmd;
@@ -446,12 +453,12 @@ public class BuildContext {
         Deque<List<Integer>> jumpAddrStack = new ArrayDeque<>();
         Deque<List<Integer>> jumpDestStack = new ArrayDeque<>();
 
-        int                   guardAddr  = -1;                // the address of the last GuardAll op
-        int                   finAddr    = -1;                // the address of the last FinallyEnd op
-        List<Integer>         jumpsAddr  = new ArrayList<>(); // the addresses of Jump ops
-        List<Integer>         jumpsDest  = new ArrayList<>(); // the addresses of jump destinations
-        Map<Integer, Boolean> refs       = null;              // the ids of registers that need to be boxed as Refs
-        boolean               doReturn   = false;             // indicates whether FinallyEnd should generate returns
+        int                   guardAddr = -1;                // the address of the last GuardAll op
+        int                   finAddr   = -1;                // the address of the last FinallyEnd op
+        List<Integer>         jumpsAddr = new ArrayList<>(); // the addresses of Jump ops
+        List<Integer>         jumpsDest = new ArrayList<>(); // the addresses of jump destinations
+        Map<Integer, Boolean> refs      = null;              // the ids of registers that need to be boxed as Refs
+        boolean               doReturn  = false;             // indicates whether FinallyEnd should generate returns
         for (int iPC = 0, opsCount = ops.length; iPC < opsCount; iPC++) {
             Op op = ops[currOpAddr = iPC];
             switch (op) {
@@ -770,22 +777,24 @@ public class BuildContext {
             }
         }
 
-        int            extraArgs = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
-        ClassDesc      CD_this   = builder.getThisCD(this);
-        JitParamDesc[] params    = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
+        int            implicitCount = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$
+        ClassDesc      CD_this       = builder.getThisCD(this);
+        JitParamDesc[] params        = isOptimized
+                ? methodDesc.optimizedParams : methodDesc.standardParams;
         if (isConstructor) {
             TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
             registerInfos.put(Op.A_THIS,
-                    new SingleSlot(Op.A_THIS, extraArgs - 1, Specific, structType, CD_this, "thi$"));
+                    new SingleSlot(Op.A_THIS, implicitCount - 1, Specific,
+                            structType, CD_this, "thi$"));
             typeMatrix.declare(-1, Op.A_THIS, structType);
         } else if (isStatic) {
             typeMatrix.ensureMutableView(0);
         } else if (!thisType.isJitPrimitive()) {
             RegisterInfo regThis = new SingleSlot(Op.A_THIS, 0, Specific, thisType, CD_this, "thi$");
 
-            // an augmented interface (e.g. Service) can declare the method while every runtime
-            // instance is represented by the corresponding native class (nService)
-            if (thisType.isInterfaceType()) {
+            // interface bodies may need a native-class view of this (e.g. Service -> nService);
+            // native Ref/Var bodies already use their concrete receiver type
+            if (thisType.isInterfaceType() && !thisType.isNativeRef()) {
                 ClassDesc cdValue = builder.getCCDesc(thisType);
                 if (!cdValue.equals(CD_this)) {
                     regThis = new Narrowed(Op.A_THIS, regThis.slots(), thisType, Specific, cdValue,
@@ -813,10 +822,10 @@ public class BuildContext {
                 type     = thisType;
                 slot     = code.parameterSlot(0);
             } else {
-                param    = methodStruct.getParam(varIndex);
-                name     = param.getName();
-                type     = resolveSpecialized(param.getType());
-                slot     = code.parameterSlot(extraArgs + i); // compensate for implicits
+                param = methodStruct.getParam(varIndex);
+                name  = param.getName();
+                type  = resolveSpecialized(param.getType());
+                slot  = code.parameterSlot(implicitCount + i); // compensate for implicits
             }
 
             if (debugInfo) {
@@ -849,7 +858,7 @@ public class BuildContext {
                 Label ifNotDefault = code.newLabel();
                 if (flavor == PrimitiveWithDefault) {
                     // if the "extSlot" is "true", use the value from the method structure
-                    int extSlot = code.parameterSlot(extraArgs + i + 1);
+                    int extSlot = code.parameterSlot(implicitCount + i + 1);
                     i++; // we consumed the next param
                     code.iload(extSlot)
                         .ifeq(ifNotDefault);
@@ -879,7 +888,7 @@ public class BuildContext {
                 assert param != null && param.hasDefaultValue();
 
                 Label ifNotDefault = code.newLabel();
-                int   extSlot      = code.parameterSlot(extraArgs + i + 1);
+                int   extSlot      = code.parameterSlot(implicitCount + i + 1);
 
                 // if the "extSlot" is -1, use the default value from the method structure,
                 // otherwise it's a NullablePrimitive
@@ -906,7 +915,7 @@ public class BuildContext {
             }
 
             case NullablePrimitive: {
-                int extSlot = code.parameterSlot(extraArgs + i + 1);
+                int extSlot = code.parameterSlot(implicitCount + i + 1);
                 i++; // we consumed the next param
 
                 registerInfos.put(varIndex,
@@ -920,7 +929,7 @@ public class BuildContext {
 
                 ClassDesc[] cds          = JitTypeDesc.getXvmPrimitiveClasses(paramDesc.type);
                 Label       ifNotDefault = code.newLabel();
-                int         extSlot      = code.parameterSlot(extraArgs + i + cds.length);
+                int         extSlot      = code.parameterSlot(implicitCount + i + cds.length);
 
                 code.iload(extSlot);
                 if (flavor == XvmPrimitiveWithDefault) {
@@ -945,7 +954,7 @@ public class BuildContext {
                     // not Null - store the multi-slot primitives (in the reverse order) and "false"
                     assert defaultReg.flavor() == XvmPrimitive;
                     for (int j = cds.length - 1; j >= 0; j--) {
-                        slot = code.parameterSlot(extraArgs + i + j);
+                        slot = code.parameterSlot(implicitCount + i + j);
                         Builder.store(code, cds[j], slot);
                     }
                     code.iconst_0();
@@ -962,7 +971,7 @@ public class BuildContext {
                 int[]       slots = new int[cds.length];
 
                 for (int j = 0; j < cds.length; j++) {
-                    slots[j] = code.parameterSlot(isThis ? j : extraArgs + i + j);
+                    slots[j] = code.parameterSlot(isThis ? j : implicitCount + i + j);
                 }
                 i += cds.length - 1; // we consumed the next params
 
@@ -973,7 +982,7 @@ public class BuildContext {
                         i++; // skip the next param
                     }
                 } else {
-                    extSlot = code.parameterSlot(extraArgs + i + 1);
+                    extSlot = code.parameterSlot(implicitCount + i + 1);
                     i++; // we consumed the next param
                 }
 
@@ -988,6 +997,100 @@ public class BuildContext {
             }
         typeMatrix.declare(-1, varIndex, type);
         }
+
+        MethodStructure finalizer = methodStruct.isConstructor()
+                ? methodStruct.getConstructFinally() : null;
+        if (finalizer != null) {
+            // capture this constructor's finalizer for invocation after construction succeeds
+            MethodBody    body = new MethodBody(finalizer);
+            JitMethodDesc desc = body.getJitDesc(builder, getMethodTargetType());
+
+            if (thisType.isDerivedVirtualChildClass()) {
+                // a derived child's receiver may not extend the Java class holding the body
+                desc = desc.asDetached(CD_this);
+            }
+
+            MethodConstant id = body.getIdentity();
+            if (propertyHosting != null) {
+                // the same annotation on different properties has distinct hosted state;
+                // scope the finalizer identity to the property so each gets its own body
+                id = propertyHosting.nestedIdentity(id);
+            }
+
+            // two annotations can have finalizers with the same signature
+            String name = "finally$" + pool().register(id).getPosition();
+            deferAssembly(new BuildContext(this, name, body, desc));
+
+            registerFinalizer(code, name, desc, implicitCount, params);
+        }
+    }
+
+    /**
+     * Capture a constructor finalizer as a Runnable and register it with the constructor context,
+     * preserving the captured values' JVM representations.
+     *
+     * @param name           the finalizer's method name without the optimization suffix
+     * @param desc           the descriptor of the finalizer body
+     * @param implicitCount  the number of implicit constructor parameters, ending with the receiver
+     * @param params         the constructor's explicit JVM parameters, including primitive
+     *                       components and default flags
+     */
+    private void registerFinalizer(CodeBuilder code, String name, JitMethodDesc desc,
+                                   int implicitCount, JitParamDesc[] params) {
+        // ordinary finalizers are instance methods, but virtual-child bodies can be detached
+        MethodTypeDesc         finalizerMD     = desc.isOptimized ? desc.optimizedMD : desc.standardMD;
+        Kind                   kind            = desc instanceof JitDetachedBodyDesc ? Kind.STATIC : Kind.VIRTUAL;
+        DirectMethodHandleDesc finalizerHandle = MethodHandleDesc.ofMethod(kind,
+                builder.art.CD(), name + (desc.isOptimized ? OPT : ""), finalizerMD);
+
+        // the handle's invocation type includes the receiver for either calling convention
+        // factoryMD: (C, Ctx, X, Y, Z) -> Runnable; captures the supplied values
+        // runMD:     () -> void; Runnable.run() forwards those values to the finalizer body
+        // primitive body parameters remain primitive factory parameters; no boxing is needed
+        ClassDesc      CD_runnable = ClassDesc.of(Runnable.class.getName());
+        MethodTypeDesc runMD       = md(CD_void);
+        MethodTypeDesc factoryMD   = finalizerHandle.invocationType().changeReturnType(CD_runnable);
+
+        // describe the bootstrap method the JVM uses to link the factory
+        DirectMethodHandleDesc bootstrap = MethodHandleDesc.ofMethod(Kind.STATIC,
+                ClassDesc.of(LambdaMetafactory.class.getName()), "metafactory",
+                md(CD_CallSite,
+                        CD_MethodHandles_Lookup, // caller access supplied by the JVM
+                        CD_String,               // invokedynamic method name: "run"
+                        CD_MethodType,           // invokedynamic factory signature
+                        CD_MethodType,           // declared interface method signature
+                        CD_MethodHandle,         // finalizer implementation to invoke
+                        CD_MethodType));         // adapted interface method signature
+
+        // at linkage the JVM calls metafactory with (caller Lookup, "run", factoryMD), followed
+        // by these three constants; executions of the linked factory create captured Runnables
+        // Runnable has no generic signature to adapt, so its declared and adapted runMD match
+        DynamicCallSiteDesc factory = DynamicCallSiteDesc.of(bootstrap, "run", factoryMD,
+                runMD,           // Runnable's declared run() signature
+                finalizerHandle, // the implementation invoked by run()
+                runMD);          // run() signature after adaptation; unchanged for Runnable
+
+        // capture arguments before the constructor can change its parameter registers
+        // final X savedX = x;
+        // final Y savedY = y;
+        // final Z savedZ = z;
+        // cctx.push(() -> thi$.finally$17(ctx, savedX, savedY, savedZ));
+        loadCtorCtx(code);
+
+        // the receiver is the last implicit constructor parameter
+        code.aload(code.parameterSlot(implicitCount - 1));
+        loadCtx(code);
+
+        // copy each JVM component directly, including primitives and their auxiliary flags
+        for (int i = 0; i < params.length; i++) {
+            Builder.load(code, params[i].cd, code.parameterSlot(implicitCount + i));
+        }
+
+        // stack: cctx, thi$, ctx, args...; the factory consumes the captured values
+        code.invokedynamic(factory);
+
+        // stack: cctx, Runnable; register it for invocation after construction succeeds
+        code.invokevirtual(CD_CtorCtx, "push", md(CD_void, CD_runnable));
     }
 
     /**
@@ -2087,8 +2190,8 @@ public class BuildContext {
                 Constant[]   params       = anno.getParams();
                 int          paramCount   = params.length;
 
-                Constant nameConst = paramCount > 0 ? params[0] : null;
-                Constant optsConst = paramCount > 1 ? params[1] : null;
+                Constant nameConst    = paramCount > 0 ? params[0] : null;
+                Constant optsConst    = paramCount > 1 ? params[1] : null;
                 String   resourceName = nameConst instanceof StringConstant stringConst
                                 ? stringConst.getValue()
                                 : name;
@@ -2487,14 +2590,12 @@ public class BuildContext {
         }
 
         TypeConstant publicType = thisType.removeAccess();
-        if (type.equals(publicType) || type instanceof CastTypeConstant castType &&
+        if (type.removeAccess().equals(publicType) || type instanceof CastTypeConstant castType &&
                 castType.getUnderlyingType2().removeAccess().isEquivalent(publicType)) {
             return typeInfo;
         }
 
-        assert publicType.isSingleUnderlyingClass(true);
-
-        if (type.isSingleUnderlyingClass(true)) {
+        if (publicType.isSingleUnderlyingClass(true) && type.isSingleUnderlyingClass(true)) {
             IdentityConstant thisId = publicType.getSingleUnderlyingClass(true);
             IdentityConstant thatId = type.getSingleUnderlyingClass(true);
 
@@ -2635,6 +2736,12 @@ public class BuildContext {
         RegisterInfo     refReg       = realizeRef(code, retId, referentType, isVar);
 
         if (propInfo.isConstant()) {
+            if (propInfo.isJitInflated()) {
+                builder.loadStaticRef(code, propInfo, ctxSlot(code));
+                code.astore(refReg.slot());
+                return;
+            }
+
             assert !isVar;
 
             Constant initial  = propInfo.getInitialValue();
@@ -2845,7 +2952,7 @@ public class BuildContext {
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {
-            md         = jmd.optimizedMD;
+            md          = jmd.optimizedMD;
             setterName += Builder.OPT;
         } else {
             md = jmd.standardMD;
@@ -3510,47 +3617,6 @@ public class BuildContext {
     }
 
     /**
-     * Create a String and store the reference to the String on the stack.
-     *
-     * <p>The String template is formatted with values from the provided slots.
-     * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
-     * argSlots} array.
-     *
-     * @param code       the {@link CodeBuilder} to use
-     * @param text       the String template to inject values into
-     * @param argsTypes  the types of the arguments to inject into the String. The array must
-     */
-    public void buildString(CodeBuilder code, String text, ClassDesc... argsTypes) {
-        DirectMethodHandleDesc bsm = MethodHandleDesc.ofMethod(
-                DirectMethodHandleDesc.Kind.STATIC,
-                ClassDesc.of("java.lang.invoke.StringConcatFactory"),
-                "makeConcatWithConstants",
-                md(CD_CallSite, CD_MethodHandles_Lookup, CD_String,
-                        CD_MethodType, CD_String, CD_Object.arrayType())
-        );
-        code.invokedynamic(DynamicCallSiteDesc.of(bsm, "makeConcat",
-                md(CD_String, argsTypes), text));
-    }
-
-    /**
-     * Create a String and store the reference to the String in a new local variable slot.
-     *
-     * <p>The String template is formatted with values from the provided slots.
-     * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
-     * argSlots} array.
-     *
-     * @param code       the {@link CodeBuilder} to use
-     * @param text       the String template to inject values into
-     * @param argsTypes  the types of the arguments to inject into the String. The array must
-     *
-     * @return the identifier of the local variable slot that the String has been stored into
-     */
-    public int buildAndStoreString(CodeBuilder  code, String text, ClassDesc... argsTypes) {
-        buildString(code, text, argsTypes);
-        return storeTempValue(code, CD_String);
-    }
-
-    /**
      * Create a temporary {@link RegisterInfo} for internal "use once within a scope" scenarios.
      * This register can only be addressed via the synthetic register -1, at which point it will be
      * "popped".
@@ -3645,7 +3711,7 @@ public class BuildContext {
         if (methodDesc instanceof JitDetachedBodyDesc detached &&
                 !body.getMethodStructure().isStatic()) {
             // nested methods must accept the same interface receiver as their enclosing body
-            jmd     = new JitDetachedBodyDesc(jmd, detached.receiverCD);
+            jmd     = jmd.asDetached(detached.receiverCD);
             jitName = DetachedBody + jitName;
         }
         deferAssembly(new BuildContext(this, jitName, body, jmd));
@@ -3843,7 +3909,7 @@ public class BuildContext {
         case TypeParameter: {
             // look for a match only amongst the method's formal type parameters
             TypeParameterConstant typeParam = (TypeParameterConstant) formalConst;
-            MethodConstant        methodId = typeParam.getMethod();
+            MethodConstant        methodId  = typeParam.getMethod();
 
             if (methodId.equals(methodStruct.getIdentityConstant())) {
                 regId = typeParam.getRegister();

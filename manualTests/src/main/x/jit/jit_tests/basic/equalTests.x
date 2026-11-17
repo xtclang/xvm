@@ -2,6 +2,7 @@ package equalTests {
 
     void run() {
         testEqualityRouting();
+        testObjectEquality();
     }
 
     void testEqualityRouting() {
@@ -30,4 +31,11 @@ package equalTests {
         class Derived(String text) extends Simple(text);
     }
 
+    void testObjectEquality() {
+        Object value = "value";
+        assert value == "value";
+        assert asObject(value) == asObject(value);
+
+        Object asObject(Object o) = o;
+    }
 }

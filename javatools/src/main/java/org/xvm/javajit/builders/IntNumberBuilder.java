@@ -6,7 +6,9 @@ import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 
 import java.util.Collection;
 
@@ -25,6 +27,8 @@ import static java.lang.constant.ConstantDescs.CD_Integer;
 import static java.lang.constant.ConstantDescs.CD_Long;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
  * The builder for IntNumber types.
@@ -56,13 +60,23 @@ public class IntNumberBuilder extends NumberBuilder {
         return switch (jitName) {
             case "and", "or", "xor" ->
                     (code, jmd) -> generateBinaryBitwise(code, jmd, jitName);
-            case "not" -> this::generateNot;
+
+            case "not" ->
+                    this::generateNot;
+
             case "toByte", "toNibble",
                  "toInt",  "toInt8",  "toInt16",  "toInt32",  "toInt64",  "toInt128",
                  "toUInt", "toUInt8", "toUInt16", "toUInt32", "toUInt64", "toUInt128" ->
                     this::generateFixedConversion;
-            case "toIntN", "toUIntN" -> this::generateUnboundedConversion;
-            default -> super.getMethodCodeGenerator(jitName);
+
+            case "toIntN", "toUIntN" ->
+                    this::generateUnboundedConversion;
+
+            case "toDec128" ->
+                    this::generateToDec128;
+
+            default ->
+                    super.getMethodCodeGenerator(jitName);
         };
     }
 
@@ -387,6 +401,37 @@ public class IntNumberBuilder extends NumberBuilder {
             code.invokestatic(targetCD, "$box", md(targetCD, CD_long));
         }
         code.areturn();
+    }
+
+    /**
+     * Assemble an optimized static implementation of "toDec128$p()".
+     *
+     * <p>{@code return Dec128.$toLongBits(ctx, new BigDecimal(value, MathContext.DECIMAL128));}
+     */
+    protected void generateToDec128(CodeBuilder code, JitMethodDesc jmd) {
+        FixedInt source = FixedInt.of(thisType);
+
+        code.aload(code.parameterSlot(jmd.optimizedCtx()))
+                .new_(CD_BigDecimal)
+                .dup();
+
+        if (source.bitLength == 128 || !source.signed && source.bitLength == 64) {
+            if (source.bitLength == 128) {
+                code.lload(code.parameterSlot(0))
+                    .lload(code.parameterSlot(1))
+                    .invokestatic(art.CD(), "$toBigInteger", md(CD_BigInteger, CD_long, CD_long));
+            } else {
+                generateUnsignedLongAsBigInteger(code);
+            }
+            code.getstatic(CD_MathContext, "DECIMAL128", CD_MathContext)
+                .invokespecial(CD_BigDecimal, INIT_NAME, md(CD_void, CD_BigInteger, CD_MathContext));
+        } else {
+            loadComparableLong(code, source);
+            code.invokespecial(CD_BigDecimal, INIT_NAME, md(CD_void, CD_long));
+        }
+
+        code.invokestatic(CD_Dec128, "$toLongBits", md(CD_long, CD_Ctx, CD_BigDecimal))
+            .lreturn();
     }
 
     /**
@@ -752,5 +797,7 @@ public class IntNumberBuilder extends NumberBuilder {
         return new UnsupportedOperationException("Unsupported number type: " + thisType);
     }
 
-    private static final ClassDesc CD_BigInteger = ClassDesc.of(BigInteger.class.getName());
+    private static final ClassDesc CD_BigDecimal  = ClassDesc.of(BigDecimal.class.getName());
+    private static final ClassDesc CD_BigInteger  = ClassDesc.of(BigInteger.class.getName());
+    private static final ClassDesc CD_MathContext = ClassDesc.of(MathContext.class.getName());
 }

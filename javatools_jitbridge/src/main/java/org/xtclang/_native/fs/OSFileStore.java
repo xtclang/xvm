@@ -20,80 +20,72 @@ import org.xtclang.ecstasy.fs.Path;
 import org.xtclang.ecstasy.fs.Directory;
 import org.xtclang.ecstasy.fs.FileStore;
 
-import org.xtclang.ecstasy.reflect.nRef;
-
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
-import static org.xtclang.ecstasy.Exception.$illegalState;
+import org.xvm.javajit.annotations.JitFromNatural;
+import org.xvm.javajit.annotations.JitGenerated;
 
 /**
  * The native implementation of {@code _native.fs.OSFileStore}.
  */
+@JitGenerated
 public class OSFileStore
         extends nObject
         implements FileStore {
 
-    protected OSFileStore(Ctx ctx, OSStorage storage, boolean readOnly) {
-        super(ctx);
-        this.storage  = storage;
-        this.readOnly = readOnly;
+    private OSFileStore() {
+        super(null);
     }
 
     /**
-     * The native field for the property {@code @Lazy Directory root.calc()}.
+     * The primitive constructor
+     * {@code construct(OSStorage storage, Boolean readOnly)}
      */
-    public nRef root;
-
-    /**
-     * The native field for the property {@code OSStorage storage;}.
-     */
-    public OSStorage storage;
-
-    /**
-     * The native property {@code public/private Boolean readOnly;}.
-     */
-    public boolean readOnly;
+    @JitFromNatural
+    public static OSFileStore $new$p(Ctx ctx, OSStorage storage, boolean readOnly) {
+        // this method is declared so that other native code can call the constructor
+        // the JIT will generate the code for this method from the natural code in
+        // _native.fs.OSFileStore.x
+        return null;
+    }
 
     /**
      * The root of the Java file system.
      */
-    private static final java.io.File ROOT = new java.io.File("/");
+    private static final java.io.File $ROOT = new java.io.File("/");
 
     /**
      * The native implementation of {@code @Lazy Directory root.calc()}.
      */
+    @JitFromNatural
     public Directory root$get(Ctx ctx) {
-        nRef ref = this.root;
-        if (ref == null) {
-            if (!storage.find$p(ctx, this, String.of(ctx, "/"))) {
-                throw $illegalState(ctx, "Assertion failed");
-            }
-            ref = this.root = new nRef(ctx, (nObject) ctx.o0, ctx.pool().typeDirectory(), true);
-        }
-        return (Directory) ref.get(ctx);
+        // this method is declared so that other native code can access the root directory property
+        // the JIT will generate the code for this method from the natural code in
+        // _native.fs.OSFileStore.x
+        return null;
     }
 
     /**
      * The native implementation of {@code @RO Int capacity;}.
      */
     public long capacity$get$p(Ctx ctx) {
-        return ROOT.getTotalSpace();
+        return $ROOT.getTotalSpace();
     }
 
     /**
      * The native implementation of {@code @RO Int bytesUsed;}.
      */
     public long bytesUsed$get$p(Ctx ctx) {
-        return ROOT.getTotalSpace() - ROOT.getFreeSpace();
+        return $ROOT.getTotalSpace() - $ROOT.getFreeSpace();
     }
 
     /**
      * The native implementation of {@code @RO Int bytesFree;}.
      */
     public long bytesFree$get$p(Ctx ctx) {
-        return ROOT.getFreeSpace();
+        return $ROOT.getFreeSpace();
     }
 
     /**

@@ -387,7 +387,7 @@ public class VirtualChildBuilder extends CommonBuilder {
         }
 
         JitCallDesc         jcd = resolveChildCall(body, thisType);
-        JitDetachedBodyDesc jmd = new JitDetachedBodyDesc(jcd.jmd(), jcd.receiverCD());
+        JitDetachedBodyDesc jmd = jcd.jmd().asDetached(jcd.receiverCD());
 
         if (jmd.isOptimized) {
             assembleMethodWrapper(classBuilder, jcd.name(), jmd.staticWrapper());
@@ -733,7 +733,7 @@ public class VirtualChildBuilder extends CommonBuilder {
         }
 
         JitCallDesc         call     = resolveChildMethodCall(this, body, thisType);
-        JitDetachedBodyDesc bodyJmd  = new JitDetachedBodyDesc(call.jmd(), call.receiverCD());
+        JitDetachedBodyDesc bodyJmd  = call.jmd().asDetached(call.receiverCD());
         String              bodyName = call.name();
         BuildContext        bctx     = new BuildContext(this, typeInfo, method, bodyJmd, depth);
 

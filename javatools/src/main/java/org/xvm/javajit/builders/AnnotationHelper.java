@@ -37,7 +37,6 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.RegisterInfo;
 
 import static org.xvm.javajit.Builder.CD_CtorCtx;
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.TypeSystem.AT;
 
@@ -48,23 +47,25 @@ public class AnnotationHelper {
     /**
      * Create a helper for a type whose composition contains annotations.
      *
-     * @param builder      the builder assembling the incorporating type
-     * @param annotations  the nonempty TypeInfo annotation array, in invocation order
+     * @param builder             the builder assembling the incorporating type
+     * @param annotations         the nonempty TypeInfo annotation array, in invocation order
+     * @param isConstructionSite  true iff the type has construction site annotations
      */
-    public AnnotationHelper(CommonBuilder builder, Annotation[] annotations) {
+    public AnnotationHelper(CommonBuilder builder, Annotation[] annotations, boolean isConstructionSite) {
         assert annotations.length > 0;
 
         this.builder            = builder;
         this.annotations        = annotations;
         this.thisType           = builder.thisType;
-        this.isConstructionSite = thisType.isAnnotated();
+        this.isConstructionSite = isConstructionSite;
 
         TypeConstant baseType = isConstructionSite
                 ? thisType.removeAnnotations()
                 : builder.typeInfo.getExtends();
         if (baseType == null) {
             baseType = thisType.isConst()
-                    ? builder.pool().typeConstRB() : builder.pool().typeObject();
+                    ? builder.pool().typeConstRB()
+                    : builder.pool().typeObject();
         }
         this.baseType              = baseType.ensureAccess(Access.PRIVATE);
         this.constructionSiteCount = isConstructionSite ? thisType.getAnnotations().length : 0;
@@ -451,16 +452,18 @@ public class AnnotationHelper {
                 continue;
             }
 
-            if (jmd.hasCtorCtx() && cctxSlot < 0) {
-                cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
-                code.aload(ctxSlot)
-                    .invokevirtual(CD_Ctx, "ctorCtx", Builder.md(CD_CtorCtx))
-                    .astore(cctxSlot);
+            int chainedCctxSlot = -1;
+            if (jmd.hasCtorCtx()) {
+                assert cctxSlot >= 0;
+                chainedCctxSlot = code.allocateLocal(TypeKind.REFERENCE);
+                code.aload(cctxSlot)
+                    .invokevirtual(CD_CtorCtx, "addChain", Builder.md(CD_CtorCtx))
+                    .astore(chainedCctxSlot);
             }
 
             code.aload(ctxSlot);
             if (jmd.hasCtorCtx()) {
-                code.aload(cctxSlot);
+                code.aload(chainedCctxSlot);
             }
             code.aload(thisSlot);
             if (constructor.isConstructionSite()) {

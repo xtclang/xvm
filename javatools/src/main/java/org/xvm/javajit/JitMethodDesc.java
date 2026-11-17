@@ -9,8 +9,8 @@ import java.util.List;
 
 import java.util.stream.IntStream;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -224,11 +224,18 @@ public class JitMethodDesc {
     /**
      * Obtain a descriptor that uses only the standard calling convention.
      */
-    public JitMethodDesc standardOnly() {
+    public JitMethodDesc asStandardOnly() {
         return isOptimized
                 ? new JitMethodDesc(typeTarget, standardReturns, standardParams,
                         null, null, isStandardStatic)
                 : this;
+    }
+
+    /**
+     * Obtain a detached-body descriptor with the specified explicit receiver.
+     */
+    public JitDetachedBodyDesc asDetached(ClassDesc receiverCD) {
+        return new JitDetachedBodyDesc(this, receiverCD, false);
     }
 
     protected MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
@@ -273,7 +280,7 @@ public class JitMethodDesc {
     public static int flagsFor(MethodStructure method) {
         if ((method.isConstructor() || method.isValidator()) && !method.isPropertyInitializer()) {
             int flags = JMD_CONSTRUCTOR;
-            if (method.isConstructor() && method.getConstructFinally() != null) {
+            if (method.isConstructor() && method.hasConstructorFinalizers()) {
                 flags |= JMD_FINALIZER;
             }
             return flags;
@@ -376,7 +383,7 @@ public class JitMethodDesc {
                     optParamList.add(
                             new JitParamDesc(type, optFlavor, CD_boolean, iOrig, iOpt++, true));
                 }
-            } else if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
+            } else if ((JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
                 assert type.isNullable();
 
                 if (iOrig >= 0) {
@@ -463,7 +470,7 @@ public class JitMethodDesc {
                 for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
                     optParamList.add(new JitParamDesc(type, XvmPrimitive, cdArg, iOrig, ixLong++, false));
                 }
-            } else if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
+            } else if ((JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
                 isOptimized = true;
                 stdParamList.add(new JitParamDesc(type, Widened, CD_nObject, iOrig, ixStdObj++, false));
 

@@ -12,7 +12,7 @@ class FileNodeTests {
     void run() {
         shouldHaveStorage();
         shouldHaveNullParentIfRoot();
-        shouldHaveNullParentIfCurrentDir();
+        shouldHaveParentIfCurrentDir();
         shouldHaveParent();
         shouldHavePath();
         shouldHaveName();
@@ -36,7 +36,7 @@ class FileNodeTests {
     void shouldHaveStorage() {
         @Inject FileStore storage;
         assert FileNode node := storage.find(RootPath);
-//        assert node.store == storage;
+        assert node.store == storage;
     }
 
     void shouldHaveNullParentIfRoot() {
@@ -45,14 +45,12 @@ class FileNodeTests {
         assert node.parent == Null;
     }
 
-    // TODO node.parent throws due to assertion in FileNode.x parent.get() as the
-    // current directory path has a Null parent path
-    // The same would happen for a FileNode created from the parent path ".."
-    void shouldHaveNullParentIfCurrentDir() {
-//        @Inject FileStore storage;
-//        assert FileNode node := storage.find(new Path("."));
-//        console.print(node.parent);
-//        assert node.parent == Null;
+    void shouldHaveParentIfCurrentDir() {
+        @Inject FileStore storage;
+        assert FileNode node := storage.find(new Path("."));
+        assert node.path.absolute;
+        assert Directory parent ?= node.parent;
+        assert parent.path == node.path.parent;
     }
 
     void shouldHaveParent() {

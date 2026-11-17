@@ -104,16 +104,17 @@ public class CommonBuilder
         super(typeSystem, art);
 
         TypeConstant type = art.type();
-        assert type.isSingleUnderlyingClass(true) && !type.isAccessSpecified();
+        assert !type.isAccessSpecified();
 
-        this.classStruct = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
+        this.thisType    = type.ensureAccess(Access.PRIVATE);
+        this.typeInfo    = thisType.ensureTypeInfo();
+        this.classStruct = typeInfo.getClassStructure();
 
         // if the class is parameterizable, the type must be either formal or specialized
         // (some formal parameters resolved to XVM primitive types)
-        assert classStruct.isParameterized() == type.isParamsSpecified();
+        assert !type.isSingleUnderlyingClass(true) ||
+                classStruct.isParameterized() == type.isParamsSpecified();
 
-        this.thisType      = type.ensureAccess(Access.PRIVATE);
-        this.typeInfo      = thisType.ensureTypeInfo();
         this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId        = classStruct.getIdentityConstant();
         this.jitType       = thisType.getJitCCType();
@@ -123,7 +124,8 @@ public class CommonBuilder
         Annotation[] annotations = typeInfo.getMixinAnnotations();
         this.annotated = annotations.length == 0
                 ? null
-                : new AnnotationHelper(this, annotations);
+                : new AnnotationHelper(this, annotations, thisType.isAnnotated());
+
         for (PropertyInfo prop : typeInfo.getProperties().values()) {
             if (isHostedProperty(prop)) {
                 hostedProperties.put(prop.getIdentity(), new PropertyHosting(this, prop));
@@ -833,7 +835,7 @@ public class CommonBuilder
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
             MethodConstant initializer = prop.getInitializer();
-            if (!prop.hasField() && !prop.isInjected() &&
+            if (!prop.hasField() && !prop.isInjected() && !prop.isJitInflated() &&
                     // initializers for static properties still need to be generated
                     !(prop.isConstant() && initializer != null)) {
 
@@ -932,6 +934,13 @@ public class CommonBuilder
         if (isContainerScoped(prop)) {
             // the generated class can be shared by containers, so store the computation means
             classBuilder.withField(jitName, CD_MethodHandle, flags);
+
+            if (prop.isJitInflated()) {
+                assert prop.isConstant();
+                // generate the custom Ref class initializer; it will be linked to the MethodHandle
+                // by assembleCLInit()
+                assembleStaticRefInitializer(classBuilder, prop);
+            }
             return;
         }
 
@@ -1167,12 +1176,22 @@ public class CommonBuilder
                 if (isContainerScoped(prop)) {
                     // store the initializer as a container-independent computation; its result can
                     // be a service and therefore cannot be shared across containers using this class
-                    MethodConstant initId   = prop.getInitializer();
-                    String         initName = initId.ensureJitMethodName(ts);
-                    MethodBody     body     = new MethodBody((MethodStructure) initId.getComponent());
-                    JitMethodDesc  jmd      = body.getJitDesc(this, thisType);
+                    MethodConstant initId = prop.getInitializer();
+                    MethodTypeDesc initMD;
+                    String         initName;
 
-                    code.ldc(MethodHandleDesc.ofMethod(Kind.STATIC, CD_this, initName, jmd.standardMD))
+                    if (prop.isJitInflated()) {
+                        assert prop.isConstant();
+
+                        initMD   = md(CD_nRef, CD_Ctx);
+                        initName = jitName + "$ref";
+                    } else {
+                        MethodBody body = new MethodBody((MethodStructure) initId.getComponent());
+                        initMD   = body.getJitDesc(this, thisType).standardMD;
+                        initName = initId.ensureJitMethodName(ts);
+                    }
+
+                    code.ldc(MethodHandleDesc.ofMethod(Kind.STATIC, CD_this, initName, initMD))
                         .invokestatic(CD_Container, "createInitializerHandle",
                                 md(CD_MethodHandle, CD_MethodHandle))
                         .putstatic(CD_this, jitName, CD_MethodHandle);
@@ -1633,6 +1652,23 @@ public class CommonBuilder
     }
 
     /**
+     * Assemble the container-scoped factory for a static property's Ref implementation.
+     */
+    protected void assembleStaticRefInitializer(ClassBuilder classBuilder, PropertyInfo prop) {
+        TypeConstant refType = pool().ensurePropertyClassTypeConstant(
+                thisType.removeAccess(), prop.getIdentity());
+        ClassDesc refCD = getICDesc(refType);
+
+        classBuilder.withMethodBody(prop.ensureJitName(typeSystem) + "$ref", md(CD_nRef, CD_Ctx),
+                ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, code -> {
+            code.aload(code.parameterSlot(0));
+            loadTypeConstant(code, refType);
+            code.invokestatic(refCD, NEW, md(refCD, CD_Ctx, CD_TypeConstant))
+                .areturn();
+        });
+    }
+
+    /**
      * @return the property's native Ref/Var type, retaining runtime Ref annotations
      */
     protected TypeConstant getPropertyRefType(PropertyInfo prop) {
@@ -2010,8 +2046,7 @@ public class CommonBuilder
         generateTrivialSetter(classBuilder, prop, prop.ensureSetterJitMethodName(typeSystem));
     }
 
-    private void generateTrivialSetter(ClassBuilder classBuilder, PropertyInfo prop,
-                                       String setterName) {
+    private void generateTrivialSetter(ClassBuilder classBuilder, PropertyInfo prop, String setterName) {
         String         jitFieldName = prop.ensureJitName(typeSystem);
         ClassDesc      CD_this      = art.CD();
         JitMethodDesc  jmd          = prop.getSetterJitDesc(this, thisType);
@@ -2024,15 +2059,15 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
         classBuilder.withMethodBody(jitName, md, flags, code -> {
-            int    ctxSlot  = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
-            String propName = getThisType().getSingleUnderlyingClass(true).getName() +
-                    '.' + prop.getName();
+            int ctxSlot = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
 
             // skip the check for Unassigned annotations
             // TODO: Lazy's exemption needs one-time assignment and concurrency checks
-            // once services/fibers are implemented
+            //       once services/fibers are implemented
             if (!prop.isJitPotentiallyUnassigned()) {
                 if (getThisType().isConst() || prop.isConstant()) {
+                    String propName = ((IdentityConstant) thisType.getDefiningConstant()).getName() +
+                        '.' + prop.getName();
                     throwReadOnly(code, propName, ctxSlot);
                     return;
                 }
@@ -2111,11 +2146,11 @@ public class CommonBuilder
                     }
                     if (prop.isConstant()) {
                         code.iload(argSlot)
-                                .putstatic(CD_this, jitFieldName + EXT, CD_boolean);
+                            .putstatic(CD_this, jitFieldName + EXT, CD_boolean);
                     } else {
                         code.aload(0)
-                                .iload(argSlot)
-                                .putfield(CD_this, jitFieldName + EXT, CD_boolean);
+                            .iload(argSlot)
+                            .putfield(CD_this, jitFieldName + EXT, CD_boolean);
                     }
                     break;
 
@@ -2126,8 +2161,8 @@ public class CommonBuilder
                 JitParamDesc pdStd = jmd.standardParams[0];
 
                 if (prop.isConstant()) {
-                    code.aload(argSlot);
-                    code.putstatic(CD_this, jitFieldName, pdStd.cd);
+                    code.aload(argSlot)
+                        .putstatic(CD_this, jitFieldName, pdStd.cd);
                 } else {
                     code.aload(0)
                         .aload(argSlot)
@@ -2887,8 +2922,6 @@ public class CommonBuilder
         }
         // the reason we need to generate "hashCode" for primitive types is to produce
         // non-predictable implementations
-        // TODO JK: consider implementing them natively via a Ctx-based facility, in which
-        //  case we can simplify the code production
         assembleConstHashCode(classBuilder);
     }
 
@@ -4567,8 +4600,8 @@ public class CommonBuilder
      *    // step 5: annotation constructors are called
      *
      *    // step 6: the constructor gets called
-     *    // - we do NOT have to save off the arguments for the `finally()` call
-     *    //   in the constructor context because we have the arguments right here
+     *    // - each constructor captures its finalizer's receiver and arguments in cctx
+     *    //   before executing its body or calling another constructor
      *    // note: cctx argument is optional
      *    construct$17(ctx, cctx, thi$, x, y, z);
      *
@@ -4576,8 +4609,7 @@ public class CommonBuilder
      *    // base classes, mixins, annotations -- of the composition)
      *    // - there is no assert method if this class has no assert() defined and
      *    //   none of its supers has an assert() defined
-     *    // - each calls its super first (TODO GG verify)
-     *    // - TODO GG define mixin and annotation assert() order
+     *    // - each calls its super first
      *    //   - depending on ordering requirements this could be a method (not a
      *    //     "static")
      *    $assert();
@@ -4593,39 +4625,31 @@ public class CommonBuilder
      *    // step 9: post construction work e.g. const freezing
      *    //    TODO GG define
      *
-     *    // step 10: any `finally {...}` methods corresponding to constructors
-     *    // from #3 and #4 are executed, in reverse order of what the constructors
-     *    // were called in
-     *    // note: cctx argument is optional
-     *    finally$17(ctx, cctx, thi$, x, y, z);
+     *    // step 10: annotation finalizer chains run in annotation construction order,
+     *    // followed by the class chain; each chain runs in reverse constructor invocation order
+     *    // - cctx is absent if no constructor in these chains has a finalizer
+     *    cctx.run();
      * }
      *
      * // assuming C extends B and B has a finally that takes some (P p, Q q):
-     * public static construct$17(CtorCtx cctx, C thi$, X x, Y y, Z z) {
-     *    // user logic before the `construct B(p,q);`
+     * public static void construct$17(Ctx ctx, CtorCtx cctx, C thi$, X x, Y y, Z z) {
+     *    cctx.push(() -> thi$.finally$17(ctx, x, y, z));
+     *
+     *    // user logic before the `construct B(p, q);`
      *    P p;
      *    Q q;
      *    // ...
      *
-     *    // this is the translation of the call to `construct B(p,q);`
-     *    cctx.push(p);
-     *    cctx.push(q);
-     *    B.construct$17(cctx, thi$, p, q);
+     *    // this is the translation of the call to `construct B(p, q);`
+     *    // B captures its own finalizer and arguments in the same context
+     *    B.construct$17(ctx, cctx, thi$, p, q);
      *
-     *    // user logic after the `construct B(p,q);`
+     *    // user logic after the `construct B(p, q);`
      *    // ...
      * }
      *
-     * public static finally$17(CtorCtx cctx, C thi$, X x, Y y, Z z) {
-     *    // run the `finally` on B before running the `finally` on D
-     *    // (we saved off the args in the constructor .. it's basically
-     *    // a hand-rolled closure)
-     *    {
-     *    Q q = cctx.pop();
-     *    P p = cctx.pop();
-     *    B.finally$17(cctx, thi$, p, q);
-     *    }
-     *
+     * public void finally$17(Ctx ctx, X x, Y y, Z z) {
+     *    // CtorCtx has already run B's captured finalizer before invoking this body
      *    // user logic from C.finally goes here
      *    // ...
      * }
@@ -4729,8 +4753,12 @@ public class CommonBuilder
 
             TypeConstant ownerType  = hasConstructionSiteAnnotations() ? annotated.getBaseType() : thisType;
             JitCtorDesc  ctorDesc   = (JitCtorDesc) constructor.getJitDesc(this, ownerType);
-            boolean      hasCtorCtx = ctorDesc.hasCtorCtx();
-            int          cctxSlot   = -1;
+            boolean      hasCtorCtx = ctorDesc.hasCtorCtx() ||
+                                        annotationConstructors != null &&
+                                        annotationConstructors.stream().
+                                                anyMatch(ctor -> ctor.desc().hasCtorCtx());
+
+            int cctxSlot = -1;
             if (hasCtorCtx) {
                 cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
                 if (debugInfo) {
@@ -4816,7 +4844,13 @@ public class CommonBuilder
                 }
             }
 
-            // steps 8, 9, 10: TODO
+            // steps 8, 9: TODO
+
+            // step 10: run captured annotation and class finalizers on the completed object
+            if (cctxSlot >= 0) {
+                code.aload(cctxSlot)
+                    .invokevirtual(CD_CtorCtx, "run", md(CD_void));
+            }
 
             code.labelBinding(endScope)
                 .aload(thisSlot)
@@ -5033,8 +5067,11 @@ public class CommonBuilder
                 // TODO: conditional ListMapIndex super calls and MapFreezer
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin
+        Map.entry("org.xtclang.ecstasy.maps.HasherMap",
+            Set.of("finally")), // TODO: &hasher lookup in the constructor finalizer
         Map.entry("org.xtclang.ecstasy.Timeout",
-            Set.of("construct")), // TODO: invokes nService with invokeinterface although nService is a Java class
+            Set.of("construct", "finally")),
+                // TODO: invokes nService with invokeinterface although nService is a Java class
         Map.entry("org.xtclang.ecstasy.io.Channel",
                 Set.of("write")), // TODO: Future support
         Map.entry("org.xtclang._native.fs.OSStorage",
