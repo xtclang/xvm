@@ -400,7 +400,7 @@ public class FPNumberBuilder extends NumberBuilder {
 
         ClassDesc returnCD = jmd.optimizedMD.returnType();
         code.invokestatic(valueCD, returnCD.equals(CD_int) ? "$toIntBits" : "$toLongBits",
-                    md(returnCD, CD_Ctx, CD_BigDecimal));
+                    mdx(returnCD, CD_BigDecimal));
         addReturn(code, returnCD);
     }
 

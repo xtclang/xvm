@@ -38,6 +38,7 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DataType;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
@@ -435,7 +436,7 @@ public abstract class OpSwitch
             }
             code.getfield(CD_nType, DataType, CD_TypeConstant);
             bctx.loadTypeConstant(code, typeConst);
-            code.invokevirtual(CD_TypeConstant, "equals", MethodTypeDesc.of(CD_boolean, CD_Object))
+            code.invokevirtual(CD_TypeConstant, "equals", md(CD_boolean, CD_Object))
                 .ifne(label);
         } else if (type.isJavaPrimitive()) {
             // we can statically compute the result
