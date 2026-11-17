@@ -4,8 +4,6 @@ import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
 
-import org.xvm.asm.ConstantPool;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
@@ -16,10 +14,10 @@ import org.xvm.javajit.RegisterInfo;
 
 import static java.lang.constant.ConstantDescs.CD_void;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_nRef;
-import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.MD_xvmObject;
+import static org.xvm.javajit.Builder.mdx;
 
 /**
  * A register that holds a Ref to an underlying value.
@@ -102,7 +100,7 @@ public class Ref
 
         super.load(code);
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nRef, "get", md(CD_Object, CD_Ctx));
+        code.invokevirtual(CD_nRef, "get", MD_xvmObject);
         code.checkcast(referentCd);
 
         return switch (referentFlavor) {
@@ -137,7 +135,7 @@ public class Ref
             super.load(code); // nRef
             bctx.loadCtx(code)
                 .aload(tempSlot)
-                .invokevirtual(CD_nRef, "set", md(CD_void, CD_Ctx, CD_Object));
+                .invokevirtual(CD_nRef, "set", mdx(CD_void, CD_Object));
 
             if (!type.isA(referentType())) {
                 return bctx.narrowRegister(code, origRef, type);

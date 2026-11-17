@@ -52,11 +52,10 @@ import static java.lang.constant.ConstantDescs.CD_MethodType;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 
-import static org.xvm.javajit.Builder.CD_Class;
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nType;
+import static org.xvm.javajit.Builder.MD_xvmClass;
 import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -807,7 +806,7 @@ public abstract class OpCallable extends Op {
                 }
                 // generated class-of-class extends Class and implements the funky interface
                 bctx.loadCtx(code);
-                code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
+                code.invokevirtual(CD_nType, "$xvmClass", MD_xvmClass)
                     .checkcast(cdTarget);
             } else {
                 // inherited functions live on their declaring implementation; for virtual children,
@@ -1041,7 +1040,7 @@ public abstract class OpCallable extends Op {
 
         // generated class-of-class must implement the virtual constructor interface
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
+        code.invokevirtual(CD_nType, "$xvmClass", MD_xvmClass)
             .checkcast(cdInterface);
         bctx.loadCtx(code);
 
