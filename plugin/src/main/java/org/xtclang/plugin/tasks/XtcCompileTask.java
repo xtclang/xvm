@@ -24,6 +24,7 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
+import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
@@ -253,8 +254,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     @Override
     @Optional
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Classpath
     public FileCollection getInputXtcJavaToolsConfig() {
         return shouldTrackLauncherRuntimeInputs()
             ? super.getInputXtcJavaToolsConfig()
@@ -263,8 +263,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     @Override
     @Optional
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Classpath
     public FileCollection getInputLauncherRuntimeCandidates() {
         return shouldTrackLauncherRuntimeInputs()
             ? super.getInputLauncherRuntimeCandidates()

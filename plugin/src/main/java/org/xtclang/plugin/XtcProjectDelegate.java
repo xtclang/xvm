@@ -238,6 +238,11 @@ public class XtcProjectDelegate {
      */
     private static final Set<String> HIDDEN_TASK_NAMES = Set.of("jar", "classes");
 
+    /**
+     * The javatools jar's build information, which also records the commit and branch it was built from.
+     */
+    private static final String JAVATOOLS_BUILD_INFO = "build-info.properties";
+
     private static boolean isHiddenTaskName(final String taskName) {
         return HIDDEN_TASK_NAMES.contains(taskName) || taskName.endsWith("java");
     }
@@ -301,10 +306,25 @@ public class XtcProjectDelegate {
     }
 
     /**
+     * Compare the javatools jar without the commit and branch that its build-info.properties records
+     * for {@code xtc --version}. They change with every commit and branch switch, while nothing that
+     * compiles or runs modules reads them: tracked, they made every XTC task out of date and every
+     * build cache entry unusable after a commit that changed no source. The tasks declare the jar as
+     * a classpath, which this runtime classpath normalization applies to.
+     */
+    private static void ignoreJavaToolsCommit(final Project project) {
+        project.getNormalization().getRuntimeClasspath().properties(JAVATOOLS_BUILD_INFO, properties -> {
+            properties.ignoreProperty("git.commit");
+            properties.ignoreProperty("git.status");
+        });
+    }
+
+    /**
      * This method, "apply", is a delegate target call for an XTC project delegating plugin
      */
     public void apply(final Project project) {
         applyJavaPlugin(tasks, project);
+        ignoreJavaToolsCommit(project);
         createXtcComponents(project);
 
         // Add xtc extension.
