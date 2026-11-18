@@ -203,7 +203,7 @@ public interface EnumValueBuilderSupport {
         classBuilder.withMethodBody(jitName, MD_xvmBoolean, ClassFile.ACC_PUBLIC, code -> {
             if (valueCD == null) {
                 // no next or prev, return false
-                code.loadConstant(0)
+                code.iconst_0()
                     .ireturn();
             } else {
                 // load the next or prev value to the stack
@@ -211,7 +211,7 @@ public interface EnumValueBuilderSupport {
                 // store it in the context
                 Builder.storeToContext(code, CD_JavaObject, 0);
                 // return true
-                code.loadConstant(1)
+                code.iconst_1()
                     .ireturn();
             }
         });
