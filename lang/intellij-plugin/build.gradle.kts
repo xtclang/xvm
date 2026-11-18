@@ -1077,7 +1077,7 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         systemProperty("xtc.tour.sections", providers.gradleProperty("intellijTourSections").getOrElse(""))
         // the real pointer, keys and typing of a recorded tour, with -PintellijTourVisible=true also without a recording
         systemProperty("xtc.tour.visible", providers.gradleProperty("intellijTourVisible").getOrElse("false"))
-        // a shorter hang bound for the tour's waits, in seconds, for a quicker look at failing checks; an hour without it
+        // a shorter hang bound for the tour's waits, in seconds, for a quicker look at failing checks; the playbook's without it
         systemProperty("xtc.tour.hang", providers.gradleProperty("intellijTourHang").getOrElse(""))
         systemProperty("xtc.playbook.replacementGates", providers.gradleProperty("intellijPlaybookReplacementGates").getOrElse(""))
         systemProperty(
