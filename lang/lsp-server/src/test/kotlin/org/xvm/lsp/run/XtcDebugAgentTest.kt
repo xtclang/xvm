@@ -81,7 +81,7 @@ class XtcDebugAgentTest {
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
             assertThat(attached.module).isEqualTo("Looped")
-            attached.debug(emptyList(), program.breakpointAt(LOOP_LINE)).awaited()
+            attached.debug(emptyMap(), program.breakpointAt(LOOP_LINE)).awaited()
             assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
             assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
 
@@ -107,7 +107,7 @@ class XtcDebugAgentTest {
         launch(COUNTERS, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
-            attached.debug(emptyList(), program.firstCounterAt(1000)).awaited()
+            attached.debug(emptyMap(), program.firstCounterAt(1000)).awaited()
             assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
             assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
             val alone =
@@ -339,7 +339,7 @@ class XtcDebugAgentTest {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
-            attached.debug(emptyList(), program.breakpointAt(LOOP_LINE)).awaited()
+            attached.debug(emptyMap(), program.breakpointAt(LOOP_LINE)).awaited()
             assertThat(events.next()).startsWith("breakpoints")
             assertThat(events.next()).startsWith("stopped")
 
@@ -355,7 +355,7 @@ class XtcDebugAgentTest {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
-            attached.debug(emptyList(), DebugSetup(emptyList(), stopOnEntry = true)).awaited()
+            attached.debug(emptyMap(), DebugSetup(emptyList(), stopOnEntry = true)).awaited()
             assertThat(events.next()).isEqualTo("stopped entry []")
             val thread = attached.threads(AttachedProgram.RUN).awaited().first()
             assertThat(
@@ -387,7 +387,7 @@ class XtcDebugAgentTest {
                     port,
                     "secret",
                     events,
-                ).debug(emptyList(), DebugSetup(emptyList()))
+                ).debug(emptyMap(), DebugSetup(emptyList()))
                 .awaited()
             assertThat(events.next()).isEqualTo("exited 0")
             assertThat(program.exit()).isEqualTo(0)

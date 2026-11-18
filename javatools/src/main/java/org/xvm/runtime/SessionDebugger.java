@@ -1,5 +1,6 @@
 package org.xvm.runtime;
 
+import java.io.File;
 import java.io.IOException;
 
 import java.math.BigInteger;
@@ -210,8 +211,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  *
  * <p><b>Breakpoints.</b> A breakpoint is installed by file and line: it stops every fiber that
  * reaches the first op of that line in any method compiled from that file. A file is the module's
- * source directory and the class's source path, as the compiler records them, compared as real
- * paths. A breakpoint may have a condition, an expression whose Boolean value must be True; a hit
+ * source directory and the class's source path, compared as real paths. The directory is the one
+ * the host gives for the module ({@link #setSourceDirs}), or else the one the module records, where
+ * it was compiled, which may be another checkout or another machine. A breakpoint may have a condition, an expression whose Boolean value must be True; a hit
  * count, which counts the hits whose condition holds; and a log message, which makes it a logpoint
  * that logs the message, with the values of the expressions in braces in it, and does not stop. The
  * fiber that reaches it evaluates them on its own thread, as it would variables; a condition that
@@ -367,6 +369,18 @@ public final class SessionDebugger implements Debugger {
      * The names of the known modules.
      */
     private final Set<String> moduleNames = ConcurrentHashMap.newKeySet();
+
+    /**
+     * The known modules, in the order {@link #addModule} made them known; guarded by this
+     * debugger's monitor.
+     */
+    private final List<ModuleStructure> indexedModules = new ArrayList<>();
+
+    /**
+     * The directory of each module's sources, by module name, as the host gives them
+     * ({@link #setSourceDirs}), in place of the directories the modules record.
+     */
+    private final Map<String, String> sourceDirs = new ConcurrentHashMap<>();
 
     /**
      * The source paths of each module's classes, by module name, once {@link #modules} has read
@@ -662,8 +676,9 @@ public final class SessionDebugger implements Debugger {
      *
      * @param name       the module's name, such as {@code "ecstasy.xtclang.org"}
      * @param version    the module's version, or null if it has none
-     * @param sourceDir  the source directory the module was compiled from, as it recorded it, or
-     *                   null if it is not known
+     * @param sourceDir  the directory of the module's sources: the one the host gave
+     *                   ({@link #setSourceDirs}), or else the one the module records, where it was
+     *                   compiled; null if it is not known
      * @param sources    the source paths of the module's classes within that directory, in order
      * @param own        true for a module of the program's own, which {@link #addModule} made
      *                   known, and false for a library
@@ -692,8 +707,8 @@ public final class SessionDebugger implements Debugger {
      *                of the fibers that called it
      * @param name    the method's name after its class's, such as {@code "Point.toString"}, or
      *                after its module's simple name for a method of a module
-     * @param path    the source file, as the compiler recorded it: the source directory of the
-     *                class's own module and the class's source path; null if it is not known
+     * @param path    the source file: the source directory of the class's own module
+     *                ({@link #setSourceDirs}) and the class's source path; null if it is not known
      * @param line    the 1-based line where the frame is, or 0 if it is not known
      * @param module  the name of the class's module, such as {@code "ecstasy.xtclang.org"}, or null
      * @param source       the class's source path within its module's source directory, such as
@@ -863,7 +878,28 @@ public final class SessionDebugger implements Debugger {
      */
     public synchronized void addModule(ModuleStructure module) {
         moduleNames.add(module.getName());
+        indexedModules.add(module);
         index(module);
+    }
+
+    /**
+     * Find the sources of the specified modules in the specified directories, in place of the
+     * directories that the modules record. A module records where it was compiled, which may be
+     * another checkout or another machine, such as when it came from a build cache; the host, such
+     * as a language server, knows where its sources are. A module that is not given keeps the
+     * directory it records.
+     *
+     * <p>Call it before setting breakpoints; the modules already known are indexed again.
+     *
+     * @param dirs  the directory of each module's sources, by module name
+     */
+    public synchronized void setSourceDirs(Map<String, String> dirs) {
+        if (dirs.isEmpty() || sourceDirs.entrySet().containsAll(dirs.entrySet())) {
+            return;
+        }
+        sourceDirs.putAll(dirs);
+        methodsByFile.clear();
+        indexedModules.forEach(this::index);
     }
 
     /**
@@ -873,7 +909,7 @@ public final class SessionDebugger implements Debugger {
      *
      * <p>The host may call it at any time, while the program runs or is stopped; the breakpoints
      * apply from the next line a fiber reaches. A file is matched by its real path: the path given,
-     * and each method's source file as the compiler recorded it, are resolved as the file system
+     * and each method's source file ({@link #setSourceDirs}), are resolved as the file system
      * resolves them, so a link or a relative path finds the same file. Two breakpoints that end up
      * on one line are both installed, and a stop there reports the first, whose condition, hit
      * count and log message apply.
@@ -1148,10 +1184,9 @@ public final class SessionDebugger implements Debugger {
             }
         }
         return modules.values().stream().map(module -> {
-            LiteralConstant dir     = module.getSourceDir();
-            Version         version = module.getVersion();
+            Version version = module.getVersion();
             return new ModuleInfo(module.getName(), version == null ? null : version.toString(),
-                    dir == null ? null : dir.getValue(),
+                    sourceDir(module),
                     moduleSources.computeIfAbsent(module.getName(), _ -> sources(module)),
                     moduleNames.contains(module.getName()));
         }).toList();
@@ -3924,9 +3959,10 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return the source file of the method, as the compiler recorded it, or null
+     * @return the source file of the method: its class's source path in its module's source
+     *         directory, or null
      */
-    private static String sourcePath(MethodStructure function) {
+    private String sourcePath(MethodStructure function) {
         ClassStructure clazz = function.getContainingClass();
         if (clazz == null) {
             return null;
@@ -3935,8 +3971,21 @@ public final class SessionDebugger implements Debugger {
         // the class's own module: the file structure's is the program's, also for a library's class
         ModuleStructure module = module(clazz);
         LiteralConstant path   = clazz.getSourcePath();
-        LiteralConstant dir    = module == null ? null : module.getSourceDir();
-        return path == null || dir == null ? null : dir.getValue() + path.getValue();
+        String          dir    = module == null ? null : sourceDir(module);
+        return path == null || dir == null ? null : dir + path.getValue();
+    }
+
+    /**
+     * @return the directory of the module's sources, ending in a separator: the one the host gave
+     *         ({@link #setSourceDirs}), or else the one the module records; null if neither is known
+     */
+    private String sourceDir(ModuleStructure module) {
+        String given = sourceDirs.get(module.getName());
+        if (given != null) {
+            return given.endsWith(File.separator) ? given : given + File.separator;
+        }
+        LiteralConstant recorded = module.getSourceDir();
+        return recorded == null ? null : recorded.getValue();
     }
 
     /**
