@@ -60,10 +60,11 @@ public final class DebugProtocol {
 
     /**
      * What a run under the debugger starts with: the breakpoints of its files, its exception stops, whether it stops
-     * at its first line, and its function breakpoints.
+     * at its first line, its function breakpoints, and the directory of each module's sources that the host knows, by
+     * module name, in place of the directory the module records (see {@link SessionDebugger#setSourceDirs}).
      */
     public record Setup(List<Source> breakpoints, ExceptionStops exceptions, boolean stopOnEntry,
-                        List<SessionDebugger.Method> functions) {
+                        List<SessionDebugger.Method> functions, Map<String, String> sourceDirs) {
     }
 
     // ----- the commands --------------------------------------------------------------------------
