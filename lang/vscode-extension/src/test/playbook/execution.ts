@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import { execFile, spawn } from 'node:child_process';
-import * as fs from 'node:fs/promises';
+import * as fs from './disk';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
