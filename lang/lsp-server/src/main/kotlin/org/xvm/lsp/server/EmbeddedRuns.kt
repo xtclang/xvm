@@ -321,7 +321,7 @@ internal class EmbeddedRuns(
         events: ProgramEvents,
         ready: CompletionStage<out DebugSetup>,
     ): CompletableFuture<String> {
-        val modules = compiler()?.sourceModuleInputs()?.map { it.name }.orEmpty()
+        val sourceDirs = sourceDirs()
         val listener =
             object : ProgramEvents by events {
                 override fun exited(
@@ -341,7 +341,7 @@ internal class EmbeddedRuns(
             val program = AttachedProgram.attach(target.host, target.port, target.token, listener, attachLimit)
             attached[runId] = program
             logger.info("run attached: run={} module={} at={}:{}", runId, program.module, target.host, target.port)
-            program.debug(modules, setup).thenApply { program.module }.whenComplete { _, failure ->
+            program.debug(sourceDirs, setup).thenApply { program.module }.whenComplete { _, failure ->
                 if (failure != null && attached.remove(runId) != null) program.close()
             }
         }, attaching)
@@ -366,7 +366,7 @@ internal class EmbeddedRuns(
         val client =
             client() as? XtcLanguageClient
                 ?: return CompletableFuture.failedFuture(UnsupportedOperationException(noTasks(kind)))
-        val modules = compiler()?.sourceModuleInputs()?.map { it.name }.orEmpty()
+        val sourceDirs = sourceDirs()
         val token = UUID.randomUUID().toString()
         // IPv4's loopback address, which the agent's --debug options can name
         val server = ServerSocket(0, 1, InetAddress.getByName(LOOPBACK))
@@ -427,7 +427,7 @@ internal class EmbeddedRuns(
                 logger.info("run attached after {} started it: run={} module={}", kind.tool, runId, program.module)
                 ready
                     .toCompletableFuture()
-                    .thenCompose { setup -> program.debug(modules, setup) }
+                    .thenCompose { setup -> program.debug(sourceDirs, setup) }
                     .thenApply { program.module }
                     .whenComplete { _, failure -> if (failure != null && attached.remove(runId) != null) program.close() }
             }.whenComplete { _, failure -> if (failure != null) taskRuns.remove(runId)?.stop() }
@@ -551,7 +551,7 @@ internal class EmbeddedRuns(
 
                 override fun detached(reason: String?) = end(null, if (process.stopped) STOPPED else reason)
             }
-        val modules = compiler()?.sourceModuleInputs()?.map { it.name }.orEmpty()
+        val sourceDirs = sourceDirs()
         return CompletableFuture
             .supplyAsync({
                 try {
@@ -566,7 +566,7 @@ internal class EmbeddedRuns(
                 attached[runId] = program
                 logger.info("tests attached: run={} module={}", runId, program.module)
                 program
-                    .debug(modules, setup)
+                    .debug(sourceDirs, setup)
                     .whenComplete { _, failure -> if (failure != null && attached.remove(runId) != null) program.close() }
             }.whenComplete { _, failure -> if (failure != null) testRuns.remove(runId)?.stop() }
     }
@@ -633,6 +633,7 @@ internal class EmbeddedRuns(
                     params.workingDirectory ?: result.workingDirectory,
                     placed,
                     runId,
+                    sourceDirs(),
                 ),
                 object : ProgramEvents {
                     override fun output(text: String) = events.output(text)
@@ -964,6 +965,14 @@ internal class EmbeddedRuns(
     }
 
     private fun compiler(): XdkAdapter? = adapter as? XdkAdapter
+
+    /**
+     * The workspace's own modules and the directory of each one's sources, by module name, for the debugger: it finds a
+     * module's files there rather than where the module records it was compiled, which may be another checkout or
+     * another machine, such as for a module from a build cache.
+     */
+    private fun sourceDirs(): Map<String, String> =
+        compiler()?.sourceModuleInputs()?.associate { it.name to it.root.parentFile.path }.orEmpty()
 
     private fun <T> unsupported(): CompletableFuture<T> =
         CompletableFuture.failedFuture(

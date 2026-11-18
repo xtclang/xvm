@@ -123,6 +123,9 @@ public class DebugCommands {
      */
     public void start(long id, SessionDebugger debugger, Setup setup) {
         if (setup != null) {
+            if (setup.sourceDirs() != null) {
+                debugger.setSourceDirs(setup.sourceDirs());
+            }
             for (var source : list(setup.breakpoints())) {
                 channel.send(new Breakpoints(id, source.path(), debugger.setBreakpoints(source.path(), list(source.breakpoints()))));
             }
