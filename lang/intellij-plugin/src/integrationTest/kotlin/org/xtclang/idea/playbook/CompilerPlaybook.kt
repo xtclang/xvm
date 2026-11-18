@@ -264,7 +264,7 @@ class CompilerPlaybook(
                 editor.text = fixtures.getValue(scenario.file) + scenario.cleanAppend
                 editor.awaitDiagnostics(emptyList())
                 // a wait for an error the clean source cannot have fails once its report is final and the editor has
-                // highlighted it, not at its bound, an hour on
+                // highlighted it, not at its hang bound
                 val waited = TimeSource.Monotonic.markNow()
                 val failure = runCatching { editor.awaitError() }.exceptionOrNull()
                 check(failure is IllegalStateException && "is final, with nothing under way" in failure.message.orEmpty()) {
