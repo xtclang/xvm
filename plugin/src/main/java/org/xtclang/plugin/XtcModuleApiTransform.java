@@ -12,6 +12,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -36,8 +37,10 @@ import org.gradle.api.tasks.PathSensitivity;
  * not compile the modules that import it again.
  *
  * <p>The input is a directory of modules, as a project's compile task produces it, or a module file; the output is a
- * directory with the API of each module under the module's file name. With a javatools that has no
- * {@code ModuleApi}, the output is a copy of each module, which a compile then depends on as a whole, as before.
+ * directory with the API of each module, named after the module with the extension {@code .api}: the API files
+ * are only compared, never loaded, and are not valid module files. Without a javatools that has
+ * {@code ModuleApi}, or for a file that cannot be read as a module, the output is a copy of the file, which a compile
+ * then depends on as a whole, as before.
  *
  * <p>Javatools is loaded for each transform and the class loader closed after it: one kept open across builds would
  * read a jar that the build has since rewritten in place.
@@ -50,6 +53,8 @@ public abstract class XtcModuleApiTransform implements TransformAction<XtcModule
     public static final String ARTIFACT_TYPE = "xtc-api";
 
     private static final String MODULE_API_CLASS = "org.xvm.asm.ModuleApi";
+
+    private static final String API_FILE_EXTENSION = "api";
 
     private static final Logger LOG = Logging.getLogger(XtcModuleApiTransform.class);
 
@@ -76,24 +81,61 @@ public abstract class XtcModuleApiTransform implements TransformAction<XtcModule
 
         final var runtime = XtcJavaToolsRuntime.resolveRuntimeFromFiles("module API",
                 getParameters().getJavaTools().getFiles().stream().filter(File::isFile).toList(), null);
-        if (runtime == null) {
-            throw failure("Found no javatools.jar to read the APIs of the modules in '{}' with.", input);
-        }
-        try (var loader = new URLClassLoader(urls(runtime.classpath()), ClassLoader.getPlatformClassLoader())) {
-            final Method write = moduleApiWriter(loader);
-            for (final Path module : modules) {
-                final Path api = output.toPath().resolve(module.getFileName().toString());
-                if (write == null) {
-                    Files.copy(module, api);
-                } else {
-                    write.invoke(null, module, api);
+        try {
+            if (runtime == null) {
+                LOG.info("[plugin] Found no javatools.jar to read the APIs of the modules in '{}' with: compiles depend on the whole modules.", input);
+                for (final Path module : modules) {
+                    copy(module, output);
+                }
+                return;
+            }
+            try (var loader = new URLClassLoader(urls(runtime.classpath()), ClassLoader.getPlatformClassLoader())) {
+                final Method write = moduleApiWriter(loader);
+                for (final Path module : modules) {
+                    if (write == null) {
+                        copy(module, output);
+                    } else {
+                        writeApi(write, module, output);
+                    }
                 }
             }
         } catch (final IOException | IllegalAccessException e) {
             throw failure(e, "Failed to write the APIs of the modules in '{}'.", input);
-        } catch (final InvocationTargetException e) {
-            throw failure(e.getCause(), "Failed to write the APIs of the modules in '{}'.", input);
         }
+    }
+
+    /**
+     * Write the API of a module, or a copy of the module if it cannot be read as one: a compile then depends on the
+     * whole file, as it did before, and reports what is wrong with it itself.
+     */
+    private static void writeApi(final Method write, final Path module, final File output)
+            throws IOException, IllegalAccessException {
+        try {
+            write.invoke(null, module, apiFile(module, output));
+        } catch (final InvocationTargetException e) {
+            LOG.info("[plugin] Cannot read the API of '{}' ({}): compiles depend on the whole module.", module, e.getCause().toString());
+            copy(module, output);
+        } catch (final LinkageError e) {
+            // javatools cannot run in this JVM, such as one older than the javatools was built for
+            LOG.info("[plugin] Cannot run javatools in this JVM to read the API of '{}' ({}): compiles depend on the whole module.", module, e.toString());
+            copy(module, output);
+        }
+    }
+
+    private static void copy(final Path module, final File output) throws IOException {
+        Files.copy(module, apiFile(module, output), StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    /**
+     * @return the file for the API of a module: its name with {@value #API_FILE_EXTENSION} in place of the module
+     *         file's extension, so that it is not taken for a module
+     */
+    private static Path apiFile(final Path module, final File output) {
+        final String name = module.getFileName().toString();
+        final String base = name.endsWith('.' + XTC_MODULE_FILE_EXTENSION)
+                ? name.substring(0, name.length() - XTC_MODULE_FILE_EXTENSION.length() - 1)
+                : name;
+        return output.toPath().resolve(base + '.' + API_FILE_EXTENSION);
     }
 
     /**
@@ -108,13 +150,14 @@ public abstract class XtcModuleApiTransform implements TransformAction<XtcModule
     }
 
     /**
-     * @return {@code ModuleApi.write(Path, Path)}, or null if the javatools has none
+     * @return {@code ModuleApi.write(Path, Path)}, or null if the javatools has none, or cannot run in this JVM, such as
+     *         one older than the javatools was built for: the compiles themselves run javatools in their own JVM
      */
     private static Method moduleApiWriter(final ClassLoader loader) {
         try {
             return loader.loadClass(MODULE_API_CLASS).getMethod("write", Path.class, Path.class);
-        } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            LOG.info("[plugin] This javatools has no {}: compiles depend on whole modules.", MODULE_API_CLASS);
+        } catch (final ClassNotFoundException | NoSuchMethodException | LinkageError e) {
+            LOG.info("[plugin] Cannot use {} from this javatools ({}): compiles depend on whole modules.", MODULE_API_CLASS, e.toString());
             return null;
         }
     }
