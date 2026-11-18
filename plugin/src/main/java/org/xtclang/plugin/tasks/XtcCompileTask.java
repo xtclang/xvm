@@ -67,6 +67,9 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // Source-set-specific module dependencies (avoids circular dependency with own output)
     private final ConfigurableFileCollection compileModuleDependencies;
 
+    // The APIs of the module dependencies, which is what the compile reads from them
+    private final ConfigurableFileCollection compileModuleDependencyApis;
+
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
      * the project ObjectFactory.
@@ -103,15 +106,18 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         // The test configuration also includes main output.
         // This avoids the circular dependency where a task's output is also its input
         this.compileModuleDependencies = objects.fileCollection();
+        this.compileModuleDependencyApis = objects.fileCollection();
         final var configurations = project.getConfigurations();
         final var mainConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(SourceSet.MAIN_SOURCE_SET_NAME));
         if (mainConfig != null) {
             compileModuleDependencies.from(mainConfig);
+            compileModuleDependencyApis.from(XtcProjectDelegate.moduleApis(mainConfig));
         }
         if (!SourceSet.MAIN_SOURCE_SET_NAME.equals(sourceSet.getName())) {
             final var sourceConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(sourceSet));
             if (sourceConfig != null) {
                 compileModuleDependencies.from(sourceConfig);
+                compileModuleDependencyApis.from(XtcProjectDelegate.moduleApis(sourceConfig));
             }
         }
 
@@ -138,11 +144,21 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * Test compile: xtcModule + xtcModuleTest (includes main output)
      */
     @Override
+    @Internal("What the compile reads from these is in getXtcModuleDependencyApis()")
+    public FileCollection getXtcModuleDependencies() {
+        return compileModuleDependencies;
+    }
+
+    /**
+     * The APIs of the module dependencies ({@link org.xtclang.plugin.XtcModuleApiTransform}): the compile reads
+     * nothing else from the modules it compiles against, so a change to one of them that leaves its API the same,
+     * such as one inside a method body, leaves this task up to date.
+     */
     @Optional
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    public FileCollection getXtcModuleDependencies() {
-        return compileModuleDependencies;
+    public FileCollection getXtcModuleDependencyApis() {
+        return compileModuleDependencyApis;
     }
 
     // TODO Why do we even have these internals?

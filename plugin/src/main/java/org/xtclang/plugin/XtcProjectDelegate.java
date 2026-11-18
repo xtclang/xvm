@@ -31,6 +31,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_EXTENSION_NAME_RUNTIME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_EXTENSION_NAME_TEST;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_TEST_TASK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
@@ -56,6 +57,7 @@ import org.gradle.api.attributes.Category;
 import org.gradle.api.attributes.LibraryElements;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.Directory;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
@@ -340,6 +342,7 @@ public class XtcProjectDelegate {
         checkProjectIsVersioned(project);
         createDefaultSourceSets(project);
         createXtcDependencyConfigs(project);
+        registerModuleApiTransform(project);
 
         createDefaultRunTask(project);
         createDefaultTestTask(project);
@@ -400,6 +403,34 @@ public class XtcProjectDelegate {
     // Configuration name for incoming dependencies, like xtcModule (by source set name).
     public static String incomingXtcModuleDependencies(final String sourceSetName) {
         return MAIN_SOURCE_SET_NAME.equals(sourceSetName) ? XTC_CONFIG_NAME_INCOMING : XTC_CONFIG_NAME_INCOMING + capitalize(sourceSetName);
+    }
+
+    /**
+     * The APIs of the modules of an incoming module configuration, which a compile depends on in place of the
+     * modules (see {@link XtcModuleApiTransform}).
+     */
+    public static FileCollection moduleApis(final Configuration config) {
+        return config.getIncoming().artifactView(view -> view.attributes(attributes ->
+            attributes.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, XtcModuleApiTransform.ARTIFACT_TYPE))).getFiles();
+    }
+
+    /**
+     * Turn module directories and module files into the modules' APIs when a compile asks for them, with the
+     * javatools that the compile uses.
+     */
+    private void registerModuleApiTransform(final Project project) {
+        final var xdkJars = project.files(getXdkContentsDir(project))
+            .builtBy(tasks.named(XDK_EXTRACT_TASK_NAME))
+            .getAsFileTree()
+            .matching(pattern -> pattern.include("**/*.jar"));
+        final var javaTools = project.files(configs.named(XDK_CONFIG_NAME_JAVATOOLS_INCOMING), xdkJars);
+        for (final String from : List.of(ArtifactTypeDefinition.DIRECTORY_TYPE, XTC_MODULE_FILE_EXTENSION)) {
+            project.getDependencies().registerTransform(XtcModuleApiTransform.class, spec -> {
+                spec.getFrom().attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, from);
+                spec.getTo().attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, XtcModuleApiTransform.ARTIFACT_TYPE);
+                spec.parameters(parameters -> parameters.getJavaTools().from(javaTools));
+            });
+        }
     }
 
     @SuppressWarnings("unused")
