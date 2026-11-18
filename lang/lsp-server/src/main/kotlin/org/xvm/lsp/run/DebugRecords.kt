@@ -22,12 +22,14 @@ import org.xvm.runtime.debug.DebugProtocol
 
 // The debug adapter's data, as the records of javatools' DebugProtocol that the worker protocol carries, and back.
 
-internal fun DebugSetup.record() =
+/** The setup, with the directory of each module's sources that the language server knows, by module name. */
+internal fun DebugSetup.record(sourceDirs: Map<String, String>) =
     DebugProtocol.Setup(
         breakpoints.map(SourceBreakpoints::record),
         exceptions.record(),
         stopOnEntry,
         functions.map(FunctionBreakpointRequest::record),
+        sourceDirs,
     )
 
 internal fun SourceBreakpoints.record() =

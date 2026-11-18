@@ -60,6 +60,8 @@ internal class RunWorkerProcess(
         val debug: DebugSetup? = null,
         /** The ID the client knows the run by, which the logs give beside the worker's own run number. */
         val runId: String? = null,
+        /** For a run under the debugger, the directory of each module's sources, by module name. */
+        val sourceDirs: Map<String, String> = emptyMap(),
     )
 
     /**
@@ -205,7 +207,7 @@ internal class RunWorkerProcess(
                             addProperty("method", request.method)
                             add("args", JsonArray().apply { request.args.forEach(::add) })
                             request.rootDir?.let { addProperty("rootDir", it) }
-                            request.debug?.let { add("setup", DebugProtocol.json(it.record())) }
+                            request.debug?.let { add("setup", DebugProtocol.json(it.record(request.sourceDirs))) }
                             limits.onDemand?.let { addProperty("onDemandMillis", it.inWholeMilliseconds) }
                         },
                     )
