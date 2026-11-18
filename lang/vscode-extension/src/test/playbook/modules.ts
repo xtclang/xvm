@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import * as fs from 'node:fs/promises';
+import * as fs from './disk';
 import * as vscode from 'vscode';
 import { CompletionItem, CompletionList, TypeHierarchyItem } from 'vscode-languageclient/node';
 import { getClient } from '../../lsp-client';

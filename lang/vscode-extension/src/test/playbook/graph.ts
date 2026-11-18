@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import * as fs from 'node:fs/promises';
+import * as fs from './disk';
 import * as vscode from 'vscode';
 import { LSPErrorCodes, Moniker, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
 import { catalog, scenarioRegex, scenarioText } from './shared';
