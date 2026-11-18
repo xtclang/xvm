@@ -45,7 +45,9 @@ import org.xvm.api.EmbeddingSupport.EntryPoint;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Fiber;
@@ -1333,6 +1335,72 @@ public class SessionDebuggerTest {
             assertEquals("ecstasy/collections/Collection.x", forEach.source());
             assertEquals(xdk().loadModule("ecstasy.xtclang.org").getSourceDir().getValue() + forEach.source(),
                     forEach.path());
+
+            session.setBreakpoints(source.toString(), List.of());
+            session.resume();
+            Await.run(control::join);
+        }
+    }
+
+    @Test
+    public void aModulesSourcesAreWhereTheHostSaysRatherThanWhereItWasCompiled()
+            throws Exception {
+        // the module records the directory it was compiled in; its sources are now in another checkout
+        Path source = compile("Library", LIBRARY);
+        Path moved  = Files.copy(source, Files.createDirectories(sourceDir.resolve("checkout")).resolve("Library.x"));
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        session.addModule(input().loadModule("Library"));
+        assertEquals(List.of(new Breakpoint(1, 6, false, SessionDebugger.NOT_IN_PROGRAM)),
+                session.setBreakpoints(moved.toString(), List.of(new Line(1, 6))));
+
+        session.setSourceDirs(Map.of("Library", moved.getParent().toString()));
+        assertEquals(List.of(new Breakpoint(2, 6, true, null)),
+                session.setBreakpoints(moved.toString(), List.of(new Line(2, 6))));
+
+        Control control = run("Library", new StringWriter(), session);
+        try (control) {
+            Stop           stop  = stops.next();
+            StackFrameInfo frame = session.stackTrace(stop.threadId()).get(0);
+            assertEquals(moved.toRealPath(), Path.of(frame.path()).toRealPath());
+            assertEquals("Library.x", frame.source());
+
+            ModuleInfo library = session.modules().stream()
+                    .filter(module -> module.name().equals("Library")).findFirst().orElseThrow();
+            assertEquals(moved.getParent().toRealPath(), Path.of(library.sourceDir()).toRealPath());
+
+            session.setBreakpoints(moved.toString(), List.of());
+            session.resume();
+            Await.run(control::join);
+        }
+    }
+
+    @Test
+    public void aModuleThatRecordsNoSourceDirectoryHasItsSourcesWhereTheHostSays()
+            throws Exception {
+        Path source = compile("Library", LIBRARY);
+        File binary = outputDir.resolve("Library.xtc").toFile();
+        FileStructure file = new FileStructure(binary);
+        file.getModule().setSourceDir(null);
+        file.writeTo(binary);
+
+        Stops stops   = new Stops();
+        var   session = new SessionDebugger(stops);
+        ModuleStructure module = input().loadModule("Library");
+        assertNull(module.getSourceDir());
+        session.addModule(module);
+        assertEquals(List.of(new Breakpoint(1, 6, false, SessionDebugger.NOT_IN_PROGRAM)),
+                session.setBreakpoints(source.toString(), List.of(new Line(1, 6))));
+
+        session.setSourceDirs(Map.of("Library", source.getParent().toString()));
+        assertEquals(List.of(new Breakpoint(2, 6, true, null)),
+                session.setBreakpoints(source.toString(), List.of(new Line(2, 6))));
+
+        Control control = run("Library", new StringWriter(), session);
+        try (control) {
+            Stop           stop  = stops.next();
+            StackFrameInfo frame = session.stackTrace(stop.threadId()).get(0);
+            assertEquals(source.toRealPath(), Path.of(frame.path()).toRealPath());
 
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
