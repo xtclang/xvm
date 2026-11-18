@@ -4,6 +4,8 @@ import java.io.File;
 
 import java.lang.reflect.Field;
 
+import java.time.Instant;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -430,8 +432,8 @@ public class TypeCompositionStatement
                     return;
                 }
 
-                // create the FileStructure and "this" ModuleStructure
-                FileStructure struct = new FileStructure(sModule, null);
+                // create the FileStructure and "this" ModuleStructure; the epoch keeps the output reproducible
+                FileStructure struct = new FileStructure(sModule, Instant.EPOCH);
                 component = struct.getModule();
                 pool      = struct.getConstantPool();
 
