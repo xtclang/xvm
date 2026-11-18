@@ -6,6 +6,8 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 
 import java.io.File;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -106,6 +108,28 @@ class OptionsTest {
         assertEquals(opts.getOutputLocation(), reparsed.getOutputLocation());
         assertEquals(opts.getModulePath(), reparsed.getModulePath());
         assertEquals(opts.getInputLocations(), reparsed.getInputLocations());
+    }
+
+    @Test
+    void testTimestampOption() {
+        assertTrue(CompilerOptions.parse(new String[]{"foo.x"}).getTimestamp().isEmpty());
+        assertEquals(Optional.of(Instant.parse("2026-01-01T00:00:00Z")),
+                CompilerOptions.parse(new String[]{"--timestamp", "2026-01-01T00:00:00Z", "foo.x"}).getTimestamp());
+
+        final var before = Instant.now();
+        final var now    = CompilerOptions.parse(new String[]{"--timestamp", "now", "foo.x"}).getTimestamp();
+        assertFalse(now.orElseThrow().isBefore(before));
+
+        // "now" stays "now" when the options are passed on, so that it is the time of the compile
+        final var args = List.of(new CompilerOptions.Builder()
+                .setTimestamp("now")
+                .addInputFile(new File("foo.x"))
+                .build()
+                .toCommandLine());
+        assertEquals("now", args.get(args.indexOf("--timestamp") + 1));
+
+        assertThrows(DateTimeParseException.class,
+                () -> CompilerOptions.parse(new String[]{"--timestamp", "yesterday", "foo.x"}).getTimestamp());
     }
 
     @Test

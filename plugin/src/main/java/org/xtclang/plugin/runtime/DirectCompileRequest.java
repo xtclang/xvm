@@ -15,7 +15,8 @@ public record DirectCompileRequest(
         boolean disableWarnings,
         boolean strict,
         boolean qualifiedOutputName,
-        String xtcVersion) {
+        String xtcVersion,
+        String timestamp) {
 
     public DirectCompileRequest {
         modulePath = List.copyOf(modulePath);

@@ -52,6 +52,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     protected final Property<@NotNull Boolean> hasQualifiedOutputName;
     protected final Property<@NotNull Boolean> hasVersionedOutputName;
     protected final Property<@NotNull String> xtcVersion;
+    protected final Property<@NotNull String> timestamp;
     protected final Property<@NotNull Boolean> rebuild;
 
     // Per-task configuration properties only.
@@ -128,6 +129,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
         this.rebuild = objects.property(Boolean.class).convention(ext.getRebuild());
         this.xtcVersion = objects.property(String.class).convention(ext.getXtcVersion());
+        this.timestamp = objects.property(String.class).convention(ext.getTimestamp());
     }
 
     @Internal
@@ -254,6 +256,13 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     @Override
     public Property<@NotNull String> getXtcVersion() {
         return xtcVersion;
+    }
+
+    @Optional
+    @Input
+    @Override
+    public Property<@NotNull String> getTimestamp() {
+        return timestamp;
     }
 
     @Input

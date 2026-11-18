@@ -3,6 +3,9 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -207,6 +210,12 @@ public class Compiler extends Launcher<CompilerOptions> {
                                         + "exists with the same name",
                                 binFile));
             }
+        }
+        try {
+            opts.getTimestamp();
+        } catch (DateTimeParseException e) {
+            log(ERROR, "The --timestamp {} is neither \"now\" nor an ISO-8601 instant, such as "
+                    + "2026-01-01T00:00:00Z", quoted(e.getParsedString()));
         }
         checkErrors("target selection");
 
@@ -542,13 +551,15 @@ public class Compiler extends Launcher<CompilerOptions> {
      */
     @SuppressWarnings("UnusedReturnValue")
     protected int emitModules(List<Node> allNodes, ModuleRepository repoOutput) {
-        CompilerOptions opts    = options();
-        var             version = opts.getVersion();
+        CompilerOptions   opts      = options();
+        var               version   = opts.getVersion();
+        Optional<Instant> timestamp = opts.getTimestamp();
         for (Node nodeModule : allNodes) {
             ModuleStructure module = (ModuleStructure) nodeModule.type().getComponent();
 
             assert !module.isFingerprint();
             version.ifPresent(module::setVersion);
+            timestamp.ifPresent(time -> module.setTimestamp(module.getConstantPool().ensureTimeConstant(time)));
 
             if (repoOutput != null) {
                 try {

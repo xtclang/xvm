@@ -87,7 +87,8 @@ public class DirectStrategy implements ExecutionStrategy {
             task.getDisableWarnings().get(),
             task.getStrict().get(),
             task.getQualifiedOutputName().get(),
-            semanticVersion
+            semanticVersion,
+            task.getTimestamp().getOrNull()
         );
     }
 

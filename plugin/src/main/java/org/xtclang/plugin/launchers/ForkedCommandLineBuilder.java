@@ -47,6 +47,11 @@ public final class ForkedCommandLineBuilder {
             args.addAll(List.of("--set-version", XtcCompileTask.semanticVersion(moduleVersion)));
         }
 
+        final String timestamp = task.getTimestamp().getOrNull();
+        if (timestamp != null && !timestamp.isBlank()) {
+            args.addAll(List.of("--timestamp", timestamp));
+        }
+
         for (final File sourceFile : task.resolveXtcSourceFiles()) {
             args.add(relativize(projectDir, sourceFile.toPath()));
         }

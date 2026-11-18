@@ -38,6 +38,11 @@ final class IsolatedLauncherOptionsBuilder {
         if (moduleVersion != null && !moduleVersion.isBlank()) {
             builder.setModuleVersion(moduleVersion);
         }
+
+        final var timestamp = request.timestamp();
+        if (timestamp != null && !timestamp.isBlank()) {
+            builder.setTimestamp(timestamp);
+        }
         return builder.build();
     }
 

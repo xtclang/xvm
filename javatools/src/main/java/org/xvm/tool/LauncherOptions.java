@@ -5,6 +5,8 @@ import java.io.IOException;
 
 import java.nio.file.Path;
 
+import java.time.Instant;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -67,7 +69,11 @@ public abstract class LauncherOptions {
         .addOption(builder("o").argName("file").hasArg()
             .desc("File or directory to write output to").get())
         .addOption(builder().longOpt("set-version").argName("version").hasArg()
-            .desc("Specify the version to stamp onto the compiled module(s)").get()));
+            .desc("Specify the version to stamp onto the compiled module(s)").get())
+        .addOption(builder().longOpt("timestamp").argName("time").hasArg()
+            .desc("Stamp the compiled module(s) with a time: \"now\", or an ISO-8601 instant such as "
+                + "2026-01-01T00:00:00Z; without it they carry the epoch, so that the same source compiles "
+                + "to the same bytes").get()));
 
     /**
      * Base Apache Commons CLI Options schema for the runners.
@@ -614,6 +620,10 @@ public abstract class LauncherOptions {
      * Simple wrapper around Apache Commons CLI CommandLine with typed getters.
      */
     public static class CompilerOptions extends LauncherOptions {
+        /**
+         * The value of {@code --timestamp} that stamps the time of the compile.
+         */
+        public static final String TIMESTAMP_NOW = "now";
 
         CompilerOptions(final CommandLine commandLine) {
             super(commandLine, COMPILER_OPTIONS, "build");
@@ -659,6 +669,19 @@ public abstract class LauncherOptions {
             return optionValue("set-version").map(Version::new);
         }
 
+        /**
+         * @return the time to stamp the compiled modules with, if one was asked for: for "now", the time
+         *         of this call
+         *
+         * @throws java.time.format.DateTimeParseException if the value is neither "now" nor an ISO-8601
+         *         instant
+         */
+        public Optional<Instant> getTimestamp() {
+            return optionValue("timestamp").map(value -> TIMESTAMP_NOW.equalsIgnoreCase(value)
+                    ? Instant.now()
+                    : Instant.parse(value));
+        }
+
         public boolean isForcedRebuild() {
             return hasOption("rebuild");
         }
@@ -696,6 +719,7 @@ public abstract class LauncherOptions {
             getResourceLocations().stream().map(File::getPath).forEach(path -> args.addAll(List.of("-r", path)));
             getOutputLocation().ifPresent(output -> args.addAll(List.of("-o", output.getPath())));
             getVersion().ifPresent(version -> args.addAll(List.of("--set-version", version.toString())));
+            optionValue("timestamp").ifPresent(timestamp -> args.addAll(List.of("--timestamp", timestamp)));
             getInputLocations().stream().map(File::getPath).forEach(args::add);
             return args.toArray(String[]::new);
         }
@@ -863,6 +887,17 @@ public abstract class LauncherOptions {
              */
             public Builder setModuleVersion(final Version version) {
                 return setModuleVersion(version.toString());
+            }
+
+            /**
+             * Stamp the compiled modules with a time.
+             *
+             * @param timestamp "now", or an ISO-8601 instant such as 2026-01-01T00:00:00Z
+             */
+            public Builder setTimestamp(final String timestamp) {
+                removeeArgsAndValues("--timestamp");
+                args.addAll(List.of("--timestamp", timestamp));
+                return this;
             }
 
             /**
