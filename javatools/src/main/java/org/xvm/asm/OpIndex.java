@@ -39,10 +39,8 @@ import org.xvm.runtime.Utils;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.MD_xvmVoid;
-import static org.xvm.javajit.Builder.md;
 import static org.xvm.javajit.Builder.mdx;
 
 import static org.xvm.javajit.registers.MultiSlot.NO_EXT;
@@ -550,13 +548,13 @@ public abstract class OpIndex
     protected void storeArrayElement(BuildContext bctx, CodeBuilder code, RegisterInfo regArray,
                                      RegisterInfo regElement) {
         ClassDesc   cdArray = bctx.builder.getCCDesc(regArray.type());
-        ClassDesc[] cdArgs  = prependArgs(regElement.slotCds(), CD_Ctx, CD_long);
+        ClassDesc[] cdArgs  = prependArgs(regElement.slotCds(), CD_long);
 
         regArray.load(code);
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nIndex);
         regElement.load(code);
-        code.invokevirtual(cdArray, "setElement$pi", md(CD_void, cdArgs));
+        code.invokevirtual(cdArray, "setElement$pi", mdx(CD_void, cdArgs));
     }
 
     /**

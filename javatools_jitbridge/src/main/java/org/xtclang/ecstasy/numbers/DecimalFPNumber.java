@@ -29,17 +29,17 @@ public abstract class DecimalFPNumber
     // ----- JIT methods ---------------------------------------------------------------------------
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, toString());
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, toString());
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
+    public long estimateStringLength$p(Ctx ctx, boolean async) {
         return toString().length();
     }
 
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
         for (char c : toString().toCharArray()) {
-            appender = appender.add$p(ctx, c);
+            appender = appender.add$p(ctx, false, c);
         }
         return appender;
     }

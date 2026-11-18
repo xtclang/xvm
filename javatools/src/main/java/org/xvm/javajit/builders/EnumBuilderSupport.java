@@ -165,15 +165,17 @@ public interface EnumBuilderSupport {
 
     /**
      * The signature of the function we generate is:
-     * <p>"public boolean equals$p(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
+     * <p>"public boolean equals$p(Ctx ctx, boolean async, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
     default void assembleEquals(CodeBuilder code) {
         // all we need is to call the equivalent function on nEnum
         code.aload(0)
-            .aload(1)
+            .iload(1)
             .aload(2)
             .aload(3)
-            .invokestatic(CD_nEnum, "equals$p", mdx(CD_boolean, CD_nType, CD_nEnum, CD_nEnum))
+            .aload(4)
+            .invokestatic(CD_nEnum, "equals$p",
+                    mdx(CD_boolean, CD_nType, CD_nEnum, CD_nEnum))
             .ireturn();
     }
 
@@ -182,8 +184,8 @@ public interface EnumBuilderSupport {
      */
     default void assembleBooleanEquals(CodeBuilder code) {
         Label notEqual = code.newLabel();
-        code.iload(2)
-            .iload(3)
+        code.iload(3)
+            .iload(4)
             .if_icmpne(notEqual)
             .iconst_1()
             .ireturn()
@@ -194,20 +196,22 @@ public interface EnumBuilderSupport {
 
     /**
      * The signature of the function we generate is:
-     * <p>"public Ordered compare(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
+     * <p>"public Ordered compare(Ctx ctx, boolean async, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
     default void assembleCompare(CommonBuilder builder, CodeBuilder code) {
         // there is a custom primitivized function on nEnum:
-        //      long compare$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2)
+        //      long compare$p(Ctx ctx, boolean async, nType CompileType, nEnum o1, nEnum o2)
         // which returns a negative, zero or positive value that needs to be translated into
         // the corresponding Ordered value using the Builder.returnIntToOrdered method
 
-        // long c = nEnum.compare$p(ctx, CompileType, o1, o2);
+        // long c = nEnum.compare$p(ctx, async, CompileType, o1, o2);
         code.aload(0)
-            .aload(1)
+            .iload(1)
             .aload(2)
             .aload(3)
-            .invokestatic(CD_nEnum, "compare$p", mdx(CD_long, CD_nType, CD_nEnum, CD_nEnum))
+            .aload(4)
+            .invokestatic(CD_nEnum, "compare$p",
+                    mdx(CD_long, CD_nType, CD_nEnum, CD_nEnum))
             .l2i();
         builder.returnIntToOrdered(code);
     }
@@ -216,8 +220,8 @@ public interface EnumBuilderSupport {
      * Generate primitive Boolean comparison.
      */
     default void assembleBooleanCompare(CommonBuilder builder, CodeBuilder code) {
-        code.iload(2)
-            .iload(3)
+        code.iload(3)
+            .iload(4)
             .isub();
         builder.returnIntToOrdered(code);
     }
@@ -287,7 +291,7 @@ public interface EnumBuilderSupport {
     /**
      * Generate the code for an optimized static primitive next() method where the JIT primitive
      * is a Java {@code int} with a signature:
-     * <p>public static boolean next$p(int thi$, Ctx ctx)
+     * <p>public static boolean next$p(int thi$, Ctx ctx, boolean async)
      */
     default void assemblePrimitiveIntNext(CommonBuilder builder, ClassBuilder classBuilder,
                                           JitMethodDesc jmd, String jitName) {
@@ -349,7 +353,7 @@ public interface EnumBuilderSupport {
     /**
      * Generate the code for an optimized static primitive prev() method where the JIT primitive
      * is a Java {@code int} with a signature:
-     * <p>public static boolean prev$p(int thi$, Ctx ctx)
+     * <p>public static boolean prev$p(int thi$, Ctx ctx, boolean async)
      */
     default void assemblePrimitiveIntPrev(ClassBuilder classBuilder,
                                           JitMethodDesc jmd, String jitName) {
@@ -408,38 +412,40 @@ public interface EnumBuilderSupport {
     /**
      * Generate the code for an optimized static primitive skip() method where the JIT primitive
      * is a Java {@code int} with a signature:
-     * <p>public static int skip$p(int thi$, Ctx ctx, long steps)
+     * <p>public static int skip$p(int thi$, Ctx ctx, boolean async, long steps)
      */
     default void assemblePrimitiveIntSkip(CommonBuilder builder, ClassBuilder classBuilder,
                                           JitMethodDesc jmd, String jitName) {
-        MethodTypeDesc mdHelper = md(CD_int, CD_int, CD_Ctx, CD_long, CD_int);
+        MethodTypeDesc mdHelper = md(CD_int, CD_int, CD_Ctx, CD_boolean, CD_long, CD_int);
         int            flags    = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
 
         classBuilder.withMethodBody(jitName, jmd.optimizedMD, flags, code -> {
             int thisSlot   = code.parameterSlot(0);
             int ctxSlot    = code.parameterSlot(1);
-            int stepsSlot  = code.parameterSlot(2);
+            int stepsSlot  = code.parameterSlot(3);
             int valueCount = getValueCount(builder);
 
-            code.iload(thisSlot)                                  // load thi$
-                .aload(ctxSlot)                                   // load Ctx
-                .lload(stepsSlot)                                 // load the steps arg
-                .loadConstant(valueCount)                         // load the number of enum values
+            code.iload(thisSlot)                            // load thi$
+                .aload(ctxSlot)                             // load Ctx
+                .iconst_0()                                 // async=false
+                .lload(stepsSlot)                           // load the steps arg
+                .loadConstant(valueCount)                   // load the number of enum values
                 .invokestatic(CD_nEnum, "$skip", mdHelper)  // call the helper
-                .ireturn();                                       // return the result
+                .ireturn();                                 // return the result
         });
     }
 
     /**
      * Generate the code for an optimized skip() method for a non-primitive enum with a signature:
-     * <p>public static Enum skip$p(Ctx ctx, long steps)
+     * <p>public static Enum skip$p(Ctx ctx, boolean async, long steps)
      */
     default void assembleEnumSkip(CommonBuilder builder, ClassBuilder classBuilder,
                                   JitMethodDesc jmd, String jitName) {
         MethodTypeDesc mdEnum     = mdx(CD_Enumeration);
         MethodTypeDesc mdValues   = mdx(CD_ArrayObj);
         MethodTypeDesc mdOrdinal  = MD_xvmLong;
-        MethodTypeDesc mdHelper   = md(CD_long, CD_long, CD_Ctx, CD_long, CD_int);
+        MethodTypeDesc mdHelper   =
+                md(CD_long, CD_long, CD_Ctx, CD_boolean, CD_long, CD_int);
         MethodTypeDesc mdGetElem  = mdx(CD_Object, CD_long);
         int            flags      = ClassFile.ACC_PUBLIC;
         ClassDesc      thisCD     = builder.art.CD();
@@ -448,22 +454,27 @@ public interface EnumBuilderSupport {
         classBuilder.withMethodBody(jitName, jmd.optimizedMD, flags, code -> {
             int thisSLot  = 0;
             int ctxSlot   = code.parameterSlot(0);
-            int stepsSlot = code.parameterSlot(1);
+            int stepsSlot = code.parameterSlot(2);
 
-            code.aload(thisSLot)  // load this
-                .aload(ctxSlot)   // load the Ctx
-                .invokevirtual(thisCD, "enumeration$get", mdEnum) // get enumeration
-                .aload(ctxSlot)   // load the Ctx
+            code.aload(thisSLot)                                       // load this
+                .aload(ctxSlot)                                        // load the Ctx
+                .iconst_0()                                            // async=false
+                .invokevirtual(thisCD, "enumeration$get", mdEnum)      // get enumeration
+                .aload(ctxSlot)                                        // load the Ctx
+                .iconst_0()                                            // async=false
                 .invokevirtual(CD_Enumeration, "values$get", mdValues) // get values array
-                .aload(ctxSlot)   // load the Ctx
-                .aload(thisSLot)  // load this
-                .aload(ctxSlot)   // load ctx
-                .invokevirtual(thisCD, "ordinal$get$p", mdOrdinal) // get this ordinal
-                .aload(ctxSlot)   // load the Ctx
-                .lload(stepsSlot) // load the steps arg
-                .loadConstant(valueCount)  // load the number of enum values
-                .invokestatic(CD_nEnum, "$skip", mdHelper)  // call the helper (may throw OOB)
-                // the stack contains: enum values array, ctx, index (index will be valid)
+                .aload(ctxSlot)                                        // load the Ctx
+                .iconst_0()                                            // async=false
+                .aload(thisSLot)                                       // load this
+                .aload(ctxSlot)                                        // load ctx
+                .iconst_0()                                            // async=false
+                .invokevirtual(thisCD, "ordinal$get$p", mdOrdinal)     // get this ordinal
+                .aload(ctxSlot)                                        // load the Ctx
+                .iconst_0()                                            // async=false
+                .lload(stepsSlot)                                      // load the steps arg
+                .loadConstant(valueCount)                              // load the number of enum values
+                .invokestatic(CD_nEnum, "$skip", mdHelper)             // call the helper (may throw OOB)
+                // the stack contains: enum values array, ctx, async, index (index will be valid)
                 .invokevirtual(CD_ArrayObj, "getElement$p", mdGetElem) // get the enum value
                 .checkcast(thisCD)   // cast to this Enum type
                 .areturn();          // return the result
@@ -500,14 +511,16 @@ public interface EnumBuilderSupport {
                     ClassDesc      thisCD    = builder.art.CD();
                     int            thisSLot  = 0;
                     int            ctxSlot   = code.parameterSlot(0);
-                    int            thatSlot  = code.parameterSlot(1);
+                    int            thatSlot  = code.parameterSlot(2);
 
                     code.aload(thatSlot)
                         .checkcast(thisCD)
                         .aload(ctxSlot)
+                        .iconst_0()
                         .invokevirtual(thisCD, "ordinal$get$p", mdOrdinal)
                         .aload(thisSLot)
                         .aload(ctxSlot)
+                        .iconst_0()
                         .invokevirtual(thisCD, "ordinal$get$p", mdOrdinal)
                         .lsub()
                         .lreturn();
@@ -519,14 +532,14 @@ public interface EnumBuilderSupport {
     /**
      * Generate the code for an optimized static primitive stepsTo() method where the JIT primitive
      * is a Java {@code int} with a signature:
-     * <p>public static long stepsTo$p(int thi$, Ctx ctx, int that)
+     * <p>public static long stepsTo$p(int thi$, Ctx ctx, boolean async, int that)
      */
     default void assemblePrimitiveIntStepsTo(ClassBuilder classBuilder, JitMethodDesc jmd, String jitName) {
         int flags = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
 
         classBuilder.withMethodBody(jitName, jmd.optimizedMD, flags, code -> {
             int thisSLot = code.parameterSlot(0);
-            int thatSlot = code.parameterSlot(2);
+            int thatSlot = code.parameterSlot(3);
 
             code.iload(thatSlot)  // load the "that" arg
                 .iload(thisSLot)  // load thi$

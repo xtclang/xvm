@@ -22,15 +22,15 @@ public class UInt16 extends UIntNumber {
     public final int $value;
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, Integer.toString($value));
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, Integer.toString($value));
     }
 
-    public static String toString$p(int thi$, Ctx ctx) {
-        return String.of(ctx, Integer.toString(thi$));
+    public static String toString$p(int thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, Integer.toString(thi$));
     }
 
-    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+    public static long estimateStringLength$p(int thi$, Ctx ctx, boolean async) {
         return $estimateUnsignedStringLength(thi$ & 0xFFFFL);
     }
 

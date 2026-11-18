@@ -210,8 +210,7 @@ public class FPNumberBuilder extends NumberBuilder {
             }
             box(code, pool().typeInt64());
         } else {
-            throwIllegalState(code, "Not Implemented",
-                    code.parameterSlot(jmd.optimizedMD.parameterCount() - 1));
+            throwIllegalState(code, "Not Implemented", code.parameterSlot(jmd.optimizedCtx()));
         }
     }
 
@@ -265,8 +264,7 @@ public class FPNumberBuilder extends NumberBuilder {
             }
             box(code, pool().typeInt64());
         } else {
-            throwIllegalState(code, "Not Implemented",
-                    code.parameterSlot(jmd.optimizedMD.parameterCount() - 1));
+            throwIllegalState(code, "Not Implemented", code.parameterSlot(jmd.optimizedCtx()));
         }
     }
 
@@ -393,7 +391,8 @@ public class FPNumberBuilder extends NumberBuilder {
         addPrimitiveReturn(code, jmd);
 
         code.labelBinding(finite)
-            .aload(code.parameterSlot(jmd.optimizedCtx()));
+            .aload(code.parameterSlot(jmd.optimizedCtx()))
+            .iconst_0();
         loadTarget(code, jmd)
             .invokestatic(valueCD, "$toBigDecimal", md(CD_BigDecimal, valueCDs));
         generateSetScale(code, jmd, mode);

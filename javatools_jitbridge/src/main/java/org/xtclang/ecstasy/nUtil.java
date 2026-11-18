@@ -15,11 +15,11 @@ public final class nUtil {
         }
     }
 
-    public static void appendValue(Ctx ctx, StringBuilder buffer, Object value) {
+    public static void appendValue(Ctx ctx, boolean async, StringBuilder buffer, Object value) {
         if (buffer.length() > MAX_LEN) {
             return;
         }
-        String text = value.toString(ctx).toString();
+        String text = value.toString(ctx, false).toString();
         if (text.length() > MAX_VAL) {
             buffer.append(text, 0, MAX_VAL)
                   .append("...");

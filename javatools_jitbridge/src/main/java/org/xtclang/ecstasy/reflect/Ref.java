@@ -12,19 +12,19 @@ public interface Ref extends Object {
     /**
      * @return true iff this reference has a referent
      */
-    boolean assigned$get$p(Ctx ctx);
+    boolean assigned$get$p(Ctx ctx, boolean async);
 
     /**
      * @return the referent of this reference
      */
-    Object get(Ctx ctx);
+    Object get(Ctx ctx, boolean async);
 
     /**
      * @return true iff this reference has a referent; the referent is returned in the context
      */
-    default boolean peek$p(Ctx ctx) {
-        if (assigned$get$p(ctx)) {
-            ctx.o0 = get(ctx);
+    default boolean peek$p(Ctx ctx, boolean async) {
+        if (assigned$get$p(ctx, false)) {
+            ctx.o0 = get(ctx, false);
             return true;
         }
         return false;
@@ -34,7 +34,7 @@ public interface Ref extends Object {
      * Native implementation of: {@code static <CompileType extends Ref> Boolean
      * equals(CompileType value1, CompileType value2)}.
      */
-    static boolean equals$p(Ctx ctx, nType CompileType, Ref value1, Ref value2) {
-        return nRef.equals$p(ctx, CompileType, value1, value2);
+    static boolean equals$p(Ctx ctx, boolean async, nType CompileType, Ref value1, Ref value2) {
+        return nRef.equals$p(ctx, false, CompileType, value1, value2);
     }
 }

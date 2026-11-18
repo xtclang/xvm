@@ -187,7 +187,7 @@ public class String
     }
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return ctx.pool().typeString();
     }
 
@@ -197,10 +197,10 @@ public class String
      *     construct(Char[] chars)
      * }</pre>
      */
-    public static String $new(Ctx ctx,TypeConstant type, ArrayᐸCharᐳ chars) {
+    public static String $new(Ctx ctx, boolean async,TypeConstant type, ArrayᐸCharᐳ chars) {
         // TODO handle huge arrays
-        ArrayᐸCharᐳ content = chars.$isImmut() ? chars : chars.freeze$p(ctx, false, true);
-        long size = content.size$get$p(ctx);
+        ArrayᐸCharᐳ content = chars.$isImmut() ? chars : chars.freeze$p(ctx, false, false, true);
+        long size = content.size$get$p(ctx, false);
         String string = new String(ctx, content.$storage, chars.$utf21, 0, 0, (int) size, null);
         string.chars = content;
         return string;
@@ -261,7 +261,7 @@ public class String
      *     Char[] chars;
      * }</pre>
      */
-    public ArrayᐸCharᐳ chars$get(Ctx ctx) {
+    public ArrayᐸCharᐳ chars$get(Ctx ctx, boolean async) {
         if (chars == null) {
             ConstantPool  pool          = ctx.pool();
             ClassConstant clz           = pool.clzArray();
@@ -269,8 +269,9 @@ public class String
             TypeConstant  typeCharArray = pool.ensureClassTypeConstant(clz, null, typeChar);
             // TODO what if this String has a next continuation?
             assert next == null;
-            ArrayᐸCharᐳ array = new ArrayᐸCharᐳ(ctx, typeCharArray, data, size$get$p(ctx), unicode);
-            array.$makeImmut(ctx);
+            ArrayᐸCharᐳ array = new ArrayᐸCharᐳ(ctx, typeCharArray, data, size$get$p(ctx, false),
+                    unicode);
+            array.$makeImmut(ctx, false);
             chars = array;
         }
         return chars;
@@ -283,7 +284,7 @@ public class String
      *     Boolean empty.get();
      * }</pre>
      */
-    public boolean empty$get$p(Ctx ctx) {
+    public boolean empty$get$p(Ctx ctx, boolean async) {
         return start == end;
     }
 
@@ -294,8 +295,8 @@ public class String
      *     Int size.get();
      * }</pre>
      */
-    public long size$get$p(Ctx ctx) {
-        return end - start + (next == null ? 0 : next.size$get$p(ctx));
+    public long size$get$p(Ctx ctx, boolean async) {
+        return end - start + (next == null ? 0 : next.size$get$p(ctx, false));
     }
 
     /**
@@ -305,9 +306,9 @@ public class String
      *     @Op("+") String! add(Object o)
      * }</pre>
      */
-    public String add(Ctx ctx, Object obj) {
+    public String add(Ctx ctx, boolean async, Object obj) {
         // TODO CP: optimize
-        return of(ctx, this + obj.toString(ctx).toString());
+        return of(ctx, false, this + obj.toString(ctx, false).toString());
     }
 
     /**
@@ -317,7 +318,7 @@ public class String
      *     @Op("[]") Char getElement(Int index)
      * }</pre>
      */
-    public int getElement$p(Ctx ctx, long index) {
+    public int getElement$p(Ctx ctx, boolean async, long index) {
         if (index < 0) {
             oob(ctx, index);
         }
@@ -331,7 +332,7 @@ public class String
      *     Iterator<Char> iterator() = chars.iterator();
      * }</pre>
      */
-    public IteratorᐸCharᐳ iterator(Ctx ctx) {
+    public IteratorᐸCharᐳ iterator(Ctx ctx, boolean async) {
         return new nIterator(ctx);
     }
 
@@ -348,14 +349,14 @@ public class String
         }
 
         @Override
-        public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.pool().typeChar());
+        public nType Element$get(Ctx ctx, boolean async) {
+            return nType.$ensureType(ctx, false, ctx.pool().typeChar());
         }
 
         @Override
-        public boolean next$p(Ctx ctx) {
-            if (index < size$get$p(ctx)) {
-                ctx.i0 = getElement$p(ctx, index++);
+        public boolean next$p(Ctx ctx, boolean async) {
+            if (index < size$get$p(ctx, false)) {
+                ctx.i0 = getElement$p(ctx, false, index++);
                 return true;
             }
             return false;
@@ -397,22 +398,22 @@ public class String
      *
      * <p>This is native as it will perform better and avoid creating a char array
      */
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ buf) {
-        long size = size$get$p(ctx);
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ buf) {
+        long size = size$get$p(ctx, false);
         for (long i = 0; i < size; i++) {
-            buf = buf.add$p(ctx, getContinued(ctx, 0, i));
+            buf = buf.add$p(ctx, false, getContinued(ctx, 0, i));
         }
         return buf;
     }
 
     @Override
-    public String toString(Ctx ctx) {
+    public String toString(Ctx ctx, boolean async) {
         return this;
     }
 
     @Override
     public java.lang.String toString() {
-        long len = size$get$p(null);
+        long len = size$get$p(null, false);
         if (len == 0) {
             return "";
         }
@@ -457,7 +458,7 @@ public class String
      *
      * @return a new String object
      */
-    public static String of(Ctx ctx, java.lang.String s) {
+    public static String of(Ctx ctx, boolean async, java.lang.String s) {
         // TODO: intern Java style?
         return new String(ctx, s);
     }
@@ -500,7 +501,7 @@ public class String
      *     static <CompileType extends Hashable> Int hashCode(CompileType value);
      * }</pre>
      */
-    public static long hashCode$p(Ctx ctx, nType type, String value) {
+    public static long hashCode$p(Ctx ctx, boolean async, nType type, String value) {
         return value.toString().hashCode();
     }
 
@@ -513,7 +514,8 @@ public class String
      *     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
      * }</pre>
      */
-    public static Ordered compare(Ctx ctx, nType type, String value1, String value2) {
+    public static Ordered compare(Ctx ctx, boolean async, nType type, String value1,
+            String value2) {
         // ToDo Optimize???
         int i = value1.toString().compareTo(value2.toString());
         return i < 0  ? Ordered.Lesser.$INSTANCE :
@@ -528,9 +530,10 @@ public class String
      *     static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
      * }</pre>
      */
-    public static boolean equals$p(Ctx ctx, nType type, String value1, String value2) {
+    public static boolean equals$p(Ctx ctx, boolean async, nType type, String value1,
+            String value2) {
         // TODO CP: optimize
-        return value1.size$get$p(ctx) == value2.size$get$p(ctx) &&
+        return value1.size$get$p(ctx, false) == value2.size$get$p(ctx, false) &&
             value1.toString().equals(value2.toString());
     }
 
@@ -541,7 +544,7 @@ public class String
      *     Boolean defined.get()
      * }</pre>
      */
-    public boolean defined$get$p(Ctx ctx) {
+    public boolean defined$get$p(Ctx ctx, boolean async) {
         return ctx.container.isSpecified(toString());
     }
 

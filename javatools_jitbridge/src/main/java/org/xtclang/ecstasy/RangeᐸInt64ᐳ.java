@@ -13,41 +13,44 @@ public class RangeᐸInt64ᐳ
 
     // ----- Range / Interval API ------------------------------------------------------------------
 
-    public static RangeᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long first, long last,
+    public static RangeᐸInt64ᐳ $new$p(Ctx ctx, boolean async, TypeConstant type, long first,
+            long last,
                                         boolean firstExclusive, boolean _firstExclusive,
                                         boolean lastExclusive, boolean _lastExclusive) {
         return new RangeᐸInt64ᐳ(ctx, first, last, !_firstExclusive && firstExclusive,
                 !_lastExclusive && lastExclusive);
     }
 
-    public long first$get$p(Ctx ctx) {
+    public long first$get$p(Ctx ctx, boolean async) {
         return $descending ? $upperBound : $lowerBound;
     }
 
     /**
      * The ending bound of the range.
      */
-    public long last$get$p(Ctx ctx) {
+    public long last$get$p(Ctx ctx, boolean async) {
         return $descending ? $lowerBound : $upperBound;
     }
 
-    public long lowerBound$get$p(Ctx ctx) {
+    public long lowerBound$get$p(Ctx ctx, boolean async) {
         return $lowerBound;
     }
 
-    public long upperBound$get$p(Ctx ctx) {
+    public long upperBound$get$p(Ctx ctx, boolean async) {
         return $upperBound;
     }
 
-    public long effectiveFirst$get$p(Ctx ctx) {
-        return $descending ? effectiveUpperBound$get$p(ctx) : effectiveLowerBound$get$p(ctx);
+    public long effectiveFirst$get$p(Ctx ctx, boolean async) {
+        return $descending ? effectiveUpperBound$get$p(ctx,
+                false) : effectiveLowerBound$get$p(ctx, false);
     }
 
-    public long effectiveLast$get$p(Ctx ctx) {
-        return $descending ? effectiveLowerBound$get$p(ctx) : effectiveUpperBound$get$p(ctx);
+    public long effectiveLast$get$p(Ctx ctx, boolean async) {
+        return $descending ? effectiveLowerBound$get$p(ctx,
+                false) : effectiveUpperBound$get$p(ctx, false);
     }
 
-    public long effectiveLowerBound$get$p(Ctx ctx) {
+    public long effectiveLowerBound$get$p(Ctx ctx, boolean async) {
         if ($lowerExclusive) {
             if ($lowerBound == Long.MAX_VALUE) {
                 throw Exception.$oob(ctx, null);
@@ -57,7 +60,7 @@ public class RangeᐸInt64ᐳ
         return $lowerBound;
     }
 
-    public long effectiveUpperBound$get$p(Ctx ctx) {
+    public long effectiveUpperBound$get$p(Ctx ctx, boolean async) {
         if ($upperExclusive) {
             if ($upperBound == Long.MIN_VALUE) {
                 throw Exception.$oob(ctx, null);
@@ -67,7 +70,7 @@ public class RangeᐸInt64ᐳ
         return $upperBound;
     }
 
-    public boolean empty$get$p(Ctx ctx) {
+    public boolean empty$get$p(Ctx ctx, boolean async) {
         if ($upperBound - $lowerBound > 1) {
             return false;
         }
@@ -80,20 +83,20 @@ public class RangeᐸInt64ᐳ
         return !$lowerExclusive | !$upperExclusive;
     }
 
-    public long size$get$p(Ctx ctx) {
+    public long size$get$p(Ctx ctx, boolean async) {
         return Math.max(0, $upperBound - $lowerBound + 1 - ($lowerExclusive ? 1 : 0) - ($upperExclusive ? 1 : 0));
     }
 
-    public long getElement$p(Ctx ctx, long index) {
+    public long getElement$p(Ctx ctx, boolean async, long index) {
         long result;
         if ($descending) {
             result = $upperBound - index - ($upperExclusive ? 1 : 0);
-            if (result < effectiveLowerBound$get$p(ctx)) {
+            if (result < effectiveLowerBound$get$p(ctx, false)) {
                 throw Exception.$oob(ctx, null);
             }
         } else {
             result = $lowerBound + index + ($lowerExclusive ? 1 : 0);
-            if (result > effectiveUpperBound$get$p(ctx)) {
+            if (result > effectiveUpperBound$get$p(ctx, false)) {
                 throw Exception.$oob(ctx, null);
             }
         }
@@ -104,11 +107,11 @@ public class RangeᐸInt64ᐳ
 
     @Override
     protected long $firstAsLong(Ctx ctx) {
-        return first$get$p(ctx);
+        return first$get$p(ctx, false);
     }
 
     @Override
     protected long $lastAsLong(Ctx ctx) {
-        return last$get$p(ctx);
+        return last$get$p(ctx, false);
     }
 }

@@ -186,16 +186,16 @@ public class ArrayBuilder extends AugmentingBuilder {
         bctx.loadCtx(code);
 
         // load the method call arguments
-        int param = 1;
+        int paramIx = 2;
         for (int i = 0; i < jmdThis.standardParams.length; i++) {
             JitParamDesc stdPd = jmdThis.standardParams[i];
             if (jmdThis.isOptimized) {
                 for (int index : jmdThis.getAllOptimizedParamIndexes(i)) {
                     JitParamDesc pd = jmdThis.optimizedParams[index];
-                    load(code, pd.cd, code.parameterSlot(param++));
+                    load(code, pd.cd, code.parameterSlot(paramIx++));
                 }
             } else {
-                load(code, stdPd.cd, code.parameterSlot(param++));
+                load(code, stdPd.cd, code.parameterSlot(paramIx++));
             }
             // we have to box if this method is optimized, the parameter is a JIT
             // primitive, but the base method parameter is not a JIT primitive
@@ -229,7 +229,7 @@ public class ArrayBuilder extends AugmentingBuilder {
 
     @Override
     protected void assembleXvmType(ClassBuilder classBuilder) {
-        // Array.java implements "$xvmType(Ctx ctx)"
+        // Array.java implements "$xvmType(Ctx ctx, boolean async)"
     }
 
     // ----- helper methods-------------------------------------------------------------------------

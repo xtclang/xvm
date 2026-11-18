@@ -13,21 +13,21 @@ public interface Timer {
      *
      * <p>{@code    Timer start();}
      */
-    Timer start(Ctx ctx);
+    Timer start(Ctx ctx, boolean async);
 
     /**
      * The native implementation of Timer method:
      *
      * <p>{@code    Timer stop();}
      */
-    Timer stop(Ctx ctx);
+    Timer stop(Ctx ctx, boolean async);
 
     /**
      * The native implementation of Timer method:
      *
      * <p>{@code    Timer reset();}
      */
-    Timer reset(Ctx ctx);
+    Timer reset(Ctx ctx, boolean async);
 
     /**
      * The native implementation of Timer method:
@@ -43,6 +43,6 @@ public interface Timer {
      * @param dfltKeepAlive  {@code true} to indicate that the default value of {@code false}
      *                       should be used for the {@code keepAlive} parameter
      */
-    nFunction schedule$p(Ctx ctx, long delayLow, long delayHigh, nFunction function,
+    nFunction schedule$p(Ctx ctx, boolean async, long delayLow, long delayHigh, nFunction function,
                          boolean keepAlive, boolean dfltKeepAlive);
 }

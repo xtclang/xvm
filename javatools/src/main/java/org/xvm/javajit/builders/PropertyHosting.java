@@ -202,7 +202,8 @@ public class PropertyHosting {
             }
 
             JitCtorDesc desc = initializer.desc();
-            code.aload(ctxSlot);
+            code.aload(ctxSlot)
+                .iconst_0();
             if (desc.hasCtorCtx()) {
                 code.aload(ctxSlot)
                     .invokevirtual(Builder.CD_Ctx, "ctorCtx", md(Builder.CD_CtorCtx));

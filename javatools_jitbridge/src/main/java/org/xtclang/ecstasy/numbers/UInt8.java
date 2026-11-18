@@ -24,15 +24,15 @@ public class UInt8 extends UIntNumber {
     public final int $value;
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, Integer.toUnsignedString($value));
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, Integer.toUnsignedString($value));
     }
 
-    public static String toString$p(int thi$, Ctx ctx) {
-        return String.of(ctx, Integer.toUnsignedString(thi$));
+    public static String toString$p(int thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, Integer.toUnsignedString(thi$));
     }
 
-    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+    public static long estimateStringLength$p(int thi$, Ctx ctx, boolean async) {
         return $estimateUnsignedStringLength(thi$ & 0xFFL);
     }
 

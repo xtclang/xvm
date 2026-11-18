@@ -11,10 +11,11 @@ public interface Const extends Object {
      *
      * {@code static <CompileType extends Const> Boolean equals(CompileType value1, CompileType value2)}.
      */
-    static boolean equals$p(Ctx ctx, nType CompileType, Const value1, Const value2) {
+    static boolean equals$p(Ctx ctx, boolean async, nType CompileType, Const value1, Const value2) {
         if (CompileType.$dataType.equals(ctx.pool().typeConst())) {
-            throw Exception.$unsupported(ctx, "Const.equals() requires a concrete comparison type");
+            throw Exception.$unsupported(ctx, false,
+                    "Const.equals() requires a concrete comparison type");
         }
-        return CompileType.equals$p(ctx, value1, value2);
+        return CompileType.equals$p(ctx, false, value1, value2);
     }
 }

@@ -47,14 +47,14 @@ public class RTRandom extends nService {
     /**
      * An optimized implementation of "Bit&nbsp;bit()"
      */
-    public int bit$p(Ctx ctx) {
+    public int bit$p(Ctx ctx, boolean async) {
         return rnd().nextBoolean() ? 1 : 0;
     }
 
     /**
      * An optimized implementation of "immutable Bit[] bits(Int size)"
      */
-    public ArrayᐸBitᐳ bits$p(Ctx ctx, long size) {
+    public ArrayᐸBitᐳ bits$p(Ctx ctx, boolean async, long size) {
         if (size < 0) {
             throw Exception.$illegalArg(ctx, "size must be >= 0: " + size);
         }
@@ -71,7 +71,7 @@ public class RTRandom extends nService {
     /**
      * Native implementation of: "immutable Byte[] bytes(Int size)"
      */
-    public ArrayᐸUInt8ᐳ bytes$p(Ctx ctx, long size) {
+    public ArrayᐸUInt8ᐳ bytes$p(Ctx ctx, boolean async, long size) {
         if (size < 0) {
             throw Exception.$illegalArg(ctx, "array size must be >= 0: " + size);
         }
@@ -89,7 +89,7 @@ public class RTRandom extends nService {
      *
      * Copied from xRTRandom.java.
      */
-    public long int$p(Ctx ctx, long max) {
+    public long int$p(Ctx ctx, boolean async, long max) {
         Random rnd = rnd();
 
         if (max <= 0) {
@@ -111,77 +111,78 @@ public class RTRandom extends nService {
     /**
      * Native implementation of "Int8&nbsp;int8()".
      */
-    public int int8$p(Ctx ctx) {
+    public int int8$p(Ctx ctx, boolean async) {
         return (byte) rnd().nextInt();
     }
 
     /**
      * Native implementation of: "Int16&nbsp;int16()"
      */
-    public int int16$p(Ctx ctx) {
+    public int int16$p(Ctx ctx, boolean async) {
         return (short) rnd().nextInt();
     }
 
     /**
      * Native implementation of: "Int32&nbsp;int32()"
      */
-    public int int32$p(Ctx ctx) {
+    public int int32$p(Ctx ctx, boolean async) {
         return rnd().nextInt();
     }
 
     /**
      * Native implementation of: "Int64&nbsp;int64()"
      */
-    public long int64$p(Ctx ctx) {
+    public long int64$p(Ctx ctx, boolean async) {
         return rnd().nextLong();
     }
 
     /**
      * Native implementation of "UInt8&nbsp;uint8()".
      */
-    public int uint8$p(Ctx ctx) {
+    public int uint8$p(Ctx ctx, boolean async) {
         return rnd().nextInt() & 0xFF;
     }
 
     /**
      * Native implementation of: "UInt16&nbsp;uint16()"
      */
-    public int uint16$p(Ctx ctx) {
+    public int uint16$p(Ctx ctx, boolean async) {
         return rnd().nextInt() & 0xFFFF;
     }
 
     /**
      * Native implementation of: "UInt32&nbsp;uint32()"
      */
-    public int uint32$p(Ctx ctx) {
+    public int uint32$p(Ctx ctx, boolean async) {
         return rnd().nextInt();
     }
 
     /**
      * Native implementation of: "UInt64&nbsp;uint64()"
      */
-    public long uint64$p(Ctx ctx) {
+    public long uint64$p(Ctx ctx, boolean async) {
         return rnd().nextLong();
     }
 
     /**
      * Native implementation of: "Dec64&nbsp;dec64()"
      */
-    public long dec64$p(Ctx ctx) {
-        return Dec64.$toLongBits(ctx, new BigDecimal(rnd().nextDouble(), MathContext.DECIMAL64));
+    public long dec64$p(Ctx ctx, boolean async) {
+        return Dec64.$toLongBits(ctx, false, new BigDecimal(rnd().nextDouble(),
+                MathContext.DECIMAL64));
     }
 
     /**
      * Native implementation of: "Float32&nbsp;float32()"
      */
-    public float float32$p(Ctx ctx) {
+    public float float32$p(Ctx ctx, boolean async) {
         return rnd().nextFloat();
     }
 
     /**
      * Native implementation of: "Float64&nbsp;float64()"
      */
-    public double float64$p(Ctx ctx) {
+    public double float64$p(Ctx ctx, boolean async) {
         return rnd().nextDouble();
     }
 
@@ -213,7 +214,7 @@ public class RTRandom extends nService {
         }
 
         if (opts instanceof IntLiteral lit) {
-            return new RTRandom(new Random(lit.magnitude.toInt64$p(null, false, false)));
+            return new RTRandom(new Random(lit.magnitude.toInt64$p(null, false, false, false)));
         }
 
         RTRandom random = THREAD_LOCAL;

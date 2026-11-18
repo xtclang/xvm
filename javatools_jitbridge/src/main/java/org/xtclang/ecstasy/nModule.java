@@ -24,7 +24,7 @@ public class nModule
     public final ModuleStructure $module;
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return $module.getIdentityConstant().getType();
     }
 }

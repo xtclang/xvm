@@ -142,25 +142,26 @@ public class Float8e4 extends BinaryFPNumber {
     }
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, Float.toString($toFloat($value)));
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, Float.toString($toFloat($value)));
     }
 
-    public static String toString$p(int thi$, Ctx ctx) {
-        return String.of(ctx, Float.toString($toFloat(thi$)));
+    public static String toString$p(int thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, Float.toString($toFloat(thi$)));
     }
 
-    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+    public static long estimateStringLength$p(int thi$, Ctx ctx, boolean async) {
         return Float.toString($toFloat(thi$)).length();
     }
 
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        return appendTo$p($value, ctx, appender);
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
+        return appendTo$p($value, ctx, false, appender);
     }
 
-    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, boolean async,
+            AppenderᐸCharᐳ appender) {
         for (char c : Float.toString($toFloat(thi$)).toCharArray()) {
-            appender = appender.add$p(ctx, c);
+            appender = appender.add$p(ctx, false, c);
         }
         return appender;
     }
@@ -179,7 +180,8 @@ public class Float8e4 extends BinaryFPNumber {
      *     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
      * }</pre>
      */
-    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
+    public static Ordered compare(Ctx ctx, boolean async, nType type, Orderable value1,
+            Orderable value2) {
         float l1 = $toFloat(((Float8e4) value1).$value);
         float l2 = $toFloat(((Float8e4) value2).$value);
         return l1 < l2    ? Ordered.Lesser.$INSTANCE
@@ -194,7 +196,7 @@ public class Float8e4 extends BinaryFPNumber {
      *     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
      * }</pre>
      */
-    public static Boolean equals(Ctx ctx, nType type, Object value1, Object value2) {
+    public static Boolean equals(Ctx ctx, boolean async, nType type, Object value1, Object value2) {
         float l1 = $toFloat(((Float8e4) value1).$value);
         float l2 = $toFloat(((Float8e4) value2).$value);
         return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;
@@ -202,11 +204,11 @@ public class Float8e4 extends BinaryFPNumber {
 
     // ----- conversion ----------------------------------------------------------------------------
 
-    public static float toFloat32$p(int thi$, Ctx ctx) {
+    public static float toFloat32$p(int thi$, Ctx ctx, boolean async) {
         return $toFloat(thi$);
     }
 
-    public static double toFloat64$p(int thi$, Ctx ctx) {
+    public static double toFloat64$p(int thi$, Ctx ctx, boolean async) {
         return $toFloat(thi$);
     }
 }

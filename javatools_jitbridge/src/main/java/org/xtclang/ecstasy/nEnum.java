@@ -19,20 +19,20 @@ public abstract class nEnum
     }
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         throw new UnsupportedOperationException("Must be generated");
     }
 
-    abstract public String name$get(Ctx ctx);
-    abstract public long ordinal$get$p(Ctx ctx);
+    abstract public String name$get(Ctx ctx, boolean async);
+    abstract public long ordinal$get$p(Ctx ctx, boolean async);
 
     /**
      * Note: While this follows the general pattern of equals() functions, it does not exist in
      * the "Enum.x" source file. This implementation requires that the caller is certain that the
      * two enum values are members of the same enumeration.
      */
-    static public boolean equals$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2) {
-        return o1.ordinal$get$p(ctx) == o2.ordinal$get$p(ctx);
+    static public boolean equals$p(Ctx ctx, boolean async, nType CompileType, nEnum o1, nEnum o2) {
+        return o1.ordinal$get$p(ctx, false) == o2.ordinal$get$p(ctx, false);
     }
 
     /**
@@ -40,8 +40,8 @@ public abstract class nEnum
      * the "Enum.x" source file. This implementation requires that the caller is certain that the
      * two enum values are members of the same enumeration.
      */
-    static public long compare$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2) {
-        return o1.ordinal$get$p(ctx) - o2.ordinal$get$p(ctx);
+    static public long compare$p(Ctx ctx, boolean async, nType CompileType, nEnum o1, nEnum o2) {
+        return o1.ordinal$get$p(ctx, false) - o2.ordinal$get$p(ctx, false);
     }
 
     /**
@@ -50,8 +50,8 @@ public abstract class nEnum
      *     Int estimateStringLength() = name.size;
      * }</pre>
      */
-    public long estimateStringLength$p(Ctx ctx) {
-        return name$get(ctx).size$get$p(ctx);
+    public long estimateStringLength$p(Ctx ctx, boolean async) {
+        return name$get(ctx, false).size$get$p(ctx, false);
     }
 
     /**
@@ -60,19 +60,19 @@ public abstract class nEnum
      *     Appender<Char> appendTo(Appender<Char> buf) = name.appendTo(buf);
      * }</pre>
      */
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        return name$get(ctx).appendTo(ctx, appender);
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
+        return name$get(ctx, false).appendTo(ctx, false, appender);
     }
 
     @Override
     public java.lang.String toString() {
-        return name$get(null).toString();
+        return name$get(null, false).toString();
     }
 
     /**
      * A helper method for the Enum skip method for int JIT primitive enums.
      */
-    public static int $skip(int thi$, Ctx ctx, long steps, int valueCount) {
+    public static int $skip(int thi$, Ctx ctx, boolean async, long steps, int valueCount) {
         if (steps == 0) {
             return thi$;
         }
@@ -87,7 +87,7 @@ public abstract class nEnum
      * A helper method for the Enum skip method Enums based on the Int64 ordinal and also for long
      * JIT primitive enums.
      */
-    public static long $skip(long thi$, Ctx ctx, long steps, int valueCount) {
+    public static long $skip(long thi$, Ctx ctx, boolean async, long steps, int valueCount) {
         if (steps == 0) {
             return thi$;
         }

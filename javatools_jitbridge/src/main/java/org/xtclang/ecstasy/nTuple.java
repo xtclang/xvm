@@ -27,7 +27,7 @@ public class nTuple
     public final nObject[]    $values;
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return $type;
     }
 
@@ -38,7 +38,7 @@ public class nTuple
      *     Int size;
      * }</pre>
      */
-    public long size$get$p(Ctx ctx) {
+    public long size$get$p(Ctx ctx, boolean async) {
         return $values.length;
     }
 
@@ -49,7 +49,7 @@ public class nTuple
      *     Object getElement(Int index)
      * }</pre>
      */
-    public Object getElement$p(Ctx ctx, long index) {
+    public Object getElement$p(Ctx ctx, boolean async, long index) {
         return $values[checkIndex(ctx, index)];
     }
 
@@ -60,7 +60,7 @@ public class nTuple
      *     Ref<Object> elementAt(Int index)
      * }</pre>
      */
-    public nRef elementAt$p(Ctx ctx, long index) {
+    public nRef elementAt$p(Ctx ctx, boolean async, long index) {
         int            i     = checkIndex(ctx, index);
         TypeConstant[] types = $type.getParamTypesArray();
         TypeConstant   type  = i < types.length
@@ -76,7 +76,7 @@ public class nTuple
      *     <Element> Tuple!<> add(Element value)
      * }</pre>
      */
-    public nTuple add(Ctx ctx, nType elementType, Object value) {
+    public nTuple add(Ctx ctx, boolean async, nType elementType, Object value) {
         int       count     = $values.length;
         nObject[] valuesNew = Arrays.copyOf($values, count + 1);
         valuesNew[count] = (nObject) value;
@@ -99,7 +99,7 @@ public class nTuple
      *     Tuple!<> addAll(Tuple!<> that)
      * }</pre>
      */
-    public nTuple addAll(Ctx ctx, nTuple that) {
+    public nTuple addAll(Ctx ctx, boolean async, nTuple that) {
         int countThis = $values.length;
         int countThat = that.$values.length;
         if (countThis == 0) {
@@ -131,15 +131,15 @@ public class nTuple
      *     Tuple replace(Int index, Object value)
      * }</pre>
      */
-    public nTuple replace$p(Ctx ctx, long index, Object value) {
+    public nTuple replace$p(Ctx ctx, boolean async, long index, Object value) {
         int            i     = checkIndex(ctx, index);
         TypeConstant[] types = $type.getParamTypesArray();
         if (i >= types.length) {
-            throw Exception.$unsupported(ctx, "Tuple element type is unavailable");
+            throw Exception.$unsupported(ctx, false, "Tuple element type is unavailable");
         }
 
         nObject valueNew = (nObject) value;
-        if (!valueNew.$xvmType(ctx).isA(types[i])) {
+        if (!valueNew.$xvmType(ctx, false).isA(types[i])) {
             throw Exception.$typeMismatch(ctx, "Tuple element [" + index + "]");
         }
 
@@ -155,7 +155,7 @@ public class nTuple
      *     Tuple!<> slice(Range<Int> interval)
      * }</pre>
      */
-    public nTuple slice(Ctx ctx, RangeᐸInt64ᐳ interval) {
+    public nTuple slice(Ctx ctx, boolean async, RangeᐸInt64ᐳ interval) {
         long lower = interval.$lowerBound + (interval.$lowerExclusive ? 1 : 0);
         long upper = interval.$upperBound + (interval.$upperExclusive ? 0 : 1);
         if (lower < 0 || upper > $values.length) {
@@ -203,8 +203,8 @@ public class nTuple
      *     Tuple!<> remove(Int index)
      * }</pre>
      */
-    public nTuple remove$p(Ctx ctx, long index) {
-        throw Exception.$unsupported(ctx, "Tuple.remove()");
+    public nTuple remove$p(Ctx ctx, boolean async, long index) {
+        throw Exception.$unsupported(ctx, false, "Tuple.remove()");
     }
 
     /**
@@ -214,8 +214,8 @@ public class nTuple
      *     Tuple!<> removeAll(Interval<Int> interval)
      * }</pre>
      */
-    public nTuple removeAll(Ctx ctx, RangeᐸInt64ᐳ interval) {
-        throw Exception.$unsupported(ctx, "Tuple.removeAll()");
+    public nTuple removeAll(Ctx ctx, boolean async, RangeᐸInt64ᐳ interval) {
+        throw Exception.$unsupported(ctx, false, "Tuple.removeAll()");
     }
 
     /**
@@ -225,8 +225,8 @@ public class nTuple
      *     immutable Tuple freeze(Boolean inPlace = False)
      * }</pre>
      */
-    public nTuple freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
-        throw Exception.$unsupported(ctx, "Tuple.freeze()");
+    public nTuple freeze$p(Ctx ctx, boolean async, boolean inPlace, boolean inPlace$dflt) {
+        throw Exception.$unsupported(ctx, false, "Tuple.freeze()");
     }
 
     /**
@@ -236,13 +236,15 @@ public class nTuple
      *     static <CompileType extends Tuple> Boolean equals( CompileType value1, CompileType value2)
      * }</pre>
      */
-    public static boolean equals$p(Ctx ctx, nType type, nTuple value1, nTuple value2) {
-        return Tuple.equals$p(ctx, type, value1, value2);
+    public static boolean equals$p(Ctx ctx, boolean async, nType type, nTuple value1,
+            nTuple value2) {
+        return Tuple.equals$p(ctx, false, type, value1, value2);
     }
 
     /**
-     * Used by {@link #getElement$p(Ctx, long)}, {@link #elementAt$p(Ctx, long)}, and
-     * {@link #replace$p(Ctx, long, Object)}.
+     * Used by {@link #getElement$p(Ctx, boolean, long)},
+     * {@link #elementAt$p(Ctx, boolean, long)}, and
+     * {@link #replace$p(Ctx, boolean, long, Object)}.
      */
     private int checkIndex(Ctx ctx, long index) {
         if (index < 0 || index >= $values.length) {

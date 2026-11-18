@@ -93,12 +93,12 @@ public abstract class Array
         public final String $name;
 
         @Override
-        public String name$get(Ctx ctx) {
+        public String name$get(Ctx ctx, boolean async) {
             return $name;
         }
 
         @Override
-        public long ordinal$get$p(Ctx ctx) {
+        public long ordinal$get$p(Ctx ctx, boolean async) {
             return $ordinal;
         }
 
@@ -112,35 +112,35 @@ public abstract class Array
         public static class Constant extends Mutability {
             public static Constant $INSTANCE = new Constant();
             public Constant() {
-                super(0, String.of(null, "Constant"));
+                super(0, String.of(null, false, "Constant"));
             }
         }
 
         public static class Persistent extends Mutability {
             public static Persistent $INSTANCE = new Persistent();
             public Persistent() {
-                super(1, String.of(null, "Persistent"));
+                super(1, String.of(null, false, "Persistent"));
             }
         }
 
         public static class Fixed extends Mutability {
             public static Fixed $INSTANCE = new Fixed();
             public Fixed() {
-                super(2, String.of(null, "Fixed"));
+                super(2, String.of(null, false, "Fixed"));
             }
         }
 
         public static class Mutable extends Mutability {
             public static Mutable $INSTANCE = new Mutable();
             public Mutable() {
-                super(3, String.of(null, "Mutable"));
+                super(3, String.of(null, false, "Mutable"));
             }
         }
     }
 
     // ----- nObject API ------------------------------------------------------------------------------
 
-    @Override public TypeConstant $xvmType(Ctx ctx) {
+    @Override public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return $isImmut() ? $type.freeze() : $type;
     }
 
@@ -152,19 +152,19 @@ public abstract class Array
     }
 
     @Override
-    public void $makeImmut(Ctx ctx) {
+    public void $makeImmut(Ctx ctx, boolean async) {
         $mut($CONSTANT);
     }
 
     // ----- Stringable API ------------------------------------------------------------------------
 
     // TODO: this is very temporary; remove when Collection.x compiles
-    public long estimateStringLength$p(Ctx ctx) {
-        return toString(ctx).size$get$p(ctx);
+    public long estimateStringLength$p(Ctx ctx, boolean async) {
+        return toString(ctx, false).size$get$p(ctx, false);
     }
 
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        return toString(ctx).appendTo(ctx, appender);
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
+        return toString(ctx, false).appendTo(ctx, false, appender);
     }
 
     // ----- Array API -----------------------------------------------------------------------------
@@ -172,59 +172,63 @@ public abstract class Array
     /**
      * The Element type.
      */
-    public nType Element$get(Ctx ctx) {
-        return nType.$ensureType(ctx, $type.getParamType(0));
+    public nType Element$get(Ctx ctx, boolean async) {
+        return nType.$ensureType(ctx, false, $type.getParamType(0));
     }
 
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static Array $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static Array $new$p(Ctx ctx, boolean async, TypeConstant type, long capacity,
+            boolean _capacity) {
         throw new UnsupportedOperationException(); // must be implemented by all subclasses
     }
 
     /**
      * Array Constructor: construct(Int size, Element | function Element (Int) supply)
      */
-    public static Array $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
+    public static Array $new$1$p(Ctx ctx, boolean async, TypeConstant type, long size,
+            Object supply) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
     /**
      * Array Constructor: {@code construct(Mutability mutability, Iterable<Element> elements = [])}
      */
-    public static Array $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static Array $new$2(Ctx ctx, boolean async, TypeConstant type, Mutability mutability,
+            Iterable elements) {
         // TODO this is temporary; review and if possible remove the overrides
         TypeConstant elementType = type.getParamType(0);
         if (!elementType.isJitPrimitive()) {
-            return ArrayᐸObjectᐳ.$new$2(ctx, type, mutability, elements);
+            return ArrayᐸObjectᐳ.$new$2(ctx, false, type, mutability, elements);
         }
 
         return switch(elementType.getSingleUnderlyingClass(true).getName()) {
-            case "Bit"      -> ArrayᐸBitᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Boolean"  -> ArrayᐸBooleanᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Char"     -> ArrayᐸCharᐳ.$new$2(ctx, type, mutability, (IterableᐸCharᐳ) elements);
-            case "Dec32"    -> ArrayᐸDec32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Dec64"    -> ArrayᐸDec64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Dec128"   -> ArrayᐸDec128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Float8e4" -> ArrayᐸFloat8e4ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Float8e5" -> ArrayᐸFloat8e5ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "BFloat16" -> ArrayᐸBFloat16ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Float32"  -> ArrayᐸFloat32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Float64"  -> ArrayᐸFloat64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int8"     -> ArrayᐸInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int16"    -> ArrayᐸInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int32"    -> ArrayᐸInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int64"    -> ArrayᐸInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Int128"   -> ArrayᐸInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Nibble"   -> ArrayᐸNibbleᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt8"    -> ArrayᐸUInt8ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt16"   -> ArrayᐸUInt16ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt32"   -> ArrayᐸUInt32ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt64"   -> ArrayᐸUInt64ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "UInt128"  -> ArrayᐸUInt128ᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Date"     -> ArrayᐸDateᐳ.$new$2$p(ctx, type, mutability, elements);
-            case "Duration" -> ArrayᐸDurationᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Bit"      -> ArrayᐸBitᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Boolean"  -> ArrayᐸBooleanᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Char"     -> ArrayᐸCharᐳ.$new$2(ctx, false, type, mutability,
+                    (IterableᐸCharᐳ) elements);
+            case "Dec32"    -> ArrayᐸDec32ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Dec64"    -> ArrayᐸDec64ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Dec128"   -> ArrayᐸDec128ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Float8e4" -> ArrayᐸFloat8e4ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Float8e5" -> ArrayᐸFloat8e5ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "BFloat16" -> ArrayᐸBFloat16ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Float32"  -> ArrayᐸFloat32ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Float64"  -> ArrayᐸFloat64ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Int8"     -> ArrayᐸInt8ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Int16"    -> ArrayᐸInt16ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Int32"    -> ArrayᐸInt32ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Int64"    -> ArrayᐸInt64ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Int128"   -> ArrayᐸInt128ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Nibble"   -> ArrayᐸNibbleᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "UInt8"    -> ArrayᐸUInt8ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "UInt16"   -> ArrayᐸUInt16ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "UInt32"   -> ArrayᐸUInt32ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "UInt64"   -> ArrayᐸUInt64ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "UInt128"  -> ArrayᐸUInt128ᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Date"     -> ArrayᐸDateᐳ.$new$2$p(ctx, false, type, mutability, elements);
+            case "Duration" -> ArrayᐸDurationᐳ.$new$2$p(ctx, false, type, mutability, elements);
             default -> throw new UnsupportedOperationException("Unsupported array type " + type);
         };
     }
@@ -232,7 +236,7 @@ public abstract class Array
     /**
      * Array Constructor: construct(Array that)
      */
-    public static Array $new$3(Ctx ctx, TypeConstant type, Array that) {
+    public static Array $new$3(Ctx ctx, boolean async, TypeConstant type, Array that) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
@@ -243,7 +247,8 @@ public abstract class Array
      *     protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
      * }</pre>
      */
-    public static Array $new$4(Ctx ctx, TypeConstant type, ArrayDelegate delegate, Mutability mutability) {
+    public static Array $new$4(Ctx ctx, boolean async, TypeConstant type, ArrayDelegate delegate,
+            Mutability mutability) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
@@ -251,12 +256,12 @@ public abstract class Array
      * @return the current storage capacity of the array; this is the "delegate.capacity" value
      *         referred to by Array.x
      */
-    public long capacity$get$p(Ctx ctx) {
+    public long capacity$get$p(Ctx ctx, boolean async) {
         // reasonably efficient implementation at the base class level, but likely to be overridden
         // for hot classes
         Array delegate = $delegate();
         if (delegate != null) {
-            return delegate.capacity$get$p(ctx);
+            return delegate.capacity$get$p(ctx, false);
         }
 
         java.lang.Object storage = $storage();
@@ -269,14 +274,14 @@ public abstract class Array
      * @param cap the desired storage capacity for the array; this is the "delegate.capacity" value
      *            referred to by Array.x
      */
-    public void capacity$set$p(Ctx ctx, long cap) {
+    public void capacity$set$p(Ctx ctx, boolean async, long cap) {
         if ($isImmut()) {
             throw $ro(ctx);
         }
 
         Array delegate = $delegate();
         if (delegate != null) {
-            delegate.capacity$set$p(ctx, cap);
+            delegate.capacity$set$p(ctx, false, cap);
             return;
         }
 
@@ -300,10 +305,10 @@ public abstract class Array
         }
 
         int smallCap = (int) cap;
-        int existCap = (int) capacity$get$p(ctx);
+        int existCap = (int) capacity$get$p(ctx, false);
         if (smallCap > existCap) {
             $growInPlace(ctx, smallCap);
-        } else if (smallCap < existCap && smallCap == size$get$p(ctx)) {
+        } else if (smallCap < existCap && smallCap == size$get$p(ctx, false)) {
             $shrinkToSize(ctx);
         }
     }
@@ -317,9 +322,9 @@ public abstract class Array
      *
      * @return `true` iff the array contains no elements
      */
-    public boolean empty$get$p(Ctx ctx) {
+    public boolean empty$get$p(Ctx ctx, boolean async) {
         Array delegate = $delegate();
-        return delegate == null ? size$get$p(ctx) == 0 : delegate.empty$get$p(ctx);
+        return delegate == null ? size$get$p(ctx, false) == 0 : delegate.empty$get$p(ctx, false);
     }
 
     /**
@@ -331,9 +336,9 @@ public abstract class Array
      *
      * @return the length of the string in characters
      */
-    public long size$get$p(Ctx ctx) {
+    public long size$get$p(Ctx ctx, boolean async) {
         Array delegate = $delegate();
-        return delegate == null ? ($sizeEtc & $SIZE_MASK) : delegate.size$get$p(ctx);
+        return delegate == null ? ($sizeEtc & $SIZE_MASK) : delegate.size$get$p(ctx, false);
     }
 
     /**
@@ -349,7 +354,7 @@ public abstract class Array
      *
      * @return a Var object representing the storage for the element in the array
      */
-    public Var elementAt$p(Ctx ctx, long index) {
+    public Var elementAt$p(Ctx ctx, boolean async, long index) {
         // TODO need a Var<T> impl, possibly a child class of Array
         throw $oob(ctx, index);
     }
@@ -361,7 +366,7 @@ public abstract class Array
      *     immutable Array freeze(Boolean inPlace = False)
      * }</pre>
      */
-    public Array freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
+    public Array freeze$p(Ctx ctx, boolean async, boolean inPlace, boolean inPlace$dflt) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -372,7 +377,7 @@ public abstract class Array
      *     immutable Array makeImmutable()
      * }</pre>
      */
-    public Array makeImmutable(Ctx ctx) {
+    public Array makeImmutable(Ctx ctx, boolean async) {
         $mut($CONSTANT);
         return this;
     }
@@ -384,7 +389,7 @@ public abstract class Array
      *     Array add(Element element)
      * }</pre>
      */
-    public Array add(Ctx ctx, Object element) {
+    public Array add(Ctx ctx, boolean async, Object element) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -396,7 +401,7 @@ public abstract class Array
      * }</pre>
      *
      */
-    public Array addAll(Ctx ctx, Iterable values) {
+    public Array addAll(Ctx ctx, boolean async, Iterable values) {
         throw new UnsupportedOperationException("Should never be called");
     }
 
@@ -407,7 +412,7 @@ public abstract class Array
      *     Array insert(Int index, Element value)
      * }</pre>
      */
-    public Array insert$p(Ctx ctx, long index, Object element) {
+    public Array insert$p(Ctx ctx, boolean async, long index, Object element) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -418,7 +423,7 @@ public abstract class Array
      *     Array delete(Int index)
      * }</pre>
      */
-    public Array delete$p(Ctx ctx, long index) {
+    public Array delete$p(Ctx ctx, boolean async, long index) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -429,7 +434,7 @@ public abstract class Array
      *     Array clear()
      * }</pre>
      */
-    public Array clear(Ctx ctx) {
+    public Array clear(Ctx ctx, boolean async) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -447,7 +452,7 @@ public abstract class Array
      *
      * @return a reified array
      */
-    public Array reify(Ctx ctx, Object mutability) {
+    public Array reify(Ctx ctx, boolean async, Object mutability) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -465,12 +470,12 @@ public abstract class Array
      *
      * @return the specified array slice
      */
-    public Array slice(Ctx ctx, RangeᐸInt64ᐳ range) {
+    public Array slice(Ctx ctx, boolean async, RangeᐸInt64ᐳ range) {
         if (range.$rangeTo128(ctx)) {
-            return slice$p(ctx, ctx.i0, ctx.i1);
+            return slice$p(ctx, false, ctx.i0, ctx.i1);
         } else {
-            long lower = range.effectiveLowerBound$get$p(ctx);
-            throw $oob(ctx, lower < 0 ? lower : range.effectiveUpperBound$get$p(ctx));
+            long lower = range.effectiveLowerBound$get$p(ctx, false);
+            throw $oob(ctx, lower < 0 ? lower : range.effectiveUpperBound$get$p(ctx, false));
         }
     }
 
@@ -483,7 +488,7 @@ public abstract class Array
      *
      * @return the specified array slice
      */
-    public Array slice$p(Ctx ctx, long n1, long n2) {
+    public Array slice$p(Ctx ctx, boolean async, long n1, long n2) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -494,7 +499,7 @@ public abstract class Array
      *     Mutability mutability.get()
      * }</pre>
      */
-    public Mutability mutability$get(Ctx ctx) {
+    public Mutability mutability$get(Ctx ctx, boolean async) {
         return switch ($mut()) {
             case 0  -> Mutability.Constant.$INSTANCE;
             case 1  -> Mutability.Persistent.$INSTANCE;
@@ -504,7 +509,7 @@ public abstract class Array
         };
     }
 
-    public abstract Iterator iterator(Ctx ctx);
+    public abstract Iterator iterator(Ctx ctx, boolean async);
 
     // ----- Array internals -----------------------------------------------------------------------
 
@@ -604,10 +609,10 @@ public abstract class Array
     /**
      * Throw a {@link ReadOnly} exception if this array is not "inPlace" writable.
      */
-    public void $ensureWriteable(Ctx ctx) {
+    public void $ensureWriteable(Ctx ctx, boolean async) {
         if ($mut() < $FIXED) {
             ReadOnly ro = new ReadOnly(ctx);
-            throw ro.$init(ctx, "");
+            throw ro.$init(ctx, false, "");
         }
     }
 
@@ -669,7 +674,7 @@ public abstract class Array
         if (index < 0) {
             throw Exception.$oob(ctx, "negative index: " + index);
         }
-        throw Exception.$oob(ctx, "index: " + index + " (size=" + size$get$p(ctx) + ")");
+        throw Exception.$oob(ctx, "index: " + index + " (size=" + size$get$p(ctx, false) + ")");
     }
 
     /**

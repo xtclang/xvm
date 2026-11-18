@@ -15,19 +15,19 @@ public interface HashCollector extends Object {
      * This is the native implementation of:
      *     Int compute();
      */
-    default Int64 compute(Ctx ctx) {
-        return Int64.$box(compute$p(ctx));
+    default Int64 compute(Ctx ctx, boolean async) {
+        return Int64.$box(compute$p(ctx, false));
     }
 
     /**
      * This is the primitive implementation of:
      *     Int compute();
      */
-    long compute$p(Ctx ctx);
+    long compute$p(Ctx ctx, boolean async);
 
     /**
      * This is the native implementation of:
      *     HashCollector reset();
      */
-    HashCollector reset(Ctx ctx);
+    HashCollector reset(Ctx ctx, boolean async);
 }

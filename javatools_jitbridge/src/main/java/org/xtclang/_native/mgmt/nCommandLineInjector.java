@@ -88,16 +88,16 @@ public class nCommandLineInjector {
 
         if (type.equals(stringType)) {
             // require a single String, return the last String element
-            return _ -> String.of(ctx, values.getLast());
+            return _ -> String.of(ctx, false, values.getLast());
         }
 
         TypeConstant stringArrayType = pool.ensureParameterizedTypeConstant(pool.typeList(), stringType);
         if (type.equals(stringArrayType)) {
             // require String[], return the whole List<String> as an array
             String[] allValues = values.stream()
-                    .map(s -> String.of(ctx, s))
+                    .map(s -> String.of(ctx, false, s))
                     .toArray(String[]::new);
-            return _ -> ArrayᐸObjectᐳ.$makeStringArray(ctx, allValues);
+            return _ -> ArrayᐸObjectᐳ.$makeStringArray(ctx, false, allValues);
         }
 
         if (type.isEnum()) {
@@ -136,13 +136,13 @@ public class nCommandLineInjector {
             var         clz         = typeSystem.loader.loadClass(enumClass);
             Field       field       = clz.getDeclaredField(Instance);
             Enumeration enumeration = (Enumeration) field.get(null);
-            Method      method      = clz.getDeclaredMethod("values$get", Ctx.class);
+            Method      method      = clz.getDeclaredMethod("values$get", Ctx.class, boolean.class);
 
-            values = (ArrayᐸObjectᐳ) method.invoke(enumeration, ctx);
+            values = (ArrayᐸObjectᐳ) method.invoke(enumeration, ctx, false);
 
-            for (long i = 0, c = values.size$get$p(ctx); i < c; i++) {
-                nEnum e = (nEnum) values.getElement$p(ctx, i);
-                if (e.name$get(ctx).toString().equals(value)) {
+            for (long i = 0, c = values.size$get$p(ctx, false); i < c; i++) {
+                nEnum e = (nEnum) values.getElement$p(ctx, false, i);
+                if (e.name$get(ctx, false).toString().equals(value)) {
                     return e;
                 }
             }
@@ -155,7 +155,7 @@ public class nCommandLineInjector {
         java.lang.String name = type.getSingleUnderlyingClass(false).getName();
         throw Exception.$illegalArg(ctx, "Injectable " + name + "=\""
                 + value + "\" does not match any names in enum " + className + " "
-                + values.toString(ctx));
+                + values.toString(ctx, false));
     }
 
     /**
@@ -168,16 +168,17 @@ public class nCommandLineInjector {
      * @return a new instance of the specified {@code Destringable} type
      */
     protected Object createDestringable(Ctx ctx, TypeConstant type, java.lang.String value) {
-        nType xvmType = nType.$ensureType(ctx, type);
-        Class clz     = xvmType.$xvmClass(ctx);
+        nType xvmType = nType.$ensureType(ctx, false, type);
+        Class clz     = xvmType.$xvmClass(ctx, false);
 
-// TODO class cXXX implements Destringable and does have a method "XXX $new(Ctx ctx, String s)" but
-//  does not have the "synthetic" method "Destringable $new(Ctx ctx, String s)" that Java
-//  requires to make an invoke interface call
-//        return ((Destringable) clz).$new(ctx, String.of(ctx, value));
+// TODO class cXXX implements Destringable and has "XXX $new(Ctx ctx, boolean async, String s)",
+//  but lacks the synthetic "Destringable $new(Ctx ctx, boolean async, String s)" required for
+//  an invokeinterface call
+//        return ((Destringable) clz).$new(ctx, false, String.of(ctx, false, value));
         try {
-            Method $new = clz.getClass().getDeclaredMethod("$new", Ctx.class, String.class);
-            return $new.invoke(clz, ctx, String.of(ctx, value));
+            Method $new = clz.getClass().getDeclaredMethod("$new", Ctx.class, boolean.class,
+                    String.class);
+            return $new.invoke(clz, ctx, false, String.of(ctx, false, value));
         } catch (ReflectiveOperationException e) {
             throw Exception.$xvmError(ctx, "Error creating Destringable instance", e);
         }

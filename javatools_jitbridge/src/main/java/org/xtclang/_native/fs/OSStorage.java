@@ -34,7 +34,7 @@ public class OSStorage extends nService {
     //  (long arm implementation)
     public OSStorage(Ctx ctx) {
         super(ctx);
-        fileStore = OSFileStore.$new$p(ctx, this, false);
+        fileStore = OSFileStore.$new$p(ctx, false, this, false);
     }
 
     /**
@@ -47,8 +47,9 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the property {@code @Abstract @RO Directory homeDir;}.
      */
-    public Directory homeDir$get(Ctx ctx) {
-        boolean found = find$p(ctx, fileStore, String.of(ctx, System.getProperty("user.home")));
+    public Directory homeDir$get(Ctx ctx, boolean async) {
+        boolean found = find$p(ctx, false, fileStore, String.of(ctx, false,
+                System.getProperty("user.home")));
         if (!found) {
             throw Exception.$illegalState(ctx, "Failed to find \"user.home\" directory");
         }
@@ -58,8 +59,9 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the property {@code @Abstract @RO Directory curDir;}.
      */
-    public Directory curDir$get(Ctx ctx) {
-        boolean found = find$p(ctx, fileStore, String.of(ctx, System.getProperty("user.dir")));
+    public Directory curDir$get(Ctx ctx, boolean async) {
+        boolean found = find$p(ctx, false, fileStore, String.of(ctx, false,
+                System.getProperty("user.dir")));
         if (!found) {
             throw Exception.$illegalState(ctx, "Failed to find \"user.dir\" directory");
         }
@@ -69,8 +71,9 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the property {@code @Abstract @RO Directory tmpDir;}.
      */
-    public Directory tmpDir$get(Ctx ctx) {
-        boolean found = find$p(ctx, fileStore, String.of(ctx, System.getProperty("java.io.tmpdir")));
+    public Directory tmpDir$get(Ctx ctx, boolean async) {
+        boolean found = find$p(ctx, false, fileStore, String.of(ctx, false,
+                System.getProperty("java.io.tmpdir")));
         if (!found) {
             throw Exception.$illegalState(ctx, "Failed to find \"java.io.tmpdir\" directory");
         }
@@ -81,7 +84,7 @@ public class OSStorage extends nService {
      * The native implementation of the method
      * {@code conditional Directory|File find(OSFileStore store, String pathString)}.
      */
-    public boolean find$p(Ctx ctx, OSFileStore store, String pathString) {
+    public boolean find$p(Ctx ctx, boolean async, OSFileStore store, String pathString) {
         Path path = OSFileNode.$toOsPath(ctx, pathString);
         if (Files.exists(path)) {
             ctx.o0 = OSFileNode.$nodeFor(ctx, store, path);
@@ -93,7 +96,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code String[] names(String pathString)}.
      */
-    public ArrayᐸObjectᐳ names(Ctx ctx, String pathString)      {
+    public ArrayᐸObjectᐳ names(Ctx ctx, boolean async, String pathString)      {
         Path               path = OSFileNode.$toOsPath(ctx, pathString);
         java.lang.String[] list = path.toFile().list();
 
@@ -101,15 +104,15 @@ public class OSStorage extends nService {
             list = new java.lang.String[0];
         }
         String[] names = Arrays.stream(list)
-                               .map(name -> String.of(ctx, name))
+                               .map(name -> String.of(ctx, false, name))
                                .toArray(String[]::new);
-        return ArrayᐸObjectᐳ.$makeStringArray(ctx, names);
+        return ArrayᐸObjectᐳ.$makeStringArray(ctx, false, names);
     }
 
     /**
      * The native implementation of the method {@code Boolean createDir(String pathString)}.
      */
-    public boolean  createDir$p(Ctx ctx, String pathString)  {
+    public boolean  createDir$p(Ctx ctx, boolean async, String pathString)  {
         java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
         if (Files.exists(path) && Files.isDirectory(path)) {
             return false;
@@ -120,7 +123,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code Boolean createFile(String pathString)}.
      */
-    public boolean createFile$p(Ctx ctx, String pathString) {
+    public boolean createFile$p(Ctx ctx, boolean async, String pathString) {
         java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
         if (Files.exists(path) && !Files.isDirectory(path)) {
             return false;
@@ -143,7 +146,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code Boolean delete(String pathString)}.
      */
-    public boolean delete$p(Ctx ctx, String pathString) {
+    public boolean delete$p(Ctx ctx, boolean async, String pathString) {
         Path path = OSFileNode.$toOsPath(ctx, pathString);
         if (Files.exists(path)) {
             return path.toFile().delete();
@@ -154,14 +157,14 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code void watch(String pathStringDir)}.
      */
-    void watch(Ctx ctx, String pathStringDir) {
+    void watch(Ctx ctx, boolean async, String pathStringDir) {
         throw new UnsupportedOperationException("TODO");
     }
 
     /**
      * The native implementation of the method {@code void unwatch(String pathStringDir)}.
      */
-    void unwatch(Ctx ctx, String pathStringDir) {
+    void unwatch(Ctx ctx, boolean async, String pathStringDir) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -169,7 +172,7 @@ public class OSStorage extends nService {
      * The native implementation of the method {@code static OSStorage instance()}.
      */
     @JitGenerated(OSStorageGenerator.class)
-    public static OSStorage instance(Ctx ctx) {
+    public static OSStorage instance(Ctx ctx, boolean async) {
         // the JIT will generate the following code for this method:
         // return new OSStorage(ctx);
         return null;

@@ -35,6 +35,7 @@ import org.xvm.javajit.builders.PackageBuilder;
 import org.xvm.javajit.builders.PureBuilder;
 import org.xvm.javajit.builders.PureVirtualChildBuilder;
 import org.xvm.javajit.builders.RefBuilder;
+import org.xvm.javajit.builders.ServiceProxyBuilder;
 import org.xvm.javajit.builders.StaticPropertyRefBuilder;
 import org.xvm.javajit.builders.VirtualChildBuilder;
 
@@ -320,7 +321,7 @@ public class TypeSystem {
                 case Impl:
                     classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
                     // fall through
-                case Pure, Enum:
+                case Pure, Enum, Proxy:
                     builder.build(classBuilder);
                     break;
 
@@ -413,7 +414,7 @@ public class TypeSystem {
                     ? ClassHierarchyInfo.ofInterface()
                     : ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
 
-            case Enum -> ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
+            case Enum, Proxy -> ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
 
             case Class -> ClassHierarchyInfo.ofClass(CD_Class);
 
@@ -433,16 +434,23 @@ public class TypeSystem {
         ConstantPool pool = pool();
         TypeConstant type = art.type();
 
+        switch (art.shape()) {
+        case Proxy:
+            return new ServiceProxyBuilder(this, art);
+
+        case Enum:
+            return new EnumerationBuilder(this, art);
+
+        case Pure:
+            return type.isVirtualChildClass()
+                    ? new PureVirtualChildBuilder(this, art)
+                    : new PureBuilder(this, art);
+        }
+
         if (art.type() instanceof PropertyClassTypeConstant propType) {
             return propType.getPropertyInfo().isConstant()
                     ? new StaticPropertyRefBuilder(this, art)
                     : new HostedPropertyRefBuilder(this, art);
-        }
-
-        if (art.shape() == ClassfileShape.Pure) {
-            return type.isVirtualChildClass()
-                    ? new PureVirtualChildBuilder(this, art)
-                    : new PureBuilder(this, art);
         }
 
         if (Builder.isEmbedded(type.getExplicitClassFormat())) {
@@ -463,10 +471,6 @@ public class TypeSystem {
             // it's definitely not Package.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
             return new PackageBuilder(this, art);
-        }
-
-        if (art.shape == ClassfileShape.Enum) {
-            return new EnumerationBuilder(this, art);
         }
 
         if (type.isEnum()) {
@@ -665,6 +669,13 @@ public class TypeSystem {
      */
     public static String pureInterface(String name) {
         return flavorClassName(name, PURE);
+    }
+
+    /**
+     * Build the service proxy name for an already-escaped implementation class name.
+     */
+    public static String serviceProxy(String name) {
+        return flavorClassName(name, PROXY);
     }
 
     private static String flavorClassName(String name, char flavor) {

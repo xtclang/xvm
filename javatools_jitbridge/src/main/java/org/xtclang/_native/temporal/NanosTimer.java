@@ -69,7 +69,7 @@ public class NanosTimer
      *
      * <p>{@code Int nanoTime();}
      */
-    public long nanoTime$get$p(Ctx ctx) {
+    public long nanoTime$get$p(Ctx ctx, boolean async) {
         return ctx.container.nanoTime();
     }
 
@@ -78,7 +78,7 @@ public class NanosTimer
      *
      * <p>{@code Int startTime();}
      */
-    public long startTime$get$p(Ctx ctx) {
+    public long startTime$get$p(Ctx ctx, boolean async) {
         return started;
     }
 
@@ -87,14 +87,14 @@ public class NanosTimer
      *
      * <p>{@code  Int previousTime();}
      */
-    public long previousElapsed$get$p(Ctx ctx) {
+    public long previousElapsed$get$p(Ctx ctx, boolean async) {
         return previousElapsed;
     }
 
     // ----- Timer implementation ------------------------------------------------------------------
 
     @Override
-    public synchronized Timer start(Ctx ctx) {
+    public synchronized Timer start(Ctx ctx, boolean async) {
         if (started != 0) {
             return this;
         }
@@ -108,7 +108,7 @@ public class NanosTimer
     }
 
     @Override
-    public synchronized Timer stop(Ctx ctx) {
+    public synchronized Timer stop(Ctx ctx, boolean async) {
         if (started == 0) {
             return this;
         }
@@ -123,7 +123,7 @@ public class NanosTimer
     }
 
     @Override
-    public synchronized Timer reset(Ctx ctx) {
+    public synchronized Timer reset(Ctx ctx, boolean async) {
         previousElapsed = 0L;
         if (started != 0) {
             started = ctx.container.nanoTime();
@@ -135,9 +135,9 @@ public class NanosTimer
     }
 
     @Override
-    public nFunction schedule$p(Ctx ctx, long delayLow, long delayHigh, nFunction function,
-                                boolean keepAlive, boolean dfltKeepAlive) {
-        long         nanos       = Int128.$div(ctx, delayLow, delayHigh, PICOS_PER_NANO, 0L);
+    public nFunction schedule$p(Ctx ctx, boolean async, long delayLow, long delayHigh,
+                                nFunction function, boolean keepAlive, boolean dfltKeepAlive) {
+        long         nanos       = Int128.$div(ctx, false, delayLow, delayHigh, PICOS_PER_NANO, 0L);
         boolean      daemon      = !dfltKeepAlive && keepAlive;
         long         now         = ctx.container.nanoTime();
         long         triggerTime = now + nanos;
@@ -200,8 +200,9 @@ public class NanosTimer
         private final long triggerTime;
 
         /**
-         * {@code true} if this is a daemon alarm.
+         * {@code true} if the alarm is not a "daemon process"; currently not plugged in.
          */
+        @SuppressWarnings("FieldCanBeLocal")
         private final boolean keepAlive;
 
         /**
@@ -305,7 +306,7 @@ public class NanosTimer
         /**
          * Cancel execution of this alarm.
          */
-        public void cancel(Ctx ignored) {
+        public void cancel(Ctx ignored, boolean async) {
             if (dead) {
                 return;
             }
@@ -341,7 +342,7 @@ public class NanosTimer
         protected nFunction createCancelFunction(Ctx ctx) {
             try {
                 TypeConstant fType  = ctx.xvm.ecstasyPool.typeFunction();
-                MethodType   mType  = MethodType.methodType(void.class, Ctx.class);
+                MethodType   mType  = MethodType.methodType(void.class, Ctx.class, boolean.class);
                 MethodHandle handle = MethodHandles.lookup()
                                             .findVirtual(nAlarmHolder.class, "cancel", mType)
                                             .bindTo(this);

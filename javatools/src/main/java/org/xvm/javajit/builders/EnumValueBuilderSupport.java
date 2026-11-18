@@ -5,7 +5,6 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.ClassStructure;
 
@@ -102,6 +101,7 @@ public interface EnumValueBuilderSupport {
      */
     default void appendEnumValueCLInit(CommonBuilder builder, CodeBuilder code) {
         code.aconst_null()
+            .iconst_0()
             .loadConstant(builder.classStruct.getName())
             .invokestatic(CD_String, "of", MD_StringOf)
             .putstatic(builder.art.CD(), EnumerationBuilderSupport.FIELD_NAMES, CD_String);
@@ -186,8 +186,8 @@ public interface EnumValueBuilderSupport {
 
     /**
      * Assemble the native Sequential next() or prev() methods:
-     * <p>boolean next$p(Ctx ctx)
-     * <p>boolean prev$p(Ctx ctx)
+     * <p>boolean next$p(Ctx ctx, boolean async)
+     * <p>boolean prev$p(Ctx ctx, boolean async)
      *
      * <p>These methods override the corresponding abstract next() and prev() methods generated in the
      * {@link EnumBuilder} for this enum.

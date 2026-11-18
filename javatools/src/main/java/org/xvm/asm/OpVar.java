@@ -26,10 +26,13 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
+import static java.lang.constant.ConstantDescs.INIT_NAME;
+import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nTuple;
 import static org.xvm.javajit.Builder.MD_xvmVoid;
+import static org.xvm.javajit.Builder.md;
 import static org.xvm.javajit.Builder.mdx;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -224,7 +227,7 @@ public abstract class OpVar
     public void computeTypes(BuildContext bctx) {
         if (isTypeAware()) {
             TypeConstant typeVar = switch (getOpCode()) {
-                case OP_VAR, OP_VAR_N ->
+                case OP_VAR, OP_VAR_P, OP_VAR_N ->
                     new UnassignedTypeConstant(bctx.getTypeConstant(m_nType));
 
                 case OP_VAR_I, OP_VAR_IN, OP_VAR_S, OP_VAR_SN, OP_VAR_T, OP_VAR_TN ->
@@ -302,7 +305,7 @@ public abstract class OpVar
         // new nTuple(ctx, type, values)
         code.new_(CD_nTuple)
             .dup();
-        bctx.loadCtx(code);
+        bctx.loadCtxOnly(code);
         bctx.loadTypeConstant(code, type);
         code.loadConstant(anArgValue.length)
             .anewarray(CD_nObject);
@@ -319,7 +322,8 @@ public abstract class OpVar
             }
             code.aastore();
         }
-        code.invokespecial(CD_nTuple, "<init>", mdx(CD_void, CD_TypeConstant, CD_nObject.arrayType()));
+        code.invokespecial(CD_nTuple, INIT_NAME,
+                md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
         reg.store(bctx, code, type);
         return -1;
     }

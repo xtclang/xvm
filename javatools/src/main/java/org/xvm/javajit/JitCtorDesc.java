@@ -15,10 +15,10 @@ import static org.xvm.javajit.Builder.CD_nObject;
  *
  * According to the step 6 of the "CommonBuilder.assembleNew" algorithm, the constructor signature
  * is:
- *  {@code construct$17(ctx, cctx, thi$, x, y, z)}, where "cctx" arg is optional,
+ *  {@code construct$17(ctx, async, cctx, thi$, x, y, z)}, where "cctx" arg is optional,
  *
- * We also use this to create the MethodTypeDesc for {@code new$17(ctx, type, outer, x, y, z)}
- * function, where "type" and "outer" are optional.
+ * We also use this to create the MethodTypeDesc for the
+ *  {@code new$17(ctx, async, type, outer, x, y, z)} function, where "type" and "outer" are optional.
  */
 public class JitCtorDesc
         extends JitMethodDesc {

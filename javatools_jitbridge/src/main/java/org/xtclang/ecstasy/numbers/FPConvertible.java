@@ -39,14 +39,14 @@ public interface FPConvertible {
      *
      * @return this FPConvertible value converted to an Int8 value inside a Java {@code int}
      */
-    default int toDec32$p(Ctx ctx) {
+    default int toDec32$p(Ctx ctx, boolean async) {
         if ($isInfinite()) {
             return $isSigned() ? Dec32.$NEG_INFINITY : Dec32.$POS_INFINITY;
         }
         if ($isNaN()) {
             return Dec32.$NaN;
         }
-        return Dec32.$toIntBits(ctx, $toBigDecimal());
+        return Dec32.$toIntBits(ctx, false, $toBigDecimal());
     }
 
     /**
@@ -59,14 +59,14 @@ public interface FPConvertible {
      *
      * @return this FPConvertible value converted to an Int8 value inside a Java {@code int}
      */
-    default long toDec64$p(Ctx ctx) {
+    default long toDec64$p(Ctx ctx, boolean async) {
         if ($isInfinite()) {
             return $isSigned() ? Dec64.$NEG_INFINITY : Dec64.$POS_INFINITY;
         }
         if ($isNaN()) {
             return Dec64.$NaN;
         }
-        return Dec64.$toLongBits(ctx, $toBigDecimal());
+        return Dec64.$toLongBits(ctx, false, $toBigDecimal());
     }
 
     /**
@@ -82,7 +82,7 @@ public interface FPConvertible {
      *
      * @return this FPConvertible value converted to an Int8 value inside a Java {@code int}
      */
-    default long toDec128$p(Ctx ctx) {
+    default long toDec128$p(Ctx ctx, boolean async) {
         if ($isInfinite()) {
             ctx.i0 = $isSigned() ? Dec128.$NEG_INFINITY_HIGH : Dec128.$POS_INFINITY_HIGH;
             return 0L;
@@ -91,7 +91,7 @@ public interface FPConvertible {
             ctx.i0 = Dec128.$NaN_HIGH;
             return 0L;
         }
-        return Dec128.$toLongBits(ctx, $toBigDecimal());
+        return Dec128.$toLongBits(ctx, false, $toBigDecimal());
     }
 
     /**
@@ -104,7 +104,7 @@ public interface FPConvertible {
      *
      * @return this FPConvertible value converted to a Float32 value inside a Java {@code float}
      */
-    default float toFloat32$p(Ctx ctx) {
+    default float toFloat32$p(Ctx ctx, boolean async) {
         return $toBigDecimal().floatValue();
     }
 
@@ -118,7 +118,7 @@ public interface FPConvertible {
      *
      * @return this FPConvertible value converted to an Float64 value inside a Java {@code double}
      */
-    default double toFloat64$p(Ctx ctx) {
+    default double toFloat64$p(Ctx ctx, boolean async) {
         return $toBigDecimal().doubleValue();
     }
 

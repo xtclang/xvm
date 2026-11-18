@@ -23,11 +23,11 @@ public class Char extends nConst {
     /**
      * Native implementation of: "construct(UInt32 codepoint)".
      */
-    public static Char $new$2$p(Ctx ctx, int codepoint) {
+    public static Char $new$2$p(Ctx ctx, boolean async, int codepoint) {
         return $box(codepoint);
     }
 
-    public static void construct$2$p(Ctx ctx, Char thi$, int codepoint) {
+    public static void construct$2$p(Ctx ctx, boolean async, Char thi$, int codepoint) {
         thi$.codepoint = codepoint;
     }
 
@@ -62,11 +62,11 @@ public class Char extends nConst {
         return ch;
     }
 
-    public static int codepoint$get$p(int thi$, Ctx ctx) {
+    public static int codepoint$get$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
-    public UInt32 codepoint$get(Ctx ctx) {
+    public UInt32 codepoint$get(Ctx ctx, boolean async) {
         return UInt32.$box(codepoint);
     }
 
@@ -79,11 +79,11 @@ public class Char extends nConst {
      * @throws nException wrapping an {@link OutOfBounds} if the result is not a valid Unicode
      *         codepoint
      */
-    public static int add$p(int this$, Ctx ctx, long n) {
+    public static int add$p(int this$, Ctx ctx, boolean async, long n) {
         long cp = this$ + n;
         if (cp < 0 || cp > 0x10FFFF) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Adding " + n + " to character code-point "
+            throw oob.$init(ctx, false, "Adding " + n + " to character code-point "
                     + this$ + " would exceed the Unicode range");
         }
         return (int) cp;
@@ -98,41 +98,43 @@ public class Char extends nConst {
      * @throws nException wrapping an {@link OutOfBounds} if the result is not a valid Unicode
      *         codepoint
      */
-    public static int sub$p(int this$, Ctx ctx, long n) {
+    public static int sub$p(int this$, Ctx ctx, boolean async, long n) {
         long cp = (long) this$ - n;
         if (cp < 0 || cp > 0x10FFFF) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Subtracting " + n + " from character code-point "
+            throw oob.$init(ctx, false, "Subtracting " + n + " from character code-point "
                     + this$ + " would be below the Unicode range");
         }
         return (int) cp;
     }
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(null, toString());
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(null, false, toString());
     }
 
-    public static String toString$p(int thi$, Ctx ctx) {
-        return String.of(ctx, java.lang.Character.toString(thi$));
+    public static String toString$p(int thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, java.lang.Character.toString(thi$));
     }
 
-    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+    public static long estimateStringLength$p(int thi$, Ctx ctx, boolean async) {
         return 1;
     }
 
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        return appender.add$p(ctx, codepoint);
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
+        return appender.add$p(ctx, false, codepoint);
     }
 
-    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
-        return appender.add$p(ctx, thi$);
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, boolean async,
+            AppenderᐸCharᐳ appender) {
+        return appender.add$p(ctx, false, thi$);
     }
 
     /**
      * Native implementation of optimized "UInt64 toUnit64()"
      */
-    public static long toInt64$p(int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public static long toInt64$p(int thi$, Ctx ctx, boolean async, boolean checkBounds,
+            boolean dfltCheckBounds) {
         return thi$;
     }
 
@@ -143,69 +145,69 @@ public class Char extends nConst {
 
     // ----- delegated IntConvertible methods -----------------------------------------------------
 
-    public static long toInt$d$p(int thi$, Ctx ctx) {
+    public static long toInt$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
-    public static int toInt8$d$p(int thi$, Ctx ctx) {
+    public static int toInt8$d$p(int thi$, Ctx ctx, boolean async) {
         return (byte) thi$;
     }
 
-    public static int toInt16$d$p(int thi$, Ctx ctx) {
+    public static int toInt16$d$p(int thi$, Ctx ctx, boolean async) {
         return (short) thi$;
     }
 
-    public static int toInt32$d$p(int thi$, Ctx ctx) {
+    public static int toInt32$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
-    public static long toInt64$d$p(int thi$, Ctx ctx) {
+    public static long toInt64$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
-    public static long toInt128$d$p(int thi$, Ctx ctx) {
+    public static long toInt128$d$p(int thi$, Ctx ctx, boolean async) {
         ctx.i0 = 0;
         return thi$;
     }
 
-    public static IntN toIntN$d$p(int thi$, Ctx ctx) {
+    public static IntN toIntN$d$p(int thi$, Ctx ctx, boolean async) {
         return IntN.$box(thi$);
     }
 
-    public static long toUInt$d$p(int thi$, Ctx ctx) {
+    public static long toUInt$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
-    public static int toUInt8$d$p(int thi$, Ctx ctx) {
+    public static int toUInt8$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$ & 0xFF;
     }
 
-    public static int toUInt16$d$p(int thi$, Ctx ctx) {
+    public static int toUInt16$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$ & 0xFFFF;
     }
 
-    public static int toUInt32$d$p(int thi$, Ctx ctx) {
+    public static int toUInt32$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
-    public static long toUInt64$d$p(int thi$, Ctx ctx) {
+    public static long toUInt64$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
-    public static long toUInt128$d$p(int thi$, Ctx ctx) {
+    public static long toUInt128$d$p(int thi$, Ctx ctx, boolean async) {
         ctx.i0 = 0;
         return thi$;
     }
 
-    public static UIntN toUIntN$d$p(int thi$, Ctx ctx) {
+    public static UIntN toUIntN$d$p(int thi$, Ctx ctx, boolean async) {
         return UIntN.$box(thi$);
     }
 
-    public static IntLiteral toIntLiteral$d$p(int thi$, Ctx ctx) {
+    public static IntLiteral toIntLiteral$d$p(int thi$, Ctx ctx, boolean async) {
         return null;
     }
 
-    public static int toNibble$d$p(int thi$, Ctx ctx) {
+    public static int toNibble$d$p(int thi$, Ctx ctx, boolean async) {
         return thi$ & 0xF;
     }
 }

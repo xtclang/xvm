@@ -50,7 +50,8 @@ public class nRef
      * @param isVar         true for a Var; false for a Ref
      * @param getter        the property getter
      * @param setter        the property setter for a Var, or null for a Ref
-     * @param assigned      the bound (Ctx)boolean storage check, or null if always assigned
+     * @param assigned      the bound (Ctx, boolean)boolean storage check, or null if always
+     *                      assigned
      */
     public nRef(Ctx ctx, TypeConstant referentType, boolean isVar,
                 MethodHandle getter, MethodHandle setter, MethodHandle assigned) {
@@ -74,27 +75,27 @@ public class nRef
     public final MethodHandle $setter;
     public final MethodHandle $assigned; // if null, the value is known to be assigned
 
-    public nType Referent$get(Ctx ctx) {
-        return nType.$ensureType(ctx, $referentType);
+    public nType Referent$get(Ctx ctx, boolean async) {
+        return nType.$ensureType(ctx, false, $referentType);
     }
 
     /**
      * Native implementation of: {@code Type<Referent> type.get()}.
      */
-    public nType type$get(Ctx ctx) {
-        return nType.$ensureType(ctx, ((nObject) get(ctx)).$xvmType(ctx));
+    public nType type$get(Ctx ctx, boolean async) {
+        return nType.$ensureType(ctx, false, ((nObject) get(ctx, false)).$xvmType(ctx, false));
     }
 
     /**
      * The native implementation of {@code <Masked> Masked maskAs(Type<Masked> maskType);}.
      */
-    public Object maskAs(Ctx ctx, nType type, nType maskType) {
+    public Object maskAs(Ctx ctx, boolean async, nType type, nType maskType) {
         // TODO this need to be implemented properly
         return $referent;
     }
 
     @Override
-    public boolean assigned$get$p(Ctx ctx) {
+    public boolean assigned$get$p(Ctx ctx, boolean async) {
         if ($getter == null) {
             return $referent != null;
         }
@@ -104,7 +105,7 @@ public class nRef
         }
 
         try {
-            return (boolean) $assigned.invokeExact(ctx);
+            return (boolean) $assigned.invokeExact(ctx, false);
         } catch (nException nEx) {
             throw nEx;
         } catch (Throwable e) {
@@ -113,21 +114,21 @@ public class nRef
     }
 
     @Override
-    public boolean peek$p(Ctx ctx) {
+    public boolean peek$p(Ctx ctx, boolean async) {
         // annotation interfaces can redeclare the inherited default method as abstract;
         // provide a concrete class method for their implementations
-        return Var.super.peek$p(ctx);
+        return Var.super.peek$p(ctx, false);
     }
 
     @Override
-    public Object get(Ctx ctx) {
+    public Object get(Ctx ctx, boolean async) {
         if ($getter == null) {
             // value-backed Ref
             return $referent;
         }
 
         try {
-            return (Object) $getter.invoke(ctx);
+            return (Object) $getter.invoke(ctx, false);
         } catch (nException nEx) {
             throw nEx;
         } catch (Throwable e) {
@@ -136,7 +137,7 @@ public class nRef
     }
 
     @Override
-    public void set(Ctx ctx, Object value) {
+    public void set(Ctx ctx, boolean async, Object value) {
         if (!$isVar) {
             throw Exception.$ro(ctx, "Ref is read-only");
         }
@@ -149,7 +150,7 @@ public class nRef
 
         // property-backed Var
         try {
-            $setter.invoke(ctx, value);
+            $setter.invoke(ctx, false, value);
         } catch (nException nEx) {
             throw nEx;
         } catch (Throwable e) {
@@ -158,7 +159,7 @@ public class nRef
     }
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return $isVar
                 ? ctx.pool().ensureVarType($referentType)
                 : ctx.pool().ensureRefType($referentType);
@@ -175,11 +176,12 @@ public class nRef
      * <pre>{@code
      *     static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
      * }</pre>
-     * Used by {@link Ref#equals$p(Ctx, nType, Ref, Ref)} for native and generated references.
+     * Used by {@link Ref#equals$p(Ctx, boolean, nType, Ref, Ref)} for native and generated
+     * references.
      */
-    public static boolean equals$p(Ctx ctx, nType CompileType, Ref ref1, Ref ref2) {
-        nObject value1 = (nObject) ref1.get(ctx);
-        nObject value2 = (nObject) ref2.get(ctx);
+    public static boolean equals$p(Ctx ctx, boolean async, nType CompileType, Ref ref1, Ref ref2) {
+        nObject value1 = (nObject) ref1.get(ctx, false);
+        nObject value2 = (nObject) ref2.get(ctx, false);
         if (value1 == value2) {
             return true;
         }
@@ -187,8 +189,8 @@ public class nRef
             return false;
         }
 
-        TypeConstant type1 = value1.$xvmType(ctx);
-        if (type1.isJitPrimitive() && value2.$xvmType(ctx).equals(type1)) {
+        TypeConstant type1 = value1.$xvmType(ctx, false);
+        if (type1.isJitPrimitive() && value2.$xvmType(ctx, false).equals(type1)) {
             if (value1 instanceof org.xtclang.ecstasy.numbers.Number) {
                 return switch (value1) {
                     case Bit    n1 -> n1.$value == ((Bit)    value2).$value;

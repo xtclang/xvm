@@ -51,7 +51,7 @@ public class OSFile
     /**
      * The primitive property getter for {@code Int size.get()}.
      */
-    public long size$get$p(Ctx ctx) {
+    public long size$get$p(Ctx ctx, boolean async) {
         try {
             java.nio.file.Path path = $getJavaPath(ctx);
             if (Files.exists(path)) {
@@ -68,14 +68,14 @@ public class OSFile
     /**
      * The native property getter for {@code immutable Byte[] contents;}.
      */
-    public ArrayᐸUInt8ᐳ contents$get(Ctx ctx) {
+    public ArrayᐸUInt8ᐳ contents$get(Ctx ctx, boolean async) {
         java.nio.file.Path path = $getJavaPath(ctx);
         try {
             java.io.File file = path.toFile();
             if (!file.exists()) {
-                throw $fileNotFound(ctx, path$get(ctx));
+                throw $fileNotFound(ctx, path$get(ctx, false));
             }
-            return ArrayᐸUInt8ᐳ.$makeArray(ctx, Handy.readFileBytes(file));
+            return ArrayᐸUInt8ᐳ.$makeArray(ctx, false, Handy.readFileBytes(file));
         } catch (IOException e) {
             throw $io(ctx, e);
         }
@@ -84,14 +84,14 @@ public class OSFile
     /**
      * The native property setter for {@code immutable Byte[] contents;}.
      */
-    public void contents$set(Ctx ctx, ArrayᐸUInt8ᐳ data) {
+    public void contents$set(Ctx ctx, boolean async, ArrayᐸUInt8ᐳ data) {
         java.nio.file.Path path = $getJavaPath(ctx);
         OpenOption[]       opts = new OpenOption[]{StandardOpenOption.TRUNCATE_EXISTING,
                                                    StandardOpenOption.WRITE,
                                                    StandardOpenOption.CREATE};
 
         try (OutputStream out = Files.newOutputStream(path, opts)) {
-            long size = data.size$get$p(ctx);
+            long size = data.size$get$p(ctx, false);
             for (int i = 0; i < size; i++) {
                 out.write(data.$getByte(i));
             }
@@ -103,16 +103,16 @@ public class OSFile
     /**
      * The native implementation of {@code immutable Byte[] readImpl(Range<Int> range)}.
      */
-    public ArrayᐸUInt8ᐳ readImpl(Ctx ctx, RangeᐸInt64ᐳ range) {
+    public ArrayᐸUInt8ᐳ readImpl(Ctx ctx, boolean async, RangeᐸInt64ᐳ range) {
         java.nio.file.Path path = $getJavaPath(ctx);
         java.io.File       file = path.toFile();
 
         if (!file.exists() || !file.isFile()) {
-            throw $fileNotFound(ctx, path$get(ctx));
+            throw $fileNotFound(ctx, path$get(ctx, false));
         }
 
-        long start = range.effectiveLowerBound$get$p(ctx);
-        long end   = range.effectiveUpperBound$get$p(ctx) + 1L;
+        long start = range.effectiveLowerBound$get$p(ctx, false);
+        long end   = range.effectiveUpperBound$get$p(ctx, false) + 1L;
         long size  = file.length();
 
         if (start < 0L) {
@@ -131,7 +131,7 @@ public class OSFile
             int bytesRead = channel.read(buffer, start);
             // TODO if bytesRead is not the expected size should we throw OOB as presumably the
             //  file length changed after the length check?
-            return ArrayᐸUInt8ᐳ.$makeArray(ctx, bytesRead, buffer);
+            return ArrayᐸUInt8ᐳ.$makeArray(ctx, false, bytesRead, buffer);
         } catch (Exception e) {
             throw $io(ctx, e);
         }
@@ -140,12 +140,12 @@ public class OSFile
     /**
      * The primitive implementation of {@code void truncateImpl(Int newSize)}.
      */
-    public void truncateImpl$p(Ctx ctx, long newSize) {
+    public void truncateImpl$p(Ctx ctx, boolean async, long newSize) {
         java.nio.file.Path path = $getJavaPath(ctx);
         java.io.File       file = path.toFile();
 
         if (!file.exists() || !file.isFile()) {
-            throw $fileNotFound(ctx, path$get(ctx));
+            throw $fileNotFound(ctx, path$get(ctx, false));
         }
 
         long length = file.length();
@@ -174,12 +174,12 @@ public class OSFile
     /**
      * The native implementation of {@code void appendBytes(Byte[] contents)}.
      */
-    public void appendBytes(Ctx ctx, ArrayᐸUInt8ᐳ contents) {
+    public void appendBytes(Ctx ctx, boolean async, ArrayᐸUInt8ᐳ contents) {
         java.nio.file.Path path = $getJavaPath(ctx);
         try (OutputStream out = new FileOutputStream(path.toFile(), /*append*/ true)) {
-            long size = contents.size$get$p(ctx);
+            long size = contents.size$get$p(ctx, false);
             for (int i = 0; i < size; i++) {
-                out.write(contents.getElement$pi(ctx, i));
+                out.write(contents.getElement$pi(ctx, false, i));
             }
         } catch (IOException e) {
             throw $io(ctx, e);
@@ -189,7 +189,7 @@ public class OSFile
     /**
      * The native implementation of {@code void appendFile(OSFileNode file)}.
      */
-    public void appendFile(Ctx ctx, OSFileNode file) {
+    public void appendFile(Ctx ctx, boolean async, OSFileNode file) {
         java.nio.file.Path srcPath  = file.$getJavaPath(ctx);
         java.nio.file.Path destPath = $getJavaPath(ctx);
         try (FileInputStream in  = new FileInputStream(srcPath.toFile());
@@ -208,7 +208,8 @@ public class OSFile
      * The native implementation of
      * {@code RawOSFileChannel openImpl(ReadOption read, WriteOption[] write)}.
      */
-    public RawOSFileChannel openImpl(Ctx ctx, File.ReadOption read, ArrayᐸObjectᐳ write) {
+    public RawOSFileChannel openImpl(Ctx ctx, boolean async, File.ReadOption read,
+            ArrayᐸObjectᐳ write) {
         if (read == null) {
             read = ReadOption.Read.$INSTANCE;
         }
@@ -224,31 +225,31 @@ public class OSFile
             } else if (readOrdinal == ReadOption.Read.$INSTANCE.$ordinal) {
                 openOpts = $READ_WRITE;
             } else if (readOrdinal == ReadOption.Exclusive.$INSTANCE.$ordinal) {
-                throw $unsupported(ctx, "ReadOption.Exclusive");
+                throw $unsupported(ctx, false, "ReadOption.Exclusive");
             }
         } else {
-            if (write.empty$get$p(ctx)) {
+            if (write.empty$get$p(ctx, false)) {
                 if (readOrdinal == ReadOption.Read.$INSTANCE.$ordinal) {
                     openOpts = $READ_ONLY;
                 } else if (readOrdinal == ReadOption.Exclusive.$INSTANCE.$ordinal) {
-                    throw $unsupported(ctx, "ReadOption.Exclusive");
+                    throw $unsupported(ctx, false, "ReadOption.Exclusive");
                 }
             } else {
                 openOpts = new HashSet<>();
                 if (readOrdinal == ReadOption.Read.$INSTANCE.$ordinal) {
                     openOpts.add(StandardOpenOption.READ);
                 } else if (readOrdinal == ReadOption.Exclusive.$INSTANCE.$ordinal) {
-                    throw $unsupported(ctx, "ReadOption.Exclusive");
+                    throw $unsupported(ctx, false, "ReadOption.Exclusive");
                 }
 
                 openOpts.add(StandardOpenOption.WRITE);
 
-                long count = write.size$get$p(ctx);
+                long count = write.size$get$p(ctx, false);
                 for (int i = 0; i < count; i++) {
-                    WriteOption writeOpt = (WriteOption) write.getElement$p(ctx, i);
+                    WriteOption writeOpt = (WriteOption) write.getElement$p(ctx, false, i);
                     OpenOption  openOpt  = writeOpt.$opt;
                     if (openOpt == null) {
-                        throw $unsupported(ctx, "WriteOption." + writeOpt.$name);
+                        throw $unsupported(ctx, false, "WriteOption." + writeOpt.$name);
                     }
                     openOpts.add(openOpt);
                 }

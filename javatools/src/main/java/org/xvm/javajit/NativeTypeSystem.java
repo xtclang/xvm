@@ -43,6 +43,7 @@ import org.xvm.javajit.builders.AugmentingEnumBuilder;
 import org.xvm.javajit.builders.AugmentingEnumValueBuilder;
 import org.xvm.javajit.builders.AugmentingEnumerationBuilder;
 import org.xvm.javajit.builders.NumberBuilder;
+import org.xvm.javajit.builders.PureBuilder;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
@@ -231,6 +232,18 @@ public class NativeTypeSystem
         Artifact         art    = new Artifact(type, struct, ClassfileShape.Impl, className);
         ConstantPool     pool   = pool();
 
+        ClassFile classFile = ClassFile.of(
+                ClassFile.ClassHierarchyResolverOption.of(createClassHierarchyResolver()),
+                ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
+                ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
+                ClassFile.DeadLabelsOption.DROP_DEAD_LABELS);
+
+        if (Builder.isEmbedded(struct.getFormat())) {
+            // annotation and mixin interfaces expose just their contracts as interfaces;
+            // their state and implementations live on the classes incorporating them
+            return classFile.build(art.CD(), new PureBuilder(this, art)::build);
+        }
+
         AugmentingBuilder builder;
         if (type.isArray()) {
             builder = new ArrayBuilder(this, art, model);
@@ -246,11 +259,6 @@ public class NativeTypeSystem
             builder = new AugmentingBuilder(this, art, model);
         }
 
-        ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption.of(createClassHierarchyResolver()),
-                ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
-                ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
-                ClassFile.DeadLabelsOption.DROP_DEAD_LABELS);
         return classFile.transformClass(model, (classBuilder, element) -> {
             if (element instanceof Interfaces) {
                 // don't copy an interface list; it would prevent the builder to add any;

@@ -18,15 +18,15 @@ public abstract class Nullable
 
         public static final Null $INSTANCE = new Null();
 
-        public static final String $name = String.of(null, "Null");
+        public static final String $name = String.of(null, false, "Null");
 
         @Override
-        public String name$get(Ctx ctx) {
+        public String name$get(Ctx ctx, boolean async) {
             return $name;
         }
 
         @Override
-        public long ordinal$get$p(Ctx ctx) {
+        public long ordinal$get$p(Ctx ctx, boolean async) {
             return 0;
         }
     }

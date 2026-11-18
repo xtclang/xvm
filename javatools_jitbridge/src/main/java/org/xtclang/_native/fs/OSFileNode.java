@@ -52,7 +52,7 @@ public class OSFileNode
      * The native property getter for {@code OSFileStore store;}
      */
     @Override
-    public OSFileStore store$get(Ctx ctx) {
+    public OSFileStore store$get(Ctx ctx, boolean async) {
         return store;
     }
 
@@ -60,7 +60,7 @@ public class OSFileNode
      * The native property getter for {@code @Lazy Path path.calc()}
      */
     @JitFromNatural
-    public Path path$get(Ctx ctx) {
+    public Path path$get(Ctx ctx, boolean async) {
         // the JIT will generate the code for this method from the natural code in
         // _native.fs.OSFileNode.x
         return null;
@@ -69,7 +69,7 @@ public class OSFileNode
     /**
      * The primitive property getter for {@code Boolean exists.get()}.
      */
-    public boolean exists$get$p(Ctx ctx) {
+    public boolean exists$get$p(Ctx ctx, boolean async) {
         return $getJavaPath(ctx).toFile().exists();
     }
 
@@ -77,30 +77,30 @@ public class OSFileNode
      * The primitive property getter for {@code Int size.get()}.
      */
     @Override
-    public long size$get$p(Ctx ctx) {
+    public long size$get$p(Ctx ctx, boolean async) {
         return 0L;
     }
 
     /**
      * The primitive property getter for {@code Boolean readable.get()}.
      */
-    public boolean readable$get$p(Ctx ctx) {
+    public boolean readable$get$p(Ctx ctx, boolean async) {
         return $getJavaPath(ctx).toFile().canRead();
     }
 
     /**
      * The primitive property getter for {@code Boolean writable.get()}.
      */
-    public boolean writable$get$p(Ctx ctx) {
+    public boolean writable$get$p(Ctx ctx, boolean async) {
         return $getJavaPath(ctx).toFile().canWrite();
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
+    public long estimateStringLength$p(Ctx ctx, boolean async) {
         return $javaPath.toString().length();
     }
 
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        return pathString$get(ctx).appendTo(ctx, appender);
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
+        return pathString$get(ctx, false).appendTo(ctx, false, appender);
     }
 
     // ----- OSFileNode API ------------------------------------------------------------------------
@@ -108,14 +108,14 @@ public class OSFileNode
     /**
      * The native property getter for {@code String pathString.get()}.
      */
-    public String pathString$get(Ctx ctx) {
-        return String.of(ctx, $javaPath.toString());
+    public String pathString$get(Ctx ctx, boolean async) {
+        return String.of(ctx, false, $javaPath.toString());
     }
 
     /**
      * The primitive property getter for {@code private Int createdMillis.get()}.
      */
-    public long createdMillis$get$p(Ctx ctx) {
+    public long createdMillis$get$p(Ctx ctx, boolean async) {
         try {
             java.nio.file.Path path = $getJavaPath(ctx);
             if (Files.exists(path)) {
@@ -132,7 +132,7 @@ public class OSFileNode
     /**
      * The primitive property getter for {@code private Int accessedMillis.get()}.
      */
-    public long accessedMillis$get$p(Ctx ctx) {
+    public long accessedMillis$get$p(Ctx ctx, boolean async) {
         try {
             java.nio.file.Path path = $getJavaPath(ctx);
             if (Files.exists(path)) {
@@ -149,7 +149,7 @@ public class OSFileNode
     /**
      * The primitive property getter for {@code private Int modifiedMillis.get()}.
      */
-    public long modifiedMillis$get$p(Ctx ctx) {
+    public long modifiedMillis$get$p(Ctx ctx, boolean async) {
         try {
             java.nio.file.Path path = $getJavaPath(ctx);
             if (Files.exists(path)) {
@@ -171,7 +171,7 @@ public class OSFileNode
     protected java.nio.file.Path $getJavaPath(Ctx ctx) {
         java.nio.file.Path path = $javaPath;
         if (path == null) {
-            path = $javaPath = $toOsPath(ctx, pathString$get(ctx));
+            path = $javaPath = $toOsPath(ctx, pathString$get(ctx, false));
         }
         return path;
     }

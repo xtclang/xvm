@@ -7,6 +7,6 @@ import org.xvm.javajit.Ctx;
  */
 public interface AppenderᐸCharᐳ extends Appender {
 
-    AppenderᐸCharᐳ add$p(Ctx ctx, int c);
+    AppenderᐸCharᐳ add$p(Ctx ctx, boolean async, int c);
 
 }

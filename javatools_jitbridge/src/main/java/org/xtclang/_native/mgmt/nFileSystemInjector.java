@@ -24,19 +24,19 @@ public class nFileSystemInjector {
     }
 
     public Directory ensureRootDir(Object ignored) {
-        return ensureStorage().fileStore.root$get(xvm.getCtx());
+        return ensureStorage().fileStore.root$get(xvm.getCtx(), false);
     }
 
     public Directory ensureHomeDir(Object opts) {
-        return ensureStorage().homeDir$get(xvm.getCtx());
+        return ensureStorage().homeDir$get(xvm.getCtx(), false);
     }
 
     public Directory ensureCurDir(Object opts) {
-        return ensureStorage().curDir$get(xvm.getCtx());
+        return ensureStorage().curDir$get(xvm.getCtx(), false);
     }
 
     public Directory ensureTmpDir(Object opts) {
-        return ensureStorage().tmpDir$get(xvm.getCtx());
+        return ensureStorage().tmpDir$get(xvm.getCtx(), false);
     }
 
     protected OSStorage ensureStorage() {
@@ -45,7 +45,7 @@ public class nFileSystemInjector {
             synchronized (this) {
                 osStorage = this.osStorage;
                 if (osStorage == null) {
-                    osStorage = this.osStorage = OSStorage.instance(xvm.getCtx());
+                    osStorage = this.osStorage = OSStorage.instance(xvm.getCtx(), false);
                 }
             }
         }

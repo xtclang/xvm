@@ -97,7 +97,7 @@ public class RefBuilder extends CommonBuilder {
             .invokevirtual(CD_TypeConstant, "getParamType", md(CD_TypeConstant, CD_int));
         loadBoolean(code, thisId.equals(pool().clzVar()));
         code.invokespecial(CD_nRef, INIT_NAME,
-                mdx(CD_void, CD_nObject, CD_TypeConstant, CD_boolean));
+                md(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
     }
 
     @Override
@@ -123,11 +123,11 @@ public class RefBuilder extends CommonBuilder {
                 int thisSlot = code.allocateLocal(TypeKind.REFERENCE);
                 code.new_(art.CD()).dup()
                     .aload(ctxSlot)
-                    .aload(code.parameterSlot(1))
+                    .aload(code.parameterSlot(2)) // Ref/Var type (ignore "async" at slot 1)
                     .invokespecial(art.CD(), INIT_NAME, MD_xvmInitType)
                     .astore(thisSlot);
                 annotated.invokeAnnotationConstructors(code, variant.constructors(),
-                        ctxSlot, -1, thisSlot, 2);
+                        ctxSlot, -1, thisSlot, 3);
                 code.aload(thisSlot).areturn();
             });
         }

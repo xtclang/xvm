@@ -12,7 +12,7 @@ import java.lang.constant.ClassDesc;
  * implementation D_C1 extends B_C1, not D_C0. A detached body with an interface receiver permits
  * D.C0's body to execute on the differently named child D.C1:
  *
- *     static R s$foo(D_iC0 thi$, Ctx ctx, ...)
+ *     static R s$foo(D_iC0 thi$, Ctx ctx, boolean async, ...)
  *
  * <p>A base child has no same-name super child in its enclosing parent's inheritance hierarchy.
  * Both B.C0 and B.C1 are base children, despite B.C1 extending the differently named B.C0;
@@ -20,8 +20,9 @@ import java.lang.constant.ClassDesc;
  * derived children, even if D does not explicitly declare them (phantoms).
  *
  * <p>Hard-left bodies, such as B.C0.foo(), can use their concrete implementation receiver.
- * This descriptor places that receiver in parameter/slot 0 and Ctx in parameter/slot 1, while
- * retaining instance-method semantics during code generation so that Ecstasy "this" is available.
+ * This descriptor places that receiver in parameter/slot 0, Ctx in parameter/slot 1, and async in
+ * parameter/slot 2, while retaining instance-method semantics during code generation so that
+ * Ecstasy "this" is available.
  */
 public class JitDetachedBodyDesc extends JitMethodDesc {
     /**
@@ -49,7 +50,7 @@ public class JitDetachedBodyDesc extends JitMethodDesc {
 
     @Override
     public int getImplicitParamCount() {
-        return 2; // receiver, Ctx
+        return 3; // receiver, Ctx, async
     }
 
     @Override

@@ -1391,7 +1391,6 @@ public class PropertyInfo
      *         or in the container for a static property
      */
     public boolean isJitInflated() {
-        // TODO: handle Future in a later phase; keep its stored-Ref implementation for now
         return isConstant() && isJitRefAnnotated() ||
                containsRefAnnotation(pool().clzFuture());
     }

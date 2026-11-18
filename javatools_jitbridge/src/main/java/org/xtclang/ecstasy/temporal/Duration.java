@@ -38,15 +38,15 @@ public class Duration
     /**
      * Native implementation of the compact {@code Duration(Int128 picoseconds)} constructor.
      */
-    public static Duration $new$0$p(Ctx ctx, long lowPicos, long highPicos) {
+    public static Duration $new$0$p(Ctx ctx, boolean async, long lowPicos, long highPicos) {
         return $box(lowPicos, highPicos);
     }
 
-    public Int128 picoseconds$get(Ctx ctx) {
+    public Int128 picoseconds$get(Ctx ctx, boolean async) {
         return Int128.$box(picoseconds$0, picoseconds$1);
     }
 
-    public static long picoseconds$get$p(long thi$Lo, long thi$Hi, Ctx ctx) {
+    public static long picoseconds$get$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean async) {
         ctx.i0 = thi$Hi;
         return thi$Lo;
     }

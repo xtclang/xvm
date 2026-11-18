@@ -26,12 +26,12 @@ public class Int64 extends IntNumber {
     public final long $value;
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, Long.toString($value));
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, Long.toString($value));
     }
 
-    public static String toString$p(long thi$, Ctx ctx) {
-        return String.of(ctx, Long.toString(thi$));
+    public static String toString$p(long thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, Long.toString(thi$));
     }
 
     private static final int     SMALL_CACHE_OFFSET = 512;  // number of cached negative values
@@ -71,7 +71,7 @@ public class Int64 extends IntNumber {
      *     construct(String text)
      * }</pre>
      */
-    public static Int64 $new(Ctx ctx, String text) {
+    public static Int64 $new(Ctx ctx, boolean async, String text) {
         return $box(Long.parseLong(text.toString()));
     }
 
@@ -85,21 +85,21 @@ public class Int64 extends IntNumber {
     /**
      * Native implementation of: "Float16 toFloat16()"
      */
-    public static float toFloat16$p(long thi$, Ctx ctx) {
+    public static float toFloat16$p(long thi$, Ctx ctx, boolean async) {
         return Float.float16ToFloat(Float.floatToFloat16((float) thi$));
     }
 
     /**
      * Native implementation of: "Float32 toFloat32()"
      */
-    public static float toFloat32$p(long thi$, Ctx ctx) {
+    public static float toFloat32$p(long thi$, Ctx ctx, boolean async) {
         return (float) thi$;
     }
 
     /**
      * Native implementation of: "Float64 toFloat64()"
      */
-    public static double toFloat64$p(long thi$, Ctx ctx) {
+    public static double toFloat64$p(long thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
@@ -128,7 +128,7 @@ public class Int64 extends IntNumber {
      *     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
      * }</pre>
      */
-    public static Ordered compare(Ctx ctx, nType type, Int64 value1, Int64 value2) {
+    public static Ordered compare(Ctx ctx, boolean async, nType type, Int64 value1, Int64 value2) {
         long l1 = value1.$value;
         long l2 = value2.$value;
         return l1 < l2  ? Ordered.Lesser.$INSTANCE
@@ -143,7 +143,7 @@ public class Int64 extends IntNumber {
      *     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
      * }</pre>
      */
-    public static Boolean equals(Ctx ctx, nType type, Int64 value1, Int64 value2) {
+    public static Boolean equals(Ctx ctx, boolean async, nType type, Int64 value1, Int64 value2) {
         return value1.$value == value2.$value ? Boolean.TRUE : Boolean.FALSE;
     }
 
@@ -154,7 +154,7 @@ public class Int64 extends IntNumber {
      *     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
      * }</pre>
      */
-    public static boolean equals$p(Ctx ctx, nType type, long value1, long value2) {
+    public static boolean equals$p(Ctx ctx, boolean async, nType type, long value1, long value2) {
         return value1 == value2;
     }
 

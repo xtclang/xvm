@@ -19,16 +19,16 @@ public abstract class nService
     }
 
     @Override
-    public void $makeImmut(Ctx ctx) {
-        throw new Unsupported(ctx).$init(ctx, null, null);
+    public void $makeImmut(Ctx ctx, boolean async) {
+        throw new Unsupported(ctx).$init(ctx, false, null, null);
     }
 
     // ----- Service interface ---------------------------------------------------------------------
 
     @Override
-    public void callLater(Ctx ctx, nFunction doLater) {
+    public void callLater(Ctx ctx, boolean async, nFunction doLater) {
         try {
-            doLater.stdMethod.invokeExact();
+            doLater.stdMethod.invokeExact(ctx, false);
         } catch (nException nEx) {
             throw nEx;
         } catch (Throwable e) {
@@ -39,27 +39,28 @@ public abstract class nService
     }
 
     @Override
-    public boolean hasFutureArrived$p(Ctx ctx) {
+    public boolean hasFutureArrived$p(Ctx ctx, boolean async) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public nObject findContextToken(Ctx ctx, nType t$Value, SharedContext sharedContext) {
+    public nObject findContextToken(Ctx ctx, boolean async, nType t$Value,
+            SharedContext sharedContext) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void registerContextToken(Ctx ctx, SharedContext.Token token) {
+    public void registerContextToken(Ctx ctx, boolean async, SharedContext.Token token) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void unregisterContextToken(Ctx ctx, SharedContext.Token token) {
+    public void unregisterContextToken(Ctx ctx, boolean async, SharedContext.Token token) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void registerTimeout(Ctx ctx, Object timeout) {
+    public void registerTimeout(Ctx ctx, boolean async, Object timeout) {
         throw new UnsupportedOperationException();
     }
 }

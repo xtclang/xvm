@@ -29,7 +29,7 @@ public class OSDirectory
     /**
      * The primitive implementation of the OSDirectory.x method {@code Boolean deleteRecursively();}.
      */
-    public boolean deleteRecursively$p(Ctx ctx) {
+    public boolean deleteRecursively$p(Ctx ctx, boolean async) {
         Path path = $getJavaPath(ctx);
         if (path.toFile().isDirectory()) {
             try {

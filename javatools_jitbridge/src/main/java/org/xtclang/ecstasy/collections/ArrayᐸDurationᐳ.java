@@ -28,7 +28,7 @@ public class ArrayᐸDurationᐳ
      * @see Array#$new$p
      */
     public static ArrayᐸDurationᐳ $new$p(
-            Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+            Ctx ctx, boolean async, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64);
@@ -42,7 +42,7 @@ public class ArrayᐸDurationᐳ
      * @see Array#$new$1$p
      */
     public static ArrayᐸDurationᐳ $new$1$p(
-            Ctx ctx, TypeConstant type, long size, Object supply) {
+            Ctx ctx, boolean async, TypeConstant type, long size, Object supply) {
         if (supply instanceof Duration boxed) {
             ctx.alloc(size * 16);
             ArrayᐸDurationᐳ array = new ArrayᐸDurationᐳ(ctx, type);
@@ -57,13 +57,13 @@ public class ArrayᐸDurationᐳ
      * @see Array#$new$2
      */
     public static ArrayᐸDurationᐳ $new$2$p(
-            Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        long size = elements.size$get$p(ctx);
+            Ctx ctx, boolean async, TypeConstant type, Mutability mutability, Iterable elements) {
+        long size = elements.size$get$p(ctx, false);
         ctx.alloc(size * 16);
         ArrayᐸDurationᐳ array = new ArrayᐸDurationᐳ(ctx, type);
         array.$mut($MUTABLE);
-        array.addAll(ctx, elements);
-        array.$mut((int) mutability.ordinal$get$p(ctx));
+        array.addAll(ctx, false, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx, false));
         return array;
     }
 
@@ -71,41 +71,41 @@ public class ArrayᐸDurationᐳ
      * @see Array#$new$3
      */
     public static ArrayᐸDurationᐳ $new$3$p(
-            Ctx ctx, TypeConstant type, ArrayᐸDurationᐳ that) {
+            Ctx ctx, boolean async, TypeConstant type, ArrayᐸDurationᐳ that) {
         throw new UnsupportedOperationException();
     }
 
-    public Duration getElement(Ctx ctx, Int64 index) {
-        long low = getElement$pi(ctx, index.$value);
+    public Duration getElement(Ctx ctx, boolean async, Int64 index) {
+        long low = getElement$pi(ctx, false, index.$value);
         return Duration.$box(low, ctx.i0);
     }
 
-    public void setElement(Ctx ctx, Int64 index, Object value) {
+    public void setElement(Ctx ctx, boolean async, Int64 index, Object value) {
         Duration duration = (Duration) value;
-        setElement$pi(ctx, index.$value, duration.picoseconds$0, duration.picoseconds$1);
+        setElement$pi(ctx, false, index.$value, duration.picoseconds$0, duration.picoseconds$1);
     }
 
-    public IteratorᐸDurationᐳ iterator(Ctx ctx) {
+    public IteratorᐸDurationᐳ iterator(Ctx ctx, boolean async) {
         return new nIterator(ctx);
     }
 
     @Override
-    public ArrayᐸDurationᐳ add(Ctx ctx, Object element) {
+    public ArrayᐸDurationᐳ add(Ctx ctx, boolean async, Object element) {
         Duration duration = (Duration) element;
-        return add$p(ctx, duration.picoseconds$0, duration.picoseconds$1);
+        return add$p(ctx, false, duration.picoseconds$0, duration.picoseconds$1);
     }
 
-    public ArrayᐸDurationᐳ add$p(Ctx ctx, long lowPicos, long highPicos) {
+    public ArrayᐸDurationᐳ add$p(Ctx ctx, boolean async, long lowPicos, long highPicos) {
         return $add128(ctx, lowPicos, highPicos);
     }
 
     public ArrayᐸDurationᐳ insert$p(
-            Ctx ctx, long index, long lowPicos, long highPicos) {
+            Ctx ctx, boolean async, long index, long lowPicos, long highPicos) {
         return $insert128(ctx, index, lowPicos, highPicos);
     }
 
     @Override
-    public ArrayᐸDurationᐳ delete$p(Ctx ctx, long index) {
+    public ArrayᐸDurationᐳ delete$p(Ctx ctx, boolean async, long index) {
         return $delete128(ctx, index);
     }
 
@@ -113,9 +113,9 @@ public class ArrayᐸDurationᐳ
 
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        long     low      = getElement$pi(ctx, index);
+        long     low      = getElement$pi(ctx, false, index);
         Duration duration = Duration.$box(low, ctx.i0);
-        return duration.toString(ctx).toString();
+        return duration.toString(ctx, false).toString();
     }
 
     // ----- Iterator implementation ---------------------------------------------------------------
@@ -128,8 +128,8 @@ public class ArrayᐸDurationᐳ
         }
 
         @Override
-        public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.container.typeSystem.pool().typeDuration());
+        public nType Element$get(Ctx ctx, boolean async) {
+            return nType.$ensureType(ctx, false, ctx.container.typeSystem.pool().typeDuration());
         }
     }
 }

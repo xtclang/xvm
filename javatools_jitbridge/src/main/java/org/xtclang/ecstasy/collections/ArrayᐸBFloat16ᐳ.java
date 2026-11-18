@@ -37,7 +37,8 @@ public class ArrayᐸBFloat16ᐳ
     /**
      * @see Array#$new$p
      */
-    public static ArrayᐸBFloat16ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸBFloat16ᐳ $new$p(Ctx ctx, boolean async, TypeConstant type,
+            long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
@@ -50,7 +51,8 @@ public class ArrayᐸBFloat16ᐳ
     /**
      * @see Array#$new$1$p
      */
-    public static ArrayᐸBFloat16ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
+    public static ArrayᐸBFloat16ᐳ $new$1$p(Ctx ctx, boolean async, TypeConstant type, long size,
+            Object supply) {
         if (supply instanceof BFloat16 boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸBFloat16ᐳ array = new ArrayᐸBFloat16ᐳ(ctx, type);
@@ -75,67 +77,71 @@ public class ArrayᐸBFloat16ᐳ
     /**
      * @see Array#$new$2
      */
-    public static ArrayᐸBFloat16ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        long size = elements.size$get$p(ctx);
+    public static ArrayᐸBFloat16ᐳ $new$2$p(Ctx ctx, boolean async, TypeConstant type,
+            Mutability mutability, Iterable elements) {
+        long size = elements.size$get$p(ctx, false);
         ctx.alloc(size * 2); // REVIEW + HEADER_SIZE?
         ArrayᐸBFloat16ᐳ array = new ArrayᐸBFloat16ᐳ(ctx, type);
         array.$mut($MUTABLE);
-        array.addAll(ctx, elements);
-        array.$mut((int) mutability.ordinal$get$p(ctx));
+        array.addAll(ctx, false, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx, false));
         return array;
     }
 
-    public static ArrayᐸBFloat16ᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability,
+    public static ArrayᐸBFloat16ᐳ $new$2(Ctx ctx, boolean async, TypeConstant type,
+            Mutability mutability,
                                             IterableᐸBFloat16ᐳ elements) {
-        return $new$2$p(ctx, type, mutability, elements);
+        return $new$2$p(ctx, false, type, mutability, elements);
     }
 
     /**
      * @see Array#$new$3
      */
-    public static ArrayᐸBFloat16ᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸBFloat16ᐳ that) {
-        return $new$2$p(ctx, type, that.mutability$get(ctx), (Iterable) that);
+    public static ArrayᐸBFloat16ᐳ $new$3(Ctx ctx, boolean async, TypeConstant type,
+            ArrayᐸBFloat16ᐳ that) {
+        return $new$2$p(ctx, false, type, that.mutability$get(ctx, false), (Iterable) that);
     }
 
-    public BFloat16 getElement(Ctx ctx, Int64 index) {
-        return BFloat16.$box(getElement$pi(ctx, index.$value));
+    public BFloat16 getElement(Ctx ctx, boolean async, Int64 index) {
+        return BFloat16.$box(getElement$pi(ctx, false, index.$value));
     }
 
-    public float getElement$p(Ctx ctx, long index) {
-        return getElement$pi(ctx, index);
+    public float getElement$p(Ctx ctx, boolean async, long index) {
+        return getElement$pi(ctx, false, index);
     }
 
-    public float getElement$pi(Ctx ctx, long index) {
+    public float getElement$pi(Ctx ctx, boolean async, long index) {
         return BFloat16Constant.toFloat((int) $getElement$pi(ctx, index));
     }
 
-    public void setElement(Ctx ctx, Int64 index, Object value) {
-        super.setElement$pi(ctx, index.$value, BFloat16Constant.toHalf(((BFloat16) value).$value));
+    public void setElement(Ctx ctx, boolean async, Int64 index, Object value) {
+        super.setElement$pi(ctx, false, index.$value,
+                BFloat16Constant.toHalf(((BFloat16) value).$value));
     }
 
-    public void setElement$p(Ctx ctx, long index, float value) {
-        setElement$pi(ctx, index, value);
+    public void setElement$p(Ctx ctx, boolean async, long index, float value) {
+        setElement$pi(ctx, false, index, value);
     }
 
-    public void setElement$pi(Ctx ctx, long index, float value) {
-        super.setElement$pi(ctx, index, BFloat16Constant.toHalf(value));
+    public void setElement$pi(Ctx ctx, boolean async, long index, float value) {
+        super.setElement$pi(ctx, false, index, BFloat16Constant.toHalf(value));
     }
 
-    public IteratorᐸBFloat16ᐳ iterator(Ctx ctx) {
+    public IteratorᐸBFloat16ᐳ iterator(Ctx ctx, boolean async) {
         return new nIterator(ctx);
     }
 
     @Override
-    public ArrayᐸBFloat16ᐳ add(Ctx ctx, Object element) {
-        return add$p(ctx, ((BFloat16) element).$value);
+    public ArrayᐸBFloat16ᐳ add(Ctx ctx, boolean async, Object element) {
+        return add$p(ctx, false, ((BFloat16) element).$value);
     }
 
-    public ArrayᐸBFloat16ᐳ add$p(Ctx ctx, float value) {
-        return super.add$p(ctx, BFloat16Constant.toHalf(value));
+    public ArrayᐸBFloat16ᐳ add$p(Ctx ctx, boolean async, float value) {
+        return super.add$p(ctx, false, BFloat16Constant.toHalf(value));
     }
 
-    public ArrayᐸBFloat16ᐳ insert$p(Ctx ctx, long index, float value) {
-        if (index < 0 || index > size$get$p(ctx)) {
+    public ArrayᐸBFloat16ᐳ insert$p(Ctx ctx, boolean async, long index, float value) {
+        if (index < 0 || index > size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $insert(ctx, index, 1);
@@ -144,8 +150,8 @@ public class ArrayᐸBFloat16ᐳ
     }
 
     @Override
-    public ArrayᐸBFloat16ᐳ delete$p(Ctx ctx, long index) {
-        if (index < 0 || index >= size$get$p(ctx)) {
+    public ArrayᐸBFloat16ᐳ delete$p(Ctx ctx, boolean async, long index) {
+        if (index < 0 || index >= size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $delete(ctx, index, 1);
@@ -157,8 +163,8 @@ public class ArrayᐸBFloat16ᐳ
     // ToDo GG/JK remove this (and sub classes) when toString() can be generated by the JIT
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        BFloat16 c = BFloat16.$box(getElement$p(ctx, index));
-        return c.toString(ctx).toString();
+        BFloat16 c = BFloat16.$box(getElement$p(ctx, false, index));
+        return c.toString(ctx, false).toString();
     }
 
     @Override
@@ -204,8 +210,8 @@ public class ArrayᐸBFloat16ᐳ
         }
 
         @Override
-        public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.pool().typeBFloat16());
+        public nType Element$get(Ctx ctx, boolean async) {
+            return nType.$ensureType(ctx, false, ctx.pool().typeBFloat16());
         }
     }
 }

@@ -25,7 +25,7 @@ public class nMethod extends nObject {
     public final MethodHandle optMethod;
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return type;
     }
 

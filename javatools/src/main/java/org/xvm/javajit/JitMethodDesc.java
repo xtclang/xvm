@@ -86,16 +86,16 @@ public class JitMethodDesc {
     }
 
     /**
-     * @return the index of the Ctx in the JVM parameters for the non-optimized signature; currently
-     *         the index is always 0
+     * @return the index of the Ctx in the JVM parameters for the non-optimized signature;
+     *         0 for ordinary methods and 1 for detached bodies
      */
     public int standardCtx() {
         return 0;
     }
 
     /**
-     * @return the index of the Ctx in the JVM parameters for the optimized signature; the index is
-     *         non-zero for "primitivized" methods, i.e. for all methods on "JitPrimitive" classes
+     * @return the index of the Ctx in the JVM parameters for the optimized signature, after any
+     *         explicit receiver or primitive receiver components
      */
     public int optimizedCtx() {
         if (!isOptimized || !isPrimitivized()) {
@@ -259,18 +259,19 @@ public class JitMethodDesc {
     }
 
     /**
-     * @return the number of extra parameters
+     * @return the number of implicit parameters; Ctx and async for ordinary methods
      */
     public int getImplicitParamCount() {
-        return 1; // Ctx
+        return 2; // Ctx, async
     }
 
     /**
      * @param ix  the index to place the next argument
-     * @return the number of added arguments
+     * @return the index following the added implicit arguments
      */
     protected int fillExtraClassDesc(ClassDesc[] paramCDs, int ix) {
         paramCDs[ix++] = CD_Ctx;
+        paramCDs[ix++] = CD_boolean;
         return ix;
     }
 

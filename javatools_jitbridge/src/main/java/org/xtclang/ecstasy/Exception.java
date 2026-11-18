@@ -32,9 +32,9 @@ public class Exception extends nConst {
      * Exception Constructor:
      *  construct(String? text = Null, Exception? cause = Null)
      */
-    public static Exception $new(Ctx ctx, Object text, Object cause) {
+    public static Exception $new(Ctx ctx, boolean async, Object text, Object cause) {
         Exception ex = new Exception(ctx);
-        construct(ctx, ex, text, cause);
+        construct(ctx, false, ex, text, cause);
         return ex;
     }
 
@@ -46,7 +46,8 @@ public class Exception extends nConst {
      *
      * @see org.xvm.asm.constants.MethodConstant#ensureJitMethodName
      */
-    public static void construct(Ctx ctx, Exception thi$, Object message, Object cause) {
+    public static void construct(Ctx ctx, boolean async, Exception thi$, Object message,
+            Object cause) {
         thi$.text       = message instanceof String text ? text : Nullable.Null.$INSTANCE;
         thi$.cause      = cause instanceof Exception e ? e : Nullable.Null.$INSTANCE;
         thi$.$exception = thi$.$createJavaException(cause instanceof Exception e ? e.$exception : null);
@@ -55,15 +56,16 @@ public class Exception extends nConst {
     /**
      * Helper method for native exception construction.
      */
-    public nException $init(Ctx ctx, java.lang.String message) {
-        return $init(ctx, message, null);
+    public nException $init(Ctx ctx, boolean async, java.lang.String message) {
+        return $init(ctx, false, message, null);
     }
 
     /**
      * Helper method for native exception construction.
      */
-    public nException $init(Ctx ctx, java.lang.String message, Throwable cause) {
-        this.text       = message == null ? Nullable.Null.$INSTANCE : String.of(ctx, message);
+    public nException $init(Ctx ctx, boolean async, java.lang.String message, Throwable cause) {
+        this.text       = message == null ? Nullable.Null.$INSTANCE : String.of(ctx, false,
+                message);
         this.cause      = cause instanceof nException e ? e.exception : Nullable.Null.$INSTANCE;
         this.$exception = $createJavaException(cause);
         return $exception;
@@ -77,8 +79,8 @@ public class Exception extends nConst {
     }
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, toString());
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, toString());
     }
 
     @Override
@@ -88,10 +90,10 @@ public class Exception extends nConst {
             className = className.substring("org.xtclang.ecstasy.".length());
         }
 
-        // TODO: replace with ecstasy.StringBuffer and move to "toString(Ctx ctx)"
+        // TODO: replace with ecstasy.StringBuffer and move to "toString(Ctx ctx, boolean async)"
         StringBuilder sb = new StringBuilder(className);
         sb.append(": ")
-          .append(text == Nullable.Null.$INSTANCE ? "" : text.toString($ctx()));
+          .append(text == Nullable.Null.$INSTANCE ? "" : text.toString($ctx(), false));
         if ($exception != null) { // can be null only during construction
             for (StackTraceElement el : $exception.getStackTrace()) {
                 if (el.getFileName().endsWith(".x") && !el.getMethodName().startsWith("$")) {
@@ -104,7 +106,7 @@ public class Exception extends nConst {
     }
 
     public static nException $ro(Ctx ctx, java.lang.String text) {
-        return new ReadOnly(ctx).$init(ctx, text);
+        return new ReadOnly(ctx).$init(ctx, false, text);
     }
 
     public static nException $oob(Ctx ctx, long index, long start, long end) {
@@ -112,41 +114,41 @@ public class Exception extends nConst {
     }
 
     public static nException $oob(Ctx ctx, java.lang.String text) {
-        return new OutOfBounds(ctx).$init(ctx, text);
+        return new OutOfBounds(ctx).$init(ctx, false, text);
     }
 
-    public static nException $unsupported(Ctx ctx, java.lang.String text) {
-        return new Unsupported(ctx).$init(ctx, text);
+    public static nException $unsupported(Ctx ctx, boolean async, java.lang.String text) {
+        return new Unsupported(ctx).$init(ctx, false, text);
     }
 
     public static nException $typeMismatch(Ctx ctx, java.lang.String text) {
-        return new TypeMismatch(ctx).$init(ctx, text);
+        return new TypeMismatch(ctx).$init(ctx, false, text);
     }
 
     /**
      * @return generic runtime exception
      */
     public static nException $rt(Ctx ctx, java.lang.String text) {
-        return new Exception(ctx).$init(ctx, text, null);
+        return new Exception(ctx).$init(ctx, false, text, null);
     }
 
     public static nException $illegalArg(Ctx ctx, java.lang.String text) {
-        return new IllegalArgument(ctx).$init(ctx, text);
+        return new IllegalArgument(ctx).$init(ctx, false, text);
     }
 
     public static nException $illegalState(Ctx ctx, java.lang.String text) {
-        return new IllegalState(ctx).$init(ctx, text);
+        return new IllegalState(ctx).$init(ctx, false, text);
     }
 
     public static nException $io(Ctx ctx, java.lang.Exception ex) {
         if (ex instanceof java.nio.file.AccessDeniedException
             || ex instanceof NonReadableChannelException
             || ex instanceof NonWritableChannelException) {
-            return new AccessDenied(ctx).$init(ctx, ex.getMessage());
+            return new AccessDenied(ctx).$init(ctx, false, ex.getMessage());
         }
         if (ex instanceof java.io.IOException) {
             if (ex instanceof java.io.FileNotFoundException) {
-                return new FileNotFound(ctx).$init(ctx, ex.getMessage());
+                return new FileNotFound(ctx).$init(ctx, false, ex.getMessage());
             }
             return $io(ctx, ex.getMessage(), null);
         }
@@ -158,7 +160,7 @@ public class Exception extends nConst {
     }
 
     public static nException $io(Ctx ctx, java.lang.String text, Throwable cause) {
-        return new IOException(ctx).$init(ctx, text, cause);
+        return new IOException(ctx).$init(ctx, false, text, cause);
     }
 
     public static nException $fileNotFound(Ctx ctx, Path path) {
@@ -166,7 +168,7 @@ public class Exception extends nConst {
     }
 
     public static nException $fileNotFound(Ctx ctx, java.lang.String text, Path path) {
-        return new FileNotFound(ctx).$init(ctx, text, path);
+        return new FileNotFound(ctx).$init(ctx, false, text, path);
     }
 
     public static nException $accessDenied(Ctx ctx, Path path) {
@@ -174,11 +176,11 @@ public class Exception extends nConst {
     }
 
     public static nException $accessDenied(Ctx ctx, java.lang.String text, Path path) {
-        return new AccessDenied(ctx).$init(ctx, text, path);
+        return new AccessDenied(ctx).$init(ctx, false, text, path);
     }
 
     public static nException $xvmError(Ctx ctx, java.lang.String text, Throwable cause) {
-        return new XvmError(ctx).$init(ctx, text, cause);
+        return new XvmError(ctx).$init(ctx, false, text, cause);
     }
 
     // ----- Const interface -----------------------------------------------------------------------
@@ -191,7 +193,8 @@ public class Exception extends nConst {
      *                                                           CompileType value2)
      * }</pre>
      */
-    public static boolean equals$p(Ctx ctx, nType type, Exception value1, Exception value2) {
+    public static boolean equals$p(Ctx ctx, boolean async, nType type, Exception value1,
+            Exception value2) {
         return value1 == value2;
     }
 
@@ -203,7 +206,8 @@ public class Exception extends nConst {
      *                                                            CompileType value2)
      * }</pre>
      */
-    public static Ordered compare(Ctx ctx, nType type, Exception value1, Exception value2) {
+    public static Ordered compare(Ctx ctx, boolean async, nType type, Exception value1,
+            Exception value2) {
         int result = Integer.compare(
                 System.identityHashCode(value1), System.identityHashCode(value2));
         return result < 0  ? Ordered.Lesser.$INSTANCE
@@ -218,7 +222,7 @@ public class Exception extends nConst {
      *     static <CompileType extends Exception> Int64 hashCode(CompileType value)
      * }</pre>
      */
-    public static long hashCode$p(Ctx ctx, nType type, Exception value) {
+    public static long hashCode$p(Ctx ctx, boolean async, nType type, Exception value) {
         return System.identityHashCode(value);
     }
 }

@@ -406,12 +406,14 @@ public class IntNumberBuilder extends NumberBuilder {
     /**
      * Assemble an optimized static implementation of "toDec128$p()".
      *
-     * <p>{@code return Dec128.$toLongBits(ctx, new BigDecimal(value, MathContext.DECIMAL128));}
+     * <p>{@code return Dec128.$toLongBits(ctx, false,
+     *         new BigDecimal(value, MathContext.DECIMAL128));}
      */
     protected void generateToDec128(CodeBuilder code, JitMethodDesc jmd) {
         FixedInt source = FixedInt.of(thisType);
 
         code.aload(code.parameterSlot(jmd.optimizedCtx()))
+                .iconst_0()
                 .new_(CD_BigDecimal)
                 .dup();
 

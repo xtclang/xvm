@@ -22,7 +22,7 @@ public class Class
 
     public final TypeConstant $publicType;
 
-    @Override public TypeConstant $xvmType(Ctx ctx) {
+    @Override public TypeConstant $xvmType(Ctx ctx, boolean async) {
         ConstantPool pool = ctx.pool();
         return pool.ensureClassTypeConstant(pool.clzClass(), null, $publicType);
     }

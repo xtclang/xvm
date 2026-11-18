@@ -55,7 +55,8 @@ public class ArrayᐸCharᐳ
     /**
      * @see Array#$new$p
      */
-    public static ArrayᐸCharᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸCharᐳ $new$p(Ctx ctx, boolean async, TypeConstant type, long capacity,
+            boolean _capacity) {
         if (type.isImmutable()) {
             // an immutable array can use its own type to create a new array
             type = type.removeImmutable();
@@ -71,7 +72,8 @@ public class ArrayᐸCharᐳ
     /**
      * @see Array#$new$1$p
      */
-    public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
+    public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, boolean async, TypeConstant type, long size,
+            Object supply) {
         if (supply instanceof Char boxed) {
             int value = boxed.codepoint;
             if (value < 0x100) {
@@ -101,60 +103,61 @@ public class ArrayᐸCharᐳ
     /**
      * @see Array#$new$2
      */
-    public static ArrayᐸCharᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, IterableᐸCharᐳ elements) {
-        long size = elements.size$get$p(ctx);
-        ArrayᐸCharᐳ array = $new$p(ctx, type, size, false);
+    public static ArrayᐸCharᐳ $new$2(Ctx ctx, boolean async, TypeConstant type,
+            Mutability mutability, IterableᐸCharᐳ elements) {
+        long size = elements.size$get$p(ctx, false);
+        ArrayᐸCharᐳ array = $new$p(ctx, false, type, size, false);
         array.$mut($MUTABLE);
-        for (IteratorᐸCharᐳ it = elements.iterator(ctx); it.next$p(ctx);) {
-            array.add$p(ctx, ctx.i0);
+        for (IteratorᐸCharᐳ it = elements.iterator(ctx, false); it.next$p(ctx, false);) {
+            array.add$p(ctx, false, ctx.i0);
         }
-        array.$mut((int) mutability.ordinal$get$p(ctx));
+        array.$mut((int) mutability.ordinal$get$p(ctx, false));
         return array;
     }
 
     /**
      * @see Array#$new$3
      */
-    public static ArrayᐸCharᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸCharᐳ that) {
+    public static ArrayᐸCharᐳ $new$3(Ctx ctx, boolean async, TypeConstant type, ArrayᐸCharᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public Char getElement(Ctx ctx, Int64 index) {
-        return Char.$box(getElement$pi(ctx, index.$value));
+    public Char getElement(Ctx ctx, boolean async, Int64 index) {
+        return Char.$box(getElement$pi(ctx, false, index.$value));
     }
 
-    public int getElement$p(Ctx ctx, long index) {
-        return getElement$pi(ctx, index);
+    public int getElement$p(Ctx ctx, boolean async, long index) {
+        return getElement$pi(ctx, false, index);
     }
 
     /**
      * Optimized "primitive intrinsic" form of the getElement() method. The JIT will use this method
      * in lieu of getElement$p() whenever it has enough information to do so.
      */
-    public int getElement$pi(Ctx ctx, long index) {
+    public int getElement$pi(Ctx ctx, boolean async, long index) {
         return (int) $getElement$pi(ctx, index);
     }
 
-    public void setElement(Ctx ctx, Int64 index, Object value) {
-        setElement$pi(ctx, index.$value, ((Char) value).codepoint);
+    public void setElement(Ctx ctx, boolean async, Int64 index, Object value) {
+        setElement$pi(ctx, false, index.$value, ((Char) value).codepoint);
     }
 
-    public void setElement$p(Ctx ctx, long index, int value) {
-        setElement$pi(ctx, index, value);
+    public void setElement$p(Ctx ctx, boolean async, long index, int value) {
+        setElement$pi(ctx, false, index, value);
     }
 
     @Override
-    public ArrayᐸCharᐳ add(Ctx ctx, Object element) {
-        return add$p(ctx, ((Char) element).codepoint);
+    public ArrayᐸCharᐳ add(Ctx ctx, boolean async, Object element) {
+        return add$p(ctx, false, ((Char) element).codepoint);
     }
 
-    public ArrayᐸCharᐳ add$p(Ctx ctx, int ch) {
-        return super.add$p(ctx, (long) ch);
+    public ArrayᐸCharᐳ add$p(Ctx ctx, boolean async, int ch) {
+        return super.add$p(ctx, false, (long) ch);
     }
 
-    public ArrayᐸCharᐳ insert$p(Ctx ctx, long index, int value) {
-        if (index < 0 || index > size$get$p(ctx)) {
+    public ArrayᐸCharᐳ insert$p(Ctx ctx, boolean async, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $insert(ctx, index, 1);
@@ -163,43 +166,43 @@ public class ArrayᐸCharᐳ
     }
 
     @Override
-    public ArrayᐸCharᐳ delete$p(Ctx ctx, long index) {
-        if (index < 0 || index >= size$get$p(ctx)) {
+    public ArrayᐸCharᐳ delete$p(Ctx ctx, boolean async, long index) {
+        if (index < 0 || index >= size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $delete(ctx, index, 1);
         return this;
     }
 
-    public ArrayᐸCharᐳ addAll(Ctx ctx, IterableᐸCharᐳ values) {
-        IteratorᐸCharᐳ iter = values.iterator(ctx);
-        while (iter.next$p(ctx)) {
-            add$p(ctx, ctx.i0);
+    public ArrayᐸCharᐳ addAll(Ctx ctx, boolean async, IterableᐸCharᐳ values) {
+        IteratorᐸCharᐳ iter = values.iterator(ctx, false);
+        while (iter.next$p(ctx, false)) {
+            add$p(ctx, false, ctx.i0);
         }
         return this;
     }
 
     @Override
-    public ArrayᐸCharᐳ freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
-        return (ArrayᐸCharᐳ) super.freeze$p(ctx, inPlace, inPlace$dflt);
+    public ArrayᐸCharᐳ freeze$p(Ctx ctx, boolean async, boolean inPlace, boolean inPlace$dflt) {
+        return (ArrayᐸCharᐳ) super.freeze$p(ctx, false, inPlace, inPlace$dflt);
     }
 
     /**
      * Native implementation of {@code Char[] slice(Range<Int> indexes)} for immutable arrays.
      */
     @Override
-    public ArrayᐸCharᐳ slice$p(Ctx ctx, long n1, long n2) {
+    public ArrayᐸCharᐳ slice$p(Ctx ctx, boolean async, long n1, long n2) {
         long lower = RangeᐸInt64ᐳ.$effectiveLowerBound(ctx, n1, n2);
         long upper = RangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
         if (lower < 0) {
             throw $oob(ctx, lower);
         }
-        if (upper >= size$get$p(ctx)) {
+        if (upper >= size$get$p(ctx, false)) {
             throw $oob(ctx, upper);
         }
         if (!$isImmut()) {
             // TODO: mutable slices must share writes with the original array, not copy its data
-            throw Exception.$unsupported(ctx, "Mutable Char[] slicing");
+            throw Exception.$unsupported(ctx, false, "Mutable Char[] slicing");
         }
 
         int    size         = (int) Math.max(0, upper - lower + 1);
@@ -214,7 +217,7 @@ public class ArrayᐸCharᐳ
         long    index      = descending ? upper : lower;
         int     step       = descending ? -1 : 1;
         for (int i = 0; i < size; i++, index += step) {
-            data[i / charsPerLong] |= (long) getElement$pi(ctx, index)
+            data[i / charsPerLong] |= (long) getElement$pi(ctx, false, index)
                     << ((charsPerLong - 1 - i % charsPerLong) * bitsPerChar);
         }
         return new ArrayᐸCharᐳ(ctx, $type, data, size, $utf21);
@@ -225,8 +228,8 @@ public class ArrayᐸCharᐳ
     // ToDo GG/JK remove this (and sub classes) when toString() can be generated by the JIT
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        Char c = Char.$box(getElement$pi(ctx, index));
-        return c.toString(ctx).toString();
+        Char c = Char.$box(getElement$pi(ctx, false, index));
+        return c.toString(ctx, false).toString();
     }
 
     @Override
@@ -296,7 +299,7 @@ public class ArrayᐸCharᐳ
         }
     }
 
-    public IteratorᐸCharᐳ iterator(Ctx ctx) {
+    public IteratorᐸCharᐳ iterator(Ctx ctx, boolean async) {
         return new nIterator(ctx);
     }
 
@@ -308,8 +311,8 @@ public class ArrayᐸCharᐳ
         }
 
         @Override
-        public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.pool().typeChar());
+        public nType Element$get(Ctx ctx, boolean async) {
+            return nType.$ensureType(ctx, false, ctx.pool().typeChar());
         }
     }
 }

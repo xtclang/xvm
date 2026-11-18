@@ -38,7 +38,8 @@ public class ArrayᐸInt64ᐳ
     /**
      * @see Array#$new$p
      */
-    public static ArrayᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸInt64ᐳ $new$p(Ctx ctx, boolean async, TypeConstant type, long capacity,
+            boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
@@ -51,7 +52,8 @@ public class ArrayᐸInt64ᐳ
     /**
      * @see Array#$new$1$p
      */
-    public static ArrayᐸInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
+    public static ArrayᐸInt64ᐳ $new$1$p(Ctx ctx, boolean async, TypeConstant type, long size,
+            Object supply) {
         if (supply instanceof Int64 boxed) {
             ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
             ArrayᐸInt64ᐳ array = new ArrayᐸInt64ᐳ(ctx, type);
@@ -80,11 +82,12 @@ public class ArrayᐸInt64ᐳ
             try {
                 if (fn.optMethod == null) {
                     for (int i = 0; i < size; i++) {
-                        array.$storage[i] = ((Int64) fn.stdMethod.invoke(ctx, Int64.$box(i))).$value;
+                        array.$storage[i] = ((Int64) fn.stdMethod.invoke(ctx, false,
+                                Int64.$box(i))).$value;
                     }
                 } else {
                     for (int i = 0; i < size; i++) {
-                        array.$storage[i] = (long) fn.optMethod.invoke(ctx, (long) i);
+                        array.$storage[i] = (long) fn.optMethod.invoke(ctx, false, (long) i);
                     }
                 }
             } catch (nException e) {
@@ -104,55 +107,57 @@ public class ArrayᐸInt64ᐳ
     /**
      * @see Array#$new$2
      */
-    public static ArrayᐸInt64ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        long size = elements.size$get$p(ctx);
+    public static ArrayᐸInt64ᐳ $new$2$p(Ctx ctx, boolean async, TypeConstant type,
+            Mutability mutability, Iterable elements) {
+        long size = elements.size$get$p(ctx, false);
         ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
         ArrayᐸInt64ᐳ array = new ArrayᐸInt64ᐳ(ctx, type);
         array.$mut($MUTABLE);
-        array.addAll(ctx, elements);
-        array.$mut((int) mutability.ordinal$get$p(ctx));
+        array.addAll(ctx, false, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx, false));
         return array;
     }
 
     /**
      * @see Array#$new$3
      */
-    public static ArrayᐸInt64ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸInt64ᐳ that) {
+    public static ArrayᐸInt64ᐳ $new$3$p(Ctx ctx, boolean async, TypeConstant type,
+            ArrayᐸInt64ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public Int64 getElement(Ctx ctx, Int64 index) {
-        return Int64.$box(getElement$pi(ctx, index.$value));
+    public Int64 getElement(Ctx ctx, boolean async, Int64 index) {
+        return Int64.$box(getElement$pi(ctx, false, index.$value));
     }
 
-    public long getElement$p(Ctx ctx, long index) {
-        return getElement$pi(ctx, index);
+    public long getElement$p(Ctx ctx, boolean async, long index) {
+        return getElement$pi(ctx, false, index);
     }
 
-    public long getElement$pi(Ctx ctx, long index) {
+    public long getElement$pi(Ctx ctx, boolean async, long index) {
         return $getElement$pi(ctx, index);
     }
 
-    public void setElement(Ctx ctx, Int64 index, Object value) {
-        setElement$pi(ctx, index.$value, ((Int64) value).$value);
+    public void setElement(Ctx ctx, boolean async, Int64 index, Object value) {
+        setElement$pi(ctx, false, index.$value, ((Int64) value).$value);
     }
 
-    public void setElement$p(Ctx ctx, long index, long value) {
-        setElement$pi(ctx, index, value);
+    public void setElement$p(Ctx ctx, boolean async, long index, long value) {
+        setElement$pi(ctx, false, index, value);
     }
 
-    public IteratorᐸInt64ᐳ iterator(Ctx ctx) {
+    public IteratorᐸInt64ᐳ iterator(Ctx ctx, boolean async) {
         return new nIterator(ctx);
     }
 
     @Override
-    public ArrayᐸInt64ᐳ add(Ctx ctx, Object element) {
-        return add$p(ctx, ((Int64) element).$value);
+    public ArrayᐸInt64ᐳ add(Ctx ctx, boolean async, Object element) {
+        return add$p(ctx, false, ((Int64) element).$value);
     }
 
-    public ArrayᐸInt64ᐳ insert$p(Ctx ctx, long index, long value) {
-        if (index < 0 || index > size$get$p(ctx)) {
+    public ArrayᐸInt64ᐳ insert$p(Ctx ctx, boolean async, long index, long value) {
+        if (index < 0 || index > size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $insert(ctx, index, 1);
@@ -161,8 +166,8 @@ public class ArrayᐸInt64ᐳ
     }
 
     @Override
-    public ArrayᐸInt64ᐳ delete$p(Ctx ctx, long index) {
-        if (index < 0 || index >= size$get$p(ctx)) {
+    public ArrayᐸInt64ᐳ delete$p(Ctx ctx, boolean async, long index) {
+        if (index < 0 || index >= size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $delete(ctx, index, 1);
@@ -174,8 +179,8 @@ public class ArrayᐸInt64ᐳ
     // ToDo GG/JK remove this (and sub classes) when toString() can be generated by the JIT
     @Override
     protected java.lang.String $elementToString(Ctx ctx, long index) {
-        Int64 n = Int64.$box(getElement$pi(ctx, index));
-        return n.toString(ctx).toString();
+        Int64 n = Int64.$box(getElement$pi(ctx, false, index));
+        return n.toString(ctx, false).toString();
     }
 
     @Override
@@ -221,8 +226,8 @@ public class ArrayᐸInt64ᐳ
         }
 
         @Override
-        public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.pool().typeInt64());
+        public nType Element$get(Ctx ctx, boolean async) {
+            return nType.$ensureType(ctx, false, ctx.pool().typeInt64());
         }
     }
 }

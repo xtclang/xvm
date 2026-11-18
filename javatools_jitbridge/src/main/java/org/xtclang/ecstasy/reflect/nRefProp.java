@@ -24,7 +24,7 @@ public class nRefProp extends nRef {
     public final TypeConstant $type;
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return $type;
     }
 }

@@ -277,6 +277,12 @@ public class AssertV
         appendLoadedRegister(code, reg);
     }
 
+    /**
+     * Append a diagnostic value already loaded on the Java stack.
+     *
+     * <p>Entry stack, bottom to top: {@code (..., ctx, async, buffer, <value>)}, where the value is
+     * a reference or multiple JVM components for an JIT primitive.
+     */
     private void appendLoadedRegister(CodeBuilder code, RegisterInfo reg) {
         JitFlavor flavor = reg.flavor();
         if (flavor.isOptimized) {
@@ -299,18 +305,19 @@ public class AssertV
             // a verifier-only default can be Java null; Ecstasy Null is a real object
             Label labelNull = code.newLabel();
             Label labelDone = code.newLabel();
-            code.dup().ifnull(labelNull);
+            code.dup()
+                .ifnull(labelNull);
             appendLoadedValue(code);
             code.goto_(labelDone)
                 .labelBinding(labelNull)
-                .pop()
+                .pop2() // consume all: ctx, async, buffer, value
                 .pop2()
                 .labelBinding(labelDone);
         }
     }
 
     private void appendNullablePrimitive(CodeBuilder code, RegisterInfo reg) {
-        // stack: (ctx, buffer, primitive value, isNull)
+        // stack: (ctx, async, buffer, primitive value, isNull)
         Label ifNull = code.newLabel();
         Label endIf  = code.newLabel();
         code.ifne(ifNull);
@@ -321,7 +328,7 @@ public class AssertV
         code.goto_(endIf)
             .labelBinding(ifNull);
 
-        // stack: (ctx, buffer, primitive value)
+        // stack: (ctx, async, buffer, primitive value)
         Builder.pop(code, reg.cd());
         Builder.loadNull(code);
         appendLoadedValue(code);
@@ -329,7 +336,7 @@ public class AssertV
     }
 
     private void appendNullableXvmPrimitive(CodeBuilder code, RegisterInfo reg) {
-        // stack: (ctx, buffer, xvm primitive slot values, isNull)
+        // stack: (ctx, async, buffer, xvm primitive slot values, isNull)
         Label ifNull = code.newLabel();
         Label endIf  = code.newLabel();
         code.ifne(ifNull);
@@ -340,7 +347,7 @@ public class AssertV
         code.goto_(endIf)
             .labelBinding(ifNull);
 
-        // stack: (ctx, buffer, xvm primitive slot values)
+        // stack: (ctx, async, buffer, xvm primitive slot values)
         ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
         for (int i = cds.length - 1; i >= 0; --i) {
             Builder.pop(code, cds[i]);
@@ -351,7 +358,7 @@ public class AssertV
     }
 
     private void appendLoadedValue(CodeBuilder code) {
-        // stack: (ctx, buffer, value)
+        // stack: (ctx, async, buffer, value)
         code.invokestatic(CD_nUtil, "appendValue", MD_AppendValue);
     }
 

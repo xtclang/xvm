@@ -7,6 +7,6 @@ import org.xvm.javajit.Ctx;
  */
 public interface Iterable extends Object {
 
-    long size$get$p(Ctx ctx);
-    Iterator iterator(Ctx ctx);
+    long size$get$p(Ctx ctx, boolean async);
+    Iterator iterator(Ctx ctx, boolean async);
 }

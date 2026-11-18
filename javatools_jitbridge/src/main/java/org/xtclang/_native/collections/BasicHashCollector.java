@@ -22,22 +22,22 @@ public class BasicHashCollector
     private final ByteHashCollector delegate;
 
     @Override
-    public long compute$p(Ctx ctx) {
+    public long compute$p(Ctx ctx, boolean async) {
         return delegate.compute();
     }
 
     @Override
-    public HashCollector reset(Ctx ctx) {
+    public HashCollector reset(Ctx ctx, boolean async) {
         delegate.reset();
         return this;
     }
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, "BasicHashCollector");
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, "BasicHashCollector");
     }
 
-    public HashCollector addByte$p(Ctx ctx, int n) {
+    public HashCollector addByte$p(Ctx ctx, boolean async, int n) {
         delegate.addByte((byte) (n & 0xFF));
         return this;
     }

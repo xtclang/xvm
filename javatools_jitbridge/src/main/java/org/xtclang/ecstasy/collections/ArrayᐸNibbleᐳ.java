@@ -37,7 +37,8 @@ public class ArrayᐸNibbleᐳ
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static ArrayᐸNibbleᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸNibbleᐳ $new$p(Ctx ctx, boolean async, TypeConstant type, long capacity,
+            boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
@@ -47,7 +48,8 @@ public class ArrayᐸNibbleᐳ
         return array;
     }
 
-    public static ArrayᐸNibbleᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
+    public static ArrayᐸNibbleᐳ $new$1$p(Ctx ctx, boolean async, TypeConstant type, long size,
+            Object supply) {
         if (supply instanceof Nibble boxed) {
             ctx.alloc(size); // REVIEW + HEADER_SIZE?
             ArrayᐸNibbleᐳ array = new ArrayᐸNibbleᐳ(ctx, type);
@@ -70,56 +72,58 @@ public class ArrayᐸNibbleᐳ
         throw new UnsupportedOperationException();
     }
 
-    public static ArrayᐸNibbleᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        long size = elements.size$get$p(ctx);
+    public static ArrayᐸNibbleᐳ $new$2$p(Ctx ctx, boolean async, TypeConstant type,
+            Mutability mutability, Iterable elements) {
+        long size = elements.size$get$p(ctx, false);
         ctx.alloc(size / 2); // REVIEW + HEADER_SIZE?
         ArrayᐸNibbleᐳ array = new ArrayᐸNibbleᐳ(ctx, type);
         array.$mut($MUTABLE);
-        array.addAll(ctx, elements);
-        array.$mut((int) mutability.ordinal$get$p(ctx));
+        array.addAll(ctx, false, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx, false));
         return array;
     }
 
-    public static ArrayᐸNibbleᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸNibbleᐳ that) {
+    public static ArrayᐸNibbleᐳ $new$3$p(Ctx ctx, boolean async, TypeConstant type,
+            ArrayᐸNibbleᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public Nibble getElement(Ctx ctx, Int64 index) {
-        return Nibble.$box(getElement$pi(ctx, index.$value));
+    public Nibble getElement(Ctx ctx, boolean async, Int64 index) {
+        return Nibble.$box(getElement$pi(ctx, false, index.$value));
     }
 
-    public int getElement$p(Ctx ctx, long index) {
-        return getElement$pi(ctx, index);
+    public int getElement$p(Ctx ctx, boolean async, long index) {
+        return getElement$pi(ctx, false, index);
     }
 
-    public int getElement$pi(Ctx ctx, long index) {
+    public int getElement$pi(Ctx ctx, boolean async, long index) {
         return (int) $getElement$pi(ctx, index);
     }
 
-    public void setElement(Ctx ctx, Int64 index, Object value) {
-        setElement$pi(ctx, index.$value, ((Nibble) value).$value);
+    public void setElement(Ctx ctx, boolean async, Int64 index, Object value) {
+        setElement$pi(ctx, false, index.$value, ((Nibble) value).$value);
     }
 
-    public void setElement$p(Ctx ctx, long index, int value) {
-        setElement$pi(ctx, index, value);
+    public void setElement$p(Ctx ctx, boolean async, long index, int value) {
+        setElement$pi(ctx, false, index, value);
     }
 
-    public IteratorᐸNibbleᐳ iterator(Ctx ctx) {
+    public IteratorᐸNibbleᐳ iterator(Ctx ctx, boolean async) {
         return new nIterator(ctx);
     }
 
     @Override
-    public ArrayᐸNibbleᐳ add(Ctx ctx, Object element) {
-        return add$p(ctx, ((Nibble) element).$value);
+    public ArrayᐸNibbleᐳ add(Ctx ctx, boolean async, Object element) {
+        return add$p(ctx, false, ((Nibble) element).$value);
     }
 
-    public ArrayᐸNibbleᐳ add$p(Ctx ctx, int value) {
-        return super.add$p(ctx, value);
+    public ArrayᐸNibbleᐳ add$p(Ctx ctx, boolean async, int value) {
+        return super.add$p(ctx, false, value);
     }
 
-    public ArrayᐸNibbleᐳ insert$p(Ctx ctx, long index, int value) {
-        if (index < 0 || index > size$get$p(ctx)) {
+    public ArrayᐸNibbleᐳ insert$p(Ctx ctx, boolean async, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $insert(ctx, index, 1);
@@ -128,8 +132,8 @@ public class ArrayᐸNibbleᐳ
     }
 
     @Override
-    public ArrayᐸNibbleᐳ delete$p(Ctx ctx, long index) {
-        if (index < 0 || index >= size$get$p(ctx)) {
+    public ArrayᐸNibbleᐳ delete$p(Ctx ctx, boolean async, long index) {
+        if (index < 0 || index >= size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $delete(ctx, index, 1);
@@ -140,8 +144,8 @@ public class ArrayᐸNibbleᐳ
 
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        Nibble c = Nibble.$box(getElement$p(ctx, index));
-        return c.toString(ctx).toString();
+        Nibble c = Nibble.$box(getElement$p(ctx, false, index));
+        return c.toString(ctx, false).toString();
     }
 
     @Override
@@ -168,11 +172,12 @@ public class ArrayᐸNibbleᐳ
      *
      * <p>This is called by various number types to return a nibble array representation of the number.
      */
-    public static ArrayᐸNibbleᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
+    public static ArrayᐸNibbleᐳ $fromLongs(Ctx ctx, boolean async, Mutability mutability,
+            long bits, long... values) {
         ConstantPool  pool  = ctx.pool();
         TypeConstant  type  = pool.ensureClassTypeConstant(pool.clzArray(), null, pool.typeNibble());
         long          size  = bits / 4;
-        ArrayᐸNibbleᐳ array = $new$p(ctx, type, size, false);
+        ArrayᐸNibbleᐳ array = $new$p(ctx, false, type, size, false);
         array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
         array.$storage = values;
         array.$size((int) size);
@@ -202,8 +207,8 @@ public class ArrayᐸNibbleᐳ
         }
 
         @Override
-        public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.pool().typeNibble());
+        public nType Element$get(Ctx ctx, boolean async) {
+            return nType.$ensureType(ctx, false, ctx.pool().typeNibble());
         }
     }
 }

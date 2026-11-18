@@ -20,7 +20,6 @@ import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_long;
-import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
@@ -107,17 +106,13 @@ public class EnumerationBuilder
         String        jitName    = getterName + OPT;
 
         classBuilder.withMethodBody(jitName, jmDesc.optimizedMD, ClassFile.ACC_PUBLIC,
-            code -> {
-                code.loadConstant((long) enumValues.length)
-                    .lreturn();
-            });
+            code -> code.loadConstant((long) enumValues.length)
+                        .lreturn());
 
         classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
-            code -> {
-                code.loadConstant((long) enumValues.length)
-                    .invokestatic(CD_Int64, "$box", md(CD_Int64, CD_long))
-                    .areturn();
-            });
+            code -> code.loadConstant((long) enumValues.length)
+                        .invokestatic(CD_Int64, "$box", md(CD_Int64, CD_long))
+                        .areturn());
     }
 
     private void assembleNamesProp(ClassBuilder classBuilder) {
@@ -165,11 +160,12 @@ public class EnumerationBuilder
         code.new_(thisCD)
             .dup()
             .aload(ctxSlot)
-            .invokespecial(thisCD, INIT_NAME, MD_xvmVoid)
+            .invokespecial(thisCD, INIT_NAME, MD_xvmInit)
             .putstatic(thisCD, Instance, thisCD);
 
         // set the $names array static field
         code.aload(ctxSlot)
+            .iconst_0()
             .loadConstant(count)
             .anewarray(CD_String);
         for (int i = 0; i < count; i++) {
@@ -177,6 +173,7 @@ public class EnumerationBuilder
             code.dup()
                 .loadConstant(i)
                 .aload(ctxSlot)
+                .iconst_0()
                 .loadConstant(value.getName())
                 .invokestatic(CD_String, "of", mdx(CD_String, CD_JavaString))
                 .aastore();
@@ -189,6 +186,7 @@ public class EnumerationBuilder
         String    jitName = enumType.getJitCCName(typeSystem);
         ClassDesc paramCD = enumType.isJitPrimitive() ? getCCDesc(enumType) : CD_Object;
         code.aload(ctxSlot)
+            .iconst_0()
             .loadConstant(count)
             .anewarray(paramCD);
         for (int i = 0; i < count; i++) {
@@ -212,12 +210,11 @@ public class EnumerationBuilder
     protected void assembleMethods(ClassBuilder classBuilder) {
         // don't call super!
 
-        classBuilder.withMethodBody(INIT_NAME, MD_xvmVoid, ClassFile.ACC_PUBLIC, code -> {
+        classBuilder.withMethodBody(INIT_NAME, MD_xvmInit, ClassFile.ACC_PUBLIC, code ->
             code.aload(0)
                 .aload(code.parameterSlot(0))
                 .getstatic(art.CD(), "$sc0", CD_TypeConstant)
                 .invokespecial(CD_Enumeration, INIT_NAME, MD_xvmInitType)
-                .return_();
-        });
+                .return_());
     }
 }

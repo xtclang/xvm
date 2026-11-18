@@ -28,23 +28,23 @@ public class Nibble extends UIntNumber {
     public final int $value;
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, Character.toString(toChar$p($value, ctx)));
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, Character.toString(toChar$p($value, ctx, false)));
     }
 
     /**
      * The primitive implementation of:
      *     String toString()
      */
-    public static String toString$p(int thi$, Ctx ctx) {
-        return String.of(ctx, Character.toString(toChar$p(thi$, ctx)));
+    public static String toString$p(int thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, Character.toString(toChar$p(thi$, ctx, false)));
     }
 
     /**
      * The primitive implementation of:
      *     Int estimateStringLength()
      */
-    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+    public static long estimateStringLength$p(int thi$, Ctx ctx, boolean async) {
         return 1;
     }
 
@@ -55,15 +55,16 @@ public class Nibble extends UIntNumber {
      *     Appender<Char> appendTo(Appender<Char> buf)
      * }</pre>
      */
-    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
-        return appender.add$p(ctx, toChar$p(thi$, ctx));
+    public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, boolean async,
+            AppenderᐸCharᐳ appender) {
+        return appender.add$p(ctx, false, toChar$p(thi$, ctx, false));
     }
 
     /**
      * The primitive implementation of:
      *     Char toChar()
      */
-    public static int toChar$p(int thi$, Ctx ctx) {
+    public static int toChar$p(int thi$, Ctx ctx, boolean async) {
         return thi$ <= 9 ? '0' + thi$ : 'A' + thi$ - 0xA;
     }
 
@@ -86,7 +87,7 @@ public class Nibble extends UIntNumber {
      * The primitive implementation of:
      *     static Nibble of(Int n)
      */
-    public static int of$p(Ctx ctx, long n) {
+    public static int of$p(Ctx ctx, boolean async, long n) {
         if (n < 0 || n > 15) {
             throw Exception.$illegalArg(ctx, "\"0 <= n <= 0xF\": n=" + n);
         }
@@ -97,7 +98,7 @@ public class Nibble extends UIntNumber {
      * The primitive implementation of:
      *     static Nibble of(Char ch)
      */
-    public static int of$1$p(Ctx ctx, int ch) {
+    public static int of$1$p(Ctx ctx, boolean async, int ch) {
         if (ch >= '0' && ch <= '9') {
             return ch - '0';
         } else if (ch >= 'A' && ch <= 'F') {
@@ -116,8 +117,8 @@ public class Nibble extends UIntNumber {
      * <p>The naturally compiled initializer currently erases the array literal's element type to
      * Object, resulting in an invalid attempt to pass an optimized Nibble value to Array.add(Object).
      */
-    public static ArrayᐸNibbleᐳ values$init(Ctx ctx) {
-        return ArrayᐸNibbleᐳ.$fromLongs(ctx, Array.Mutability.Constant.$INSTANCE, 64,
+    public static ArrayᐸNibbleᐳ values$init(Ctx ctx, boolean async) {
+        return ArrayᐸNibbleᐳ.$fromLongs(ctx, false, Array.Mutability.Constant.$INSTANCE, 64,
                 0x0123_4567_89AB_CDEFL);
     }
 

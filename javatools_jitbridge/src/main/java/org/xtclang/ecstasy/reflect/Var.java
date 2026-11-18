@@ -11,5 +11,5 @@ public interface Var extends Ref {
     /**
      * @param referent  the referent to store in this reference
      */
-    void set(Ctx ctx, Object referent);
+    void set(Ctx ctx, boolean async, Object referent);
 }

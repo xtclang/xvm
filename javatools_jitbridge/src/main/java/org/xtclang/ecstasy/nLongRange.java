@@ -36,30 +36,30 @@ public abstract class nLongRange
     /**
      * True iff the starting bound of the range is exclusive.
      */
-    public boolean firstExclusive$get$p(Ctx ctx) {
+    public boolean firstExclusive$get$p(Ctx ctx, boolean async) {
         return $descending ? $upperExclusive : $lowerExclusive;
     }
 
     /**
      * True iff the ending bound of the range is exclusive.
      */
-    public boolean lastExclusive$get$p(Ctx ctx) {
+    public boolean lastExclusive$get$p(Ctx ctx, boolean async) {
         return $descending ? $lowerExclusive : $upperExclusive;
     }
 
-    public boolean lowerExclusive$get$p(Ctx ctx) {
+    public boolean lowerExclusive$get$p(Ctx ctx, boolean async) {
         return $lowerExclusive;
     }
 
-    public boolean upperExclusive$get$p(Ctx ctx) {
+    public boolean upperExclusive$get$p(Ctx ctx, boolean async) {
         return $upperExclusive;
     }
 
-    public boolean descending$get$p(Ctx ctx) {
+    public boolean descending$get$p(Ctx ctx, boolean async) {
         return $descending;
     }
 
-    public boolean effectiveLimits$p(Ctx ctx) {
+    public boolean effectiveLimits$p(Ctx ctx, boolean async) {
         long lo = $lowerExclusive ? Int64.$next(ctx, $lowerBound) : $lowerBound;
         long hi = $upperExclusive ? Int64.$prev(ctx, $upperBound) : $upperBound;
         if (lo > hi) {
@@ -244,7 +244,8 @@ public abstract class nLongRange
      * @return `true` iff the `Range` value was encoded into two Java `long` values
      */
     public boolean $rangeTo128(Ctx ctx) {
-        return $rangeTo128(ctx, $firstAsLong(ctx), $lastAsLong(ctx), firstExclusive$get$p(ctx), lastExclusive$get$p(ctx));
+        return $rangeTo128(ctx, $firstAsLong(ctx), $lastAsLong(ctx), firstExclusive$get$p(ctx,
+                false), lastExclusive$get$p(ctx, false));
     }
 
     /**

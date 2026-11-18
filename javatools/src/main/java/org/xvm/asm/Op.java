@@ -1162,6 +1162,7 @@ public abstract class Op {
         case OP_VAR_TN:      return new Var_TN      (in, aconst);
         case OP_VAR_M:       return new Var_M       (in, aconst);
         case OP_VAR_MN:      return new Var_MN      (in, aconst);
+        case OP_VAR_P:       return new Var_P       (in, aconst);
 
         case OP_MOV:         return new Move        (in, aconst);
         case OP_MOV_VAR:     return new MoveVar     (in, aconst);
@@ -1406,6 +1407,7 @@ public abstract class Op {
         case OP_VAR_TN:      return "VAR_TN";
         case OP_VAR_M:       return "VAR_M";
         case OP_VAR_MN:      return "VAR_MN";
+        case OP_VAR_P:       return "VAR_P";
         case OP_MOV:         return "MOV";
         case OP_MOV_VAR:     return "MOV_VAR";
         case OP_MOV_REF:     return "MOV_REF";
@@ -1585,8 +1587,8 @@ public abstract class Op {
         int c = ai.length;
         writePackedLong(out, c);
 
-        for (int i = 0; i < c; ++i) {
-            writePackedLong(out, ai[i]);
+        for (int j : ai) {
+            writePackedLong(out, j);
         }
     }
 
@@ -1693,7 +1695,7 @@ public abstract class Op {
     public static final int OP_VAR_TN       = 0x5B;
     public static final int OP_VAR_M        = 0x5C;
     public static final int OP_VAR_MN       = 0x5D;
-    public static final int OP_RSVD_5E      = 0x5E;
+    public static final int OP_VAR_P        = 0x5E;
     public static final int OP_RSVD_5F      = 0x5F;
 
     public static final int OP_MOV          = 0x60;

@@ -31,28 +31,28 @@ public class Date
     /**
      * The primitive implementation of the Ecstasy {@code epochDay} property getter.
      */
-    public int epochDay$get(Ctx ctx) {
+    public int epochDay$get(Ctx ctx, boolean async) {
         return epochDay;
     }
 
     /**
      * The static primitive implementation of the Ecstasy {@code epochDay} property getter.
      */
-    public static int epochDay$get$p(int thi$, Ctx ctx) {
+    public static int epochDay$get$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
     /**
      * The static primitive implementation of toString().
      */
-    public static String toString$p(int thi$, Ctx ctx) {
-        return $box(thi$).toString(ctx);
+    public static String toString$p(int thi$, Ctx ctx, boolean async) {
+        return $box(thi$).toString(ctx, false);
     }
 
     /**
      * The native implementation of the estimateStringLength() method.
      */
-    public long estimateStringLength$p(Ctx ctx) {
+    public long estimateStringLength$p(Ctx ctx, boolean async) {
         return 10;
     }
 

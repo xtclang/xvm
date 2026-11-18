@@ -25,25 +25,25 @@ public class RawChannel extends nService {
     /**
      * The primitive property getter for {@code Boolean closed;}.
      */
-    public boolean closed$get$p(Ctx ctx) {
+    public boolean closed$get$p(Ctx ctx, boolean async) {
         return false;
     }
 
     /**
      * The primitive property getter for {@code void close();}.
      */
-    public void close(Ctx ctx) {
+    public void close(Ctx ctx, boolean async) {
     }
 
     /**
      * The primitive implementation of {@code Byte[]|Int allocate(Boolean internal)}.
      */
-    public Object allocate$p(Ctx ctx, boolean internal) {
-        if (closed$get$p(ctx)) {
+    public Object allocate$p(Ctx ctx, boolean async, boolean internal) {
+        if (closed$get$p(ctx, false)) {
             return Int64.$box(-2L);
         }
         long capacity = $getPreferredBufferSize(ctx);
-        return ArrayᐸUInt8ᐳ.$makeArray(ctx, capacity);
+        return ArrayᐸUInt8ᐳ.$makeArray(ctx, false, capacity);
     }
 
     /**

@@ -17,7 +17,7 @@ import static org.xvm.javajit.Builder.OPT;
  *
  * <p>For example, for a parent B with children C0 and C1, the Java implementation B_C1 can declare:
  *      class B_C1 {
- *          R super$C0$foo(B_iC0 receiver, Ctx ctx, ...) { ... }
+ *          R super$C0$foo(B_iC0 receiver, Ctx ctx, boolean async, ...) { ... }
  *      }
  * Here owner is B_C1, but receiverCD is B_iC0, the interface shared by B.C0 and its same-name
  * derived children. The implicit receiver selects the composition-specific override; the explicit

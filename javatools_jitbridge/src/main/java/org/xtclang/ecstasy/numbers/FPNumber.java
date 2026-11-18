@@ -47,8 +47,8 @@ public abstract class FPNumber extends Number {
      * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
      * zero, it can only be -1 for negative or +1 for positive values.
      */
-    public static int $signum(float value, Ctx ctx) {
-        return $signum(Float.floatToRawIntBits(value), ctx);
+    public static int $signum(float value, Ctx ctx, boolean async) {
+        return $signum(Float.floatToRawIntBits(value), ctx, false);
     }
 
     /**
@@ -56,8 +56,8 @@ public abstract class FPNumber extends Number {
      * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
      * zero, it can only be -1 for negative or +1 for positive values.
      */
-    public static int $signum(double value, Ctx ctx) {
-        return $signum(Double.doubleToRawLongBits(value), ctx);
+    public static int $signum(double value, Ctx ctx, boolean async) {
+        return $signum(Double.doubleToRawLongBits(value), ctx, false);
     }
 
     /**
@@ -65,7 +65,7 @@ public abstract class FPNumber extends Number {
      * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
      * zero, it can only be -1 for negative or +1 for positive values.
      */
-    public static int $signum(int value, Ctx ctx) {
+    public static int $signum(int value, Ctx ctx, boolean async) {
         return value < 0 ? -1 : 1;
     }
 
@@ -74,7 +74,7 @@ public abstract class FPNumber extends Number {
      * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
      * zero, it can only be -1 for negative or +1 for positive values.
      */
-    public static int $signum(long value, Ctx ctx) {
+    public static int $signum(long value, Ctx ctx, boolean async) {
         return value < 0 ? -1 : 1;
     }
 
@@ -83,7 +83,7 @@ public abstract class FPNumber extends Number {
      * In IEEE 754-2008, zero, infinity, and NaN can all be signed, so the signum will never be
      * zero, it can only be -1 for negative or +1 for positive values.
      */
-    public static int $signum(long lowBits, long highBits, Ctx ctx) {
+    public static int $signum(long lowBits, long highBits, Ctx ctx, boolean async) {
         return highBits < 0 ? -1 : 1;
     }
 
@@ -104,12 +104,13 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Int8 value inside a Java {@code int}
      */
-    public int toInt8$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
+    public int toInt8$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+            Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Byte.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int8 value");
         }
         return bi.byteValue();
@@ -130,12 +131,13 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Int16 value inside a Java {@code int}
      */
-    public int toInt16$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
+    public int toInt16$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+            Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Short.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int16 value");
         }
         return bi.shortValue();
@@ -156,12 +158,13 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Int32 value inside a Java {@code int}
      */
-    public int toInt32$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
+    public int toInt32$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+            Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Integer.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int32 value");
         }
         return bi.intValue();
@@ -182,13 +185,13 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Int64 value inside a Java {@code long}
      */
-    public long toInt64$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+    public long toInt64$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= Long.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int64 value");
         }
         return bi.longValue();
@@ -213,14 +216,14 @@ public abstract class FPNumber extends Number {
      * @return the low 64-bits of this FPNumber value converted to an Int128 value inside a
      *         Java {@code long}
      */
-    public long toInt128$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+    public long toInt128$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
                               Rounding direction) {
 
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits >= 128)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Int128 value");
         }
         return Int128.$fromBigInteger(ctx, bi);
@@ -241,18 +244,18 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Nibble value inside a Java {@code int}
      */
-    public int toNibble$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+    public int toNibble$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
                             Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Nibble value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > 4)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid Nibble value");
         }
         return bi.intValue() & 0x0F;
@@ -273,18 +276,18 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an UInt8 value inside a Java {@code int}
      */
-    public int toUInt8$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+    public int toUInt8$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
                             Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt8 value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > Byte.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt8 value");
         }
         return bi.intValue() & 0xFF;
@@ -305,18 +308,18 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an UInt16 value inside a Java {@code int}
      */
-    public int toUInt16$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+    public int toUInt16$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt8 value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > Short.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt16 value");
         }
         return bi.shortValue() & 0xFFFF;
@@ -337,18 +340,18 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an UInt32 value inside a Java {@code int}
      */
-    public int toUInt32$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+    public int toUInt32$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt32 value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > Integer.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt32 value");
         }
         return bi.intValue();
@@ -369,18 +372,18 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an UInt64 value inside a Java {@code long}
      */
-    public long toUInt64$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+    public long toUInt64$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
                               Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt64 value");
         }
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > Long.SIZE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt64 value");
         }
         return bi.longValue();
@@ -405,11 +408,11 @@ public abstract class FPNumber extends Number {
      * @return the low 64-bits of this FPNumber value converted to an UInt128 value inside a
      *         Java {@code long}
      */
-    public long toUInt128$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
+    public long toUInt128$FP$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
                                Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt128 value");
         }
 
@@ -417,21 +420,21 @@ public abstract class FPNumber extends Number {
         int        bits = bi.bitLength();
         if (!dfltCheckBounds && checkBounds && (bits > 128)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UInt128 value");
         }
         return UInt128.$fromBigInteger(ctx, bi);
     }
 
-    public IntN toIntN$FP$p(Ctx ctx, Rounding direction) {
+    public IntN toIntN$FP$p(Ctx ctx, boolean async, Rounding direction) {
         BigInteger bi = $toBigInteger(direction);
         return IntN.$box(bi);
     }
 
-    public UIntN toUIntN$FP$p(Ctx ctx, Rounding direction) {
+    public UIntN toUIntN$FP$p(Ctx ctx, boolean async, Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()
+            throw oob.$init(ctx, false, "FPNumber value " + $toBigDecimal().toEngineeringString()
                     + " is not a valid UIntN value");
         }
         BigInteger bi = $toBigInteger(direction);
@@ -467,46 +470,46 @@ public abstract class FPNumber extends Number {
         }
 
         @Override
-        public String name$get(Ctx ctx) {
+        public String name$get(Ctx ctx, boolean async) {
             return $name;
         }
 
         @Override
-        public long ordinal$get$p(Ctx ctx) {
+        public long ordinal$get$p(Ctx ctx, boolean async) {
             return $ordinal;
         }
 
         public static class TiesToEven extends Rounding {
             private TiesToEven() {
-                super(0, String.of(null, "TiesToEven"), RoundingMode.HALF_EVEN);
+                super(0, String.of(null, false, "TiesToEven"), RoundingMode.HALF_EVEN);
             }
             public static TiesToEven $INSTANCE = new TiesToEven();
         }
 
         public static class TiesToAway extends Rounding {
             private TiesToAway() {
-                super(1, String.of(null, "TiesToAway"), RoundingMode.UP);
+                super(1, String.of(null, false, "TiesToAway"), RoundingMode.UP);
             }
             public static TiesToAway $INSTANCE = new TiesToAway();
         }
 
         public static class TowardPositive extends Rounding {
             private TowardPositive() {
-                super(2, String.of(null, "TowardPositive"), RoundingMode.CEILING);
+                super(2, String.of(null, false, "TowardPositive"), RoundingMode.CEILING);
             }
             public static TowardPositive $INSTANCE = new TowardPositive();
         }
 
         public static class TowardZero extends Rounding {
             private TowardZero() {
-                super(3, String.of(null, "TowardZero"), RoundingMode.DOWN);
+                super(3, String.of(null, false, "TowardZero"), RoundingMode.DOWN);
             }
             public static TowardZero $INSTANCE = new TowardZero();
         }
 
         public static class TowardNegative extends Rounding {
             private TowardNegative() {
-                super(4, String.of(null, "TowardNegative"), RoundingMode.FLOOR);
+                super(4, String.of(null, false, "TowardNegative"), RoundingMode.FLOOR);
             }
             public static TowardNegative $INSTANCE = new TowardNegative();
         }

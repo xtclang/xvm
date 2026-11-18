@@ -35,7 +35,8 @@ public class ArrayᐸFloat64ᐳ
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static ArrayᐸFloat64ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸFloat64ᐳ $new$p(Ctx ctx, boolean async, TypeConstant type, long capacity,
+            boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
@@ -45,7 +46,8 @@ public class ArrayᐸFloat64ᐳ
         return array;
     }
 
-    public static ArrayᐸFloat64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
+    public static ArrayᐸFloat64ᐳ $new$1$p(Ctx ctx, boolean async, TypeConstant type, long size,
+            Object supply) {
         if (supply instanceof org.xtclang.ecstasy.numbers.Float64 boxed) {
             ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
             ArrayᐸFloat64ᐳ array = new ArrayᐸFloat64ᐳ(ctx, type);
@@ -65,60 +67,63 @@ public class ArrayᐸFloat64ᐳ
         throw new UnsupportedOperationException();
     }
 
-    public static ArrayᐸFloat64ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        long size = elements.size$get$p(ctx);
+    public static ArrayᐸFloat64ᐳ $new$2$p(Ctx ctx, boolean async, TypeConstant type,
+            Mutability mutability, Iterable elements) {
+        long size = elements.size$get$p(ctx, false);
         ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
         ArrayᐸFloat64ᐳ array = new ArrayᐸFloat64ᐳ(ctx, type);
         array.$mut($MUTABLE);
-        array.addAll(ctx, elements);
-        array.$mut((int) mutability.ordinal$get$p(ctx));
+        array.addAll(ctx, false, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx, false));
         return array;
     }
 
-    public static ArrayᐸFloat64ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸFloat64ᐳ that) {
+    public static ArrayᐸFloat64ᐳ $new$3$p(Ctx ctx, boolean async, TypeConstant type,
+            ArrayᐸFloat64ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public Float64 getElement(Ctx ctx, Int64 index) {
-        return Float64.$box(getElement$pi(ctx, index.$value));
+    public Float64 getElement(Ctx ctx, boolean async, Int64 index) {
+        return Float64.$box(getElement$pi(ctx, false, index.$value));
     }
 
-    public double getElement$p(Ctx ctx, long index) {
-        return getElement$pi(ctx, index);
+    public double getElement$p(Ctx ctx, boolean async, long index) {
+        return getElement$pi(ctx, false, index);
     }
 
-    public double getElement$pi(Ctx ctx, long index) {
+    public double getElement$pi(Ctx ctx, boolean async, long index) {
         return Double.longBitsToDouble($getElement$pi(ctx, index));
     }
 
-    public void setElement(Ctx ctx, Int64 index, Object value) {
-        setElement$pi(ctx, index.$value, Double.doubleToRawLongBits(((Float64) value).$value));
+    public void setElement(Ctx ctx, boolean async, Int64 index, Object value) {
+        setElement$pi(ctx, false, index.$value,
+                Double.doubleToRawLongBits(((Float64) value).$value));
     }
 
-    public void setElement$p(Ctx ctx, long index, double value) {
-        setElement$pi(ctx, index, Double.doubleToRawLongBits(value));
+    public void setElement$p(Ctx ctx, boolean async, long index, double value) {
+        setElement$pi(ctx, false, index, Double.doubleToRawLongBits(value));
     }
 
-    public void setElement$pi(Ctx ctx, long index, double value) {
-        setElement$pi(ctx, index, Double.doubleToRawLongBits(value));
+    public void setElement$pi(Ctx ctx, boolean async, long index, double value) {
+        setElement$pi(ctx, false, index, Double.doubleToRawLongBits(value));
     }
 
-    public IteratorᐸFloat64ᐳ iterator(Ctx ctx) {
+    public IteratorᐸFloat64ᐳ iterator(Ctx ctx, boolean async) {
         return new nIterator(ctx);
     }
 
     @Override
-    public ArrayᐸFloat64ᐳ add(Ctx ctx, Object element) {
-        return add$p(ctx, Double.doubleToRawLongBits(((Float64) element).$value));
+    public ArrayᐸFloat64ᐳ add(Ctx ctx, boolean async, Object element) {
+        return add$p(ctx, false, Double.doubleToRawLongBits(((Float64) element).$value));
     }
 
-    public ArrayᐸFloat64ᐳ add$p(Ctx ctx, double value) {
-        return super.add$p(ctx, Double.doubleToRawLongBits(value));
+    public ArrayᐸFloat64ᐳ add$p(Ctx ctx, boolean async, double value) {
+        return super.add$p(ctx, false, Double.doubleToRawLongBits(value));
     }
 
-    public ArrayᐸFloat64ᐳ insert$p(Ctx ctx, long index, double value) {
-        if (index < 0 || index > size$get$p(ctx)) {
+    public ArrayᐸFloat64ᐳ insert$p(Ctx ctx, boolean async, long index, double value) {
+        if (index < 0 || index > size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $insert(ctx, index, 1);
@@ -127,8 +132,8 @@ public class ArrayᐸFloat64ᐳ
     }
 
     @Override
-    public ArrayᐸFloat64ᐳ delete$p(Ctx ctx, long index) {
-        if (index < 0 || index >= size$get$p(ctx)) {
+    public ArrayᐸFloat64ᐳ delete$p(Ctx ctx, boolean async, long index) {
+        if (index < 0 || index >= size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $delete(ctx, index, 1);
@@ -140,8 +145,8 @@ public class ArrayᐸFloat64ᐳ
     // ToDo GG/JK remove this (and sub classes) when toString() can be generated by the JIT
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        Float64 n = Float64.$box(getElement$pi(ctx, index));
-        return n.toString(ctx).toString();
+        Float64 n = Float64.$box(getElement$pi(ctx, false, index));
+        return n.toString(ctx, false).toString();
     }
 
     @Override
@@ -187,8 +192,8 @@ public class ArrayᐸFloat64ᐳ
         }
 
         @Override
-        public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.pool().typeFloat64());
+        public nType Element$get(Ctx ctx, boolean async) {
+            return nType.$ensureType(ctx, false, ctx.pool().typeFloat64());
         }
     }
 }

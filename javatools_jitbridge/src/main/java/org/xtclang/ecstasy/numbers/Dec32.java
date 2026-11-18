@@ -101,95 +101,106 @@ public class Dec32 extends DecimalFPNumber {
         return new Dec32(value);
     }
 
-    public static String toString$p(int thi$, Ctx ctx) {
-        return String.of(ctx, $box(thi$).toString());
+    public static String toString$p(int thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, $box(thi$).toString());
     }
 
-    public static long estimateStringLength$p(int thi$, Ctx ctx) {
+    public static long estimateStringLength$p(int thi$, Ctx ctx, boolean async) {
         return $box(thi$).toString().length();
     }
 
     public static AppenderᐸCharᐳ appendTo$p(
-            int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
+            int thi$, Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
         for (char c : $box(thi$).toString().toCharArray()) {
-            appender = appender.add$p(ctx, c);
+            appender = appender.add$p(ctx, false, c);
         }
         return appender;
     }
 
-    public static boolean infinity$get$p(int thi$, Ctx ctx) {
+    public static boolean infinity$get$p(int thi$, Ctx ctx, boolean async) {
         return $isInfinite($leftmost7Bits(thi$));
     }
 
-    public static boolean finite$get$p(int thi$, Ctx ctx) {
+    public static boolean finite$get$p(int thi$, Ctx ctx, boolean async) {
         return $isFinite($leftmost7Bits(thi$));
     }
 
-    public static boolean NaN$get$p(int thi$, Ctx ctx) {
+    public static boolean NaN$get$p(int thi$, Ctx ctx, boolean async) {
         return $isNaN($leftmost7Bits(thi$));
     }
 
     public static int toInt8$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toInt8$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toInt8$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static int toInt16$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toInt16$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toInt16$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static int toInt32$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toInt32$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toInt32$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static long toInt64$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toInt64$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toInt64$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static long toInt128$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toInt128$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static int toNibble$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toNibble$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toNibble$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static int toUInt8$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toUInt8$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toUInt8$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static int toUInt16$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toUInt16$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toUInt16$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static int toUInt32$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toUInt32$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toUInt32$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static long toUInt64$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toUInt64$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toUInt64$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
     public static long toUInt128$FP$p(
-            int thi$, Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
-        return $box(thi$).toUInt128$FP$p(ctx, checkBounds, dfltCheckBounds, direction);
+            int thi$, Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds,
+                    Rounding direction) {
+        return $box(thi$).toUInt128$FP$p(ctx, false, checkBounds, dfltCheckBounds, direction);
     }
 
-    public static IntN toIntN$FP$p(int thi$, Ctx ctx, Rounding direction) {
-        return $box(thi$).toIntN$FP$p(ctx, direction);
+    public static IntN toIntN$FP$p(int thi$, Ctx ctx, boolean async, Rounding direction) {
+        return $box(thi$).toIntN$FP$p(ctx, false, direction);
     }
 
-    public static UIntN toUIntN$FP$p(int thi$, Ctx ctx, Rounding direction) {
-        return $box(thi$).toUIntN$FP$p(ctx, direction);
+    public static UIntN toUIntN$FP$p(int thi$, Ctx ctx, boolean async, Rounding direction) {
+        return $box(thi$).toUIntN$FP$p(ctx, false, direction);
     }
 
     // ----- Op methods ----------------------------------------------------------------------------
@@ -205,13 +216,13 @@ public class Dec32 extends DecimalFPNumber {
      * @return the result of the addition as an IEEE-754-2008 32-bit decimal packed into
      *         an {@code int}
      */
-    public static int $add(Ctx ctx, int bits1, int bits2) {
+    public static int $add(Ctx ctx, boolean async, int bits1, int bits2) {
         int     leftSevenBits1 = $leftmost7Bits(bits1);
         int     leftSevenBits2 = $leftmost7Bits(bits2);
         boolean finite1        = $isFinite(leftSevenBits1);
         boolean finite2        = $isFinite(leftSevenBits2);
         if (finite1 && finite2) {
-            return $toIntBits(ctx, $toBigDecimal(bits1).add($toBigDecimal(bits2)));
+            return $toIntBits(ctx, false, $toBigDecimal(bits1).add($toBigDecimal(bits2)));
         }
         // if bits1 is finite, bits2 is infinity or Nan, so return bits2
         // else if bits2 is finite, then bits1 is infinity or Nan, so return bits1
@@ -233,7 +244,7 @@ public class Dec32 extends DecimalFPNumber {
      * @return the result of the multiplication as an IEEE-754-2008 32-bit decimal packed into
      *         an {@code int}
      */
-    public static int $div(Ctx ctx, int bits1, int bits2) {
+    public static int $div(Ctx ctx, boolean async, int bits1, int bits2) {
         int     leftSevenBits1 = $leftmost7Bits(bits1);
         int     leftSevenBits2 = $leftmost7Bits(bits2);
         boolean finite1        = $isFinite(leftSevenBits1);
@@ -242,10 +253,10 @@ public class Dec32 extends DecimalFPNumber {
         if (finite1 && finite2) {
             if ($isZero(bits2)) {
                 // ToDo this should be DivideByZero but that fails with a JVM verifier error
-                throw new IllegalMath(ctx).$init(ctx, "divide by zero");
+                throw new IllegalMath(ctx).$init(ctx, false, "divide by zero");
             }
             BigDecimal bd = $toBigDecimal(bits1);
-            return $toIntBits(ctx, bd.divide($toBigDecimal(bits2), RoundingMode.DOWN));
+            return $toIntBits(ctx, false, bd.divide($toBigDecimal(bits2), RoundingMode.DOWN));
         }
 
         if ($isNaN(leftSevenBits1) || $isNaN(leftSevenBits2)) {
@@ -277,7 +288,7 @@ public class Dec32 extends DecimalFPNumber {
      * @return the result of the operation as an IEEE-754-2008 32-bit decimal packed into an
      *         {@code int}
      */
-    public static int $mod(Ctx ctx, int bits1, int bits2) {
+    public static int $mod(Ctx ctx, boolean async, int bits1, int bits2) {
         int     leftSevenBits1 = $leftmost7Bits(bits1);
         int     leftSevenBits2 = $leftmost7Bits(bits2);
         boolean finite1        = $isFinite(leftSevenBits1);
@@ -287,7 +298,7 @@ public class Dec32 extends DecimalFPNumber {
             BigDecimal target  = $toBigDecimal(bits1);
             BigDecimal divisor = $toBigDecimal(bits2);
             BigDecimal bigR    = target.remainder(divisor, MathContext.DECIMAL32);
-            return $toIntBits(ctx, bigR.signum() >= 0 ? bigR : bigR.add(divisor));
+            return $toIntBits(ctx, false, bigR.signum() >= 0 ? bigR : bigR.add(divisor));
         }
         // either side is infinity or NaN so return NaN
         return $NaN;
@@ -304,14 +315,14 @@ public class Dec32 extends DecimalFPNumber {
      * @return the result of the multiplication as an IEEE-754-2008 32-bit decimal packed into
      *         an {@code int}
      */
-    public static int $mul(Ctx ctx, int bits1, int bits2) {
+    public static int $mul(Ctx ctx, boolean async, int bits1, int bits2) {
         int     leftSevenBits1 = $leftmost7Bits(bits1);
         int     leftSevenBits2 = $leftmost7Bits(bits2);
         boolean finite1        = $isFinite(leftSevenBits1);
         boolean finite2        = $isFinite(leftSevenBits2);
 
         if (finite1 && finite2) {
-            return $toIntBits(ctx, $toBigDecimal(bits1).multiply($toBigDecimal(bits2)));
+            return $toIntBits(ctx, false, $toBigDecimal(bits1).multiply($toBigDecimal(bits2)));
         }
         if ($isNaN(leftSevenBits1) || $isNaN(leftSevenBits2)) {
             // either side is Nan, so return Nan
@@ -331,10 +342,10 @@ public class Dec32 extends DecimalFPNumber {
      *
      * @return the negated IEEE-754-2008 32-bit decimal packed into an {@code int}
      */
-    public static int $neg(Ctx ctx, int bits) {
+    public static int $neg(Ctx ctx, boolean async, int bits) {
         int leftSevenBits = $leftmost7Bits(bits);
         return $isFinite(leftSevenBits)
-                ? $toIntBits(ctx, $toBigDecimal(bits).negate())
+                ? $toIntBits(ctx, false, $toBigDecimal(bits).negate())
                 : $isNaN(leftSevenBits)
                         ? $NaN
                         : $isSigned(leftSevenBits) ? $POS_INFINITY : $NEG_INFINITY;
@@ -351,13 +362,13 @@ public class Dec32 extends DecimalFPNumber {
      * @return the result of the subtraction as an IEEE-754-2008 32-bit decimal packed into
      *         an {@code int}
      */
-    public static int $sub(Ctx ctx, int bits1, int bits2) {
+    public static int $sub(Ctx ctx, boolean async, int bits1, int bits2) {
         int     leftSevenBits1 = $leftmost7Bits(bits1);
         int     leftSevenBits2 = $leftmost7Bits(bits2);
         boolean finite1        = $isFinite(leftSevenBits1);
         boolean finite2        = $isFinite(leftSevenBits2);
         if (finite1 && finite2) {
-            return $toIntBits(ctx, $toBigDecimal(bits1).subtract($toBigDecimal(bits2)));
+            return $toIntBits(ctx, false, $toBigDecimal(bits1).subtract($toBigDecimal(bits2)));
         }
 
         if ($isNaN(leftSevenBits1) || $isNaN(leftSevenBits2)) {
@@ -378,24 +389,24 @@ public class Dec32 extends DecimalFPNumber {
 
     // ----- conversion ----------------------------------------------------------------------------
 
-    public static int toDec32$p(int thi$, Ctx ctx) {
+    public static int toDec32$p(int thi$, Ctx ctx, boolean async) {
         return thi$;
     }
 
-    public static long toDec64$p(int thi$, Ctx ctx) {
+    public static long toDec64$p(int thi$, Ctx ctx, boolean async) {
         int leftSevenBits = $leftmost7Bits(thi$);
         if ($isFinite(leftSevenBits)) {
-            return Dec64.$toLongBits(ctx, $toBigDecimal(thi$));
+            return Dec64.$toLongBits(ctx, false, $toBigDecimal(thi$));
         }
         return $isInfinite(leftSevenBits)
                 ? $isSigned(leftSevenBits) ? Dec64.$NEG_INFINITY : Dec64.$POS_INFINITY
                 : Dec64.$NaN;
     }
 
-    public static long toDec128$p(int thi$, Ctx ctx) {
+    public static long toDec128$p(int thi$, Ctx ctx, boolean async) {
         int leftSevenBits = $leftmost7Bits(thi$);
         if ($isFinite(leftSevenBits)) {
-            return Dec128.$toLongBits(ctx, $toBigDecimal(thi$));
+            return Dec128.$toLongBits(ctx, false, $toBigDecimal(thi$));
         }
         ctx.i0 = $isInfinite(leftSevenBits)
                 ? $isSigned(leftSevenBits) ? Dec128.$NEG_INFINITY_HIGH : Dec128.$POS_INFINITY_HIGH
@@ -563,14 +574,14 @@ public class Dec32 extends DecimalFPNumber {
      *
      * @throws nException wrapping an {@link OutOfBounds} if the value is out of range
      */
-    public static int $toIntBits(Ctx ctx, BigDecimal dec) {
+    public static int $toIntBits(Ctx ctx, boolean async, BigDecimal dec) {
         dec = dec.round(MathContext.DECIMAL32);
 
         // get the significand
         int nSig = dec.unscaledValue().intValueExact();
         if (nSig < -9999999 || nSig > 9999999) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "significand is >7 digits: " + nSig);
+            throw oob.$init(ctx, false, "significand is >7 digits: " + nSig);
         }
 
         int nBits = 0;
@@ -582,7 +593,7 @@ public class Dec32 extends DecimalFPNumber {
         // bias the exponent (the scale is basically a negative exponent)
         int nExp = 101 - dec.scale();
         if (nExp < 0 || nExp >= 192) {
-            throw new OutOfBounds(ctx).$init(ctx,
+            throw new OutOfBounds(ctx).$init(ctx, false,
                     "biased exponent is out of range [0,192): " + nExp);
         }
 

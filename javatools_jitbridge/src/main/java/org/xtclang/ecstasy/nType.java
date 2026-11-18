@@ -53,13 +53,13 @@ public class nType
     private Class  xvmClass;
 
     public nObject alloc(Ctx ctx) {
-        throw Exception.$unsupported(ctx, "Type " + $dataType);
+        throw Exception.$unsupported(ctx, false, "Type " + $dataType);
     }
 
     /**
      * @return  an instance of the {@link Class class of class} for this type
      */
-    public Class $xvmClass(Ctx ctx) {
+    public Class $xvmClass(Ctx ctx, boolean async) {
         if (xvmClass == null) {
             TypeSystem       typeSystem  = ctx.container.typeSystem;
             java.lang.String className   = $dataType.getJitImplName(typeSystem);
@@ -75,7 +75,8 @@ public class nType
                             newInstance(ctx, $dataType);
 
             } catch (java.lang.Exception e) {
-                throw new Exception(ctx).$init(ctx, "Failed to load a class for: " + className, e);
+                throw new Exception(ctx).$init(ctx, false,
+                        "Failed to load a class for: " + className, e);
             }
         }
         return xvmClass;
@@ -90,16 +91,16 @@ public class nType
      *
      * @see org.xvm.javajit.BuildContext#loadFormalType
      */
-    public nType $dataTypeForName(Ctx ctx, java.lang.String name) {
+    public nType $dataTypeForName(Ctx ctx, boolean async, java.lang.String name) {
         TypeConstant type = $dataType.resolveGenericType(name);
         if (type == null) {
             throw Exception.$xvmError(ctx, "Unresolvable formal type \"" + name + "\" in " +
                     $dataType.getValueString(), null);
         }
-        return $ensureType(ctx, type);
+        return $ensureType(ctx, false, type);
     }
 
-    @Override public TypeConstant $xvmType(Ctx ctx) {
+    @Override public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return $dataType.getType();
     }
 
@@ -108,8 +109,8 @@ public class nType
     }
 
     @Override
-    public Boolean structConstructor(Ctx ctx, Type OuterType, Object outer) {
-        throw Exception.$unsupported(ctx, "Type " + $dataType);
+    public Boolean structConstructor(Ctx ctx, boolean async, Type OuterType, Object outer) {
+        throw Exception.$unsupported(ctx, false, "Type " + $dataType);
     }
 
     /**
@@ -117,13 +118,14 @@ public class nType
      *
      * TODO: this is temporary - it needs to be removed here and naturally generated
      */
-    public boolean hashed$p(Ctx ctx) {
+    public boolean hashed$p(Ctx ctx, boolean async) {
         ConstantPool pool = ctx.pool();
         if (!$dataType.isA(pool.typeHashable())) {
             return false;
         }
         if (!$dataType.isSingleUnderlyingClass(true)) {
-            throw Exception.$unsupported(ctx, "Type.hashed() for " + $dataType.getValueString());
+            throw Exception.$unsupported(ctx, false,
+                    "Type.hashed() for " + $dataType.getValueString());
         }
         if ($dataType.findCallable(pool.sigHashCode()) == null ||
                 $dataType.findCallable(pool.sigEquals()) == null) {
@@ -138,36 +140,36 @@ public class nType
         try {
             // use the generated factory so the hasher implements the correct specialized interface
             java.lang.Class<?> hasherClass = ts.loader.loadClass(hasherType.getJitICName(ts));
-            ctx.o0 = hasherClass.getDeclaredMethod(newName, Ctx.class, TypeConstant.class)
-                    .invoke(null, ctx, hasherType);
+            ctx.o0 = hasherClass.getDeclaredMethod(newName, Ctx.class, boolean.class,
+                    TypeConstant.class).invoke(null, ctx, false, hasherType);
             return true;
         } catch (ReflectiveOperationException e) {
-            throw new Exception(ctx).$init(ctx,
+            throw new Exception(ctx).$init(ctx, false,
                     "Failed to create a natural hasher for " + $dataType.getValueString(), e);
         }
     }
 
     // TODO: Stringable methods below are temporary; remove when we can compile Type.x
-    public long estimateStringLength$p(Ctx ctx) {
+    public long estimateStringLength$p(Ctx ctx, boolean async) {
         return 0;
     }
 
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
         for (char c : $dataType.getValueString().toCharArray()) {
-            appender = appender.add$p(ctx, c);
+            appender = appender.add$p(ctx, false, c);
         }
         return appender;
     }
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, $dataType.getValueString());
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, $dataType.getValueString());
     }
 
     /**
      * @return nType instance for the specified type
      */
-    public static nType $ensureType(Ctx ctx, TypeConstant type) {
+    public static nType $ensureType(Ctx ctx, boolean async, TypeConstant type) {
         // TODO: cache type -> nType
         return new nType(ctx, type);
     }
@@ -176,25 +178,26 @@ public class nType
      * Native implementation of: {@code static <CompileType extends Type> Boolean
      * equals(CompileType value1, CompileType value2)}.
      */
-    public static boolean equals$p(Ctx ctx, nType CompileType, nType value1, nType value2) {
+    public static boolean equals$p(Ctx ctx, boolean async, nType CompileType, nType value1,
+            nType value2) {
         return value1.$dataType.equals(value2.$dataType);
     }
 
     /**
      * "Comparable" interface  support.
      */
-    public boolean equals$p(Ctx ctx, Object value1, Object value2) {
+    public boolean equals$p(Ctx ctx, boolean async, Object value1, Object value2) {
         if (value1 == value2) {
             return true;
         }
 
         if ($dataType.equals(ctx.pool().typeEnum())) {
             // Enum inherits Const.equals(), whose native implementation uses ordinal equality
-            return nEnum.equals$p(ctx, this, (nEnum) value1, (nEnum) value2);
+            return nEnum.equals$p(ctx, false, this, (nEnum) value1, (nEnum) value2);
         }
 
-        nType type1 = ((nObject) value1).$type(ctx);
-        nType type2 = ((nObject) value2).$type(ctx);
+        nType type1 = ((nObject) value1).$type(ctx, false);
+        nType type2 = ((nObject) value2).$type(ctx, false);
         if ($dataType.isJitPrimitive()) {
             if (!type1.$dataType.equals(type2.$dataType)) {
                 return false;
@@ -244,10 +247,10 @@ public class nType
 
         try {
             java.lang.Boolean result = (java.lang.Boolean)
-                    equalsMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
+                    equalsMethod.invoke($xvmClass(ctx, false), ctx, false, this, value1, value2);
             return result.booleanValue();
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported(ctx,
+            throw Exception.$unsupported(ctx, false,
                 "Failed to invoke 'equals()` on class " + $dataType.getValueString());
         }
     }
@@ -255,13 +258,13 @@ public class nType
     /**
      * "Orderable" interface  support.
      */
-    public Ordered compare(Ctx ctx, Orderable value1, Orderable value2) {
+    public Ordered compare(Ctx ctx, boolean async, Orderable value1, Orderable value2) {
         if (value1 == value2) {
             return Ordered.Equal.$INSTANCE;
         }
 
-        nType type1 = ((nObject) value1).$type(ctx);
-        nType type2 = ((nObject) value2).$type(ctx);
+        nType type1 = ((nObject) value1).$type(ctx, false);
+        nType type2 = ((nObject) value2).$type(ctx, false);
         if ($dataType.isJitPrimitive() && type1.$dataType.equals(type2.$dataType)) {
             int result = switch (value1) {
                 case Bit n1    -> n1.$value - ((Bit)    value2).$value;
@@ -309,14 +312,15 @@ public class nType
         }
 
         try {
-            return (Ordered) compareMethod.invoke($xvmClass(ctx), ctx, this, value1, value2);
+            return (Ordered) compareMethod.invoke($xvmClass(ctx, false), ctx, false, this,
+                    value1, value2);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported(ctx,
+            throw Exception.$unsupported(ctx, false,
                 "Failed to invoke 'compare()` on class " + $dataType.getValueString());
         }
     }
 
-    public long hashCode$p(Ctx ctx, Hashable value) {
+    public long hashCode$p(Ctx ctx, boolean async, Hashable value) {
         if ($dataType.isJitPrimitive() ) {
             ByteHashCollector collector = ctx.createHashCollector();
             collector = switch (value) {
@@ -359,9 +363,9 @@ public class nType
         }
 
         try {
-            return (long) hashCodeMethod.invoke($xvmClass(ctx), ctx, this, value);
+            return (long) hashCodeMethod.invoke($xvmClass(ctx, false), ctx, false, this, value);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw Exception.$unsupported(ctx,
+            throw Exception.$unsupported(ctx, false,
                     "Failed to invoke 'hashCode$p()` on class " + $dataType.getValueString());
         }
 
@@ -374,7 +378,7 @@ public class nType
         try {
             targetClass = typeSystem.loader.loadClass(className);
         } catch (ClassNotFoundException e) {
-            throw Exception.$unsupported(ctx, "No such class " + className);
+            throw Exception.$unsupported(ctx, false, "No such class " + className);
         }
 
         int paramCount   = METHOD_PARAMETER_PREFIX.length + valueCount;
@@ -395,7 +399,7 @@ public class nType
 
         // fall through to the class-of-class routing method; its value parameters use the funky
         // declaration types rather than the concrete target type represented by paramClasses
-        java.lang.Class<?> classOfClass = $xvmClass(ctx).getClass();
+        java.lang.Class<?> classOfClass = $xvmClass(ctx, false).getClass();
         for (Method method : classOfClass.getDeclaredMethods()) {
             if (!method.getName().equals(methodName) ||
                     method.getParameterCount() != paramCount) {
@@ -404,7 +408,8 @@ public class nType
 
             java.lang.Class<?>[] methodParams = method.getParameterTypes();
             boolean              matches      = methodParams[0].equals(Ctx.class) &&
-                                                methodParams[1].equals(nType.class);
+                                                methodParams[1].equals(boolean.class) &&
+                                                methodParams[2].equals(nType.class);
             for (int i = METHOD_PARAMETER_PREFIX.length; matches && i < methodParams.length; i++) {
                 matches = methodParams[i].isAssignableFrom(targetClass);
             }
@@ -413,10 +418,11 @@ public class nType
             }
         }
 
-        throw Exception.$unsupported(ctx,
+        throw Exception.$unsupported(ctx, false,
             "No method " + methodName + " on class " + $dataType.getValueString());
     }
 
     /** Context and represented type precede the values in equals, compare and hashCode methods. */
-    private static final java.lang.Class<?>[] METHOD_PARAMETER_PREFIX = {Ctx.class, nType.class};
+    private static final java.lang.Class<?>[] METHOD_PARAMETER_PREFIX =
+            {Ctx.class, boolean.class, nType.class};
 }

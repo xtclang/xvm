@@ -44,7 +44,7 @@ public class OSFileStore
      * {@code construct(OSStorage storage, Boolean readOnly)}
      */
     @JitFromNatural
-    public static OSFileStore $new$p(Ctx ctx, OSStorage storage, boolean readOnly) {
+    public static OSFileStore $new$p(Ctx ctx, boolean async, OSStorage storage, boolean readOnly) {
         // this method is declared so that other native code can call the constructor
         // the JIT will generate the code for this method from the natural code in
         // _native.fs.OSFileStore.x
@@ -60,7 +60,7 @@ public class OSFileStore
      * The native implementation of {@code @Lazy Directory root.calc()}.
      */
     @JitFromNatural
-    public Directory root$get(Ctx ctx) {
+    public Directory root$get(Ctx ctx, boolean async) {
         // this method is declared so that other native code can access the root directory property
         // the JIT will generate the code for this method from the natural code in
         // _native.fs.OSFileStore.x
@@ -70,35 +70,35 @@ public class OSFileStore
     /**
      * The native implementation of {@code @RO Int capacity;}.
      */
-    public long capacity$get$p(Ctx ctx) {
+    public long capacity$get$p(Ctx ctx, boolean async) {
         return $ROOT.getTotalSpace();
     }
 
     /**
      * The native implementation of {@code @RO Int bytesUsed;}.
      */
-    public long bytesUsed$get$p(Ctx ctx) {
+    public long bytesUsed$get$p(Ctx ctx, boolean async) {
         return $ROOT.getTotalSpace() - $ROOT.getFreeSpace();
     }
 
     /**
      * The native implementation of {@code @RO Int bytesFree;}.
      */
-    public long bytesFree$get$p(Ctx ctx) {
+    public long bytesFree$get$p(Ctx ctx, boolean async) {
         return $ROOT.getFreeSpace();
     }
 
     /**
      * The native implementation of {@code Directory dirFor(Path path);}.
      */
-    public Directory dirFor(Ctx ctx, Path path) {
-        return dirFor(ctx, path.toString(ctx));
+    public Directory dirFor(Ctx ctx, boolean async, Path path) {
+        return dirFor(ctx, false, path.toString(ctx, false));
     }
 
     /**
      * The native implementation of {@code Directory dirFor(Path path);}.
      */
-    public OSDirectory dirFor(Ctx ctx, String pathString) {
+    public OSDirectory dirFor(Ctx ctx, boolean async, String pathString) {
         java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
         return new OSDirectory(ctx, this, path);
     }
@@ -106,7 +106,7 @@ public class OSFileStore
     /**
      * The native implementation of {@code File fileFor(Path path);}.
      */
-    public OSFile fileFor(Ctx ctx, String pathString) {
+    public OSFile fileFor(Ctx ctx, boolean async, String pathString) {
         java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
         return new OSFile(ctx, this, path);
     }
@@ -116,20 +116,23 @@ public class OSFileStore
      * {@code OSDirectory|OSFile copyOrMove(Path sourcePath, String sourceStr, Path destPath,
      *                                      String destStr, Boolean move)}.
      */
-    public Object copyOrMove$p(Ctx ctx, Path sourcePath, String sourceStr, Path destPath,
+    public Object copyOrMove$p(Ctx ctx, boolean async, Path sourcePath, String sourceStr,
+            Path destPath,
                                String destStr, boolean move) {
 
         try {
             java.nio.file.Path pathSrc = OSFileNode.$toOsPath(ctx, sourceStr);
             if (Files.notExists(pathSrc)) {
                 throw new FileNotFound(ctx)
-                        .$init(ctx, "Could not find file or directory: " + sourceStr, sourcePath);
+                        .$init(ctx, false, "Could not find file or directory: " + sourceStr,
+                                sourcePath);
             }
 
             java.nio.file.Path pathDest = OSFileNode.$toOsPath(ctx, destStr);
             if (Files.exists(pathDest) && !Files.isDirectory(pathDest)) {
                 throw new FileAlreadyExists(ctx)
-                        .$init(ctx, "Could not overwrite file or directory: " + destStr, destPath);
+                        .$init(ctx, false, "Could not overwrite file or directory: " + destStr,
+                                destPath);
             }
 
             java.nio.file.Path pathResult = move
@@ -138,11 +141,11 @@ public class OSFileStore
 
             return OSFileNode.$nodeFor(ctx, this, pathResult);
         } catch (NoSuchFileException | FileNotFoundException e) {
-            throw new FileNotFound(ctx).$init(ctx, e.getMessage(), sourcePath);
+            throw new FileNotFound(ctx).$init(ctx, false, e.getMessage(), sourcePath);
         } catch (FileAlreadyExistsException e) {
-            throw new FileAlreadyExists(ctx).$init(ctx, e.getMessage(), destPath);
+            throw new FileAlreadyExists(ctx).$init(ctx, false, e.getMessage(), destPath);
         } catch (SecurityException | AccessDeniedException e) {
-            throw new AccessDenied(ctx).$init(ctx, e.getMessage(), destPath);
+            throw new AccessDenied(ctx).$init(ctx, false, e.getMessage(), destPath);
         } catch (IOException | InvalidPathException e) {
             throw Exception.$io(ctx, e.getMessage());
         }
@@ -152,7 +155,7 @@ public class OSFileStore
      * The native implementation of the OSFileStore.x method:
      * {@code conditional OSFile linkAsFile(String pathString)}.
      */
-    public boolean linkFileAs$p(Ctx ctx, String pathString) {
+    public boolean linkFileAs$p(Ctx ctx, boolean async, String pathString) {
         java.nio.file.Path pathSrc = OSFileNode.$toOsPath(ctx, pathString);
         // TODO implement native support for link files
         return false;

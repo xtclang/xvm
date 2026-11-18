@@ -266,6 +266,7 @@ public class NumberBuilder extends AugmentingBuilder {
      */
     protected void generateUnsupported(CodeBuilder code, JitMethodDesc jmd, String jitName) {
         code.aload(code.parameterSlot(jmd.optimizedCtx()))
+            .iconst_0()
             .ldc(jitName)
             .invokestatic(CD_Exception, "$unsupported", mdx(CD_nException, CD_JavaString))
             .athrow();
@@ -322,6 +323,7 @@ public class NumberBuilder extends AugmentingBuilder {
 
             code.aload(arraySlot)
                 .aload(ctxSlot)
+                .iconst_0()
                 .invokevirtual(CD_Array, "size$get$p", MD_xvmLong)
                 .loadConstant(expectedSize)
                 .lcmp()
@@ -422,6 +424,7 @@ public class NumberBuilder extends AugmentingBuilder {
                                      ClassDesc arrayCD, boolean isBitArray, int index, int bitLength) {
         code.aload(arraySlot)
             .aload(ctxSlot)
+            .iconst_0()
             .loadConstant(index);
 
         MethodTypeDesc md;
@@ -491,7 +494,8 @@ public class NumberBuilder extends AugmentingBuilder {
 
             code.aload(0);
             unbox(code, thisType);
-            code.aload(ctxSlot);
+            code.aload(ctxSlot)
+                .iconst_0();
             code.invokestatic(CD_this, methodName + OPT, jmd.optimizedMD);
             ClassDesc cdOptRet = jmd.optimizedMD.returnType();
             if (cdRet.equals(cdOptRet)) {
@@ -514,14 +518,16 @@ public class NumberBuilder extends AugmentingBuilder {
         long bitLength = getBitLength();
 
         // we will create an instance of ArrayᐸBitᐳ by calling the static helper method
-        // $fromLongs the signature is ArrayᐸBitᐳ $fromLongs(Ctx ctx, long bitLength, long[] bits)
+        // $fromLongs has signature:
+        // ArrayᐸBitᐳ $fromLongs(Ctx ctx, boolean async, long bitLength, long[] bits)
 
-        // load the Ctx and bitLength parameters
+        // load the Ctx, synchronous flag, and bitLength parameters
         code.aload(code.parameterSlot(jmd.optimizedCtx()))
+            .iconst_0()
             .loadConstant(bitLength);
 
         // create an array of longs to hold each of the method parameters passed to
-        // the bits$get$p method except the last Ctx param
+        // the bits$get$p method, excluding the implicit Ctx and async parameters
         loadLongValues(code, jmd);
 
         // the populated long array is on the top of the stack
@@ -1105,6 +1111,7 @@ public class NumberBuilder extends AugmentingBuilder {
         ClassDesc mutabilityCD    = jmd.optimizedParams[mutabilityIndex].cd;
 
         code.aload(code.parameterSlot(jmd.optimizedCtx()))
+                .iconst_0()
                 .aload(mutabilitySlot)
                 .loadConstant(size);
 
@@ -1126,9 +1133,9 @@ public class NumberBuilder extends AugmentingBuilder {
         }
 
         classBuilder.withMethodBody(jitName, mdCompare, flags, code -> {
-            code.aload(code.parameterSlot(2));
-            unbox(code, thisType);
             code.aload(code.parameterSlot(3));
+            unbox(code, thisType);
+            code.aload(code.parameterSlot(4));
             unbox(code, thisType);
 
             String name = thisType.getSingleUnderlyingClass(false).getName();

@@ -21,15 +21,15 @@ public class UInt64 extends UIntNumber {
     public final long $value;
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, Long.toUnsignedString($value));
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, Long.toUnsignedString($value));
     }
 
-    public static String toString$p(long thi$, Ctx ctx) {
-        return String.of(ctx, Long.toUnsignedString(thi$));
+    public static String toString$p(long thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, Long.toUnsignedString(thi$));
     }
 
-    public static long estimateStringLength$p(long thi$, Ctx ctx) {
+    public static long estimateStringLength$p(long thi$, Ctx ctx, boolean async) {
         return $estimateUnsignedStringLength(thi$);
     }
 

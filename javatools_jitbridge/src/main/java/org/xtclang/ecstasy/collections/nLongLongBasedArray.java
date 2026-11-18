@@ -16,27 +16,27 @@ public abstract class nLongLongBasedArray<ArrayType extends nLongLongBasedArray<
         super(ctx, type);
     }
 
-    public long getElement$p(Ctx ctx, long index) {
+    public long getElement$p(Ctx ctx, boolean async, long index) {
         return $getElement$pi(ctx, index);
     }
 
-    public long getElement$pi(Ctx ctx, long index) {
+    public long getElement$pi(Ctx ctx, boolean async, long index) {
         return $getElement$pi(ctx, index);
     }
 
-    public void setElement$p(Ctx ctx, long index, long lowValue, long highValue) {
-        setElement$pi(ctx, index, lowValue, highValue);
+    public void setElement$p(Ctx ctx, boolean async, long index, long lowValue, long highValue) {
+        setElement$pi(ctx, false, index, lowValue, highValue);
     }
 
-    public void setElement$pi(Ctx ctx, long index, long lowValue, long highValue) {
+    public void setElement$pi(Ctx ctx, boolean async, long index, long lowValue, long highValue) {
         ctx.i0 = highValue;
-        setElement$pi(ctx, index, lowValue);
+        setElement$pi(ctx, false, index, lowValue);
     }
 
     @Override
-    public Array addAll(Ctx ctx, Iterable values) {
-        Iterator iterator = values.iterator(ctx);
-        while (iterator.next$p(ctx)) {
+    public Array addAll(Ctx ctx, boolean async, Iterable values) {
+        Iterator iterator = values.iterator(ctx, false);
+        while (iterator.next$p(ctx, false)) {
             $add128(ctx, ctx.i0, ctx.i1);
         }
         return this;
@@ -58,12 +58,12 @@ public abstract class nLongLongBasedArray<ArrayType extends nLongLongBasedArray<
     protected ArrayType $add128(
             Ctx ctx, long lowValue, long highValue) {
         ctx.i0 = highValue;
-        return super.add$p(ctx, lowValue);
+        return super.add$p(ctx, false, lowValue);
     }
 
     @SuppressWarnings("unchecked")
     protected ArrayType $insert128(Ctx ctx, long index, long lowValue, long highValue) {
-        if (index < 0 || index > size$get$p(ctx)) {
+        if (index < 0 || index > size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $insert(ctx, index, 1);
@@ -73,7 +73,7 @@ public abstract class nLongLongBasedArray<ArrayType extends nLongLongBasedArray<
 
     @SuppressWarnings("unchecked")
     protected ArrayType $delete128(Ctx ctx, long index) {
-        if (index < 0 || index >= size$get$p(ctx)) {
+        if (index < 0 || index >= size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $delete(ctx, index, 1);
@@ -124,8 +124,8 @@ public abstract class nLongLongBasedArray<ArrayType extends nLongLongBasedArray<
         }
 
         @Override
-        public boolean next$p(Ctx ctx) {
-            if (index < size$get$p(ctx)) {
+        public boolean next$p(Ctx ctx, boolean async) {
+            if (index < size$get$p(ctx, false)) {
                 long low = $getElement$pi(ctx, index++);
                 // high is already in ctx.i0
                 ctx.i1 = ctx.i0;

@@ -30,12 +30,12 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
+import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nMethod;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.md;
-import static org.xvm.javajit.Builder.mdx;
 
 import static org.xvm.javajit.JitFlavor.Specific;
 
@@ -181,12 +181,12 @@ public class MBind
         ClassDesc    cdFn   = bctx.builder.getCCDesc(typeFn);
         code.new_(cdFn)
             .dup();
-        bctx.loadCtx(code);
+        bctx.loadCtxOnly(code);
         bctx.loadTypeConstant(code, typeFn);
         code.aload(slotStd)
             .aload(slotOpt)
             .iload(slotImm)
-            .invokespecial(cdFn, INIT_NAME, mdx(CD_void, CD_TypeConstant,
+            .invokespecial(cdFn, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
         bctx.storeValue(code, m_nRetValue, typeFn);

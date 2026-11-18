@@ -61,15 +61,15 @@ public abstract class nObject
     /**
      * Auto-generated for all classes.
      */
-    public TypeConstant $xvmType(Ctx ctx) {
-        return $type(ctx).$dataType;
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
+        return $type(ctx, false).$dataType;
     }
 
     /**
      * Auto-generated for classes that represent generic types.
      */
-    public nType $type(Ctx ctx) {
-        return nType.$ensureType(ctx, $xvmType(ctx));
+    public nType $type(Ctx ctx, boolean async) {
+        return nType.$ensureType(ctx, false, $xvmType(ctx, false));
     }
 
     /**
@@ -80,14 +80,14 @@ public abstract class nObject
      *
      * @see org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty
      */
-    public nType $typeForName(Ctx ctx, java.lang.String name) {
-        TypeConstant targetType = $xvmType(ctx);
+    public nType $typeForName(Ctx ctx, boolean async, java.lang.String name) {
+        TypeConstant targetType = $xvmType(ctx, false);
         TypeConstant type       = targetType.resolveGenericType(name);
         if (type == null) {
             throw Exception.$xvmError(ctx, "Unresolvable formal type \"" + name + "\" in " +
                     targetType.getValueString(), null);
         }
-        return nType.$ensureType(ctx, type);
+        return nType.$ensureType(ctx, false, type);
     }
 
     /**
@@ -96,8 +96,8 @@ public abstract class nObject
      * the child's class-of-class.
      * Also used by generated "$xvmType" methods on non-generic virtual children.
      */
-    public TypeConstant $childType(Ctx ctx, TypeConstant childType) {
-        TypeConstant parentType = $xvmType(ctx);
+    public TypeConstant $childType(Ctx ctx, boolean async, TypeConstant childType) {
+        TypeConstant parentType = $xvmType(ctx, false);
         ConstantPool pool       = ctx.pool();
         TypeConstant targetType = pool.ensureVirtualChildTypeConstant(parentType,
                 childType.getSingleUnderlyingClass(true).getName());
@@ -114,11 +114,11 @@ public abstract class nObject
         return ($meta & $IMMUTABLE) != 0;
     }
 
-    public void $makeImmut(Ctx ctx) {
+    public void $makeImmut(Ctx ctx, boolean async) {
         $meta |= $IMMUTABLE;
     }
 
-    public void $checkImmut(Ctx ctx) {
+    public void $checkImmut(Ctx ctx, boolean async) {
         if (($meta & $IMMUTABLE) != 0) {
             throw Exception.$ro(ctx, null);
         }
@@ -128,14 +128,14 @@ public abstract class nObject
      * This should be overridden by duck-type wrappers.
      */
     public boolean $isA(Ctx ctx, nType t) {
-        return $type(ctx).$dataType.isA(t.$dataType);
+        return $type(ctx, false).$dataType.isA(t.$dataType);
     }
 
     // ----- static helpers for when references may be non-xObj classes ----------------------------
 
-    public static java.lang.Object $makeImmut(Ctx ctx, java.lang.Object ref) {
+    public static java.lang.Object $makeImmut(Ctx ctx, boolean async, java.lang.Object ref) {
         if (ref instanceof nObject xRef) {
-            xRef.$makeImmut(ctx);
+            xRef.$makeImmut(ctx, false);
             return xRef;
         }
 

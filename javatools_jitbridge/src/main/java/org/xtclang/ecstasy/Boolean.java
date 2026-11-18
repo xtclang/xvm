@@ -14,7 +14,7 @@ public abstract class Boolean
         public static final False $INSTANCE = new False();
 
         public False() {
-            super(false, 0, String.of(null, "False"));
+            super(false, 0, String.of(null, false, "False"));
         }
     }
 
@@ -22,7 +22,7 @@ public abstract class Boolean
         public static final True $INSTANCE = new True();
 
         public True() {
-            super(true, 1, String.of(null, "True"));
+            super(true, 1, String.of(null, false, "True"));
         }
     }
 
@@ -41,56 +41,57 @@ public abstract class Boolean
         return value ? True.$INSTANCE : False.$INSTANCE;
     }
 
-    @Override public String name$get(Ctx ctx) {
+    @Override public String name$get(Ctx ctx, boolean async) {
         return $name;
     }
 
-    public static String name$get$p(boolean thi$, Ctx ctx) {
+    public static String name$get$p(boolean thi$, Ctx ctx, boolean async) {
         return (thi$ ? True.$INSTANCE : False.$INSTANCE).$name;
     }
 
-    @Override public long ordinal$get$p(Ctx ctx) {
+    @Override public long ordinal$get$p(Ctx ctx, boolean async) {
         return $ordinal;
     }
 
-    public static long ordinal$get$p(boolean thi$, Ctx ctx) {
+    public static long ordinal$get$p(boolean thi$, Ctx ctx, boolean async) {
         return thi$ ? 1 : 0;
     }
 
-    public static boolean and$p(boolean thi$, Ctx ctx, boolean that) {
+    public static boolean and$p(boolean thi$, Ctx ctx, boolean async, boolean that) {
         return thi$  & that;
     }
 
-    public static boolean or$p(boolean thi$, Ctx ctx, boolean that) {
+    public static boolean or$p(boolean thi$, Ctx ctx, boolean async, boolean that) {
         return thi$;
     }
 
-    public static boolean xor$p(boolean thi$, Ctx ctx, boolean that) {
+    public static boolean xor$p(boolean thi$, Ctx ctx, boolean async, boolean that) {
         return thi$ ^ that;
     }
 
-    public static boolean not$p(boolean thi$, Ctx ctx) {
+    public static boolean not$p(boolean thi$, Ctx ctx, boolean async) {
         return !thi$;
     }
 
-    public static int toBit$p(boolean thi$, Ctx ctx) {
+    public static int toBit$p(boolean thi$, Ctx ctx, boolean async) {
         return thi$ ? 1 : 0;
     }
 
-    public static int toByte$p(boolean thi$, Ctx ctx) {
+    public static int toByte$p(boolean thi$, Ctx ctx, boolean async) {
         return thi$ ? (byte) 1 : (byte) 0;
     }
 
-    public static String toString$p(boolean thi$, Ctx ctx) {
-        return name$get$p(thi$, ctx);
+    public static String toString$p(boolean thi$, Ctx ctx, boolean async) {
+        return name$get$p(thi$, ctx, false);
     }
 
-    public static long estimateStringLength$p(boolean thi$, Ctx ctx) {
-        return name$get$p(thi$, ctx).size$get$p(ctx);
+    public static long estimateStringLength$p(boolean thi$, Ctx ctx, boolean async) {
+        return name$get$p(thi$, ctx, false).size$get$p(ctx, false);
     }
 
-    public static AppenderᐸCharᐳ appendTo$p(boolean thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
-        return name$get$p(thi$, ctx).appendTo(ctx, appender);
+    public static AppenderᐸCharᐳ appendTo$p(boolean thi$, Ctx ctx, boolean async,
+            AppenderᐸCharᐳ appender) {
+        return name$get$p(thi$, ctx, false).appendTo(ctx, false, appender);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

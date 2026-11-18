@@ -103,7 +103,7 @@ public class VirtualChildBuilder extends CommonBuilder {
         if (hasOuter) {
             code.aload(code.parameterSlot(1));
         }
-        code.invokespecial(getSuperCD(), INIT_NAME, hasOuter ? MD_xvmOuterVoid : MD_xvmVoid);
+        code.invokespecial(getSuperCD(), INIT_NAME, hasOuter ? MD_xvmOuterVoid : MD_xvmInit);
     }
 
     @Override
@@ -119,7 +119,11 @@ public class VirtualChildBuilder extends CommonBuilder {
     protected void invokePropertyInitializer(CodeBuilder code, MethodInfo initializer,
                                              JitMethodDesc jmd) {
         JitCallDesc call = resolveChildMethodCall(this, initializer.getHead(), thisType);
-        code.aload(0).dup().checkcast(call.receiverCD()).aload(code.parameterSlot(0));
+        code.aload(0)
+            .dup()
+            .checkcast(call.receiverCD())
+            .aload(code.parameterSlot(0))
+            .iconst_0();
         call.invoke(code, false);
     }
 
@@ -424,7 +428,10 @@ public class VirtualChildBuilder extends CommonBuilder {
                 throwReadOnly(code, prop.getName(), ctxSlot);
                 return;
             }
-            code.aload(0).checkcast(CD_nObject).aload(ctxSlot)
+            code.aload(0)
+                .checkcast(CD_nObject)
+                .aload(ctxSlot)
+                .iconst_0()
                 .invokevirtual(CD_nObject, "$checkImmut", MD_xvmVoid);
         }
         String         field  = prop.getFieldIdentity().ensureJitPropertyName(typeSystem);
@@ -443,7 +450,7 @@ public class VirtualChildBuilder extends CommonBuilder {
                     storeToContext(code, value.cd, value.altIndex, ctxSlot);
                 }
             } else {
-                load(code, value.cd, code.parameterSlot(i + 2));
+                load(code, value.cd, code.parameterSlot(jmd.getImplicitParamCount() + i));
                 storeField(code, thisType, fieldName, cd);
             }
         }
@@ -601,8 +608,8 @@ public class VirtualChildBuilder extends CommonBuilder {
      * Emit a composition-specific continuation with the hard-left contract's descriptor.
      * For B.C1 extending B.C0 and D declaring same-name children D.C0 and D.C1, the route on D_C1 is:
      *
-     *     void super$C0$foo(B_iC0 thi$, Ctx ctx) {
-     *         D_C0.s$foo((D_iC0) thi$, ctx);
+     *     void super$C0$foo(B_iC0 thi$, Ctx ctx, boolean async) {
+     *         D_C0.s$foo((D_iC0) thi$, ctx, async);
      *     }
      *
      * B_C1's already-compiled body invokes this route virtually on the same receiver.
@@ -676,9 +683,10 @@ public class VirtualChildBuilder extends CommonBuilder {
     /**
      * Route an ordinary method or accessor through a detached body or a hard-left super-router.
      *
-     * <p>A declared D.C1.foo() gets a trivial entrance calling D_C1.s$foo(this, ctx, ...).
+     * <p>A declared D.C1.foo() gets a trivial entrance calling D_C1.s$foo(this, ctx, async, ...).
      * If hard-left B.C1 instead inherits foo() from B.C0, its entrance must call
-     * this.super$C0$foo(this, ctx, ...). That forwarding entrance establishes the B.C1 boundary:
+     * this.super$C0$foo(this, ctx, async, ...). That forwarding entrance establishes the B.C1
+     * boundary:
      * on a D.C1 object, Java dispatch selects D_C1's router and enters D.C0.foo(), rather than
      * bypassing it by directly entering B.C0.foo(). Neither entrance copies the Ecstasy body.
      */
@@ -711,8 +719,8 @@ public class VirtualChildBuilder extends CommonBuilder {
     private void routeBody(ClassBuilder classBuilder, String name, JitCallDesc call, boolean optimized) {
         MethodTypeDesc md = optimized ? call.jmd().optimizedMD : call.jmd().standardMD;
         classBuilder.withMethodBody(name, md, ClassFile.ACC_PUBLIC, code -> {
-            // static call:  Owner.s$foo(this, ctx, ...)
-            // virtual call: this.super$C0$foo(this, ctx, ...); the same object is both the
+            // static call:  Owner.s$foo(this, ctx, async, ...)
+            // virtual call: this.super$C0$foo(this, ctx, async, ...); the same object is both the
             // Java dispatch receiver and the explicit receiver passed to the detached body
             code.aload(0);
             if (call.isVirtual()) {

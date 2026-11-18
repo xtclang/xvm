@@ -23,7 +23,8 @@ public class RTBuffer extends nObject {
      * The primitive implementation of
      * {@code private void copyRawBytes(Int srcOffset, Byte[] bytes, Int dstOffset, Int count)}
      */
-    public void copyRawBytes(Ctx ctx, long srcOffset, ArrayᐸUInt8ᐳ target, long dstOffset, long count) {
+    public void copyRawBytes(Ctx ctx, boolean async, long srcOffset, ArrayᐸUInt8ᐳ target,
+            long dstOffset, long count) {
         rawBytes.$copyRawBytes(ctx, srcOffset, target, dstOffset, count);
     }
 }

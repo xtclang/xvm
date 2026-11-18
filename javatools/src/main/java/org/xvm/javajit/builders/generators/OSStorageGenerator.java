@@ -12,7 +12,7 @@ import org.xvm.javajit.builders.AugmentingBuilder;
 
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
-import static org.xvm.javajit.Builder.MD_xvmVoid;
+import static org.xvm.javajit.Builder.MD_xvmInit;
 
 /**
  * The {@link JitGenerated.Generator} implementation for native {@code ecstasy.fs.OSStorage} class.
@@ -35,7 +35,7 @@ public class OSStorageGenerator
             code.new_(cd)
                 .dup()
                 .aload(code.parameterSlot(0))
-                .invokespecial(cd, INIT_NAME, MD_xvmVoid)
+                .invokespecial(cd, INIT_NAME, MD_xvmInit)
                 .areturn();
         });
     }

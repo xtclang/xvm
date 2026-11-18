@@ -40,12 +40,12 @@ public class nFunction extends nObject implements Function {
     }
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return type;
     }
 
     @Override
-    public Tuple invoke(Ctx ctx, Tuple args) {
+    public Tuple invoke(Ctx ctx, boolean async, Tuple args) {
         // almost *never* called - reflection based
         // TODO
         return null;

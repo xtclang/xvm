@@ -229,12 +229,12 @@ public class AnnotationHelper {
      * For {@code @A1 @A0 B}, each base constructor has six variants, using XTC argument types
      * and '@' for AT:
      * <pre>
-     *   $new@0$0@1$0(Ctx, TypeConstant, baseArgs..., Int    v1, Int    v0)
-     *   $new@0$0@1$1(Ctx, TypeConstant, baseArgs..., Int    v1, String v0)
-     *   $new@0$0@1$2(Ctx, TypeConstant, baseArgs..., Int    v1, UInt   v0)
-     *   $new@0$1@1$0(Ctx, TypeConstant, baseArgs..., String v1, Int    v0)
-     *   $new@0$1@1$1(Ctx, TypeConstant, baseArgs..., String v1, String v0)
-     *   $new@0$1@1$2(Ctx, TypeConstant, baseArgs..., String v1, UInt   v0)
+     *   $new@0$0@1$0(Ctx, boolean, TypeConstant, baseArgs..., Int    v1, Int    v0)
+     *   $new@0$0@1$1(Ctx, boolean, TypeConstant, baseArgs..., Int    v1, String v0)
+     *   $new@0$0@1$2(Ctx, boolean, TypeConstant, baseArgs..., Int    v1, UInt   v0)
+     *   $new@0$1@1$0(Ctx, boolean, TypeConstant, baseArgs..., String v1, Int    v0)
+     *   $new@0$1@1$1(Ctx, boolean, TypeConstant, baseArgs..., String v1, String v0)
+     *   $new@0$1@1$2(Ctx, boolean, TypeConstant, baseArgs..., String v1, UInt   v0)
      * </pre>
      * Standard and optimized Java entry points are handled separately.
      *
@@ -461,7 +461,8 @@ public class AnnotationHelper {
                     .astore(chainedCctxSlot);
             }
 
-            code.aload(ctxSlot);
+            code.aload(ctxSlot)
+                .iconst_0();
             if (jmd.hasCtorCtx()) {
                 code.aload(chainedCctxSlot);
             }
@@ -623,8 +624,8 @@ public class AnnotationHelper {
      * selecting {@code A1(Int)} and {@code A0(UInt)} produces both entry points below, using '@'
      * for AT:
      * <pre>
-     * $new@0$0@1$2(Ctx,   TypeConstant, baseArgs..., Int64 v1, UInt64 v0)
-     * $new@0$0@1$2$p(Ctx, TypeConstant, baseArgs..., long v1, long v0)
+     * $new@0$0@1$2(Ctx, boolean, TypeConstant, baseArgs..., Int64 v1, UInt64 v0)
+     * $new@0$0@1$2$p(Ctx, boolean, TypeConstant, baseArgs..., long v1, long v0)
      * </pre>
      *
      * @param suffix        the construction site constructor names appended to the instantiator

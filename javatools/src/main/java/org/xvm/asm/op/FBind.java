@@ -41,12 +41,12 @@ import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
+import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.md;
-import static org.xvm.javajit.Builder.mdx;
 import static org.xvm.javajit.JitMethodDesc.JMD_STATIC;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -319,7 +319,7 @@ public class FBind
 
             RegisterInfo regArg = bctx.ensureRegister(code, anArg[i]);
 
-            // the standard position only needs to be offset by the implicits (ctx)
+            // the standard position only needs to be offset by the implicits (ctx, async)
             int          cImplicits = jmdBefore.getImplicitParamCount();
             JitParamDesc pdArg      = jmdBefore.standardParams[nArgPos];
             int          nStdPos    = cImplicits + pdArg.index;
@@ -365,12 +365,12 @@ public class FBind
         ClassDesc cdFn = bctx.builder.getCCDesc(typeFn);
         code.new_(cdFn)
             .dup();
-        bctx.loadCtx(code);
+        bctx.loadCtxOnly(code);
         bctx.loadTypeConstant(code, typeFn);
         code.aload(slotStd)
             .aload(slotOpt)
             .iload(slotImm)
-            .invokespecial(cdFn, INIT_NAME, mdx(CD_void, CD_TypeConstant,
+            .invokespecial(cdFn, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
         RegisterInfo regRet = bctx.ensureRegister(code, m_nRetValue, typeFn, cdFn, "");

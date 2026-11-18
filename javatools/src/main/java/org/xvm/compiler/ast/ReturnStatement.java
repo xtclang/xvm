@@ -25,6 +25,7 @@ import org.xvm.asm.op.Return_1;
 import org.xvm.asm.op.Return_N;
 import org.xvm.asm.op.Return_T;
 import org.xvm.asm.op.Var_D;
+import org.xvm.asm.op.Var_P;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -326,11 +327,23 @@ public class ReturnStatement
                 // return only as many as the caller expects
                 Expression expr   = listExprs.get(0);
                 boolean    fCheck = fConditional && !expr.isConditionalResult();
-                // TODO: if the expr is InvocationExpression then
-                // Assignable[] ass = new Assignable[expr.getValueCount()];
-                // expr.generateAssignments();
-                Argument[] aArgs  = expr.generateArguments(ctx, code, true, errs);
-                int        cArgs  = aArgs.length;
+                Argument[] aArgs;
+
+                if (expr instanceof InvocationExpression && !m_fFutureReturn && expr.getValueCount() > 0) {
+                    // use Var_P to preserve asynchronous results for tail calls
+                    int          count  = expr.getValueCount();
+                    Assignable[] aLVals = new Assignable[count];
+                                 aArgs  = new Argument[count];
+                    for (int i = 0; i < count; i++) {
+                        Register reg = code.createRegister(expr.getTypes()[i]);
+                        code.add(new Var_P(reg));
+                        aLVals[i] = expr.new Assignable(reg);
+                        aArgs[i]   = reg;
+                    }
+                    expr.generateAssignments(ctx, code, aLVals, errs);
+                } else {
+                    aArgs = expr.generateArguments(ctx, code, true, errs);
+                }
 
                 switch (cRets) {
                 case 0:
@@ -356,7 +369,8 @@ public class ReturnStatement
                     break;
                 }
 
-                default:
+                default: {
+                    int cArgs = aArgs.length;
                     if (cArgs > 1) {
                         Label labelFalse = null;
 
@@ -394,7 +408,8 @@ public class ReturnStatement
                                 valFalse.getValueString(), expr.getType().getValueString());
                         }
                     }
-                }
+                    break;
+                }}
                 break;
             }
 

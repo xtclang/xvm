@@ -7,6 +7,6 @@ import org.xvm.javajit.Ctx;
  */
 public interface IterableᐸCharᐳ extends Iterable {
 
-    @Override long size$get$p(Ctx ctx);
-    @Override IteratorᐸCharᐳ iterator(Ctx ctx);
+    @Override long size$get$p(Ctx ctx, boolean async);
+    @Override IteratorᐸCharᐳ iterator(Ctx ctx, boolean async);
 }

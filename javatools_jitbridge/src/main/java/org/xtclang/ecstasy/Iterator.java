@@ -7,7 +7,7 @@ import org.xvm.javajit.Ctx;
  */
 public interface Iterator extends Object {
 
-    nType Element$get(Ctx ctx);
+    nType Element$get(Ctx ctx, boolean async);
 
-    boolean next$p(Ctx ctx);
+    boolean next$p(Ctx ctx, boolean async);
 }

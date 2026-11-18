@@ -54,7 +54,7 @@ public class RawOSFileChannel extends RawChannel {
     /**
      * The primitive property getter for {@code Int size;}.
      */
-    public long size$get$p(Ctx ctx) {
+    public long size$get$p(Ctx ctx, boolean async) {
         try {
             return $channel.size();
         } catch (IOException e) {
@@ -65,7 +65,7 @@ public class RawOSFileChannel extends RawChannel {
     /**
      * The primitive property setter for {@code Int size;}.
      */
-    public void size$set$p(Ctx ctx, long size) {
+    public void size$set$p(Ctx ctx, boolean async, long size) {
         try {
             $channel.truncate(size);
         } catch (IOException e) {
@@ -76,7 +76,7 @@ public class RawOSFileChannel extends RawChannel {
     /**
      * The primitive property getter for {@code Int position;}.
      */
-    public long position$get$p(Ctx ctx) {
+    public long position$get$p(Ctx ctx, boolean async) {
         try {
             return $channel.position();
         } catch (IOException e) {
@@ -87,7 +87,7 @@ public class RawOSFileChannel extends RawChannel {
     /**
      * The primitive property setter for {@code Int position;}.
      */
-    public void position$set$p(Ctx ctx, long position) {
+    public void position$set$p(Ctx ctx, boolean async, long position) {
         try {
             $channel.position(position);
         } catch (IOException e) {
@@ -98,14 +98,14 @@ public class RawOSFileChannel extends RawChannel {
     /**
      * The primitive property getter for {@code Boolean readable;}.
      */
-    public boolean readable$get$p(Ctx ctx) {
+    public boolean readable$get$p(Ctx ctx, boolean async) {
         return $readable;
     }
 
     /**
      * The primitive property getter for {@code Boolean writable;}.
      */
-    public boolean writable$get$p(Ctx ctx) {
+    public boolean writable$get$p(Ctx ctx, boolean async) {
         return $writable;
     }
 
@@ -113,7 +113,7 @@ public class RawOSFileChannel extends RawChannel {
      * The primitive property getter for {@code Boolean closed;}.
      */
     @Override
-    public boolean closed$get$p(Ctx ctx) {
+    public boolean closed$get$p(Ctx ctx, boolean async) {
         return !$channel.isOpen();
     }
 
@@ -121,7 +121,7 @@ public class RawOSFileChannel extends RawChannel {
      * The native implementation of {@code void close()}.
      */
     @Override
-    public void close(Ctx ctx) {
+    public void close(Ctx ctx, boolean async) {
         try {
             $channel.close();
         } catch (IOException e) {
@@ -132,7 +132,7 @@ public class RawOSFileChannel extends RawChannel {
     /**
      * The native implementation of {@code void flush()}.
      */
-    public void flush(Ctx ctx) {
+    public void flush(Ctx ctx, boolean async) {
         try {
             $channel.force(false);
         } catch (IOException e) {
@@ -143,14 +143,14 @@ public class RawOSFileChannel extends RawChannel {
     /**
      * The native implementation of {@code Byte[]|Int take()}.
      */
-    public Object take(Ctx ctx) {
+    public Object take(Ctx ctx, boolean async) {
         try {
             ByteBuffer buffer = ByteBuffer.allocate(8192);
             int read = $channel.read(buffer);
             if (read < 0) {
                 return Int64.$box(-1L);
             }
-            return ArrayᐸUInt8ᐳ.$makeArray(ctx, read, buffer);
+            return ArrayᐸUInt8ᐳ.$makeArray(ctx, false, read, buffer);
         } catch (NonReadableChannelException e) {
             return Int64.$box(-2L); // InputShutdown
         } catch (ClosedChannelException e) {
@@ -163,7 +163,7 @@ public class RawOSFileChannel extends RawChannel {
     /**
      * The primitive implementation of {@code Int submit(Byte[] buffer, Int start, Int end)}.
      */
-    public long submit$p(Ctx ctx, ArrayᐸUInt8ᐳ buffer, long start, long end) {
+    public long submit$p(Ctx ctx, boolean async, ArrayᐸUInt8ᐳ buffer, long start, long end) {
         try {
             return $channel.write(buffer.$getBuffer(ctx, start, end));
         } catch (NonReadableChannelException e) {

@@ -7,6 +7,6 @@ import org.xvm.javajit.Ctx;
  */
 public interface IterableᐸBFloat16ᐳ extends Iterable {
 
-    @Override long size$get$p(Ctx ctx);
-    @Override IteratorᐸBFloat16ᐳ iterator(Ctx ctx);
+    @Override long size$get$p(Ctx ctx, boolean async);
+    @Override IteratorᐸBFloat16ᐳ iterator(Ctx ctx, boolean async);
 }

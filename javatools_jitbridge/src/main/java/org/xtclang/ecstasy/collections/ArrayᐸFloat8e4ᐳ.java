@@ -39,7 +39,8 @@ public class ArrayᐸFloat8e4ᐳ
     /**
      * @see Array#$new$p
      */
-    public static ArrayᐸFloat8e4ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸFloat8e4ᐳ $new$p(Ctx ctx, boolean async, TypeConstant type,
+            long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
@@ -52,13 +53,14 @@ public class ArrayᐸFloat8e4ᐳ
     /**
      * @see Array#$new$1$p
      */
-    public static ArrayᐸFloat8e4ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
+    public static ArrayᐸFloat8e4ᐳ $new$1$p(Ctx ctx, boolean async, TypeConstant type, long size,
+            Object supply) {
         if (supply instanceof Float8e4 boxed) {
-            return $new8Bit(ctx, type, size, boxed.$value, ArrayᐸFloat8e4ᐳ::new);
+            return $new8Bit(ctx, false, type, size, boxed.$value, ArrayᐸFloat8e4ᐳ::new);
         }
 
         if (supply instanceof nFunction fn) {
-            return $new8Bit(ctx, type, size, fn, UNBOX, ArrayᐸFloat8e4ᐳ::new);
+            return $new8Bit(ctx, false, type, size, fn, UNBOX, ArrayᐸFloat8e4ᐳ::new);
         }
 
         throw new UnsupportedOperationException();
@@ -67,63 +69,66 @@ public class ArrayᐸFloat8e4ᐳ
     /**
      * @see Array#$new$2
      */
-    public static ArrayᐸFloat8e4ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
-        long size = elements.size$get$p(ctx);
+    public static ArrayᐸFloat8e4ᐳ $new$2$p(Ctx ctx, boolean async, TypeConstant type,
+            Mutability mutability, Iterable elements) {
+        long size = elements.size$get$p(ctx, false);
         ctx.alloc(size); // REVIEW + HEADER_SIZE?
         ArrayᐸFloat8e4ᐳ array = new ArrayᐸFloat8e4ᐳ(ctx, type);
         array.$mut($MUTABLE);
-        array.addAll(ctx, elements);
-        array.$mut((int) mutability.ordinal$get$p(ctx));
+        array.addAll(ctx, false, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx, false));
         return array;
     }
 
-    public static ArrayᐸFloat8e4ᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability,
+    public static ArrayᐸFloat8e4ᐳ $new$2(Ctx ctx, boolean async, TypeConstant type,
+            Mutability mutability,
                                             IterableᐸFloat8e4ᐳ elements) {
-        return $new$2$p(ctx, type, mutability, elements);
+        return $new$2$p(ctx, false, type, mutability, elements);
     }
 
     /**
      * @see Array#$new$3
      */
-    public static ArrayᐸFloat8e4ᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸFloat8e4ᐳ that) {
-        return $new$2$p(ctx, type, that.mutability$get(ctx), (Iterable) that);
+    public static ArrayᐸFloat8e4ᐳ $new$3(Ctx ctx, boolean async, TypeConstant type,
+            ArrayᐸFloat8e4ᐳ that) {
+        return $new$2$p(ctx, false, type, that.mutability$get(ctx, false), (Iterable) that);
     }
 
-    public Float8e4 getElement(Ctx ctx, Int64 index) {
-        return Float8e4.$box(getElement$pi(ctx, index.$value));
+    public Float8e4 getElement(Ctx ctx, boolean async, Int64 index) {
+        return Float8e4.$box(getElement$pi(ctx, false, index.$value));
     }
 
-    public int getElement$p(Ctx ctx, long index) {
-        return getElement$pi(ctx, index);
+    public int getElement$p(Ctx ctx, boolean async, long index) {
+        return getElement$pi(ctx, false, index);
     }
 
-    public int getElement$pi(Ctx ctx, long index) {
+    public int getElement$pi(Ctx ctx, boolean async, long index) {
         return (int) $getElement$pi(ctx, index);
     }
 
-    public void setElement(Ctx ctx, Int64 index, Object value) {
-        setElement$pi(ctx, index.$value, ((Float8e4) value).$value);
+    public void setElement(Ctx ctx, boolean async, Int64 index, Object value) {
+        setElement$pi(ctx, false, index.$value, ((Float8e4) value).$value);
     }
 
-    public void setElement$p(Ctx ctx, long index, int value) {
-        setElement$pi(ctx, index, value);
+    public void setElement$p(Ctx ctx, boolean async, long index, int value) {
+        setElement$pi(ctx, false, index, value);
     }
 
-    public IteratorᐸFloat8e4ᐳ iterator(Ctx ctx) {
+    public IteratorᐸFloat8e4ᐳ iterator(Ctx ctx, boolean async) {
         return new nIterator(ctx);
     }
 
     @Override
-    public ArrayᐸFloat8e4ᐳ add(Ctx ctx, Object element) {
-        return add$p(ctx, ((Float8e4) element).$value);
+    public ArrayᐸFloat8e4ᐳ add(Ctx ctx, boolean async, Object element) {
+        return add$p(ctx, false, ((Float8e4) element).$value);
     }
 
-    public ArrayᐸFloat8e4ᐳ add$p(Ctx ctx, int value) {
-        return super.add$p(ctx, value);
+    public ArrayᐸFloat8e4ᐳ add$p(Ctx ctx, boolean async, int value) {
+        return super.add$p(ctx, false, value);
     }
 
-    public ArrayᐸFloat8e4ᐳ insert$p(Ctx ctx, long index, int value) {
-        if (index < 0 || index > size$get$p(ctx)) {
+    public ArrayᐸFloat8e4ᐳ insert$p(Ctx ctx, boolean async, long index, int value) {
+        if (index < 0 || index > size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $insert(ctx, index, 1);
@@ -132,8 +137,8 @@ public class ArrayᐸFloat8e4ᐳ
     }
 
     @Override
-    public ArrayᐸFloat8e4ᐳ delete$p(Ctx ctx, long index) {
-        if (index < 0 || index >= size$get$p(ctx)) {
+    public ArrayᐸFloat8e4ᐳ delete$p(Ctx ctx, boolean async, long index) {
+        if (index < 0 || index >= size$get$p(ctx, false)) {
             throw $oob(ctx, index);
         }
         $delete(ctx, index, 1);
@@ -145,8 +150,8 @@ public class ArrayᐸFloat8e4ᐳ
     // ToDo GG/JK remove this (and sub classes) when toString() can be generated by the JIT
     @Override
     protected String $elementToString(Ctx ctx, long index) {
-        Float8e4 c = Float8e4.$box(getElement$pi(ctx, index));
-        return c.toString(ctx).toString();
+        Float8e4 c = Float8e4.$box(getElement$pi(ctx, false, index));
+        return c.toString(ctx, false).toString();
     }
 
     @Override
@@ -192,8 +197,8 @@ public class ArrayᐸFloat8e4ᐳ
         }
 
         @Override
-        public nType Element$get(Ctx ctx) {
-            return nType.$ensureType(ctx, ctx.pool().typeFloat8e4());
+        public nType Element$get(Ctx ctx, boolean async) {
+            return nType.$ensureType(ctx, false, ctx.pool().typeFloat8e4());
         }
     }
 }

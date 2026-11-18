@@ -81,7 +81,7 @@ public class IntN extends IntNumber {
      * The native implementation of;
      *     static Numeric zero();
      */
-    public static IntN zero(Ctx ctx) {
+    public static IntN zero(Ctx ctx, boolean async) {
         return ZERO;
     }
 
@@ -89,7 +89,7 @@ public class IntN extends IntNumber {
      * The native implementation of;
      *     static Numeric one();
      */
-    public static IntN one(Ctx ctx) {
+    public static IntN one(Ctx ctx, boolean async) {
         return ONE;
     }
 
@@ -100,7 +100,7 @@ public class IntN extends IntNumber {
      *     static conditional Range<Numeric> range();
      * }</pre>
      */
-    public static Boolean range(Ctx ctx) {
+    public static Boolean range(Ctx ctx, boolean async) {
         return Boolean.False.$INSTANCE;
     }
 
@@ -111,7 +111,7 @@ public class IntN extends IntNumber {
      *     static conditional Range<Numeric> range();
      * }</pre>
      */
-    public static boolean range$p(Ctx ctx) {
+    public static boolean range$p(Ctx ctx, boolean async) {
         return false;
     }
 
@@ -121,16 +121,16 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     Bit[] bits.get()
      */
-    protected ArrayᐸBitᐳ bits$get(Ctx ctx) {
+    protected ArrayᐸBitᐳ bits$get(Ctx ctx, boolean async) {
         long[] longs = $longValues(ctx);
-        return ArrayᐸBitᐳ.$fromLongs(ctx, ctx.i0, longs);
+        return ArrayᐸBitᐳ.$fromLongs(ctx, false, ctx.i0, longs);
     }
 
     /**
      * The primitive implementation of:
      *     Int bitLength.get()
      */
-    public long bitLength$get$p(Ctx ctx) {
+    public long bitLength$get$p(Ctx ctx, boolean async) {
         int bitLength = $value.bitLength();
         return bitLength == 0 ? 8 : ((bitLength + 7L) / 8L) * 8L;
     }
@@ -139,7 +139,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *     Int byteLength.get()
      */
-    protected long byteLength$get$p(Ctx ctx) {
+    protected long byteLength$get$p(Ctx ctx, boolean async) {
         return ($value.bitLength() + 7) / 8;
     }
 
@@ -147,7 +147,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    Number neg();
      */
-    public IntN neg(Ctx ctx) {
+    public IntN neg(Ctx ctx, boolean async) {
         return new IntN($value.negate());
     }
 
@@ -155,7 +155,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN add(IntN n);
      */
-    public IntN add(Ctx ctx, IntN n) {
+    public IntN add(Ctx ctx, boolean async, IntN n) {
         return new IntN($value.add(n.$value));
     }
 
@@ -163,7 +163,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN sub(IntN n);
      */
-    public IntN sub(Ctx ctx, IntN n) {
+    public IntN sub(Ctx ctx, boolean async, IntN n) {
         return new IntN($value.subtract(n.$value));
     }
 
@@ -171,7 +171,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN mul(IntN n);
      */
-    public IntN mul(Ctx ctx, IntN n) {
+    public IntN mul(Ctx ctx, boolean async, IntN n) {
         return new IntN($value.multiply(n.$value));
     }
 
@@ -179,7 +179,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN div(IntN n);
      */
-    public IntN div(Ctx ctx, IntN n) {
+    public IntN div(Ctx ctx, boolean async, IntN n) {
         return new IntN($value.divide(n.$value));
     }
 
@@ -187,7 +187,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN mod(IntN n);
      */
-    public IntN mod(Ctx ctx, IntN n) {
+    public IntN mod(Ctx ctx, boolean async, IntN n) {
         return new IntN($value.mod(n.$value));
     }
 
@@ -195,7 +195,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN divrem(IntN n);
      */
-    public IntN divrem(Ctx ctx, IntN n) {
+    public IntN divrem(Ctx ctx, boolean async, IntN n) {
         BigInteger[] results = $value.divideAndRemainder(n.$value);
         ctx.o0 = new IntN(results[1]);
         return new IntN(results[0]);
@@ -205,7 +205,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN remainder(IntN n);
      */
-    public IntN remainder(Ctx ctx, IntN n) {
+    public IntN remainder(Ctx ctx, boolean async, IntN n) {
         return new IntN($value.remainder(n.$value));
     }
 
@@ -213,7 +213,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN abs();
      */
-    public IntN abs(Ctx ctx) {
+    public IntN abs(Ctx ctx, boolean async) {
         if ($value.signum() >= 0) {
             return this;
         }
@@ -224,16 +224,16 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN pow(IntN n);
      */
-    public IntN pow(Ctx ctx, IntN n) {
+    public IntN pow(Ctx ctx, boolean async, IntN n) {
         if (n.$value.bitLength() > 32) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "");
+            throw oob.$init(ctx, false, "");
         }
         try {
             return new IntN($value.pow(n.$value.intValue()));
         } catch (ArithmeticException e) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, e.getMessage());
+            throw oob.$init(ctx, false, e.getMessage());
         }
     }
 
@@ -243,7 +243,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     UIntN magnitude.get()
      */
-    public Number magnitude$get(Ctx ctx) {
+    public Number magnitude$get(Ctx ctx, boolean async) {
         return UIntN.$box($value.abs());
     }
 
@@ -251,7 +251,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntNumber leftmostBit.get()
      */
-    public IntN leftmostBit$get(Ctx ctx) {
+    public IntN leftmostBit$get(Ctx ctx, boolean async) {
         if ($value.bitCount() == 0) {
             return this;
         }
@@ -268,7 +268,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntNumber rightmostBit.get()
      */
-    public IntN rightmostBit$get(Ctx ctx) {
+    public IntN rightmostBit$get(Ctx ctx, boolean async) {
         int lowest = $value.getLowestSetBit();
         if (lowest < 0) {
             return this;
@@ -280,7 +280,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntNumber leadingZeroCount.get()
      */
-    public int leadingZeroCount$get$p(Ctx ctx) {
+    public int leadingZeroCount$get$p(Ctx ctx, boolean async) {
         byte[] bytes = $value.toByteArray();
         for (int i = 0; i < bytes.length; i++) {
             if (bytes[i] != 0) {
@@ -294,7 +294,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntNumber trailingZeroCount.get()
      */
-    public int trailingZeroCount$get$p(Ctx ctx) {
+    public int trailingZeroCount$get$p(Ctx ctx, boolean async) {
         byte[] bytes = $value.toByteArray();
         for (int i = bytes.length - 1; i >= 0; i--) {
             if (bytes[i] != 0) {
@@ -308,7 +308,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntNumber bitCount.get()
      */
-    public int bitCount$get$p(Ctx ctx) {
+    public int bitCount$get$p(Ctx ctx, boolean async) {
         return $value.bitCount();
     }
 
@@ -316,7 +316,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntNumber and(IntN n);
      */
-    public IntNumber and(Ctx ctx, IntNumber that) {
+    public IntNumber and(Ctx ctx, boolean async, IntNumber that) {
         return new IntN($value.and(((IntN) that).$value));
     }
 
@@ -324,7 +324,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntNumber or(IntN n);
      */
-    public IntNumber or(Ctx ctx, IntNumber that) {
+    public IntNumber or(Ctx ctx, boolean async, IntNumber that) {
         return new IntN($value.or(((IntN) that).$value));
     }
 
@@ -332,7 +332,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntNumber xor(IntN n);
      */
-    public IntNumber xor(Ctx ctx, IntNumber that) {
+    public IntNumber xor(Ctx ctx, boolean async, IntNumber that) {
         return new IntN($value.xor(((IntN) that).$value));
     }
 
@@ -340,7 +340,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntNumber not();
      */
-    public IntNumber not(Ctx ctx) {
+    public IntNumber not(Ctx ctx, boolean async) {
         return new IntN($value.not());
     }
 
@@ -348,7 +348,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber shiftLeft(Int n);
      */
-    public IntNumber shiftLeft$p(Ctx ctx, long n) {
+    public IntNumber shiftLeft$p(Ctx ctx, boolean async, long n) {
         if (n == 0) {
             return this;
         }
@@ -359,7 +359,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber shiftRight(Int n);
      */
-    public IntNumber shiftRight$p(Ctx ctx, long n) {
+    public IntNumber shiftRight$p(Ctx ctx, boolean async, long n) {
         if (n == 0) {
             return this;
         }
@@ -370,7 +370,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber shiftAllRight(Int n);
      */
-    public IntNumber shiftAllRight$p(Ctx ctx, long n) {
+    public IntNumber shiftAllRight$p(Ctx ctx, boolean async, long n) {
         if (n == 0) {
             return this;
         }
@@ -385,7 +385,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber rotateLeft(Int n);
      */
-    public IntNumber rotateLeft$p(Ctx ctx, long n) {
+    public IntNumber rotateLeft$p(Ctx ctx, boolean async, long n) {
         // Handle distances larger than bitLength
         int bitLength = $value.bitLength();
         if (bitLength == 0) {
@@ -410,7 +410,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber rotateRight(Int n);
      */
-    public IntNumber rotateRight$p(Ctx ctx, long n) {
+    public IntNumber rotateRight$p(Ctx ctx, boolean async, long n) {
         // Handle distances larger than bitLength
         int bitLength = $value.bitLength();
         if (bitLength == 0) {
@@ -437,7 +437,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber retainLSBits(Int count)
      */
-    public IntNumber retainLSBits$p(Ctx ctx, long count) {
+    public IntNumber retainLSBits$p(Ctx ctx, boolean async, long count) {
         // Handle edge cases for zero or negative boundaries
         if ($value.signum() == 0 || count <= 0) {
             return ZERO;
@@ -456,7 +456,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber retainMSBits(Int count)
      */
-    public IntNumber retainMSBits$p(Ctx ctx, long count) {
+    public IntNumber retainMSBits$p(Ctx ctx, boolean async, long count) {
         // Handle edge cases for zero or negative boundaries
         if ($value.signum() == 0 || count <= 0) {
             return ZERO;
@@ -479,7 +479,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     (Boolean, IntN) next()
      */
-    public boolean next$p(Ctx ctx) {
+    public boolean next$p(Ctx ctx, boolean async) {
         ctx.o0 = new IntN($value.add(BigInteger.ONE));
         return true;
     }
@@ -488,7 +488,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntN nextValue()
      */
-    public IntN nextValue(Ctx ctx) {
+    public IntN nextValue(Ctx ctx, boolean async) {
         return new IntN($value.add(BigInteger.ONE));
     }
 
@@ -496,7 +496,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     (Boolean, IntN) prev()
      */
-    public boolean prev$p(Ctx ctx) {
+    public boolean prev$p(Ctx ctx, boolean async) {
         ctx.o0 = new IntN($value.subtract(BigInteger.ONE));
         return true;
     }
@@ -505,7 +505,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntN prevValue()
      */
-    public IntN prevValue(Ctx ctx) {
+    public IntN prevValue(Ctx ctx, boolean async) {
         return new IntN($value.subtract(BigInteger.ONE));
     }
 
@@ -513,7 +513,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *     Int stepsTo(IntNumber that)
      */
-    public long stepsTo$p(Ctx ctx, IntNumber that) {
+    public long stepsTo$p(Ctx ctx, boolean async, IntNumber that) {
         return ((IntN) that).$value.subtract(this.$value).longValue();
     }
 
@@ -521,7 +521,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *     IntNumber skip(Int steps)
      */
-    public IntNumber skip$p(Ctx ctx, long steps) {
+    public IntNumber skip$p(Ctx ctx, boolean async, long steps) {
         return steps == 0 ? this : new IntN($value.add(BigInteger.valueOf(steps)));
     }
 
@@ -537,7 +537,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java {@code int}
      */
-    public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public int toInt8$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, Byte.SIZE, true)) {
             return $value.byteValue();
         }
@@ -554,7 +554,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java {@code int}
      */
-    public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public int toInt16$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, Short.SIZE, true)) {
             return $value.shortValue();
         }
@@ -571,7 +571,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java {@code int}
      */
-    public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public int toInt32$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, Integer.SIZE, true)) {
             return $value.intValue();
         }
@@ -588,8 +588,8 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java long
      */
-    public long toInt$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return toInt64$p(ctx, checkBounds, dfltCheckBounds);
+    public long toInt$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
+        return toInt64$p(ctx, false, checkBounds, dfltCheckBounds);
     }
 
     /**
@@ -602,7 +602,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java long
      */
-    public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public long toInt64$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, Long.SIZE, true)) {
             return $value.longValue();
         }
@@ -619,7 +619,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as an Int128
      */
-    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public long toInt128$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, 128, true)) {
             return Int128.$fromBigInteger(ctx, $value);
         }
@@ -636,7 +636,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java {@code int}
      */
-    public int toNibble$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public int toNibble$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, 4, false)) {
             return $value.byteValue() & 0x0F;
         }
@@ -653,7 +653,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java {@code int}
      */
-    public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public int toUInt8$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, Byte.SIZE, false)) {
             return $value.byteValue() & 0xFF;
         }
@@ -670,7 +670,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java {@code int}
      */
-    public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public int toUInt16$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, Short.SIZE, false)) {
             return $value.shortValue() & 0xFFFF;
         }
@@ -687,7 +687,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java {@code int}
      */
-    public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public int toUInt32$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, Integer.SIZE, false)) {
             return $value.intValue();
         }
@@ -704,8 +704,8 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java long
      */
-    public long toUInt$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return toUInt64$p(ctx, checkBounds, dfltCheckBounds);
+    public long toUInt$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
+        return toUInt64$p(ctx, false, checkBounds, dfltCheckBounds);
     }
 
     /**
@@ -718,7 +718,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a Java long
      */
-    public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public long toUInt64$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, Long.SIZE, false)) {
             return $value.longValue();
         }
@@ -735,7 +735,7 @@ public class IntN extends IntNumber {
      *
      * @return this IntN value as a UInt128
      */
-    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public long toUInt128$p(Ctx ctx, boolean async, boolean checkBounds, boolean dfltCheckBounds) {
         if ($checkBounds(checkBounds, dfltCheckBounds, 128, false)) {
             long[] longs = $longValues(ctx);
             ctx.i0 = longs.length > 1 ? longs[1] : 0;
@@ -748,7 +748,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntN toIntN()
      */
-    public IntN toIntN(Ctx ctx) {
+    public IntN toIntN(Ctx ctx, boolean async) {
         return this;
     }
 
@@ -756,7 +756,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntN toIntN()
      */
-    public UIntN toUIntN(Ctx ctx) {
+    public UIntN toUIntN(Ctx ctx, boolean async) {
         if ($value.signum() < 0) {
             throw Exception.$oob(ctx, "IntN value " + $value + " is not a valid UIntN value");
         }
@@ -786,31 +786,31 @@ public class IntN extends IntNumber {
 
     // ----- Orderable interface -------------------------------------------------------------------
 
-    public static Ordered compare(Ctx ctx, nType type, IntN value1, IntN value2) {
+    public static Ordered compare(Ctx ctx, boolean async, nType type, IntN value1, IntN value2) {
         int r = value1.$value.compareTo(value2.$value);
         return r < 0 ? Ordered.Lesser.$INSTANCE
                 : r == 0 ? Ordered.Equal.$INSTANCE
                   : Ordered.Greater.$INSTANCE;
     }
 
-    public static boolean equals$p(Ctx ctx, nType type, IntN value1, IntN value2) {
+    public static boolean equals$p(Ctx ctx, boolean async, nType type, IntN value1, IntN value2) {
         return value1.$value.equals(value2.$value);
     }
 
     // ----- Stringable interface ------------------------------------------------------------------
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, $value.toString());
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, $value.toString());
     }
 
-    public long estimateStringLength$p(Ctx ctx) {
+    public long estimateStringLength$p(Ctx ctx, boolean async) {
         return $value.toString().length();
     }
 
-    public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
+    public AppenderᐸCharᐳ appendTo(Ctx ctx, boolean async, AppenderᐸCharᐳ appender) {
         for (char c : $value.toString().toCharArray()) {
-            appender = appender.add$p(ctx, c);
+            appender = appender.add$p(ctx, false, c);
         }
         return appender;
     }

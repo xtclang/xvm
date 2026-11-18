@@ -187,7 +187,7 @@ public class Assert
             bctx.loadArgument(code, m_nTest);
             code.ifne(labelEnd);
         }
-        bctx.loadCtx(code);
+        bctx.loadCtxOnly(code);
         if (m_nConstructor == A_IGNORE) {
             code.loadConstant( "Debugger support for jit is not yet implemented");
             code.invokevirtual(CD_Ctx, "log", Ctx.MD_log);

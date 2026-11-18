@@ -66,9 +66,11 @@ public class IntNBuilder extends IntNumberBuilder {
                 int stringSlot = code.parameterSlot(jmd.getImplicitParamCount());
 
                 code.aload(ctxSlot)
+                    .iconst_0()
                     .aload(stringSlot)
                     .invokestatic(CD_IntLiteral, "$new", mdx(CD_IntLiteral, CD_String))
                     .aload(ctxSlot)
+                    .iconst_0()
                     .invokevirtual(CD_IntLiteral, "to" + thisName, mdx(thisCD))
                     .areturn();
             });
@@ -83,6 +85,7 @@ public class IntNBuilder extends IntNumberBuilder {
 
                 code.aload(arraySlot)
                     .aload(ctxSlot)
+                    .iconst_0()
                     .loadConstant(unsigned ? 0 : 1)
                     .invokevirtual(arrayCD, "$toBigInteger", mdToBigInt)
                     .invokestatic(thisCD, "$box", mdBox)

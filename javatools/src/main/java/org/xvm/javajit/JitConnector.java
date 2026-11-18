@@ -99,35 +99,39 @@ public class JitConnector
             // reflection boxes the optimized Java long as Long, which join() uses as the exit code
             Object result;
             if (methodStructure.getParamCount() == 0) {
-                Method runMethod = mainClass.getMethod(runName, Ctx.class);
-                result = runMethod.invoke(module, ctx);
+                Method runMethod = mainClass.getMethod(runName, Ctx.class, Boolean.TYPE);
+                result = runMethod.invoke(module, ctx, false);
             } else {
                 TypeConstant stringArrayType = pool.ensureArrayType(pool.typeString());
 
                 assert methodStructure.getParamCount() == 1 &&
                     methodStructure.getParam(0).getType().equals(stringArrayType);
 
-                // ArrayᐸObjectᐳ stringArray = ArrayᐸObjectᐳ.new$p(ctx, arrayType, capacity, false);
+                // ArrayᐸObjectᐳ stringArray =
+                //         ArrayᐸObjectᐳ.$new$p(ctx, false, arrayType, capacity, false);
                 Class       arrayClass  = loader.loadClass(Builder.N_ArrayObj);
-                Method      newMethod   = arrayClass.getDeclaredMethod("$new$p", Ctx.class, TypeConstant.class, Long.TYPE, Boolean.TYPE);
-                Object      stringArray = newMethod.invoke(null, ctx, stringArrayType, (long) args.length, false);
+                Method      newMethod   = arrayClass.getDeclaredMethod("$new$p", Ctx.class,
+                        Boolean.TYPE, TypeConstant.class, Long.TYPE, Boolean.TYPE);
+                Object      stringArray = newMethod.invoke(null, ctx, false, stringArrayType,
+                        (long) args.length, false);
                 Class       stringClass = loader.loadClass(Builder.N_String);
                 Class       objectClass = loader.loadClass(Builder.N_Object);
                 Constructor stringCtor  = stringClass.getDeclaredConstructor(Ctx.class, String.class);
-                Method      addMethod   = arrayClass.getDeclaredMethod("add", Ctx.class, objectClass);
+                Method      addMethod   = arrayClass.getDeclaredMethod("add", Ctx.class, Boolean.TYPE, objectClass);
                 for (String arg : args) {
                     // stringArray.add(arg);
-                    addMethod.invoke(stringArray, ctx, stringCtor.newInstance(ctx, arg));
+                    addMethod.invoke(stringArray, ctx, false, stringCtor.newInstance(ctx, arg));
                 }
 
                 // stringArray.makeImmutable();
                 Class  baseArrayClass  = loader.loadClass(Builder.N_Array);
-                Method makeImmutMethod = baseArrayClass.getDeclaredMethod("makeImmutable", Ctx.class);
-                stringArray = makeImmutMethod.invoke(stringArray, ctx);
+                Method makeImmutMethod = baseArrayClass.getDeclaredMethod("makeImmutable",
+                                            Ctx.class, Boolean.TYPE);
+                stringArray = makeImmutMethod.invoke(stringArray, ctx, false);
 
                 // run(stringArray);
-                Method runMethod = mainClass.getMethod(runName, Ctx.class, arrayClass);
-                result = runMethod.invoke(module, ctx, stringArray);
+                Method runMethod = mainClass.getMethod(runName, Ctx.class, Boolean.TYPE, arrayClass);
+                result = runMethod.invoke(module, ctx, false, stringArray);
             }
             switch (result) {
                 case Long        l -> this.result = l;

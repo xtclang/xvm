@@ -15,10 +15,10 @@ public interface FileNode extends Object, Hashable {
     /**
      * The native property getter for {@code @RO FileStore store;}.
      */
-    FileStore store$get(Ctx ctx);
+    FileStore store$get(Ctx ctx, boolean async);
 
     /**
      * The primitive property getter for {@code Int size.get()}.
      */
-    long size$get$p(Ctx ctx);
+    long size$get$p(Ctx ctx, boolean async);
 }

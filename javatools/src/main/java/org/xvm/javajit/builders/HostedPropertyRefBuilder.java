@@ -71,7 +71,7 @@ public class HostedPropertyRefBuilder extends Builder {
                     .withSuperclass(CD_nRefProp)
                     .withInterfaceSymbols(interfaces);
 
-        MethodTypeDesc init = mdx(CD_void, CD_TypeConstant, CD_boolean,
+        MethodTypeDesc init = md(CD_void, CD_Ctx, CD_TypeConstant, CD_boolean,
                 CD_nObject, CD_MethodHandle, CD_MethodHandle, CD_MethodHandle);
         classBuilder.withMethodBody(INIT_NAME, init, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0);
@@ -182,13 +182,14 @@ public class HostedPropertyRefBuilder extends Builder {
         classBuilder.withMethodBody(name, md, ClassFile.ACC_PUBLIC, code -> {
             int ctxSlot = code.parameterSlot(0);
             code.aload(0)
-                .aload(ctxSlot);
+                .aload(ctxSlot)
+                .iconst_0();
 
             TypeConstant type = property.getType();
             if (operation.equals("set")) {
                 JitParamDesc[] params = optimized ? desc.optimizedParams : desc.standardParams;
                 for (int i = 0; i < params.length; i++) {
-                    load(code, params[i].cd, code.parameterSlot(i + 1));
+                    load(code, params[i].cd, code.parameterSlot(i + 2));
                 }
                 if (optimized) {
                     if (type.isNullable()) {

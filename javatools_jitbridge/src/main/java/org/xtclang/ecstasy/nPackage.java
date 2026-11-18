@@ -26,7 +26,7 @@ public class nPackage
     public final PackageStructure $package;
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return $type;
     }
 }

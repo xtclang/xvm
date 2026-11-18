@@ -149,7 +149,7 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
-        if (!isNativeMethod(INIT_NAME, MD_xvmVoid)) {
+        if (!isNativeMethod(INIT_NAME, MD_xvmInit)) {
             super.assembleInit(classBuilder, props);
         }
     }
@@ -300,8 +300,8 @@ public class AugmentingBuilder extends CommonBuilder {
             if (jmd.isPrimitivized()) {
                 // callers into a non-primitive base use an optimized virtual method, while a
                 // primitive subclass implements that method as a static function with a "thi$";
-                // e.g. route virtual "Boolean.estimateStringLength$p(Ctx)" (defined on Enum)
-                //          to static "Boolean.estimateStringLength$p(boolean thi$, Ctx)"
+                // e.g. route virtual "Boolean.estimateStringLength$p(Ctx, boolean)"
+                // (defined on Enum) to static "Boolean.estimateStringLength$p(boolean, Ctx, boolean)"
                 TypeConstant  typeDeclared = method.getJitIdentity().getClassIdentity().getType();
                 JitMethodDesc jmdDeclared  = method.getJitDesc(this, typeDeclared);
                 if (jmdDeclared.isOptimized && !jmdDeclared.isOptimizedStatic &&

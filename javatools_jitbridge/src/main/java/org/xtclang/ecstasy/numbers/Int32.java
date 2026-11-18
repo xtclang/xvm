@@ -22,12 +22,12 @@ public class Int32 extends IntNumber {
     public final int $value;
 
     @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, Integer.toString($value));
+    public String toString(Ctx ctx, boolean async) {
+        return String.of(ctx, false, Integer.toString($value));
     }
 
-    public static String toString$p(int thi$, Ctx ctx) {
-        return String.of(ctx, Integer.toString(thi$));
+    public static String toString$p(int thi$, Ctx ctx, boolean async) {
+        return String.of(ctx, false, Integer.toString(thi$));
     }
 
     /**

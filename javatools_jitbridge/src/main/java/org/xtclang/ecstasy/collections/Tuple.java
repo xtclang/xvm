@@ -21,7 +21,7 @@ public interface Tuple {
      *     static <CompileType extends Tuple> Boolean equals(CompileType value1, CompileType value2)
      * }</pre>
      */
-    static boolean equals$p(Ctx ctx, nType type, nTuple value1, nTuple value2) {
+    static boolean equals$p(Ctx ctx, boolean async, nType type, nTuple value1, nTuple value2) {
         if (value1 == value2) {
             return true;
         }
@@ -49,7 +49,8 @@ public interface Tuple {
             TypeConstant type1 = (i < types1.length ? types1[i] : object).removeNullable();
             TypeConstant type2 = (i < types2.length ? types2[i] : object).removeNullable();
             if (!type1.equals(type2) ||
-                    !nType.$ensureType(ctx, type1).equals$p(ctx, element1, element2)) {
+                    !nType.$ensureType(ctx, false, type1).equals$p(ctx, false, element1,
+                            element2)) {
                 return false;
             }
         }

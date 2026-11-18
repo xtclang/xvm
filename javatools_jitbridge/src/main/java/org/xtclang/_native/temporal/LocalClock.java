@@ -19,11 +19,11 @@ public class LocalClock extends nService {
 
     public boolean utc;
 
-    public long epochMillis$get$p(Ctx ctx) {
+    public long epochMillis$get$p(Ctx ctx, boolean async) {
         return System.currentTimeMillis();
     }
 
-    public long timezoneMillis$get$p(Ctx ctx) {
+    public long timezoneMillis$get$p(Ctx ctx, boolean async) {
         return TimeZone.getDefault().getOffset(System.currentTimeMillis());
     }
 

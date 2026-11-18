@@ -14,5 +14,5 @@ public interface Type extends Const {
     /**
      * {@code conditional function DataType(Struct) structConstructor(OuterType? outer = Null)}
      */
-    Boolean structConstructor(Ctx ctx, Type OuterType, Object outer);
+    Boolean structConstructor(Ctx ctx, boolean async, Type OuterType, Object outer);
 }

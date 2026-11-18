@@ -29,16 +29,16 @@ public class Int128 extends IntNumber {
     private String $toString = null;
 
     @Override
-    public String toString(Ctx ctx) {
+    public String toString(Ctx ctx, boolean async) {
         String toString = $toString;
         if (toString == null) {
-            toString = $toString = String.of(ctx, $asBigInteger().toString());
+            toString = $toString = String.of(ctx, false, $asBigInteger().toString());
         }
         return toString;
     }
 
-    public static String toString$p(long thi$Lo, long thi$Hi, Ctx ctx) {
-        return String.of(ctx, $toBigInteger(thi$Lo, thi$Hi).toString());
+    public static String toString$p(long thi$Lo, long thi$Hi, Ctx ctx, boolean async) {
+        return String.of(ctx, false, $toBigInteger(thi$Lo, thi$Hi).toString());
     }
 
     /**
@@ -66,7 +66,7 @@ public class Int128 extends IntNumber {
      *
      * @return  the low 64 bits of the result
      */
-    public static long $div(Ctx ctx, long low1, long high1, long low2, long high2) {
+    public static long $div(Ctx ctx, boolean async, long low1, long high1, long low2, long high2) {
         BigInteger n1 = $toBigInteger(low1, high1);
         BigInteger n2 = $toBigInteger(low2, high2);
         return $fromBigInteger(ctx, n1.divide(n2));
@@ -83,7 +83,7 @@ public class Int128 extends IntNumber {
      *
      * @return  the low 64 bits of the result
      */
-    public static long $mod(Ctx ctx, long low1, long high1, long low2, long high2) {
+    public static long $mod(Ctx ctx, boolean async, long low1, long high1, long low2, long high2) {
         BigInteger n1 = $toBigInteger(low1, high1);
         BigInteger n2 = $toBigInteger(low2, high2);
         return $fromBigInteger(ctx, n1.mod(n2));

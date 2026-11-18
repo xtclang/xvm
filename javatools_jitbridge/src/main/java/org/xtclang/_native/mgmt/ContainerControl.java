@@ -20,7 +20,7 @@ public class ContainerControl extends nService {
     private final TypeConstant $containerType;
 
     @Override
-    public TypeConstant $xvmType(Ctx ctx) {
+    public TypeConstant $xvmType(Ctx ctx, boolean async) {
         return $containerType;
     }
 }
