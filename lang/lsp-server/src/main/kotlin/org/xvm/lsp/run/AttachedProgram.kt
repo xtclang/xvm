@@ -53,12 +53,13 @@ internal class AttachedProgram private constructor(
         }
 
     /**
-     * Sets the program's debugger up as [setup] asks, with the program's own modules named [modules] besides its
-     * main one, and completes once the program has taken it: how the breakpoints were installed goes to the listener
-     * first. A program that waits for a debugger before its first line then starts.
+     * Sets the program's debugger up as [setup] asks, with the program's own modules besides its main one, and the
+     * directory of their sources, both from [sourceDirs], by module name; it completes once the program has taken it:
+     * how the breakpoints were installed goes to the listener first. A program that waits for a debugger before its
+     * first line then starts.
      */
     fun debug(
-        modules: List<String>,
+        sourceDirs: Map<String, String>,
         setup: DebugSetup,
     ): CompletableFuture<Unit> {
         Thread
@@ -66,7 +67,7 @@ internal class AttachedProgram private constructor(
             .name("xtc-attached-reader-$module")
             .daemon(true)
             .start(::read)
-        val sent = deliver(RUN, DebugProtocol.json(DebugProtocol.Debug(RUN, modules, setup.record())))
+        val sent = deliver(RUN, DebugProtocol.json(DebugProtocol.Debug(RUN, sourceDirs.keys.toList(), setup.record(sourceDirs))))
         if (!sent) started.completeExceptionally(IOException("The connection to the program was lost"))
         return started
     }
