@@ -427,7 +427,7 @@ public class FBind
                     code.aastore();
                 }
             } else {
-                code.loadConstant(1)
+                code.iconst_1()
                     .anewarray(CD_JavaObject)
                     .dup()
                     .iconst_0();
@@ -435,7 +435,7 @@ public class FBind
                 code.aastore();
             }
         } else {
-            code.loadConstant(1)
+            code.iconst_1()
                 .anewarray(CD_JavaObject)
                 .dup()
                 .iconst_0();

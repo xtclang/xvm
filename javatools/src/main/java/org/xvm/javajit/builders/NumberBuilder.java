@@ -1040,8 +1040,8 @@ public class NumberBuilder extends AugmentingBuilder {
                 // call the static compare helper method to compare to zero
                 code.lload(code.parameterSlot(0))
                     .lload(code.parameterSlot(1))
-                    .loadConstant(0L)
-                    .loadConstant(0L)
+                    .lconst_0()
+                    .lconst_0()
                     .invokestatic(art.CD(), "$compare",
                             md(CD_int, CD_long, CD_long, CD_long, CD_long));
                 break;
