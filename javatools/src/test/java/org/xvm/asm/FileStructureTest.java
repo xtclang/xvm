@@ -145,6 +145,31 @@ public class FileStructureTest {
     }
 
     @Test
+    public void testDescriptionShowsTimestampOfModuleWithoutSourceDir() {
+        // a module compiled from a source with no file, or made directly, has a timestamp but no
+        // source directory
+        var module = new FileStructure("Described", Instant.parse("2026-01-01T00:00:00Z")).getModule();
+
+        assertNull(module.getSourceDir());
+        assertTrue(module.getDescription().endsWith(
+                "source-dir=none, timestamp=" + module.getTimestamp().getValueString()),
+                module.getDescription());
+    }
+
+    @Test
+    public void testDescriptionOfModuleWithSourceDirButNoTimestamp() {
+        var file   = new FileStructure("Described");
+        var module = file.getModule();
+        var dir    = file.getConstantPool().ensureLiteralConstant(Constant.Format.Path, "/src/");
+        module.setSourceDir(dir);
+        module.setTimestamp(null);
+
+        assertTrue(module.getDescription().endsWith(
+                "source-dir=" + dir.getValueString() + ", timestamp=none"),
+                module.getDescription());
+    }
+
+    @Test
     public void testUnknownFileKindIsRejected()
             throws IOException {
         var file = new FileStructure("Future");

@@ -946,7 +946,7 @@ public class ModuleStructure
         sb.append(", source-dir=")
           .append(m_constDir == null ? "none" : m_constDir.getValueString())
           .append(", timestamp=")
-          .append(m_constDir == null ? "none" : m_constTimestamp.getValueString());
+          .append(m_constTimestamp == null ? "none" : m_constTimestamp.getValueString());
 
         return sb.toString();
     }
