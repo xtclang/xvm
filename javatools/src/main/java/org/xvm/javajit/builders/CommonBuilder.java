@@ -3525,7 +3525,7 @@ public class CommonBuilder
             code.aload(valueSlot)
                     .getfield(cdThis, "$savedHashCode", CD_long) // load the cached hash
                     .dup2()                      // duplicate the cached long value
-                    .loadConstant(0L)
+                    .lconst_0()
                     .lcmp()                      // compare the cached value to zero
                     .ifeq(compute)               // if equal to zero, jump to the compute label
                     .lreturn()                   // not zero, return the cached hash
