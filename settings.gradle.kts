@@ -32,7 +32,12 @@ buildCache {
         // of this repository build concurrently (e.g., ../research-fork and ../gradle94).
         // Without this, both projects share ~/.gradle/caches/build-cache-1/ and concurrent
         // writes can corrupt cached artifacts (ZipFile invalid LOC header errors).
-        directory = file(".gradle/build-cache")
+        // CI builds one checkout at a time and keeps the cache in the Gradle user home, which
+        // setup-gradle saves after master's runs and restores for later runs, so that a run
+        // reuses what an earlier one built.
+        if (!providers.environmentVariable("CI").isPresent) {
+            directory = file(".gradle/build-cache")
+        }
     }
 }
 
