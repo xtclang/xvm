@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import { spawn } from 'node:child_process';
-import * as fs from 'node:fs/promises';
+import * as fs from './disk';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';

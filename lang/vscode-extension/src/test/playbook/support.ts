@@ -1,12 +1,12 @@
 import * as assert from 'node:assert';
 import { realpathSync } from 'node:fs';
-import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type DiagnosticReport } from '../../lsp-client';
 import { focusTestEditor } from '../native-focus';
 import { withTestWait } from '../progress';
 import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
+import * as fs from './disk';
 import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
 
 export const manualPath = path.resolve(__dirname, '../../../../doc/manual-test-plan.md');
@@ -97,9 +97,9 @@ export async function noErrors(uri: vscode.Uri): Promise<void> {
  * server that pushes its diagnostics, has no such version; what VS Code shows is taken as it is.
  */
 export async function diagnostics(uri: vscode.Uri, accept: (values: vscode.Diagnostic[]) => boolean, message: string) {
-    // a report of the current text that does not do is final once nothing could make another: no compile, no request
-    // the server is answering, no pull of the client's, no items of the document's that the server has still to report,
-    // and no compile submitted since, three times in a row
+    // a report of the current text that does not do is final once nothing could make another: no change on disk the
+    // server has still to hear of, no compile, no request the server is answering, no pull of the client's, no items of
+    // the document's that the server has still to report, and no compile submitted since, three times in a row
     let settled = 0;
     let submitted: number | undefined;
     const shown = await eventually(async () => {
@@ -117,19 +117,21 @@ export async function diagnostics(uri: vscode.Uri, accept: (values: vscode.Diagn
 }
 
 /**
- * The compiles the server has had submitted, when nothing could change the diagnostics of the document [uri]: no compile
- * is queued or running, nor any request or pull, and the server has given the client the document's current items;
- * undefined while anything is.
+ * The compiles the server has had submitted, when nothing could change the diagnostics of the document [uri]: the server
+ * has heard of every change the case made on disk, no compile is queued or running, nor any request or pull, and the
+ * server has given the client the document's current items; undefined while anything is.
  */
 async function quiet(uri: vscode.Uri): Promise<number | undefined> {
     if (pullsInFlight() > 0) return undefined;
     const status = await client().sendRequest<{ compilerQueue?: Record<string, number>; openRequests?: string[];
-        unreportedDiagnostics?: string[] }>('xtc/languageServiceStatus');
+        unreportedDiagnostics?: string[]; watchedFileChanges?: Record<string, number> }>('xtc/languageServiceStatus');
     const queue = status.compilerQueue;
     const compiling = !!queue && (queue.queueSize > 0 || queue.debouncingSize > 0 || queue.runningSize > 0);
     // the server names a document by its canonical URI
     const unreported = (status.unreportedDiagnostics ?? []).some(each => canonical(vscode.Uri.parse(each)) === canonical(uri));
-    return compiling || unreported || (status.openRequests ?? []).length > 0 || pullsInFlight() > 0 ? undefined : queue?.submittedTotal ?? 0;
+    const unheard = fs.unheardChanges(status.watchedFileChanges ?? {});
+    return unheard || compiling || unreported || (status.openRequests ?? []).length > 0 || pullsInFlight() > 0
+        ? undefined : queue?.submittedTotal ?? 0;
 }
 
 /** The real path of the file [uri], or its path as it is, if it is not a file or there is none. */
@@ -330,6 +332,7 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
         const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
         assert.ok(root);
         const workspace = new Workspace(path.join(root, id));
+        fs.forgetChanges();
         try { await body(workspace, scenario.values); }
         catch (error) {
             // A timed-out command can still be mutating the disposable editor. The runner aborts;
