@@ -37,6 +37,8 @@ class XtcWorkspaceService(
 
     private val fileChanges = FileChangeSnapshots()
 
+    private val receivedChanges = ReceivedFileChanges()
+
     override fun textDocumentContent(params: TextDocumentContentParams): CompletableFuture<TextDocumentContentResult> =
         server.readOnlyDocuments.content(params.uri)
 
@@ -61,9 +63,18 @@ class XtcWorkspaceService(
      * @see org.eclipse.lsp4j.services.WorkspaceService.didChangeWatchedFiles
      */
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
+        val time = System.currentTimeMillis()
         logger.info("workspace/didChangeWatchedFiles: {} changes", params.changes.size)
         refreshFiles(params.changes)
+        // the rediscovery the changes asked for runs on its own thread, and any compile it submits is queued by its end
+        server.discoveryIdle().whenComplete { _, _ -> receivedChanges.received(params.changes.map { it.uri }, time) }
     }
+
+    /**
+     * When the server received the latest watched-file event of each file, by URI, in milliseconds since the epoch,
+     * once it has acted on it: what it read of the file, it read after that time.
+     */
+    internal fun receivedFileChanges(): Map<String, Long> = receivedChanges.snapshot()
 
     override fun willRenameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> = server.willRenameFiles(params)
 
