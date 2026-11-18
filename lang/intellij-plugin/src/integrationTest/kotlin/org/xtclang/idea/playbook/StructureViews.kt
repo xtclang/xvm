@@ -13,7 +13,26 @@ import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.toolwindows.structureToolWindow
 import com.intellij.driver.sdk.ui.ui
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+
+// TODO LSP4IJ: #1738 — a release before 0.30.0 can send a document's textDocument/documentSymbol ahead of the didChange
+//  of the edit it was asked for. The server answers ContentModified, and LSP4IJ keeps that empty answer as the edited
+//  text's symbols, so the Structure view stays empty until the next edit. Drop this once the playbook's LSP4IJ is
+//  0.30.0 or later; a local build or a channel's has the fix.
+private val keepsStaleSymbols: Boolean =
+    System.getProperty("xtc.playbook.lsp4ijPlugin") == null &&
+        System.getProperty("xtc.playbook.lsp4ijChannel").isNullOrEmpty() &&
+        System.getProperty("xtc.playbook.lsp4ijVersion", "").split('.').let { parts ->
+            val (major, minor) = (0..1).map { parts.getOrNull(it)?.toIntOrNull() ?: 0 }
+            major == 0 && minor < 30
+        }
+
+/** How long the Structure view has to show an edit's symbols before the text is edited again, for [keepsStaleSymbols]. */
+private val staleAfter = 10.seconds
 
 /**
  * Inspect the actual Structure tree populated by LSP4IJ, including deliberately absent
@@ -27,6 +46,7 @@ fun Driver.structure(
     val visible = withContext(OnDispatcher.EDT) { getToolWindow("Structure").isVisible() }
     if (!visible) invokeAction("ActivateStructureToolWindow", component = editor.component)
     val tree = ui.structureToolWindow().waitAndGetStructureTree()
+    var asked = TimeSource.Monotonic.markNow()
     awaitUi("Structure contains $include and excludes $exclude", HANG_LIMIT) {
         // the driver gives a tree's expansion a few seconds of its own, which a loaded machine can exceed; expanding
         // again is harmless, so its timeout means only that the rows are not all there yet, and the hang bound ends a
@@ -42,7 +62,18 @@ fun Driver.structure(
             rows.any {
                 Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").containsMatchIn(it)
             }
-        include.all(::contains) && exclude.none(::contains)
+        val shown = include.all(::contains) && exclude.none(::contains)
+        if (!shown && keepsStaleSymbols && asked.elapsedNow() > staleAfter) {
+            println(
+                "[playbook] ${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)} warning: the Structure view shows $rows " +
+                    "after $staleAfter; editing the text and back, as LSP4IJ before 0.30.0 can keep an empty answer (#1738)",
+            )
+            val text = editor.text
+            editor.text = "$text "
+            editor.text = text
+            asked = TimeSource.Monotonic.markNow()
+        }
+        shown
     }
 }
 
