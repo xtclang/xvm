@@ -239,6 +239,12 @@ tasks.test {
         dir = dir.parentFile
     }
     systemProperty("xtc.composite.root", dir.absolutePath)
+    // LspIntegrationTest opens sources of the core library under that root: without this input, a change to them
+    // would not run it again.
+    inputs
+        .dir(File(dir, "lib_ecstasy/src/main/x"))
+        .withPropertyName("ecstasySources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 tasks.jar {

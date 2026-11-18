@@ -23,6 +23,12 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    // LanguageModelTest and DslPowerShowcaseTest check the model against the core library's sources, which they find
+    // above the working directory: without this input, a change to those sources would not run them again.
+    inputs
+        .dir(rootDir.resolve("../lib_ecstasy/src/main/x"))
+        .withPropertyName("ecstasySources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 // =============================================================================
