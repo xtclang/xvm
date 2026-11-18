@@ -283,11 +283,6 @@ public class MethodDeclarationStatement
         return null;
     }
 
-    /**
-     * Numbers within this method, so that the names they make, such as those of variables named
-     * {@code _}, depend only on the method's own source: a counter shared by every compile in the JVM
-     * would make a module's bytes depend on what else the JVM has compiled.
-     */
     @Override
     protected int getCodeContainerCounter() {
         return m_counter++;
@@ -1262,9 +1257,9 @@ public class MethodDeclarationStatement
     private transient MethodDeclarationStatement m_stmtComplement;
 
     /**
-     * The next number of {@link #getCodeContainerCounter()}.
+     * A unique counter with the context of this method.
      */
-    private transient int m_counter;
+    protected transient int m_counter;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
             "condition", "annotations", "typeParams", "returns", "redundant", "params", "body");
