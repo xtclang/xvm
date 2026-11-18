@@ -1417,6 +1417,9 @@ class XtcLanguageServer internal constructor(
                 "openRequests" to openRequests.values.filter { it != "xtc/languageServiceStatus" }.sorted(),
                 // the documents whose current diagnostics the client has still to pull, which a pushing server has none of
                 "unreportedDiagnostics" to if (usesPullDiagnostics) textDocumentService.unreportedDiagnostics() else emptyList(),
+                // when the server received each file's latest watched-file event, by URI, which a client that changed the
+                // file on disk compares with the time of its change
+                "watchedFileChanges" to workspaceService.receivedFileChanges(),
                 "heap" to health.heapStatus(),
                 // the latest lines the server logged about its heap and its compile queue, oldest first
                 "health" to health.events(),

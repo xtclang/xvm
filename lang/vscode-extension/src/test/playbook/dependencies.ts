@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import * as fs from 'node:fs/promises';
+import * as fs from './disk';
 import * as vscode from 'vscode';
 import { catalog, editScenario, scenarioOffset, scenarioRegex, shared } from './shared';
 import { client, diagnosticCode, diagnostics, eventually, fixture, noErrors, playbook, position, symbols, targets, Workspace } from './support';
