@@ -15,10 +15,7 @@ import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
-import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.WorkspaceDiagnosticParams
-import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.xtclang.idea.XtcIntelliJLanguage
@@ -149,11 +146,6 @@ class XtcLanguageClient(
     private val semanticUpdates =
         SequentialTaskExecutor.createSequentialApplicationPoolExecutor("Ecstasy semantic updates")
 
-    // TODO LSP4IJ: UP69 — LSP4IJ 0.21.0 asks for no workspace report, so the diagnostics of closed documents come from
-    // the report this asks for. Remove it, its ClosedDocumentConnection and its refresh with an LSP4IJ release whose
-    // own workspace pull updates closed documents.
-    private val closedDocuments = ClosedDocumentDiagnostics(ClosedDocumentConnection(), semanticUpdates)
-
     // UP13, by design upstream: LSP4IJ keeps server configuration in its global store and
     // leaves other sources to clients through createSettings. The Ecstasy project settings
     // page writes project configuration, so the store that owns the compiler graph wins here.
@@ -184,10 +176,8 @@ class XtcLanguageClient(
         }
     }
 
-    override fun refreshDiagnostics(): CompletableFuture<Void> {
-        // TODO LSP4IJ: UP69 — the workspace report, asked for before this refresh is answered, for the closed documents
-        closedDocuments.refresh()
-        return semanticUpdate {
+    override fun refreshDiagnostics(): CompletableFuture<Void> =
+        semanticUpdate {
             FileEditorManager.getInstance(project).openFiles.forEach(::invalidateSemanticFacts)
             // IntelliJ pulls diagnostics, so this refresh, not a publication, follows each analysis
             refreshRunIcons()
@@ -198,61 +188,6 @@ class XtcLanguageClient(
                 super.refreshDiagnostics()
             }
         }
-    }
-
-    // TODO LSP4IJ: UP69 — what ClosedDocumentDiagnostics needs of the server and of LSP4IJ, until LSP4IJ pulls the
-    // workspace's diagnostics itself.
-
-    /** The server's workspace report and LSP4IJ's documents, for [closedDocuments]. */
-    private inner class ClosedDocumentConnection : ClosedDocumentDiagnostics.Connection {
-        override fun report(): CompletableFuture<WorkspaceDiagnosticReport>? {
-            if (isDisposed || project.isDisposed) return null
-            val provider = clientFeatures.serverWrapper.serverCapabilitiesSync?.diagnosticProvider
-            if (provider?.isWorkspaceDiagnostics != true) return null
-            return languageServer?.workspaceService?.diagnostic(
-                WorkspaceDiagnosticParams(emptyList()).apply { identifier = provider.identifier },
-            )
-        }
-
-        override fun document(uri: String): ClosedDocumentDiagnostics.Document {
-            val file = clientFeatures.findFileByUri(uri) ?: return ClosedDocumentDiagnostics.Document.MISSING
-            val opened = clientFeatures.serverWrapper.getOpenedDocument(clientFeatures.getFileUri(file))
-            return when {
-                opened?.synchronizer != null -> ClosedDocumentDiagnostics.Document.OPEN
-                opened != null || FileEditorManager.getInstance(project).isFileOpen(file) -> ClosedDocumentDiagnostics.Document.OPENING
-                else -> ClosedDocumentDiagnostics.Document.CLOSED
-            }
-        }
-
-        // LSP4IJ's own handling of a publication, without this client's refreshes of open editors
-        override fun publish(
-            uri: String,
-            diagnostics: List<Diagnostic>,
-        ) {
-            if (!isDisposed && !project.isDisposed && clientFeatures.serverStatus == ServerStatus.started) {
-                super@XtcLanguageClient.publishDiagnostics(PublishDiagnosticsParams(uri, diagnostics))
-            }
-        }
-
-        override fun opened(uri: String) {
-            // a publication that reached the document as it opened stays beside its pulled diagnostics, unless cleared
-            publish(uri, emptyList())
-        }
-
-        // TODO LSP4IJ: UP69 — the workspace report is what Project Errors lists of the server's errors while the plugin
-        // asks for it. With an LSP4IJ release that pulls it (WorkspaceDiagnosticManager) and tells its client features
-        // each file's merged diagnostics (LSPDiagnosticFeature.diagnosticsUpdated, #1704), the plugin's diagnostic feature
-        // calls ProjectErrors.reported from there instead, with its own getMessage, for open and closed files alike, and
-        // this goes with the bridge.
-        override fun reported(
-            uri: String,
-            diagnostics: List<Diagnostic>,
-        ) {
-            if (isDisposed || project.isDisposed) return
-            val file = clientFeatures.findFileByUri(uri) ?: return
-            ProjectErrors.getInstance(project).reported(file, diagnostics, clientFeatures.diagnosticFeature::getMessage)
-        }
-    }
 
     override fun refreshCodeLenses(): CompletableFuture<Void> {
         refreshRunIcons()

@@ -34,10 +34,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
-// TODO LSP4IJ: UP69 — LSP4IJ 0.21.0 asks for no workspace report, so only ClosedDocumentDiagnostics gets a closed
-// file's errors to IntelliJ. Keep these tests when the bridge goes: they check what IntelliJ shows, whichever of
-// LSP4IJ and the plugin asks for the report.
-
 /**
  * The errors of an Ecstasy file that is not open, from the server's workspace report, make it one of IntelliJ's problem
  * files, the files the Project view marks red, and LSP4IJ keeps them as the closed document's; open files keep the
