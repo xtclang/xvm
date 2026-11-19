@@ -325,8 +325,7 @@ class StubLanguageServer(
 
         override fun getOutputStream(): OutputStream = checkNotNull(client).getOutputStream()
 
-        // TODO LSP4IJ: UP77 — handleRemoved leaves all of a server's wrappers started when one dispose throws,
-        // so a stop, even one during a start, must not throw
+        // a stop, even one during a start, does not throw, as a real connection's does not
         override fun stop() {
             synchronized(lock) {
                 stopped = true
