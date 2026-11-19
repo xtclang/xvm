@@ -10,7 +10,7 @@
 # the entire server would lose the document-version and request ownership guarantees.
 # Public LanguageServerManager start/stop APIs cannot replace these connection/cache hooks.
 # Remove entries when upstream exposes equivalent public APIs and the adapter migrates.
-lsp4ij=0.30.0
+lsp4ij=0.30.1
 
 Internal class com.redhat.devtools.lsp4ij.LSPFileSupport
 Internal class com.redhat.devtools.lsp4ij.LanguageServiceAccessor
