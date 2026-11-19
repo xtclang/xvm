@@ -315,9 +315,10 @@ internal fun ParityScenarios.libraryNavigationCases() {
         check(library.text.lines()[type.line()].startsWith(data.string("libraryDeclaration"))) { "Not the type's declaration: $type" }
 
         // a call in a method body to a method of another source of the library, which the copy compiled on its own,
-        // with only its imports and type names, cannot resolve; the query waits for the library's compile
+        // with only its imports and type names, cannot resolve; the query waits for the library's compile. Asked of the
+        // server only: IntelliJ's Go to Definition does not navigate inside the library view (xvm#741), so X350 is partial
         val call = library.at(data.string("call"), data.int("callOffset"))
-        val target = targets(library, "definition", call).single()
+        val target = targets(library, "definition", call, native = false).single()
         check(libraryDocument(target.string("uri"), data.string("targetSource"))) { "Not the library's document: $target" }
         check(names(listOf(target)) == listOf(data.string("target")))
         val declared = protocol.query("workspace/textDocumentContent", mapOf("uri" to target.string("uri"))).asJsonObject.string("text")
