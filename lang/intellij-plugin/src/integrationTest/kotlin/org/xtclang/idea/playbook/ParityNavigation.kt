@@ -6,7 +6,6 @@ import com.google.gson.JsonObject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
-import java.nio.file.Path
 
 internal fun ParityScenarios.navigationCases() {
     case("X3") { data ->
@@ -307,26 +306,22 @@ internal fun ParityScenarios.libraryNavigationCases() {
     case("X350") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
-        // as a user opens it: Go to Definition on a library type opens the library's source, read-only, at its declaration
+        // as a user opens it: Go to Definition on a library type opens the library's source, read-only, at its declaration:
+        // the server's ecstasy-library: document, which LSP4IJ opens from workspace/textDocumentContent, without a file
         val type = targets(document, "definition", document.at(data.string("libraryType"))).single()
-        // TODO LSP4IJ: UP25 — LSP4IJ 0.21.0 has no workspace/textDocumentContent, so the library's source is the
-        // server's protected copy on disk, not its ecstasy-library content
-        check(URI(type.string("uri")).scheme == "file") { "The library source is not a file: $type" }
-        val path = Path.of(URI(type.string("uri")))
-        check(path.endsWith(data.string("librarySource")) && !Files.isWritable(path)) { "Not the read-only library source: $path" }
-        check(Files.readAllLines(path)[type.line()].startsWith(data.string("libraryDeclaration"))) { "Not the type's declaration: $type" }
-        val library = open(path, data.string("librarySource"))
+        check(libraryDocument(type.string("uri"), data.string("librarySource"))) { "Not the library's document: $type" }
+        val library = selected(data.string("librarySource"))
+        check(library.uri == type.string("uri") && !library.writable) { "Not the read-only library view: ${library.uri}" }
+        check(library.text.lines()[type.line()].startsWith(data.string("libraryDeclaration"))) { "Not the type's declaration: $type" }
 
         // a call in a method body to a method of another source of the library, which the copy compiled on its own,
         // with only its imports and type names, cannot resolve; the query waits for the library's compile
         val call = library.at(data.string("call"), data.int("callOffset"))
         val target = targets(library, "definition", call).single()
-        val declared = Path.of(URI(target.string("uri")))
-        check(declared.endsWith(data.string("targetSource")) && !Files.isWritable(declared)) {
-            "Not the read-only library source: $declared"
-        }
+        check(libraryDocument(target.string("uri"), data.string("targetSource"))) { "Not the library's document: $target" }
         check(names(listOf(target)) == listOf(data.string("target")))
-        check(Files.readAllLines(declared)[target.line()].contains(data.string("targetDeclaration"))) {
+        val declared = protocol.query("workspace/textDocumentContent", mapOf("uri" to target.string("uri"))).asJsonObject.string("text")
+        check(declared.lines()[target.line()].contains(data.string("targetDeclaration"))) {
             "Not the method's declaration: $target"
         }
 
@@ -335,6 +330,12 @@ internal fun ParityScenarios.libraryNavigationCases() {
         check(hover.toString().contains(data.string("hover"))) { "Hover of ${data.string("target")}: $hover" }
     }
 }
+
+/** Whether [uri] is the server's `ecstasy-library:` document of the library source whose path ends with [source]. */
+private fun libraryDocument(
+    uri: String,
+    source: String,
+): Boolean = URI(uri).let { it.scheme == "ecstasy-library" && it.path.endsWith("/$source") }
 
 private fun assertRanges(
     actual: List<JsonElement>,
