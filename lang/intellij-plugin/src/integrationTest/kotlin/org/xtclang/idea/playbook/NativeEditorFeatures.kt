@@ -8,6 +8,7 @@ import com.intellij.driver.sdk.FileEditorManager
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import org.eclipse.lsp4j.InlineCompletionTriggerKind
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Path
 
@@ -90,7 +91,18 @@ internal fun ParityWorkspace.nativeLibraryContent(
     }
     // Retained diagnostic paint is not readiness for the replacement process. Match the
     // initial navigation's definition query before checking the new native editor target.
-    check(query("textDocument/definition", source, at).rows().single().string("uri") == uri)
+    // LSP4IJ reopens the source in the replacement server with a new version, which can retire an analysis that a
+    // query started: the server then answers that the document changed (ContentModified), and the query is asked again
+    val definition =
+        awaitUiNotNull("replacement server answers the definition of $uri", HANG_LIMIT) {
+            try {
+                query("textDocument/definition", source, at).rows().single()
+            } catch (failure: ClientRequestFailure) {
+                if (failure.code != ResponseErrorCode.ContentModified.value) throw failure
+                null
+            }
+        }
+    check(definition.string("uri") == uri)
     clean(source)
     val reopened = navigate()
     check(reopened.isValid() && !reopened.isWritable() && !file.isValid())
