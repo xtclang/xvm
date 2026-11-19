@@ -10870,8 +10870,10 @@
         "hover": "StringBuffer add(Char v)"
       },
       "intellij": {
-        "coverage": "full",
-        "limitations": []
+        "coverage": "partial",
+        "limitations": [
+          "Go to Definition inside the library source, which LSP4IJ 0.30 opens from workspace/textDocumentContent as the server's ecstasy-library: document, does not navigate in IntelliJ, though the server answers textDocument/definition there; the case checks that answer and the hover through the server, and the native Go to Definition only into the library (xvm#741)."
+        ]
       }
     },
     "CFG1": {
