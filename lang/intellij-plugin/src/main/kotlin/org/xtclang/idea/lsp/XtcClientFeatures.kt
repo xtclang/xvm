@@ -1,10 +1,13 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
+import com.redhat.devtools.lsp4ij.client.features.LSPDiagnosticFeature
 import com.redhat.devtools.lsp4ij.client.features.LSPInlayHintFeature
 import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
 import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
+import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueHandler
@@ -54,6 +57,18 @@ class XtcClientFeatures : LSPClientFeatures() {
     }
 
     init {
+        // each file's diagnostics, open or closed, as LSP4IJ keeps them, are its errors in the Problems window's
+        // Project Errors, which LSP4IJ does not fill
+        setDiagnosticFeature(
+            object : LSPDiagnosticFeature() {
+                override fun diagnosticsUpdated(
+                    file: VirtualFile,
+                    diagnostics: List<Diagnostic>,
+                ) {
+                    if (!project.isDisposed) ProjectErrors.getInstance(project).reported(file, diagnostics, ::getMessage)
+                }
+            },
+        )
         setInlayHintFeature(
             object : LSPInlayHintFeature() {
                 override fun isInlayHintSupported(file: PsiFile): Boolean =
