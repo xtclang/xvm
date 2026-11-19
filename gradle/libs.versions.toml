@@ -26,6 +26,7 @@ jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
 jaxb-runtime = "4.0.9"
 jetbrains-annotations = "26.1.0"
+jetty = "12.1.15"
 jline = "4.0.16"
 slf4j = "2.0.20"
 
@@ -134,7 +135,6 @@ foojay-resolver = { id = "org.gradle.toolchains.foojay-resolver", version.ref = 
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
-vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
 
 # =============================================================================
 # Lang tooling plugins
@@ -153,7 +153,6 @@ javatools = { group = "org.xtclang", name = "javatools" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge" }
 javatools-jitbridge = { group = "org.xtclang", name = "javatools-jitbridge" }
 javatools-turtle = { group = "org.xtclang", name = "javatools-turtle" }
-javatools-unicode = { group = "org.xtclang", name = "javatools-unicode" }
 javatools-utils = { group = "org.xtclang", name = "javatools-utils" }
 xdk = { group = "org.xtclang", name = "xdk" }
 xdk-aggregate = { group = "org.xtclang", name = "lib-aggregate" }
@@ -190,6 +189,7 @@ jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api",
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind-api" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb-runtime" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
+jetty-server = { module = "org.eclipse.jetty:jetty-server", version.ref = "jetty" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 
@@ -221,7 +221,6 @@ lang-lsp4j = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j", version.ref = "la
 lang-lsp4j-debug = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.debug", version.ref = "lang-lsp4j" }
 lang-lsp4j-jsonrpc = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc", version.ref = "lang-lsp4j" }
 lang-slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "lang-slf4j" }
-lang-slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "lang-slf4j" }
 
 # =============================================================================
 # Lang tooling - IntelliJ plugin
@@ -234,9 +233,7 @@ lang-intellij-junit4-compat = { module = "junit:junit", version.ref = "lang-inte
 # =============================================================================
 # apache-commons-compress and tukaani-xz are also on the build-logic classpath
 # for downloading/extracting native artifacts.
-apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "apache-commons-compress" }
 lang-jtreesitter = { module = "io.github.tree-sitter:jtreesitter", version.ref = "lang-jtreesitter" }
-tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
 
 # =============================================================================
 # Lang tooling - Gradle plugin classpath floors (see version comment above)
