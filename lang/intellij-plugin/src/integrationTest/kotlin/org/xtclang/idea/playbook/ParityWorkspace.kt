@@ -86,8 +86,17 @@ class ParityWorkspace(
                     }
                 }
 
+        /** The file's URI, or, for a library view that LSP4IJ opened from `workspace/textDocumentContent`, its path. */
         val uri: String
-            get() = Path.of(source.getPath()).toUri().toString()
+            get() = source.getPath().let { path -> if (URI_PATH.containsMatchIn(path)) path else Path.of(path).toUri().toString() }
+
+        val writable: Boolean
+            get() =
+                with(driver) {
+                    withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                        buffer.isWritable()
+                    }
+                }
 
         val editor: JEditorUiComponent
             get() =
@@ -212,6 +221,18 @@ class ParityWorkspace(
         }
         return open(directory.resolve(file), file)
     }
+
+    /** The document of the selected editor, such as a library view that navigation opened, as [file] names it in messages. */
+    fun selected(file: String): Document =
+        with(driver) {
+            Document(
+                file,
+                withContext(OnDispatcher.EDT) {
+                    requireNotNull(service<FileEditorManager>(singleProject()).getSelectedTextEditor()) { "No editor shows $file" }
+                        .getVirtualFile()
+                },
+            )
+        }
 
     /** Opens the file at [path], which may be outside [directory], in an editor, as [file] names it in messages. */
     fun open(
@@ -545,6 +566,9 @@ class ParityWorkspace(
  * `workspace/textDocumentContent` (UP25, #1749), such as a bundled library source, the URI itself.
  */
 internal fun editorPath(uri: String): String = URI(uri).let { if (it.scheme == "file") Path.of(it).toString() else uri }
+
+/** The path of a library view that LSP4IJ opened from `workspace/textDocumentContent`, which is its URI, as [editorPath] gives it. */
+private val URI_PATH = Regex("^[A-Za-z][A-Za-z0-9+.-]+://")
 
 /** Compare local URI spelling without changing objects that must round-trip to the server. */
 internal fun JsonObject.string(name: String): String =
