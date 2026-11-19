@@ -8,8 +8,6 @@ import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.SymbolKind
 import java.nio.file.Path
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 /** Immutable wire-format choices, independent of compiler semantics and editor preferences. */
 internal data class ClientPresentation(
@@ -38,14 +36,6 @@ internal data class ClientPresentation(
      * requests without only fill, as its initialization option `xtcCodeActions.quickFixesPerDiagnostic` says.
      */
     val quickFixesPerDiagnostic: Boolean = false,
-    /**
-     * The client waits for an Automatic code action request where it must not wait long, so such a request waits for
-     * its full answer only [automaticWait], and then answers from what is proved already, as its initialization option
-     * `xtcCodeActions.automaticFromCache` says.
-     */
-    val automaticFromCache: Boolean = false,
-    /** How long such a request waits for its full answer: `xtcCodeActions.automaticWaitMillis`, if the client says. */
-    val automaticWait: Duration = AUTOMATIC_WAIT,
 ) {
     val codeActions: Boolean
         get() = actionLiterals || applyEdit
@@ -86,13 +76,6 @@ internal data class ClientPresentation(
 
     companion object {
         const val APPLY_CODE_ACTION = "xtc.applyCodeAction"
-
-        /**
-         * How long an Automatic code action request of a client that waits for it waits for its full answer, unless the
-         * client says: about as long as a wait for the lightbulb goes unnoticed, enough for the proofs of an unchanged
-         * revision; an edit's first compile takes longer.
-         */
-        val AUTOMATIC_WAIT = 500.milliseconds
         private val lineBreaks = Regex("\\r\\n|\\r|\\n")
         private val legacyCompletionKinds =
             CompletionItemKind.entries
@@ -102,7 +85,6 @@ internal data class ClientPresentation(
 
         fun read(params: InitializeParams): ClientPresentation {
             val text = params.capabilities?.textDocument
-            val codeActions = LspJsonOptions.lookup(params.initializationOptions, "xtcCodeActions")
             return ClientPresentation(
                 markdownHover =
                     text?.hover?.contentFormat?.firstOrNull {
@@ -166,9 +148,11 @@ internal data class ClientPresentation(
                         ?.valueSet
                         .orEmpty()
                         .toSet(),
-                quickFixesPerDiagnostic = LspJsonOptions.boolean(codeActions, "quickFixesPerDiagnostic") == true,
-                automaticFromCache = LspJsonOptions.boolean(codeActions, "automaticFromCache") == true,
-                automaticWait = LspJsonOptions.int(codeActions, "automaticWaitMillis")?.coerceAtLeast(0)?.milliseconds ?: AUTOMATIC_WAIT,
+                quickFixesPerDiagnostic =
+                    LspJsonOptions.boolean(
+                        LspJsonOptions.lookup(params.initializationOptions, "xtcCodeActions"),
+                        "quickFixesPerDiagnostic",
+                    ) == true,
             )
         }
 
