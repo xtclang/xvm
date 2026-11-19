@@ -76,6 +76,9 @@ internal fun ParityScenarios.compilerImportCases() {
                     Files.copy(source, root.resolve(file))
                 }
                 if (!System.getProperty("os.name").startsWith("Windows")) check(root.resolve("gradlew").toFile().setExecutable(true))
+                // The cases share these paths. IntelliJ must see each case's removal of them before the next case's copies,
+                // or it takes them for an edit of the same files and can index the earlier content as the later one.
+                files.forEach { changed(root.resolve(it)) }
                 data["included"]?.rows()?.forEach { build ->
                     val target = Files.createDirectories(root.resolve(build.string("folder")))
                     val gate = Files.createDirectories(target.resolve(".compiler-import-playbook"))
@@ -108,6 +111,7 @@ internal fun ParityScenarios.compilerImportCases() {
                         root.resolve("settings.gradle.kts"),
                         "rootProject.name = \"composite\"\nincludeBuild(\"included\")\n",
                     )
+                    changed(root.resolve("settings.gradle.kts"))
                 }
                 write(fixture.string("file"), fixture.string("source"))
                 write(fixture.string("resource"), fixture.string("contents"))
@@ -215,12 +219,21 @@ internal fun ParityScenarios.compilerImportCases() {
             } finally {
                 steps.forEach { Files.writeString(control.resolve("$id-${it.string("operation")}.release"), "cleanup\n") }
                 with(driver) { withContext(OnDispatcher.EDT) { utility(ProgressUi::class).hide(singleProject()) } }
-                files.forEach { Files.deleteIfExists(root.resolve(it)) }
+                files.map(root::resolve).forEach {
+                    Files.deleteIfExists(it)
+                    changed(it)
+                }
                 if (previousReport == null) Files.deleteIfExists(report) else Files.write(report, previousReport)
                 if (previousAggregate == null) Files.deleteIfExists(aggregate) else Files.write(aggregate, previousAggregate)
-                if (data.has("included")) root.resolve("included").toFile().deleteRecursively()
+                if (data.has("included")) {
+                    root.resolve("included").toFile().deleteRecursively()
+                    changed(root.resolve("included"))
+                }
                 // X303 makes its project in a project root without them.
-                made.forEach { it.toFile().deleteRecursively() }
+                made.forEach {
+                    it.toFile().deleteRecursively()
+                    changed(it)
+                }
                 with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).clearProjectGraph(singleProject()) } }
                 refresh()
             }
