@@ -6,6 +6,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 
@@ -67,6 +68,38 @@ public final class Ctx {
     public Object   o7;
     public long[]   iN;
     public Object[] oN; // coldest at the bottom (no fields should be declared below this point!)
+
+    // ----- multi-return support ------------------------------------------------------------------
+
+    /**
+     * Store a primitive return value beyond the directly addressable context fields.
+     *
+     * @param value  the value to store
+     * @param index  the zero-based index in the overflow array
+     */
+    public void storeLong(long value, int index) {
+        if (iN == null) {
+            iN = new long[index + 1];
+        } else if (index >= iN.length) {
+            iN = Arrays.copyOf(iN, index + 1);
+        }
+        iN[index] = value;
+    }
+
+    /**
+     * Store a reference return value beyond the directly addressable context fields.
+     *
+     * @param value  the value to store
+     * @param index  the zero-based index in the overflow array
+     */
+    public void storeRef(Object value, int index) {
+        if (oN == null) {
+            oN = new Object[index + 1];
+        } else if (index >= oN.length) {
+            oN = Arrays.copyOf(oN, index + 1);
+        }
+        oN[index] = value;
+    }
 
     // ----- memory accounting ---------------------------------------------------------------------
 
