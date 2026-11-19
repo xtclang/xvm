@@ -709,11 +709,15 @@ public abstract class IdentityConstant
      */
     protected StringBuilder buildJitClassName(TypeSystem ts) {
         IdentityConstant idParent = getParentConstant();
-        char    chDelim;
-        boolean fUsePosition;
+        String           sName    = getName();
+        char             chDelim;
+        boolean          fUsePosition;
+
+        // a literal '$' is indistinguishable from a nesting separator; the suffix lets the loader
+        // identify the type without interpreting the flattened class path
         switch (idParent.getFormat()) {
-            case Module, Package   -> {chDelim = '.'; fUsePosition = false;}
-            case Class             -> {chDelim = '$'; fUsePosition = false;}
+            case Module, Package   -> {chDelim = '.'; fUsePosition = sName.indexOf('$') >= 0;}
+            case Class             -> {chDelim = '$'; fUsePosition = sName.indexOf('$') >= 0;}
             case Property, Method  -> {chDelim = '$'; fUsePosition = true; }
             default ->
                 throw new IllegalStateException("unexpected parent constant: " + idParent);
@@ -721,7 +725,7 @@ public abstract class IdentityConstant
 
         StringBuilder sb = idParent.buildJitClassName(ts)
                                    .append(chDelim)
-                                   .append(getName());
+                                   .append(sName);
         if (fUsePosition) {
             assert getComponent() != null;
             appendJitSuffix(sb, getPosition());
