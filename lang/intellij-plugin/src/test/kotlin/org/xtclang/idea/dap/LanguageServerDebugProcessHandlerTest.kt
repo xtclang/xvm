@@ -16,7 +16,6 @@ import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.XtcLanguageServer
 import java.io.IOException
 import java.lang.reflect.Proxy
-import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArrayList
@@ -75,7 +74,7 @@ class LanguageServerDebugProcessHandlerTest {
     fun `a line typed in the session's console while the program is stopped runs in the stopped frame, and shows its answer`() {
         val sessions = DebugSessions()
         val server = FakeServer().apply { started.complete(Unit) }
-        val handler = LanguageServerDebugProcessHandler(sessions, frameSources = {}) { CompletableFuture.completedFuture(server.proxy) }
+        val handler = LanguageServerDebugProcessHandler(sessions) { CompletableFuture.completedFuture(server.proxy) }
         val events = Events(handler)
         handler.startNotify()
 
@@ -110,7 +109,7 @@ class LanguageServerDebugProcessHandlerTest {
     fun `a continue's answer reaches the client once the program stops or ends, which keeps Run to Cursor's breakpoint until then`() {
         val sessions = DebugSessions()
         val server = FakeServer().apply { started.complete(Unit) }
-        val handler = LanguageServerDebugProcessHandler(sessions, frameSources = {}) { CompletableFuture.completedFuture(server.proxy) }
+        val handler = LanguageServerDebugProcessHandler(sessions) { CompletableFuture.completedFuture(server.proxy) }
         val events = Events(handler)
         handler.startNotify()
 
@@ -151,7 +150,7 @@ class LanguageServerDebugProcessHandlerTest {
     fun `while a continue's answer waits, the client's other requests go on, and a pause stops the program with that answer first`() {
         val sessions = DebugSessions()
         val server = FakeServer().apply { started.complete(Unit) }
-        val handler = LanguageServerDebugProcessHandler(sessions, frameSources = {}) { CompletableFuture.completedFuture(server.proxy) }
+        val handler = LanguageServerDebugProcessHandler(sessions) { CompletableFuture.completedFuture(server.proxy) }
         val events = Events(handler)
         handler.startNotify()
 
@@ -180,7 +179,7 @@ class LanguageServerDebugProcessHandlerTest {
         fun ending(end: (DebugSessions, LanguageServerDebugProcessHandler) -> Unit): Events {
             val sessions = DebugSessions()
             val server = FakeServer().apply { started.complete(Unit) }
-            val handler = LanguageServerDebugProcessHandler(sessions, frameSources = {}) { CompletableFuture.completedFuture(server.proxy) }
+            val handler = LanguageServerDebugProcessHandler(sessions) { CompletableFuture.completedFuture(server.proxy) }
             val events = Events(handler)
             handler.startNotify()
             handler.write("""{"seq":5,"type":"request","command":"continue","arguments":{"threadId":1}}""")
@@ -278,47 +277,6 @@ class LanguageServerDebugProcessHandlerTest {
         assertThat(events.text(ProcessOutputTypes.STDOUT)).contains("\"event\":\"output\"", "\"event\":\"stopped\"")
         assertThat(events.text(ProcessOutputTypes.STDOUT)).doesNotContain(DebugSessions.XTC_TEST)
         handler.destroyProcess()
-    }
-
-    @Test
-    fun `a stack trace's source files go to be found before the client reads its frames`() {
-        val sessions = DebugSessions()
-        val server = FakeServer().apply { started.complete(Unit) }
-        val order = CopyOnWriteArrayList<String>()
-        val handler =
-            LanguageServerDebugProcessHandler(sessions, frameSources = { files -> order += files.map(Path::toString) }) {
-                CompletableFuture.completedFuture(server.proxy)
-            }
-        handler.addProcessListener(
-            object : ProcessListener {
-                override fun onTextAvailable(
-                    event: ProcessEvent,
-                    outputType: Key<*>,
-                ) {
-                    order += "output"
-                }
-            },
-        )
-        handler.startNotify()
-
-        val frames =
-            """{"seq":16,"type":"response","request_seq":11,"command":"stackTrace","success":true,"body":{"stackFrames":[
-            {"id":1,"name":"run","source":{"name":"Run.x","path":"/work/Run.x"},"line":6},
-            {"id":2,"name":"forEach","source":{"name":"Collection.x","path":"/copies/ecstasy/collections/Collection.x"},"line":222},
-            {"id":3,"name":"native","source":{"name":"Native.x","sourceReference":7},"line":1},
-            {"id":4,"name":"again","source":{"name":"Run.x","path":"/work/Run.x"},"line":5}]}}"""
-        sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(frames).asJsonObject))
-        assertThat(order).containsExactly(
-            Path.of("/work/Run.x").toString(),
-            Path.of("/copies/ecstasy/collections/Collection.x").toString(),
-            "output",
-        )
-
-        // other messages go straight on
-        sessions.receive(
-            DebugMessageParams("session-1", JsonParser.parseString("""{"seq":17,"type":"event","event":"stopped"}""").asJsonObject),
-        )
-        assertThat(order).endsWith("output", "output").hasSize(4)
     }
 
     @Test
