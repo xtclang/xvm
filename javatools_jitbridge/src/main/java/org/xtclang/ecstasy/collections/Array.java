@@ -536,8 +536,8 @@ public abstract class Array
      *         where storage is allocated
      */
     protected long $capCfg(Ctx ctx) {
-        long cap = $isImmut() ? 0 : ($hashEtc & $CAP_MASK);
-        return cap == 0 ? $MIN_CAP : cap;
+        long cap = $hashEtc & $CAP_MASK;
+        return $isImmut() ? 0 : cap == 0 ? $MIN_CAP : cap;
     }
 
     /**

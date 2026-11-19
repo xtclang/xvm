@@ -6,6 +6,7 @@ package stringTests {
         shouldGetCharArrayString();
         createStringFromEmptyArray();
         createStringFromArray();
+        shouldConcatenateFromEmptyString();
 
     }
 
@@ -54,5 +55,13 @@ package stringTests {
         assert chars.size == 4;
         assert s.size == 3;
         assert s == "abc";
+    }
+
+    void shouldConcatenateFromEmptyString() {
+        String text = "";
+        for (Int i : 0..<3) {
+            text += "yo";
+        }
+        assert text == "yoyoyo";
     }
 }
