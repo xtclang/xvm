@@ -22,6 +22,8 @@ package callTests {
         (Int? i1N, Int i2N) = testNullableMultiReturns(10);
         assert i1N == Null && i2N == 5;
 
+        testMoreThanEightReturns();
+
         // conditional
         if (Int i3 := testConditionalPrimitive(30)) {
             assert i3 == 33;
@@ -93,6 +95,40 @@ package callTests {
     (Int, Int) testMultiReturns(Int i) = (i*2, i-2);
 
     (Int?, Int) testNullableMultiReturns(Int i) = (Null, i/2);
+
+    void testMoreThanEightReturns() {
+        (Int i0, Int i1, Int i2, Int i3, Int i4,
+         Int i5, Int i6, Int i7, Int i8, Int i9) = tenInts();
+        assert i0 == 0 && i1 == 1 && i2 == 2 && i3 == 3 && i4 == 4;
+        assert i5 == 5 && i6 == 6 && i7 == 7 && i8 == 8 && i9 == 9;
+
+        (i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, Int i10) = elevenInts();
+        assert i0 == 10 && i1 == 11 && i2 == 12 && i3 == 13 && i4 == 14;
+        assert i5 == 15 && i6 == 16 && i7 == 17 && i8 == 18 && i9 == 19 && i10 == 20;
+
+        (String s0, String s1, String s2, String s3, String s4,
+         String s5, String s6, String s7, String s8, String s9) = tenStrings();
+        assert s0 == "0" && s1 == "1" && s2 == "2" && s3 == "3" && s4 == "4";
+        assert s5 == "5" && s6 == "6" && s7 == "7" && s8 == "8" && s9 == "9";
+
+        (s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, String s10) = elevenStrings();
+        assert s0 == "a" && s1 == "b" && s2 == "c" && s3 == "d" && s4 == "e";
+        assert s5 == "f" && s6 == "g" && s7 == "h" && s8 == "i" && s9 == "j" && s10 == "k";
+
+        (Int, Int, Int, Int, Int, Int, Int, Int, Int, Int) tenInts() =
+                (0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+
+        (Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int) elevenInts() =
+                (10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
+
+        (String, String, String, String, String,
+         String, String, String, String, String) tenStrings() =
+                ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+
+        (String, String, String, String, String,
+         String, String, String, String, String, String) elevenStrings() =
+                ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k");
+    }
 
     conditional Int testConditionalPrimitive(Int i) {
         if (i > -1) {

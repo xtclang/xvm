@@ -2071,7 +2071,7 @@ public abstract class Builder {
                 code // r = $ctx.iN[returnIndex-8]
                     .getfield(CD_Ctx, "iN", CD_long.arrayType())
                     .loadConstant(returnIndex - 8)
-                    .aaload();
+                    .laload();
             }
 
             // convert the long to the corresponding Java primitive
@@ -2156,22 +2156,18 @@ public abstract class Builder {
                 code // $ctx.i"returnIndex" = r
                     .putfield(CD_Ctx, "i" + returnIndex, CD_long);
             } else {
-                // TODO: replace with a helper "Ctx.storeLong(i-8, value)"
-                code // $ctx.iN[returnIndex-8] = r
-                    .getfield(CD_Ctx, "iN", CD_long.arrayType())
+                code // $ctx.storeLong(r, returnIndex-8)
                     .loadConstant(returnIndex - 8)
-                    .aastore();
+                    .invokevirtual(CD_Ctx, "storeLong", md(CD_void, CD_long, CD_int));
             }
         } else {
             if (returnIndex < 8) {
                 code // $ctx.o"returnIndex" = r
                     .putfield(CD_Ctx, "o" + returnIndex, CD_JavaObject);
             } else {
-                // TODO: replace with a helper "Ctx.storeRef(i-8, value)"
-                code // $ctx.oN[returnIndex-8] = r
-                    .getfield(CD_Ctx, "oN", CD_JavaObject.arrayType())
+                code // $ctx.storeRef(r, returnIndex-8)
                     .loadConstant(returnIndex - 8)
-                    .aastore();
+                    .invokevirtual(CD_Ctx, "storeRef", md(CD_void, CD_JavaObject, CD_int));
             }
         }
         return code;
