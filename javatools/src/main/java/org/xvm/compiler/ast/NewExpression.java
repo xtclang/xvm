@@ -709,6 +709,7 @@ public class NewExpression
             m_mapRegisters   = ctxAnon.ensureRegisterMap();
             m_fInstanceChild = ctxAnon.isInstanceChild();
             m_ctxCapture     = null;
+            plan             = m_fInstanceChild ? Plan.Child : Plan.Regular;
 
             // make sure the capture names don't collide
             ClassStructure clzAnon = ctxAnon.getThisClass();

@@ -748,13 +748,8 @@ public abstract class ClassTemplate
             return invokeNativeGet(frame, idProp.getName(), hTarget, iReturn);
         }
 
-        if (chain.isField()) {
+        if (chain.isField() || clzTarget.isStruct()) {
             return clzTarget.getFieldValue(frame, hTarget, idProp, iReturn);
-        }
-
-        if (clzTarget.isStruct()) {
-            return frame.raiseException("Invalid property \"" + idProp.getName() +
-                    "\" access from " + clzTarget.getType().getValueString());
         }
 
         MethodStructure method = chain.getTop();
@@ -876,6 +871,12 @@ public abstract class ClassTemplate
         if (field.isInflated()) {
             RefHandle hRef = (RefHandle) hValue;
             if (!(hRef instanceof FutureHandle)) {
+                if (hThis.isStruct()) {
+                    // TODO: ideally this should return a structure for the inflated property
+                    return frame.raiseException(xException.unsupported(frame,
+                            "structure for ref annotated property \"" + field.getName() + "\""));
+                }
+
                 if (hRef.getComposition().isStruct()) {
                     Frame.Continuation stepNext = frameCaller -> {
                         RefHandle hR = (RefHandle) frameCaller.popStack();
@@ -1119,7 +1120,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePreInc(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle hRef = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarPreInc(frame, hRef, iReturn);
@@ -1139,7 +1140,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePostInc(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarPostInc(frame, hRef, iReturn);
@@ -1159,7 +1160,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePreDec(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarPreDec(frame, hRef, iReturn);
@@ -1179,7 +1180,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePostDec(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarPostDec(frame, hRef, iReturn);
@@ -1199,7 +1200,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyAdd(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarAdd(frame, hRef, hArg);
@@ -1220,7 +1221,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertySub(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarSub(frame, hRef, hArg);
@@ -1241,7 +1242,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyMul(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarMul(frame, hRef, hArg);
@@ -1262,7 +1263,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyDiv(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarDiv(frame, hRef, hArg);
@@ -1283,7 +1284,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyMod(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarMod(frame, hRef, hArg);
@@ -1304,7 +1305,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyShl(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarShl(frame, hRef, hArg);
@@ -1325,7 +1326,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyShr(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarShr(frame, hRef, hArg);
@@ -1346,7 +1347,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyShrAll(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarShrAll(frame, hRef, hArg);
@@ -1367,7 +1368,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyAnd(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarAnd(frame, hRef, hArg);
@@ -1388,7 +1389,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyOr(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarOr(frame, hRef, hArg);
@@ -1409,7 +1410,7 @@ public abstract class ClassTemplate
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int invokePropertyXor(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hArg) {
-        if (hTarget.isInflated(idProp)) {
+        if (hTarget.isInflated(idProp) && !hTarget.isStruct()) {
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) hThis.getField(frame, idProp);
             return hRef.getVarSupport().invokeVarXor(frame, hRef, hArg);
