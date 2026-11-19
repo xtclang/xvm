@@ -11,14 +11,11 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.redhat.devtools.lsp4ij.dap.DAPDebugProcess
 import com.redhat.devtools.lsp4ij.dap.DebugMode
-import com.redhat.devtools.lsp4ij.dap.client.DAPClient
 import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptor
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptorFactory
 import com.redhat.devtools.lsp4ij.dap.descriptors.ServerReadyConfig
-import com.redhat.devtools.lsp4ij.settings.ServerTrace
 import org.xtclang.idea.run.DebugTestsTab
 import org.xtclang.idea.run.EmbeddedExecution
 import org.xtclang.idea.run.TestEventsProcessHandler
@@ -120,33 +117,14 @@ class XtcDebugAdapterDescriptor(
         return parameters
     }
 
-    override fun getDebugMode(): DebugMode = DebugMode.LAUNCH
-
-    // TODO LSP4IJ: UP64 — DebugMode.ATTACH replaces the adapter's process with a NopProcessHandler and reaches the
-    // adapter by socket only, so an adapter whose transport is its process handler can only be launched; only the
-    // client is made in ATTACH mode.
-
     /**
-     * The client of an Ecstasy Attach configuration ([XtcAttachConfiguration]) sends `attach`, and on stop
-     * `disconnect`, which detaches; the descriptor's own mode stays [DebugMode.LAUNCH], so that LSP4IJ starts
-     * [startServer], which carries the session over the language server's connection.
+     * An Ecstasy Attach configuration ([XtcAttachConfiguration]) attaches: its client sends `attach`, and on stop
+     * `disconnect`, which detaches.
      */
-    override fun createClient(
-        debugProcess: DAPDebugProcess,
-        dapParameters: Map<String, Any>,
-        isDebug: Boolean,
-        debugMode: DebugMode,
-        serverTrace: ServerTrace,
-        parentClient: DAPClient?,
-    ): DAPClient =
-        super.createClient(
-            debugProcess,
-            dapParameters,
-            isDebug,
-            if (environment.runProfile is XtcAttachConfiguration) DebugMode.ATTACH else debugMode,
-            serverTrace,
-            parentClient,
-        )
+    override fun getDebugMode(): DebugMode = if (environment.runProfile is XtcAttachConfiguration) DebugMode.ATTACH else DebugMode.LAUNCH
+
+    /** The session's process carries it over the language server's connection, for an attach as for a launch. */
+    override fun startServer(debugMode: DebugMode): ProcessHandler = startServer()
 
     override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig(0)
 
