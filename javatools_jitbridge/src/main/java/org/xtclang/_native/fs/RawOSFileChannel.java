@@ -9,7 +9,6 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.NonReadableChannelException;
 
 import java.nio.file.OpenOption;
-import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 import java.util.Set;
@@ -31,16 +30,13 @@ public class RawOSFileChannel extends RawChannel {
 
     private final FileChannel $channel;
 
-    private final java.nio.file.Path $path;
-
     private final boolean $readable;
 
     private final boolean $writable;
 
-    protected RawOSFileChannel(Ctx ctx, FileChannel channel, Path path, Set<OpenOption> openOpts) {
+    protected RawOSFileChannel(Ctx ctx, FileChannel channel, Set<OpenOption> openOpts) {
         super(ctx);
         $channel  = channel;
-        $path     = path;
         $readable = openOpts.contains(StandardOpenOption.READ);
         $writable = openOpts.contains(StandardOpenOption.WRITE);
     }
