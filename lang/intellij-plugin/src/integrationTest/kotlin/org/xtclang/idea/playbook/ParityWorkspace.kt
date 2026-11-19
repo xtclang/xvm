@@ -173,6 +173,19 @@ class ParityWorkspace(
             utility(ParityFiles::class).getInstance().refreshAndFindFileByPath(path.toString())
         }
 
+    /**
+     * The text of IntelliJ's document of the file at [path], or null while it has none: while it moves a file, it can find
+     * one already on disk whose document it cannot give yet.
+     */
+    fun documentText(path: Path): String? =
+        refresh(path)?.let { source ->
+            with(driver) {
+                withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                    service<ParityDocuments>().getDocument(source)?.getText()
+                }
+            }
+        }
+
     /** Tells IntelliJ of [path] as it is on disk now, after this case changed it there, whether it had the file or not. */
     internal fun changed(path: Path): VirtualFile? =
         with(driver) {
