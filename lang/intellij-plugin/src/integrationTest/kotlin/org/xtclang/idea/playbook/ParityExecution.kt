@@ -1209,8 +1209,8 @@ internal fun ParityScenarios.runEntryCases() {
 
                 // Run to Cursor, on a line in the loop after a long count
                 debugger.runToCursor(project, module, file, cursor)
-                // TODO LSP4IJ: UP44 — LSP4IJ 0.21.0 removes Run to Cursor's temporary breakpoint once the continue request is
-                //  answered, which the plugin gives it only once the program stops: the count takes longer than that round trip
+                // the count takes longer than the continue request's round trip: LSP4IJ keeps the temporary breakpoint until
+                //  the program stops (#1773)
                 val stopped =
                     debugger.awaitState(project, module, "Run to Cursor stops at the cursor's line", HANG_LIMIT) {
                         it.has("exitCode") || it["suspended"]?.asBoolean == true
