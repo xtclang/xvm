@@ -109,7 +109,7 @@ internal fun ParityScenarios.typeMoveCases() {
                                     if (path.toString().endsWith(".x")) {
                                         // IntelliJ normalizes document buffers to LF; closed files
                                         // below still assert exact disk bytes, including CRLF.
-                                        Document(path.fileName.toString(), requireNotNull(refresh(path))).text ==
+                                        documentText(path) ==
                                             expected.replace("\r\n", "\n").replace('\r', '\n')
                                     } else {
                                         Files.readString(path) == expected
