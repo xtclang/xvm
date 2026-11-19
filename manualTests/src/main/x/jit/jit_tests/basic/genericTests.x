@@ -90,9 +90,14 @@ package genericTests {
 
         // this class has a literal marker but no generated suffix
         assert new Valueꖛ1(9).value == 9;
+
+        // a literal '$' must not be interpreted as a nested-class separator
+        Value$1 v1 = new Value$1(19);
+        assert v1.value == 19 && v1.toString().endsWith("Value$1");
     }
 
     class Valueꖛ1(Int value) {}
+    class Value$1(Int value) {}
 
     static <Element, Result> Result apply(
             function Result(Element) transform, Element value) = transform(value);

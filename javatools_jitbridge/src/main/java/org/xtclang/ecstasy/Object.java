@@ -4,6 +4,8 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
+import static org.xvm.javajit.TypeSystem.removeJitSuffix;
+
 /**
  * Native representation of `ecstasy.Object`.
  */
@@ -16,6 +18,6 @@ public interface Object extends Comparable {
     }
 
     default String toString(Ctx ctx) {
-        return String.of(ctx, getClass().getName());
+        return String.of(ctx, removeJitSuffix(getClass().getName()));
     }
 }
