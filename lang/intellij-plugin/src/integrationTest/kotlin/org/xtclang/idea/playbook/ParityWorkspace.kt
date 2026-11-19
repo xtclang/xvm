@@ -137,7 +137,7 @@ class ParityWorkspace(
     fun delete(file: String) = changeOnDisk(directory.resolve(file), Files::delete)
 
     /**
-     * Changes [path] on disk with [change], outside IntelliJ, and waits until LSP4IJ has told the server of it, in a
+     * Changes [path] on disk with [change], outside IntelliJ, and waits until the server has heard of it, from a
      * watched-file notification that names it or a directory above it. Until then the server has nothing to do, and a
      * wait for the diagnostics that the change brings would find their report final.
      */
@@ -145,21 +145,34 @@ class ParityWorkspace(
         path: Path,
         change: (Path) -> Unit,
     ) {
-        val before = watched(path)
+        // the server runs on this machine, so its clock is this one
+        val time = System.currentTimeMillis()
         change(path)
         changed(path)
         with(driver) {
-            awaitUi("LSP4IJ tells the server of the change to $path", HANG_LIMIT) { watched(path) > before }
+            awaitUi("the server hears of the change to $path", HANG_LIMIT) { heard(path, time) }
         }
     }
 
-    /** The watched-file notifications LSP4IJ has sent that name [path] or a directory above it. */
-    private fun watched(path: Path): Int {
+    /**
+     * Whether the server has received a watched-file event since [time] that names [path] or a directory above it, as its
+     * status tells. The server's own record, not LSP4IJ's trace console, whose bounded buffer drops older messages in a
+     * long run, so that a count of the notifications in it need not grow when a new one comes.
+     */
+    private fun heard(
+        path: Path,
+        time: Long,
+    ): Boolean {
         val target = path.toFile().canonicalFile.toPath()
-        return trace.notifications("workspace/didChangeWatchedFiles", received = false).count { params ->
-            params["changes"]?.takeIf { it.isJsonArray }?.asJsonArray?.any { change ->
-                runCatching { target.startsWith(File(URI(change.asJsonObject["uri"].asString)).canonicalFile.toPath()) }.getOrDefault(false)
-            } == true
+        val received =
+            protocol
+                .query("xtc/languageServiceStatus", emptyMap<String, Any>())
+                .asJsonObject["watchedFileChanges"]
+                ?.takeIf { it.isJsonObject }
+                ?.asJsonObject ?: return false
+        return received.entrySet().any { (uri, at) ->
+            at.asLong >= time &&
+                runCatching { target.startsWith(File(URI(uri)).canonicalFile.toPath()) }.getOrDefault(false)
         }
     }
 
