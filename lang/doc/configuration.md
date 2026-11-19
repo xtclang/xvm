@@ -88,7 +88,7 @@ running servers. The server runs on IntelliJ's bundled Java runtime.
 | Retired process sessions to keep (`logRetainedSessions`) | 1 to 20, `5` | `-Dxtc.logs.retainedSessions` | `idea/lsp/ServerRuntimeSettings.kt:25`, `:68` |
 | Compile an XDK library as a whole when one of its sources is opened (`compileLibraries`) | boolean, `true` | `-Dxtc.lsp.compileLibraries` | `idea/lsp/ServerRuntimeSettings.kt:26`, `:58` |
 
-The arguments are inserted before `-jar` at `idea/lsp/XtcLspServerSupportProvider.kt:160`.
+The arguments are inserted before `-jar` at `idea/lsp/XtcLspServerSupportProvider.kt:155`.
 
 **Languages & Frameworks | Ecstasy Language Service Defaults** (application) and **Ecstasy Language
 Service** (project) (`LanguageServiceConfigurable`). Stored as JSON under `xtc.languageService` in
@@ -99,9 +99,9 @@ LSP4IJ's settings for the server `xtcLanguageServer`, global or per project
 | Field | Type, default | Reaches the server as | Read at |
 |-------|---------------|-----------------------|---------|
 | Use application language-service defaults | boolean, on for a new project; project page only | Removes the project's `xtc.languageService` | `idea/lsp/LanguageServiceConfigurable.kt:34`, `:199` |
-| Language adapter (`adapter`) | `default`, `compiler` or `treesitter`; `default` | `-Dxtc.lsp.adapter=<value>`, left out for `default`; a change restarts the server | `idea/lsp/LanguageAdapter.kt:13`, `idea/lsp/XtcLspServerSupportProvider.kt:161`, restart `idea/lsp/XtcLanguageClient.kt:74` |
+| Language adapter (`adapter`) | `default`, `compiler` or `treesitter`; `default` | `-Dxtc.lsp.adapter=<value>`, left out for `default`; a change restarts the server | `idea/lsp/LanguageAdapter.kt:13`, `idea/lsp/XtcLspServerSupportProvider.kt:156`, restart `idea/lsp/XtcLanguageClient.kt:74` |
 | Text synchronization (`textSynchronization`) | `full` or `incremental`; `full` | `xtcDocumentSync.incremental` initialization option; a change restarts the server | `idea/lsp/LanguageServiceConfiguration.kt:32` |
-| Save formatting owner (`saveFormatting`) | `editor` or `server`; `editor` | Disabled: LSP4IJ has no `willSaveWaitUntil`, so the plugin always sends `formatOnSave: false` | `idea/lsp/LanguageServiceConfigurable.kt:164`, `idea/lsp/XtcLspServerSupportProvider.kt:195` |
+| Save formatting owner (`saveFormatting`) | `editor` or `server`; `editor` | Disabled: LSP4IJ has no `willSaveWaitUntil`, so the plugin always sends `formatOnSave: false` | `idea/lsp/LanguageServiceConfigurable.kt:164`, `idea/lsp/XtcLspServerSupportProvider.kt:190` |
 | Show Ecstasy inlay hints (`inlayHints`) | boolean, `true` | Not sent; the client skips the request | `idea/lsp/XtcClientFeatures.kt:131` |
 | Show Ecstasy reference counts (`referenceCodeLens`) | boolean, `true` | `xtc.codeLens` section, field `references` | `idea/lsp/XtcLanguageClient.kt:384` |
 
@@ -140,16 +140,16 @@ this JSON and adds `buildModels` from the Gradle model file (section 4)
 
 **LSP4IJ's Language Servers page** keeps the trace level and the debug port for `xtcLanguageServer`.
 They belong to LSP4IJ: the plugin builds the command with LSP4IJ's `JavaProcessCommandBuilder`, which
-adds the debug options (`idea/lsp/XtcLspServerSupportProvider.kt:151`).
+adds the debug options (`idea/lsp/XtcLspServerSupportProvider.kt:146`).
 
 ### 1.3 Values the editors pass through from their own process
 
 | Name | Set by | What happens | Read at |
 |------|--------|--------------|---------|
 | `XTC_LOG_LEVEL` | Environment of the VS Code extension host | Passed as `-Dxtc.logLevel=<value>`, `INFO` when unset | `vsc/lsp-client.ts:132`, `vsc/java.ts:292` |
-| `xtc.logLevel`, else `XTC_LOG_LEVEL` | IntelliJ's JVM or environment; `runIde` sets both from `-Plog` | Passed as `-Dxtc.logLevel=<value>`, `INFO` when unset | `idea/lsp/XtcLspServerSupportProvider.kt:141` |
-| `xtc.lsp.semanticTokens`, else `XTC_LSP_SEMANTIC_TOKENS` | IntelliJ's JVM or environment; `runIde` sets both from `-Pxtc.intellij.semanticTokens` | Always passed as `-Dxtc.lsp.semanticTokens=<value>`, `true` when unset, so the jar's built-in default never applies under IntelliJ | `idea/lsp/XtcLspServerSupportProvider.kt:145` |
-| `xtc.trace.directory`, `xtc.trace.level`, `xtc.logs.directory`, `xtc.lsp.test.holdReferences` | IntelliJ's JVM | Each one that is set is passed on as the same `-D` option | `idea/lsp/XtcLspServerSupportProvider.kt:170` |
+| `xtc.logLevel`, else `XTC_LOG_LEVEL` | IntelliJ's JVM or environment; `runIde` sets both from `-Plog` | Passed as `-Dxtc.logLevel=<value>`, `INFO` when unset | `idea/lsp/XtcLspServerSupportProvider.kt:136` |
+| `xtc.lsp.semanticTokens`, else `XTC_LSP_SEMANTIC_TOKENS` | IntelliJ's JVM or environment; `runIde` sets both from `-Pxtc.intellij.semanticTokens` | Always passed as `-Dxtc.lsp.semanticTokens=<value>`, `true` when unset, so the jar's built-in default never applies under IntelliJ | `idea/lsp/XtcLspServerSupportProvider.kt:140` |
+| `xtc.trace.directory`, `xtc.trace.level`, `xtc.logs.directory`, `xtc.lsp.test.holdReferences` | IntelliJ's JVM | Each one that is set is passed on as the same `-D` option | `idea/lsp/XtcLspServerSupportProvider.kt:165` |
 
 VS Code starts the server without its own environment map, so the server inherits the extension
 host's environment, including `XTC_SOURCE_ROOTS`, `XTC_LSP_LOG_DIR` and the other variables of
@@ -169,10 +169,10 @@ sessions are pruned at startup (`:161`).
 | Option | Added by | Read at |
 |--------|----------|---------|
 | `--enable-native-access=ALL-UNNAMED`, `-Dapple.awt.UIElement=true`, `-Djava.awt.headless=true` | VS Code | `vsc/java.ts:289` |
-| `-Dapple.awt.UIElement=true`, `-Djava.awt.headless=true` | IntelliJ | `idea/lsp/XtcLspServerSupportProvider.kt:163` |
+| `-Dapple.awt.UIElement=true`, `-Djava.awt.headless=true` | IntelliJ | `idea/lsp/XtcLspServerSupportProvider.kt:158` |
 | `-agentlib:jdwp=...,address=5005` | VS Code, when the extension itself runs in debug mode | `vsc/lsp-client.ts:153` |
-| Debug options | IntelliJ, from LSP4IJ's debug port setting | `idea/lsp/XtcLspServerSupportProvider.kt:151` |
-| Working directory | VS Code: the extension's directory; IntelliJ: the project's base path | `vsc/lsp-client.ts:148`, `idea/lsp/XtcLspServerSupportProvider.kt:180` |
+| Debug options | IntelliJ, from LSP4IJ's debug port setting | `idea/lsp/XtcLspServerSupportProvider.kt:146` |
+| Working directory | VS Code: the extension's directory; IntelliJ: the project's base path | `vsc/lsp-client.ts:148`, `idea/lsp/XtcLspServerSupportProvider.kt:175` |
 
 ### 2.2 JVM system properties
 
@@ -228,9 +228,7 @@ says how to set its inputs.
 | `xtcDocumentSync.formatOnSave` | boolean, `false` | The server formats on save. | VS Code; IntelliJ always sends `false` | `lsp/server/DocumentSynchronization.kt:46` |
 | `xtcSourceRoots` | string array, `[]` | Extra source roots (section 2.2). | VS Code | `lsp/server/SourceRootResolver.kt:45` |
 | `xtcCompiler` | object, absent | The first compiler configuration, the shape of the `xtc.compiler` section (2.6). Invalid content fails `initialize` with `InvalidParams`. | VS Code | `lsp/server/CompilerConfiguration.kt:17`, `lsp/server/XtcLanguageServer.kt:484` |
-| `xtcCodeActions.quickFixesPerDiagnostic` | boolean, `false` | Quick fixes are asked for per diagnostic. | IntelliJ (`true`) | `lsp/server/ClientPresentation.kt:169`, sent at `idea/lsp/XtcLspServerSupportProvider.kt:117` |
-| `xtcCodeActions.automaticFromCache` | boolean, `false` | Automatic code action requests are answered from what is proved already. | Neither | `lsp/server/ClientPresentation.kt:170` |
-| `xtcCodeActions.automaticWaitMillis` | integer, 500 | How long an Automatic code action request waits for its full answer. | Neither | `lsp/server/ClientPresentation.kt:171`, default `:95` |
+| `xtcCodeActions.quickFixesPerDiagnostic` | boolean, `false` | Quick fixes are asked for per diagnostic. | IntelliJ (`true`) | `lsp/server/ClientPresentation.kt:151`, sent at `idea/lsp/XtcLspServerSupportProvider.kt:113` |
 | `trace` (LSP's own) | `off`, `messages` or `verbose` | The server's protocol trace; `$/setTrace` changes it later. | Both | `lsp/server/XtcLanguageServer.kt:472`, `:168` |
 
 ### 2.6 `workspace/configuration` sections

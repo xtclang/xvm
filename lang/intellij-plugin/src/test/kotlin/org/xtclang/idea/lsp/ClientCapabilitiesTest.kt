@@ -43,8 +43,7 @@ class ClientCapabilitiesTest {
     }
 
     @Test
-    fun `ask for quick fixes per diagnostic, and for full code action answers, not ones within a budget`() {
-        // TODO LSP4IJ: UP74 — LSP4IJ 0.21 keeps a partial answer for the document's version and never asks again
+    fun `ask for quick fixes per diagnostic`() {
         assertThat(XtcLspConnectionProvider.LSP4IJ_CODE_ACTIONS)
             .isEqualTo(mapOf("xtcCodeActions" to mapOf("quickFixesPerDiagnostic" to true)))
     }
