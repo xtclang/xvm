@@ -174,7 +174,7 @@ class ParityWorkspace(
         }
 
     /** Tells IntelliJ of [path] as it is on disk now, after this case changed it there, whether it had the file or not. */
-    private fun changed(path: Path): VirtualFile? =
+    internal fun changed(path: Path): VirtualFile? =
         with(driver) {
             utility(DiskChangesProbe::class).refresh(path.toString())
         }
