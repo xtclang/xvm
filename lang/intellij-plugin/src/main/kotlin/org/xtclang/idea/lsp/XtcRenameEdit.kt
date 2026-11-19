@@ -4,8 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.DocumentContentSynchronizer
@@ -71,7 +69,6 @@ class XtcRenameEdit
                             }.toMap()
                     if (
                         !snapshot.isCurrent() ||
-                        hasUnsavedClosedTarget(edit) ||
                         graph?.isCurrent() == false ||
                         resourceMoves.size != targets.size ||
                         resolved.size != targets.size ||
@@ -79,6 +76,8 @@ class XtcRenameEdit
                     ) {
                         false
                     } else {
+                        val closed = ClosedRefactoringDocuments.capture(project, edit) ?: return@compute false
+                        closed.beforeApply()
                         graph?.beforeApply()
                         // TODO LSP4IJ: UP03 — 0.21 only renames the basename, ignoring a changed parent URI.
                         // Apply resource moves through VFS inside this same undo command.
@@ -101,13 +100,12 @@ class XtcRenameEdit
                                     }
                                 }
                             } else {
-                                // LSP4IJ saves the changed documents that have no editor, and saves them again after
-                                // Undo and Redo
                                 LSPIJUtils.applyWorkspaceEdit(WorkspaceEdit(listOf(change)))
                             }
                         }
                         if (edit.documentChanges == null) LSPIJUtils.applyWorkspaceEdit(edit)
                         graph?.apply()
+                        closed.afterApply()
                         true
                     }
                 }
@@ -125,25 +123,6 @@ class XtcRenameEdit
             } else {
                 UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION
             }
-
-        /**
-         * Whether a document without an editor that the edit changes has unsaved changes: the server read the file, not
-         * that text, so its ranges don't describe it.
-         */
-        private fun hasUnsavedClosedTarget(edit: WorkspaceEdit): Boolean {
-            val documents = FileDocumentManager.getInstance()
-            val editors = FileEditorManager.getInstance(snapshot.wrapper.project)
-            val uris =
-                edit.changes.orEmpty().keys +
-                    edit.documentChanges
-                        .orEmpty()
-                        .filter { it.isLeft }
-                        .map { it.left.textDocument.uri }
-            return uris.distinct().any { uri ->
-                val file = LSPIJUtils.findResourceFor(uri) ?: return true
-                !editors.isFileOpen(file) && (documents.getDocument(file) ?: return true).let(documents::isDocumentUnsaved)
-            }
-        }
 
         /** Open buffer and synchronizer identity captured before requesting a rename. */
         private data class Buffer(
