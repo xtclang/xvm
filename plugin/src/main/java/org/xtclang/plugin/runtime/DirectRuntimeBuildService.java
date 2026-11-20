@@ -8,7 +8,6 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,33 +43,31 @@ public abstract class DirectRuntimeBuildService
 
     private final Map<DirectRuntimeFingerprint, RuntimeEntry> runtimes = new ConcurrentHashMap<>();
 
+    /**
+     * Compiles in the isolated runtime. The compiles of this build that use the same runtime share the library modules
+     * that they load, and run one at a time.
+     */
     public int executeCompile(final XtcLauncherRuntime runtime, final DirectCompileRequest request, final Logger logger) {
-        return invoke(runtime, "executeCompile", new Class<?>[]{DirectCompileRequest.class, Logger.class}, request, logger);
+        final var entry = getOrCreateRuntime(runtime, logger);
+        return invoke(entry.compileMethod(), request, logger, entry.libraryModules());
     }
 
     public int executeRun(final XtcLauncherRuntime runtime, final DirectRunRequest request, final Logger logger) {
-        return invoke(runtime, "executeRun", new Class<?>[]{DirectRunRequest.class, Logger.class}, request, logger);
+        return invoke(getOrCreateRuntime(runtime, logger).runMethod(), request, logger);
     }
 
     public int executeTest(final XtcLauncherRuntime runtime, final DirectTestRequest request, final Logger logger) {
-        return invoke(runtime, "executeTest", new Class<?>[]{DirectTestRequest.class, Logger.class}, request, logger);
+        return invoke(getOrCreateRuntime(runtime, logger).testMethod(), request, logger);
     }
 
-    private int invoke(
-            final XtcLauncherRuntime runtime,
-            final String methodName,
-            final Class<?>[] parameterTypes,
-            final Object request,
-            final Logger logger) {
-
-        final var entry = getOrCreateRuntime(runtime, logger);
+    private static int invoke(final Method method, final Object... arguments) {
         try {
-            return (Integer) entry.executorMethod(methodName, parameterTypes).invoke(null, request, logger);
+            return (Integer) method.invoke(null, arguments);
         } catch (final InvocationTargetException e) {
             final var cause = e.getCause();
-            throw failure(cause == null ? e : cause, "Direct runtime invocation failed in {}()", methodName);
+            throw failure(cause == null ? e : cause, "Direct runtime invocation failed in {}()", method.getName());
         } catch (final Exception e) {
-            throw failure(e, "Failed to invoke isolated direct runtime method {}()", methodName);
+            throw failure(e, "Failed to invoke isolated direct runtime method {}()", method.getName());
         }
     }
 
@@ -112,11 +109,15 @@ public abstract class DirectRuntimeBuildService
     static RuntimeEntry loadRuntimeEntry(final URLClassLoader loader) throws ReflectiveOperationException {
         try {
             final var executorType = loader.loadClass(EXECUTOR_CLASS);
+            // the library modules' class is the isolated loader's, so executeCompile is looked up by the instance's
+            final var libraryModules = executorType.getMethod("newLibraryModules").invoke(null);
             return new RuntimeEntry(
                 loader,
-                executorType.getMethod("executeCompile", DirectCompileRequest.class, Logger.class),
+                executorType.getMethod("executeCompile", DirectCompileRequest.class, Logger.class,
+                    libraryModules.getClass()),
                 executorType.getMethod("executeRun", DirectRunRequest.class, Logger.class),
-                executorType.getMethod("executeTest", DirectTestRequest.class, Logger.class)
+                executorType.getMethod("executeTest", DirectTestRequest.class, Logger.class),
+                libraryModules
             );
         } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
             // Ownership transfers to the entry only after every executor method is available.
@@ -188,20 +189,16 @@ public abstract class DirectRuntimeBuildService
         }
     }
 
+    /**
+     * An isolated runtime: its classloader, its executor's entry points, and the library modules that its compiles
+     * share, of a type that only its classloader knows.
+     */
     record RuntimeEntry(
             URLClassLoader classLoader,
             Method compileMethod,
             Method runMethod,
-            Method testMethod) implements Closeable {
-
-        Method executorMethod(final String methodName, final Class<?>[] parameterTypes) throws NoSuchMethodException {
-            return switch (methodName) {
-                case "executeCompile" -> compileMethod;
-                case "executeRun" -> runMethod;
-                case "executeTest" -> testMethod;
-                default -> throw new NoSuchMethodException(methodName + Arrays.toString(parameterTypes));
-            };
-        }
+            Method testMethod,
+            Object libraryModules) implements Closeable {
 
         @Override
         public void close() {

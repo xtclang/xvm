@@ -48,7 +48,7 @@ class DirectRuntimeCleanupTest {
     }
 
     private static DirectRuntimeBuildService.RuntimeEntry entry(final TrackingLoader loader) {
-        return new DirectRuntimeBuildService.RuntimeEntry(loader, null, null, null);
+        return new DirectRuntimeBuildService.RuntimeEntry(loader, null, null, null, null);
     }
 
     private static final class TrackingLoader extends URLClassLoader {
