@@ -28,20 +28,25 @@ repositories {
     gradlePluginPortal()
 }
 
+// The coordinates of a [plugins] alias's plugin marker, which depends on the plugin's implementation. Build-logic
+// takes a plugin through the same catalog entry that other builds apply it with.
+fun pluginMarker(plugin: Provider<PluginDependency>): Provider<String> =
+    plugin.map { "${it.pluginId}:${it.pluginId}.gradle.plugin:${it.version.requiredVersion}" }
+
 dependencies {
     implementation("org.xtclang.build:settings-plugins")
 
-    // Publishing plugin dependencies - versions from libs.versions.toml
-    implementation("com.vanniktech:gradle-maven-publish-plugin:${libs.versions.vanniktech.maven.publish.get()}")
+    // Publishing plugin dependencies - from libs.versions.toml
+    implementation(pluginMarker(libs.plugins.vanniktech.maven.publish))
 
     // Archive handling for native library builds (XZ/tar support)
-    implementation("org.apache.commons:commons-compress:${libs.versions.apache.commons.compress.get()}")
-    implementation("org.tukaani:xz:${libs.versions.tukaani.xz.get()}")
+    implementation(libs.apache.commons.compress)
+    implementation(libs.tukaani.xz)
 
     // git-version: compileOnly so the convention plugin can reference the
     // public VersionDetails interface directly (no reflection). The plugin
     // itself is applied by consumers (e.g. docker/build.gradle.kts).
-    compileOnly("com.palantir.gradle.gitversion:gradle-git-version:${libs.versions.palantir.git.version.get()}")
+    compileOnly(pluginMarker(libs.plugins.palantir.git.version))
     compileOnly(platform(libs.guava.bom))
 
     testImplementation(platform(libs.junit.bom))

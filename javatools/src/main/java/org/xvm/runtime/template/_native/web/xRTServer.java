@@ -1,20 +1,12 @@
 package org.xvm.runtime.template._native.web;
 
-import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.HttpsConfigurator;
-import com.sun.net.httpserver.HttpsExchange;
-import com.sun.net.httpserver.HttpsParameters;
-import com.sun.net.httpserver.HttpsServer;
-
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
+
+import java.nio.ByteBuffer;
 
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -29,11 +21,12 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ExecutionException;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
@@ -41,9 +34,30 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
+
+import org.eclipse.jetty.http.HostPortHttpField;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
+
+import org.eclipse.jetty.io.Content;
+
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+
+import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.IteratingCallback;
+
+import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -70,6 +84,7 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
+import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.numbers.xUInt16;
 
@@ -86,7 +101,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.util.Handy;
 
 /**
- * Native implementation of the RTServer.x service that uses native Java {@link HttpServer}.
+ * Native implementation of the RTServer.x service that uses Jetty Core.
  */
 public class xRTServer
         extends xService {
@@ -163,7 +178,7 @@ public class xRTServer
             return invokeContainsBodies(frame, (HttpContextHandle) hArg, iReturn);
 
         case "removeRouteImpl":
-            return invokeRemoveRoute(frame, (HttpServerHandle) hTarget, (StringHandle) hArg);
+            return invokeRemoveRoute((HttpServerHandle) hTarget, (StringHandle) hArg);
         }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -206,7 +221,7 @@ public class xRTServer
 
         case "closeImpl":
             assert frame.f_context == hServer.f_context;
-            return invokeClose(hServer);
+            return invokeClose(frame, hServer);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -240,7 +255,7 @@ public class xRTServer
      * "void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)" method.
      */
     private int invokeBind(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg) {
-        if (hServer.getHttpServer() != null) {
+        if (hServer.getBinding() != null) {
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
         }
 
@@ -248,89 +263,97 @@ public class xRTServer
         String       sBindAddr  = ((StringHandle)   ahArg[1]).getStringValue();
         int          nHttpPort  = (int) ((JavaLong) ahArg[2]).getValue();
         int          nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
+        Container    container  = frame.f_context.f_container;
+
+        Router           router = new Router(hBinding);
+        QueuedThreadPool pool   = new QueuedThreadPool();
+        pool.setName("HttpHandler");
+        pool.setDaemon(true);
+
+        Server  server  = new Server(pool);
+        Binding binding = new Binding(server, router, null);
+        server.setHandler(router);
+        hServer.setBinding(binding);
 
         try {
-            configureHttpServer (hServer, new InetSocketAddress(sBindAddr, nHttpPort));
-            configureHttpsServer(hServer, new InetSocketAddress(sBindAddr, nHttpsPort));
-            configureBinding(hServer, hBinding);
-
-            HttpServer  httpServer  = hServer.getHttpServer();
-            HttpsServer httpsServer = hServer.getHttpsServer();
-
-            // at the moment we only support a single "binding"; set up the thread pool
-            String        sName   = "HttpHandler";
-            ThreadGroup   group   = new ThreadGroup(sName);
-            ThreadFactory factory = r -> {
-                Thread thread = new Thread(group, r);
-                thread.setDaemon(true);
-                thread.setName(sName + "@" + thread.hashCode());
-                return thread;
-            };
-
-            // We don't actually rely on any scaling here; all requests go to a single natural
-            // Handler service instance that needs to demultiplex it as quick as possible
-            // (see HttpHandler.x in xenia.xtclang.org module).
-            // If necessary, we can change the start() method to take an array of handlers and
-            // demultiplex it earlier by the native code
-            Executor executor = Executors.newCachedThreadPool(factory);
-
-            httpServer.setExecutor(executor);
-            httpServer.start();
-
-            httpsServer.setExecutor(executor);
-            httpsServer.start();
-
-            // prevent the container from being terminated
-            hServer.f_context.f_container.registerNativeCallback();
-
-            Router router = hServer.getRouter();
-            httpServer .createContext("/", router);
-            httpsServer.createContext("/", router);
-
-            return Op.R_NEXT;
-        } catch (Exception e) {
-            frame.f_context.f_container.terminate(hServer.f_context);
+            configureHttpServer (binding, new InetSocketAddress(sBindAddr, nHttpPort));
+            configureHttpsServer(binding, new InetSocketAddress(sBindAddr, nHttpsPort));
+        } catch (GeneralSecurityException e) {
+            hServer.setBinding(null);
             return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
         }
-    }
 
-    private void configureHttpServer(HttpServerHandle hServer, InetSocketAddress addr)
-            throws IOException {
-        hServer.setHttpServer(HttpServer.create(addr, 0));
-    }
-
-    private void configureHttpsServer(HttpServerHandle hServer, InetSocketAddress addr)
-            throws IOException, GeneralSecurityException {
-        HttpsServer httpsServer = HttpsServer.create(addr, 0);
-        SSLContext  ctxSSL      = SSLContext.getInstance("TLS");
-
-        KeyManager[] aKeyManagers = new KeyManager[] {new SimpleKeyManager(hServer)};
-        ctxSSL.init(aKeyManagers, null, null);
-
-        httpsServer.setHttpsConfigurator(new HttpsConfigurator(ctxSSL) {
-            @Override
-            public void configure(HttpsParameters params) {
+        CompletableFuture<Void> cf = container.scheduleIO(() -> {
+            try {
+                server.start();
+            } catch (Exception e) {
                 try {
-                    SSLContext    ctxSSL    = getSSLContext();
-                    SSLEngine     engine    = ctxSSL.createSSLEngine();
-                    SSLParameters paramsSSL = ctxSSL.getSupportedSSLParameters();
-
-                    paramsSSL.setNeedClientAuth(false);
-                    paramsSSL.setCipherSuites(engine.getEnabledCipherSuites());
-                    paramsSSL.setProtocols(engine.getEnabledProtocols());
-
-                    params.setSSLParameters(paramsSSL);
-                } catch (Exception ex) {
-                    throw new RuntimeException("failed to initialize the SSL context", ex);
+                    server.stop();
+                } catch (Exception eStop) {
+                    e.addSuppressed(eStop);
                 }
+                throw e;
+            }
+            return null;
+        });
+
+        return frame.waitForIO(cf, frameCaller -> {
+            try {
+                cf.get();
+                if (hServer.getBinding() != binding || !server.isStarted()) {
+                    return frameCaller.raiseException(xException.obscureIoException(frameCaller,
+                            "Server closed while binding"));
+                }
+
+                // prevent the container from being terminated
+                container.registerNativeCallback();
+                router.f_fRegistered.set(true);
+                return Op.R_NEXT;
+            } catch (Exception e) {
+                hServer.clear(binding);
+                return raiseIOException(frameCaller, e);
             }
         });
-        hServer.setHttpsServer(httpsServer);
     }
 
-    private void configureBinding(HttpServerHandle hServer, ObjectHandle hBinding) {
-        hServer.setBinding(hBinding);
-}
+    private void configureHttpServer(Binding binding, InetSocketAddress addr) {
+        HttpConfiguration config    = new HttpConfiguration();
+        Server            server    = binding.server();
+        ServerConnector   connector = new ServerConnector(server, new HttpConnectionFactory(config));
+
+        config.setSendServerVersion(false);
+        connector.setHost(addr.getHostString());
+        connector.setPort(addr.getPort());
+        server.addConnector(connector);
+    }
+
+    private void configureHttpsServer(Binding binding, InetSocketAddress addr)
+            throws GeneralSecurityException {
+        SSLContext ctxSSL = SSLContext.getInstance("TLS");
+        Server     server = binding.server();
+
+        KeyManager[] aKeyManagers = new KeyManager[] {new SimpleKeyManager(binding.router())};
+        ctxSSL.init(aKeyManagers, null, null);
+
+        SslContextFactory.Server ssl = new SslContextFactory.Server();
+        ssl.setSslContext(ctxSSL);
+        ssl.setNeedClientAuth(false);
+
+        HttpConfiguration       config     = new HttpConfiguration();
+        SecureRequestCustomizer customizer = new SecureRequestCustomizer();
+
+        // certificate selection and host routing are handled by our key manager and router
+        customizer.setSniHostCheck(false);
+        config.addCustomizer(customizer);
+        config.setSendServerVersion(false);
+
+        HttpConnectionFactory http11    = new HttpConnectionFactory(config);
+        ServerConnector       connector = new ServerConnector(server,
+                new SslConnectionFactory(ssl, http11.getProtocol()), http11);
+        connector.setHost(addr.getHostString());
+        connector.setPort(addr.getPort());
+        server.addConnector(connector);
+    }
 
     /**
      * Implementation of "void addRouteImpl(String hostName, UInt16 httpPort, UInt16 httpsPort,
@@ -343,7 +366,13 @@ public class xRTServer
         ServiceHandle  hWrapper   = (ServiceHandle) ahArg[3];
         KeyStoreHandle hKeystore  = ahArg[4] instanceof KeyStoreHandle hK ? hK : null;
         String         sTlsKey    = ahArg[5] instanceof StringHandle hS ? hS.getStringValue() : null;
-        Router         router     = hServer.getRouter();
+        Binding        binding    = hServer.getBinding();
+
+        if (binding == null) {
+            return frame.raiseException(xException.illegalState(frame, "Server is not bound"));
+        }
+
+        Router router = binding.router();
 
         if (hKeystore != null) {
             KeyStore keystore = hKeystore.f_keyStore;
@@ -351,7 +380,7 @@ public class xRTServer
                 return frame.raiseException("Invalid or missing entry for Tls key: \"" + sTlsKey + '"');
             }
 
-            if (sTlsKey == null && router.mapRoutes.isEmpty()) {
+            if (sTlsKey == null && !router.hasRoutes()) {
                 // find a public/private key pair that could be used to encrypt tls communications
                 try {
                     for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();) {
@@ -369,15 +398,16 @@ public class xRTServer
             }
         }
 
-        RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
+        RequestHandler handler = createRequestHandler(frame, hWrapper, router.getBinding());
         RouteInfo      route   = new RouteInfo(handler, nHttpPort, nHttpsPort, hKeystore, sTlsKey);
 
-        if (hServer.getHttpServer().getAddress().getHostName().equals(sHostName)) {
+        ServerConnector connector = (ServerConnector) binding.server().getConnectors()[0];
+        if (connector.getHost().equals(sHostName)) {
             // the "direct" route is only used by the KeyManager when a host name is missing
             router.setDirectRoute(route);
         }
 
-        router.mapRoutes.put(sHostName, route);
+        router.addRoute(sHostName, route);
         return Op.R_NEXT;
     }
 
@@ -396,34 +426,42 @@ public class xRTServer
     private int invokeReplaceRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg, int iResult) {
         String        sHostName = ((StringHandle) ahArg[0]).getStringValue();
         ServiceHandle hWrapper  = (ServiceHandle) ahArg[1];
-        Router        router    = hServer.getRouter();
-        RouteInfo     info      = router.mapRoutes.get(sHostName);
+        Binding       binding   = hServer.getBinding();
 
+        if (binding == null) {
+            return frame.assignValue(iResult, xBoolean.FALSE);
+        }
+
+        Router    router = binding.router();
+        RouteInfo info   = router.getRoute(sHostName);
         if (info == null) {
             return frame.assignValue(iResult, xBoolean.FALSE);
         }
 
-        RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
-        router.mapRoutes.put(sHostName,
+        RequestHandler handler = createRequestHandler(frame, hWrapper, router.getBinding());
+        router.addRoute(sHostName,
             new RouteInfo(handler, info.nHttpPort, info.nHttpsPort, info.hKeyStore, info.sTlsKey));
         return frame.assignValue(iResult, xBoolean.TRUE);
     }
 
-    private RequestHandler createRequestHandler(Frame frame, ServiceHandle hWrapper, HttpServerHandle hServer) {
+    private RequestHandler createRequestHandler(Frame frame, ServiceHandle hWrapper, ObjectHandle hBinding) {
         ClassStructure  clzHandler = hWrapper.getTemplate().getStructure();
         MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 5);
         assert method != null;
 
         FunctionHandle hFunction =
                 xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hWrapper);
-        return new RequestHandler(hWrapper.f_context, hFunction, hServer);
+        return new RequestHandler(hWrapper.f_context, hFunction, hBinding);
     }
 
     /**
      * Implementation of "void removeRouteImpl(String hostName)" method.
      */
-    private int invokeRemoveRoute(Frame frame, HttpServerHandle hServer, StringHandle hHostName) {
-        hServer.getRouter().mapRoutes.remove(hHostName.getStringValue());
+    private int invokeRemoveRoute(HttpServerHandle hServer, StringHandle hHostName) {
+        Binding binding = hServer.getBinding();
+        if (binding != null) {
+            binding.router().removeRoute(hHostName.getStringValue());
+        }
         return Op.R_NEXT;
     }
 
@@ -431,7 +469,8 @@ public class xRTServer
      * Implementation of "(Byte[], UInt16) getReceivedAtAddress(RequestContext context)" method.
      */
     private int invokeGetReceivedAtAddress(Frame frame, HttpContextHandle hCtx, int[] aiResult) {
-        InetSocketAddress addr  = hCtx.f_exchange.getLocalAddress();
+        InetSocketAddress addr  = (InetSocketAddress)
+                                    hCtx.f_request.getConnectionMetaData().getLocalSocketAddress();
         byte[]            ab    = addr.getAddress().getAddress();
         int               nPort = addr.getPort();
 
@@ -444,7 +483,8 @@ public class xRTServer
      * Implementation of "(Byte[], UInt16) getReceivedFromAddress(RequestContext context)" method.
      */
     private int invokeGetReceivedFromAddress(Frame frame, HttpContextHandle hCtx, int[] aiResult) {
-        InetSocketAddress addr  = hCtx.f_exchange.getRemoteAddress();
+        InetSocketAddress addr  = (InetSocketAddress)
+                                    hCtx.f_request.getConnectionMetaData().getRemoteSocketAddress();
         byte[]            ab    = addr.getAddress().getAddress();
         int               nPort = addr.getPort();
 
@@ -457,10 +497,10 @@ public class xRTServer
      * Implementation of "conditional (String, Uint16) getHostInfo(RequestContext context)" method.
      */
     private int invokeGetHostInfo(Frame frame, HttpContextHandle hCtx, int[] aiResult) {
-        HttpExchange exchange = hCtx.f_exchange;
-        String       sHost    = exchange.getRequestHeaders().getFirst("Host");
-        String       sName    = extractHostName(sHost);
-        int          nPort    = extractHostPort(sHost, exchange);
+        Request           request = hCtx.f_request;
+        HostPortHttpField host    = (HostPortHttpField) request.getHeaders().getField(HttpHeader.HOST);
+        String            sName   = extractHostName(host);
+        int               nPort   = extractHostPort(host, request.isSecure());
 
         return sName == null
             ? frame.assignValue(aiResult[0], xBoolean.FALSE)
@@ -472,7 +512,7 @@ public class xRTServer
      * Implementation of "String getProtocolString(RequestContext context)" method.
      */
     private int invokeGetProtocol(Frame frame, HttpContextHandle hCtx, int iResult) {
-        String sProtocol = hCtx.f_exchange.getProtocol();
+        String sProtocol = hCtx.f_request.getConnectionMetaData().getProtocol();
 
         return frame.assignValue(iResult, xString.makeHandle(sProtocol));
     }
@@ -481,10 +521,10 @@ public class xRTServer
      * Implementation of "String[] getHeaderNames(RequestContext context)" method.
      */
     private int invokeGetHeaderNames(Frame frame, HttpContextHandle hCtx, int iResult) {
-        Headers headers = hCtx.f_exchange.getRequestHeaders();
+        HttpFields headers = hCtx.f_request.getHeaders();
 
         return frame.assignValue(iResult,
-                xString.makeArrayHandle(headers.keySet().toArray(Utils.NO_NAMES)));
+                xString.makeArrayHandle(headers.getFieldNamesCollection().toArray(Utils.NO_NAMES)));
     }
 
     /**
@@ -493,11 +533,11 @@ public class xRTServer
      */
     private int invokeGetHeaderValues(Frame frame, HttpContextHandle hCtx,
                                       StringHandle hName, int[] aiResult) {
-        Headers headers = hCtx.f_exchange.getRequestHeaders();
-        String  sName   = hName.getStringValue();
+        HttpFields headers = hCtx.f_request.getHeaders();
+        String     sName   = hName.getStringValue();
 
-        List<String> listValues = headers.get(sName);
-        if (listValues == null) {
+        List<String> listValues = headers.getValuesList(sName);
+        if (listValues.isEmpty()) {
             return frame.assignValue(aiResult[0], xBoolean.FALSE);
         }
 
@@ -512,15 +552,17 @@ public class xRTServer
         HttpContextHandle hCtx = (HttpContextHandle) ahArg[0];
         long              cb   = ((JavaLong) ahArg[1]).getValue();
 
-        try {
-            InputStream in = hCtx.f_exchange.getRequestBody();
-            byte[]      ab = in.readNBytes((int) Math.min(cb, Integer.MAX_VALUE));
-            return frame.assignValue(iResult, ab.length == 0
-                    ? xByteArray.ensureEmptyByteArray()
-                    : xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
-        } catch (IOException e) {
-            return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
-        }
+        CompletableFuture<byte[]> cf = hCtx.readBody((int) Math.min(cb, Integer.MAX_VALUE));
+        return frame.waitForIO(cf, frameCaller -> {
+            try {
+                byte[] ab = cf.get();
+                return frameCaller.assignValue(iResult, ab.length == 0
+                        ? xByteArray.ensureEmptyByteArray()
+                        : xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
+            } catch (Exception e) {
+                return raiseIOException(frameCaller, e);
+            }
+        });
     }
 
     /**
@@ -535,30 +577,47 @@ public class xRTServer
     /**
      * Implementation of "closeImpl()" method.
      */
-    private int invokeClose(HttpServerHandle hServer) {
-        HttpServer httpServer  = hServer.getHttpServer();
-        HttpServer httpsServer = hServer.getHttpsServer();
-        if (httpServer != null) {
-            if (httpServer.getExecutor() == null) {
-                // we need to compensate for a bug in com.sun.net.httpserver.HttpServer that doesn't
-                // properly close the server socket that hasn't been established
-                httpServer.start();
-                httpServer.stop(0);
-                httpsServer.start();
-                httpsServer.stop(0);
-            } else {
-                httpServer.removeContext("/");
-                httpServer.stop(0);
-                httpsServer.removeContext("/");
-                httpsServer.stop(0);
-                ((ExecutorService) httpServer.getExecutor()).shutdown();
-                hServer.f_context.f_container.unregisterNativeCallback();
-            }
-            hServer.getRouter().mapRoutes.clear();
-            hServer.clear();
+    private int invokeClose(Frame frame, HttpServerHandle hServer) {
+        Binding binding = hServer.getBinding();
+        if (binding == null) {
+            return Op.R_NEXT;
         }
 
-        return Op.R_NEXT;
+        if (binding.closing() != null) {
+            return frame.waitForExternalCompletion(binding.closing(), Op.A_IGNORE, _ -> Op.R_NEXT);
+        }
+
+        CompletableFuture<ObjectHandle> cfClosing = new CompletableFuture<>();
+        Binding                         closing   = binding.stopping(cfClosing);
+        hServer.setBinding(closing);
+
+        CompletableFuture<Void> cfStop = frame.f_context.f_container.scheduleIO(() -> {
+            binding.server().stop();
+            return null;
+        });
+
+        return frame.waitForIO(cfStop, frameCaller -> {
+            try {
+                cfStop.get();
+                return Op.R_NEXT;
+            } catch (Exception e) {
+                return raiseIOException(frameCaller, e);
+            } finally {
+                Router router = closing.router();
+                if (router.f_fRegistered.compareAndSet(true, false)) {
+                    frameCaller.f_context.f_container.unregisterNativeCallback();
+                }
+                router.clearRoutes();
+                hServer.clear(closing);
+
+                // notify other close callers after cleanup
+                if (frameCaller.m_hException == null) {
+                    cfClosing.complete(xTuple.H_VOID);
+                } else {
+                    cfClosing.completeExceptionally(frameCaller.m_hException.getException());
+                }
+            }
+        });
     }
 
     /**
@@ -566,23 +625,37 @@ public class xRTServer
      *                                    String[] values, Int responseLength)" method.
      */
     private int invokeSetHeaders(Frame frame, ObjectHandle[] ahArg) {
-        HttpExchange      exchange      = ((HttpContextHandle) ahArg[0]).f_exchange;
+        HttpContextHandle hCtx          = (HttpContextHandle) ahArg[0];
         long              nStatus       = ((JavaLong) ahArg[1]).getValue();
         StringArrayHandle hHeaderNames  = (StringArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate;
         StringArrayHandle hHeaderValues = (StringArrayHandle) ((ArrayHandle) ahArg[3]).m_hDelegate;
         long              nLength       = ((JavaLong) ahArg[4]).getValue();
 
-        Headers headers = exchange.getResponseHeaders();
-        for (long i = 0, c = hHeaderNames.m_cSize; i < c; i++) {
-            headers.add(hHeaderNames.get(i), hHeaderValues.get(i));
-        }
-
         try {
-            exchange.sendResponseHeaders((int) nStatus, (int) nLength);
+            synchronized (hCtx) {
+                if (hCtx.m_stage == Stage.COMPLETED) {
+                    throw new IOException("HTTP exchange already completed");
+                }
+                if (hCtx.m_stage != Stage.OPEN) {
+                    throw new IOException("HTTP response already started");
+                }
+
+                Response           response = hCtx.f_response;
+                HttpFields.Mutable headers  = response.getHeaders();
+
+                response.setStatus((int) nStatus);
+                for (long i = 0, c = hHeaderNames.m_cSize; i < c; i++) {
+                    headers.add(hHeaderNames.get(i), hHeaderValues.get(i));
+                }
+                if (nLength > 0) {
+                    headers.put(HttpHeader.CONTENT_LENGTH, nLength);
+                }
+                hCtx.m_stage = Stage.HEADERS_SET;
+            }
             return Op.R_NEXT;
-        } catch (IOException e) {
-            exchange.close();
-            return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
+        } catch (Exception e) {
+            hCtx.complete(e);
+            return raiseIOException(frame, e);
         }
     }
 
@@ -591,103 +664,107 @@ public class xRTServer
      * method.
      */
     private int invokeSetBodyBytes(Frame frame, ObjectHandle[] ahArg) {
-        HttpExchange exchange = ((HttpContextHandle) ahArg[0]).f_exchange;
-        ArrayHandle  hBody    = (ArrayHandle) ahArg[1];
-        boolean      fFinal   = ((BooleanHandle) ahArg[2]).get();
+        HttpContextHandle hCtx   = (HttpContextHandle) ahArg[0];
+        ArrayHandle       hBody  = (ArrayHandle) ahArg[1];
+        boolean           fFinal = ((BooleanHandle) ahArg[2]).get();
 
-        byte[] abBody = xByteArray.getBytes(hBody);
-        if (abBody.length > 0) {
-            OutputStream out = exchange.getResponseBody();
+        byte[]                  abBody = xByteArray.getBytes(hBody);
+        CompletableFuture<Void> cf     = hCtx.writeBody(abBody, fFinal);
+        return frame.waitForIO(cf, frameCaller -> {
             try {
-                out.write(abBody);
-            } catch (Throwable e) {
-                exchange.close();
-                return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
+                cf.get();
+                return Op.R_NEXT;
+            } catch (Exception e) {
+                return raiseIOException(frameCaller, e);
             }
-        }
-
-        if (fFinal) {
-            exchange.close();
-        }
-        return Op.R_NEXT;
+        });
     }
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static String extractHostName(String sHost) {
-        if (sHost != null) {
-            int ofPort = sHost.lastIndexOf(':');
-            if (ofPort >= 0) {
-                sHost = sHost.substring(0, ofPort);
-            }
-        }
-        return sHost;
+    private static int raiseIOException(Frame frame, Exception e) {
+        Throwable cause = e instanceof ExecutionException ? e.getCause() : e;
+        return frame.raiseException(xException.obscureIoException(frame, cause.getMessage()));
     }
 
-    protected static int extractHostPort(String sHost, HttpExchange exchange) {
-        if (sHost == null) {
-            return exchange.getRemoteAddress().getPort();
+    private static String extractHostName(HostPortHttpField host) {
+        if (host == null) {
+            return null;
         }
 
-        int ofPort = sHost.lastIndexOf(':');
-        return ofPort >= 0
-            ? Integer.valueOf(sHost.substring(ofPort + 1))
-            : exchange instanceof HttpsExchange ? 443 : 80;
+        // match HostInfo.host.toString(), which omits IPv6 brackets
+        String sName = host.getHost();
+        return sName != null && sName.startsWith("[")
+                ? sName.substring(1, sName.length() - 1)
+                : sName;
+    }
+
+    private static int extractHostPort(HostPortHttpField host, boolean fTls) {
+        int nDefaultPort = fTls ? 443 : 80;
+        return host == null ? nDefaultPort : host.getPort(nDefaultPort);
     }
 
     // ----- helper classes ------------------------------------------------------------------------
 
     /**
-     * The {@link HttpHandler} that handles all request from the Java {@link HttpServer} and calls
-     * the natural HttpServer.Handler "handle()" method.
+     * The bridge that handles requests from Jetty and calls the natural HttpServer.Handler
+     * "handle()" method.
      */
-    protected static class RequestHandler
-            implements HttpHandler {
-        public RequestHandler(ServiceContext context, FunctionHandle hFunction, HttpServerHandle hServer) {
+    protected static class RequestHandler {
+        public RequestHandler(ServiceContext context, FunctionHandle hFunction, ObjectHandle hBinding) {
             f_context   = context;
             f_hFunction = hFunction;
-            f_hServer   = hServer;
+            f_hBinding  = hBinding;
         }
 
-        @Override
-        public void handle(HttpExchange exchange) {
+        public void handle(HttpContextHandle hCtx) {
             try (var ignore = ConstantPool.withPool(f_context.f_pool)) {
                 // call the Handler handle method
-                ObjectHandle[] hArgs = createArguments(exchange);
+                ObjectHandle[] hArgs = createArguments(hCtx);
                 f_context.postRequest(null, f_hFunction, hArgs, 0).handle((response, err) -> {
                     // process the response (or error) from calling the Handler handle method
                     // TODO: this should be sent to the natural "unhandledException" handler
                     if (err != null) {
-                        sendError(exchange, err);
+                        sendError(hCtx, err);
                     }
                     return null;
                 });
             } catch (Throwable t) {
-                sendError(exchange, t);
+                sendError(hCtx, t);
             }
         }
 
-        private ObjectHandle[] createArguments(HttpExchange exchange) {
-            ObjectHandle      hBinding = f_hServer.getBinding();
-            HttpContextHandle hContext = new HttpContextHandle(exchange);
-            StringHandle      hURI     = xString.makeHandle(exchange.getRequestURI().toASCIIString());
-            StringHandle      hMethod  = xString.makeHandle(exchange.getRequestMethod());
-            BooleanHandle     hTls     = xBoolean.makeHandle(exchange instanceof HttpsExchange);
-            return new ObjectHandle[]{hBinding, hContext, hURI, hMethod, hTls};
+        private ObjectHandle[] createArguments(HttpContextHandle hCtx) {
+            Request       request = hCtx.f_request;
+            StringHandle  hURI    = xString.makeHandle(request.getHttpURI().getPathQuery());
+            StringHandle  hMethod = xString.makeHandle(request.getMethod());
+            BooleanHandle hTls    = xBoolean.makeHandle(request.isSecure());
+            return new ObjectHandle[]{f_hBinding, hCtx, hURI, hMethod, hTls};
         }
 
-        private void sendError(HttpExchange exchange, Throwable t) {
+        private void sendError(HttpContextHandle hCtx, Throwable t) {
             t.printStackTrace();
-            try (exchange) {
-                exchange.sendResponseHeaders(500, -1);
-            } catch (IOException e) {
-                e.printStackTrace();
+            boolean fStarted;
+            synchronized (hCtx) {
+                if (hCtx.m_stage == Stage.COMPLETED) {
+                    return;
+                }
+                fStarted = hCtx.f_response.isCommitted() || hCtx.m_stage != Stage.OPEN;
+                if (!fStarted) {
+                    hCtx.f_response.setStatus(500);
+                    hCtx.m_stage = Stage.HEADERS_SET;
+                }
+            }
+            if (fStarted) {
+                hCtx.complete(t);
+            } else {
+                hCtx.writeBody(Handy.EMPTY_BYTE_ARRAY, true);
             }
         }
 
-        private final ServiceContext   f_context;
-        private final FunctionHandle   f_hFunction;
-        private final HttpServerHandle f_hServer;
+        private final ServiceContext f_context;
+        private final FunctionHandle f_hFunction;
+        private final ObjectHandle   f_hBinding;
     }
 
     /**
@@ -695,8 +772,8 @@ public class xRTServer
      */
     protected static class SimpleKeyManager
             extends X509ExtendedKeyManager {
-        public SimpleKeyManager(HttpServerHandle hServer) {
-            f_hServer = hServer;
+        public SimpleKeyManager(Router router) {
+            f_router = router;
         }
 
         @Override
@@ -732,8 +809,8 @@ public class xRTServer
                 // the main reason the server name may be missing is for an HTTPS request that
                 // goes directly against the IP address (e.g. "https://129.168.1.30:8081/nginx")
                 RouteInfo route = sHost == null
-                        ? f_hServer.getRouter().getDirectRoute()
-                        : f_hServer.getRouter().mapRoutes.get(sHost);
+                        ? f_router.getDirectRoute()
+                        : f_router.getRoute(sHost);
                 if (route == null) {
                     // TODO: REMOVE
                     System.err.println(Handy.logTime() + " Trace: Handshake with unknown host: " + sHost);
@@ -785,9 +862,9 @@ public class xRTServer
         // ----- data fields -----------------------------------------------------------------------
 
         /**
-         * The HttpServer handle.
+         * The router for this server binding.
          */
-        private final HttpServerHandle f_hServer;
+        private final Router f_router;
 
         /**
          * The key store handle used by the current thread.
@@ -798,37 +875,62 @@ public class xRTServer
     // ---- Router ---------------------------------------------------------------------------------
 
     protected static class Router
-            implements HttpHandler {
-        public final Map<String, RouteInfo> mapRoutes = new ConcurrentHashMap<>();
+            extends Handler.Abstract.NonBlocking {
+        public Router(ObjectHandle hBinding) {
+            f_hBinding = hBinding;
+        }
 
-        private ObjectHandle m_hBinding;
-        private RouteInfo    m_routeDirect;
+        private final Map<String, RouteInfo> mapRoutes = new ConcurrentHashMap<>();
+
+        private final AtomicBoolean f_fRegistered = new AtomicBoolean();
+
+        private final ObjectHandle f_hBinding;
+
+        private RouteInfo m_routeDirect;
 
         @Override
-        public void handle(HttpExchange exchange)
-                throws IOException {
-            String    sHost = exchange.getRequestHeaders().getFirst("Host");
-            String    sName = extractHostName(sHost);
-            int       nPort = extractHostPort(sHost, exchange);
-            boolean   fTls  = exchange instanceof HttpsExchange;
-            RouteInfo route = mapRoutes.get(sName);
+        public boolean handle(Request request, Response response, Callback callback) {
+            boolean           fTls  = request.isSecure();
+            HostPortHttpField host  = (HostPortHttpField) request.getHeaders().getField(HttpHeader.HOST);
+            String            sName = extractHostName(host);
+            int               nPort = extractHostPort(host, fTls);
+            RouteInfo         route = sName == null ? null : getRoute(sName);
+
             if (route == null || nPort != (fTls ? route.nHttpsPort : route.nHttpPort)) {
+                String sHost = host == null ? null : host.getValue();
                 System.err.println(Handy.logTime() + " Trace: Request for unregistered route: "
-                    + (fTls ? "https://" : "http://") + sHost + exchange.getRequestURI() + " from "
-                    + exchange.getRemoteAddress().getAddress());
-                exchange.sendResponseHeaders(421, -1); // HttpStatus.MisdirectedRequest
-                exchange.close();
+                    + (fTls ? "https://" : "http://") + sHost + request.getHttpURI().getPathQuery() + " from "
+                    + Request.getRemoteAddr(request));
+                response.setStatus(421); // HttpStatus.MisdirectedRequest
+                response.write(true, null, callback);
             } else {
-                route.handler.handle(exchange);
+                route.handler.handle(new HttpContextHandle(request, response, callback));
             }
+            return true;
+        }
+
+        protected boolean hasRoutes() {
+            return !mapRoutes.isEmpty();
+        }
+
+        protected RouteInfo getRoute(String sHostName) {
+            return mapRoutes.get(sHostName);
+        }
+
+        protected void addRoute(String sHostName, RouteInfo route) {
+            mapRoutes.put(sHostName, route);
+        }
+
+        protected void removeRoute(String sHostName) {
+            mapRoutes.remove(sHostName);
+        }
+
+        protected void clearRoutes() {
+            mapRoutes.clear();
         }
 
         protected ObjectHandle getBinding() {
-            return m_hBinding;
-        }
-
-        protected void setBinding(ObjectHandle binding) {
-            m_hBinding = binding;
+            return f_hBinding;
         }
 
         protected RouteInfo getDirectRoute() {
@@ -843,6 +945,16 @@ public class xRTServer
     protected record RouteInfo(RequestHandler handler, int nHttpPort, int nHttpsPort,
                                KeyStoreHandle hKeyStore, String sTlsKey) {}
 
+    /**
+     * The native state associated with a server binding. Replaced when shutdown starts and
+     * cleared when it completes.
+     */
+    protected record Binding(Server server, Router router, CompletableFuture<ObjectHandle> closing) {
+        Binding stopping(CompletableFuture<ObjectHandle> cf) {
+            return new Binding(server, router, cf);
+        }
+    }
+
     // ----- ObjectHandles -------------------------------------------------------------------------
 
     /**
@@ -851,113 +963,231 @@ public class xRTServer
     protected static class HttpServerHandle
             extends ServiceHandle {
         /**
-         * The underlying native state needs to be kept in an array, so cloning the handle would
-         * not splinter the state.
+         * The underlying native state is shared, so cloning the handle does not splinter it.
+         * Updates are serialized by the server's service context.
          */
-        private final Object[] f_aoNative = new Object[3];
+        private final AtomicReference<Binding> f_binding = new AtomicReference<>();
 
         protected HttpServerHandle(TypeComposition clazz, ServiceContext context) {
             super(clazz, context);
-
-            f_aoNative[0] = new Router();
         }
 
         /**
-         * @return the request router
+         * @return the current server binding, or null if unbound
          */
-        protected Router getRouter() {
-            return (Router) f_aoNative[0];
-        }
-
-        protected void setRouter(Router router) {
-            Router routerPrev = getRouter();
-            if (router == routerPrev) {
-                return;
-            }
-
-            ObjectHandle binding = getBinding();
-            if (binding != null) {
-                // clean up the reference while we still can
-                setBinding(null);
-            }
-
-            if (router != null) {
-                router.setBinding(binding);
-            }
-
-            f_aoNative[0] = router;
+        protected Binding getBinding() {
+            return f_binding.get();
         }
 
         /**
-         * @return underlying {@link HttpServer}.
+         * Replace the current server binding.
          */
-        protected HttpServer getHttpServer() {
-            return (HttpServer) f_aoNative[1];
-        }
-
-        protected void setHttpServer(HttpServer httpServer) {
-            f_aoNative[1] = httpServer;
+        protected void setBinding(Binding binding) {
+            f_binding.set(binding);
         }
 
         /**
-         * @return the underlying {@link HttpsServer}
+         * Clear the binding only if it is still the specified one.
          */
-        protected HttpsServer getHttpsServer() {
-            return (HttpsServer) f_aoNative[2];
-        }
-
-        protected void setHttpsServer(HttpsServer httpsServer) {
-            f_aoNative[2] = httpsServer;
-        }
-
-        protected ObjectHandle getBinding() {
-            Router router = getRouter();
-            return router == null
-                    ? null
-                    : router.getBinding();
-        }
-
-        protected void setBinding(ObjectHandle binding) {
-            Router router = getRouter();
-            if (router == null) {
-                assert binding == null;
-            } else {
-                router.setBinding(binding);
-            }
-        }
-
-        protected void clear() {
-            setRouter(null);
-            setHttpServer(null);
-            setHttpsServer(null);
+        protected void clear(Binding binding) {
+            f_binding.compareAndSet(binding, null);
         }
 
         @Override
         public String toString() {
-            return "HttpServer" +
-                    (getHttpServer() == null
-                        ? ""
-                        : "@" + getHttpServer().getAddress().getHostString());
+            Binding binding = getBinding();
+            return "HttpServer" + (binding == null
+                    ? ""
+                    : "@" + ((ServerConnector) binding.server().getConnectors()[0]).getHost());
         }
     }
 
     /**
-     * Native handle holding the HttpExchange reference.
+     * Native handle holding the Jetty request and its response completion.
      */
     protected static class HttpContextHandle
                 extends ObjectHandle {
-        public HttpContextHandle(HttpExchange exchange) {
+        public HttpContextHandle(Request request, Response response, Callback callback) {
             super(xObject.INSTANCE.getCanonicalClass());
 
-            f_exchange = exchange;
+            f_request  = request;
+            f_response = response;
+            f_callback = callback;
             m_fMutable = false;
+
+            // allow slow handlers; pending reads and writes still time out
+            request.addIdleTimeoutListener(_ -> false);
+            request.addFailureListener(this::complete);
+        }
+
+        protected CompletableFuture<byte[]> readBody(int cb) {
+            ReadBody reader;
+            synchronized (this) {
+                if (cb < 0 || m_reader != null || m_stage == Stage.COMPLETED) {
+                    return CompletableFuture.failedFuture(new IOException("Invalid HTTP body read"));
+                }
+                if (m_fEOF || cb == 0) {
+                    return CompletableFuture.completedFuture(Handy.EMPTY_BYTE_ARRAY);
+                }
+                m_reader = reader = new ReadBody(cb);
+            }
+            reader.iterate();
+            return reader.f_cf;
+        }
+
+        protected CompletableFuture<Void> writeBody(byte[] ab, boolean fFinal) {
+            CompletableFuture<Void> cf = new CompletableFuture<>();
+            try {
+                synchronized (this) {
+                    if (m_stage != Stage.HEADERS_SET) {
+                        throw new IOException("Invalid HTTP response write");
+                    }
+                    m_stage = fFinal ? Stage.FINAL_WRITE_PENDING : Stage.HEADERS_SET;
+                }
+                f_response.write(fFinal, ab.length == 0 ? null : ByteBuffer.wrap(ab),
+                        Callback.from(() -> {
+                            if (fFinal) {
+                                complete(null);
+                            }
+                            cf.complete(null);
+                        }, e -> {
+                            complete(e);
+                            cf.completeExceptionally(e);
+                        }));
+            } catch (Throwable e) {
+                complete(e);
+                cf.completeExceptionally(e);
+            }
+            return cf;
         }
 
         /**
-         * The wrapped {@link HttpExchange}.
+         * Complete Jetty's handler only when the response is sent or the exchange fails.
          */
-        public final HttpExchange f_exchange;
+        protected void complete(Throwable e) {
+            ReadBody reader;
+            synchronized (this) {
+                if (m_stage == Stage.COMPLETED) {
+                    return;
+                }
+                m_stage = Stage.COMPLETED;
+                reader  = m_reader;
+                if (m_chunk != null) {
+                    m_chunk.release();
+                    m_chunk = null;
+                }
+            }
+            if (reader != null) {
+                reader.failed(e == null ? new IOException("HTTP response completed") : e);
+            }
+            if (e == null) {
+                f_callback.succeeded();
+            } else {
+                f_callback.failed(e);
+            }
+        }
+
+        /**
+         * Read at most the requested number of bytes, waiting for content without blocking the
+         * HTTP service context. A partly consumed chunk is retained for the next read.
+         */
+        private class ReadBody
+                extends IteratingCallback {
+            private ReadBody(int cb) {
+                f_cb     = cb;
+                f_stream = new ByteArrayOutputStream(Math.min(cb, 8192));
+            }
+
+            @Override
+            protected Action process() throws IOException {
+                while (true) {
+                    synchronized (HttpContextHandle.this) {
+                        if (m_stage == Stage.COMPLETED) {
+                            throw new IOException("HTTP request completed");
+                        }
+                        if (f_stream.size() >= f_cb || m_fEOF) {
+                            return Action.SUCCEEDED;
+                        }
+
+                        Content.Chunk chunk = m_chunk;
+                        if (chunk != null) {
+                            if (Content.Chunk.isFailure(chunk)) {
+                                throw new IOException("HTTP request body failed", chunk.getFailure());
+                            }
+
+                            ByteBuffer buffer = chunk.getByteBuffer();
+                            int        cb     = Math.min(buffer.remaining(), f_cb - f_stream.size());
+                            byte[]     ab     = new byte[cb];
+                            buffer.get(ab);
+                            f_stream.writeBytes(ab);
+                            if (!buffer.hasRemaining()) {
+                                m_fEOF = chunk.isLast();
+                                chunk.release();
+                                m_chunk = null;
+                            }
+                            continue;
+                        }
+                    }
+
+                    // read() and demand() may invoke callbacks synchronously
+                    Content.Chunk chunk = f_request.read();
+                    if (chunk == null) {
+                        f_request.demand(this::succeeded);
+                        return Action.SCHEDULED;
+                    }
+                    synchronized (HttpContextHandle.this) {
+                        if (m_stage == Stage.COMPLETED) {
+                            chunk.release();
+                            throw new IOException("HTTP request completed");
+                        }
+                        m_chunk = chunk;
+                    }
+                }
+            }
+
+            @Override
+            protected void onCompleteSuccess() {
+                synchronized (HttpContextHandle.this) {
+                    m_reader = null;
+                }
+                f_cf.complete(f_stream.toByteArray());
+            }
+
+            @Override
+            protected void onCompleteFailure(Throwable e) {
+                synchronized (HttpContextHandle.this) {
+                    m_reader = null;
+                    if (m_chunk != null) {
+                        m_chunk.release();
+                        m_chunk = null;
+                    }
+                }
+                complete(e);
+                f_cf.completeExceptionally(e);
+            }
+
+            private final int                       f_cb;
+            private final ByteArrayOutputStream     f_stream;
+            private final CompletableFuture<byte[]> f_cf = new CompletableFuture<>();
+        }
+
+        /**
+         * The wrapped Jetty request, response, and completion callback.
+         */
+        public final Request  f_request;
+        public final Response f_response;
+        public final Callback f_callback;
+
+        /**
+         * State guarded by this handle's monitor.
+         */
+        private Stage         m_stage = Stage.OPEN;
+        private boolean       m_fEOF;
+        private Content.Chunk m_chunk;
+        private ReadBody      m_reader;
     }
+
+    private enum Stage {OPEN, HEADERS_SET, FINAL_WRITE_PENDING, COMPLETED}
 
     // ----- data fields and constants -------------------------------------------------------------
 
