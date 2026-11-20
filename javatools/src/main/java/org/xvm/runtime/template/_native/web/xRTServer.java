@@ -52,8 +52,6 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 
-import org.eclipse.jetty.server.handler.ContextHandler;
-
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.IteratingCallback;
 
@@ -271,11 +269,9 @@ public class xRTServer
         pool.setName("HttpHandler");
         pool.setDaemon(true);
 
-        Server         server  = new Server(pool);
-        ContextHandler context = new ContextHandler("/");
-        Binding        binding = new Binding(server, router, null);
-        context.setHandler(router);
-        server .setHandler(context);
+        Server  server  = new Server(pool);
+        Binding binding = new Binding(server, router, null);
+        server.setHandler(router);
         hServer.setBinding(binding);
 
         try {
