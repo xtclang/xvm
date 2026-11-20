@@ -28,9 +28,9 @@ public final class IsolatedDirectExecutor {
     /**
      * Returns the library modules that the compiles of one build share, for {@link #executeCompile}.
      *
-     * @return the shared library modules, typed for the caller, whose classloader does not know their class
+     * @return the shared library modules
      */
-    public static Object newLibraryModules() {
+    public static LibraryModules newLibraryModules() {
         return new LibraryModules();
     }
 
@@ -40,11 +40,11 @@ public final class IsolatedDirectExecutor {
      *
      * @param request         the compile
      * @param logger          the logger of the task
-     * @param libraryModules  what {@link #newLibraryModules()} returned
+     * @param libraries       what {@link #newLibraryModules()} returned
      * @return the exit code
      */
-    public static int executeCompile(final DirectCompileRequest request, final Logger logger, final Object libraryModules) {
-        final var libraries = (LibraryModules) libraryModules;
+    public static int executeCompile(final DirectCompileRequest request, final Logger logger,
+            final LibraryModules libraries) {
         final var err = new ErrorList(DEFAULT_ERROR_LIMIT);
         final var console = createConsole(logger);
         final var options = new IsolatedLauncherOptionsBuilder().buildCompilerOptions(request);

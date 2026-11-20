@@ -109,12 +109,15 @@ public abstract class DirectRuntimeBuildService
     static RuntimeEntry loadRuntimeEntry(final URLClassLoader loader) throws ReflectiveOperationException {
         try {
             final var executorType = loader.loadClass(EXECUTOR_CLASS);
+            // the library modules' class is the isolated loader's, so executeCompile is looked up by the instance's
+            final var libraryModules = executorType.getMethod("newLibraryModules").invoke(null);
             return new RuntimeEntry(
                 loader,
-                executorType.getMethod("executeCompile", DirectCompileRequest.class, Logger.class, Object.class),
+                executorType.getMethod("executeCompile", DirectCompileRequest.class, Logger.class,
+                    libraryModules.getClass()),
                 executorType.getMethod("executeRun", DirectRunRequest.class, Logger.class),
                 executorType.getMethod("executeTest", DirectTestRequest.class, Logger.class),
-                executorType.getMethod("newLibraryModules").invoke(null)
+                libraryModules
             );
         } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
             // Ownership transfers to the entry only after every executor method is available.
