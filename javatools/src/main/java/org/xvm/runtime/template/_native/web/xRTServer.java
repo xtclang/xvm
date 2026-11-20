@@ -636,7 +636,7 @@ public class xRTServer
 
         try {
             synchronized (hCtx) {
-                if (hCtx.m_fHeadersSent || hCtx.m_fCompleted) {
+                if (hCtx.m_stage != Stage.OPEN) {
                     throw new IOException("HTTP response already started");
                 }
 
@@ -650,7 +650,7 @@ public class xRTServer
                 if (nLength > 0) {
                     headers.put(HttpHeader.CONTENT_LENGTH, nLength);
                 }
-                hCtx.m_fHeadersSent = true;
+                hCtx.m_stage = Stage.HEADERS_SET;
             }
             return Op.R_NEXT;
         } catch (Exception e) {
@@ -750,13 +750,13 @@ public class xRTServer
             t.printStackTrace();
             boolean fStarted;
             synchronized (hCtx) {
-                if (hCtx.m_fCompleted) {
+                if (hCtx.m_stage == Stage.COMPLETED) {
                     return;
                 }
-                fStarted = hCtx.f_response.isCommitted() || hCtx.m_fHeadersSent;
+                fStarted = hCtx.f_response.isCommitted() || hCtx.m_stage != Stage.OPEN;
                 if (!fStarted) {
                     hCtx.f_response.setStatus(500);
-                    hCtx.m_fHeadersSent = true;
+                    hCtx.m_stage = Stage.HEADERS_SET;
                 }
             }
             if (fStarted) {
@@ -1024,7 +1024,7 @@ public class xRTServer
         protected CompletableFuture<byte[]> readBody(int cb) {
             ReadBody reader;
             synchronized (this) {
-                if (cb < 0 || m_reader != null || m_fCompleted) {
+                if (cb < 0 || m_reader != null || m_stage == Stage.COMPLETED) {
                     return CompletableFuture.failedFuture(new IOException("Invalid HTTP body read"));
                 }
                 if (m_fEOF || cb == 0) {
@@ -1040,10 +1040,10 @@ public class xRTServer
             CompletableFuture<Void> cf = new CompletableFuture<>();
             try {
                 synchronized (this) {
-                    if (!m_fHeadersSent || m_fFinalWrite || m_fCompleted) {
+                    if (m_stage != Stage.HEADERS_SET) {
                         throw new IOException("Invalid HTTP response write");
                     }
-                    m_fFinalWrite = fFinal;
+                    m_stage = fFinal ? Stage.FINAL_WRITE_PENDING : Stage.HEADERS_SET;
                 }
                 f_response.write(fFinal, ab.length == 0 ? null : ByteBuffer.wrap(ab),
                         Callback.from(() -> {
@@ -1068,11 +1068,11 @@ public class xRTServer
         protected void complete(Throwable e) {
             ReadBody reader;
             synchronized (this) {
-                if (m_fCompleted) {
+                if (m_stage == Stage.COMPLETED) {
                     return;
                 }
-                m_fCompleted = true;
-                reader = m_reader;
+                m_stage = Stage.COMPLETED;
+                reader  = m_reader;
                 if (reader == null && m_chunk != null) {
                     m_chunk.release();
                     m_chunk = null;
@@ -1103,7 +1103,7 @@ public class xRTServer
             protected Action process() throws IOException {
                 while (true) {
                     synchronized (HttpContextHandle.this) {
-                        if (m_fCompleted) {
+                        if (m_stage == Stage.COMPLETED) {
                             throw new IOException("HTTP request completed");
                         }
                         if (f_stream.size() >= f_cb || m_fEOF) {
@@ -1137,7 +1137,7 @@ public class xRTServer
                         return Action.SCHEDULED;
                     }
                     synchronized (HttpContextHandle.this) {
-                        if (m_fCompleted) {
+                        if (m_stage == Stage.COMPLETED) {
                             chunk.release();
                             throw new IOException("HTTP request completed");
                         }
@@ -1182,13 +1182,13 @@ public class xRTServer
         /**
          * State guarded by this handle's monitor.
          */
-        private boolean       m_fCompleted;
-        private boolean       m_fHeadersSent;
-        private boolean       m_fFinalWrite;
+        private Stage         m_stage = Stage.OPEN;
         private boolean       m_fEOF;
         private Content.Chunk m_chunk;
         private ReadBody      m_reader;
     }
+
+    private enum Stage {OPEN, HEADERS_SET, FINAL_WRITE_PENDING, COMPLETED}
 
     // ----- data fields and constants -------------------------------------------------------------
 
