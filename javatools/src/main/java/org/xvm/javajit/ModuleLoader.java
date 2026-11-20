@@ -10,19 +10,25 @@ import java.lang.classfile.ClassModel;
 
 import java.lang.classfile.constantpool.ClassEntry;
 
+import java.lang.ref.WeakReference;
+
 import java.lang.reflect.AccessFlag;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.function.Predicate;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ModuleStructure;
 
-import static org.xvm.javajit.TypeSystem.getJitSuffix;
+import org.xvm.asm.constants.ModuleConstant;
 
+import static java.util.Collections.unmodifiableSet;
+import static org.xvm.javajit.TypeSystem.getJitSuffix;
 import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.require;
 
@@ -58,6 +64,7 @@ public class ModuleLoader
         this.pkg        = pkg;
         this.prefix     = pkg + '.';
         this.typeSystem = parent.typeSystem;
+        this.weakRef    = new WeakReference<>(this);
     }
 
     /**
@@ -82,6 +89,17 @@ public class ModuleLoader
      * ClassFile generation for the module that this ModuleLoader is responsible for loading.
      */
     public final TypeSystem typeSystem;
+
+    /**
+     * A WeakReference to this ModuleLoader. When it's gone, it's gone.
+     */
+    public final WeakReference<ModuleLoader> weakRef;
+
+    /**
+     * Lazily calculated set of module identities that this ModuleLoader depends on, including
+     * core modules and its own module.
+     */
+    private Set<ModuleConstant> dependsOn;
 
     // ----- ClassLoader API -----------------------------------------------------------------------
 
@@ -136,6 +154,27 @@ public class ModuleLoader
      */
     public Ctx getCtx() {
         return getXvm().getCtx();
+    }
+
+    /**
+     * @return this loader's module identity and all of its module dependencies
+     */
+    public Set<ModuleConstant> getDependsOn() {
+        if (dependsOn == null) {
+            dependsOn = unmodifiableSet(collectDependencies(new HashSet<>(), module.getIdentityConstant()));
+        }
+        return dependsOn;
+    }
+
+    private static Set<ModuleConstant> collectDependencies(Set<ModuleConstant> set, ModuleConstant id) {
+        if (set.add(id)) {
+            // recurse to collect all "downstream" dependencies (modules implicitly used by this
+            // module, but aren't explicitly imported here)
+            for (ModuleConstant depId : ((ModuleStructure) id.getComponent()).getDependencyTypes().keySet()) {
+                collectDependencies(set, depId);
+            }
+        }
+        return set;
     }
 
     // ----- debugging -----------------------------------------------------------------------------

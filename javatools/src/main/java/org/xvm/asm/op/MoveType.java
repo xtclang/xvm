@@ -90,7 +90,7 @@ public class MoveType
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
-        if (regFrom.type().isJitCCInterface()) {
+        if (regFrom.type().isJitCCInterface(bctx.typeSystem)) {
             code.checkcast(CD_nObject);
         }
 

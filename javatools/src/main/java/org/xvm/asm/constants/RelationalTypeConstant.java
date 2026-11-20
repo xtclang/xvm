@@ -80,6 +80,22 @@ public abstract class RelationalTypeConstant
         m_constType2 = pool.getConstant(m_iType2, TypeConstant.class);
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public ModuleConstant peekJitModuleOwner() {
+        ModuleConstant module1 = m_constType1.peekJitModuleOwner();
+        ModuleConstant module2 = m_constType2.peekJitModuleOwner();
+        return module1 == module2 ? module1 : null;
+    }
+
+    @Override
+    public Set<ModuleConstant> collectJitModuleOwners(Set<ModuleConstant> modules) {
+        m_constType1.collectJitModuleOwners(modules);
+        m_constType2.collectJitModuleOwners(modules);
+        return modules;
+    }
+
     // ----- type specific methods -----------------------------------------------------------------
 
     /**
@@ -629,14 +645,7 @@ public abstract class RelationalTypeConstant
                           || m_constType2.consumesFormalType(sTypeName, access));
     }
 
-    // ----- JIT support ---------------------------------------------------------------------------
-
-    @Override
-    public TypeConstant getJitCCType() {
-        return getConstantPool().typeObject();
-    }
-
-    // ----- run-time support ----------------------------------------------------------------------
+    // ----- interpreter support -------------------------------------------------------------------
 
     @Override
     public ClassTemplate getTemplate(Container container) {

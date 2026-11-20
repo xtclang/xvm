@@ -97,7 +97,7 @@ public class PropertyHosting {
                             ? new MethodBody((MethodStructure) id.getComponent())
                             : builder.typeInfo.getMethodById(id).getHead();
 
-                    TypeConstant type = body.asJitFunctionType(pool, builder.thisType);
+                    TypeConstant type = body.asJitFunctionType(pool, ts, builder.thisType);
                     types[j] = type.isMethod() ? pool.bindMethodTarget(type) : type;
                 } else {
                     types[j] = args[j].getType();
@@ -270,7 +270,7 @@ public class PropertyHosting {
         } else {
             name = methodName(methodId);
 
-            TypeConstant targetType = methodId.getClassIdentity().getFormalType().getJitCCType();
+            TypeConstant targetType = methodId.getClassIdentity().getFormalType().getJitCCType(ts);
             desc = method.getJitDesc(builder, targetType);
         }
         return new JitCallDesc(builder.art.CD(), name, desc, JitCallDesc.Kind.Virtual, false, null);
@@ -313,7 +313,7 @@ public class PropertyHosting {
                 }
 
                 bctx.loadCtx(code);
-                if (targetType.isJitCCInterface()) {
+                if (targetType.isJitCCInterface(ts)) {
                     code.invokeinterface(targetCD, name, MD_xvmBoolean);
                 } else {
                     code.invokevirtual(targetCD, name, MD_xvmBoolean);

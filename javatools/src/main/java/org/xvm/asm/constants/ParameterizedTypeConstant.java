@@ -24,6 +24,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
 
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
@@ -804,18 +807,45 @@ public class ParameterizedTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getJitCCType() {
-        assert isSingleUnderlyingClass(true);
-
-        TypeConstant typeJit = m_typeJitCallable;
-        if (typeJit != null) {
-            return typeJit;
+    public ModuleConstant peekJitModuleOwner() {
+        ModuleConstant owner = m_constType.peekJitModuleOwner();
+        if (owner != null) {
+            for (TypeConstant typeParam : m_atypeParams) {
+                if (owner != typeParam.peekJitModuleOwner()) {
+                    return null;
+                }
+            }
         }
+        return owner;
+    }
+
+    @Override
+    public Set<ModuleConstant> collectJitModuleOwners(Set<ModuleConstant> modules) {
+        m_constType.collectJitModuleOwners(modules);
+        for (TypeConstant typeParam : m_atypeParams) {
+            typeParam.collectJitModuleOwners(modules);
+        }
+        return modules;
+    }
+
+    @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        TypeConstant jccType = buildJitCCType(loader.typeSystem);
+        boolean newable = jccType.isNativeRef() || !jccType.isInterfaceType()
+                && !jccType.isTuple() && !jccType.isTypeOfType()
+                && !jccType.isFunction() && !jccType.isMethod()
+                && !jccType.getSingleUnderlyingClass(true).equals(getConstantPool().clzClass())
+                && jccType.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        return new JitInfo(this, loader, jccType, newable ? jccType : null, jccType);
+    }
+
+    private TypeConstant buildJitCCType(TypeSystem ts) {
+        assert isSingleUnderlyingClass(true);
 
         ConstantPool pool = getConstantPool();
         if (isTuple()) {
             // Tuple has a variable number of parameters; every specialization uses nTuple
-            return m_typeJitCallable = pool.typeTuple();
+            return pool.typeTuple();
         }
 
         ClassStructure clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
@@ -836,12 +866,12 @@ public class ParameterizedTypeConstant
             TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
             boolean        fDiff        = false;
 
-            TypeConstant[] atypeCanon = toCallableTypes(atypeParams);
+            TypeConstant[] atypeCanon = toCallableTypes(ts, atypeParams);
             if (atypeCanon != null) {
                 atypeParams = atypeCanon;
                 fDiff       = true;
             }
-            atypeCanon = toCallableTypes(atypeReturns);
+            atypeCanon = toCallableTypes(ts, atypeReturns);
             if (atypeCanon != null) {
                 atypeReturns = atypeCanon;
                 fDiff        = true;
@@ -854,7 +884,7 @@ public class ParameterizedTypeConstant
                     : this;
         }
 
-        TypeConstant typeResolved = typeOrig.getJitCCType();
+        TypeConstant typeResolved = typeOrig.getJitCCType(ts);
         boolean      fTrivial     = true;
 
         // we need to normalize the parameters, since omitted defaults must produce the same JCC as
@@ -867,7 +897,7 @@ public class ParameterizedTypeConstant
             TypeConstant typeParamOriginal = aconstOriginal[i];
             if (typeParamOriginal.isJitPrimitive()) {
                 aconstCanonical = cow(aconstOriginal, aconstCanonical, i,
-                        aconstOriginal[i].getJitCCType());
+                        aconstOriginal[i].getJitCCType(ts));
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);
@@ -880,10 +910,6 @@ public class ParameterizedTypeConstant
                     aconstCanonical = cow(aconstOriginal, aconstCanonical, i, pool.typeObject());
                 } else if (!typeConstraint.equals(typeParamOriginal)) {
                     aconstCanonical = cow(aconstOriginal, aconstCanonical, i, typeConstraint);
-
-                    if (!typeConstraint.equals(pool.typeObject())) {
-                        fTrivial = false;
-                    }
                 }
 
                 if (listContribs == null) {
@@ -906,20 +932,21 @@ public class ParameterizedTypeConstant
             }
         }
 
-        return m_typeJitCallable = fTrivial
+        TypeConstant type = fTrivial
                 ? typeResolved // TerminalTypeConstant
                 : typeResolved == typeOrig && aconstCanonical == m_atypeParams
-                    ? this
-                    : pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical);
+                        ? this
+                        : pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical);
+        return type == this ? this : type.getJitCCType(ts);
     }
 
     /**
      * @return an array of converted callable JIT types; null if no changes were made
      */
-    private TypeConstant[] toCallableTypes(TypeConstant[] atype) {
+    private TypeConstant[] toCallableTypes(TypeSystem ts, TypeConstant[] atype) {
         TypeConstant[] atypeCanonical = atype;
         for (int i = 0, c = atype.length; i < c; ++i) {
-            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getJitCCType());
+            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getJitCCType(ts));
         }
         return atypeCanonical;
     }
@@ -1142,9 +1169,4 @@ public class ParameterizedTypeConstant
      * Cached conversion result.
      */
     private transient TypeConstant m_typeResolvedPrev;
-
-    /**
-     * Cached callable JIT type.
-     */
-    private transient TypeConstant m_typeJitCallable;
 }

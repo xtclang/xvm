@@ -253,6 +253,18 @@ public class PendingTypeConstant
         return "PendingTypeParameter";
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public ModuleConstant peekJitModuleOwner() {
+        return f_typeConstraint.peekJitModuleOwner();
+    }
+
+    @Override
+    public Set<ModuleConstant> collectJitModuleOwners(Set<ModuleConstant> modules) {
+        return f_typeConstraint.collectJitModuleOwners(modules);
+    }
+
     // ----- data fields ---------------------------------------------------------------------------
 
     private final TypeConstant f_typeConstraint;

@@ -715,7 +715,7 @@ public abstract class OpCallable extends Op {
                 cdTarget   = bctx.builder.getCCDesc(typeTarget);
                 sJitName   = infoMethod.ensureJitMethodName(ts);
                 jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
-                fInterface = typeTarget.isJitCCInterface();
+                fInterface = typeTarget.isJitCCInterface(bctx.typeSystem);
                 fCond      = infoMethod.isConditionalReturn(infoTarget);
             } else {
                 callSuper  = bctx.resolveSuperCall();
@@ -814,7 +814,7 @@ public abstract class OpCallable extends Op {
                 TypeConstant typeImpl = body.resolveDeclaringType(pool, typeTarget);
 
                 cdTarget   = typeImpl.getJitImplDesc(ts);
-                fInterface = typeImpl.isJitImplInterface();
+                fInterface = typeImpl.isJitImplInterface(bctx.typeSystem);
                 jmdCall    = infoMethod.getJitDesc(builder, typeImpl);
             }
         } else {
@@ -1110,7 +1110,7 @@ public abstract class OpCallable extends Op {
         bctx.loadThis(code);
 
         TypeConstant typeReceiver = jmdCtor.typeTarget;
-        if (VirtualChildBuilder.isHardLeft(typeReceiver) && bctx.thisType.isJitCCInterface()) {
+        if (VirtualChildBuilder.isHardLeft(typeReceiver) && bctx.thisType.isJitCCInterface(bctx.typeSystem)) {
             // a hard-left constructor requires a concrete receiver; e.g. a super-constructor call
             // from D.C0 to B.C0 loads "this" as D_iC0, so the verifier requires a cast to B_C0
             code.checkcast(typeReceiver.getJitCCDesc(bctx.typeSystem));
