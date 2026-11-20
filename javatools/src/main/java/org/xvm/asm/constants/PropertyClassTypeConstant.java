@@ -480,7 +480,7 @@ public class PropertyClassTypeConstant
 
     @Override
     protected JitInfo buildJitInfo(ModuleLoader loader) {
-        return new JitInfo(this, loader, this, this, this);
+        return new JitInfo(this, loader, this, true);
     }
 
     @Override

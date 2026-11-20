@@ -120,7 +120,7 @@ public class JitTypeDesc {
      */
     public static ClassDesc getWidenedClass(Builder builder, TypeConstant type) {
         // annotated types are always widened (rule V.4 at "jit_class_names.txt" spec)
-        return type.isSingleUnderlyingClass(true) && !type.getJitCCType(builder.typeSystem).isAnnotated()
+        return type.isSingleUnderlyingClass(true) && !type.getJitType(builder.typeSystem).isAnnotated()
                 ? null
                 : type.getJitCCDesc(builder.typeSystem);
     }

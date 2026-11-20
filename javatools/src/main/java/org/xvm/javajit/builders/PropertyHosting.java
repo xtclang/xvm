@@ -270,7 +270,7 @@ public class PropertyHosting {
         } else {
             name = methodName(methodId);
 
-            TypeConstant targetType = methodId.getClassIdentity().getFormalType().getJitCCType(ts);
+            TypeConstant targetType = methodId.getClassIdentity().getFormalType().getJitType(ts);
             desc = method.getJitDesc(builder, targetType);
         }
         return new JitCallDesc(builder.art.CD(), name, desc, JitCallDesc.Kind.Virtual, false, null);

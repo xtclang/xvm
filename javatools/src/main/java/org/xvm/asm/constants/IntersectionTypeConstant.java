@@ -720,9 +720,8 @@ public class IntersectionTypeConstant
 
     @Override
     protected JitInfo buildJitInfo(ModuleLoader loader) {
-        TypeConstant jccType = combineJitType(loader.typeSystem, m_constType1, m_constType2);
-        boolean newable = jccType.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
-        return new JitInfo(this, loader, jccType, newable ? jccType : null, jccType);
+        TypeConstant type = combineJitType(loader.typeSystem, m_constType1, m_constType2);
+        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false));
     }
 
     private static TypeConstant combineJitType(TypeSystem ts, TypeConstant type1, TypeConstant type2) {
@@ -734,16 +733,16 @@ public class IntersectionTypeConstant
         }
 
         if (type1.isJitPrimitive()) {
-            return type1.getJitCCType(ts);
+            return type1.getJitType(ts);
         }
         if (type2.isJitPrimitive()) {
-            return type2.getJitCCType(ts);
+            return type2.getJitType(ts);
         }
 
         // while the original intersection contributions are not assignable to each other, the
         // canonical types might be
-        type1 = type1.getJitCCType(ts);
-        type2 = type2.getJitCCType(ts);
+        type1 = type1.getJitType(ts);
+        type2 = type2.getJitType(ts);
         return type2.isA(type1)    ? type1
                 : type1.isA(type2) ? type2
                 : type2.getConstantPool().typeObject();

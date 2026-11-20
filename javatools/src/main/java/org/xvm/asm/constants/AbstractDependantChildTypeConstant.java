@@ -73,8 +73,7 @@ public abstract class AbstractDependantChildTypeConstant
     @Override
     protected JitInfo buildJitInfo(ModuleLoader loader) {
         TypeConstant type = removeAutoNarrowing();
-        boolean newable = type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
-        return new JitInfo(this, loader, type, newable ? type : null, type);
+        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false));
     }
 
     // ----- TypeConstant methods ------------------------------------------------------------------
