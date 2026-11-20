@@ -1974,12 +1974,12 @@ public class TerminalTypeConstant
         }
 
         type = removeAutoNarrowing();
-        boolean newable = isNativeRef() || !isInterfaceType() && !isTuple() && !isTypeOfType()
+        boolean fNewable = isNativeRef() || !isInterfaceType() && !isTuple() && !isTypeOfType()
                 && !isFunction() && !isMethod()
                 && !getSingleUnderlyingClass(true).equals(getConstantPool().clzClass())
                 && !Builder.isEmbedded(getExplicitClassFormat())
                 && ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
-        return new JitInfo(this, loader, type, newable ? type : null, type);
+        return new JitInfo(this, loader, type, fNewable);
     }
 
     @Override

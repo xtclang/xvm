@@ -827,7 +827,7 @@ public class MethodBody {
 
         MethodStructure   method = getClassifyingMethodStructure();
         SignatureConstant sig    = method.resolveJitSignature(builder.pool(), builder.typeSystem,
-                typeTarget.getJitCCType(builder.typeSystem));
+                typeTarget.getJitType(builder.typeSystem));
 
         // TODO consider caching this
         return JitMethodDesc.of(builder, typeTarget, JitMethodDesc.flagsFor(method),

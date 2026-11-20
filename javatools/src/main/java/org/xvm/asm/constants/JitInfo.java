@@ -19,25 +19,21 @@ public final class JitInfo {
     /**
      * Construct a JitInfo.
      *
-     * @param type       the type for which this JitInfo exists
-     * @param loader     the ModuleLoader for this type
-     * @param jccType    the "Java Call Class" type
-     * @param jicType    the "Java Instance Class" type
-     * @param jImplType  the "Java Implementation Class" type
+     * @param type    the type for which this JitInfo exists
+     * @param loader  the ModuleLoader for this type
+     * @param jitType the "Java Call Class" type
      */
     public JitInfo(
             TypeConstant type,
             ModuleLoader loader,
-            TypeConstant jccType,
-            TypeConstant jicType,
-            TypeConstant jImplType) {
-        assert type != null && loader != null && jccType != null && jImplType != null;
+            TypeConstant jitType,
+            boolean      isNewable) {
+        assert type != null && loader != null;
 
         this.type      = type;
         this.loader    = loader.weakRef;
-        this.jccType   = jccType;
-        this.jicType   = jicType;
-        this.jImplType = jImplType;
+        this.jitType   = jitType;
+        this.isNewable = isNewable;
     }
 
     /**
@@ -51,7 +47,7 @@ public final class JitInfo {
         assert type != null;
         return this.type == type
                 ? this
-                : new JitInfo(type, loader(), jccType, jicType, jImplType);
+                : new JitInfo(type, loader(), jitType, isNewable);
     }
 
     /**
@@ -59,9 +55,9 @@ public final class JitInfo {
      */
     public JitInfo withoutJic(TypeConstant type) {
         assert type != null;
-        return jicType == null && this.type == type
+        return jitType == null && this.type == type
                 ? this
-                : new JitInfo(type, loader(), jccType, null, jImplType);
+                : new JitInfo(type, loader(), jitType, isNewable);
     }
 
     // ----- fields --------------------------------------------------------------------------------
@@ -80,17 +76,12 @@ public final class JitInfo {
     /**
      * The "Java Call Class" type
      */
-    private final TypeConstant jccType;
+    private final TypeConstant jitType;
 
     /**
-     * The "Java Instance Class" type
+     * Is this type newable.
      */
-    private final TypeConstant jicType;
-
-    /**
-     * The "Java Implementation Class" type
-     */
-    private final TypeConstant jImplType;
+    private final boolean isNewable;
 
     /**
      * The categorization of the JIC, describing how an instance is to be created.
@@ -180,24 +171,17 @@ public final class JitInfo {
     }
 
     /**
-     * @return the "Java Call Class" type
+     * @return the canonical JIT type
      */
-    public TypeConstant jccType() {
-        return jccType;
+    public TypeConstant jitType() {
+        return jitType;
     }
 
     /**
-     * @return the "Java Instance Class" type
+     * @return true iff the JIT type is newable
      */
-    public TypeConstant jicType() {
-        return jicType;
-    }
-
-    /**
-     * @return the "Java Implementation Class" type
-     */
-    public TypeConstant jImplType() {
-        return jImplType;
+    public boolean isNewable() {
+        return isNewable;
     }
 
     /**
@@ -215,9 +199,9 @@ public final class JitInfo {
      * @return true iff the JCC is an interface, indicating the use of the "invokeinterface" op
      */
     public boolean jccInterface() {
-        return jccType instanceof PropertyClassTypeConstant property
+        return jitType instanceof PropertyClassTypeConstant property
                 ? property.getRefType().isJitCCInterface(typeSystem())
-                : jccType.isDerivedVirtualChildClass() || jccType.isJitImplInterfaceType();
+                : jitType.isDerivedVirtualChildClass() || jitType.isJitImplInterfaceType();
     }
 
     /**
@@ -235,7 +219,7 @@ public final class JitInfo {
      * @return the "Java Instance Class" name
      */
     public String jicName() {
-        if (jicType == null) {
+        if (!isNewable) {
             return null;
         }
 
@@ -281,42 +265,42 @@ public final class JitInfo {
     // ----- internal ------------------------------------------------------------------------------
 
     private JICForm computeJicForm() {
-        if (jicType == null) {
+        if (jitType == null) {
             return JICForm.Abstract;
         }
 
-        if (jicType instanceof PropertyClassTypeConstant) {
+        if (jitType instanceof PropertyClassTypeConstant) {
             return JICForm.Simple;
         }
 
-        boolean hasOuter = jicType.getSingleUnderlyingClass(true).getComponent()
+        boolean hasOuter = jitType.getSingleUnderlyingClass(true).getComponent()
                 instanceof ClassStructure clz && clz.isInstanceChild();
-        return jicType.hasJitRuntimeType()
+        return jitType.hasJitRuntimeType()
                 ? hasOuter ? JICForm.GenericChild : JICForm.Generic
                 : hasOuter ? JICForm.Child        : JICForm.Simple;
     }
 
     private String computeJccName() {
-        if (jccType instanceof PropertyClassTypeConstant property) {
+        if (jitType instanceof PropertyClassTypeConstant property) {
             return property.isNativeRebase()
-                    ? jicType == null ? buildPropertyClassName(property) : jicName()
+                    ? jitType == null ? buildPropertyClassName(property) : jicName()
                     : property.getRefType().getJitCCName(typeSystem());
         }
-        String name = buildJitName(jccType.removeAnnotations());
-        return jccType.isDerivedVirtualChildClass() ? TypeSystem.pureInterface(name) : name;
+        String name = buildJitName(jitType.removeAnnotations());
+        return jitType.isDerivedVirtualChildClass() ? TypeSystem.pureInterface(name) : name;
     }
 
     private String computeJicName() {
-        return jicType instanceof PropertyClassTypeConstant property
+        return jitType instanceof PropertyClassTypeConstant property
                 ? buildPropertyClassName(property)
-                : buildJitName(jicType);
+                : buildJitName(jitType);
     }
 
     private String computeJImplName() {
-        if (jImplType instanceof PropertyClassTypeConstant property) {
-            return jicType == jImplType ? jicName() : buildPropertyClassName(property);
+        if (jitType instanceof PropertyClassTypeConstant property) {
+            return jitType == jitType ? jicName() : buildPropertyClassName(property);
         }
-        return buildJitName(jImplType);
+        return buildJitName(jitType);
     }
 
     private String buildPropertyClassName(PropertyClassTypeConstant property) {

@@ -574,21 +574,16 @@ public class AnnotatedTypeConstant
 
     @Override
     protected JitInfo buildJitInfo(ModuleLoader loader) {
-        TypeSystem ts = loader.typeSystem;
+        TypeSystem   ts   = loader.typeSystem;
         TypeConstant type = AnnotationHelper.filterAnnotations(this);
         if (type != this) {
             return type.ensureJitInfo(ts).withType(this);
         }
 
-        JitInfo      underlying = getUnderlyingType().ensureJitInfo(ts);
-        ConstantPool pool       = getConstantPool();
-        TypeConstant jccType    = pool.ensureAnnotatedTypeConstant(getAnnotationClass(),
-                Constant.NO_CONSTS, underlying.jccType());
-        TypeConstant jicType    = underlying.jicType() == null ? null : pool.ensureAnnotatedTypeConstant(
-                getAnnotationClass(), Constant.NO_CONSTS, underlying.jicType());
-        TypeConstant jImplType  = pool.ensureAnnotatedTypeConstant(getAnnotationClass(),
-                Constant.NO_CONSTS, underlying.jImplType());
-        return new JitInfo(this, loader, jccType, jicType, jImplType);
+        JitInfo      jitInfo = getUnderlyingType().ensureJitInfo(ts);
+        TypeConstant jitType = loader.module.getConstantPool().
+                ensureAnnotatedTypeConstant(getAnnotationClass(), Constant.NO_CONSTS, jitInfo.jitType());
+        return new JitInfo(this, loader, jitType, jitInfo.isNewable());
     }
 
     // ----- type comparison support ---------------------------------------------------------------

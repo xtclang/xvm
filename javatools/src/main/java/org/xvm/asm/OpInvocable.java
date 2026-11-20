@@ -462,7 +462,7 @@ public abstract class OpInvocable extends Op {
         if (isPropCall) {
             call = hosting.resolveCall(infoMethod);
         } else {
-            if (typeTarget.getJitCCType(bctx.typeSystem).isAnnotated()) {
+            if (typeTarget.getJitType(bctx.typeSystem).isAnnotated()) {
                 // annotated targets are widened; dispatch through the declaring callable contract
                 typeInvoke = bodyHead.resolveDeclaringType(bctx.pool(), typeTarget);
                 cdInvoke   = bctx.builder.getCCDesc(typeInvoke);

@@ -83,22 +83,22 @@ public class CastTypeConstant
     @Override
     protected JitInfo buildJitInfo(ModuleLoader loader) {
         TypeSystem   ts       = loader.typeSystem;
-        TypeConstant typeBase = getBaseType().getJitCCType(ts);
-        TypeConstant typeCast = getUnderlyingType2().getJitCCType(ts);
+        TypeConstant typeBase = getBaseType().getJitType(ts);
+        TypeConstant typeCast = getUnderlyingType2().getJitType(ts);
 
         // the code below could be written mush simpler, but first, we want to isolate the
         // simplest paths and there is a possibility we need to do something special the
         // "orthogonal" scenario at the bottom
         if (typeBase.isA(typeCast)) {
-            return new JitInfo(this, loader, typeBase, typeBase, typeBase);
+            return new JitInfo(this, loader, typeBase, typeBase.ensureTypeInfo().isNewable(false));
         }
         if (typeCast.isA(typeBase)) {
-            return new JitInfo(this, loader, typeCast, typeCast, typeCast);
+            return new JitInfo(this, loader, typeCast, typeCast.ensureTypeInfo().isNewable(false));
         }
 
         // the types are orthogonal; keep the base, since this is what the JIT compiler knows;
         // it will have to cast the targets...
-        return new JitInfo(this, loader, typeBase, typeBase, typeBase);
+        return new JitInfo(this, loader, typeBase, typeBase.ensureTypeInfo().isNewable(false));
     }
 
     // ----- Constant methods ----------------------------------------------------------------------

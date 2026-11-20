@@ -170,7 +170,7 @@ public class BuildContext {
         this.className       = builder.art.className();
         this.typeInfo        = typeInfo;
         this.thisType        = thisType;
-        this.jitType         = thisType.getJitCCType(typeSystem);
+        this.jitType         = thisType.getJitType(typeSystem);
         this.callChain       = methodInfo.ensureOptimizedMethodChain(typeInfo);
         this.methodStruct    = callChain[callDepth].getMethodStructure();
         this.callDepth       = callDepth;
@@ -202,7 +202,7 @@ public class BuildContext {
         this.className       = builder.art.className();
         this.typeInfo        = typeInfo;
         this.thisType        = typeInfo.getType();
-        this.jitType         = thisType.getJitCCType(typeSystem);
+        this.jitType         = thisType.getJitType(typeSystem);
         this.callDepth       = 0;
         MethodBody[] chain   = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
