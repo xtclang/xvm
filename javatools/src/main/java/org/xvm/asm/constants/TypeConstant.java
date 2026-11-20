@@ -7342,7 +7342,7 @@ public abstract class TypeConstant
         if (isModifyingType()) {
             return getUnderlyingType().collectJitModuleOwners(modules);
         }
-        throw new UnsupportedOperationException("type=" + this);
+        throw new UnsupportedOperationException("type=" + this.getValueString());
     }
 
     boolean isJitImplInterfaceType() {
@@ -7351,10 +7351,10 @@ public abstract class TypeConstant
     }
 
     /**
-     * Determine the JIT canonical type C(T) for an arbitrary Ecstasy type represents a type that
-     * JIT compiler uses to compute "JIT Call Class Name" and "JIT Instance Class Name" for Java
-     * variables and properties that hold non-primitive instances of the corresponding type. It's
-     * the minimal (the widest) type that produces the same JCC(T) and JIC(T).
+     * Determine the JIT canonical type C(T) for an arbitrary Ecstasy type T, representing a type
+     * that the JIT compiler uses to compute "JIT Call Class Name" (JCC), "JIT Instance Class Name"
+     * (JIC), and "JIT implementation Class Name" ("JImpl") for Java variables and properties (etc.)
+     * that hold non-primitive instances of the corresponding type.
      *
      * <p>The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying
      * class} that can be parameterized by non-parameterized callable JIT types as parameters.
@@ -7690,14 +7690,15 @@ public abstract class TypeConstant
         }
 
         // TODO review / change
-        if ((cd = JitTypeDesc.getWidenedClass(builder, this)) != null) {
+        if ((cd = JitTypeDesc.getWidenedClass(ts, this)) != null) {
             return new JitTypeDesc(getJitType(ts), Widened, cd);
         }
 
         assert isSingleUnderlyingClass(true);
 
-        // TODO review / change
+        // TODO review / change - currently hacked to allow some array support
         return new JitTypeDesc(getJitType(ts), Specific, builder.getCCDesc(this));
+//        return new JitTypeDesc(getJitType(ts), Specific, getJitCCDesc(ts));
     }
 
     /**

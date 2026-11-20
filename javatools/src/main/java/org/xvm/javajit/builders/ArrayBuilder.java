@@ -45,6 +45,7 @@ public class ArrayBuilder extends AugmentingBuilder {
 
     @Override
     public ClassDesc getCCDesc(TypeConstant type) {
+        // TODO get rid of this override
         if (isBaseArrayType(type)) {
             return CD_Array;
         }
