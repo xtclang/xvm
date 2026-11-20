@@ -38,9 +38,10 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 ## Composite build semantics
 
 - `settings.gradle.kts` is an aggregator root; root `build` is an aggregate lifecycle over the included builds.
-- Always included: `javatools`, `javatools_jitbridge`, `javatools_utils`, `javatools_unicode`, `plugin`, `xdk`, `docker`.
-- Optional builds are gated by `includeBuildLang` / `includeBuildManualTests` (visibility) and attached to the
-  root lifecycle by `includeBuildAttachLang` / `includeBuildAttachManualTests`. All default to `false`.
+- Always included: `javatools`, `javatools_jitbridge`, `javatools_utils`, `javatools_unicode`, `plugin`, `xdk`, `docker`,
+  `manualTests`; all of them are attached to the root lifecycle.
+- `lang` is optional: included by `includeBuildLang` (visibility) and attached to the root lifecycle by
+  `includeBuildAttachLang`. Both default to `false`.
 - `manualTests` is a fake third-party consumer build that verifies published/composite plugin+XDK behavior.
 - Running any `:lang:*` task from root needs BOTH flags (either one alone fails with "project ':lang' not found"):
 

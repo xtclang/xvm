@@ -1,7 +1,6 @@
 /**
  * Constant Boolean results must still evaluate a runtime left operand exactly once.
  * Run: ./gradlew :manualTests:runOne -PtestName=TestConditionalEffects
- *      -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true
  */
 module TestConditionalEffects {
     void run() {

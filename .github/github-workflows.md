@@ -927,12 +927,9 @@ gh workflow run commit.yml \
 ./gradlew manualTests:runXtc
 ```
 
-**Environment Configuration**:
-```groovy
-// In settings.gradle.kts or gradle.properties
-org.gradle.project.includeBuildManualTests=true
-org.gradle.project.includeBuildAttachManualTests=true
-```
+`manualTests` is always part of the build and attached to its lifecycle. `./gradlew build` compiles its modules but
+does not run the manual tests; run those explicitly with the tasks above (`runXtc`, `runOne -PtestName=...`, etc.).
+The only test `check` runs there is the `xunit_demo` xunit module, via `testXtc`.
 
 ---
 

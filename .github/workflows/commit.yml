@@ -84,10 +84,6 @@ on:
                 default: false
 
 env:
-    # Add manual tests as included builds - defaults to true for push/PR and for workflow_dispatch
-    # unless manual tests are explicitly skipped. This must not depend on include-lang.
-    ORG_GRADLE_PROJECT_includeBuildManualTests: ${{ github.event_name != 'workflow_dispatch' || !(github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true') }}
-    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ github.event_name != 'workflow_dispatch' || !(github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true') }}
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
     RUN_INTEGRATION_TESTS: true
 
@@ -559,6 +555,12 @@ jobs:
                 # Root check includes spotlessCheck; CI disables the local automatic spotlessApply.
                 BUILD_TASKS="distZip check :plugin:compileJava"
                 BUILD_PROPS="-Porg.xtclang.java.test.failFast=true -Porg.xtclang.plugin.java.lint=true"
+                # Every build compiles manualTests but does not run the manual tests; check runs only its xunit_demo
+                # module, via testXtc. skip-tests detaches manualTests from this build, so it is not compiled and
+                # xunit_demo does not run. The manual tests step below is skipped too.
+                if [ "${{ env.skip_manual_tests }}" == "true" ]; then
+                    BUILD_PROPS="$BUILD_PROPS -PincludeBuildAttachManualTests=false"
+                fi
                 BUILD_JVM_ARGS=""
                 CONSUMER_REPO_DIR="$PWD/ci-artifacts/consumer-maven-repo"
                 SNAPSHOT_REPO_DIR="$PWD/ci-artifacts/snapshot-maven-repo"
