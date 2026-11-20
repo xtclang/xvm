@@ -34,6 +34,19 @@ public class TypeSequenceTypeConstant
         super(pool);
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public ModuleConstant peekJitModuleOwner() {
+        return getConstantPool().modEcstasy();
+    }
+
+    @Override
+    public Set<ModuleConstant> collectJitModuleOwners(Set<ModuleConstant> modules) {
+        modules.add(getConstantPool().modEcstasy());
+        return modules;
+    }
+
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override

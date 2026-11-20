@@ -39,7 +39,7 @@ import static org.xvm.javajit.JitFlavor.Specific;
 public class RefBuilder extends CommonBuilder {
     public RefBuilder(TypeSystem typeSystem, Artifact art) {
         super(typeSystem, art);
-        assert jitType.isJitAnnotatedRef();
+        assert jitType.isJitAnnotatedRef(typeSystem);
     }
 
     @Override

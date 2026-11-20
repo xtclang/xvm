@@ -155,11 +155,13 @@ public class ModuleStructure
     public Map<ModuleConstant, Boolean> getDependencies() {
         Map<ModuleConstant, Boolean> mapDependencies = m_mapDependencies;
         if (mapDependencies == null) {
-            mapDependencies = m_mapDependencies = collectModuleDependencies();
+            mapDependencies = collectModuleDependencies();
+            if (isReadOnly()) {
+                mapDependencies = Collections.unmodifiableMap(mapDependencies);
+            }
+            m_mapDependencies = mapDependencies;
         }
-        return isReadOnly()
-                ? Collections.unmodifiableMap(mapDependencies)
-                : mapDependencies;
+        return mapDependencies;
     }
 
     /**
@@ -781,7 +783,8 @@ public class ModuleStructure
 
     @Override
     protected void markModified() {
-        m_abDigest = null;
+        m_abDigest        = null;
+        m_mapDependencies = null;
         super.markModified();
     }
 

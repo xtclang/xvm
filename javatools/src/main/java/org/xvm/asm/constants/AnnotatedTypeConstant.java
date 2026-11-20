@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.function.Consumer;
 
@@ -19,6 +20,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.builders.AnnotationHelper;
 
 import org.xvm.runtime.ClassTemplate;
@@ -556,25 +559,36 @@ public class AnnotatedTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getJitCCType() {
-        TypeConstant type = AnnotationHelper.filterAnnotations(this);
-        if (type == this) {
-            TypeConstant typeUnderlying = getUnderlyingType().getJitCCType();
-
-            // strip parameters
-            return getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
-                            Constant.NO_CONSTS, typeUnderlying);
-        }
-        return type.getJitCCType();
+    public ModuleConstant peekJitModuleOwner() {
+        ModuleConstant module1 = m_constType.peekJitModuleOwner();
+        ModuleConstant module2 = getAnnotationClass().getModuleConstant();
+        return module1 == module2 ? module1 : null;
     }
 
     @Override
-    public TypeConstant getJitICType() {
-        TypeConstant typeUnderlying = getUnderlyingType().getJitICType();
+    public Set<ModuleConstant> collectJitModuleOwners(Set<ModuleConstant> modules) {
+        m_constType.collectJitModuleOwners(modules);
+        modules.add(getAnnotationClass().getModuleConstant());
+        return modules;
+    }
 
-        // strip parameters
-        return getConstantPool().ensureAnnotatedTypeConstant(getAnnotationClass(),
-                        Constant.NO_CONSTS, typeUnderlying);
+    @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        TypeSystem ts = loader.typeSystem;
+        TypeConstant type = AnnotationHelper.filterAnnotations(this);
+        if (type != this) {
+            return type.ensureJitInfo(ts).withType(this);
+        }
+
+        JitInfo      underlying = getUnderlyingType().ensureJitInfo(ts);
+        ConstantPool pool       = getConstantPool();
+        TypeConstant jccType    = pool.ensureAnnotatedTypeConstant(getAnnotationClass(),
+                Constant.NO_CONSTS, underlying.jccType());
+        TypeConstant jicType    = underlying.jicType() == null ? null : pool.ensureAnnotatedTypeConstant(
+                getAnnotationClass(), Constant.NO_CONSTS, underlying.jicType());
+        TypeConstant jImplType  = pool.ensureAnnotatedTypeConstant(getAnnotationClass(),
+                Constant.NO_CONSTS, underlying.jImplType());
+        return new JitInfo(this, loader, jccType, jicType, jImplType);
     }
 
     // ----- type comparison support ---------------------------------------------------------------

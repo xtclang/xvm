@@ -32,6 +32,7 @@ import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyBody.Effect;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -984,7 +985,15 @@ public class UnionTypeConstant
         code.labelBinding(lblEnd);
     }
 
-    // ----- run-time support ----------------------------------------------------------------------
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        TypeConstant object = loader.typeSystem.pool().typeObject(); // TODO GG
+        return object.ensureJitInfo(loader.typeSystem).withoutJic(this);
+    }
+
+    // ----- interpreter support -------------------------------------------------------------------
 
     @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {

@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.function.Consumer;
 
@@ -171,6 +172,13 @@ public class PropertyClassTypeConstant
                 ? getConstantPool().register(new PropertyClassTypeConstant(
                         getConstantPool(), m_typeParent, m_idProp, false))
                 : this;
+    }
+
+    /**
+     * @return true iff the property type is a "native rebase" (runtime only)
+     */
+    boolean isNativeRebase() {
+        return f_fNativeRebase;
     }
 
     // ----- TypeConstant methods ------------------------------------------------------------------
@@ -457,54 +465,37 @@ public class PropertyClassTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getJitCCType() {
-        return this;
+    public ModuleConstant peekJitModuleOwner() {
+        ModuleConstant module1 = getParentType().peekJitModuleOwner();
+        ModuleConstant module2 = m_idProp.getModuleConstant();
+        return module1 == module2 ? module1 : null;
     }
 
     @Override
-    public TypeConstant getJitICType() {
-        return this;
+    public Set<ModuleConstant> collectJitModuleOwners(Set<ModuleConstant> modules) {
+        getParentType().collectJitModuleOwners(modules);
+        modules.add(m_idProp.getModuleConstant());
+        return modules;
     }
 
     @Override
-    public String getJitCCName(TypeSystem ts) {
-        return f_fNativeRebase ? getJitICName(ts) : getRefType().getJitCCName(ts);
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        return new JitInfo(this, loader, this, this, this);
     }
 
     @Override
-    public boolean isJitL2Specialized() {
-        return getRefType().isJitL2Specialized();
+    public boolean isJitL2Specialized(TypeSystem ts) {
+        return getRefType().isJitL2Specialized(ts);
     }
 
     @Override
-    public boolean isJitAnnotatedRef() {
-        return getRefType().isJitAnnotatedRef();
+    public boolean isJitAnnotatedRef(TypeSystem ts) {
+        return getRefType().isJitAnnotatedRef(ts);
     }
 
     @Override
-    public String getJitICName(TypeSystem ts) {
-        ModuleLoader loader  = ts.findOwnerLoader(getParentType());
-        TypeConstant type    = loader.typeSystem.pool().register(asStandardRef());
-        StringBuilder sbName = new StringBuilder(getProperty().getClassJitName(ts));
-
-        TypeSystem.appendJitSuffix(sbName, type.getPosition());
-
-        return loader.prefix + TypeSystem.escapeJitName(sbName.toString(), true);
-    }
-
-    @Override
-    public String getJitImplName(TypeSystem ts) {
-        return getJitICName(ts);
-    }
-
-    @Override
-    public boolean isJitImplInterface() {
+    public boolean isJitImplInterface(TypeSystem ts) {
         return false;
-    }
-
-    @Override
-    public boolean isJitCCInterface() {
-        return getRefType().isJitCCInterface();
     }
 
     // ----- run-time support ----------------------------------------------------------------------

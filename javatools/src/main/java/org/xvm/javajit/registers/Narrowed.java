@@ -142,7 +142,7 @@ public class Narrowed
         if (type.isA(this.type())) {
             return super.store(bctx, code, type);
         } else {
-            assert type.isA(original().type()) || type.isJitAssignableTo(original().type());
+            assert type.isA(original().type()) || type.isJitAssignableTo(bctx.typeSystem, original().type());
             RegisterInfo origReg = bctx.resetRegister(this).store(bctx, code, type);
             return bctx.narrowRegister(code, origReg, type);
         }

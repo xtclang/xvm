@@ -14,6 +14,9 @@ import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
+
+import org.xvm.javajit.ModuleLoader;
 
 /**
  * A base class for TypeConstants based on the parent's type and a child class structure.
@@ -50,6 +53,29 @@ public abstract class AbstractDependantChildTypeConstant
      * @return the child ClassStructure associated with this type
      */
     protected abstract ClassStructure getChildStructure();
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public ModuleConstant peekJitModuleOwner() {
+        ModuleConstant module1 = getParentType().peekJitModuleOwner();
+        ModuleConstant module2 = getChildStructure().getIdentityConstant().getModuleConstant();
+        return module1 == module2 ? module1 : null;
+    }
+
+    @Override
+    public Set<ModuleConstant> collectJitModuleOwners(Set<ModuleConstant> modules) {
+        getParentType().collectJitModuleOwners(modules);
+        modules.add(getChildStructure().getIdentityConstant().getModuleConstant());
+        return modules;
+    }
+
+    @Override
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        TypeConstant type = removeAutoNarrowing();
+        boolean newable = type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        return new JitInfo(this, loader, type, newable ? type : null, type);
+    }
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
