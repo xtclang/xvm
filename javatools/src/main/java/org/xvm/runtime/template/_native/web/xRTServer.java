@@ -37,6 +37,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
 
+import org.eclipse.jetty.http.HostPortHttpField;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 
@@ -496,10 +497,10 @@ public class xRTServer
      * Implementation of "conditional (String, Uint16) getHostInfo(RequestContext context)" method.
      */
     private int invokeGetHostInfo(Frame frame, HttpContextHandle hCtx, int[] aiResult) {
-        Request request = hCtx.f_request;
-        String  sHost   = request.getHeaders().get(HttpHeader.HOST);
-        String  sName   = extractHostName(sHost);
-        int     nPort   = extractHostPort(sHost, request);
+        Request           request = hCtx.f_request;
+        HostPortHttpField host    = (HostPortHttpField) request.getHeaders().getField(HttpHeader.HOST);
+        String            sName   = extractHostName(host);
+        int               nPort   = extractHostPort(host, request.isSecure());
 
         return sName == null
             ? frame.assignValue(aiResult[0], xBoolean.FALSE)
@@ -632,6 +633,9 @@ public class xRTServer
 
         try {
             synchronized (hCtx) {
+                if (hCtx.m_stage == Stage.COMPLETED) {
+                    throw new IOException("HTTP exchange already completed");
+                }
                 if (hCtx.m_stage != Stage.OPEN) {
                     throw new IOException("HTTP response already started");
                 }
@@ -683,25 +687,21 @@ public class xRTServer
         return frame.raiseException(xException.obscureIoException(frame, cause.getMessage()));
     }
 
-    private static String extractHostName(String sHost) {
-        if (sHost != null) {
-            int ofPort = sHost.lastIndexOf(':');
-            if (ofPort >= 0) {
-                sHost = sHost.substring(0, ofPort);
-            }
+    private static String extractHostName(HostPortHttpField host) {
+        if (host == null) {
+            return null;
         }
-        return sHost;
+
+        // match HostInfo.host.toString(), which omits IPv6 brackets
+        String sName = host.getHost();
+        return sName != null && sName.startsWith("[")
+                ? sName.substring(1, sName.length() - 1)
+                : sName;
     }
 
-    private static int extractHostPort(String sHost, Request request) {
-        if (sHost == null) {
-            return Request.getRemotePort(request);
-        }
-
-        int ofPort = sHost.lastIndexOf(':');
-        return ofPort >= 0
-            ? Integer.valueOf(sHost.substring(ofPort + 1))
-            : request.isSecure() ? 443 : 80;
+    private static int extractHostPort(HostPortHttpField host, boolean fTls) {
+        int nDefaultPort = fTls ? 443 : 80;
+        return host == null ? nDefaultPort : host.getPort(nDefaultPort);
     }
 
     // ----- helper classes ------------------------------------------------------------------------
@@ -890,13 +890,14 @@ public class xRTServer
 
         @Override
         public boolean handle(Request request, Response response, Callback callback) {
-            String    sHost = request.getHeaders().get(HttpHeader.HOST);
-            String    sName = extractHostName(sHost);
-            int       nPort = extractHostPort(sHost, request);
-            boolean   fTls  = request.isSecure();
-            RouteInfo route = sName == null ? null : getRoute(sName);
+            boolean           fTls  = request.isSecure();
+            HostPortHttpField host  = (HostPortHttpField) request.getHeaders().getField(HttpHeader.HOST);
+            String            sName = extractHostName(host);
+            int               nPort = extractHostPort(host, fTls);
+            RouteInfo         route = sName == null ? null : getRoute(sName);
 
             if (route == null || nPort != (fTls ? route.nHttpsPort : route.nHttpPort)) {
+                String sHost = host == null ? null : host.getValue();
                 System.err.println(Handy.logTime() + " Trace: Request for unregistered route: "
                     + (fTls ? "https://" : "http://") + sHost + request.getHttpURI().getPathQuery() + " from "
                     + Request.getRemoteAddr(request));
@@ -1014,6 +1015,8 @@ public class xRTServer
             f_callback = callback;
             m_fMutable = false;
 
+            // allow slow handlers; pending reads and writes still time out
+            request.addIdleTimeoutListener(_ -> false);
             request.addFailureListener(this::complete);
         }
 
@@ -1069,7 +1072,7 @@ public class xRTServer
                 }
                 m_stage = Stage.COMPLETED;
                 reader  = m_reader;
-                if (reader == null && m_chunk != null) {
+                if (m_chunk != null) {
                     m_chunk.release();
                     m_chunk = null;
                 }
