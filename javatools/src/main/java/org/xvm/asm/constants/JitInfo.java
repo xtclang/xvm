@@ -19,9 +19,10 @@ public final class JitInfo {
     /**
      * Construct a JitInfo.
      *
-     * @param type    the type for which this JitInfo exists
-     * @param loader  the ModuleLoader for this type
-     * @param jitType the "Java Call Class" type
+     * @param type       the type for which this JitInfo exists
+     * @param loader     the ModuleLoader for this type
+     * @param jitType    the canonical JIT type
+     * @param isNewable  true iff the type represents an instantiable class
      */
     public JitInfo(
             TypeConstant type,
