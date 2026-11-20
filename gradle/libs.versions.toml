@@ -135,6 +135,7 @@ foojay-resolver = { id = "org.gradle.toolchains.foojay-resolver", version.ref = 
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
 
 # =============================================================================
 # Lang tooling plugins
@@ -233,7 +234,9 @@ lang-intellij-junit4-compat = { module = "junit:junit", version.ref = "lang-inte
 # =============================================================================
 # apache-commons-compress and tukaani-xz are also on the build-logic classpath
 # for downloading/extracting native artifacts.
+apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "apache-commons-compress" }
 lang-jtreesitter = { module = "io.github.tree-sitter:jtreesitter", version.ref = "lang-jtreesitter" }
+tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
 
 # =============================================================================
 # Lang tooling - Gradle plugin classpath floors (see version comment above)
