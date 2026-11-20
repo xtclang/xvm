@@ -9,8 +9,6 @@ import java.io.OutputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 
-import java.time.Instant;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -235,7 +233,8 @@ public class ModuleStructure
     /**
      * Determine the directory path that contains the module. The path is in the format of the
      * machine that compiled the module; in other words, it might look like "c:\dev\prj\", or it
-     * might look like "/development/prj/", or any other valid format.
+     * might look like "/development/prj/", or any other valid format. The compiler does not
+     * record the directory, so that a module's bytes do not depend on where it was compiled.
      *
      * @return the literal constant indicating the source directory, or null
      */
@@ -257,8 +256,8 @@ public class ModuleStructure
     }
 
     /**
-     * Determine the date/time that the module was created. The compiler records the epoch, so that the
-     * same source compiles to the same bytes, unless it was asked for a time ({@code --timestamp}).
+     * Determine the date/time that the module was created. The compiler records none unless it is
+     * asked for one ({@code --timestamp}), so that the same source compiles to the same bytes.
      *
      * @return the literal constant indicating the compilation timestamp, or null
      */
@@ -277,6 +276,17 @@ public class ModuleStructure
             m_constTimestamp = constTimestamp;
             markModified();
         }
+    }
+
+    /**
+     * Remove what the API of the module leaves out: the time it was built and the directory it
+     * was compiled from.
+     *
+     * @see FileStructure#writeApi
+     */
+    void stripToApi() {
+        setTimestamp(null);
+        setSourceDir(null);
     }
 
     /**
@@ -948,8 +958,7 @@ public class ModuleStructure
 
         sb.append(", source-dir=")
           .append(m_constDir == null ? "none" : m_constDir.getValueString());
-        if (m_constTimestamp != null && !Instant.EPOCH.toString().equals(m_constTimestamp.getValue())) {
-            // only a time that was asked for; the epoch says nothing
+        if (m_constTimestamp != null) {
             sb.append(", timestamp=")
               .append(m_constTimestamp.getValueString());
         }

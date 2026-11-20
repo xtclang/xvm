@@ -14,7 +14,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
-import java.time.Instant;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -54,26 +56,12 @@ public class FileStructure
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a file structure that will initially contain one module, stamped with the current
-     * wall-clock time as its creation timestamp.
+     * Construct a file structure that will initially contain one module. The module has no
+     * creation timestamp; {@link ModuleStructure#setTimestamp} gives it one.
      *
      * @param sModule   the fully qualified module name
      */
     public FileStructure(String sModule) {
-        this(sModule, Instant.now());
-    }
-
-    /**
-     * Construct a file structure that will initially contain one module, stamped with the
-     * specified creation timestamp. Passing an explicit timestamp gives the caller complete
-     * control over the generated content, making the produced binary reproducible: the same
-     * module contents and the same timestamp yield byte-identical output.
-     *
-     * @param sModule    the fully qualified module name
-     * @param timestamp  the creation timestamp to stamp the module with; null is recorded as the
-     *                   epoch
-     */
-    public FileStructure(String sModule, Instant timestamp) {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
         // module name required
@@ -85,7 +73,6 @@ public class FileStructure
         ConstantPool    pool     = new ConstantPool(this);
         ModuleConstant  idModule = pool.ensureModuleConstant(sModule);
         ModuleStructure module   = new ModuleStructure(this, idModule);
-        module.setTimestamp(pool.ensureTimeConstant(timestamp));
 
         if (!addChild(module)) {
             throw new IllegalStateException("module already exists");
@@ -352,6 +339,85 @@ public class FileStructure
         reregisterConstants(true);
         assemble(out);
         resetModified();
+    }
+
+    // ----- module API ----------------------------------------------------------------------------
+
+    /**
+     * Write the API of a module file to another file. The API is what a module that imports a
+     * compiled module compiles against: the module file without its methods' code, the source
+     * text of their bodies, the time it was built and the directory it was compiled from,
+     * together with whether each method is abstract, native or has code.
+     *
+     * <p>The compiler reads no method's code or source text from the modules it compiles against,
+     * so two module files with the same API compile every module that imports them to the same
+     * bytes. A build can then skip compiling the importers again after a change that leaves the
+     * API the same, such as one inside a method body. The API is only compared, never loaded; it
+     * is not a valid module file.
+     *
+     * @param module  a module file, as the compiler writes it
+     * @param api     the file to write the API to
+     *
+     * @throws IOException  if the module file cannot be read or the API cannot be written
+     */
+    public static void writeApi(Path module, Path api)
+            throws IOException {
+        FileStructure file;
+        try (InputStream in = Files.newInputStream(module)) {
+            file = new FileStructure(in, false, false);
+        }
+        try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(api))) {
+            file.writeApiTo(out);
+        }
+    }
+
+    /**
+     * Strip this FileStructure down to its API, and write the API to the provided OutputStream.
+     *
+     * @param out  the stream to write to
+     *
+     * @throws IOException  if an IOException occurs while writing the API
+     *
+     * @see #writeApi(Path, Path)
+     */
+    public void writeApiTo(OutputStream out)
+            throws IOException {
+        try (var ignored = ConstantPool.withPool(getConstantPool())) {
+            byte[] abFlags = stripToApi();
+            writeTo(out);
+            out.write(abFlags);
+        }
+    }
+
+    /**
+     * Remove what the API leaves out from each module in this FileStructure.
+     *
+     * @return for each method, whether it is abstract, native or has code, in the order the file
+     *         holds the methods, which is the same for two files whose other contents are the same
+     */
+    byte[] stripToApi() {
+        ByteArrayOutputStream outFlags = new ByteArrayOutputStream();
+        for (Component component : apiTree(this).toList()) {
+            switch (component) {
+            case ModuleStructure module -> module.stripToApi();
+            case MethodStructure method -> outFlags.write(method.stripToApi());
+            default -> {
+            }
+            }
+        }
+        return outFlags.toByteArray();
+    }
+
+    /**
+     * @return the component and every component that it holds, each with its conditional
+     *         variants, in the order the file holds them; unlike {@link #visitChildren}, this
+     *         also descends into the variants that are not the eldest sibling
+     */
+    private static Stream<Component> apiTree(Component component) {
+        return Stream.concat(Stream.of(component), component.children().stream()
+                .flatMap(child -> Stream.<Component>iterate(child, Objects::nonNull,
+                        Component::getNextSibling))
+                .flatMap(FileStructure::apiTree));
     }
 
     // ----- metadata --------------------------------------------------------------------------------

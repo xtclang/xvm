@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.xvm.asm.constants.MethodConstant;
 
 /**
- * {@link ModuleApi} reaches every method of the XDK's modules: after it strips one, no method that the module file
- * names has code or source text left, and no module has a build time or a source directory.
+ * {@link FileStructure#writeApi} reaches every method of the XDK's modules: after it strips one, no method that the
+ * module file names has code or source text left, and no module has a build time or a source directory.
  */
 class ModuleApiStripTest {
     @Test
@@ -64,7 +64,7 @@ class ModuleApiStripTest {
             file = new FileStructure(in, false, false);
         }
         try (var ignored = ConstantPool.withPool(file.getConstantPool())) {
-            ModuleApi.strip(file);
+            file.stripToApi();
             var out = new ByteArrayOutputStream();
             file.writeTo(out);
             return out.toByteArray();

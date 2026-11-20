@@ -27,12 +27,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
-import org.xvm.asm.ModuleApi;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 
 /**
- * A module that imports another compiles to the same bytes against two versions of it whose {@link ModuleApi} is the
- * same, and the changes it can see change the API: a build may skip compiling importers when the API stays the same.
+ * A module that imports another compiles to the same bytes against two versions of it whose API
+ * ({@link FileStructure#writeApi}) is the same, and the changes it can see change the API: a build may skip compiling
+ * importers when the API stays the same.
  */
 class ModuleApiTest {
     private static final String LIBRARY = """
@@ -86,8 +87,7 @@ class ModuleApiTest {
         byte[] second  = bytes(compile(changed, null));
         assertFalse(Arrays.equals(first, second), "the change is in the library's bytes");
 
-        assertArrayEquals(ModuleApi.of(new ByteArrayInputStream(first)),
-                ModuleApi.of(new ByteArrayInputStream(second)));
+        assertArrayEquals(api(first), api(second));
         assertArrayEquals(bytes(compileAgainst(first)), bytes(compileAgainst(second)),
                 "the importer compiles to the same bytes against both");
     }
@@ -98,8 +98,8 @@ class ModuleApiTest {
         String changed = LIBRARY.replace(target, replacement);
         assertFalse(changed.equals(LIBRARY), "the change applies");
 
-        byte[] before = ModuleApi.of(new ByteArrayInputStream(bytes(compile(LIBRARY, null))));
-        byte[] after  = ModuleApi.of(new ByteArrayInputStream(bytes(compile(changed, null))));
+        byte[] before = api(bytes(compile(LIBRARY, null)));
+        byte[] after  = api(bytes(compile(changed, null)));
         assertFalse(Arrays.equals(before, after), change + " changes the API");
     }
 
@@ -128,6 +128,15 @@ class ModuleApiTest {
         assertNotNull(module, () -> "compile failed: " + errs.getErrors());
         assertFalse(errs.hasSeriousErrors(), () -> "compile failed: " + errs.getErrors());
         return module;
+    }
+
+    /**
+     * @return the API of the specified module file
+     */
+    private static byte[] api(byte[] module) throws IOException {
+        var out = new ByteArrayOutputStream();
+        new FileStructure(new ByteArrayInputStream(module), false, false).writeApiTo(out);
+        return out.toByteArray();
     }
 
     private static byte[] bytes(ModuleStructure module) {

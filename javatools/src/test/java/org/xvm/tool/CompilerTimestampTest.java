@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -26,16 +27,16 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 
 /**
- * {@code xtc build} stamps a compiled module with the epoch, so that the same source compiles to the same
- * bytes, unless {@code --timestamp} asks for a time: "now", or an ISO-8601 instant.
+ * {@code xtc build} stamps a compiled module with no time, so that the same source compiles to the same
+ * bytes, unless {@code --timestamp} asks for one: "now", or an ISO-8601 instant.
  */
 class CompilerTimestampTest {
     @TempDir
     Path work;
 
     @Test
-    void aModuleCarriesTheEpochUnlessATimeIsAskedFor() throws IOException, URISyntaxException {
-        assertEquals(Instant.EPOCH, timestamp(compile()));
+    void aModuleCarriesNoTimeUnlessOneIsAskedFor() throws IOException, URISyntaxException {
+        assertNull(compile().getTimestamp());
         assertEquals(Instant.parse("2026-01-01T00:00:00Z"),
                 timestamp(compile("--timestamp", "2026-01-01T00:00:00Z")));
 

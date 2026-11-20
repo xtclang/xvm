@@ -31,16 +31,16 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 
 /**
- * Turns the XTC modules that a compile depends on into their APIs, as javatools' {@code org.xvm.asm.ModuleApi}
- * defines them: what a module that imports them compiles against. A compile task takes the APIs as its input in
- * place of the modules, so a change to a module that leaves its API the same, such as one inside a method body, does
- * not compile the modules that import it again.
+ * Turns the XTC modules that a compile depends on into their APIs, as javatools'
+ * {@code org.xvm.asm.FileStructure.writeApi} defines them: what a module that imports them compiles against. A compile
+ * task takes the APIs as its input in place of the modules, so a change to a module that leaves its API the same, such
+ * as one inside a method body, does not compile the modules that import it again.
  *
  * <p>The input is a directory of modules, as a project's compile task produces it, or a module file; the output is a
  * directory with the API of each module, named after the module with the extension {@code .api}: the API files
  * are only compared, never loaded, and are not valid module files. Without a javatools that has
- * {@code ModuleApi}, or for a file that cannot be read as a module, the output is a copy of the file, which a compile
- * then depends on as a whole, as before.
+ * {@code FileStructure.writeApi}, or for a file that cannot be read as a module, the output is a copy of the file,
+ * which a compile then depends on as a whole, as before.
  *
  * <p>Javatools is loaded for each transform and the class loader closed after it: one kept open across builds would
  * read a jar that the build has since rewritten in place.
@@ -52,7 +52,9 @@ public abstract class XtcModuleApiTransform implements TransformAction<XtcModule
      */
     public static final String ARTIFACT_TYPE = "xtc-api";
 
-    private static final String MODULE_API_CLASS = "org.xvm.asm.ModuleApi";
+    private static final String API_WRITER_CLASS = "org.xvm.asm.FileStructure";
+
+    private static final String API_WRITER_METHOD = "writeApi";
 
     private static final String API_FILE_EXTENSION = "api";
 
@@ -150,14 +152,15 @@ public abstract class XtcModuleApiTransform implements TransformAction<XtcModule
     }
 
     /**
-     * @return {@code ModuleApi.write(Path, Path)}, or null if the javatools has none, or cannot run in this JVM, such as
-     *         one older than the javatools was built for: the compiles themselves run javatools in their own JVM
+     * @return {@code FileStructure.writeApi(Path, Path)}, or null if the javatools has none, or cannot run in this JVM,
+     *         such as one older than the javatools was built for: the compiles themselves run javatools in their own
+     *         JVM
      */
     private static Method moduleApiWriter(final ClassLoader loader) {
         try {
-            return loader.loadClass(MODULE_API_CLASS).getMethod("write", Path.class, Path.class);
+            return loader.loadClass(API_WRITER_CLASS).getMethod(API_WRITER_METHOD, Path.class, Path.class);
         } catch (final ClassNotFoundException | NoSuchMethodException | LinkageError e) {
-            LOG.info("[plugin] Cannot use {} from this javatools ({}): compiles depend on whole modules.", MODULE_API_CLASS, e.toString());
+            LOG.info("[plugin] Cannot use {}.{} from this javatools ({}): compiles depend on whole modules.", API_WRITER_CLASS, API_WRITER_METHOD, e.toString());
             return null;
         }
     }
