@@ -84,9 +84,6 @@ on:
                 default: false
 
 env:
-    # Manual tests are always part of the build and of its lifecycle. A workflow_dispatch with skip-tests
-    # detaches them, through the aggregator's includeBuildAttach<build> property.
-    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ !(github.event_name == 'workflow_dispatch' && (github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true')) }}
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
     RUN_INTEGRATION_TESTS: true
 
@@ -558,6 +555,11 @@ jobs:
                 # Root check includes spotlessCheck; CI disables the local automatic spotlessApply.
                 BUILD_TASKS="distZip check :plugin:compileJava"
                 BUILD_PROPS="-Porg.xtclang.java.test.failFast=true -Porg.xtclang.plugin.java.lint=true"
+                # manualTests is part of every build's lifecycle; skip-tests leaves it out of this one, so that
+                # check neither compiles nor tests it (the manual tests step below skips it too)
+                if [ "${{ env.skip_manual_tests }}" == "true" ]; then
+                    BUILD_PROPS="$BUILD_PROPS -PincludeBuildAttachManualTests=false"
+                fi
                 BUILD_JVM_ARGS=""
                 CONSUMER_REPO_DIR="$PWD/ci-artifacts/consumer-maven-repo"
                 SNAPSHOT_REPO_DIR="$PWD/ci-artifacts/snapshot-maven-repo"
