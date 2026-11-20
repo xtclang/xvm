@@ -927,7 +927,9 @@ gh workflow run commit.yml \
 ./gradlew manualTests:runXtc
 ```
 
-`manualTests` is always part of the build and attached to its lifecycle, so `./gradlew build` compiles it and runs its tests.
+`manualTests` is always part of the build and attached to its lifecycle. `./gradlew build` compiles its modules but
+does not run the manual tests; run those explicitly with the tasks above (`runXtc`, `runOne -PtestName=...`, etc.).
+The only test `check` runs there is the `xunit_demo` xunit module, via `testXtc`.
 
 ---
 

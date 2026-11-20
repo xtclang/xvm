@@ -555,8 +555,9 @@ jobs:
                 # Root check includes spotlessCheck; CI disables the local automatic spotlessApply.
                 BUILD_TASKS="distZip check :plugin:compileJava"
                 BUILD_PROPS="-Porg.xtclang.java.test.failFast=true -Porg.xtclang.plugin.java.lint=true"
-                # manualTests is part of every build's lifecycle; skip-tests leaves it out of this one, so that
-                # check neither compiles nor tests it (the manual tests step below skips it too)
+                # Every build compiles manualTests but does not run the manual tests; check runs only its xunit_demo
+                # module, via testXtc. skip-tests detaches manualTests from this build, so it is not compiled and
+                # xunit_demo does not run. The manual tests step below is skipped too.
                 if [ "${{ env.skip_manual_tests }}" == "true" ]; then
                     BUILD_PROPS="$BUILD_PROPS -PincludeBuildAttachManualTests=false"
                 fi

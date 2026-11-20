@@ -104,7 +104,8 @@ optionalBuilds.forEach { (buildName, propertyName) ->
     }
 }
 
-// manualTests is always part of the build and of its lifecycle: a root build compiles it and runs its tests.
+// manualTests is always part of the build and of its lifecycle: a root build compiles its modules but does not run the
+// manual tests (run them with runXtc, runOne, etc.); check runs only its xunit_demo module, via testXtc.
 includeBuild("manualTests")
 
 // Disable problematic test distribution websocket check task
