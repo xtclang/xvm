@@ -2406,6 +2406,28 @@ public final class Handy {
         return StreamSupport.stream(iterable.spliterator(), false);
     }
 
+    // ----- exception helpers ---------------------------------------------------------------------
+
+    /**
+     * Allows a "throw new IllegalStateExpression()" to be used as an expression.
+     *
+     * @return this method throws, so it never returns
+     */
+    public static <T> T illegalState() {
+        throw new IllegalStateException();
+    }
+
+    /**
+     * Allows a "throw new IllegalStateExpression()" to be used as an expression.
+     *
+     * @param message  the descriptive text to include in the exception
+     *
+     * @return this method throws, so it never returns
+     */
+    public static <T> T illegalState(String message) {
+        throw new IllegalStateException(message);
+    }
+
     // ----- constants -----------------------------------------------------------------------------
 
     /**

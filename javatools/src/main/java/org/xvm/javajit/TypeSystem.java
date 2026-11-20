@@ -8,15 +8,18 @@ import java.lang.classfile.ClassHierarchyResolver.ClassHierarchyInfo;
 import java.lang.classfile.attribute.SourceFileAttribute;
 
 import java.lang.constant.ClassDesc;
-
+import java.lang.ref.WeakReference;
+import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -40,13 +43,9 @@ import org.xvm.javajit.builders.VirtualChildBuilder;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.MODULE;
-
-import static org.xvm.util.Handy.digitValue;
-import static org.xvm.util.Handy.isDigit;
-import static org.xvm.util.Handy.require;
-
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static org.xvm.util.Handy.*;
 
 /**
  * As part of the Ecstasy JIT implementation targeting the JVM, this class represents an Ecstasy
@@ -127,11 +126,15 @@ public class TypeSystem {
         require("shared", shared);
         require("owned", owned);
 
-        this.xvm    = xvm;
-        this.name   = xvm.generateTypeSystemName(shared, owned, this instanceof NativeTypeSystem);
-        this.loader = new TypeSystemLoader(this, name, shared, owned);
-        this.shared = loader.shared;
-        this.owned  = loader.owned;
+        this.xvm        = xvm;
+        this.name       = xvm.generateTypeSystemName(shared, owned, this instanceof NativeTypeSystem);
+        this.loader     = new TypeSystemLoader(this, name, shared, owned);
+        this.shared     = loader.shared;
+        this.owned      = loader.owned;
+        this.loaderById = Stream.concat(Arrays.stream(this.shared), Arrays.stream(this.owned))
+                                .collect(Collectors.toMap(l -> l.module.getIdentityConstant(),
+                                        Function.identity(), (_, _) -> illegalState(), HashMap::new));
+        this.weakRef    = new WeakReference<>(this);
     }
 
     /**
@@ -154,12 +157,22 @@ public class TypeSystem {
      * The ModuleLoaders that are "shared into" this TypeSystem from other TypeSystems and that can
      * be delegated to in order to generate and load code.
      */
-    public final ModuleLoader[] shared;
+    final ModuleLoader[] shared;
 
     /**
      * The ModuleLoaders that this TypeSystem is responsible for generating and loading code for.
      */
-    public final ModuleLoader[] owned;
+    final ModuleLoader[] owned;
+
+    /**
+     * A lookup map for ModuleLoader objects by their ModuleConstant.
+     */
+    final HashMap<ModuleConstant, ModuleLoader> loaderById;
+
+    /**
+     * A re-usable WeakReference to this TypeSystem. When it's gone, it's gone.
+     */
+    public final WeakReference<TypeSystem> weakRef;
 
     // special identifier characters used for encoding class/method/field names in Java ClassFiles
     public static final int  ESC      = 0x10458; // "𐑘"
@@ -208,20 +221,43 @@ public class TypeSystem {
      * Find the ConstantPool that "owns" the specified signature.
      */
     public ConstantPool findOwnerPool(SignatureConstant sig) {
-        ConstantPool thisPool = pool();
+        if (owned.length == 1) {
+            // the signature must be covered by the one owned module's ConstantPool
+            ConstantPool thisPool = owned[0].module.getConstantPool();
+            assert sig.isShared(thisPool);
 
-        // try to go "up" towards the root Ecstasy type system to see if anyone "above" us fully
-        // "knows" about the specified constant
+            // try to go "up" towards the root Ecstasy type system to see if anyone "above" us fully
+            // "knows" about the specified constant
+            for (ModuleLoader loader : shared) {
+                ConstantPool thatPool = loader.module.getConstantPool();
+                if (thatPool != thisPool && sig.isShared(thatPool)) {
+                    return loader.typeSystem.findOwnerPool(sig);
+                }
+            }
+
+            return thisPool;
+        }
+
+        IdentityHashMap<ConstantPool, Boolean> thesePools = new IdentityHashMap<>();
+        for (ModuleLoader loader : owned) {
+            thesePools.put(loader.module.getConstantPool(), true);
+        }
+
         for (ModuleLoader loader : shared) {
             ConstantPool thatPool = loader.module.getConstantPool();
-            if (thatPool != thisPool && sig.isShared(thatPool)) {
+            if (!thesePools.containsKey(thatPool) && sig.isShared(thatPool)) {
                 return loader.typeSystem.findOwnerPool(sig);
             }
         }
 
-        // if we can't go up, then we have to fully "know" the constant (i.e. there is no "down")
-        assert sig.isShared(thisPool);
-        return thisPool;
+        for (ModuleLoader loader : owned) {
+            ConstantPool thatPool = loader.module.getConstantPool();
+            if (sig.isShared(thatPool)) {
+                return thatPool;
+            }
+        }
+
+        throw new IllegalStateException("cannot find pool for " + sig + " from " + this);
     }
 
     /**
@@ -230,42 +266,70 @@ public class TypeSystem {
      * @param type  a type with {@link TypeConstant#isSingleUnderlyingClass single underlying class}
      */
     public ModuleLoader findOwnerLoader(TypeConstant type) {
-        ConstantPool thisPool = pool();
-
-        // try to go "up" towards the root Ecstasy type system to see if anyone "above" us fully
-        // "knows" about the specified constant
-        for (ModuleLoader loader : shared) {
-            ConstantPool thatPool = loader.module.getConstantPool();
-            if (thatPool != thisPool && type.isShared(thatPool)) {
-                return loader.typeSystem.findOwnerLoader(type);
+        ModuleConstant id = type.peekJitModuleOwner();
+        if (id == null) {
+            // no peek'd module owner, which means there may be more than one module involved
+            Set<ModuleConstant> ids = type.collectJitModuleOwners(new HashSet<>());
+            switch (ids.size()) {
+            case 0:
+                throw new IllegalStateException("no modules identified for type=" + type.getValueString());
+            case 1:
+                // just one was found, so drop out of this complex handling for "potentially more
+                // than one module represented by the type", and return to the simpler handling
+                id = ids.iterator().next();
+                break;
+            default:
+                // figure out which of the modules in this type system contain all of the necessary
+                // modules in their dependency graph, and if there is more than one, choose the
+                // smallest one that covers the requirements; use a predictable+repeatable order of
+                // module loaders to guarantee we get a predictable+repeatable answer
+                ModuleLoader best     = null;
+                int          smallest = Integer.MAX_VALUE;
+                for (ModuleLoader loader : shared) {
+                    Set<ModuleConstant> set = loader.getDependsOn();
+                    if (set.containsAll(ids)) {
+                        int size = set.size();
+                        if (size < smallest || size == smallest && loader.prefix.compareTo(best.prefix) < 0) {
+                            best     = loader;
+                            smallest = size;
+                        }
+                    }
+                }
+                if (best == null) {
+                    for (ModuleLoader loader : owned) {
+                        Set<ModuleConstant> set = loader.getDependsOn();
+                        if (set.containsAll(ids)) {
+                            int size = set.size();
+                            if (size < smallest || size == smallest && loader.prefix.compareTo(best.prefix) < 0) {
+                                best     = loader;
+                                smallest = size;
+                            }
+                        }
+                    }
+                    if (best == null) {
+                        throw new IllegalStateException("no owning module given the module-set="
+                                + ids + " for type=" + type.getValueString());
+                    }
+                }
+                return best;
             }
         }
 
-        // if we can't go up, then we have to fully "know" the constant (i.e. there is no "down")
-        assert type.isShared(thisPool);
-
-        // select the module which is responsible for assembling the class for the type
-        IdentityConstant id     = type.getSingleUnderlyingClass(true);
-        ModuleConstant   module = id.getModuleConstant();
-
-        // it's possible that the type is a parameterized shared type, e.g. Array<Person>
-        for (ModuleLoader loader : shared) {
-            if (loader.module.getIdentityConstant().equals(module)) {
-                return loader;
-            }
+        // find the module loader for that module identity
+        ModuleLoader loader = loaderById.get(id);
+        if (loader == null) {
+            throw new IllegalStateException("cannot find loader for type " + type.getValueString()
+                    + " from " + this + " using module identity " + id.getValueString());
         }
-
-        for (ModuleLoader loader : owned) {
-            if (loader.module.getIdentityConstant().equals(module)) {
-                return loader;
-            }
-        }
-
-        throw new IllegalStateException("No owner loader for " + type);
+        return loader;
     }
 
     /**
-     * Find the ModuleLoader that "owns" (i.e. will assemble the class for) the specified class name.
+     * Find a ModuleLoader based on a Java class name.
+     *
+     * @param name  a Java class name within this TypeSystem
+     *
+     * @return the ModuleLoader that loaded (or is responsible for loading) the specified class
      */
     public ModuleLoader findOwnerLoader(String name) {
         for (ModuleLoader loader : owned) {
@@ -280,6 +344,25 @@ public class TypeSystem {
             }
         }
         return null;
+    }
+
+    /**
+     * @param loader  the loader to test for
+     *
+     * @return true iff this TypeSystem contains the specified loader
+     */
+    public boolean contains(ModuleLoader loader) {
+        for (ModuleLoader actual : owned) {
+            if (loader == actual) {
+                return true;
+            }
+        }
+        for (ModuleLoader actual : shared) {
+            if (loader == actual) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -409,7 +492,7 @@ public class TypeSystem {
 
         // TODO: optimize "ensureBuilder(art).getSuperCD()" call
         return switch (art.shape()) {
-            case Impl -> art.type().isJitImplInterface()
+            case Impl -> art.type().isJitImplInterface(this)
                     ? ClassHierarchyInfo.ofInterface()
                     : ClassHierarchyInfo.ofClass(ensureBuilder(art).getSuperCD());
 
@@ -449,7 +532,7 @@ public class TypeSystem {
             return new PureBuilder(this, art);
         }
 
-        if (type.isJitAnnotatedRef()) {
+        if (type.isJitAnnotatedRef(this)) {
             return new RefBuilder(this, art);
         }
 

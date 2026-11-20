@@ -142,7 +142,7 @@ public abstract class OpReturn
                     break;
 
                 case "Specific->Specific":
-                    if (!cd.equals(pdRet.cd) && !regRet.type().isJitAssignableTo(pdRet.type)) {
+                    if (!cd.equals(pdRet.cd) && !regRet.type().isJitAssignableTo(bctx.typeSystem, pdRet.type)) {
                         code.checkcast(pdRet.cd);
                     }
                     Builder.store(code, pdRet.cd, slotR);
@@ -302,7 +302,7 @@ public abstract class OpReturn
                     break;
 
                 case "Specific->Specific":
-                    if (!cd.equals(pdRet.cd) && !regRet.type().isJitAssignableTo(pdRet.type)) {
+                    if (!cd.equals(pdRet.cd) && !regRet.type().isJitAssignableTo(bctx.typeSystem, pdRet.type)) {
                         code.checkcast(pdRet.cd);
                     }
                     break;
