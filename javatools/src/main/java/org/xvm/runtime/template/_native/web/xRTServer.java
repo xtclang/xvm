@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
@@ -84,6 +85,7 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
+import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.numbers.xUInt16;
 
@@ -177,7 +179,7 @@ public class xRTServer
             return invokeContainsBodies(frame, (HttpContextHandle) hArg, iReturn);
 
         case "removeRouteImpl":
-            return invokeRemoveRoute(frame, (HttpServerHandle) hTarget, (StringHandle) hArg);
+            return invokeRemoveRoute((HttpServerHandle) hTarget, (StringHandle) hArg);
         }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -254,7 +256,7 @@ public class xRTServer
      * "void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)" method.
      */
     private int invokeBind(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg) {
-        if (hServer.getServer() != null) {
+        if (hServer.getBinding() != null) {
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
         }
 
@@ -264,32 +266,26 @@ public class xRTServer
         int          nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
         Container    container  = frame.f_context.f_container;
 
-        Router router = hServer.getRouter();
-        if (router == null) {
-            hServer.setRouter(router = new Router());
-        }
-
-        String           sName = "HttpHandler";
-        QueuedThreadPool pool  = new QueuedThreadPool();
-        pool.setName(sName);
+        Router           router = new Router(hBinding);
+        QueuedThreadPool pool   = new QueuedThreadPool();
+        pool.setName("HttpHandler");
         pool.setDaemon(true);
 
         Server         server  = new Server(pool);
         ContextHandler context = new ContextHandler("/");
+        Binding        binding = new Binding(server, router, null);
         context.setHandler(router);
-        server.setHandler(context);
-        hServer.setServer(server);
-        configureBinding(hServer, hBinding);
+        server .setHandler(context);
+        hServer.setBinding(binding);
 
         try {
-            configureHttpServer (server,          new InetSocketAddress(sBindAddr, nHttpPort));
-            configureHttpsServer(hServer, server, new InetSocketAddress(sBindAddr, nHttpsPort));
+            configureHttpServer (binding, new InetSocketAddress(sBindAddr, nHttpPort));
+            configureHttpsServer(binding, new InetSocketAddress(sBindAddr, nHttpsPort));
         } catch (GeneralSecurityException e) {
-            hServer.clear();
+            hServer.setBinding(null);
             return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
         }
 
-        Router routerFinal = router;
         CompletableFuture<Void> cf = container.scheduleIO(() -> {
             try {
                 server.start();
@@ -307,27 +303,25 @@ public class xRTServer
         return frame.waitForIO(cf, frameCaller -> {
             try {
                 cf.get();
-                if (hServer.getServer() != server || !server.isStarted() ||
-                        hServer.getCloseFuture() != null) {
+                if (hServer.getBinding() != binding || !server.isStarted()) {
                     return frameCaller.raiseException(xException.obscureIoException(frameCaller,
                             "Server closed while binding"));
                 }
 
                 // prevent the container from being terminated
                 container.registerNativeCallback();
-                routerFinal.f_fRegistered.set(true);
+                router.f_fRegistered.set(true);
                 return Op.R_NEXT;
             } catch (Exception e) {
-                if (hServer.getServer() == server && hServer.getCloseFuture() == null) {
-                    hServer.clear();
-                }
+                hServer.clear(binding);
                 return raiseIOException(frameCaller, e);
             }
         });
     }
 
-    private void configureHttpServer(Server server, InetSocketAddress addr) {
+    private void configureHttpServer(Binding binding, InetSocketAddress addr) {
         HttpConfiguration config    = new HttpConfiguration();
+        Server            server    = binding.server();
         ServerConnector   connector = new ServerConnector(server, new HttpConnectionFactory(config));
 
         config.setSendServerVersion(false);
@@ -336,11 +330,12 @@ public class xRTServer
         server.addConnector(connector);
     }
 
-    private void configureHttpsServer(HttpServerHandle hServer, Server server, InetSocketAddress addr)
+    private void configureHttpsServer(Binding binding, InetSocketAddress addr)
             throws GeneralSecurityException {
         SSLContext ctxSSL = SSLContext.getInstance("TLS");
+        Server     server = binding.server();
 
-        KeyManager[] aKeyManagers = new KeyManager[] {new SimpleKeyManager(hServer)};
+        KeyManager[] aKeyManagers = new KeyManager[] {new SimpleKeyManager(binding.router())};
         ctxSSL.init(aKeyManagers, null, null);
 
         SslContextFactory.Server ssl = new SslContextFactory.Server();
@@ -363,10 +358,6 @@ public class xRTServer
         server.addConnector(connector);
     }
 
-    private void configureBinding(HttpServerHandle hServer, ObjectHandle hBinding) {
-        hServer.setBinding(hBinding);
-    }
-
     /**
      * Implementation of "void addRouteImpl(String hostName, UInt16 httpPort, UInt16 httpsPort,
      *                     HandlerWrapper wrapper, KeyStore keystore, String? tlsKey=Null)" method.
@@ -378,7 +369,13 @@ public class xRTServer
         ServiceHandle  hWrapper   = (ServiceHandle) ahArg[3];
         KeyStoreHandle hKeystore  = ahArg[4] instanceof KeyStoreHandle hK ? hK : null;
         String         sTlsKey    = ahArg[5] instanceof StringHandle hS ? hS.getStringValue() : null;
-        Router         router     = hServer.getRouter();
+        Binding        binding    = hServer.getBinding();
+
+        if (binding == null) {
+            return frame.raiseException(xException.illegalState(frame, "Server is not bound"));
+        }
+
+        Router router = binding.router();
 
         if (hKeystore != null) {
             KeyStore keystore = hKeystore.f_keyStore;
@@ -386,7 +383,7 @@ public class xRTServer
                 return frame.raiseException("Invalid or missing entry for Tls key: \"" + sTlsKey + '"');
             }
 
-            if (sTlsKey == null && router.mapRoutes.isEmpty()) {
+            if (sTlsKey == null && !router.hasRoutes()) {
                 // find a public/private key pair that could be used to encrypt tls communications
                 try {
                     for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();) {
@@ -404,16 +401,16 @@ public class xRTServer
             }
         }
 
-        RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
+        RequestHandler handler = createRequestHandler(frame, hWrapper, router.getBinding());
         RouteInfo      route   = new RouteInfo(handler, nHttpPort, nHttpsPort, hKeystore, sTlsKey);
 
-        ServerConnector connector = (ServerConnector) hServer.getServer().getConnectors()[0];
+        ServerConnector connector = (ServerConnector) binding.server().getConnectors()[0];
         if (connector.getHost().equals(sHostName)) {
             // the "direct" route is only used by the KeyManager when a host name is missing
             router.setDirectRoute(route);
         }
 
-        router.mapRoutes.put(sHostName, route);
+        router.addRoute(sHostName, route);
         return Op.R_NEXT;
     }
 
@@ -432,34 +429,42 @@ public class xRTServer
     private int invokeReplaceRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg, int iResult) {
         String        sHostName = ((StringHandle) ahArg[0]).getStringValue();
         ServiceHandle hWrapper  = (ServiceHandle) ahArg[1];
-        Router        router    = hServer.getRouter();
-        RouteInfo     info      = router.mapRoutes.get(sHostName);
+        Binding       binding   = hServer.getBinding();
 
+        if (binding == null) {
+            return frame.assignValue(iResult, xBoolean.FALSE);
+        }
+
+        Router    router = binding.router();
+        RouteInfo info   = router.getRoute(sHostName);
         if (info == null) {
             return frame.assignValue(iResult, xBoolean.FALSE);
         }
 
-        RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
-        router.mapRoutes.put(sHostName,
+        RequestHandler handler = createRequestHandler(frame, hWrapper, router.getBinding());
+        router.addRoute(sHostName,
             new RouteInfo(handler, info.nHttpPort, info.nHttpsPort, info.hKeyStore, info.sTlsKey));
         return frame.assignValue(iResult, xBoolean.TRUE);
     }
 
-    private RequestHandler createRequestHandler(Frame frame, ServiceHandle hWrapper, HttpServerHandle hServer) {
+    private RequestHandler createRequestHandler(Frame frame, ServiceHandle hWrapper, ObjectHandle hBinding) {
         ClassStructure  clzHandler = hWrapper.getTemplate().getStructure();
         MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 5);
         assert method != null;
 
         FunctionHandle hFunction =
                 xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hWrapper);
-        return new RequestHandler(hWrapper.f_context, hFunction, hServer);
+        return new RequestHandler(hWrapper.f_context, hFunction, hBinding);
     }
 
     /**
      * Implementation of "void removeRouteImpl(String hostName)" method.
      */
-    private int invokeRemoveRoute(Frame frame, HttpServerHandle hServer, StringHandle hHostName) {
-        hServer.getRouter().mapRoutes.remove(hHostName.getStringValue());
+    private int invokeRemoveRoute(HttpServerHandle hServer, StringHandle hHostName) {
+        Binding binding = hServer.getBinding();
+        if (binding != null) {
+            binding.router().removeRoute(hHostName.getStringValue());
+        }
         return Op.R_NEXT;
     }
 
@@ -576,36 +581,43 @@ public class xRTServer
      * Implementation of "closeImpl()" method.
      */
     private int invokeClose(Frame frame, HttpServerHandle hServer) {
-        Server server = hServer.getServer();
-        if (server == null) {
+        Binding binding = hServer.getBinding();
+        if (binding == null) {
             return Op.R_NEXT;
         }
 
-        CompletableFuture<Void> cfStop = hServer.getCloseFuture();
-        if (cfStop == null) {
-            cfStop = frame.f_context.f_container.scheduleIO(() -> {
-                server.stop();
-                return null;
-            });
-            hServer.setCloseFuture(cfStop);
+        if (binding.closing() != null) {
+            return frame.waitForExternalCompletion(binding.closing(), Op.A_IGNORE, _ -> Op.R_NEXT);
         }
 
-        Router                  router = hServer.getRouter();
-        CompletableFuture<Void> cf     = cfStop;
+        CompletableFuture<ObjectHandle> cfClosing = new CompletableFuture<>();
+        Binding                         closing   = binding.stopping(cfClosing);
+        hServer.setBinding(closing);
 
-        return frame.waitForIO(cf, frameCaller -> {
+        CompletableFuture<Void> cfStop = frame.f_context.f_container.scheduleIO(() -> {
+            binding.server().stop();
+            return null;
+        });
+
+        return frame.waitForIO(cfStop, frameCaller -> {
             try {
-                cf.get();
+                cfStop.get();
                 return Op.R_NEXT;
             } catch (Exception e) {
                 return raiseIOException(frameCaller, e);
             } finally {
+                Router router = closing.router();
                 if (router.f_fRegistered.compareAndSet(true, false)) {
                     frameCaller.f_context.f_container.unregisterNativeCallback();
                 }
-                if (hServer.getServer() == server) {
-                    router.mapRoutes.clear();
-                    hServer.clear();
+                router.clearRoutes();
+                hServer.clear(closing);
+
+                // notify other close callers after cleanup
+                if (frameCaller.m_hException == null) {
+                    cfClosing.complete(xTuple.H_VOID);
+                } else {
+                    cfClosing.completeExceptionally(frameCaller.m_hException.getException());
                 }
             }
         });
@@ -703,10 +715,10 @@ public class xRTServer
      * "handle()" method.
      */
     protected static class RequestHandler {
-        public RequestHandler(ServiceContext context, FunctionHandle hFunction, HttpServerHandle hServer) {
+        public RequestHandler(ServiceContext context, FunctionHandle hFunction, ObjectHandle hBinding) {
             f_context   = context;
             f_hFunction = hFunction;
-            f_hServer   = hServer;
+            f_hBinding  = hBinding;
         }
 
         public void handle(HttpContextHandle hCtx) {
@@ -727,12 +739,11 @@ public class xRTServer
         }
 
         private ObjectHandle[] createArguments(HttpContextHandle hCtx) {
-            Request       request  = hCtx.f_request;
-            ObjectHandle  hBinding = f_hServer.getBinding();
-            StringHandle  hURI     = xString.makeHandle(request.getHttpURI().getPathQuery());
-            StringHandle  hMethod  = xString.makeHandle(request.getMethod());
-            BooleanHandle hTls     = xBoolean.makeHandle(request.isSecure());
-            return new ObjectHandle[]{hBinding, hCtx, hURI, hMethod, hTls};
+            Request       request = hCtx.f_request;
+            StringHandle  hURI    = xString.makeHandle(request.getHttpURI().getPathQuery());
+            StringHandle  hMethod = xString.makeHandle(request.getMethod());
+            BooleanHandle hTls    = xBoolean.makeHandle(request.isSecure());
+            return new ObjectHandle[]{f_hBinding, hCtx, hURI, hMethod, hTls};
         }
 
         private void sendError(HttpContextHandle hCtx, Throwable t) {
@@ -755,9 +766,9 @@ public class xRTServer
             }
         }
 
-        private final ServiceContext   f_context;
-        private final FunctionHandle   f_hFunction;
-        private final HttpServerHandle f_hServer;
+        private final ServiceContext f_context;
+        private final FunctionHandle f_hFunction;
+        private final ObjectHandle   f_hBinding;
     }
 
     /**
@@ -765,8 +776,8 @@ public class xRTServer
      */
     protected static class SimpleKeyManager
             extends X509ExtendedKeyManager {
-        public SimpleKeyManager(HttpServerHandle hServer) {
-            f_hServer = hServer;
+        public SimpleKeyManager(Router router) {
+            f_router = router;
         }
 
         @Override
@@ -802,8 +813,8 @@ public class xRTServer
                 // the main reason the server name may be missing is for an HTTPS request that
                 // goes directly against the IP address (e.g. "https://129.168.1.30:8081/nginx")
                 RouteInfo route = sHost == null
-                        ? f_hServer.getRouter().getDirectRoute()
-                        : f_hServer.getRouter().mapRoutes.get(sHost);
+                        ? f_router.getDirectRoute()
+                        : f_router.getRoute(sHost);
                 if (route == null) {
                     // TODO: REMOVE
                     System.err.println(Handy.logTime() + " Trace: Handshake with unknown host: " + sHost);
@@ -855,9 +866,9 @@ public class xRTServer
         // ----- data fields -----------------------------------------------------------------------
 
         /**
-         * The HttpServer handle.
+         * The router for this server binding.
          */
-        private final HttpServerHandle f_hServer;
+        private final Router f_router;
 
         /**
          * The key store handle used by the current thread.
@@ -869,12 +880,17 @@ public class xRTServer
 
     protected static class Router
             extends Handler.Abstract.NonBlocking {
-        public final Map<String, RouteInfo> mapRoutes = new ConcurrentHashMap<>();
+        public Router(ObjectHandle hBinding) {
+            f_hBinding = hBinding;
+        }
+
+        private final Map<String, RouteInfo> mapRoutes = new ConcurrentHashMap<>();
 
         private final AtomicBoolean f_fRegistered = new AtomicBoolean();
 
-        private ObjectHandle m_hBinding;
-        private RouteInfo    m_routeDirect;
+        private final ObjectHandle f_hBinding;
+
+        private RouteInfo m_routeDirect;
 
         @Override
         public boolean handle(Request request, Response response, Callback callback) {
@@ -882,7 +898,7 @@ public class xRTServer
             String    sName = extractHostName(sHost);
             int       nPort = extractHostPort(sHost, request);
             boolean   fTls  = request.isSecure();
-            RouteInfo route = sName == null ? null : mapRoutes.get(sName);
+            RouteInfo route = sName == null ? null : getRoute(sName);
 
             if (route == null || nPort != (fTls ? route.nHttpsPort : route.nHttpPort)) {
                 System.err.println(Handy.logTime() + " Trace: Request for unregistered route: "
@@ -896,12 +912,28 @@ public class xRTServer
             return true;
         }
 
-        protected ObjectHandle getBinding() {
-            return m_hBinding;
+        protected boolean hasRoutes() {
+            return !mapRoutes.isEmpty();
         }
 
-        protected void setBinding(ObjectHandle binding) {
-            m_hBinding = binding;
+        protected RouteInfo getRoute(String sHostName) {
+            return mapRoutes.get(sHostName);
+        }
+
+        protected void addRoute(String sHostName, RouteInfo route) {
+            mapRoutes.put(sHostName, route);
+        }
+
+        protected void removeRoute(String sHostName) {
+            mapRoutes.remove(sHostName);
+        }
+
+        protected void clearRoutes() {
+            mapRoutes.clear();
+        }
+
+        protected ObjectHandle getBinding() {
+            return f_hBinding;
         }
 
         protected RouteInfo getDirectRoute() {
@@ -916,6 +948,16 @@ public class xRTServer
     protected record RouteInfo(RequestHandler handler, int nHttpPort, int nHttpsPort,
                                KeyStoreHandle hKeyStore, String sTlsKey) {}
 
+    /**
+     * The native state associated with a server binding. Replaced when shutdown starts and
+     * cleared when it completes.
+     */
+    protected record Binding(Server server, Router router, CompletableFuture<ObjectHandle> closing) {
+        Binding stopping(CompletableFuture<ObjectHandle> cf) {
+            return new Binding(server, router, cf);
+        }
+    }
+
     // ----- ObjectHandles -------------------------------------------------------------------------
 
     /**
@@ -924,99 +966,42 @@ public class xRTServer
     protected static class HttpServerHandle
             extends ServiceHandle {
         /**
-         * The underlying native state needs to be kept in an array, so cloning the handle would
-         * not splinter the state.
+         * The underlying native state is shared, so cloning the handle does not splinter it.
+         * Updates are serialized by the server's service context.
          */
-        private final Object[] f_aoNative = new Object[3];
+        private final AtomicReference<Binding> f_binding = new AtomicReference<>();
 
         protected HttpServerHandle(TypeComposition clazz, ServiceContext context) {
             super(clazz, context);
-
-            f_aoNative[0] = new Router();
         }
 
         /**
-         * @return the request router
+         * @return the current server binding, or null if unbound
          */
-        protected Router getRouter() {
-            return (Router) f_aoNative[0];
-        }
-
-        protected void setRouter(Router router) {
-            Router routerPrev = getRouter();
-            if (router == routerPrev) {
-                return;
-            }
-
-            ObjectHandle binding = getBinding();
-            if (binding != null) {
-                // clean up the reference while we still can
-                setBinding(null);
-            }
-
-            if (router != null) {
-                router.setBinding(binding);
-            }
-
-            f_aoNative[0] = router;
+        protected Binding getBinding() {
+            return f_binding.get();
         }
 
         /**
-         * @return the underlying Jetty server
+         * Replace the current server binding.
          */
-        protected Server getServer() {
-            return (Server) f_aoNative[1];
+        protected void setBinding(Binding binding) {
+            f_binding.set(binding);
         }
 
         /**
-         * Set the underlying Jetty server.
+         * Clear the binding only if it is still the specified one.
          */
-        protected void setServer(Server server) {
-            f_aoNative[1] = server;
-        }
-
-        /**
-         * @return the outstanding server shutdown, if any
-         */
-        protected CompletableFuture<Void> getCloseFuture() {
-            return (CompletableFuture<Void>) f_aoNative[2];
-        }
-
-        /**
-         * Set the outstanding server shutdown.
-         */
-        protected void setCloseFuture(CompletableFuture<Void> cf) {
-            f_aoNative[2] = cf;
-        }
-
-        protected ObjectHandle getBinding() {
-            Router router = getRouter();
-            return router == null
-                    ? null
-                    : router.getBinding();
-        }
-
-        protected void setBinding(ObjectHandle binding) {
-            Router router = getRouter();
-            if (router == null) {
-                assert binding == null;
-            } else {
-                router.setBinding(binding);
-            }
-        }
-
-        protected void clear() {
-            setRouter(null);
-            setServer(null);
-            setCloseFuture(null);
+        protected void clear(Binding binding) {
+            f_binding.compareAndSet(binding, null);
         }
 
         @Override
         public String toString() {
-            return "HttpServer" +
-                    (getServer() == null
-                        ? ""
-                        : "@" + ((ServerConnector) getServer().getConnectors()[0]).getHost());
+            Binding binding = getBinding();
+            return "HttpServer" + (binding == null
+                    ? ""
+                    : "@" + ((ServerConnector) binding.server().getConnectors()[0]).getHost());
         }
     }
 
