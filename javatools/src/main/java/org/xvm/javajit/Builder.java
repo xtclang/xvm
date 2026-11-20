@@ -1371,7 +1371,7 @@ public abstract class Builder {
         }
 
         PropertyInfo xvmInfo = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit = typeContainer.getJitCCType(typeSystem).ensureAccess(Access.PRIVATE);
+        TypeConstant typeJit = typeContainer.getJitType(typeSystem).ensureAccess(Access.PRIVATE);
         PropertyInfo jitInfo = typeJit.ensureTypeInfo().findProperty(propId, true);
         if (jitInfo == null) {
             // a relational type can collapse to Object, which may not expose the property
@@ -1385,7 +1385,7 @@ public abstract class Builder {
         if (!invokeStatic) {
             // resolve the descriptor against the implementation owner
             typeOwner = jitInfo.getCallableOwnerType(this, typeContainer);
-            typeOwner = typeOwner.getJitCCType(typeSystem);
+            typeOwner = typeOwner.getJitType(typeSystem);
             jitInfo   = propId.getPropertyInfo(typeOwner);
             jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
         }
@@ -2288,10 +2288,10 @@ public abstract class Builder {
      */
     public JitCtorDesc getChildConstructorDesc(MethodInfo constructor, TypeConstant targetType) {
         TypeInfo     info = constructor.getTypeInfo();
-        TypeConstant type = info.getType().removeAnnotations().getJitCCType(typeSystem);
+        TypeConstant type = info.getType().removeAnnotations().getJitType(typeSystem);
 
         if (targetType.isAnnotated()) {
-            type = type.adoptAnnotations(pool(), targetType.getJitCCType(typeSystem));
+            type = type.adoptAnnotations(pool(), targetType.getJitType(typeSystem));
         }
 
         JitMethodDesc jmd = convertConstructToNew(info, getCCDesc(type),
@@ -2323,12 +2323,11 @@ public abstract class Builder {
     public JitMethodDesc callNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
                                  MethodConstant ctorId, RegisterInfo outer,
                                  Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
-        TypeConstant targetJIC  = targetType.getJitICType(typeSystem);
-        TypeInfo     targetInfo = targetJIC.ensureTypeInfo();
+        TypeInfo     targetInfo = targetType.ensureTypeInfo();
         MethodInfo   ctor       = targetInfo.getMethodById(ctorId);
 
         if (ctor == null) {
-            targetInfo = targetJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            targetInfo = targetType.ensureAccess(Access.PRIVATE).ensureTypeInfo();
             ctor       = targetInfo.getMethodById(ctorId);
         }
 
@@ -2337,11 +2336,11 @@ public abstract class Builder {
                     ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc targetCD = targetJIC.isVirtualChild()
+        ClassDesc targetCD = targetType.isVirtualChild()
                 ? getCCDesc(targetType)
                 : getICDesc(targetType);
 
-        if (targetJIC.isVirtualChild()) {
+        if (targetType.isVirtualChild()) {
             assert outer != null : "Virtual child without an outer";
             assert bctx  != null : "Out of context";
 

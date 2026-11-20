@@ -984,7 +984,7 @@ public class MethodStructure
     public SignatureConstant resolveJitSignature(ConstantPool pool, TypeSystem ts,
                                                  TypeConstant typeTarget) {
         SignatureConstant sig     = getIdentityConstant().getSignature();
-        TypeConstant      typeJit = typeTarget.getJitCCType(ts);
+        TypeConstant      typeJit = typeTarget.getJitType(ts);
 
         // resolve captured lambda type parameters and method type parameters on primitive or
         // layer-two specialized targets, including both primitive and reference bindings;

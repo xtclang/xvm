@@ -202,6 +202,13 @@ public abstract class TypeInfo {
     public abstract boolean isNewable(boolean fSingleton, ErrorListener errs);
 
     /**
+     * Simple helper around the method above.
+     */
+    public boolean isNewable(boolean fSingleton) {
+        return isNewable(fSingleton, ErrorListener.BLACKHOLE);
+    }
+
+    /**
      * Report one or more reasons why this type is "not newable".
      *
      * @param sTarget     the name of the type that is being new'd

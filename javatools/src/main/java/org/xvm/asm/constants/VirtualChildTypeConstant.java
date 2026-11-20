@@ -10,7 +10,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 
 import org.xvm.javajit.ModuleLoader;
 
@@ -263,10 +262,9 @@ public class VirtualChildTypeConstant
 
     @Override
     protected JitInfo buildJitInfo(ModuleLoader loader) {
-        TypeConstant jccType = getConstantPool().ensureVirtualChildTypeConstant(
-                getParentType().getJitCCType(loader.typeSystem), getChildName());
-        boolean newable = jccType.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
-        return new JitInfo(this, loader, jccType, newable ? jccType : null, jccType);
+        TypeConstant type = loader.module.getConstantPool().ensureVirtualChildTypeConstant(
+                getParentType().getJitType(loader.typeSystem), getChildName());
+        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false));
     }
 
     // ----- type comparison support ---------------------------------------------------------------

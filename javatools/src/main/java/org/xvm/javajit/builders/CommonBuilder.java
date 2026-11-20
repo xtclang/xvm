@@ -117,7 +117,7 @@ public class CommonBuilder
 
         this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId        = classStruct.getIdentityConstant();
-        this.jitType       = thisType.getJitCCType(typeSystem);
+        this.jitType       = thisType.getJitType(typeSystem);
         this.isSpecialized = jitType.isJitL2Specialized(typeSystem);
         this.isPrimitive   = type.isJitPrimitive();
 
