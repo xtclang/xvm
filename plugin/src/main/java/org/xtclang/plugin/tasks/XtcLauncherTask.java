@@ -10,6 +10,7 @@ import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
@@ -186,14 +187,17 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return ext;
     }
 
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    /**
+     * The javatools jar, as a classpath: Gradle then compares its contents through the project's
+     * runtime classpath normalization, which ignores the commit and branch it records for
+     * {@code xtc --version} (see {@link XtcProjectDelegate}).
+     */
+    @Classpath
     public FileCollection getInputXtcJavaToolsConfig() {
         return javaToolsConfig.get();
     }
 
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Classpath
     public FileCollection getInputLauncherRuntimeCandidates() {
         return objects.fileCollection()
             .from(javaToolsConfig.get())

@@ -114,7 +114,7 @@ public final class XtcJavaToolsRuntime {
         return resolveRuntime(projectVersion, javaToolsConfig, xdkFileTree, logger).launcherJar();
     }
 
-    private static XtcLauncherRuntime resolveRuntimeFromFiles(
+    static XtcLauncherRuntime resolveRuntimeFromFiles(
             final String source,
             final List<File> files,
             final String artifactVersion) {

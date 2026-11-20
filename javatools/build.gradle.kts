@@ -234,12 +234,42 @@ val jar = tasks.named<Jar>("jar") {
     }
 }
 
-// ModuleInfoTest parses real module sources of sibling XDK projects. Declare them as inputs so
-// an edit to those sources re-runs the tests instead of reusing an up-to-date or cached result.
-tasks.test {
+// The commit and branch in build-info.properties only feed `xtc --version`, and its test compares the output with
+// the same file, so the tests do not depend on them: compare the classpath without them, so that a commit that
+// changes no source does not rerun the tests. The XTC plugin does the same for the tasks that compile and run modules.
+normalization {
+    runtimeClasspath {
+        properties("build-info.properties") {
+            ignoreProperty("git.commit")
+            ignoreProperty("git.status")
+        }
+    }
+}
+
+// ModuleInfoTest parses real module sources of sibling XDK projects, so it runs on its own, with those sources as
+// inputs: an edit to them reruns it instead of reusing an up-to-date or cached result, without rerunning the other
+// tests, which do not read them.
+val moduleInfoTest = tasks.register<Test>("moduleInfoTest") {
+    description = "Run ModuleInfoTest, which parses the module sources of lib_net, lib_json and lib_web"
+    group = VERIFICATION_GROUP
+
+    val testSourceSet = sourceSets.test.get()
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    useJUnitPlatform()
+
+    include("**/ModuleInfoTest.class")
     inputs.files(listOf("lib_net", "lib_json", "lib_web").map { File(compositeRoot, "$it/src/main/x") })
         .withPropertyName("siblingModuleSources")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+tasks.test {
+    exclude("**/ModuleInfoTest.class")
+}
+
+tasks.check {
+    dependsOn(moduleInfoTest)
 }
 
 val versionOutputTest = tasks.register<Test>("versionOutputTest") {

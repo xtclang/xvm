@@ -24,6 +24,7 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
+import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
@@ -51,6 +52,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     protected final Property<@NotNull Boolean> hasQualifiedOutputName;
     protected final Property<@NotNull Boolean> hasVersionedOutputName;
     protected final Property<@NotNull String> xtcVersion;
+    protected final Property<@NotNull String> timestamp;
     protected final Property<@NotNull Boolean> rebuild;
 
     // Per-task configuration properties only.
@@ -65,6 +67,9 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     // Source-set-specific module dependencies (avoids circular dependency with own output)
     private final ConfigurableFileCollection compileModuleDependencies;
+
+    // The APIs of the module dependencies, which is what the compile reads from them
+    private final ConfigurableFileCollection compileModuleDependencyApis;
 
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
@@ -102,15 +107,18 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         // The test configuration also includes main output.
         // This avoids the circular dependency where a task's output is also its input
         this.compileModuleDependencies = objects.fileCollection();
+        this.compileModuleDependencyApis = objects.fileCollection();
         final var configurations = project.getConfigurations();
         final var mainConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(SourceSet.MAIN_SOURCE_SET_NAME));
         if (mainConfig != null) {
             compileModuleDependencies.from(mainConfig);
+            compileModuleDependencyApis.from(XtcProjectDelegate.moduleApis(mainConfig));
         }
         if (!SourceSet.MAIN_SOURCE_SET_NAME.equals(sourceSet.getName())) {
             final var sourceConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(sourceSet));
             if (sourceConfig != null) {
                 compileModuleDependencies.from(sourceConfig);
+                compileModuleDependencyApis.from(XtcProjectDelegate.moduleApis(sourceConfig));
             }
         }
 
@@ -121,6 +129,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
         this.rebuild = objects.property(Boolean.class).convention(ext.getRebuild());
         this.xtcVersion = objects.property(String.class).convention(ext.getXtcVersion());
+        this.timestamp = objects.property(String.class).convention(ext.getTimestamp());
     }
 
     @Internal
@@ -137,11 +146,21 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * Test compile: xtcModule + xtcModuleTest (includes main output)
      */
     @Override
+    @Internal("What the compile reads from these is in getXtcModuleDependencyApis()")
+    public FileCollection getXtcModuleDependencies() {
+        return compileModuleDependencies;
+    }
+
+    /**
+     * The APIs of the module dependencies ({@link org.xtclang.plugin.XtcModuleApiTransform}): the compile reads
+     * nothing else from the modules it compiles against, so a change to one of them that leaves its API the same,
+     * such as one inside a method body, leaves this task up to date.
+     */
     @Optional
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    public FileCollection getXtcModuleDependencies() {
-        return compileModuleDependencies;
+    public FileCollection getXtcModuleDependencyApis() {
+        return compileModuleDependencyApis;
     }
 
     // TODO Why do we even have these internals?
@@ -239,6 +258,13 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return xtcVersion;
     }
 
+    @Optional
+    @Input
+    @Override
+    public Property<@NotNull String> getTimestamp() {
+        return timestamp;
+    }
+
     @Input
     @Override
     public Property<@NotNull Boolean> getStrict() {
@@ -253,8 +279,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     @Override
     @Optional
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Classpath
     public FileCollection getInputXtcJavaToolsConfig() {
         return shouldTrackLauncherRuntimeInputs()
             ? super.getInputXtcJavaToolsConfig()
@@ -263,8 +288,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     @Override
     @Optional
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    @Classpath
     public FileCollection getInputLauncherRuntimeCandidates() {
         return shouldTrackLauncherRuntimeInputs()
             ? super.getInputLauncherRuntimeCandidates()

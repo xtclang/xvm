@@ -222,6 +222,7 @@ xtc build [options] <source_files>
 | `--rebuild` | Force rebuild |
 | `--strict` | Treat warnings as errors |
 | `--nowarn` | Suppress warnings |
+| `--timestamp <time>` | Optionally stamp the compiled modules with a time. For `<time>`, use the literal `now` or an ISO-8601 instant like `2027-06-13T00:00:00Z`. |
 | `-v, --verbose` | Verbose output |
 
 ### Examples

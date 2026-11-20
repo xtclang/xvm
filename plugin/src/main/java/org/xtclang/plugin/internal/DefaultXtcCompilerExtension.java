@@ -23,6 +23,7 @@ public abstract class DefaultXtcCompilerExtension extends DefaultXtcLauncherTask
     protected final Property<@NotNull Boolean> hasQualifiedOutputName;
     protected final Property<@NotNull Boolean> hasVersionedOutputName;
     protected final Property<@NotNull String> stamp;
+    protected final Property<@NotNull String> timestamp;
     protected final Property<@NotNull Boolean> rebuild;
 
     @Inject
@@ -40,6 +41,7 @@ public abstract class DefaultXtcCompilerExtension extends DefaultXtcLauncherTask
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(false);
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(false);
         this.stamp = objects.property(String.class).convention(XtcProjectDelegate.readXdkVersion());
+        this.timestamp = objects.property(String.class);
     }
 
     @Override
@@ -65,6 +67,11 @@ public abstract class DefaultXtcCompilerExtension extends DefaultXtcLauncherTask
     @Override
     public Property<@NotNull String> getXtcVersion() {
         return stamp;
+    }
+
+    @Override
+    public Property<@NotNull String> getTimestamp() {
+        return timestamp;
     }
 
     @Override

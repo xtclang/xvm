@@ -531,29 +531,21 @@ public class TypeCompositionStatement
                 break FindSource;
             }
 
-            TypeCompositionStatement stmtModule = (TypeCompositionStatement) nodeModule;
-            String                   sFile      = sOrig.replace(File.separatorChar, '/');
-            if (this == stmtModule) {
-                // this statement is the module statement, so this file name also is used to
-                // configure the root directory from which the module source code originated
-                int ofFile = sFile.lastIndexOf('/') + 1;
-
-                String sDir = sOrig.substring(0, ofFile);
-                ((ModuleStructure) component).setSourceDir(
-                        pool.ensureLiteralConstant(Constant.Format.Path, sDir));
-
-                sFile = sFile.substring(ofFile);
-            } else {
-                // get the root directory of the source tree; the file name must be under that
-                // directory
-                String sDir = ((ModuleStructure) stmtModule.getComponent()).getSourceDir().getValue();
-                if (sDir == null || !sOrig.startsWith(sDir)) {
-                    break FindSource;
-                }
-
-                sFile = sFile.substring(sDir.length());
+            // the module statement's file name configures the root directory from which the module
+            // source code originated; the file name must be under that directory. the module does
+            // not record the directory, so that its bytes do not depend on where it was compiled
+            String sModuleFile = ((TypeCompositionStatement) nodeModule).getSource().getFileName();
+            if (sModuleFile == null) {
+                break FindSource;
             }
 
+            String sDir = sModuleFile.substring(0,
+                    sModuleFile.replace(File.separatorChar, '/').lastIndexOf('/') + 1);
+            if (!sOrig.startsWith(sDir)) {
+                break FindSource;
+            }
+
+            String sFile = sOrig.substring(sDir.length()).replace(File.separatorChar, '/');
             component.setSourcePath(pool.ensureLiteralConstant(Constant.Format.Path, sFile));
         }
 

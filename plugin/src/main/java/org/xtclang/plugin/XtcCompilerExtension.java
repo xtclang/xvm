@@ -15,5 +15,12 @@ public interface XtcCompilerExtension extends XtcLauncherTaskExtension {
 
     Property<@NotNull String> getXtcVersion();
 
+    /**
+     * The time to stamp compiled modules with, passed to the compiler as {@code --timestamp}: "now", or an
+     * ISO-8601 instant such as 2026-01-01T00:00:00Z. Unset, the modules carry no time, so that the same source
+     * compiles to the same bytes and builds that depend on them stay up to date.
+     */
+    Property<@NotNull String> getTimestamp();
+
     Property<@NotNull Boolean> getRebuild();
 }

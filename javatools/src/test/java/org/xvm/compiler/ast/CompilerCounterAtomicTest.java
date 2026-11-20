@@ -30,14 +30,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Guards compiler-wide counters that are shared when multiple compilations run in one JVM.
+ * Guards compiler-wide counters that are shared when multiple compilations run in one JVM, and the
+ * counter of a method, which counts within that method only.
  */
 public class CompilerCounterAtomicTest {
     @Test
     public void staticCompilerCountersAreAtomic()
             throws Exception {
         assertAtomicCounter(ConditionalStatement.class, "LABEL_COUNTER");
-        assertAtomicCounter(MethodDeclarationStatement.class, "COUNTER");
         assertAtomicCounter(ElseExpression.class, "COUNTER");
         assertAtomicCounter(ElvisExpression.class, "COUNTER");
     }
@@ -93,17 +93,16 @@ public class CompilerCounterAtomicTest {
     }
 
     @Test
-    public void methodDeclarationCodeContainerCountersRemainSequential()
-            throws Exception {
-        withCounter(MethodDeclarationStatement.class, "COUNTER", 200, () -> {
-            TestMethodDeclarationStatement stmt1 = new TestMethodDeclarationStatement("method1");
-            TestMethodDeclarationStatement stmt2 = new TestMethodDeclarationStatement("method2");
+    public void methodDeclarationsCountWithinEachMethod() {
+        TestMethodDeclarationStatement stmt1 = new TestMethodDeclarationStatement("method1");
+        TestMethodDeclarationStatement stmt2 = new TestMethodDeclarationStatement("method2");
 
-            assertEquals(200, stmt1.codeContainerCounter());
-            assertEquals(201, stmt2.codeContainerCounter());
-            assertEquals(202, stmt1.codeContainerCounter());
-            assertEquals(203, getAtomicCounter(MethodDeclarationStatement.class, "COUNTER").get());
-        });
+        // each method starts at 0, whatever other methods have counted, so that a method's names,
+        // such as those of its variables named _, depend only on its own source
+        assertEquals(0, stmt1.codeContainerCounter());
+        assertEquals(0, stmt2.codeContainerCounter());
+        assertEquals(1, stmt1.codeContainerCounter());
+        assertEquals(1, stmt2.codeContainerCounter());
     }
 
     @Test

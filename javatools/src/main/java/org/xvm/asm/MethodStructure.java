@@ -731,6 +731,25 @@ public class MethodStructure
                 : m_source.renderLines(iFirst, cLines, fTrim);
     }
 
+    /**
+     * Drop the code of this method and the source text of its body, which the API of its module
+     * leaves out.
+     *
+     * @return whether the method was abstract (bit 0), native (bit 1) and had code (bit 2)
+     *
+     * @see FileStructure#writeApi
+     */
+    int stripToApi() {
+        boolean fAbstract = isAbstract();
+        int     nFlags    = (fAbstract ? 1 : 0) | (isNative() ? 2 : 0) | (hasCode() ? 4 : 0);
+
+        // marking a method abstract drops its code; it is then marked as it was
+        setAbstract(true);
+        setAbstract(fAbstract);
+        configureSource(null, 0);
+        return nFlags;
+    }
+
     // ----- compiler support ----------------------------------------------------------------------
 
     /**

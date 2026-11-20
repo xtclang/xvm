@@ -24,15 +24,12 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
-import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
@@ -213,13 +210,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
             throw new GradleException("Java toolchain not configured - cannot resolve java executable for forked execution");
         }
         return executable;
-    }
-
-    // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)
-    @InputDirectory
-    @PathSensitive(PathSensitivity.RELATIVE)
-    Provider<@NotNull Directory> getInputXdkModules() {
-        return xdkContentsDir;
     }
 
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)

@@ -42,6 +42,27 @@ class LauncherArgumentsTest {
         }
     }
 
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"now", "2026-01-01T00:00:00Z"})
+    void compileTimestampIsOptionalInBothLaunchers(final String timestamp) {
+        final var project = ProjectBuilder.builder().build();
+        project.setVersion("1.0");
+        project.getPluginManager().apply(XtcPlugin.class);
+        final var task = project.getTasks().named("compileXtc", XtcCompileTask.class).get();
+        task.getTimestamp().set(project.provider(() -> timestamp));
+
+        final var direct = DirectStrategy.createCompileRequest(task);
+        final var forked = List.of(new ForkedCommandLineBuilder().buildCompilerArgs(task));
+        if (timestamp == null || timestamp.isEmpty()) {
+            assertTrue(direct.timestamp() == null || direct.timestamp().isEmpty());
+            assertFalse(forked.contains("--timestamp"));
+        } else {
+            assertEquals(timestamp, direct.timestamp());
+            assertEquals(timestamp, forked.get(forked.indexOf("--timestamp") + 1));
+        }
+    }
+
     @Test
     void selectedModuleMethodReachesBothLaunchers() {
         final var project = ProjectBuilder.builder().build();

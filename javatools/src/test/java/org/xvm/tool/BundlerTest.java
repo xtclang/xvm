@@ -5,8 +5,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import java.time.Instant;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -220,16 +218,12 @@ class BundlerTest {
 
     @Test
     void testBundleOutputBytesIndependentOfInputOrder(@TempDir Path tempDir) throws Exception {
-        // with explicit creation timestamps there is no hidden wall-clock input left anywhere in
-        // the pipeline: each bundling run generates its own inputs completely from scratch, and
-        // the runs both generate and present them in opposite orders - the produced binaries must
-        // still be byte-identical
-        var timestamp = Instant.parse("2026-01-01T00:00:00Z");
-
-        byte[] abForward  = generateAndBundle(tempDir.resolve("forward"), timestamp,
-                List.of("MainMod", "LibA", "LibB"));
-        byte[] abReversed = generateAndBundle(tempDir.resolve("reversed"), timestamp,
-                List.of("LibB", "LibA", "MainMod"));
+        // a module carries no creation timestamp unless given one, so there is no hidden
+        // wall-clock input left anywhere in the pipeline: each bundling run generates its own
+        // inputs completely from scratch, and the runs both generate and present them in opposite
+        // orders - the produced binaries must still be byte-identical
+        byte[] abForward  = generateAndBundle(tempDir.resolve("forward"), List.of("MainMod", "LibA", "LibB"));
+        byte[] abReversed = generateAndBundle(tempDir.resolve("reversed"), List.of("LibB", "LibA", "MainMod"));
         assertArrayEquals(abForward, abReversed);
 
         // write -> read -> write must also be a fixpoint: re-serializing a read-back bundle
@@ -241,17 +235,16 @@ class BundlerTest {
     }
 
     /**
-     * Generate fresh single-module inputs into the given directory - in the given order, stamped
-     * with the given timestamp - bundle them with the real bundle command, and return the bundle
-     * file's bytes.
+     * Generate fresh single-module inputs into the given directory - in the given order - bundle
+     * them with the real bundle command, and return the bundle file's bytes.
      */
-    private static byte[] generateAndBundle(Path dir, Instant timestamp, List<String> moduleNames)
+    private static byte[] generateAndBundle(Path dir, List<String> moduleNames)
             throws Exception {
         Files.createDirectories(dir);
         var inputs = new ArrayList<File>();
         for (var name : moduleNames) {
             var file = dir.resolve(name + ".xtc").toFile();
-            new FileStructure(name, timestamp).writeTo(file);
+            new FileStructure(name).writeTo(file);
             inputs.add(file);
         }
 
