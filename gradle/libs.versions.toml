@@ -20,7 +20,7 @@
 # =============================================================================
 acme4j = "3.5.1"
 apache-commons-cli = "1.11.0"
-bouncycastle = "1.86"
+bouncycastle = "1.87"
 gson = "2.15.0"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
@@ -63,13 +63,13 @@ mockito = "5.24.0"
 # =============================================================================
 # Everything below is only used when includeBuildLang=true.
 lang-kotlin = "2.4.21"
-lang-kotlinx-serialization = "1.12.0"
+lang-kotlinx-serialization = "1.13.0"
 lang-ktlint = "1.8.0"
 
 # =============================================================================
 # Lang tooling - LSP, DAP & logging
 # =============================================================================
-lang-logback = "1.6.6"
+lang-logback = "1.6.7"
 lang-lsp4j = "1.0.0"
 lang-slf4j = "2.0.20"
 
