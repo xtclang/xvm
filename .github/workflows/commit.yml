@@ -1246,7 +1246,7 @@ jobs:
                   enable-debug: false
 
             - name: Setup Java
-              uses: actions/setup-java@v6.2.0
+              uses: actions/setup-java@v6.3.0
               with:
                   distribution: ${{ steps.versions.outputs.java-distribution }}
                   java-version: ${{ steps.versions.outputs.java-version }}
