@@ -1,12 +1,11 @@
 package org.xvm.runtime.template._native.web;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
-
-import java.nio.ByteBuffer;
 
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -54,7 +53,7 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 
 import org.eclipse.jetty.util.Callback;
-import org.eclipse.jetty.util.IteratingCallback;
+import org.eclipse.jetty.util.IO;
 
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -552,7 +551,8 @@ public class xRTServer
         HttpContextHandle hCtx = (HttpContextHandle) ahArg[0];
         long              cb   = ((JavaLong) ahArg[1]).getValue();
 
-        CompletableFuture<byte[]> cf = hCtx.readBody((int) Math.min(cb, Integer.MAX_VALUE));
+        CompletableFuture<byte[]> cf = frame.f_context.f_container.scheduleIO(
+                () -> hCtx.readBody((int) Math.min(cb, Integer.MAX_VALUE)));
         return frame.waitForIO(cf, frameCaller -> {
             try {
                 byte[] ab = cf.get();
@@ -669,7 +669,11 @@ public class xRTServer
         boolean           fFinal = ((BooleanHandle) ahArg[2]).get();
 
         byte[]                  abBody = xByteArray.getBytes(hBody);
-        CompletableFuture<Void> cf     = hCtx.writeBody(abBody, fFinal);
+        CompletableFuture<Void> cf     = frame.f_context.f_container.scheduleIO(() -> {
+            hCtx.writeBody(abBody, fFinal);
+            return null;
+        });
+
         return frame.waitForIO(cf, frameCaller -> {
             try {
                 cf.get();
@@ -758,7 +762,10 @@ public class xRTServer
             if (fStarted) {
                 hCtx.complete(t);
             } else {
-                hCtx.writeBody(Handy.EMPTY_BYTE_ARRAY, true);
+                f_context.f_container.scheduleIO(() -> {
+                    hCtx.writeBody(Handy.EMPTY_BYTE_ARRAY, true);
+                    return null;
+                });
             }
         }
 
@@ -1020,155 +1027,102 @@ public class xRTServer
             request.addFailureListener(this::complete);
         }
 
-        protected CompletableFuture<byte[]> readBody(int cb) {
-            ReadBody reader;
+        /**
+         * Read at most the requested number of bytes, waiting for content without blocking the
+         * HTTP service context. A partly consumed chunk is retained for the next read.
+         */
+        protected byte[] readBody(int cb)
+                throws IOException {
+            InputStream in;
             synchronized (this) {
-                if (cb < 0 || m_reader != null || m_stage == Stage.COMPLETED) {
-                    return CompletableFuture.failedFuture(new IOException("Invalid HTTP body read"));
+                if (cb < 0 || m_fReading || m_stage == Stage.COMPLETED) {
+                    throw new IOException("Invalid HTTP body read");
                 }
-                if (m_fEOF || cb == 0) {
-                    return CompletableFuture.completedFuture(Handy.EMPTY_BYTE_ARRAY);
+                if (cb == 0) {
+                    return Handy.EMPTY_BYTE_ARRAY;
                 }
-                m_reader = reader = new ReadBody(cb);
+                if (m_in == null) {
+                    m_in = Content.Source.asInputStream(f_request);
+                }
+                in         = m_in;
+                m_fReading = true;
             }
-            reader.iterate();
-            return reader.f_cf;
+
+            try {
+                return in.readNBytes(cb);
+            } catch (IOException e) {
+                complete(e);
+                throw e;
+            } finally {
+                boolean fClose;
+                synchronized (this) {
+                    m_fReading = false;
+                    fClose     = m_stage == Stage.COMPLETED;
+                }
+                if (fClose) {
+                    IO.close(in);
+                }
+            }
         }
 
-        protected CompletableFuture<Void> writeBody(byte[] ab, boolean fFinal) {
-            CompletableFuture<Void> cf = new CompletableFuture<>();
+        /**
+         * Write response body bytes using Jetty's blocking output stream. Must run on an I/O
+         * thread. A final write closes the stream and completes the HTTP exchange.
+         *
+         * @param ab      the response body bytes
+         * @param fFinal  true if this is the last write
+         */
+        protected void writeBody(byte[] ab, boolean fFinal)
+                throws IOException {
             try {
+                OutputStream out;
                 synchronized (this) {
-                    if (m_stage != Stage.HEADERS_SET) {
+                    if (m_stage != Stage.HEADERS_SET || m_fWriting) {
                         throw new IOException("Invalid HTTP response write");
                     }
-                    m_stage = fFinal ? Stage.FINAL_WRITE_PENDING : Stage.HEADERS_SET;
+                    if (m_out == null) {
+                        m_out = Content.Sink.asOutputStream(f_response);
+                    }
+                    out        = m_out;
+                    m_fWriting = true;
+                    m_stage    = fFinal ? Stage.FINAL_WRITE_PENDING : Stage.HEADERS_SET;
                 }
-                f_response.write(fFinal, ab.length == 0 ? null : ByteBuffer.wrap(ab),
-                        Callback.from(() -> {
-                            if (fFinal) {
-                                complete(null);
-                            }
-                            cf.complete(null);
-                        }, e -> {
-                            complete(e);
-                            cf.completeExceptionally(e);
-                        }));
-            } catch (Throwable e) {
+
+                try {
+                    out.write(ab);
+                    if (fFinal) {
+                        out.close();
+                        complete(null);
+                    }
+                } finally {
+                    m_fWriting = false;
+                }
+            } catch (IOException e) {
                 complete(e);
-                cf.completeExceptionally(e);
+                throw e;
             }
-            return cf;
         }
 
         /**
          * Complete Jetty's handler only when the response is sent or the exchange fails.
          */
         protected void complete(Throwable e) {
-            ReadBody reader;
+            InputStream in;
             synchronized (this) {
                 if (m_stage == Stage.COMPLETED) {
                     return;
                 }
                 m_stage = Stage.COMPLETED;
-                reader  = m_reader;
-                if (m_chunk != null) {
-                    m_chunk.release();
-                    m_chunk = null;
-                }
+                in      = m_fReading ? null : m_in;
+                m_in    = null;
+                m_out   = null;
             }
-            if (reader != null) {
-                reader.failed(e == null ? new IOException("HTTP response completed") : e);
-            }
+            IO.close(in);
             if (e == null) {
                 f_callback.succeeded();
             } else {
                 f_callback.failed(e);
             }
-        }
-
-        /**
-         * Read at most the requested number of bytes, waiting for content without blocking the
-         * HTTP service context. A partly consumed chunk is retained for the next read.
-         */
-        private class ReadBody
-                extends IteratingCallback {
-            private ReadBody(int cb) {
-                f_cb     = cb;
-                f_stream = new ByteArrayOutputStream(Math.min(cb, 8192));
-            }
-
-            @Override
-            protected Action process() throws IOException {
-                while (true) {
-                    synchronized (HttpContextHandle.this) {
-                        if (m_stage == Stage.COMPLETED) {
-                            throw new IOException("HTTP request completed");
-                        }
-                        if (f_stream.size() >= f_cb || m_fEOF) {
-                            return Action.SUCCEEDED;
-                        }
-
-                        Content.Chunk chunk = m_chunk;
-                        if (chunk != null) {
-                            if (Content.Chunk.isFailure(chunk)) {
-                                throw new IOException("HTTP request body failed", chunk.getFailure());
-                            }
-
-                            ByteBuffer buffer = chunk.getByteBuffer();
-                            int        cb     = Math.min(buffer.remaining(), f_cb - f_stream.size());
-                            byte[]     ab     = new byte[cb];
-                            buffer.get(ab);
-                            f_stream.writeBytes(ab);
-                            if (!buffer.hasRemaining()) {
-                                m_fEOF = chunk.isLast();
-                                chunk.release();
-                                m_chunk = null;
-                            }
-                            continue;
-                        }
-                    }
-
-                    // read() and demand() may invoke callbacks synchronously
-                    Content.Chunk chunk = f_request.read();
-                    if (chunk == null) {
-                        f_request.demand(this::succeeded);
-                        return Action.SCHEDULED;
-                    }
-                    synchronized (HttpContextHandle.this) {
-                        if (m_stage == Stage.COMPLETED) {
-                            chunk.release();
-                            throw new IOException("HTTP request completed");
-                        }
-                        m_chunk = chunk;
-                    }
-                }
-            }
-
-            @Override
-            protected void onCompleteSuccess() {
-                synchronized (HttpContextHandle.this) {
-                    m_reader = null;
-                }
-                f_cf.complete(f_stream.toByteArray());
-            }
-
-            @Override
-            protected void onCompleteFailure(Throwable e) {
-                synchronized (HttpContextHandle.this) {
-                    m_reader = null;
-                    if (m_chunk != null) {
-                        m_chunk.release();
-                        m_chunk = null;
-                    }
-                }
-                complete(e);
-                f_cf.completeExceptionally(e);
-            }
-
-            private final int                       f_cb;
-            private final ByteArrayOutputStream     f_stream;
-            private final CompletableFuture<byte[]> f_cf = new CompletableFuture<>();
         }
 
         /**
@@ -1181,10 +1135,15 @@ public class xRTServer
         /**
          * State guarded by this handle's monitor.
          */
-        private Stage         m_stage = Stage.OPEN;
-        private boolean       m_fEOF;
-        private Content.Chunk m_chunk;
-        private ReadBody      m_reader;
+        private Stage        m_stage = Stage.OPEN;
+        private InputStream  m_in;
+        private OutputStream m_out;
+        private boolean      m_fReading;
+
+        /**
+         * Indicates whether a response write is in progress.
+         */
+        private volatile boolean m_fWriting;
     }
 
     private enum Stage {OPEN, HEADERS_SET, FINAL_WRITE_PENDING, COMPLETED}
