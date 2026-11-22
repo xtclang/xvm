@@ -478,6 +478,15 @@ internal interface TourProbe {
 
     fun serverState(): String
 
+    /** Got It tooltips on, with [id] unseen, for a check of it. */
+    fun enableGotIt(id: String)
+
+    /** Whether the selected editor shows a Got It tooltip. */
+    fun gotItShown(): Boolean
+
+    /** Clicks the Got It tooltip that shows away, true when one showed, and turns Got It tooltips off again. */
+    fun dismissGotIt(): Boolean
+
     fun serverHasFile(path: String): Boolean
 
     fun prepare(

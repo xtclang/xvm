@@ -17,10 +17,13 @@ internal fun ParityScenarios.adapterChooserCases() {
         }
         check(chooser.inGroup(data.string("menuGroup"), data.string("actionId"))) { "The adapter action is not in the Tools menu" }
         val page = with(driver) { utility(LanguageServicePage::class) }
+        val gotIt = with(driver) { utility(GotItProbe::class) }
         val original = with(driver) { withContext(OnDispatcher.EDT) { page.content(singleProject()) } }
         var previous = protocol.server().getCurrentProcessId()
         try {
             listOf(data.string("treeSitterLabel") to "TreeSitter", data.string("compilerLabel") to "XDK").forEach { (label, expected) ->
+                // the first start with Tree-sitter shows, once, in the Ecstasy editor, what the adapter leaves out
+                if (expected == "TreeSitter") gotIt.enable(data.string("treeSitterTooltip"))
                 with(driver) {
                     focusEditor(document.editor)
                     withContext(OnDispatcher.EDT) { chooser.invoke(document.editor.editor, data.string("actionId")) }
@@ -32,11 +35,28 @@ internal fun ParityScenarios.adapterChooserCases() {
                 previous = protocol.server().getCurrentProcessId()
                 val status = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
                 check(status.string("adapter") == expected) { "Expected the $expected adapter: $status" }
+                if (expected == "TreeSitter") {
+                    with(driver) {
+                        awaitUi("the Tree-sitter Got It tooltip over the editor", HANG_LIMIT) { gotIt.shown(document.editor.editor) }
+                    }
+                    check(gotIt.dismiss()) { "The Tree-sitter tooltip has no Got It button" }
+                }
             }
         } finally {
+            gotIt.dismiss()
             with(driver) { withContext(OnDispatcher.EDT) { page.restore(singleProject(), original) } }
         }
     }
+}
+
+/** The plugin's Got It tooltips, which the playbook IDE starts with off, through the IDE-side probe. */
+@Remote("org.xtclang.idea.playbook.probe.GotItUi", plugin = "org.xtclang.playbook.probe")
+interface GotItProbe {
+    fun enable(id: String)
+
+    fun shown(editor: Editor): Boolean
+
+    fun dismiss(): Boolean
 }
 
 /** Keymap, menu and chooser checks for the adapter action, through the IDE-side probe. */

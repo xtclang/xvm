@@ -373,6 +373,15 @@ object TourUi {
     @JvmStatic
     fun ideThreads(): String = ThreadDumper.dumpThreadsToString()
 
+    @JvmStatic
+    fun enableGotIt(id: String) = GotItUi.enable(id)
+
+    @JvmStatic
+    fun gotItShown(): Boolean = anyEdt { GotItUi.shown(editor()) }
+
+    @JvmStatic
+    fun dismissGotIt(): Boolean = GotItUi.dismiss()
+
     /** True once the project is open in its window. */
     @JvmStatic
     fun projectOpen(): Boolean =
