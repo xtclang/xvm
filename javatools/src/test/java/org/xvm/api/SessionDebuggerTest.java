@@ -45,9 +45,7 @@ import org.xvm.api.EmbeddingSupport.EntryPoint;
 
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
-import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Fiber;
@@ -107,6 +105,12 @@ public class SessionDebuggerTest {
 
     @TempDir
     Path sourceDir;
+
+    /**
+     * The source directory of each module that {@link #compile} compiled, by name, which {@link #debugger}
+     * names to a session.
+     */
+    private final Map<String, String> compiled = new HashMap<>();
 
     private static EmbeddingSupport support;
 
@@ -935,7 +939,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Targets", TARGETS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Targets"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 4)));
 
@@ -978,7 +982,7 @@ public class SessionDebuggerTest {
     public void aDataBreakpointStopsAtTheNextLineOfTheFieldsServiceOnceTheFieldHasChanged() throws Exception {
         Path  source  = compile("Watched", WATCHED);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Watched"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
 
@@ -1023,7 +1027,7 @@ public class SessionDebuggerTest {
     public void aRestartedFrameIsCalledAgainByItsCallerAndStopsAtItsFirstLine() throws Exception {
         Path  source  = compile("Restarts", RESTARTS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Restarts"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 16)));
 
@@ -1069,7 +1073,7 @@ public class SessionDebuggerTest {
     public void aFrameRestartsAfterItsFiberRanCodeInTheStop() throws Exception {
         Path  source  = compile("Restarts", RESTARTS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Restarts"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 16)));
 
@@ -1107,7 +1111,7 @@ public class SessionDebuggerTest {
         Path  source  = compile("Waits", PROGRAM.replace("Program", "Waits").replace("worker.work^();", "")
                 .replace("Int done = worker.finished();", "worker.work^(); Int done = worker.finished();"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Waits"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "done == 100000", null, null)));
 
@@ -1149,7 +1153,7 @@ public class SessionDebuggerTest {
     public void aFiberThatContinuesAloneStopsAgainWhileTheOtherFibersWait() throws Exception {
         Path  source  = compile("Alone", ALONE);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Alone"));
         session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
 
@@ -1183,7 +1187,7 @@ public class SessionDebuggerTest {
     public void aFiberThatStepsAloneStopsWhereTheStepEndsWhileTheOtherFibersWait() throws Exception {
         Path  source  = compile("StepsAlone", ALONE.replace("Alone", "StepsAlone"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("StepsAlone"));
         session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
 
@@ -1213,7 +1217,7 @@ public class SessionDebuggerTest {
     public void aPauseStopsTheFiberThatRunsAloneWhileTheOtherFibersWait() throws Exception {
         Path  source  = compile("PausesAlone", ALONE.replace("Alone", "PausesAlone"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("PausesAlone"));
         session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
 
@@ -1247,7 +1251,7 @@ public class SessionDebuggerTest {
     public void whenTheFiberThatRunsAloneEndsTheProgramStopsAtAFiberThatWaits() throws Exception {
         Path  source  = compile("EndsAlone", ALONE.replace("Alone", "EndsAlone"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("EndsAlone"));
         session.setBreakpoints(source.toString(), List.of(firstAt(1000)));
 
@@ -1279,7 +1283,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Modules", LIBRARY.replace("Library", "Modules"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Modules"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 6)));
         // before the program starts, the runtime has linked nothing
@@ -1299,7 +1303,7 @@ public class SessionDebuggerTest {
             ModuleInfo ecstasy = modules.get("ecstasy.xtclang.org");
             assertFalse(ecstasy.own());
             assertTrue(ecstasy.sources().contains("ecstasy/collections/Collection.x"), ecstasy.sources().toString());
-            assertEquals(xdk().loadModule("ecstasy.xtclang.org").getSourceDir().getValue(), ecstasy.sourceDir());
+            assertNull(ecstasy.sourceDir(), "a library compiled elsewhere has the directory the host names, and it named none");
             assertEquals(session.modules(), session.modules());
 
             session.setBreakpoints(source.toString(), List.of());
@@ -1313,7 +1317,9 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Library", LIBRARY);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
+        String libraries = sourceDir.resolve("xdk") + File.separator;
+        session.setSourceDirs(Map.of("ecstasy.xtclang.org", libraries));
         session.addModule(input().loadModule("Library"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 6)));
 
@@ -1329,12 +1335,11 @@ public class SessionDebuggerTest {
             assertEquals("Library.x", lambda.source());
             assertEquals(source.toRealPath(), Path.of(lambda.path()).toRealPath());
 
-            // the library's own source directory, where it was compiled, not the program's
+            // the library's own source directory, which the host named, not the program's
             StackFrameInfo forEach = frames.get(1);
             assertEquals("ecstasy.xtclang.org", forEach.module());
             assertEquals("ecstasy/collections/Collection.x", forEach.source());
-            assertEquals(xdk().loadModule("ecstasy.xtclang.org").getSourceDir().getValue() + forEach.source(),
-                    forEach.path());
+            assertEquals(libraries + forEach.source(), forEach.path());
 
             session.setBreakpoints(source.toString(), List.of());
             session.resume();
@@ -1345,7 +1350,8 @@ public class SessionDebuggerTest {
     @Test
     public void aModulesSourcesAreWhereTheHostSaysRatherThanWhereItWasCompiled()
             throws Exception {
-        // the module records the directory it was compiled in; its sources are now in another checkout
+        // a compiled module does not record where it was compiled; its sources are now in another
+        // checkout, which the host names
         Path source = compile("Library", LIBRARY);
         Path moved  = Files.copy(source, Files.createDirectories(sourceDir.resolve("checkout")).resolve("Library.x"));
         Stops stops   = new Stops();
@@ -1376,44 +1382,11 @@ public class SessionDebuggerTest {
     }
 
     @Test
-    public void aModuleThatRecordsNoSourceDirectoryHasItsSourcesWhereTheHostSays()
-            throws Exception {
-        Path source = compile("Library", LIBRARY);
-        File binary = outputDir.resolve("Library.xtc").toFile();
-        FileStructure file = new FileStructure(binary);
-        file.getModule().setSourceDir(null);
-        file.writeTo(binary);
-
-        Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
-        ModuleStructure module = input().loadModule("Library");
-        assertNull(module.getSourceDir());
-        session.addModule(module);
-        assertEquals(List.of(new Breakpoint(1, 6, false, SessionDebugger.NOT_IN_PROGRAM)),
-                session.setBreakpoints(source.toString(), List.of(new Line(1, 6))));
-
-        session.setSourceDirs(Map.of("Library", source.getParent().toString()));
-        assertEquals(List.of(new Breakpoint(2, 6, true, null)),
-                session.setBreakpoints(source.toString(), List.of(new Line(2, 6))));
-
-        Control control = run("Library", new StringWriter(), session);
-        try (control) {
-            Stop           stop  = stops.next();
-            StackFrameInfo frame = session.stackTrace(stop.threadId()).get(0);
-            assertEquals(source.toRealPath(), Path.of(frame.path()).toRealPath());
-
-            session.setBreakpoints(source.toString(), List.of());
-            session.resume();
-            Await.run(control::join);
-        }
-    }
-
-    @Test
     public void aBreakpointStopsAtItsLineWithTheCallerBelowAndTheProgramGoesOnWhenResumed()
             throws Exception {
         Path  source  = compile("Twice", TWICE);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Twice"));
         List<Breakpoint> breakpoints = session.setBreakpoints(source.toString(), List.of(new Line(7, 11)));
         assertEquals(List.of(new Breakpoint(7, 11, true, null)), breakpoints);
@@ -1449,7 +1422,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Strategy", STRATEGY);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         // indexing the module's lines passes over the interface's method, which has no code
         session.addModule(input().loadModule("Strategy"));
         List<Breakpoint> breakpoints = session.setBreakpoints(source.toString(), List.of(new Line(1, 9)));
@@ -1472,7 +1445,7 @@ public class SessionDebuggerTest {
     public void aBreakpointWithoutCodeOnItsLineMovesToTheNextLineWithCodeOrIsNotInstalled()
             throws Exception {
         Path source  = compile("Moves", TWICE.replace("Twice", "Moves"));
-        var  session = new SessionDebugger(_ -> {});
+        var  session = debugger(_ -> {});
         session.addModule(input().loadModule("Moves"));
 
         // "Int run() {" has no code of its own, the blank line and the closing brace none to follow
@@ -1489,7 +1462,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Entered", TARGETS.replace("Targets", "Entered"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Entered"));
 
         // by the method's own name or after its module's; the library's forEach is not the
@@ -1527,7 +1500,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Vars", VARS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Vars"));
         assertTrue(session.setBreakpoints(source.toString(), List.of(new Line(1, 21))).getFirst().verified());
 
@@ -1588,7 +1561,7 @@ public class SessionDebuggerTest {
     public void pathsToVariablesFieldsAndElementsEvaluateWithoutRunningCode() throws Exception {
         Path  source  = compile("Paths", VARS.replace("Vars", "Paths"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Paths"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 21)));
 
@@ -1631,7 +1604,7 @@ public class SessionDebuggerTest {
     public void operatorsRunTheRuntimesOwnOperationsAndComputeWhatTheProgramDoes() throws Exception {
         Path  source  = compile("Exprs", EXPRS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Exprs"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 29)));
 
@@ -1717,7 +1690,7 @@ public class SessionDebuggerTest {
                 }
                 """);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Boxes"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 4)));
 
@@ -1739,7 +1712,7 @@ public class SessionDebuggerTest {
         Path source  = compile("Reads", TWICE.replace("Twice", "Reads"));
         var  read    = new CompletableFuture<List<Variable>>();
         var  ref     = new AtomicReference<SessionDebugger>();
-        var  session = new SessionDebugger(stop -> {
+        var  session = debugger(stop -> {
             SessionDebugger self  = ref.get();
             int             frame = self.stackTrace(stop.threadId()).getFirst().id();
             self.variables(self.scopes(frame).getFirst().variablesReference())
@@ -1771,7 +1744,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Steps", STEPS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Steps"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 4)));
 
@@ -1818,7 +1791,7 @@ public class SessionDebuggerTest {
     public void aStepOutStopsAtTheCallersNextLineAndABreakpointOnTheWayEndsAStep() throws Exception {
         Path  source  = compile("StepsOut", STEPS.replace("Steps", "StepsOut"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("StepsOut"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 11)));
 
@@ -1849,7 +1822,7 @@ public class SessionDebuggerTest {
             throws Exception {
         compile("Throws", THROWS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Throws"));
         session.setExceptionStops(false, true);
 
@@ -1882,7 +1855,7 @@ public class SessionDebuggerTest {
     public void everyThrownExceptionStopsWhenAskedAlsoOneThatIsCaught() throws Exception {
         compile("ThrowsAll", THROWS.replace("Throws", "ThrowsAll"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("ThrowsAll"));
         session.setExceptionStops(true, false);
 
@@ -1910,7 +1883,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Conditions", LOOP.replace("Loop", "Conditions"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Conditions"));
         assertEquals(List.of(new Breakpoint(1, 7, true, null)),
                 session.setBreakpoints(source.toString(), List.of(new Line(1, 7, " even ", null, null))));
@@ -1933,7 +1906,7 @@ public class SessionDebuggerTest {
         // the hit count counts the hits whose condition holds: the second even i is 2
         compile("Counts", LOOP.replace("Loop", "Counts"));
         Stops counted = new Stops();
-        var   again   = new SessionDebugger(counted);
+        var   again   = debugger(counted);
         again.addModule(input().loadModule("Counts"));
         again.setBreakpoints(sourceDir.resolve("Counts.x").toString(), List.of(new Line(2, 7, "even", "2", null)));
         try (Control second = run("Counts", new StringWriter(), again)) {
@@ -1949,7 +1922,7 @@ public class SessionDebuggerTest {
     public void aResetResumesTheProgramWhichThenRunsWithoutStopping() throws Exception {
         Path  source  = compile("Resets", LOOP.replace("Loop", "Resets"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Resets"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 7, null, null, null)));
         session.setExceptionStops(true, false);
@@ -1968,7 +1941,7 @@ public class SessionDebuggerTest {
     public void conditionsAndLogMessagesAreExpressions() throws Exception {
         Path  source  = compile("Operators", LOOP.replace("Loop", "Operators"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Operators"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "i % 2 == 0 && i > 0", null, null),
                 new Line(2, 6, null, null, "i={i}, twice={i * 2}, odd={i % 2 != 0}")));
@@ -1991,7 +1964,7 @@ public class SessionDebuggerTest {
     public void aLogpointLogsItsMessageWithTheValuesOfItsPathsAndDoesNotStop() throws Exception {
         Path  source  = compile("Logs", LOOP.replace("Loop", "Logs"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Logs"));
         session.setBreakpoints(source.toString(),
                 List.of(new Line(1, 7, null, null, "i={i}, sum={sum} {nope}"), new Line(2, 9, null, null, "sum {sum")));
@@ -2015,7 +1988,7 @@ public class SessionDebuggerTest {
     public void aConditionThatCannotBeEvaluatedStopsAndSaysWhy() throws Exception {
         Path  source  = compile("BadCondition", LOOP.replace("Loop", "BadCondition"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("BadCondition"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 7, "sum", null, null)));
 
@@ -2032,7 +2005,7 @@ public class SessionDebuggerTest {
     public void anEnumValueWrittenByItsEnumerationsNameIsComparedWithAValueOfThatEnumeration() throws Exception {
         Path  source  = compile("Cards", CARDS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Cards"));
         // by the enumeration's name alone, and by a path that ends in it
         session.setBreakpoints(source.toString(),
@@ -2091,7 +2064,7 @@ public class SessionDebuggerTest {
     @Test
     public void aConditionHitCountOrLogMessageThatIsNotUnderstoodIsNotInstalled() throws Exception {
         Path source  = compile("NotUnderstood", LOOP.replace("Loop", "NotUnderstood"));
-        var  session = new SessionDebugger(_ -> {});
+        var  session = debugger(_ -> {});
         session.addModule(input().loadModule("NotUnderstood"));
 
         assertEquals(List.of(new Breakpoint(1, 7, false, "The condition \"i >\"" + NOT_EVALUATED),
@@ -2111,7 +2084,7 @@ public class SessionDebuggerTest {
             throws Exception {
         compile("ThrowsInfo", THROWS.replace("Throws", "ThrowsInfo"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("ThrowsInfo"));
         session.setExceptionStops(true, false);
 
@@ -2147,7 +2120,7 @@ public class SessionDebuggerTest {
         // every thrown IllegalArgument: the caught IllegalState does not stop the program
         compile("ThrowsTyped", THROWS.replace("Throws", "ThrowsTyped"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("ThrowsTyped"));
         session.setExceptionStops(true, List.of("IllegalArgument", "OutOfBounds"), false, List.of());
 
@@ -2164,7 +2137,7 @@ public class SessionDebuggerTest {
         // an uncaught Exception: IllegalArgument extends it
         compile("ThrowsBase", THROWS.replace("Throws", "ThrowsBase"));
         Stops based = new Stops();
-        var   again = new SessionDebugger(based);
+        var   again = debugger(based);
         again.addModule(input().loadModule("ThrowsBase"));
         again.setExceptionStops(false, List.of(), true, List.of("Exception"));
         try (Control control = run("ThrowsBase", new StringWriter(), again)) {
@@ -2180,7 +2153,7 @@ public class SessionDebuggerTest {
     public void pauseStopsARunningProgramAtTheNextLineItReaches() throws Exception {
         compile("Ticks", TICKS);
         Stops        stops   = new Stops();
-        var          session = new SessionDebugger(stops);
+        var          session = debugger(stops);
         StringWriter output  = new StringWriter();
         Control      control = run("Ticks", output, session);
         try (control) {
@@ -2220,7 +2193,7 @@ public class SessionDebuggerTest {
     public void stopOnEntryStopsAtTheProgramsFirstLine() throws Exception {
         compile("Entry", TWICE.replace("Twice", "Entry"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         // the program's module is known, so the libraries that run before it do not stop it
         session.addModule(input().loadModule("Entry"));
         session.stopOnEntry();
@@ -2253,7 +2226,7 @@ public class SessionDebuggerTest {
                 }
                 """);
         Stops        stops   = new Stops();
-        var          session = new SessionDebugger(stops);
+        var          session = debugger(stops);
         StringWriter output  = new StringWriter();
         Control      control = run("Pauses", output, session);
         try (control) {
@@ -2270,7 +2243,7 @@ public class SessionDebuggerTest {
     public void whileStoppedAFiberOfAnotherServiceWaitsAtItsNextLine() throws Exception {
         Path  source  = compile("Holds", HOLDS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Holds"));
         assertTrue(session.setBreakpoints(source.toString(), List.of(new Line(1, 16))).getFirst().verified());
 
@@ -2293,7 +2266,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Shares", HOLDS.replace("Holds", "Shares"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Shares"));
         assertTrue(session.setBreakpoints(source.toString(), List.of(new Line(1, 16))).getFirst().verified());
 
@@ -2329,7 +2302,7 @@ public class SessionDebuggerTest {
     public void aStepGoesIntoACallToAnotherServiceAndOutToItsCallerOnTheCallingFiber() throws Exception {
         Path  source  = compile("Calls", CALLS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Calls"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 13)));
 
@@ -2371,7 +2344,7 @@ public class SessionDebuggerTest {
     public void aStopsFrameIdsAndReferencesAreNotTheNextStopsAndReadNothingThere() throws Exception {
         Path  source  = compile("Stale", STALE);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Stale"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 8)));
 
@@ -2417,7 +2390,7 @@ public class SessionDebuggerTest {
     public void aReadOrEvaluationAskedForAsTheProgramResumesIsAnsweredWithNothingOrWhy() throws Exception {
         Path  source  = compile("Races", TWICE.replace("Twice", "Races"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Races"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 12)));
 
@@ -2448,7 +2421,7 @@ public class SessionDebuggerTest {
     public void runningCodeAnswersWithItsValuesToStringAndWhatItChangesStaysChanged() throws Exception {
         Path  source  = compile("Runs", RUNS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Runs"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 37)));
 
@@ -2499,7 +2472,7 @@ public class SessionDebuggerTest {
     public void anObjectsComputedPropertiesAndToStringAreLazyVariablesWhoseReadRunsTheirCode() throws Exception {
         Path  source  = compile("Values", VALUES);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Values"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 34)));
         // ordinary getters may take a loaded machine longer than ON_DEMAND; spin, below, checks it
@@ -2555,7 +2528,7 @@ public class SessionDebuggerTest {
     public void integersShowInHexadecimalWhenAskedAndMutableObjectsHaveIdentityCodes() throws Exception {
         Path  source  = compile("Formats", FORMATS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Formats"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 23)));
 
@@ -2605,7 +2578,7 @@ public class SessionDebuggerTest {
     public void aLargeArrayIsReadAPageAtATimeAndAFilterTakesTheNamedOrIndexedChildren() throws Exception {
         Path  source  = compile("Pages", PAGES);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Pages"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
 
@@ -2653,7 +2626,7 @@ public class SessionDebuggerTest {
     public void aLocalAFieldOrAnElementTakesTheValueOfAnExpressionOfItsTypeAndTheProgramGoesOnWithIt() throws Exception {
         Path  source  = compile("Sets", SETS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Sets"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 18)));
 
@@ -2701,7 +2674,7 @@ public class SessionDebuggerTest {
     public void aNameTypedInAStoppedFrameCompletesToItsVariablesOrToTheMembersOfTheValueBeforeADot() throws Exception {
         Path  source  = compile("Completes", COMPLETES);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Completes"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 7), new Line(2, 18)));
 
@@ -2761,7 +2734,7 @@ public class SessionDebuggerTest {
     public void nothingStopsARunsCodeAndWhatItThrowsOrWhyItDoesNotCompileIsItsAnswer() throws Exception {
         Path  source  = compile("Unstopped", RUNS.replace("Runs", "Unstopped"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Unstopped"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 37), new Line(2, 6)));
         session.setExceptionStops(true, true);
@@ -2797,7 +2770,7 @@ public class SessionDebuggerTest {
     public void codeRunAtAnExceptionStopLeavesTheProgramsOwnExceptionToBeCaughtAsBefore() throws Exception {
         compile("Rethrows", THROWS.replace("Throws", "Rethrows"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Rethrows"));
         session.setExceptionStops(true, false);
 
@@ -2827,7 +2800,7 @@ public class SessionDebuggerTest {
     public void readsAndOtherRunsWaitForARunAndTheProgramsResumeEndsOne() throws Exception {
         Path                  source  = compile("Waits", TWICE.replace("Twice", "Waits"));
         Stops                 stops   = new Stops();
-        var                   session = new SessionDebugger(stops);
+        var                   session = debugger(stops);
         BlockingQueue<String> lines   = new LinkedBlockingQueue<>();
         Semaphore             reading = new Semaphore(0);
         session.addModule(input().loadModule("Waits"));
@@ -2887,7 +2860,7 @@ public class SessionDebuggerTest {
             throws Exception {
         Path  source  = compile("Ends", ENDS);
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Ends"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
 
@@ -2920,7 +2893,7 @@ public class SessionDebuggerTest {
     public void cancellingARunOrResumingTheProgramEndsTheRunsCode() throws Exception {
         Path  source  = compile("Cancels", ENDS.replace("Ends", "Cancels"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Cancels"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
 
@@ -2955,7 +2928,7 @@ public class SessionDebuggerTest {
     public void closingTheProgramEndsARunInProgress() throws Exception {
         Path  source  = compile("Terminates", ENDS.replace("Ends", "Terminates"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Terminates"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 5)));
 
@@ -3006,7 +2979,7 @@ public class SessionDebuggerTest {
     public void aRunThatCallsAServiceWhoseFiberIsStoppedEndsAtItsTimeLimitAndSaysWhy() throws Exception {
         Path  source  = compile("Blocked", HOLDS.replace("Holds", "Blocked"));
         Stops stops   = new Stops();
-        var   session = new SessionDebugger(stops);
+        var   session = debugger(stops);
         session.addModule(input().loadModule("Blocked"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 16)));
 
@@ -3033,7 +3006,7 @@ public class SessionDebuggerTest {
         // the worker counts until it is told to stop, so it still counts whenever the test looks
         Path                  source  = compile("Going", GOING);
         Stops                 stops   = new Stops();
-        var                   session = new SessionDebugger(stops);
+        var                   session = debugger(stops);
         BlockingQueue<String> lines   = new LinkedBlockingQueue<>();
         session.addModule(input().loadModule("Going"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 17)));
@@ -3091,7 +3064,7 @@ public class SessionDebuggerTest {
     public void closingAStoppedRunEndsItWhereItIsAndTheNextRunHasNoDebugger() throws Exception {
         Path source  = compile("Closes", TWICE.replace("Twice", "Closes"));
         var  stops   = new Stops();
-        var  session = new SessionDebugger(stops);
+        var  session = debugger(stops);
         session.addModule(input().loadModule("Closes"));
         session.setBreakpoints(source.toString(), List.of(new Line(1, 11)));
 
@@ -3290,7 +3263,19 @@ public class SessionDebuggerTest {
         ErrorList errs = new ErrorList(25);
         assertTrue(support.compile(file.toFile(), null, new DirRepository(outputDir.toFile(), false), errs),
                 () -> "compile failed: " + errs.getErrors());
+        compiled.put(moduleName, sourceDir.toString());
         return file;
+    }
+
+    /**
+     * @return a session that finds the sources of the modules {@link #compile} compiled where it wrote
+     *         them, named as a language server names its workspace's: a compiled module does not record
+     *         where it was compiled
+     */
+    private SessionDebugger debugger(SessionDebugger.Listener listener) {
+        var session = new SessionDebugger(listener);
+        session.setSourceDirs(compiled);
+        return session;
     }
 
     /**

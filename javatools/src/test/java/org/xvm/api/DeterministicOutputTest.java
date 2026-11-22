@@ -103,7 +103,9 @@ class DeterministicOutputTest {
         Files.writeString(dir.resolve("Located").resolve("Helper.x"), "class Helper {}\n");
 
         String[] args = {"-L", xdkModules().getPath(), "-o", out.toString(), source.toString()};
-        assertEquals(0, Launcher.launch(Launcher.CMD_BUILD, args, new Console() {}, null));
+        var errs = new ErrorList(25);
+        assertEquals(0, Launcher.launch(Launcher.CMD_BUILD, args, new Console() {}, errs),
+                () -> "build failed: " + errs.getErrors());
         return Files.readAllBytes(out.resolve("Located.xtc"));
     }
 

@@ -212,8 +212,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
  * <p><b>Breakpoints.</b> A breakpoint is installed by file and line: it stops every fiber that
  * reaches the first op of that line in any method compiled from that file. A file is the module's
  * source directory and the class's source path, compared as real paths. The directory is the one
- * the host gives for the module ({@link #setSourceDirs}), or else the one the module records, where
- * it was compiled, which may be another checkout or another machine. A breakpoint may have a condition, an expression whose Boolean value must be True; a hit
+ * the host gives for the module ({@link #setSourceDirs}): a compiled module does not record where it
+ * was compiled, so a module the host names no directory for has no breakpoints. A breakpoint may have a condition, an expression whose Boolean value must be True; a hit
  * count, which counts the hits whose condition holds; and a log message, which makes it a logpoint
  * that logs the message, with the values of the expressions in braces in it, and does not stop. The
  * fiber that reaches it evaluates them on its own thread, as it would variables; a condition that
@@ -676,9 +676,8 @@ public final class SessionDebugger implements Debugger {
      *
      * @param name       the module's name, such as {@code "ecstasy.xtclang.org"}
      * @param version    the module's version, or null if it has none
-     * @param sourceDir  the directory of the module's sources: the one the host gave
-     *                   ({@link #setSourceDirs}), or else the one the module records, where it was
-     *                   compiled; null if it is not known
+     * @param sourceDir  the directory of the module's sources that the host gave
+     *                   ({@link #setSourceDirs}), or null if it gave none
      * @param sources    the source paths of the module's classes within that directory, in order
      * @param own        true for a module of the program's own, which {@link #addModule} made
      *                   known, and false for a library
@@ -883,11 +882,10 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * Find the sources of the specified modules in the specified directories, in place of the
-     * directories that the modules record. A module records where it was compiled, which may be
-     * another checkout or another machine, such as when it came from a build cache; the host, such
-     * as a language server, knows where its sources are. A module that is not given keeps the
-     * directory it records.
+     * Find the sources of the specified modules in the specified directories. A compiled module
+     * does not record where it was compiled, so that the same sources compile to the same bytes
+     * anywhere; the host, such as a language server, knows where its sources are. A module that is
+     * not given has no sources here, and no breakpoints.
      *
      * <p>Call it before setting breakpoints; the modules already known are indexed again.
      *
@@ -3976,16 +3974,12 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return the directory of the module's sources, ending in a separator: the one the host gave
-     *         ({@link #setSourceDirs}), or else the one the module records; null if neither is known
+     * @return the directory of the module's sources that the host gave ({@link #setSourceDirs}),
+     *         ending in a separator, or null if it gave none
      */
     private String sourceDir(ModuleStructure module) {
         String given = sourceDirs.get(module.getName());
-        if (given != null) {
-            return given.endsWith(File.separator) ? given : given + File.separator;
-        }
-        LiteralConstant recorded = module.getSourceDir();
-        return recorded == null ? null : recorded.getValue();
+        return given == null || given.endsWith(File.separator) ? given : given + File.separator;
     }
 
     /**
