@@ -155,6 +155,64 @@
                 "category": "Ecstasy"
             }
         ],
+        "walkthroughs": [
+            {
+                "id": "xtc.gettingStarted",
+                "title": "Get Started with Ecstasy",
+                "description": "Create, build and run Ecstasy modules, and reach the language server's output, restart and logs.",
+                "steps": [
+                    {
+                        "id": "createProject",
+                        "title": "Create an Ecstasy project",
+                        "description": "Make an application, library or service module with its Gradle build, using the XDK's xtc init, or open a folder of .x files.\n[Create New Project](command:xtc.createProject)",
+                        "media": { "markdown": "walkthrough/keys.md" },
+                        "completionEvents": ["onCommand:xtc.createProject"]
+                    },
+                    {
+                        "id": "buildAndRun",
+                        "title": "Build and run a module",
+                        "description": "In an Ecstasy editor, Ctrl+F9 (macOS: Cmd+F9) builds and Ctrl+Shift+F10 (macOS: Ctrl+Shift+R) runs the editor's module, as ▶ Run above its module declaration does.\n[Build](command:xtc.build)\n[Run Module](command:xtc.runModule)",
+                        "media": { "markdown": "walkthrough/keys.md" },
+                        "completionEvents": ["onCommand:xtc.build", "onCommand:xtc.runModule"]
+                    },
+                    {
+                        "id": "buildMode",
+                        "title": "Build with the embedded compiler or with Gradle",
+                        "description": "The embedded compiler, the default, builds and runs with the language server's compiler and bundled XDK, with nothing to sync; a folder's Gradle build and its settings do not apply. Gradle mode runs the folder's Gradle build, with all of its settings. Automatic uses Gradle when the folder has a Gradle build. Ctrl+Alt+X, then B chooses; in a folder with a Gradle build, so does the status bar.\n[Select Build Mode](command:xtc.selectBuildMode)",
+                        "media": { "markdown": "walkthrough/build-modes.md" },
+                        "completionEvents": ["onCommand:xtc.selectBuildMode", "onSettingChanged:xtc.build.mode"]
+                    },
+                    {
+                        "id": "languageAdapter",
+                        "title": "Switch between the compiler and Tree-sitter",
+                        "description": "The language server analyzes Ecstasy with the compiler by default. Tree-sitter is the older, syntax-only adapter, and a fallback when the compiler adapter has trouble with a project. In an Ecstasy editor, Ctrl+Alt+X, then A switches, and the server restarts.\n[Switch Language Adapter](command:xtc.selectLanguageAdapter)",
+                        "media": { "markdown": "walkthrough/language-adapters.md" },
+                        "completionEvents": ["onCommand:xtc.selectLanguageAdapter", "onSettingChanged:xtc.languageService.adapter"]
+                    },
+                    {
+                        "id": "serverOutput",
+                        "title": "Show the language server's output",
+                        "description": "Ctrl+Alt+X, then L shows the server's output, and pressed again hides it.\n[Show Language Server Output](command:xtc.showServerOutput)",
+                        "media": { "markdown": "walkthrough/keys.md" },
+                        "completionEvents": ["onCommand:xtc.showServerOutput"]
+                    },
+                    {
+                        "id": "restartServer",
+                        "title": "Restart the language server",
+                        "description": "Ctrl+Alt+X, then R restarts the server, as a change to its runtime settings needs.\n[Restart Language Server](command:xtc.restartServer)\n[Open Language Service Settings](command:xtc.openLanguageSettings)",
+                        "media": { "markdown": "walkthrough/keys.md" },
+                        "completionEvents": ["onCommand:xtc.restartServer"]
+                    },
+                    {
+                        "id": "exportLogs",
+                        "title": "Attach the server's logs to a bug report",
+                        "description": "Ecstasy: Export Server Logs saves the language server's recent logs, timing traces and status as one ZIP file, to attach to an issue.\n[Export Server Logs](command:xtc.exportServerLogs)",
+                        "media": { "markdown": "walkthrough/keys.md" },
+                        "completionEvents": ["onCommand:xtc.exportServerLogs"]
+                    }
+                ]
+            }
+        ],
         "keybindings": [
             {
                 "command": "xtc.selectLanguageAdapter",
