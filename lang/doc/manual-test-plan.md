@@ -3810,7 +3810,7 @@ own modules. Manual steps for the same behavior are in [section 18a](#18a-embedd
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X286 | In an Ecstasy editor press `Ctrl+Alt+X`, then `A`, and choose **Tree-sitter**. Then open **Ecstasy: Switch Language Adapter** (VS Code Command Palette; IntelliJ **Tools** menu) and choose **Ecstasy Compiler**. | Each shortcut opens the same chooser; each choice restarts the server once (a new process) into the chosen adapter. VS Code presses the chord as renderer key events. IntelliJ checks the keymap binding and the Tools menu entry, then invokes the action from the editor and answers its popup. |
+| X286 | In an Ecstasy editor press `Ctrl+Alt+X`, then `A`, and choose **Tree-sitter**. Then open **Ecstasy: Switch Language Adapter** (VS Code Command Palette; IntelliJ **Tools** menu) and choose **Ecstasy Compiler**. | Each shortcut opens the same chooser; each choice restarts the server once (a new process) into the chosen adapter. VS Code presses the chord as renderer key events. IntelliJ checks the keymap binding and the Tools menu entry, then invokes the action from the editor and answers its popup. In IntelliJ, the first start with Tree-sitter shows a Got It tooltip over the editor, once, saying what the adapter leaves out and how to switch back. |
 
 ### Embedded run console input (X287)
 

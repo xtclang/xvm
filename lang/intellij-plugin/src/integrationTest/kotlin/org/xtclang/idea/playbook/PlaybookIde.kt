@@ -131,6 +131,9 @@ internal class PlaybookIde(
                         addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
                         addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
                         addSystemProperty("idea.auto.reload.plugins", false)
+                        // no Got It tooltip shows in the middle of a case; X286 and the tour turn the plugin's on for
+                        // their checks of them (probe/GotItUi.kt)
+                        disableGotItTooltips()
                         // where the IDE's memory goes, which MemoryProbe records; glibc's malloc keeps an arena per
                         // core for a process of many threads, which the container's memory pays for
                         addLine("-XX:NativeMemoryTracking=summary")
