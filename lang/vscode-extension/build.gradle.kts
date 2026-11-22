@@ -222,7 +222,7 @@ fun registerStagePackage(
     description = "Stage extension files and versioned metadata without modifying sources"
     dependsOn(npmCompile)
     from(layout.projectDirectory) {
-        include("package.json", ".vscodeignore", "README.md", "snippets/**")
+        include("package.json", ".vscodeignore", "README.md", "snippets/**", "walkthrough/**")
     }
     from(copyLicense, copyLanguageConfig)
     from(copyCompilerModelImport) { into("resources") }
