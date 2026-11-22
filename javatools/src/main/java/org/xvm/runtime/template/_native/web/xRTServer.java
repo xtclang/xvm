@@ -1061,7 +1061,7 @@ public class xRTServer
                 byte[] ab     = new byte[cb];
                 int    cbRead = in.readNBytes(ab, 0, cb);
                 return cbRead == cb ? ab : Arrays.copyOf(ab, cbRead);
-            } catch (IOException e) {
+            } catch (Throwable e) {
                 complete(e);
                 throw e;
             } finally {
@@ -1108,7 +1108,7 @@ public class xRTServer
                 } finally {
                     m_fWriting = false;
                 }
-            } catch (IOException e) {
+            } catch (Throwable e) {
                 complete(e);
                 throw e;
             }
