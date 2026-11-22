@@ -2831,10 +2831,15 @@ private fun Tour.settings() {
         } finally {
             dismissGotIt()
         }
-        // an edit, as a user's next keystroke, asks for the server again
+        // the open editor's next request starts the server again, which opens the file once it has initialized
         open(source("Eights.x"), 0)
+        // TODO LSP4IJ: UP83 — an edit before the file is open at the new server is lost: LSP4IJ opens it with the text
+        //  it took when it asked for the connection, and listens to the document only from then on. In
+        //  run-tour-7164529137914405705 the server opened Eights.x without the edit, and never got it
+        expect(within(HANG) { serverState().startsWith("started") && serverHasFile(source("Eights.x")) }) {
+            "The server did not come back with Eights.x: ${serverState()}"
+        }
         replace("return drawPile.popCard();", 0, "return drawPile.popCrd();")
-        expect(within(HANG) { serverState().startsWith("started") }) { "The server did not come back: ${serverState()}" }
         hasError(source("Eights.x"), "popCrd")
         restore()
     }
