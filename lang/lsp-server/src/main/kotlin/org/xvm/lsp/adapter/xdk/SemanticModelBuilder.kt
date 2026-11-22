@@ -153,7 +153,7 @@ internal class CompiledSemantics(
     val artifact: XdkDependency?,
 )
 
-/** Emit once, then associate copied bindings with artifact identities only when compilation succeeds. */
+/** One compilation's semantic models; once it has succeeded, its artifact and, for [navigation], its rename facts. */
 internal fun EmbeddingSupport.Compilation.compiledSemantics(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
@@ -188,11 +188,9 @@ internal fun EmbeddingSupport.Compilation.compiledSemantics(
                 } else {
                     null
                 }
-            val monikers = artifact?.let { XdkMonikers.capture(it, bindings, dependencies) }.orEmpty()
-            val exported = models.map { it.withMonikers(monikers) }
             CompiledSemantics(
-                exported,
-                facts?.let { XdkNavigationIndex.Facts(exported, it.constants) },
+                models,
+                facts?.let { XdkNavigationIndex.Facts(models, it.constants) },
                 artifact,
             )
         }
