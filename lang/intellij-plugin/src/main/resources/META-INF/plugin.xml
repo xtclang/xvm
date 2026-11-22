@@ -110,6 +110,19 @@
                            displayType="BALLOON"
                            isLogByDefault="true"/>
 
+        <!-- Tip of the Day, which IntelliJ paces and the user can turn off. Each tip belongs to a feature in
+             XtcProductivityFeatures.xml, whose tracked actions count its uses, so tips about what the user already
+             does come last. The features also appear in Help | My Productivity, with the names in
+             messages/XtcProductivityFeatures.properties. -->
+        <tipAndTrick file="XtcServerLog.html"/>
+        <tipAndTrick file="XtcRestartServer.html"/>
+        <tipAndTrick file="XtcLanguageAdapter.html"/>
+        <tipAndTrick file="XtcBuildMode.html"/>
+        <tipAndTrick file="XtcExportServerLogs.html"/>
+        <tipAndTrick file="XtcRunAndTest.html"/>
+        <productivityFeaturesProvider implementation="org.xtclang.idea.XtcProductivityFeatures"/>
+        <featureStatisticsBundle qualifiedName="messages.XtcProductivityFeatures"/>
+
         <!-- Claim *.x as an Ecstasy source file so IntelliJ does not suggest unrelated Marketplace plugins. -->
         <fileType name="Ecstasy"
                   implementationClass="org.xtclang.idea.XtcFileType"
