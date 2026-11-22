@@ -53,6 +53,15 @@ internal fun Driver.nativeLocations(
         editor.scrollToCaretNow()
         invokeAction(action, component = editor.component)
     }
+
+    // TODO LSP4IJ: UP80 — a Go to request that ends unanswered, as one cancelled by the closing of its file, shows "No …
+    //  found", and once its editor is gone in a modal dialog (redhat-developer/lsp4ij#2093), which held every later case.
+    //  Its task hands its answer to the EDT before its progress ends, so the check waits for that and leaves no request
+    //  behind it. The caret alone does not wait when a target is where the lookup starts, as an implementation that is
+    //  the declaration it is asked at.
+    val name = Path.of(document.file).fileName.toString()
+
+    fun settle() = awaitUi("native $kind's request in $name ends", HANG_LIMIT) { !goToRuns(name) }
     if (expected.isEmpty()) {
         val support = semanticSupport(document.editor)
         val feature =
@@ -69,6 +78,7 @@ internal fun Driver.nativeLocations(
                 !future.isCompletedExceptionally() &&
                 future.get().isEmpty()
         }
+        settle()
         dismissPopups()
         return
     }
@@ -113,7 +123,7 @@ internal fun Driver.nativeLocations(
                     }
                 },
                 checker = { it in expectedPoints },
-            )
+            ).also { settle() }
         }
     check(opened.toSet() == expectedPoints.toSet()) {
         "Expected $expectedPoints; native destinations: $opened"
@@ -225,6 +235,29 @@ interface NativeLocationsFuture : ClientFuture {
 @Remote("com.redhat.devtools.lsp4ij.usages.LocationData", plugin = "com.redhat.devtools.lsp4ij")
 interface NativeLocation {
     fun location(): ClientValue
+}
+
+/**
+ * Whether an LSP4IJ Go to request in the file [name] runs: the progress of its task, which LSP4IJ titles
+ * `Find implementation(s) of 'Name.x' at '42'`, and so on for declarations, type definitions and references
+ * (`lsp.goto.*.progress.title`, in the playbook's English). Read without the EDT, which a modal dialog may hold.
+ */
+private fun Driver.goToRuns(name: String): Boolean =
+    utility(NativeProgress::class).getCurrentIndicators().any { indicator ->
+        // a progress that is not a task's has no title
+        runCatching { indicator.getTitle() }.getOrNull()?.let { it.startsWith("Find ") && "(s) of '$name' at '" in it } == true
+    }
+
+/** IntelliJ's running progress, among it that of LSP4IJ's Go to requests. */
+@Remote("com.intellij.openapi.progress.impl.CoreProgressManager")
+interface NativeProgress {
+    fun getCurrentIndicators(): List<NativeTitledIndicator>
+}
+
+/** Reads the title of a task from its progress. */
+@Remote("com.intellij.openapi.progress.util.TitledIndicator")
+interface NativeTitledIndicator {
+    fun getTitle(): String?
 }
 
 /** Requests hover through the installed client's feature support. */
