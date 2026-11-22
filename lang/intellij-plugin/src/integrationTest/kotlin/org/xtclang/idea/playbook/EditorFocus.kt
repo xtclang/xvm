@@ -34,6 +34,18 @@ interface NativePopupManager {
 }
 
 /**
+ * Closes the modal dialog that a case leaves open, which would hold every later call that waits for the EDT outside
+ * it, and answers it by its title and text; null for none. Asked without the EDT's non-modal queue, which it holds.
+ */
+fun Driver.closeHeldDialog(): String? = utility(HeldDialogProbe::class).close()
+
+/** The probe's handle on a modal dialog that a case leaves open. */
+@Remote("org.xtclang.idea.playbook.probe.HeldDialogs", plugin = "org.xtclang.playbook.probe")
+interface HeldDialogProbe {
+    fun close(): String?
+}
+
+/**
  * Native popups require focus; AppIcon activates the window without Driver's title-bar mouse click.
  */
 fun Driver.focusEditor(editor: JEditorUiComponent) {
