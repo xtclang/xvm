@@ -403,6 +403,13 @@ class XdkDependencyTest {
         }
     }
 
+    @Test
+    fun `the same source compiles to the same artifact wherever it is`() {
+        val first = dependency(LIBRARY, "file:///first/Library.x")
+        val second = dependency(LIBRARY, "file:///second/Library.x")
+        assertThat(second.bytes()).isEqualTo(first.bytes())
+    }
+
     private fun dependency(
         source: String,
         uri: String = LIBRARY_URI,

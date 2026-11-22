@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
-The shared catalog contains **352 scenarios**: X1–X350 (X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
+The shared catalog contains **350 scenarios**: X1–X350 (X252, X253 and X273–X275 are retired), CFG1–CFG3 and 7a.8/7a.9.
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
@@ -78,7 +78,7 @@ Run the complete native playbooks sequentially from the repository root:
 These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
 unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
 startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
-The catalog currently has 352 scenarios; a partial-coverage result is not a full pass.
+The catalog currently has 350 scenarios; a partial-coverage result is not a full pass.
 
 On a desktop the playbook's editor takes the focus, and keystrokes typed elsewhere reach it. To keep
 both editors off the desktop, run the same playbooks in a Linux container on Xvfb with
@@ -1526,7 +1526,7 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 352 scenarios: X1–X350 (X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 350 scenarios: X1–X350 (X252, X253 and X273–X275 retired), CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
@@ -1541,7 +1541,7 @@ build. A future fast profile could exclude them for quick checks, with
 full runs kept as checkpoints.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 352 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+all 350 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
 documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
@@ -1767,7 +1767,7 @@ class Child extends Base<String> {
 |---|--------|-----------------|
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
-| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Declaration lookup, monikers, formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Inline values are not advertised. Document colors are not advertised. Native formatting is exercised further in X102/X107. |
+| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Declaration lookup, formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Inline values are not advertised. Document colors and monikers are not advertised. Native formatting is exercised further in X102/X107. |
 | X32 | Try completion in `box.pair(unknown = \|);`, `box.pair(first = "x", first = \|);`, `box.pair(True, \|);`, `box.pair("x", "y", \|);`, and `missing(\|);`. | Unknown or duplicate labels, incompatible or excess arguments, and unresolved calls offer no argument values. Valid argument-value insertion, including positions before a later written argument, is covered by the positive completion scenarios. |
 
 ### F. Type-definition and implementation lookup
@@ -3573,24 +3573,18 @@ X45/X59/X63/X143/X251, with zero scenario failures; IntelliJ also passes startup
 
 ### Portable symbol identities
 
-| Case | Action | Expected result |
-|------|--------|-----------------|
-| X252 | Configure the shared Library/Consumer sources. Query monikers for Consumer's integer call and closed Library's matching declaration; compare the string overload. Open Library, change the integer body without saving, then restore it. | Export/import share scheme and identifier; overloads differ. Opening/recompiling unchanged source preserves identity. The edit changes both ends together; restoration recovers the original identifier. |
-| X253 | Open the shared private-property example. Query its private declaration, bundled String and register local. Introduce the shared unresolved name, then repair it. | Private declaration is local; String is imported. Register locals and failed attempts supply no identity. Repair restores the same IDs. |
-
-These cases use `textDocument/moniker` through each installed language client. Inspect the protocol
-trace for `scheme`, `identifier`, `unique` and `kind`; neither IDE currently provides a moniker panel.
-X31 now requires the compiler moniker provider. Binary-only/source-indexed parity and checkout
-relocation are backend tests, not claims about native editor widgets.
+X252 and X253 checked `textDocument/moniker` through each installed language client. Neither editor uses monikers:
+LSP4IJ never sends the request (UP51), and VS Code has no moniker view. The server's provider was removed on
+2026-11-22 with both cases, whose IDs are retired.
 
 ### Read-only library documents
 
 | Case | Action | Expected result |
 |------|--------|-----------------|
-| X254 | Open the shared LibraryViews fixture and navigate to String and xml.Document. Open each matching source, compare its declaration moniker with the consumer, and request formatting. Attempt an edit in the VS Code virtual editor. | Both editors negotiate revision-owned virtual content and refuse edits. Declaration/export and consumer/import share artifact identity. Formatting leaves the source unchanged. |
+| X254 | Open the shared LibraryViews fixture and navigate to String and xml.Document. Open each matching source and request formatting. Attempt an edit in the VS Code virtual editor. | Both editors negotiate revision-owned virtual content and refuse edits. Formatting leaves the source unchanged. |
 
-Select **X31,X101,X158,X252,X253,X254** to cover existing bundled navigation, portable identities and the
-new library-view path. X254 runs the same String/xml.Document source fixture in both editors.
+Select **X31,X101,X158,X254** to cover existing bundled navigation and the
+library-view path. X254 runs the same String/xml.Document source fixture in both editors.
 
 1. Open `X254/LibraryViews.x` and navigate from `String` and `xml.Document` to their definitions.
 2. In VS Code, confirm the target uses `ecstasy-library:` and displays the matching declaration.
@@ -3598,9 +3592,7 @@ new library-view path. X254 runs the same String/xml.Document source fixture in 
 3. In IntelliJ, confirm the target uses `ecstasy-library:`, opens read-only and displays the matching
    declaration, and that formatting leaves it unchanged. Changing the compiler inputs refreshes it, and a
    server restart retires it.
-4. The driver requests `textDocument/moniker` at the library declaration. Its scheme/identifier must
-   match the consumer import; the declaration kind is `export`. Neither IDE has a moniker browser.
-5. For supporting clients, `workspace/textDocumentContent` returns exact matching bundled text.
+4. For supporting clients, `workspace/textDocumentContent` returns exact matching bundled text.
    The protocol tests replace compiler inputs and verify refresh of fetched views, coalescing while
    a reply is pending, rejection of unknown/other-connection URIs, and retirement on shutdown.
 

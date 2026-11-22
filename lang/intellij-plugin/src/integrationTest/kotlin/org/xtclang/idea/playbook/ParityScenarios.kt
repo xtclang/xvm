@@ -24,7 +24,6 @@ class ParityScenarios(
         progressCases()
         reliabilityCases()
         indexingCases()
-        monikerCases()
         libraryContentCases()
         inlineCompletionCases()
         refreshOverlapCases()

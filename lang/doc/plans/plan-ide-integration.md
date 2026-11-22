@@ -269,7 +269,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. X130's Move/Undo/Redo/resource assertions pass the October 5 full VS Code run; its earlier intermittent Explorer repaint failure remains UP16. X218 still fails VS Code overlapping-move Undo (UP23). IntelliJ supports the ordered transaction. Bounded cross-package qualification passes X161; explicit graph replacement uses `xtc/renameFiles` and shared X162/X163. | L71 / X128, X130 |
 | Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Backend/packaged transport and selected X132 pass in both editors. | L72 / X132 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke the client's `xtc.runModule` command, which follows the editor's build mode; embedded build/run uses the custom `xtc/build` and `xtc/run` requests rather than server commands | L73 |
-| Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
+| Cross-project monikers | None. The provider and X252/X253 were removed on 2026-11-22: neither editor uses monikers (UP51) | L74 |
 | Server-provided document content/refresh | Negotiated revision-owned bundled virtual content and refresh; protected file fallback in IntelliJ (UP25); host source indexes remain file locations | L75 |
 | Inline completion | Compiler names/values, automatic ambiguity suppression and explicit alternatives; selected-range and revision guards | L76; native IntelliJ invocation/selection remains UP26 |
 | Document colors and color presentations | None. The fixture-only prototype and X273–X275 were removed on 2026-10-21; Ecstasy has no color type for swatches and pickers to apply to. Source highlighting is semantic tokens. | L77 |
@@ -1494,6 +1494,8 @@ justified by these measurements; prolonged release budgets remain L82.
 
 ### L74 artifact identities (2026-10-05)
 
+_Removed on 2026-11-22, with the library declarations' monikers of L75 and the shared cases X252 and X253. Neither editor uses monikers: LSP4IJ never sends the request (UP51), and VS Code has no moniker view. The rest of this section records what was built._
+
 `textDocument/moniker` now has a compiler-only provider. The `ecstasy-artifact-v1` scheme
 uses a SHA-256 digest of the normalized emitted module plus its normalized constant-table index.
 Normalization removes build timestamps and checkout directories in a private deserialized copy;
@@ -1538,7 +1540,7 @@ another GUI run. No full-catalog run is claimed. The catalog has **258 cases**, 
 `7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.
 
 
-L75 implements negotiated library document content/refresh and direct bundled declaration monikers.
+L75 implements negotiated library document content/refresh, and had direct bundled declaration monikers until 2026-11-22.
 VS Code uses its standard read-only virtual provider; IntelliJ retains protected file views until
 LSP4IJ implements the provider (UP25). X254 explicitly records this client difference. 58 distinct backend/protocol cases and the packaged content round trip pass. VS Code passes all
 six selected cases; IntelliJ passes five plus START and reports X254 partial with its file-fallback
@@ -1589,8 +1591,8 @@ clients. Null paths inherit evaluated Gradle binaries independently of source-gr
 empty paths remove external binaries, with the bundled XDK always retained. Attachments create
 read-only declaration-navigation snapshots and do not become source modules or change advertised
 LSP capabilities. The source/identity checks are bounded by artifact metadata and available debug
-text; matching sources are required. External attachment views do not yet export declaration
-monikers or support arbitrary semantic queries inside library source text. IntelliJ uses protected
+text; matching sources are required. External attachment views do not support arbitrary
+semantic queries inside library source text. IntelliJ uses protected
 fallback files (UP25); VS Code uses the virtual content provider. Shared X266–X268 cover the controls,
 persistence, navigation and invalid-input retention. See the
 [contract and validation](../../../doc/errs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
