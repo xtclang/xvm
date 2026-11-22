@@ -399,6 +399,7 @@ public class XtcProjectDelegate {
         return project.getLayout().getBuildDirectory().dir(XTC_LANGUAGE_NAME + '/' + sourceSet.getName() + "/lib");
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     public static Provider<@NotNull Directory> getXtcResourceOutputDirectory(final Project project, final SourceSet sourceSet) {
         // Follow the producer's destination property, including later Copy.into(...) overrides.
         final var resources = project.getTasks().named(getProcessResourcesTaskName(sourceSet), Copy.class);

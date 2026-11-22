@@ -708,6 +708,7 @@ prepareSandbox.configure {
 
 // Derive TextMate destination from prepareSandbox's output (works with any IDE version)
 // prepareSandbox.destinationDirectory is the plugins/ directory, we need plugins/<plugin-name>/lib/textmate
+@Suppress("UnstableApiUsage")
 val sandboxPluginTextMate: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("intellij-plugin/lib/textmate") }
 
 val copyTextMateToSandbox =
@@ -722,6 +723,7 @@ val copyTextMateToSandbox =
         mustRunAfter(project(":dsl").tasks.named("compileTestJava"))
 
         val rootDir = project.rootDir // local capture for CC safety
+        @Suppress("UnstableApiUsage")
         doLastTask { logCopiedFiles("textmate", destinationDirectory.get().asFile, rootDir) }
     }
 
@@ -734,6 +736,7 @@ val copyTextMateToSandbox =
 //
 // Location: plugins/intellij-plugin/bin/xtc-lsp-server.jar (off classpath)
 
+@Suppress("UnstableApiUsage")
 val sandboxPluginBin: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("intellij-plugin/bin") }
 
 val copyLspServerToSandbox =
@@ -786,6 +789,7 @@ val prepareRunIdeSandbox =
         }
 
         // as copyLspServerToSandbox's copy, this one must be a whole jar
+        @Suppress("UnstableApiUsage")
         val server = destinationDirectory.file("intellij-plugin/bin/xtc-lsp-server.jar")
         doLast { requireWholeArchive(server.get().asFile, "The runIde sandbox's language server") }
     }
