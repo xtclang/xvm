@@ -256,6 +256,7 @@ fun registerPackage(
     description = taskDescription
     dependsOn(npmInstall)
     script.set(layout.projectDirectory.file("node_modules/@vscode/vsce/vsce"))
+    @Suppress("UnstableApiUsage")
     workingDir.set(stage.flatMap { it.destinationDirectory })
     args.set(archive.map { listOf("package", "--no-dependencies") + vsceOptions + listOf("--out", it.asFile.absolutePath) })
     inputs.files(stage)

@@ -382,7 +382,10 @@ distributions {
             }
 
             // Include launcher scripts directly in bin/
-            from(prepareDistributionScripts.flatMap { it.destinationDirectory }) {
+            from(prepareDistributionScripts.flatMap {
+                @Suppress("UnstableApiUsage")
+                it.destinationDirectory
+            }) {
                 include("xcc")
                 include("xcc.bat")
                 include("xec")
