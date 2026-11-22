@@ -1,0 +1,26 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="css/tips.css">
+</head>
+<body>
+<p><b>Build Ecstasy with the embedded compiler or with Gradle</b></p>
+<p>
+    <b>Embedded compiler</b>, the default: Build, Rebuild and Run use the language server's compiler and its bundled
+    XDK, with nothing to sync, also in a project without a Gradle build. It needs the compiler language adapter. In a
+    project with a Gradle build, the build's own settings, such as runXtc arguments, JVM options and its XDK version,
+    do not apply.
+</p>
+<p>
+    <b>Gradle</b>: Build, Rebuild and Run run the project's Gradle build, with all of its settings, as on the command
+    line. Build needs the Gradle project linked in IntelliJ.
+    <b>Automatic</b> uses Gradle when the project has a Gradle build, and the embedded compiler otherwise.
+</p>
+<p>
+    Press <span class="shortcut">&shortcut:xtc.selectBuildMode;</span>
+    (<span class="control">Tools | Select Ecstasy Build Mode</span>), or open
+    <span class="control">Settings | Build, Execution, Deployment | Ecstasy</span>, to choose. The next build or run
+    uses the new mode, with no restart or Gradle sync.
+</p>
+</body>
+</html>
