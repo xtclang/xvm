@@ -41,6 +41,21 @@ internal fun <T> boundedEdt(
         },
         modality,
     )
+    return awaitEdt(result, modality, "a probe's call") { abandoned.set(true) }
+}
+
+/**
+ * Answers [result], which [what] completes once the EDT has run its part in [modality], and fails as [boundedEdt] does:
+ * once [HANG_LIMIT] passes, and at once when a modal dialog holds the EDT from [modality], with the dialog's title and
+ * text. [abandon] runs before either failure.
+ */
+internal fun <T> awaitEdt(
+    result: CompletableFuture<T>,
+    modality: ModalityState,
+    what: String,
+    abandon: () -> Unit = {},
+): T {
+    val application = ApplicationManager.getApplication()
     val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(HANG_SECONDS)
     // the modal context is the EDT's to answer, in any modality, as a dialog's own event loop runs such a question;
     // one question at a time, as a busy EDT answers none
@@ -51,13 +66,13 @@ internal fun <T> boundedEdt(
                 return result.get(POLL_MILLIS, TimeUnit.MILLISECONDS)
             } catch (_: TimeoutException) {
                 if (System.nanoTime() >= deadline) {
-                    abandoned.set(true)
-                    error("The EDT did not run a probe's call within $HANG_LIMIT, in $modality: is a dialog open?")
+                    abandon()
+                    error("The EDT did not run $what within $HANG_LIMIT, in $modality: is a dialog open?")
                 }
                 if (modality != ModalityState.any() && asked?.isDone != false) {
                     asked?.getNow(null)?.takeUnless { result.isDone }?.let { dialog ->
-                        abandoned.set(true)
-                        error("A modal dialog holds the EDT, which a probe's call in $modality waits for: $dialog")
+                        abandon()
+                        error("A modal dialog holds the EDT, which $what in $modality waits for: $dialog")
                     }
                     asked =
                         CompletableFuture<String?>().also { question ->
@@ -71,7 +86,7 @@ internal fun <T> boundedEdt(
     }
 }
 
-/** How often [boundedEdt] looks at the IDE's modality while it waits. */
+/** How often [awaitEdt] looks at the IDE's modality while it waits. */
 private const val POLL_MILLIS = 250L
 
 /**
@@ -109,3 +124,10 @@ private fun descendants(component: Component): Sequence<Component> =
         yield(component)
         if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
     }
+
+/** The modal dialog that a playbook case leaves open, which holds every later call that waits for the EDT outside it. */
+object HeldDialogs {
+    /** Closes the dialogs that show when a modal one holds the EDT, as their Cancel does, and answers that one by its title and text; null for none. */
+    @JvmStatic
+    fun close(): String? = boundedEdt(ModalityState.any(), ::holdingDialog)?.also { TourUi.closeDialogs() }
+}

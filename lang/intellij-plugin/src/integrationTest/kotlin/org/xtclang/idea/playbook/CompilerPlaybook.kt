@@ -1365,6 +1365,8 @@ class CompilerPlaybook(
         if (id != "START" && id != "START_REOPEN") progress(id, "running", description)
         try {
             action()
+            // a modal dialog left open holds every later case, as LSP4IJ's "No Implementation found" held all after X37
+            closeHeldDialog()?.let { dialog -> error("$id left a modal dialog open: $dialog") }
             check(!isPluginLoaded("com.intellij.modules.ultimate")) {
                 "Ultimate became active during $id; this cannot establish Community support"
             }
@@ -1377,6 +1379,8 @@ class CompilerPlaybook(
         } catch (failure: Throwable) {
             val unsafeToContinue = failure.mustStopPlaybook()
             if (!unsafeToContinue) {
+                // and a failing case's dialog too, such as one that its call behind it failed on
+                runCatching { closeHeldDialog() }.onFailure(failure::addSuppressed)
                 runCatching {
                     ClientTrace(this)
                         .capture(
