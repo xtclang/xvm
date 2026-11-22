@@ -2808,8 +2808,16 @@ private fun Tour.settings() {
         val before = serverState()
         val pid = before.substringAfter(' ').toLongOrNull()
         expect(pid != null) { "No server process: $before" }
-        ProcessHandle.of(pid!!).ifPresent(ProcessHandle::destroyForcibly)
-        expect(within(HANG) { serverState() != before }) { "The server still runs: ${serverState()}" }
+        // the first unexpected stop shows, once, in the Ecstasy editor, how to restart the server and see its log
+        open(source("Eights.x"), 0)
+        enableGotIt("xtc.serverStopped")
+        try {
+            ProcessHandle.of(pid!!).ifPresent(ProcessHandle::destroyForcibly)
+            expect(within(HANG) { serverState() != before }) { "The server still runs: ${serverState()}" }
+            expect(within(HANG) { gotItShown() }) { "No Got It tooltip over the editor for the stopped server" }
+        } finally {
+            dismissGotIt()
+        }
         // an edit, as a user's next keystroke, asks for the server again
         open(source("Eights.x"), 0)
         replace("return drawPile.popCard();", 0, "return drawPile.popCrd();")
