@@ -192,6 +192,25 @@ internal class Tour(
     /** The absolute path of [name], a test module, such as `DeckTest.x`. */
     fun test(name: String): String = file("src/test/x/$name")
 
+    /**
+     * How the language server of process [pid] ended the first `textDocument/hover` request it got, as its trace says:
+     * `replied`, or `error` for one it rejected; null until that request has ended. A line still being written does
+     * not parse, and is read the next time.
+     */
+    fun firstHover(pid: String): String? {
+        val files =
+            runCatching { Files.list(run.resolve("server-trace")).use { paths -> paths.toList() } }
+                .getOrDefault(emptyList())
+                .filter { it.fileName.toString().startsWith("lsp-trace-$pid-") }
+        val hovers =
+            files
+                .flatMap { it.readText().lines() }
+                .mapNotNull { line -> runCatching { JsonParser.parseString(line).asJsonObject }.getOrNull() }
+                .filter { it["kind"]?.asString == "lsp-request" && it["operation"]?.asString == "textDocument/hover" }
+        val first = hovers.firstOrNull { it["event"]?.asString == "start" }?.get("id") ?: return null
+        return hovers.firstOrNull { it["id"] == first && it["event"]?.asString == "end" }?.get("outcome")?.asString
+    }
+
     fun section(name: String) {
         section = name
         progress("Section $name")
