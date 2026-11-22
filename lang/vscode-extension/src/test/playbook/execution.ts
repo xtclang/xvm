@@ -355,8 +355,14 @@ export function debugSessionCases(): void {
         await configureModules(workspace, [{ name: data.module, file: data.file }]);
         await noErrors(document.uri);
         await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
+            // the messages both ways, in the order they went, so that the stack requests of a stop follow it
+            const messages: DapMessage[] = [];
+            const tracker = trackDebugSessions(messages, messages);
+            // the frames VS Code selects: a stopped thread's top frame, once the thread's stack has come
+            const selected: vscode.DebugStackFrame[] = [];
+            const selection = vscode.debug.onDidChangeActiveStackItem(item => {
+                if (item instanceof vscode.DebugStackFrame && item.session.type === 'xtc') selected.push(item);
+            });
             let ended = false;
             let started: vscode.DebugSession | undefined;
             const start = vscode.debug.onDidStartDebugSession(session => {
@@ -365,39 +371,46 @@ export function debugSessionCases(): void {
             const termination = vscode.debug.onDidTerminateDebugSession(session => {
                 if (session.type === 'xtc') ended = true;
             });
+            // VS Code shows a stop once it has selected a frame of the stopped thread, after the [since] it had selected
+            //  before, and the stack it asked for then is where the stop is. A step before that steps the thread it had
+            //  selected, or the session's first, which the adapter refuses as not stopped, and the stack VS Code asks
+            //  for the stop before may come after the step's: both failed X306 on 2026-11-22
+            const shown = (stop: DapMessage, since: number, depth: number, message: string) => eventually(
+                async () => selected.slice(since).some(frame => frame.threadId === stop.body?.threadId) ? stackAfter(messages, stop) : [],
+                frames => frames.length >= depth, message);
             const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
             vscode.debug.addBreakpoints([breakpoint]);
             try {
                 assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
                     { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                await eventually(async () => dapEvents(messages, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
+                await shown(dapEvents(messages, 'stopped')[0], 0, 1, 'VS Code shows the stop at the breakpoint');
 
                 for (const [kind, name, line] of data.steps as [string, string, number][]) {
-                    const stops = dapEvents(sent, 'stopped').length;
-                    const from = sent.length;
+                    const stops = dapEvents(messages, 'stopped').length;
+                    const since = selected.length;
                     await vscode.commands.executeCommand(stepCommands[kind]);
-                    await eventually(async () => dapEvents(sent, 'stopped').length, count => count > stops, `Step ${kind} stops the program`);
-                    assert.strictEqual(dapEvents(sent, 'stopped')[stops].body?.reason, 'step');
+                    await eventually(async () => dapEvents(messages, 'stopped').length, count => count > stops, `Step ${kind} stops the program`);
+                    const stop = dapEvents(messages, 'stopped')[stops];
+                    assert.strictEqual(stop.body?.reason, 'step');
                     // VS Code asks for the stack again after each stop, to show where the step ended
-                    const frames = await eventually(
-                        async () => sent.slice(from).filter(message => message.type === 'response' && message.command === 'stackTrace')
-                            .flatMap(message => message.body?.stackFrames ?? []),
-                        values => values.length >= (kind === 'into' ? 2 : 1), `VS Code shows where step ${kind} ended`);
+                    const frames = await shown(stop, since, kind === 'into' ? 2 : 1, `VS Code shows where step ${kind} ended`);
                     assert.deepStrictEqual([frames[0].name, frames[0].line], [name, line], `Step ${kind}: ${JSON.stringify(frames)}`);
                     if (kind === 'into') assert.deepStrictEqual([frames[1].name, frames[1].line], data.caller);
                 }
-                assert.ok(!dapOutput(sent).includes(data.output), 'Nothing after line 6 has run');
+                assert.ok(!dapOutput(messages).includes(data.output), 'Nothing after line 6 has run');
 
                 await vscode.commands.executeCommand('workbench.action.debug.continue');
                 await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
+                assert.strictEqual(dapEvents(messages, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(messages));
+                assert.ok(dapOutput(messages).includes(data.output), dapOutput(messages));
             } finally {
                 vscode.debug.removeBreakpoints([breakpoint]);
                 // a case that fails while its program is stopped leaves no session for the next one
                 if (started && !ended) await vscode.debug.stopDebugging(started);
                 start.dispose();
                 termination.dispose();
+                selection.dispose();
                 tracker.dispose();
             }
         });
@@ -1786,6 +1799,20 @@ function dapOutput(sent: DapMessage[]): string {
     return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
 }
 
+/**
+ * The stack of [stop]'s thread that VS Code asked for after the stop, from its top frame, in [messages] of both
+ * directions: each request's frames go where its `startFrame` puts them.
+ */
+function stackAfter(messages: DapMessage[], stop: DapMessage): DapFrame[] {
+    const after = messages.slice(messages.indexOf(stop));
+    const frames: DapFrame[] = [];
+    after.filter(message => message.type === 'request' && message.command === 'stackTrace' && message.arguments?.threadId === stop.body?.threadId)
+        .forEach(request => after.find(message => message.type === 'response' && message.request_seq === request.seq)?.body?.stackFrames
+            ?.forEach((frame, index) => { frames[(request.arguments?.startFrame ?? 0) + index] = frame; }));
+    const gap = frames.findIndex(frame => frame === undefined);
+    return gap < 0 ? frames : frames.slice(0, gap);
+}
+
 /** The parts of a Debug Adapter Protocol message that the X285, X304-X331 and X336-X338 cases check. */
 interface DapMessage {
     seq?: number;
@@ -1795,7 +1822,7 @@ interface DapMessage {
     command?: string;
     success?: boolean;
     message?: string;
-    arguments?: { expression?: string };
+    arguments?: { expression?: string; threadId?: number; startFrame?: number };
     body?: {
         areas?: string[];
         exitCode?: number;
@@ -1806,10 +1833,17 @@ interface DapMessage {
         threadId?: number;
         breakpoint?: { verified: boolean; line?: number };
         breakpoints?: { verified: boolean; line?: number; message?: string }[];
-        stackFrames?: { name: string; line: number; source?: { path?: string } }[];
+        stackFrames?: DapFrame[];
         sources?: { path?: string }[];
         totalFrames?: number;
     };
+}
+
+/** A frame as a `stackTrace` response gives it. */
+interface DapFrame {
+    name: string;
+    line: number;
+    source?: { path?: string };
 }
 
 /** A variable as a `variables` response gives it. */
