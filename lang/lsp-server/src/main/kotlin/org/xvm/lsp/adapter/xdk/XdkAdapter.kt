@@ -39,7 +39,6 @@ import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.adapter.SelectionRange
 import org.xvm.lsp.adapter.SemanticTokens
 import org.xvm.lsp.adapter.SignatureHelp
-import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.adapter.WorkspaceEdit
@@ -173,7 +172,6 @@ class XdkAdapter
                 AdapterCapability.TYPE_HIERARCHY,
                 AdapterCapability.TYPE_DEFINITION,
                 AdapterCapability.IMPLEMENTATION,
-                AdapterCapability.MONIKER,
                 AdapterCapability.CALL_HIERARCHY,
                 AdapterCapability.SIGNATURE_HELP,
                 AdapterCapability.SEMANTIC_TOKENS,
@@ -1044,7 +1042,6 @@ class XdkAdapter
         private enum class ProjectQueryKind {
             REFERENCES,
             CODE_LENSES,
-            MONIKERS,
             RENAME,
             RENAME_PROPOSAL,
             FILE_RENAME,
@@ -2539,33 +2536,6 @@ class XdkAdapter
                     .document(uri)
                     ?.semantics
                     ?.declarationLocationsAt(line, column)
-                    .orEmpty(),
-            )
-        }
-
-        override fun findMonikers(
-            uri: String,
-            line: Int,
-            column: Int,
-        ): List<SymbolMoniker> = findMonikersAsync(uri, line, column).join()
-
-        override fun findMonikersAsync(
-            uri: String,
-            line: Int,
-            column: Int,
-        ): CompletableFuture<List<SymbolMoniker>> {
-            if (isLibraryDocument(uri)) return libraryQuery("library-monikers", uri) { XdkLibrarySources.monikers(uri, line, column) }
-            val current = module(uri)
-            if (current == null && hasProject(uri)) {
-                return projectQuery(ProjectQueryKey(uri, ProjectQueryKind.MONIKERS), emptyList()) {
-                    it.navigation()?.monikers(uri, line, column).orEmpty()
-                }
-            }
-            return CompletableFuture.completedFuture(
-                current
-                    ?.document(uri)
-                    ?.semantics
-                    ?.monikersAt(line, column)
                     .orEmpty(),
             )
         }

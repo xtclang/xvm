@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.lsp.adapter.SymbolMoniker
 import java.util.UUID
 import java.util.List.copyOf as immutableList
 import java.util.Map.copyOf as immutableMap
@@ -24,31 +23,7 @@ class SemanticModel
         imports: List<ImportAlias> = emptyList(),
         lambdas: List<LambdaSite> = emptyList(),
         sourceLinks: List<SourceLink> = emptyList(),
-        monikers: Map<SymbolId, SymbolMoniker> = emptyMap(),
     ) {
-        private val monikers = immutableMap(monikers)
-
-        fun monikersAt(
-            line: Int,
-            column: Int,
-        ): List<SymbolMoniker> = listOfNotNull(symbolAt(line, column)?.id?.let(monikers::get))
-
-        internal fun withMonikers(values: Map<SymbolId, SymbolMoniker>): SemanticModel =
-            SemanticModel(
-                id,
-                status,
-                sourceName,
-                facts,
-                occurrences,
-                expressions,
-                calls,
-                functionCalls,
-                imports,
-                lambdas,
-                sourceLinks,
-                values,
-            )
-
         /** How much semantic information this compilation snapshot could establish. */
         enum class Status {
             UNAVAILABLE,
@@ -550,12 +525,6 @@ class SemanticModel
                                 canonical(id) to slot.copy(method = canonical(slot.method))
                             },
                     )
-                // Each source view shares its compilation's identity table, just like other facts.
-                // Copying the whole module table per companion would retain files × symbols entries.
-                val monikersBySnapshot =
-                    models.distinctBy { it.id }.associate { model ->
-                        model.id to immutableMap(model.monikers.mapKeys { canonical(it.key) })
-                    }
                 return models.map { model ->
                     SemanticModel(
                         model.id,
@@ -571,7 +540,6 @@ class SemanticModel
                         model.imports,
                         lambdas = model.lambdas,
                         sourceLinks = model.sourceLinks,
-                        monikers = monikersBySnapshot.getValue(model.id),
                     )
                 }
             }

@@ -11,7 +11,6 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.MonikerParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.Range
@@ -289,34 +288,23 @@ class LibraryContentProtocolTest {
             val text = workspace.textDocumentContent(params).join().text
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, text.replace("\n", "\r\n"))))
-            val moniker = MonikerParams(TextDocumentIdentifier(target.uri), target.range.start)
-            val original = documents.moniker(moniker).awaited()
-            assertThat(original).hasSize(1)
+            val hover = HoverParams(TextDocumentIdentifier(target.uri), target.range.start)
             documents.didChange(
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(target.uri, 2),
                     listOf(TextDocumentContentChangeEvent("module Forged {}")),
                 ),
             )
-            assertThat(documents.moniker(moniker).awaited()).isEmpty()
             assertThat(workspace.textDocumentContent(params).join().text).isEqualTo(text)
             documents.didChange(
-                DidChangeTextDocumentParams(
-                    VersionedTextDocumentIdentifier(target.uri, 3),
-                    listOf(TextDocumentContentChangeEvent(text.replace("const String", "const  String"))),
-                ),
+                DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(target.uri, 3), listOf(TextDocumentContentChangeEvent(text))),
             )
-            assertThat(documents.moniker(moniker).awaited()).isEmpty()
-            documents.didChange(
-                DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(target.uri, 4), listOf(TextDocumentContentChangeEvent(text))),
-            )
-            assertThat(documents.moniker(moniker).awaited()).isEqualTo(original)
             // A library URI's text cannot change, so a dependency change asks the client to fetch no view again: not as
             // the server takes the change, whose refreshes it sends before it returns, nor once the document's analysis
             // after the change is current.
             server.replaceCompilerDependencies(emptyList())
             assertThat(notifications).isEmpty()
-            documents.moniker(moniker).awaited()
+            documents.hover(hover).awaited()
             assertThat(notifications).isEmpty()
             assertThat(workspace.textDocumentContent(params).join().text).isEqualTo(text)
         }

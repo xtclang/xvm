@@ -571,8 +571,8 @@ clients. Null paths inherit evaluated Gradle binaries independently of source-gr
 empty paths remove external binaries, with the bundled XDK always retained. Attachments create
 read-only declaration-navigation snapshots and do not become source modules or change advertised
 LSP capabilities. The source/identity checks are bounded by artifact metadata and available debug
-text; matching sources are required. External attachment views do not yet export declaration
-monikers or support arbitrary semantic queries inside library source text. IntelliJ uses protected
+text; matching sources are required. External attachment views do not support arbitrary
+semantic queries inside library source text. IntelliJ uses protected
 fallback files (UP25); VS Code uses the virtual content provider. Shared X266–X268 cover the controls,
 persistence, navigation and invalid-input retention. See the
 [contract and validation](../../../doc/errs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).

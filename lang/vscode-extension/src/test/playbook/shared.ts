@@ -31,8 +31,8 @@ export function selectedScenarioIds(selection: string | undefined): ScenarioId[]
     return sharedScenarioIds.filter(id => requested.includes(id));
 }
 
-// X273-X275 tested the removed L77 color prototype; their IDs are not reused.
-const retiredIds = ['X273', 'X274', 'X275'];
+// X252 and X253 tested the removed monikers, X273-X275 the removed L77 color prototype; their IDs are not reused.
+const retiredIds = ['X252', 'X253', 'X273', 'X274', 'X275'];
 const expectedIds = [...Array.from({ length: 350 }, (_, index) => `X${index + 1}`).filter(id => !retiredIds.includes(id)), 'CFG1', 'CFG2', 'CFG3', '7a.8', '7a.9'];
 assert.deepStrictEqual(sharedScenarioIds, expectedIds, 'The catalog must describe the complete playbook in order');
 for (const [id, scenario] of Object.entries(catalog.cases)) {

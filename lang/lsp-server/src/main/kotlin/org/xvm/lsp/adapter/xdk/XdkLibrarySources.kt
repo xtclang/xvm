@@ -9,7 +9,6 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.MultiMethodConstant
 import org.xvm.lsp.adapter.ReadOnlyDocument
-import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.util.ProcessDirectories
 import java.io.File
 import java.net.URI
@@ -102,10 +101,7 @@ internal object XdkLibrarySources {
         val document: ReadOnlyDocument,
         val declarations: List<LibraryDeclaration>,
     ) {
-        // Evaluated only on the compiler worker. The cached value contains copied ranges/IDs only.
-        val monikers by lazy { declarationMonikers(this) }
-
-        // as monikers, with copied text only
+        // evaluated only on the compiler worker; the cached value holds copied ranges and text only
         val hovers by lazy { declarationHovers(this) }
 
         // parsed, with no compiler objects
@@ -140,26 +136,9 @@ internal object XdkLibrarySources {
 
     fun document(uri: String): ReadOnlyDocument? = source(uri)?.document
 
-    /** A parsed name is not proof: require one exact artifact declaration at this source range. */
-    fun monikers(
-        uri: String,
-        line: Int,
-        column: Int,
-    ): List<SymbolMoniker> {
-        if (line < 0 || column < 0) return emptyList()
-        val at = SemanticModel.Position(line, column)
-        return source(uri)
-            ?.monikers
-            ?.filterKeys { at in it }
-            ?.values
-            ?.singleOrNull()
-            ?.let(::listOf)
-            .orEmpty()
-    }
-
     /**
-     * What hover shows of the artifact declaration whose name is at this source position, from the library's binary, as
-     * [monikers] finds it: its declaration, and its doc comment. Null when there is not exactly one.
+     * What hover shows of the artifact declaration whose name is at this source position, from the library's binary: its
+     * declaration, and its doc comment. A parsed name is not proof, so this is null when there is not exactly one.
      */
     fun hover(
         uri: String,
@@ -199,11 +178,6 @@ internal object XdkLibrarySources {
         if (line < 0 || column < 0) return null
         val at = SemanticModel.Position(line, column)
         return source(uri)?.hovers?.entries?.singleOrNull { at in it.key }
-    }
-
-    private fun declarationMonikers(source: SourceFile): Map<SemanticModel.Range, SymbolMoniker> {
-        val symbols = XdkLibraries.symbolIndex(source.module) ?: return emptyMap()
-        return declarations(source) { identity, _, _ -> symbols.moniker(identity.position, imported = false) }
     }
 
     private fun declarationHovers(source: SourceFile): Map<SemanticModel.Range, String> =
