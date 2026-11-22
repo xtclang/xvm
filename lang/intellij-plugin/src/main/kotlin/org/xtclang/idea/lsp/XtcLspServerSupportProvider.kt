@@ -121,6 +121,8 @@ class XtcLspConnectionProvider(
 
     init {
         addLogErrorHandler { support.append(launch, it) }
+        // LSP4IJ runs these only for a process that ends without its stop
+        addUnexpectedServerStopHandler { XtcGotItTooltips.serverStopped(project) }
         try {
             configureCommand()
         } catch (failure: Exception) {
@@ -207,6 +209,7 @@ class XtcLspConnectionProvider(
         logger.info(
             "Ecstasy LSP Server process started (v${LspBuildProperties.version}, adapter=$adapterName, pid=$pid)",
         )
+        if (adapterName == LanguageAdapter.TREE_SITTER.setting) XtcGotItTooltips.treeSitterStarted(project)
 
         if (startNotificationShown.compareAndSet(false, true)) {
             val labelColor = ColorUtil.toHtmlColor(JBUI.CurrentTheme.ContextHelp.FOREGROUND)
