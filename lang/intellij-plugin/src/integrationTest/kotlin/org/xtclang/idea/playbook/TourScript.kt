@@ -2748,13 +2748,26 @@ private fun Tour.settings() {
                 serverState().let { it.startsWith("started") && it != before }
             },
         ) { "The server: ${serverState()}, before $before" }
-        // the first Ctrl+Q after the restart, which LSP4IJ asks once, before it has reopened the file
+        // the first Ctrl+Q after the restart, which LSP4IJ asks once, before it has reopened the file: the server
+        //  answers it, and does not reject it for the files LSP4IJ opens again meanwhile
+        val pid = serverState().substringAfter(' ')
         open(source("Eights.x"), 0)
         at("INITIAL_HAND_SIZE", delta = 3)
         action("QuickJavaDoc")
-        val first = within(HANG) { "Number of cards dealt" in popupText() }
+        expect(within(HANG) { firstHover(pid) != null } && firstHover(pid) == "replied") {
+            "The server's first hover after the restart: ${firstHover(pid)}"
+        }
+        // TODO LSP4IJ: UP82 — Quick Documentation waits 500 ms at most for the hover, whose answer after a restart
+        //  waits for the module's compile, and a later answer shows at the next Ctrl+Q at the same place: in
+        //  run-tour-3696415223983703475 the answer took 834 ms, and the first Ctrl+Q showed nothing
+        if ("Number of cards dealt" !in popupText()) {
+            dismiss()
+            action("QuickJavaDoc")
+        }
+        expect(within(HANG) { "Number of cards dealt" in popupText() }) {
+            "The documentation after the restart: ${popupText().take(300)}"
+        }
         answers()
-        expect(first) { "The first documentation after the restart showed nothing" }
         toolWindow("Language Servers", false)
     }
     verify("switching the language adapter restarts the server with it, and back again", setOf(Need.SERVER)) {
