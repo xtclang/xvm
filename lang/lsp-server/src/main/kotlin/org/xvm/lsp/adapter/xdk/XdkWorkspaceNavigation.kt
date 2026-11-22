@@ -7,7 +7,6 @@ import org.xvm.lsp.adapter.CodeLens
 import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
-import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
@@ -163,12 +162,6 @@ internal class XdkWorkspaceNavigation(
      */
     private fun isFinalizer(symbol: SemanticModel.Symbol): Boolean =
         symbol.kind == SemanticModel.SymbolKind.METHOD && symbol.name == "finally"
-
-    fun monikers(
-        uri: String,
-        line: Int,
-        column: Int,
-    ): List<SymbolMoniker> = views[sourceUri(uri)]?.monikersAt(line, column).orEmpty()
 
     fun definition(
         uri: String,

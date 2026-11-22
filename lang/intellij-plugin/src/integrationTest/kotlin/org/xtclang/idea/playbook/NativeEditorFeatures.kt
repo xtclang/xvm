@@ -20,8 +20,6 @@ internal fun ParityWorkspace.nativeLibraryContent(
     source: ParityWorkspace.Document,
     at: Int,
     target: JsonObject,
-    imported: JsonObject,
-    monikerScheme: String,
 ) = with(driver) {
     val uri = target.string("uri")
     val start = target["range"].asJsonObject["start"].asJsonObject
@@ -51,15 +49,6 @@ internal fun ParityWorkspace.nativeLibraryContent(
     val text = withContext(OnDispatcher.EDT) { requireNotNull(manager.getSelectedTextEditor()).getDocument().getText() }
     val content = protocol.query("workspace/textDocumentContent", mapOf("uri" to uri)).asJsonObject.string("text")
     check(text == content)
-    val exported =
-        protocol
-            .query(
-                "textDocument/moniker",
-                mapOf("textDocument" to mapOf("uri" to uri), "position" to start),
-            ).rows()
-            .single()
-    check(exported == imported.deepCopy().apply { addProperty("kind", "export") })
-    check(exported.string("scheme") == monikerScheme)
     check(
         protocol
             .query(

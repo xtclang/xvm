@@ -15,16 +15,6 @@ data class ReadOnlyDocument(
     val text: String,
 )
 
-/** Portable artifact identity. The scheme owns the identifier format, independently of snapshots. */
-data class SymbolMoniker(
-    val scheme: String,
-    val identifier: String,
-    val kind: Kind,
-) {
-    /** Relationship between a moniker and its provider: imported, exported or local to this document. */
-    enum class Kind { IMPORT, EXPORT, LOCAL }
-}
-
 /** A position in a text document (0-based line and column). */
 data class Position(
     val line: Int,

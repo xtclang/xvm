@@ -50,8 +50,6 @@ class XdkDependency
             return XdkDependency(module, artifact, index.declarations, index.documents, index.documentation, fromSource)
         }
 
-        internal val symbolIndex: XdkArtifactSymbols by lazy { XdkArtifactSymbols.capture(artifact) }
-
         val declarations: Map<Int, SemanticModel.SourceLocation> = immutableMap(declarations)
         val revision: String =
             ByteArrayOutputStream()

@@ -59,9 +59,6 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.LocationLink
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
-import org.eclipse.lsp4j.Moniker
-import org.eclipse.lsp4j.MonikerKind
-import org.eclipse.lsp4j.MonikerParams
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.PartialResultParams
 import org.eclipse.lsp4j.Position
@@ -93,7 +90,6 @@ import org.eclipse.lsp4j.TypeHierarchyItem
 import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
-import org.eclipse.lsp4j.UniquenessLevel
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WillSaveTextDocumentParams
 import org.eclipse.lsp4j.WorkDoneProgressParams
@@ -117,7 +113,6 @@ import org.xvm.lsp.adapter.CodeActionCompiles
 import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.InlineCompletionContext
-import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRenameProposal
 import org.xvm.lsp.adapter.xdk.XdkSources
@@ -1966,41 +1961,6 @@ class XtcTextDocumentService(
             } catch (e: IllegalArgumentException) {
                 throw ResponseErrorException(
                     ResponseError(ResponseErrorCode.InvalidParams, e.message, null),
-                )
-            }
-        }
-
-    override fun moniker(params: MonikerParams): CompletableFuture<List<Moniker>> =
-        queryAsync(
-            "textDocument/moniker",
-            params.textDocument.uri,
-            request = {
-                val uri = params.textDocument.uri
-                val library = adapter.readOnlyDocument(uri)
-                val rendered = openDocuments[uri]?.content
-
-                // LSP 3.18 permits client whitespace normalization in read-only views. EOL
-                // normalization preserves positions; other rewrites cannot reuse binary ranges.
-                fun lines(text: String) = text.replace("\r\n", "\n").replace('\r', '\n')
-                if (library != null && rendered != null && lines(rendered) != lines(library.text)) {
-                    CompletableFuture.completedFuture(emptyList())
-                } else {
-                    adapter.findMonikersAsync(uri, params.position.line, params.position.character)
-                }
-            },
-            progress = params,
-            partial = PartialResults::list,
-        ) { monikers ->
-            monikers.map {
-                Moniker(
-                    it.scheme,
-                    it.identifier,
-                    UniquenessLevel.Scheme,
-                    when (it.kind) {
-                        SymbolMoniker.Kind.IMPORT -> MonikerKind.Import
-                        SymbolMoniker.Kind.EXPORT -> MonikerKind.Export
-                        SymbolMoniker.Kind.LOCAL -> MonikerKind.Local
-                    },
                 )
             }
         }

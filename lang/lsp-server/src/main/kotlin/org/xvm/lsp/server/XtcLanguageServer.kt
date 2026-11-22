@@ -902,7 +902,6 @@ class XtcLanguageServer internal constructor(
                 td?.declaration?.let { "declaration" },
                 td?.typeDefinition?.let { "typeDefinition" },
                 td?.implementation?.let { "implementation" },
-                td?.moniker?.let { "moniker" },
                 td?.references?.let { "references" },
                 td?.documentSymbol?.let { "documentSymbol" },
                 td?.formatting?.let { "formatting" },
@@ -1182,9 +1181,6 @@ class XtcLanguageServer internal constructor(
             }
             if (AdapterCapability.IMPLEMENTATION in adapter.capabilities) {
                 implementationProvider = Either.forLeft(true)
-            }
-            if (AdapterCapability.MONIKER in adapter.capabilities) {
-                monikerProvider = Either.forLeft(true)
             }
             if (AdapterCapability.TYPE_HIERARCHY in adapter.capabilities) {
                 typeHierarchyProvider = Either.forLeft(true)

@@ -226,8 +226,9 @@ class SharedScenarios(
                 json.getAsJsonObject("cases").entrySet().associate { (id, value) ->
                     id to gson.fromJson(value, Scenario::class.java)
                 }
-            // X273-X275 tested the removed L77 color prototype; their IDs are not reused
-            val retired = setOf("X273", "X274", "X275")
+            // X252 and X253 tested the removed monikers, X273-X275 the removed L77 color prototype; their IDs are not
+            // reused
+            val retired = setOf("X252", "X253", "X273", "X274", "X275")
             val expected = (1..350).map { "X$it" }.filterNot { it in retired } + listOf("CFG1", "CFG2", "CFG3", "7a.8", "7a.9")
             require(scenarios.keys.toList() == expected) {
                 "The catalog must describe the complete playbook in order"

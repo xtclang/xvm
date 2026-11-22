@@ -53,7 +53,6 @@
  * | workspaceFolders, didChangeWorkspaceFolders | - the tour's single-folder window would reload, ending the tour; the playbook's --multi-root run covers it |
  * | textDocument/codeLens, codeLens/resolve   | step "Code lenses"; check "A reference lens"                      |
  * | textDocument/linkedEditingRange           | check "Linked editing"                                            |
- * | textDocument/moniker                      | checks "Monikers", "One identity in the XDK's sources" (protocol: VS Code has no moniker view) |
  * | textDocument/prepareTypeHierarchy, subtypes, supertypes | step "Type hierarchy"; check "Supertypes"           |
  * | textDocument/prepareCallHierarchy, incomingCalls, outgoingCalls | step "Call hierarchy"; check "Outgoing calls" |
  * | workspace/configuration, didChangeConfiguration | checks "Formatting settings", "Inlay hint setting", "Reference lens setting" |
@@ -264,7 +263,7 @@ async function start(tour: Tour, coverage: Coverage): Promise<void> {
             'implementationProvider', 'referencesProvider', 'documentSymbolProvider', 'documentHighlightProvider', 'selectionRangeProvider',
             'foldingRangeProvider', 'renameProvider', 'codeActionProvider', 'documentFormattingProvider', 'documentRangeFormattingProvider',
             'documentOnTypeFormattingProvider', 'inlayHintProvider', 'inlineValueProvider', 'documentLinkProvider', 'signatureHelpProvider',
-            'semanticTokensProvider', 'workspaceSymbolProvider', 'codeLensProvider', 'linkedEditingRangeProvider', 'monikerProvider',
+            'semanticTokensProvider', 'workspaceSymbolProvider', 'codeLensProvider', 'linkedEditingRangeProvider',
             'typeHierarchyProvider', 'callHierarchyProvider', 'diagnosticProvider', 'inlineCompletionProvider'];
         const missing = providers.filter(provider => !capabilities[provider]);
         expect(missing.length === 0, () => `Not advertised: ${missing.join(', ')}`);
@@ -964,34 +963,6 @@ async function navigation(tour: Tour): Promise<void> {
             expect(document.getText() === before.text && document.version === before.version && !document.isDirty,
                 () => `HashMap.x (${document.uri.scheme}) took an edit`);
         },
-    });
-    await tour.verify("One identity in the XDK's sources", 'textDocument/moniker', async () => {
-        // the library's source is a read-only view; its declarations have the identities that the project's uses of
-        // them import
-        const library = active().document;
-        expect(path.basename(library.uri.path) === 'HashMap.x', () => `In ${library.uri.toString()}`);
-        const monikers = (uri: string, position: vscode.Position) =>
-            getClient()!.sendRequest<{ identifier: string; scheme: string; kind?: string }[] | null>('textDocument/moniker', {
-                textDocument: { uri }, position: { line: position.line, character: position.character },
-            }).then(found => found ?? []);
-        const declared = await monikers(library.uri.toString(), library.positionAt(library.getText().indexOf('class HashMap') + 'class '.length));
-        const scoreboard = tour.source('Scoreboard.x');
-        const line = await lineOf(scoreboard, 'new HashMap') - 1;
-        const used = await monikers(vscode.Uri.file(scoreboard).toString(),
-            new vscode.Position(line, (await text(scoreboard)).split('\n')[line].indexOf('new HashMap') + 'new Hash'.length));
-        expect(declared.some(each => each.kind === 'export'
-            && used.some(use => use.kind === 'import' && use.scheme === each.scheme && use.identifier === each.identifier)),
-            () => `HashMap.x declares ${JSON.stringify(declared)}; Scoreboard.x uses ${JSON.stringify(used)}`);
-    });
-    await tour.verify('Monikers', 'textDocument/moniker', async () => {
-        const deck = tour.source('Deck.x');
-        await open(deck);
-        const monikers = await getClient()!.sendRequest<{ identifier: string; scheme: string }[] | null>('textDocument/moniker', {
-            textDocument: { uri: vscode.Uri.file(deck).toString() }, position: { line: 0, character: 'class De'.length },
-        });
-        // an export moniker of the class, by the compiled module's identity: the same in every project that uses it
-        expect((monikers ?? []).some(moniker => moniker.scheme.startsWith('ecstasy') && moniker.identifier.length > 0
-            && (moniker as { kind?: string }).kind === 'export'), () => JSON.stringify(monikers));
     });
     await command('workbench.action.closeAllEditors');
     await tour.verifyRestored();
@@ -3111,7 +3082,7 @@ async function protocol(tour: Tour, coverage: Coverage): Promise<void> {
         'textDocument/codeAction', 'codeAction/resolve', 'textDocument/formatting', 'textDocument/rangesFormatting', 'textDocument/onTypeFormatting',
         'textDocument/inlayHint', 'textDocument/inlineValue', 'textDocument/documentLink', 'textDocument/signatureHelp', 'textDocument/semanticTokens/full',
         'textDocument/semanticTokens/full/delta', 'textDocument/semanticTokens/range', 'workspace/symbol', 'xtc/renameFiles',
-        'textDocument/codeLens', 'codeLens/resolve', 'textDocument/linkedEditingRange', 'textDocument/moniker', 'textDocument/prepareTypeHierarchy',
+        'textDocument/codeLens', 'codeLens/resolve', 'textDocument/linkedEditingRange', 'textDocument/prepareTypeHierarchy',
         'typeHierarchy/subtypes', 'typeHierarchy/supertypes', 'textDocument/prepareCallHierarchy', 'callHierarchy/incomingCalls', 'callHierarchy/outgoingCalls',
         'textDocument/diagnostic', 'workspace/diagnostic', 'textDocument/inlineCompletion', 'textDocument/didOpen', 'textDocument/didChange',
         'textDocument/didClose', 'textDocument/didSave', 'workspace/didChangeConfiguration', 'workspace/didChangeWatchedFiles', 'workspace/didRenameFiles',

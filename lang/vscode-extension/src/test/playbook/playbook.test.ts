@@ -10,7 +10,7 @@ import { documentationCases } from './documentation';
 import { editingClosureCases, formattingBreadthCases, linkedScopeCases, structuralRecoveryCases } from './editingClosure';
 import { attachCases, buildModeCases, commandLineDebugCases, debugSessionCases, executionCases, executionInputCases, gradleDebugCases, gradleProjectCases, gradleTestCases, renamedRootCases, runEntryCases, testExplorerCases } from './execution';
 import { configurationCases, dependencyCases } from './dependencies';
-import { graphCases, indexingCases, libraryContentCases, monikerCases } from './graph';
+import { graphCases, indexingCases, libraryContentCases } from './graph';
 import { highlightingCases } from './highlighting';
 import { inlineCompletionCases } from './inlineCompletion';
 import { librarySettingsCases } from './librarySettings';
@@ -82,7 +82,6 @@ suite('XdkAdapter playbook', function () {
     structuralRecoveryCases();
     formattingBreadthCases();
     indexingCases();
-    monikerCases();
     libraryContentCases();
     inlineCompletionCases();
     refreshOverlapCases();

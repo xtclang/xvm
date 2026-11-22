@@ -14,18 +14,17 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Checks revision-owned library source documents and monikers in virtual and file-backed views. Navigation
+ * Checks revision-owned library source documents in virtual and file-backed views. Navigation
  * must find declarations independently of which symbols a consumer previously queried.
  */
 class XdkLibraryDocumentsTest {
     @Test
-    fun `matching bundled sources have revision owned content and monikers in file and virtual views`() {
+    fun `matching bundled sources have revision owned content and declarations in file and virtual views`() {
         XdkAdapter().use { adapter ->
             val uri = "file:///App.x"
             val text = "module App { package xml import xml.xtclang.org; void accept(xml.Document doc) {} }"
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             val at = text.indexOf("Document")
-            val imported = adapter.findMonikers(uri, 0, at).single()
             val location = requireNotNull(adapter.findDefinition(uri, 0, at))
             val document = requireNotNull(adapter.readOnlyDocument(location.uri))
             assertThat(URI(document.uri).scheme).isEqualTo("ecstasy-library")
@@ -33,8 +32,7 @@ class XdkLibraryDocumentsTest {
             assertThat(document.text).isEqualTo(Files.readString(Path.of(URI(location.uri))))
             assertThat(adapter.readOnlyDocument(document.uri)).isEqualTo(document)
             listOf(location.uri, document.uri).forEach { source ->
-                assertThat(adapter.findMonikers(source, location.startLine, location.startColumn))
-                    .containsExactly(imported.copy(kind = SymbolMoniker.Kind.EXPORT))
+                assertThat(adapter.getHoverInfo(source, location.startLine, location.startColumn)).contains("Document")
                 assertThat(adapter.compile(source, "module Forged {} ").diagnostics).isEmpty()
                 assertThat(adapter.prepareRename(source, location.startLine, location.startColumn)).isNull()
                 assertThat(adapter.formatDocument(source, document.text, FormattingOptions(4, true))).isEmpty()
@@ -44,7 +42,6 @@ class XdkLibraryDocumentsTest {
             assertThat(adapter.readOnlyDocument(document.uri)).isEqualTo(document)
             assertThat(adapter.readOnlyDocument(document.uri.replace("/xml/", "/../"))).isNull()
             assertThat(adapter.readOnlyDocument("file:///etc/passwd")).isNull()
-            assertThat(adapter.findMonikers(document.uri, 0, 0)).isEmpty()
             adapter.close()
             assertThat(adapter.readOnlyDocument(document.uri)).isNull()
         }
@@ -61,12 +58,11 @@ class XdkLibraryDocumentsTest {
             val line = lines.indexOfFirst { it.contains("Int size.get()") }
             assertThat(line).isNotNegative()
             val column = lines[line].indexOf("size")
-            val moniker = adapter.findMonikers(document.uri, line, column).single()
-            assertThat(moniker.kind).isEqualTo(SymbolMoniker.Kind.EXPORT)
+            assertThat(adapter.getHoverInfo(document.uri, line, column)).contains("size")
             val consumer = "module App { Int length(String text) = text.size; }"
             assertThat(adapter.compile("file:///App.x", consumer).diagnostics).isEmpty()
-            assertThat(adapter.findMonikers("file:///App.x", 0, consumer.indexOf("size")))
-                .containsExactly(moniker.copy(kind = SymbolMoniker.Kind.IMPORT))
+            val declared = requireNotNull(adapter.findDefinition("file:///App.x", 0, consumer.indexOf("size")))
+            assertThat(declared.startLine to declared.startColumn).isEqualTo(line to column)
         }
     }
 
