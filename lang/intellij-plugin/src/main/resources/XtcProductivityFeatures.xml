@@ -1,0 +1,26 @@
+<!-- Ecstasy's features for Tip of the Day and Help | My Productivity, which XtcProductivityFeatures registers. IntelliJ
+     counts a feature's uses through the actions it tracks, and shows the tips of the features not yet used first. The
+     names are in messages/XtcProductivityFeatures.properties: a feature's under its id, the group's as group.xtc. -->
+<component>
+    <group id="xtc">
+        <feature id="xtc.server.log" tip-id="XtcServerLog" min-usage-count="1" utility-score="4">
+            <track-action id="xtc.toggleServerLog"/>
+        </feature>
+        <feature id="xtc.server.restart" tip-id="XtcRestartServer" min-usage-count="1" utility-score="4">
+            <track-action id="xtc.restartLanguageServer"/>
+        </feature>
+        <feature id="xtc.server.adapter" tip-id="XtcLanguageAdapter" min-usage-count="1" utility-score="4">
+            <track-action id="xtc.selectLanguageAdapter"/>
+        </feature>
+        <feature id="xtc.build.mode" tip-id="XtcBuildMode" min-usage-count="1" utility-score="4">
+            <track-action id="xtc.selectBuildMode"/>
+        </feature>
+        <feature id="xtc.server.exportLogs" tip-id="XtcExportServerLogs" min-usage-count="1" utility-score="3">
+            <track-action id="xtc.exportServerLogs"/>
+        </feature>
+        <feature id="xtc.run" tip-id="XtcRunAndTest" min-usage-count="1" utility-score="3">
+            <track-action id="xtc.runModule"/>
+            <track-action id="xtc.runAllTests"/>
+        </feature>
+    </group>
+</component>

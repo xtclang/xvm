@@ -1,0 +1,19 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="css/tips.css">
+</head>
+<body>
+<p><b>Switch between the Ecstasy compiler and Tree-sitter</b></p>
+<p>
+    The language server analyzes Ecstasy with the Ecstasy compiler by default, which knows the code's types.
+    Tree-sitter is the older, syntax-only adapter: it knows the code's structure and indexes the workspace, and is a
+    fallback when the compiler adapter has trouble with a project.
+</p>
+<p>
+    Press <span class="shortcut">&shortcut:xtc.selectLanguageAdapter;</span>
+    (<span class="control">Tools | Switch Ecstasy Language Adapter</span>) to choose one. The server restarts and
+    keeps what the open editors hold.
+</p>
+</body>
+</html>
