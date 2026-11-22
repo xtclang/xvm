@@ -8781,7 +8781,8 @@
     "X286": {
       "title": "the adapter chooser opens from its shortcut, command and Tools menu, and each choice restarts the server",
       "manual": [
-        "A physical desktop key press remains manual: VS Code sends the shortcut as renderer key events, and IntelliJ checks the keymap binding before invoking the action."
+        "A physical desktop key press remains manual: VS Code sends the shortcut as renderer key events, and IntelliJ checks the keymap binding before invoking the action.",
+        "In IntelliJ, the first start with Tree-sitter shows a Got It tooltip over the Ecstasy editor that says what the adapter leaves out and how to switch back; it shows once, and the playbook resets it for its check."
       ],
       "values": {
         "file": "AdapterChooser.x",
@@ -8792,7 +8793,8 @@
         "chooserTitle": "Ecstasy: Switch Language Adapter",
         "shortcut": "ctrl+alt+x a",
         "treeSitterLabel": "Tree-sitter",
-        "compilerLabel": "Ecstasy Compiler"
+        "compilerLabel": "Ecstasy Compiler",
+        "treeSitterTooltip": "xtc.treeSitterAdapter"
       },
       "intellij": {
         "coverage": "partial",
