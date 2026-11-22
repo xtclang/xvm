@@ -41,7 +41,8 @@ class XdkMonikerTest {
         assertThat(moniker(first, LIBRARY, "pick(Int"))
             .isEqualTo(moniker(second, LIBRARY, "pick(Int"))
             .isNotEqualTo(moniker(changed, LIBRARY, "pick(Int"))
-        assertThat(first.artifact!!.bytes()).isNotEqualTo(second.artifact!!.bytes())
+        // the same source compiles to the same bytes, wherever it is
+        assertThat(first.artifact!!.bytes()).isEqualTo(second.artifact!!.bytes())
         assertThat(monikers(first.models.single(), LIBRARY, "T>")).isEmpty()
     }
 

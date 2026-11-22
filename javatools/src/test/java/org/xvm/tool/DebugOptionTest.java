@@ -14,6 +14,7 @@ import java.nio.file.Path;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import java.util.concurrent.BlockingQueue;
@@ -107,6 +108,8 @@ public class DebugOptionTest {
                 throw new IllegalArgumentException("bad options: " + options);
             }
             var session = new SessionDebugger(STOPS::add);
+            // as an IDE's agent does, it names where the module's sources are: a compiled module does not record it
+            session.setSourceDirs(Map.of(module.getName(), source.getParent().toString()));
             session.addModule(module);
             session.setBreakpoints(source.toString(), List.of(new Line(1, 4, null, null, null)));
             debugger = session;
