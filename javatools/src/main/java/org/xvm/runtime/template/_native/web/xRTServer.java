@@ -1028,8 +1028,9 @@ public class xRTServer
         }
 
         /**
-         * Read at most the requested number of bytes, waiting for content without blocking the
-         * HTTP service context. A partly consumed chunk is retained for the next read.
+         * Read at most the requested number of body bytes using Jetty's blocking input stream.
+         * Wait for the requested byte count or the end of the body. A partly consumed chunk is
+         * retained for the next read.
          */
         protected byte[] readBody(int cb)
                 throws IOException {
@@ -1066,8 +1067,8 @@ public class xRTServer
         }
 
         /**
-         * Write response body bytes using Jetty's blocking output stream. Must run on an I/O
-         * thread. A final write closes the stream and completes the HTTP exchange.
+         * Write response body bytes using Jetty's blocking output stream. A final write closes the
+         * stream and completes the HTTP exchange.
          *
          * @param ab      the response body bytes
          * @param fFinal  true if this is the last write
