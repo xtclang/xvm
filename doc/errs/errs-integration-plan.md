@@ -1645,8 +1645,8 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Bounded same-module type moves now rewrite package qualifications; X161 Move/Undo/Redo passes in both editors. Explicit graph relocation now uses the host proposal/persistence path (X162/X163). Retain the VS Code file-operation refusal limitation. |
 | L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting pass backend and selected X132/X137–X139 checks; Full remains default. | Broaden workspace/save ownership coverage; IntelliJ uses native save formatting because LSP4IJ lacks `willSaveWaitUntil`. Save edits remain version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; negotiated legacy code actions have a bounded one-use resolve/apply command. | Broader server commands and embedded Run remain separate scopes; define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
-| L74 monikers | Implemented and validated: normalized artifact identities, source/binary equality, overload/generic calls, replacement, private/local visibility and shared X252/X253. | Bounded to current successful semantic snapshots. L75 adds direct library document monikers; no LSIF exporter or native moniker browser is claimed. |
-| L75 document content | Negotiated immutable virtual source content/refresh and direct library monikers pass backend, packaged and selected acceptance. | IntelliJ uses protected file fallback until LSP4IJ implements content providers (UP25). |
+| L74 monikers | None: the moniker provider, its artifact identities and X252/X253 were removed on 2026-11-22. | Neither editor uses monikers: LSP4IJ never sends the request (UP51), and VS Code has no moniker view. See the [removal record](#l74-monikers-removed-2026-11-22). |
+| L75 document content | Negotiated immutable virtual source content/refresh passes backend, packaged and selected acceptance; its direct library monikers were removed with L74's on 2026-11-22. | IntelliJ uses protected file fallback until LSP4IJ implements content providers (UP25). |
 | L76 inline completion | Compiler cursor projection, capability negotiation, cancellation and shared X255–X258 pass batched backend and selected editor validation. | Plain names/expected-type values only. LSP4IJ native invocation/selection constraints are UP26; no generative service is implied. |
 | L77 colors | None: the fixture-only document-color prototype and X273–X275 were removed on 2026-10-21. | Excluded until Ecstasy has a color type; highlighting is semantic tokens. See the [removal record](#l77-color-prototype-removed-2026-10-21). |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
@@ -1707,15 +1707,15 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   commands require a named user action and acceptance cases rather than placeholder handlers.
   Embedded Run commands must route to the shared build/execution service defined by R2–R5,
   rather than assembling another CLI command or duplicating compilation in a protocol handler.
-- [x] **L74 — Cross-project symbol identities.** `textDocument/moniker` supplies normalized
-  artifact-based import/export/local identities with scheme-level uniqueness. Recompilation,
-  checkout relocation, overload/generic calls, distinct same-name artifacts, source/binary parity,
-  replacement, visibility and stale/canceled responses pass regression tests; X31/X252/X253 pass
-  selected acceptance in both editors. Snapshot-local IDs remain internal. Parsed-only library
-  document enrichment remains with L75; see the [L74 contract and receipt](#l74-artifact-identities-2026-10-05).
+- [x] **L74 — Cross-project symbol identities: removed.** `textDocument/moniker` supplied normalized
+  artifact-based import/export/local identities from 2026-10-05; see the
+  [L74 contract and receipt](#l74-artifact-identities-2026-10-05). Neither editor uses monikers: LSP4IJ
+  never sends the request (UP51), and VS Code has no moniker view. The provider, its artifact
+  identities and X252/X253 were removed on 2026-11-22; see the
+  [removal record](#l74-monikers-removed-2026-11-22).
 - [x] **L75 — Read-only document content.** Negotiated LSP 3.18 `workspace/textDocumentContent`
   and refresh serve immutable revision-owned bundled source views. Matching library declarations
-  have artifact-backed monikers without another AST. VS Code virtual views and IntelliJ's read-only
+  answer hover and definition without another AST. VS Code virtual views and IntelliJ's read-only
   file fallback pass selected acceptance; virtual IntelliJ content/refresh remains the explicit
   UP25 client limit. Host source indexes remain file locations, not invented source snapshots.
   See the [contract and receipt](#l75-read-only-library-content-2026-10-05).
@@ -2663,6 +2663,31 @@ token as `Bearer` without an `api-version`; [microsoft/vscode-vsce#1337](https:/
 fixes that only in the 4.0.1 pre-releases, so #711 needs a newer vsce, or `--azure-credential`
 if the Marketplace has no trusted publishing setting. Everything still open across the branch is
 listed in [remaining.md](remaining.md).
+
+### L74 monikers removed (2026-11-22)
+
+The server no longer answers `textDocument/moniker`. Neither editor uses monikers: LSP4IJ never sends the request (UP51), and VS Code has no moniker view. The editors' playbook
+cases and the VS Code tour sent the request themselves, as protocol checks with no native feature
+behind them, so the provider kept code, artifact hashing and tests alive for no user.
+
+Removed: `XdkMonikers.kt` (`XdkMonikers` and `XdkArtifactSymbols`, the content-addressed symbol
+table of an artifact), `SymbolMoniker`, `AdapterCapability.MONIKER`, the adapter's `findMonikers`,
+`SemanticModel.monikersAt` and its moniker table, the workspace navigation's and library sources'
+moniker lookups, `XdkDependency.symbolIndex` and the bundled libraries' lazy symbol tables, the
+server's `monikerProvider` advertisement and `textDocument/moniker` handler, `XdkMonikerTest`,
+`MonikerProtocolTest`, `XdkStdioTest`'s packaged moniker round trip, the IntelliJ and VS Code
+`monikerCases` with the cases X252 and X253, and the VS Code tour's checks "One identity in the XDK's
+sources" and "Monikers". Both harnesses keep X252 and X253 as retired IDs.
+
+Kept or moved:
+- X254 keeps its library-view checks, without comparing the declaration's moniker with the
+  consumer's.
+- X31 lists `monikerProvider` among the capabilities that must not be advertised; `XdkStdioTest`
+  asserts no `monikerProvider`.
+- `XdkMonikerTest` also checked that the same source compiles to the same artifact bytes wherever it
+  is; that check moves to `XdkDependencyTest`.
+- `XdkLibraryDocumentsTest` checks the library views with hover and definition instead of
+  monikers, and `LibraryContentProtocolTest` waits for the analysis with a hover request.
 
 ### L77 color prototype removed (2026-10-21)
 

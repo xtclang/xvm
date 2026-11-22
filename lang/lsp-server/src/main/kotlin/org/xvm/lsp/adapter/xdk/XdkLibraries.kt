@@ -32,7 +32,7 @@ internal object XdkLibraries {
         val names =
             checkNotNull(index.getProperty("modules")) { "Bundled XDK module index is missing" }
         val repository = BuildRepository()
-        val artifacts =
+        val revisions =
             names.split(',').associate { name ->
                 val bytes = resource(name).use { it.readBytes() }
                 val module =
@@ -40,16 +40,12 @@ internal object XdkLibraries {
                         FileStructure(bytes.inputStream()).module
                     }
                 repository.storeModule(module)
-                module.name to
-                    Artifact(
-                        HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)),
-                        lazy { XdkArtifactSymbols.capture(resource(name).use { it.readBytes() }) },
-                    )
+                module.name to HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
             }
         for (module in listOf("ecstasy.xtclang.org", "mack.xtclang.org", "_native.xtclang.org")) {
             checkNotNull(repository.loadModule(module)) { "Bundled XDK is missing $module" }
         }
-        Bundle(repository, artifacts)
+        Bundle(repository, revisions)
     }
 
     /**
@@ -66,9 +62,9 @@ internal object XdkLibraries {
     /** One revision for the whole bundle: equal exactly when every bundled module is byte for byte the same. */
     internal val fingerprint: String by lazy {
         val revisions =
-            bundle.artifacts.entries
+            bundle.revisions.entries
                 .sortedBy { it.key }
-                .joinToString("\n") { (name, artifact) -> "$name=${artifact.revision}" }
+                .joinToString("\n") { (name, revision) -> "$name=$revision" }
         HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(revisions.toByteArray()))
     }
 
@@ -119,23 +115,15 @@ internal object XdkLibraries {
     /** The file that marks [directory] complete. */
     private const val COMPLETE = ".complete"
 
-    /** Bundled compiler repository and the immutable artifacts used to reopen its modules. */
+    /** Bundled compiler repository and the SHA-256 revision of each bundled module's file, by module name. */
     private data class Bundle(
         val repository: BuildRepository,
-        val artifacts: Map<String, Artifact>,
-    )
-
-    /** Library artifact revision with lazily materialized detached symbols. */
-    private data class Artifact(
-        val revision: String,
-        val symbols: Lazy<XdkArtifactSymbols>,
+        val revisions: Map<String, String>,
     )
 
     internal fun module(name: String) = bundle.repository.loadModule(name)
 
-    internal fun revision(name: String): String = bundle.artifacts.getValue(name).revision
-
-    internal fun symbolIndex(name: String): XdkArtifactSymbols? = bundle.artifacts[name]?.symbols?.value
+    internal fun revision(name: String): String = bundle.revisions.getValue(name)
 
     fun configure() {
         configured

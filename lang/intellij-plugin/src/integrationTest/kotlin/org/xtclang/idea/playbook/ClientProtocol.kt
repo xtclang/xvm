@@ -121,7 +121,6 @@ class ClientProtocol(
                 "textDocument/foldingRange",
                 "textDocument/selectionRange",
                 "textDocument/inlayHint",
-                "textDocument/moniker",
                 "textDocument/formatting",
                 "textDocument/rangesFormatting",
                 "textDocument/onTypeFormatting",

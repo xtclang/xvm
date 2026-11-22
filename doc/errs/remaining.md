@@ -1255,9 +1255,10 @@ passes with the workaround disabled. The gates are in
 
 - UP51 (2026-10-28): LSP4IJ never sends `textDocument/moniker` (0.21.0 and `main`, `7469aab9`), and
   IntelliJ has no view or navigation that uses monikers; no LSP4IJ issue or pull request mentions
-  them. XVM's server answers them since L74/L75, and IntelliJ's X31 and X252–X254 pass by sending
-  the request through LSP4IJ's LSP4J endpoint, a protocol check rather than native coverage; VS Code
-  has no moniker view either. Nothing is filed until IntelliJ has a use for them.
+  them. VS Code has no moniker view either. XVM's server answered them from L74/L75 until
+  2026-11-22, when the provider was removed with X252 and X253, as neither editor uses them; the
+  cases had sent the request themselves, a protocol check rather than native coverage. Nothing is
+  filed until IntelliJ has a use for them.
 
 ### LSP4IJ: document links without a target (UP52): our #1785, merged
 

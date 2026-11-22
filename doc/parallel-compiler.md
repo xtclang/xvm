@@ -98,7 +98,7 @@ nobody has found yet, and the language server's own state that assumes one worke
 `new FileStructure(file)`, which is lazy (`asm/DirRepository.java:393-401`,
 `asm/FileStructure.java:107-110`). The language server reads each bundled module with
 `FileStructure(InputStream)`, also lazy, into one `BuildRepository`, and configures
-`EmbeddingSupport` with it (`lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkLibraries.kt:34-53`,
+`EmbeddingSupport` with it (`lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkLibraries.kt:34-49`,
 `:62`, and `asm/FileStructure.java:135-138`). Nothing writes to that `BuildRepository` after
 configuration. Read-through stores go to the attempt's own `BuildRepository`.
 
@@ -238,7 +238,7 @@ Two of the language server's concerns from `doc/errs/errs.md` look different in 
 | --- | --- | --- | --- | --- |
 | Lazily deserialized children | `asm/Component.java:810-850`, `:3649` | The first `children()`/`hasChildren()`, in practice the first copy | `volatile byte[]` handoff under a monitor shared by siblings | Nothing: built for threads ("this blocks other threads until deserialization is complete", `:828-829`) |
 | `DirRepository` scan cache and module instance | `asm/DirRepository.java:83-88`, `:404-414` | `loadModule` | `HashMap`/`TreeMap` under `synchronized` | Nothing; fixed in `669fcb1a3e` (#547) |
-| `BuildRepository` map (the language server's bundle) | `compiler/BuildRepository.java:82` | Only during configuration (`XdkLibraries.kt:34-53`) | `TreeMap` | Nothing while no one writes. A host that stores into the configured `BuildRepository` while compiling would corrupt it |
+| `BuildRepository` map (the language server's bundle) | `compiler/BuildRepository.java:82` | Only during configuration (`XdkLibraries.kt:34-49`) | `TreeMap` | Nothing while no one writes. A host that stores into the configured `BuildRepository` while compiling would corrupt it |
 | `IdentityConstant.m_component` | `asm/constants/IdentityConstant.java:597-603` | `getComponent()`, lazily on read. Library queries call it on source constants (`XdkLibrarySources.kt:367`); copying may, through `resolveTypedefs` *(inferred)* | plain field | Benign: the value is always the same component, already published by the deserialization handoff *(inferred, JMM argument)* |
 | `Constant.m_iHash` | `asm/Constant.java:558-585`, `:975` | `hashCode()`, lazily | `int` | Benign, the same single-check idiom as `String.hash` |
 | Source constant pool, list and maps | `asm/ConstantPool.java:3756-3770` | Normally nothing. `extractVersion` registers a versioned `ModuleConstant` (`asm/ModuleStructure.java:679`); `resolveTypedefs` could create constants in the source pool *(inferred; compiled pools already hold typedef-free constants)* | `ArrayList` + `ConcurrentHashMap` | `register` is synchronized, but its readers are not: `getConstant(int)` and `getConstants()` read the `ArrayList` unlocked (`:84-86`, `:131-134`). A new constant is visible in the map before `registerConstants` re-points its parts (`:205-256`) |
@@ -363,10 +363,10 @@ What two attempts share is sections 3.2, 3.3 and 3.4 and, for a versioned import
 | Lazy deserialization, racy caches (3.2) | None expected | — |
 
 The language server also shares the bundle with its library queries.
-`XdkLibraries.module(name)` returns the configured instance (`XdkLibraries.kt:134`). Hover,
-definition and monikers in a library copy walk its pool and components
-(`lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkLibrarySources.kt:169-232`,
-`:361-367`), and so does semantic model building (`SemanticModelBuilder.kt:1559`). Today those
+`XdkLibraries.module(name)` returns the configured instance (`XdkLibraries.kt:124`). Hover
+and definition in a library copy walk its pool and components
+(`lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkLibrarySources.kt:143-213`,
+`:341-347`), and so does semantic model building (`SemanticModelBuilder.kt:1559`). Today those
 queries go through the same single worker ("Library queries share compiler serialization",
 `XdkAdapter.kt:410-421`). They read like a copy does, so their safety class is section 3.2.
 

@@ -72,7 +72,6 @@
  *                                                   finally block, turning the reference counts off takes their lenses away
  *   codeLensProvider: Run                           check the Run lens runs the module; playbook X280
  *   linkedEditingRangeProvider                      the IDE's editing needs LSP4IJ 0.30.0, the Coming card; playbook X133
- *   monikerProvider                                 no IntelliJ UI but the library view's: playbook X254
  *   typeHierarchyProvider                           step Type hierarchy
  *   callHierarchyProvider                           step Call hierarchy
  *   workDoneProgress                                playbook X145
@@ -223,8 +222,8 @@
  *     invalidated, the console's completions and singleThread, which LSP4IJ 0.21.0 does not ask for (the Coming card,
  *     UP30-UP55); inlineValue and linkedEditingRange, which need LSP4IJ 0.30.0; workspace.textDocumentContent, which
  *     LSP4IJ has no client for (UP25); semanticTokens delta and range, rangesFormatting, inlayHint/resolve,
- *     documentLink/resolve, workspaceSymbol/resolve, moniker, workDoneProgress and the refresh requests, which the VS
- *     Code tour checks by its server trace and IntelliJ by the playbook (X126, X131, X132, X145, X254);
+ *     documentLink/resolve, workspaceSymbol/resolve, workDoneProgress and the refresh requests, which the VS Code tour
+ *     checks by its server trace and IntelliJ by the playbook (X126, X131, X132, X145);
  *     workspace/didChangeWatchedFiles; xtc/healthCheck; xtc/discoverConsumers (IntelliJ: playbook X99, X105)
  *   IntelliJ's only: xtc/runLenses, as VS Code takes its Run lens from textDocument/codeLens; willRenameFiles, which
  *     VS Code's participant replaces by xtc/renameFiles; the Gradle model's import; the IDE's Build window and Project

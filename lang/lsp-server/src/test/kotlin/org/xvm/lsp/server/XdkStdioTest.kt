@@ -36,8 +36,6 @@ import org.eclipse.lsp4j.InlineCompletionParams
 import org.eclipse.lsp4j.InlineCompletionTriggerKind
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.MonikerKind
-import org.eclipse.lsp4j.MonikerParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
@@ -153,7 +151,7 @@ class XdkStdioTest {
     }
 
     @Test
-    fun `packaged library content and direct monikers use negotiated immutable virtual documents`() {
+    fun `packaged library content uses negotiated immutable virtual documents`() {
         Session(packagedJar(), directory).use { session ->
             session.initialize(libraryContent = true)
             val text = "module Stdio { String text = \"value\"; }"
@@ -171,49 +169,8 @@ class XdkStdioTest {
             val content = session.await(workspace.textDocumentContent(TextDocumentContentParams(target.uri))).text
             assertThat(content.lines()[target.range.start.line]).contains("const String")
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, content)))
-            val imported =
-                session
-                    .await(
-                        documents.moniker(MonikerParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String")))),
-                    ).single()
-            val exported = session.await(documents.moniker(MonikerParams(TextDocumentIdentifier(target.uri), target.range.start))).single()
-            assertThat(exported.identifier).isEqualTo(imported.identifier)
-            assertThat(exported.kind).isEqualTo(MonikerKind.Export)
             assertThatThrownBy { session.await(workspace.textDocumentContent(TextDocumentContentParams("ecstasy-library:///unknown.x"))) }
                 .hasCauseInstanceOf(ResponseErrorException::class.java)
-            session.shutdownAndExit()
-        }
-    }
-
-    @Test
-    fun `packaged monikers round trip stable identities partial results and changed artifacts`() {
-        Session(packagedJar(), directory).use { session ->
-            session.initialize()
-            val text = "module Stdio { Int value = 1; }"
-            session.open(text)
-            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
-            val params = MonikerParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("value")))
-            val documents = session.server.textDocumentService
-            val first = session.await(documents.moniker(params)).single()
-            assertThat(first.scheme).isEqualTo("ecstasy-artifact-v1")
-            assertThat(first.kind).isEqualTo(MonikerKind.Export)
-            params.partialResultToken = Either.forLeft("moniker-partial")
-            assertThat(session.await(documents.moniker(params))).isEmpty()
-            val parts = session.progress.filter { it.token.left == "moniker-partial" }
-            assertThat(parts).hasSize(1)
-            assertThat(Gson().toJsonTree(parts.single().value.right).asJsonArray.single())
-                .isEqualTo(Gson().toJsonTree(first))
-            params.partialResultToken = null
-            session.change(text, 2)
-            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
-            assertThat(session.await(documents.moniker(params))).containsExactly(first)
-            session.change(text.replace("= 1", "= 2"), 3)
-            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
-            assertThat(session.await(documents.moniker(params)).single().identifier).isNotEqualTo(first.identifier)
-            session.change("module Stdio { Missing value; }", 4)
-            assertThat(session.diagnosticsAt(4).diagnostics).isNotEmpty()
-            params.position = Position(0, 23)
-            assertThat(session.await(documents.moniker(params))).isEmpty()
             session.shutdownAndExit()
         }
     }
@@ -1926,10 +1883,10 @@ class XdkStdioTest {
             assertThat(initialized.capabilities.definitionProvider.left).isTrue()
             assertThat(initialized.capabilities.typeDefinitionProvider.left).isTrue()
             assertThat(initialized.capabilities.implementationProvider.left).isTrue()
-            assertThat(initialized.capabilities.monikerProvider.left).isTrue()
             assertThat(initialized.capabilities.callHierarchyProvider.left).isTrue()
             assertThat(initialized.capabilities.inlayHintProvider.left).isTrue()
             assertThat(initialized.capabilities.colorProvider).isNull()
+            assertThat(initialized.capabilities.monikerProvider).isNull()
             assertThat(initialized.capabilities.semanticTokensProvider).isNotNull()
             assertThat(initialized.capabilities.hoverProvider.left).isTrue()
             assertThat(initialized.capabilities.referencesProvider.right.workDoneProgress).isTrue()
