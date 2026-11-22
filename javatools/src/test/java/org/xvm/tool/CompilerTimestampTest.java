@@ -23,6 +23,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleStructure;
 
@@ -78,7 +79,7 @@ class CompilerTimestampTest {
 
         List<String> args = new ArrayList<>(List.of(options));
         args.addAll(List.of("-L", new File(modules.toURI()).getPath(), "-o", out.toString(), source.toString()));
-        return Launcher.launch(Launcher.CMD_BUILD, args.toArray(String[]::new), new Console() {}, null);
+        return Launcher.launch(Launcher.CMD_BUILD, args.toArray(String[]::new), new Console() {}, new ErrorList(25));
     }
 
     private static Instant timestamp(ModuleStructure module) {
