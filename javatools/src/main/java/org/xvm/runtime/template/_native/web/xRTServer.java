@@ -16,6 +16,7 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
@@ -1050,7 +1051,16 @@ public class xRTServer
             }
 
             try {
-                return in.readNBytes(cb);
+                if (cb == Integer.MAX_VALUE) {
+                    return in.readAllBytes();
+                }
+                // we cannot simply call
+                //     return in.readNBytes(cb);
+                // due to a bug in Jetty's ContentSourceInputStream that can block on that extra
+                // zero-length read issued by readNBytes(int)
+                byte[] ab     = new byte[cb];
+                int    cbRead = in.readNBytes(ab, 0, cb);
+                return cbRead == cb ? ab : Arrays.copyOf(ab, cbRead);
             } catch (IOException e) {
                 complete(e);
                 throw e;
