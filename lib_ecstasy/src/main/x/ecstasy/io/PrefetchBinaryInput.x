@@ -72,14 +72,34 @@
 
     @Override
     immutable Byte[] readBytes(Int count) {
-        if (bufferOffset == 0 && count == buffer.size) {
+        assert:arg count >= 0;
+        if (count == 0) {
+            return [];
+        }
+
+        Byte[] bufferCurr = buffer;
+        Int    size       = bufferCurr.size;
+        if (bufferOffset == 0 && count == size) {
             // request a new buffer; freeze and return our current buffer
-            Byte[] bufferCurr = buffer;
             requestNextBuffer();
             return bufferCurr.freeze(inPlace=True);
-        } else {
-            return super(count);
         }
+
+        Int first = bufferOffset;
+        if (count <= size - first) {
+            // a partial read can also copy a slice instead of reading individual bytes
+            Int    after = first + count;
+            Byte[] bytes = bufferCurr[first ..< after].freeze(inPlace=False);
+            if (after == size) {
+                requestNextBuffer();
+                bufferOffset = 0;
+            } else {
+                bufferOffset = after;
+            }
+            return bytes;
+        }
+        // read byte-by-byte
+        return super(count);
     }
 
     @Override
