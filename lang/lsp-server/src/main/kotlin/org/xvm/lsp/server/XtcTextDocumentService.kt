@@ -113,6 +113,7 @@ import org.xvm.lsp.adapter.CodeActionCompiles
 import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.InlineCompletionContext
+import org.xvm.lsp.adapter.RenameRefused
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRenameProposal
 import org.xvm.lsp.adapter.xdk.XdkSources
@@ -1466,12 +1467,23 @@ class XtcTextDocumentService(
             "textDocument/rename",
             params.textDocument.uri,
             {
-                adapter.renameAsync(
-                    params.textDocument.uri,
-                    params.position.line,
-                    params.position.character,
-                    params.newName,
-                )
+                adapter
+                    .renameAsync(
+                        params.textDocument.uri,
+                        params.position.line,
+                        params.position.character,
+                        params.newName,
+                    ).exceptionallyCompose { failure ->
+                        // a refusal the client shows, instead of an edit-less answer after prepareRename accepted it
+                        val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.last()
+                        CompletableFuture.failedFuture(
+                            if (cause is RenameRefused) {
+                                ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, cause.message, null))
+                            } else {
+                                failure
+                            },
+                        )
+                    }
             },
             workspace = true,
             progress = params,

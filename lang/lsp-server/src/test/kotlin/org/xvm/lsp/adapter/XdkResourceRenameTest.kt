@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -124,7 +125,9 @@ class XdkResourceRenameTest {
         XdkAdapter().use { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("App.x"))))
             assertThat(adapter.compile(uri("App.x"), text).diagnostics).isEmpty()
-            assertThat(adapter.rename(uri("App.x"), 0, text.indexOf("App"), "Changed")).isNull()
+            // renaming the configured module changes the configuration, which a plain rename can't: it is refused
+            assertThatThrownBy { adapter.rename(uri("App.x"), 0, text.indexOf("App"), "Changed") }
+                .hasRootCauseInstanceOf(RenameRefused::class.java)
             assertThat(adapter.rename(uri("App.x"), 0, text.indexOf("Box"), "Renamed")).isNull()
             val member = directory.resolve("App/Box.x").toFile().readText()
             assertThat(adapter.rename(uri("App/Box.x"), 0, member.indexOf("construct"), "build"))
@@ -254,8 +257,11 @@ class XdkResourceRenameTest {
                 ),
             )
             assertThat(adapter.compile(uri("Library.x"), library).diagnostics).isEmpty()
-            assertThat(adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed"))
-                .isNull()
+            // a plain rename can't carry the change of the configured source modules: it is refused with the reason
+            assertThatThrownBy { adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed") }
+                .hasRootCauseInstanceOf(RenameRefused::class.java)
+                .rootCause()
+                .hasMessageContaining("xtc.compiler.sourceModules")
             val proposal =
                 requireNotNull(
                     adapter
