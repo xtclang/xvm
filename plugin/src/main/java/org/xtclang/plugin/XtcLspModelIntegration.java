@@ -43,6 +43,7 @@ final class XtcLspModelIntegration {
             final var buildId = root.getProjectDir().toURI() + "#";
             task.getProjectId().set(buildId + project.getPath());
             task.getProjectPath().set(project.getPath());
+            task.getBuildTreePath().set(project.getBuildTreePath());
             task.getProjectDirectory().set(project.getProjectDir().toURI().toString());
             task.getBuildFile().set(project.getBuildFile().toURI().toString());
             task.getSourceSetName().set(sourceSet.getName());
