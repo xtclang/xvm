@@ -168,18 +168,35 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   Fix: give the rename facts the project's replaced libraries (`XdkProject.replaced`) and treat those
   modules as sources. A rename of a public `ecstasy` API then edits every dependent in the
   repository, the largest rename the server makes, so it wants a heavy test over the whole XDK.
+  **2026-11-23, partly done:** the rename facts prove a replaced library as sources, the compiled
+  module itself and each dependency compiled from source (`XdkReplacedLibraryTest`: a rename in the
+  workspace's own `json` edits its importer). Still open, a rename in the workspace's own `ecstasy`:
+  a heavy test over copies of `lib_ecstasy` and `lib_json`, renaming a `String` method that `json`
+  calls, runs out of heap at the tests' 1 GB, and at 3 GB compiles four times in 30 s and is then
+  refused by `preservesBindings` (the proposed edit compiles; a binding differs). Likely the same
+  root as the import proofs below.
 - [ ] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
   (`XdkLibrarySources`) still read the bundle, and may offer its older names. Alternatives: index
   the workspace's compiled `ecstasy` instead, whose declarations its artifact already maps; or keep
-  the bundle's and say so.
-- [ ] The server reads the repository's `ecstasy` with its own compiler, the plugin's, so a compiler
-  change newer than the plugin's build is not understood. Alternatives: build the plugin from the
+  the bundle's and say so. **2026-11-23, partly done** (decided: index the workspace's): a source
+  artifact of a library's name records its importable declarations, and the candidates of a replaced
+  library come from it, the bundle's skipped. Hover takes a symbol's declaration from the
+  dependencies before the bundle (`SemanticModelBuilder.kt`, `dependencies[it] ?: …`). Still open:
+  in a workspace that replaces a library no import candidate survives its proof, not even the
+  bundled `xml`'s `Parser`, as before the change: `XdkProjectQueries` treats a dependency of a
+  library's name as satisfied by the bundle in several places (the `!in XdkLibraries.moduleNames`
+  filters), which the proofs of a replaced library's importers need to see as sources.
+- [x] The server reads the repository's `ecstasy` with its own compiler, the plugin's, so a compiler
+  change newer than the plugin's build is not understood. Done 2026-11-23, by saying so (decided):
+  a replaced library with errors gets an information diagnostic on its root (`REPLACED-LIBRARY`),
+  that the server's compiler may be older and a plugin built from the repository matches. Alternatives: build the plugin from the
   repository, as Gridman does (works now, by hand); have the server load the repository's built
   javatools for such a workspace, in a class loader of its own as the Gradle plugin's in-process mode
   does (large: the server's adapter is compiled against one javatools); or at least say plainly, when
   the workspace's `ecstasy` fails to compile, that the plugin may be older than the compiler.
-- [ ] An editor setting for `xtc.lsp.replaceLibraries`, as `compileLibraries` has one in both
-  editors; today only the server property turns replacement off.
+- [x] An editor setting for `xtc.lsp.replaceLibraries`, as `compileLibraries` has one in both
+  editors. Done 2026-11-23: IntelliJ's check box on the Ecstasy Server Runtime and Logs page, VS
+  Code's `xtc.server.replaceLibraries`, both machine-local and on by default.
 
 ### L82: completion evidence and release gates
 
