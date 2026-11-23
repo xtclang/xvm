@@ -140,19 +140,23 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   of another (`AttachedProgram.kt:185`). `XdkRepositoryWorkspaceTest` (heavy),
   `XdkWorkspaceDiscoveryTest`, `XdkBuildModelTest`, `CompilerConfigurationTest`,
   `XdkProjectServerTest` and `EmbeddedExecutionTest` cover it.
-- [ ] Run and Debug in Gradle mode do not resolve in a composite build such as the XVM repository:
-  both editors run `gradlew -q runXtc` (or `testXtc`) `--module=<m>` from the project's root, and
-  the XVM root only aggregates its included builds, so Gradle answers "Task 'testXtc' not found in
-  root project 'xvm'". The full path does resolve, with the task's options:
-  `:xdk:lib-json:testXtc --module=json.xtclang.org -PxtcDebug=...` (checked 2026-11-12, dry run).
-  Alternatives: the plugin's model export names each source set's project by its build-tree path
-  (`Project.getBuildTreePath()`, `:xdk:lib-json`), the root aggregator runs every included build's
-  export and merges them into the root's `.gradle/xtc/lsp-model.json`, and the editors address the
-  module's task by that path, keeping the bare name where no model says otherwise (general: any
-  composite build; a few days across the plugin, the aggregator and both editors); or IntelliJ asks
-  its Gradle integration for the module's project path (IntelliJ only, and needs Gradle for Java);
-  or the root aggregator forwards `runXtc` and `testXtc` (no: task options cannot be passed on to
-  included builds' tasks).
+- [x] Run and Debug in Gradle mode do not resolve in a composite build such as the XVM repository:
+  both editors ran `gradlew -q runXtc` (or `testXtc`) `--module=<m>` from the project's root, and
+  the XVM root only aggregates its included builds, so Gradle answered "Task 'testXtc' not found in
+  root project 'xvm'"; the full path resolves with the task's options. Done 2026-11-23 (#774): the
+  plugin's model export names each source set's project by its build-tree path (`buildTreePath`,
+  `Project.getBuildTreePath()`, `:xdk:lib-json`); the editors' import already merges every included
+  build's model into the root's (`lang/gradle/compiler-model.init.gradle`), so no root aggregator
+  was needed; the server tells the client each module's project from the imported model
+  (`xtc/gradleProjects`); and both editors run a module's `runXtc` and `testXtc` in it, `:runXtc`
+  for a root project, every known project's `testXtc` for all test modules, and the bare name where
+  no model names the module's project. Checked in the XVM repository: its import gives all 50 source
+  sets a path, json's `:xdk:lib-json`, which resolves. Limits: the path needs an imported model
+  (IntelliJ: **Refresh Gradle model** on the Ecstasy Compiler page, or a sync of a linked Gradle
+  project; VS Code: **Ecstasy: Refresh Gradle Compiler Model**); without one, a run that Gradle
+  answers with "Task '…Xtc' not found" says once to import the build, in IntelliJ for every Gradle
+  run and in VS Code for tests only, as a VS Code task's terminal output is not the extension's to
+  read. Not yet tried in the editors on the XVM repository itself (manual 18a.20).
 - [ ] Embedded builds, runs and debug sessions with the workspace's own toolchain instead of the
   bundled XDK, for a project on another XDK version as much as for the XVM repository: run workers
   started from the toolchain the build model names, which compile and run with it
