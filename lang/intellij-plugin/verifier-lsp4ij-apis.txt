@@ -17,3 +17,11 @@ Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getLanguageSe
 Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getStartedServers() : java.util.Set
 Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.hasAny(com.intellij.psi.PsiFile, java.util.function.Predicate) : boolean
 Internal method com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures.getServerWrapper() : com.redhat.devtools.lsp4ij.LanguageServerWrapper
+
+# OpenedTextRepair (UP83): a lifecycle listener sees the didOpen notifications that go to the server, the only way to
+# learn that LSP4IJ 0.30.1 opened a document with older text than it has. Remove with OpenedTextRepair once a
+# release has redhat-developer/lsp4ij#2127.
+Internal interface com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener
+Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleLSPMessage(org.eclipse.lsp4j.jsonrpc.messages.Message, org.eclipse.lsp4j.jsonrpc.MessageConsumer, com.redhat.devtools.lsp4ij.LanguageServerWrapper) : void
+Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleError(com.redhat.devtools.lsp4ij.LanguageServerWrapper, java.lang.Throwable) : void
+Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleStatusChanged(com.redhat.devtools.lsp4ij.LanguageServerWrapper) : void
