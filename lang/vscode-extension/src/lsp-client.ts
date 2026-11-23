@@ -21,6 +21,7 @@ import { LibraryOptions } from './library-configuration';
 import { libraryOptions } from './library-settings';
 import { attachDebugSessions, endAllDebugSessions } from './debug-adapter';
 import { attachEmbeddedExecution, endAllRuns, forgetReplacedLibraries } from './embedded-execution';
+import { attachGradleProjects, forgetGradleProjects } from './gradle-projects';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
@@ -307,6 +308,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     // a report of the previous connection's server says nothing of what this one shows
     diagnosticReports.clear();
     attachEmbeddedExecution(connection);
+    attachGradleProjects(connection);
     attachDebugSessions(connection);
 
     activeConnectionKey = requestedKey;
@@ -336,6 +338,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         if (newState === State.Stopped) {
             endAllRuns('The Ecstasy language server stopped, ending the run.');
             forgetReplacedLibraries();
+            forgetGradleProjects();
             endAllDebugSessions('The Ecstasy language server stopped, ending the debug session.');
         }
 
