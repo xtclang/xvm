@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, createEmbeddedBuildTask, createEmbeddedRunTask, type BuildMode } from './embedded-execution';
+import { gradleProjects, gradleTask, gradleTasks } from './gradle-projects';
 
 export interface XtcTaskDefinition extends vscode.TaskDefinition {
     moduleName: string;
@@ -40,14 +41,14 @@ export class XtcTaskProvider implements vscode.TaskProvider {
                 // embedded mode has no tests or clean of its own, so a Gradle build keeps offering them
                 if (gradle) {
                     tasks.push(
-                        this.createLifecycleTask('Test', `${gradlew} testXtc`, folder, vscode.TaskGroup.Test),
+                        this.createLifecycleTask('Test', `${gradlew} ${gradleTasks('testXtc').join(' ')}`, folder, vscode.TaskGroup.Test),
                         this.createLifecycleTask('Clean', `${gradlew} clean`, folder, vscode.TaskGroup.Clean)
                     );
                 }
             } else if (gradle) {
                 tasks.push(
                     this.createLifecycleTask('Build', `${gradlew} build`, folder, vscode.TaskGroup.Build),
-                    this.createLifecycleTask('Test', `${gradlew} testXtc`, folder, vscode.TaskGroup.Test),
+                    this.createLifecycleTask('Test', `${gradlew} ${gradleTasks('testXtc').join(' ')}`, folder, vscode.TaskGroup.Test),
                     this.createLifecycleTask('Clean', `${gradlew} clean`, folder, vscode.TaskGroup.Clean)
                 );
             }
@@ -136,15 +137,18 @@ function moduleArguments(definition: XtcTaskDefinition): string[] {
     return definition.args ?? splitModuleArguments(definition.moduleArguments);
 }
 
-/** The Gradle wrapper and its arguments that run the definition's module with runXtc, which takes the module's arguments comma-separated. */
-export function gradleRunCommand(definition: XtcTaskDefinition): { command: string; args: string[] } {
+/**
+ * The Gradle wrapper and its arguments that run the definition's module with runXtc, in the module's Gradle project
+ * from [projects], which takes the module's arguments comma-separated.
+ */
+export function gradleRunCommand(definition: XtcTaskDefinition, projects = gradleProjects()): { command: string; args: string[] } {
     const quietMode = definition.quietMode ?? true;
     const passed = moduleArguments(definition);
     return {
         command: process.platform === 'win32' ? 'gradlew.bat' : './gradlew',
         args: [
             ...(quietMode ? ['-q'] : []),
-            'runXtc',
+            gradleTask(definition.moduleName, 'runXtc', projects),
             ...(definition.moduleName ? [`--module=${definition.moduleName}`] : []),
             ...(definition.methodName ? [`--method=${definition.methodName}`] : []),
             ...(passed.length > 0 ? [`--args=${passed.join(',')}`] : []),

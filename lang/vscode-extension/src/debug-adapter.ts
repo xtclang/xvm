@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from './embedded-execution';
+import { gradleProjects, gradleTask, noticeMissingTask } from './gradle-projects';
 import type { SourceModule } from './source-graph-configuration';
 import { createXtcRunTask, type XtcTaskDefinition } from './task-provider';
 import { LineSplitter, parseTestEvent, REPORT, type TestEvent } from './test-events';
@@ -52,12 +53,15 @@ export function gradleWrapper(platform = process.platform): string {
     return platform === 'win32' ? 'gradlew.bat' : './gradlew';
 }
 
-/** `testXtc`'s options that run [tests] of [module], all of its tests for none, with xunit's `json` report. */
-export function gradleTestArgs(module: string, tests: readonly TestSelection[]): string[] {
+/**
+ * `testXtc`'s options that run [tests] of [module], all of its tests for none, with xunit's `json` report, in the
+ * module's Gradle project from [projects], the imported model's, by its path in the build tree.
+ */
+export function gradleTestArgs(module: string, tests: readonly TestSelection[], projects = gradleProjects()): string[] {
     const options: Record<string, string> = { package: 'test-package', class: 'test-class', test: 'test-method' };
     return [
         '-q',
-        'testXtc',
+        gradleTask(module, 'testXtc', projects),
         `--module=${module}`,
         ...tests.flatMap(test => options[test.kind] ? [`--${options[test.kind]}=${test.selector}`] : []),
         `--test-report=${REPORT}`,
@@ -78,8 +82,12 @@ export function runTestProcess(command: string, args: readonly string[], directo
         streams.forEach(({ stream, error }) => {
             const lines = new LineSplitter();
             stream.setEncoding('utf8');
-            stream.on('data', (text: string) => lines.feed(text).forEach(line => output(line, error)));
-            stream.on('end', () => lines.flush().forEach(line => output(line, error)));
+            const take = (line: string) => {
+                if (error) noticeMissingTask(line);
+                output(line, error);
+            };
+            stream.on('data', (text: string) => lines.feed(text).forEach(take));
+            stream.on('end', () => lines.flush().forEach(take));
         });
         const stop = token.onCancellationRequested(() => child.kill());
         child.on('error', failure => {
@@ -94,14 +102,15 @@ export function runTestProcess(command: string, args: readonly string[], directo
 
 /**
  * The Gradle wrapper and its arguments for a Gradle-mode launch's task: the module's run, in a JVM of its own, with
- * the debug properties that make the launcher run the program under the debugger.
+ * the debug properties that make the launcher run the program under the debugger, in the module's Gradle project.
  */
-export function gradleDebugCommand(params: DebugTaskParams, platform = process.platform): { command: string; args: string[] } {
+export function gradleDebugCommand(params: DebugTaskParams, platform = process.platform,
+                                   projects = gradleProjects()): { command: string; args: string[] } {
     return {
         command: gradleWrapper(platform),
         args: [
             '-q',
-            'runXtc',
+            gradleTask(params.module, 'runXtc', projects),
             '--mode=ATTACHED',
             `--module=${params.module}`,
             ...(params.method ? [`--method=${params.method}`] : []),
