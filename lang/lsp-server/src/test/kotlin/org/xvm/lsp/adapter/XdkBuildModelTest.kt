@@ -113,6 +113,21 @@ class XdkBuildModelTest {
     }
 
     @Test
+    fun `each module's Gradle project is its source set's path in the build tree, where the model says it`() {
+        val json = source("lib/json.x", "module Json {}")
+        val tests = source("lib/test/JsonTest.x", "module JsonTest { package json import Json; }")
+        val old = source("old/Old.x", "module Old {}")
+        val inputs =
+            model(
+                entry("lib", "main", listOf(json)).apply { addProperty("buildTreePath", ":xdk:lib-json") },
+                entry("lib", "test", listOf(tests)).apply { addProperty("buildTreePath", ":xdk:lib-json") },
+                // a model from a plugin that does not write the field names no project
+                entry("old", "main", listOf(old)),
+            ).resolve()
+        assertThat(inputs.projects).containsExactlyInAnyOrderEntriesOf(mapOf("Json" to ":xdk:lib-json", "JsonTest" to ":xdk:lib-json"))
+    }
+
+    @Test
     fun `test sees own main and declared project dependencies but unrelated main does not`() {
         val main = source("main/Main.x", "module Main {}")
         val tests = source("test/Tests.x", "module Tests { package main import Main; }")
