@@ -790,9 +790,9 @@ and the 0.30.0 branch's commits are on errs, rebased with the subjects the items
 full IntelliJ playbook on 0.30.1 passed every case: 342 passed and 9 partial, the 8 partial on 0.21.0
 too and X350 ([#741](https://github.com/xtclang/xvm/issues/741)). Rechecked on 2026-11-23: each item
 says which errs commit took the release, or why it stays open. Kept since the 0.30.0 branch: UP03's
-guarded entry points, UP04's rename guard, UP12, UP13 and UP21's `ClosedRefactoringDocuments`; UP14,
-kept with them, is removed (`f012284915`). Their removal gates ran on 0.30.1 on 2026-11-23, and each item
-says what they showed: UP03 waits for a release with the fix of UP84 (#2135), UP04 for X116, UP12 for
+guarded entry points, UP12, UP13 and UP21's `ClosedRefactoringDocuments`; UP14, kept with them, is
+removed (`f012284915`), and UP04's rename guard turned out to be XVM's own rename (`467730297d`). Their removal gates ran on 0.30.1 on 2026-11-23, and each item
+says what they showed: UP03 waits for a release with the fix of UP84 (#2135), UP12 for
 IntelliJ's UP24, and UP07's waits for a baseline. UP13 is LSP4IJ's extension point. What waits for 0.30.2 is in #741's to-do list. The gates are in
 [the register](errs-upstream-issues.md#register).
 
@@ -872,16 +872,15 @@ IntelliJ's UP24, and UP07's waits for a baseline. UP13 is LSP4IJ's extension poi
   requests apply version-checked edits before persistence, and X139 extended. On the 0.30.0 branch:
   `97cdb4e25d`, its settings texts `d5d64a8caf`.
   **On 0.30.1:** `5f7df7db4d`, its settings texts `603fbd394b`.
-- [ ] UP04 (#1698, #1718): remove the rename snapshot guard and client edit validation; gate: stale,
+- [x] UP04 (#1698, #1718): remove the rename snapshot guard and client edit validation; gate: stale,
   closed and reopened document tests and X144. On the 0.30.0 branch: `2be956ad8c` removes the
   client's edit validation (`applyEdit`); the rename guard stays (`XtcRenameEdit`,
   `PreflightedRenames`).
-  **On 0.30.1:** `daeaf6563e` removes the client's edit validation. The rename guard stays
-  (`XtcRenameEdit`, `XtcRenameHandler`, `XtcClientFeatures`), as on the 0.30.0 branch; on 2026-11-23
-  its removal gate ran on 0.30.1 with the bridge off, on an experiment branch: the rename cases that
-  ran pass on LSP4IJ's own rename, X144 included, but X116 and X118 didn't run. Without the guard a
-  module rename skips `ClosedRefactoringDocuments` (UP21), so X116 decides; it is being run with
-  only the guard off.
+  **On 0.30.1:** done. `daeaf6563e` removes the client's edit validation. With only the rename guard
+  off, X118's explicit module rename fails twice: LSP4IJ's rename sends `textDocument/rename`, which
+  can't carry the source-module change that only `xtc/rename` carries. So `XtcRenameHandler` is
+  XVM's own rename and stays; its checks guard the edits it applies itself. Its tags are comments
+  now (`467730297d`), and the server refuses that plain rename with its reason (`856d5ef01b`).
 - [x] UP05 (#1742): remove `CompilerRootWatches`; gate: changes under external roots observed while
   focused, watchers released on disposal, X124. On the 0.30.0 branch: `26e2f7440e`.
   **On 0.30.1:** `a6077c9942`.
