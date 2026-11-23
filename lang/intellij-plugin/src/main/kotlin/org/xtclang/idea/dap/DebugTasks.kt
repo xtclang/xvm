@@ -12,6 +12,7 @@ import com.intellij.openapi.util.Key
 import org.xtclang.idea.lsp.DebugTaskParams
 import org.xtclang.idea.lsp.DebugTaskResult
 import org.xtclang.idea.lsp.TestEvent
+import org.xtclang.idea.run.XtcBuildSettings
 import org.xtclang.idea.run.XtcRunConfiguration
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
@@ -34,7 +35,8 @@ internal object DebugTasks {
         project: Project,
         params: DebugTaskParams,
     ): CompletableFuture<DebugTaskResult> {
-        val command = commandLine(params).withWorkDirectory(project.basePath?.let { Path(it).toFile() })
+        val settings = XtcBuildSettings.getInstance(project)
+        val command = commandLine(params, settings.gradleProjects).withWorkDirectory(project.basePath?.let { Path(it).toFile() })
         logger.info("Running under the debugger: ${command.commandLineString}")
         val handler =
             try {
@@ -54,7 +56,11 @@ internal object DebugTasks {
                 ) {
                     when (outputType) {
                         ProcessOutputTypes.STDOUT -> lines?.feed(event.text) ?: sessions.output(params.sessionId, event.text, "stdout")
-                        ProcessOutputTypes.STDERR -> sessions.output(params.sessionId, event.text, "stderr")
+
+                        ProcessOutputTypes.STDERR -> {
+                            sessions.output(params.sessionId, event.text, "stderr")
+                            settings.missingTask(project, event.text)
+                        }
                     }
                 }
 
@@ -101,15 +107,24 @@ internal object DebugTasks {
 
     /**
      * The task's command line: for a command-line launch, `xtc run` as a command-line Run runs the module, with
-     * `--debug`; otherwise the Gradle wrapper's, the module's run with the debug property.
+     * `--debug`; otherwise the Gradle wrapper's, the module's run with the debug property, in the module's project from
+     * [projects], the imported model's, by its path in the build tree.
      */
-    internal fun commandLine(params: DebugTaskParams): GeneralCommandLine {
-        val tests = params.tests ?: return runCommandLine(params)
+    internal fun commandLine(
+        params: DebugTaskParams,
+        projects: Map<String, String> = emptyMap(),
+    ): GeneralCommandLine {
+        val tests = params.tests ?: return runCommandLine(params, projects)
         return if (params.buildMode == COMMAND_LINE) {
             XtcRunConfiguration.xtcTestCommandLine(params.module, tests, params.debug)
         } else {
             GeneralCommandLine(XtcRunConfiguration.gradleWrapper()).apply {
-                addParameters("-q", "testXtc", "--mode=ATTACHED", "--module=${params.module}")
+                addParameters(
+                    "-q",
+                    XtcBuildSettings.gradleTask(projects, params.module, "testXtc"),
+                    "--mode=ATTACHED",
+                    "--module=${params.module}",
+                )
                 addParameters(XtcRunConfiguration.gradleTestOptions(tests))
                 addParameter("-PxtcDebug=${params.debug}")
             }
@@ -117,12 +132,20 @@ internal object DebugTasks {
     }
 
     /** A debugged run's command line, `xtc run`'s or the Gradle run's, as [commandLine] has it for a launch without tests. */
-    private fun runCommandLine(params: DebugTaskParams): GeneralCommandLine =
+    private fun runCommandLine(
+        params: DebugTaskParams,
+        projects: Map<String, String>,
+    ): GeneralCommandLine =
         if (params.buildMode == COMMAND_LINE) {
             XtcRunConfiguration.xtcCommandLine(params.module, params.method, params.args, params.debug)
         } else {
             GeneralCommandLine(XtcRunConfiguration.gradleWrapper()).apply {
-                addParameters("-q", "runXtc", "--mode=ATTACHED", "--module=${params.module}")
+                addParameters(
+                    "-q",
+                    XtcBuildSettings.gradleTask(projects, params.module, "runXtc"),
+                    "--mode=ATTACHED",
+                    "--module=${params.module}",
+                )
                 params.method?.let { addParameter("--method=$it") }
                 params.args.takeIf { it.isNotEmpty() }?.let { addParameter("--args=${it.joinToString(",")}") }
                 addParameter("-PxtcDebug=${params.debug}")
