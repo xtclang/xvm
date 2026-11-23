@@ -492,7 +492,13 @@ class XdkRenameServerTest {
                     .last()
                     .right,
             ).isInstanceOf(RenameFile::class.java)
-            assertThat(documents.rename(params).awaited()).isNull()
+            // the plain request can't carry the graph's change: it is refused with the reason, not answered with no edit
+            assertThatThrownBy { documents.rename(params).awaited() }
+                .rootCause()
+                .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                    assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.RequestFailed.value)
+                    assertThat(it.responseError.message).contains("xtc.compiler.sourceModules")
+                }
             assertThat(library.readText()).isEqualTo(text)
             assertThat(consumer.readText()).isEqualTo(use)
         } finally {
