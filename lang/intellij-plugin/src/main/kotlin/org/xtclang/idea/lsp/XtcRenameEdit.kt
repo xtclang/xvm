@@ -23,14 +23,11 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
-// TODO LSP4IJ: UP04 — validate document versions before applying WorkspaceEdit; stale responses currently
-// overwrite newer edits. Retire this snapshot guard after upstream provides equivalent checks.
-
 /**
- * A rename response bound to the client documents that produced it. LSP4IJ 0.21 applies
- * WorkspaceEdit without checking document versions. Keep the request's immutable snapshot until
- * application and check it under the same write action as all of the returned edits. No second
- * version counter or long-lived document listener is needed.
+ * A rename response bound to the client documents that produced it. The XTC rename applies its proposal itself,
+ * outside LSP4IJ's own checks, so it keeps the request's immutable snapshot until application and checks it under
+ * the same write action as all of the returned edits. No second version counter or long-lived document listener is
+ * needed.
  */
 class XtcRenameEdit
     private constructor(
