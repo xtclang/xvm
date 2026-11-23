@@ -39,9 +39,9 @@ Three ways of reaching the server recur in the tables:
 
 ### 1.1 VS Code
 
-The 19 settings in `contributes.configuration` of `lang/vscode-extension/package.json`, whose
-entries start at lines 292 to 556. The three machine-scoped ones, `xtc.java.vmOptions`,
-`xtc.server.compileLibraries` and `xtc.server.logs`, are read from the user settings only
+The 20 settings in `contributes.configuration` of `lang/vscode-extension/package.json`, whose
+entries start at lines 292 to 556. The four machine-scoped ones, `xtc.java.vmOptions`,
+`xtc.server.compileLibraries`, `xtc.server.replaceLibraries` and `xtc.server.logs`, are read from the user settings only
 (`inspect(...).globalValue`); workspace values of them are ignored.
 
 | Setting | Type, default | What it does | Reaches the server as | Read at |
@@ -64,6 +64,7 @@ entries start at lines 292 to 556. The three machine-scoped ones, `xtc.java.vmOp
 | `xtc.java.home` | string, `""` | The Java 25+ installation that runs the server. Empty: `jdk-utils` discovery (`JAVA_HOME`, `PATH`, SDKMAN and others), then a JRE downloaded earlier, then a download from Adoptium. A path without `bin/java` is an error. A change restarts the server. | The `java` executable of the command line | `vsc/java.ts:54`, order `vsc/java.ts:22` |
 | `xtc.java.vmOptions` | string array, `[]` | JVM options, one per item: `-Xms`, `-Xmx`, `-Xss`, `-XX:MaxMetaspaceSize=`, `-XX:ReservedCodeCacheSize=` (K, M or G), `-XX:ActiveProcessorCount=`, `-XX:+UseG1GC`, `UseSerialGC`, `UseParallelGC`, `UseZGC`. Anything else is rejected. Without a collector or `-Xmx` among them, the server runs `-XX:+UseZGC -XX:SoftMaxHeapSize=1G`: ZGC keeps the heap near 1 GB and grows past it only as far as the live data needs. Machine scope. | JVM options | `vsc/runtime-settings.ts:37`, validation `vsc/runtime-settings.ts:4`, default `vsc/runtime-settings.ts:31` |
 | `xtc.server.compileLibraries` | boolean, `true` | Compile an opened XDK source with its whole library, so that navigation works for every name in it. Needs a server heap of about 1 GB. Machine scope. | `-Dxtc.lsp.compileLibraries=<value>` | `vsc/runtime-settings.ts:59` |
+| `xtc.server.replaceLibraries` | boolean, `true` | Use the workspace's own modules in place of the bundled XDK libraries of their names, as in the XVM repository. Machine scope. | `-Dxtc.lsp.replaceLibraries=<value>` | `vsc/runtime-settings.ts:61` |
 | `xtc.server.logs` | object, `{"historyDays": 7, "maxFileMb": 10, "totalSizeMb": 50, "retainedSessions": 5}` | Server log retention (section 4). Ranges: days 1 to 90, file MB 1 to 100, archive MB from the file MB to 1000, sessions 1 to 20. Machine scope. | `-Dxtc.logs.historyDays`, `-Dxtc.logs.maxFileMb`, `-Dxtc.logs.totalSizeMb`, `-Dxtc.logs.retainedSessions` | `vsc/runtime-settings.ts:52`, `vsc/runtime-settings.ts:55` |
 
 `package.json` also sets editor defaults for `[xtc]` files in `configurationDefaults`, such as
@@ -86,7 +87,8 @@ running servers. The server runs on IntelliJ's bundled Java runtime.
 | Each log file (MB) (`logMaxFileMb`) | 1 to 100, `10` | `-Dxtc.logs.maxFileMb` | `idea/lsp/ServerRuntimeSettings.kt:23`, `:66` |
 | Rolled archive cap per stream (MB) (`logTotalSizeMb`) | file MB to 1000, `50` | `-Dxtc.logs.totalSizeMb` | `idea/lsp/ServerRuntimeSettings.kt:24`, `:67` |
 | Retired process sessions to keep (`logRetainedSessions`) | 1 to 20, `5` | `-Dxtc.logs.retainedSessions` | `idea/lsp/ServerRuntimeSettings.kt:25`, `:68` |
-| Compile an XDK library as a whole when one of its sources is opened (`compileLibraries`) | boolean, `true` | `-Dxtc.lsp.compileLibraries` | `idea/lsp/ServerRuntimeSettings.kt:26`, `:58` |
+| Compile an XDK library as a whole when one of its sources is opened (`compileLibraries`) | boolean, `true` | `-Dxtc.lsp.compileLibraries` | `idea/lsp/ServerRuntimeSettings.kt:27`, `:67` |
+| Use the workspace's own modules in place of the bundled XDK libraries of their names (`replaceLibraries`) | boolean, `true` | `-Dxtc.lsp.replaceLibraries` | `idea/lsp/ServerRuntimeSettings.kt:28`, `:67` |
 
 The arguments are inserted before `-jar` at `idea/lsp/XtcLspServerSupportProvider.kt:155`.
 
