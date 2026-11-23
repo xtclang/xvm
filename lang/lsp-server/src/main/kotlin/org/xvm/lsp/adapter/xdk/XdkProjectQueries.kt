@@ -176,7 +176,7 @@ internal class XdkProjectQueries(
                                             ),
                                         )
                                     } else {
-                                        diagnostics
+                                        diagnostics + replacedLibraryNote(module, diagnostics)
                                     }
                                 val validArtifact = artifact?.takeIf { it.module == module.name }
                                 navigationBuilds[module.uri] =
@@ -1827,3 +1827,28 @@ private const val SOURCE_MODULES_RENAME =
     "This rename also changes the configured source modules (xtc.compiler.sourceModules), which " +
         "textDocument/rename can't update; rename it in a client that sends xtc/rename, " +
         "such as the Ecstasy plugins for IntelliJ and VS Code"
+
+/**
+ * A note on the root of a workspace module that replaces a bundled library and has errors: the server compiles it with
+ * the compiler that it was built with, so a repository whose compiler is newer can fail here for that alone.
+ */
+private fun replacedLibraryNote(
+    module: XdkSourceModule,
+    diagnostics: List<Diagnostic>,
+): List<Diagnostic> =
+    if (XdkLibraryReplacement.replaces(module.name) && diagnostics.any { it.severity == Diagnostic.Severity.ERROR }) {
+        listOf(
+            Diagnostic(
+                location = Location(module.uri, 0, 0, 0, 0),
+                severity = Diagnostic.Severity.INFORMATION,
+                message =
+                    "The language server compiles ${module.name}, which replaces the bundled library, with the " +
+                        "compiler it was built with. If this repository's compiler is newer, these errors may come from " +
+                        "that; an editor plugin built from this repository compiles with the same compiler.",
+                code = Diagnostic.Codes.REPLACED_LIBRARY,
+                source = Diagnostic.SOURCE,
+            ),
+        )
+    } else {
+        emptyList()
+    }
