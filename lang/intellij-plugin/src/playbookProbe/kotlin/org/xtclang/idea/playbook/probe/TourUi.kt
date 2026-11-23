@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook.probe
 
+import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.intellij.analysis.problemsView.ProblemsCollector
@@ -398,6 +399,24 @@ object TourUi {
             .getInstance(project())
             .startedServers
             .any { it.serverDefinition.id == SERVER_ID && it.serverStatus == ServerStatus.started }
+
+    /** The process IDs of the Ecstasy language servers that the IDE runs, as a JSON array, from their jar. */
+    @JvmStatic
+    fun serverProcesses(): String =
+        Gson().toJson(
+            ProcessHandle
+                .current()
+                .descendants()
+                .filter {
+                    it.isAlive &&
+                        it
+                            .info()
+                            .commandLine()
+                            .orElse("")
+                            .contains("xtc-lsp-server.jar")
+                }.map { it.pid() }
+                .toList(),
+        )
 
     /** The Ecstasy language server's status, such as `started`, and its process's ID; empty when it has none. */
     @JvmStatic
