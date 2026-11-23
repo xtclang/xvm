@@ -236,7 +236,7 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   handler now refreshes, before a `stackTrace` response goes on, the nearest folder above each
   unknown frame file; with the parent listed first, X324 failed 4 of 6 without it and passed 5 of 5.
   What listed the temporary folder in the full run is not known.
-- [ ] X312 failed once, in the full run on the 0.30.0 branch (`run-11663425380226624296`,
+- [x] X312 failed once, in the full run on the 0.30.0 branch (`run-11663425380226624296`,
   2026-10-28): the program stopped at the exception its filter names, but no exception hint showed
   in 30 s. LSP4IJ shows the hint once, and IntelliJ drops an editor hint while the IDE is not the
   active application; the failure's screenshot, and X307's of 2026-10-26, have Safari in front.
@@ -246,7 +246,9 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   the 0.30.0 branch. Tried on 2026-11-03 on errs with `-Plsp4ijChannel=nightly` and X312 made
   full for the runs: the plugin does not compile against the nightly, whose formatting API takes a
   list of ranges where `XtcFormattingService` (UP12) passes one, which the 0.30.0 bump adapts. So the
-  check waits for the bump.
+  check waits for the bump. Done (2026-11-23): X312 passes in IntelliJ on LSP4IJ 0.30.1 in the container
+  (`run-1061357732916096379`), with X308, X311, X314, X317, X318, X326 and X328–X331, which back the tour's "With LSP4IJ
+  0.30.1" card.
 - [x] The server never deleted its `xtc-library-sources-*` temporary directories
   (`XdkLibrarySources`); 2,068 had piled up by 2026-10-28. A JVM shutdown hook now deletes the
   directory when the server exits (`4cf5450acd`; `LibraryCopiesCleanupTest` in compilerStdioTest).
@@ -890,7 +892,10 @@ IntelliJ's UP24, and UP07's waits for a baseline. UP13 is LSP4IJ's extension poi
   stays as the playbook's report record. Still open: the playbook's three UP07 waits
   (`CompilerPlaybook`, `RefactoringActions`, `Tour`); on 2026-11-23 its removal gate ran on 0.30.1
   with the bridge off, on an experiment branch: X181–X185 and X201–X215 pass, but only after 53
-  reopened intention lists, so a baseline with the waits on decides.
+  reopened intention lists, so a baseline with the waits on decides. Decided 2026-11-23: the baseline,
+  errs with the bridge and the waits, reopened none over the same cases (`run-1061357732916096379`), so both stay on
+  0.30.1. The experiment turned off the bridge and the fixture isolation together, so which of them the
+  reopens need is still open; that decides whether an LSP4IJ issue is left to file.
 - [x] UP08 (#1710): remove `ConfigurationJson`'s null handling; gate: X266, X268, CFG1–CFG3.
   On the 0.30.0 branch: `d8ad697b7f`.
   **On 0.30.1:** `fca2ed0b85`.
@@ -1220,9 +1225,9 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   checkout that had it, such as the stub fix's on errs that day, may have run old classes; the full
   suite since covers the same classes.
 
-### LSP4IJ: a killed server comes back as several (UP72): fixed upstream; the gap left is #1863
+### LSP4IJ: a killed server comes back as several (UP72): done, fixed in 0.30.1
 
-- [ ] UP72 (2026-11-05): after a server's process dies, LSP4IJ 0.21.0 keeps `serverError` until a
+- [x] UP72 (2026-11-05): after a server's process dies, LSP4IJ 0.21.0 keeps `serverError` until a
   restart attempt initializes, so each `start()` meanwhile stops the attempt in progress and starts
   another (up to 20, then it disables the server), and a stopped attempt still initializes and
   installs itself over the current one. The IntelliJ tour's run 6 (`run-tour-6451871955669100195`)
@@ -1236,8 +1241,9 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   our local draft of a patch is in `errs-upstream-issues.md`'s UP72 row, for reference. No plugin
   workaround (2026-11-05). To do: after a release with the fixes, the tour's "the server's process
   dies" check should see one restart.
-  **On 0.30.1:** #1865 and #1867 are in 0.30.1, and #1863 was closed on 2026-11-05. Still to do:
-  check that the tour's "the server's process dies" sees one restart.
+  **On 0.30.1:** #1865 and #1867 are in 0.30.1, and #1863 was closed on 2026-11-05. Done
+  (2026-11-23): the tour's "the server's process dies" checks that one server started after the kill,
+  by the traces the servers write, and that the IDE's server processes come to that one (`run-tour-1441735048023870850`).
 
 ### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
 
@@ -1419,9 +1425,9 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   make X131's UP52 step pass without the gate.
   **On 0.30.1:** `620eeb5374`.
 
-### LSP4IJ: no linked editing (UP53): our #1812, merged
+### LSP4IJ: no linked editing (UP53): done, our #1812, in 0.30.1
 
-- [ ] UP53 (2026-10-28): LSP4IJ never sends `textDocument/linkedEditingRange`, so IntelliJ users get no
+- [x] UP53 (2026-10-28): LSP4IJ never sends `textDocument/linkedEditingRange`, so IntelliJ users get no
   rename-on-type for locals, which XVM's server answers. IntelliJ's X133 sends the request itself,
   a protocol check rather than native coverage. Fixed by our
   [#1812](https://github.com/redhat-developer/lsp4ij/pull/1812) (filed 2026-11-02, merged 2026-11-03, `625621bb`):
@@ -1432,7 +1438,10 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   guide demo, which found that our server linked nothing at a caret just after a name
   (`394bb23eb8` fixes it). To do: after a release with #1812, make IntelliJ's X133 turn it on, type
   in a local's declaration and see its uses follow.
-  **On 0.30.1:** #1812 is in 0.30.1. Still to do: X133.
+  **On 0.30.1:** #1812 is in 0.30.1, and done (2026-11-23): IntelliJ's X133 turns linked editing on,
+  waits until LSP4IJ has linked the ranges at the end of a local's declaration, types a letter, and sees
+  the local's use follow and the other method's local of the same name stay (`run-1061357732916096379`). The probe reads
+  the ranges from LSP4IJ's synchronizer, which keeps them to itself (`LinkedEditingUi`).
 
 ### LSP4IJ: only the first of several ranges is formatted (UP54): our #1786, merged
 
@@ -1456,17 +1465,18 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   after a release with it, a native IntelliJ hit-count case.
   **On 0.30.1:** `7bbf0ecfa4`.
 
-### LSP4IJ: the `exited` event (UP56): bridged, our #1791, merged
+### LSP4IJ: the `exited` event (UP56): done, our #1791, in 0.30.1
 
-- [ ] UP56 (2026-10-28): LSP4IJ ignores DAP's `exited` event, so the program's exit code never reaches
+- [x] UP56 (2026-10-28): LSP4IJ ignores DAP's `exited` event, so the program's exit code never reaches
   IntelliJ through it. XVM's `LanguageServerDebugProcessHandler` reads `exited` itself and ends its
   process with that exit code. Our [#1791](https://github.com/redhat-developer/lsp4ij/pull/1791) (merged
   2026-10-28, unreleased, `116a18d1`) puts the exit code on the session's process handler
   (`DAPDebugProcess.PROGRAM_EXIT_CODE`) and shows it when the adapter's process ends; CodeRabbit's
   finding, a child session's exit code replacing its parent's, was fixed in it first. To do: after a
   release with it, have our handler take the exit code from that key instead of reading `exited`.
-  **On 0.30.1:** #1791 is in 0.30.1. Still to do: our handler still reads `exited`, not
-  `PROGRAM_EXIT_CODE`.
+  **On 0.30.1:** #1791 is in 0.30.1, and done (2026-11-23): our handler no longer reads `exited`, and
+  ends its process with the exit code LSP4IJ keeps under `PROGRAM_EXIT_CODE`. The playbook's debug cases
+  X285 and X304–X307, whose programs end with exit codes 4, 42, 7, 6 and 1, check it.
 
 ### LSP4IJ: inline-value and folding-range refreshes (UP57, UP58): our #1790, merged
 
