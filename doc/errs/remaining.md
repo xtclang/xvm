@@ -782,16 +782,18 @@ breakpoint list, which the editors replace.
 
 ## 4. Upstream fixes
 
-### LSP4IJ: released in 0.30.0
+### LSP4IJ: released in 0.30.1
 
 LSP4IJ released 0.30.0 and then 0.30.1, the same code, on 2026-11-19, with every fix this section
 waited for. XVM pins 0.30.1 (`gradle/libs.versions.toml`, `lang-intellij-lsp4ij`) since `b449d8a746`,
 and the 0.30.0 branch's commits are on errs, rebased with the subjects the items below name. The
 full IntelliJ playbook on 0.30.1 passed every case: 342 passed and 9 partial, the 8 partial on 0.21.0
 too and X350 ([#741](https://github.com/xtclang/xvm/issues/741)). Rechecked on 2026-11-23: each item
-says which errs commit took the release, or why it stays open. Kept on purpose since the 0.30.0
-branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halves of UP14 and UP21's
-`ClosedRefactoringDocuments`. What waits for 0.30.2 is in #741's to-do list. The gates are in
+says which errs commit took the release, or why it stays open. Kept since the 0.30.0 branch, their
+removal gates not yet run on 0.30.1: UP03's guarded entry points, UP04's rename guard, UP12 and both
+halves of UP14. No LSP4IJ issue is open for any of them; the gaps left, UP12's closed-buffer
+connections and UP14's answers that change after an analysis, are not filed. UP21's
+`ClosedRefactoringDocuments` came back on 0.30.1 for X116, and UP13 is LSP4IJ's extension point. What waits for 0.30.2 is in #741's to-do list. The gates are in
 [the register](errs-upstream-issues.md#register).
 
 - [x] Watch for the next LSP4IJ release and bump the pin.
@@ -874,8 +876,9 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   closed and reopened document tests and X144. On the 0.30.0 branch: `2be956ad8c` removes the
   client's edit validation (`applyEdit`); the rename guard stays (`XtcRenameEdit`,
   `PreflightedRenames`).
-  **On 0.30.1:** `daeaf6563e` removes the client's edit validation. The rename guard stays on
-  purpose (`XtcRenameEdit`, `XtcRenameHandler`, `XtcClientFeatures`), so this stays open.
+  **On 0.30.1:** `daeaf6563e` removes the client's edit validation. The rename guard stays
+  (`XtcRenameEdit`, `XtcRenameHandler`, `XtcClientFeatures`), as on the 0.30.0 branch, with no
+  LSP4IJ issue open; the removal gate hasn't been run on 0.30.1, so this stays open.
 - [x] UP05 (#1742): remove `CompilerRootWatches`; gate: changes under external roots observed while
   focused, watchers released on disposal, X124. On the 0.30.0 branch: `26e2f7440e`.
   **On 0.30.1:** `a6077c9942`.
@@ -900,9 +903,13 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   **On 0.30.1:** `ea87035263`.
 - [ ] UP12 (#1707): narrow the `XtcFormattingService` override; gate: absent-editor, snapshot,
   cancellation and server-lifetime guards, X138 and X139. The UP24 command ownership stays.
-  **On 0.30.1:** kept on purpose, so this stays open.
+  **On 0.30.1:** #1707 fixes the absent editor. Left: UP24's Redo (IntelliJ, filed), and the
+  connection that a reconnected closed buffer keeps (the register's 2026-10-07 follow-up), which is
+  not filed. Kept since the 0.30.0 branch; the removal gate hasn't been run on 0.30.1, so this stays
+  open.
 - [ ] UP14 (#1716): remove the semantic-result retirement in `XtcLanguageClient`; gate: X146.
-  **On 0.30.1:** kept on purpose, so this stays open.
+  **On 0.30.1:** kept since the 0.30.0 branch; the removal gate hasn't been run on 0.30.1, so this
+  stays open.
 - [ ] UP14's other half ([#1771](https://github.com/redhat-developer/lsp4ij/pull/1771), merged 2026-10-27,
   unreleased, `7fa1794f`): hover, definition, declaration, type
   definition, implementation, references, completion, rename and the hierarchy prepares reuse a
@@ -912,7 +919,9 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   fix for hover and definition. Gate after a release: `XtcLanguageClient`'s retirement shrinks to
   what #1771 leaves, answers that change after an analysis without any file changing, and the
   features still on the file stamp; X146 passes.
-  **On 0.30.1:** #1771 is in 0.30.0; kept on purpose, so this stays open.
+  **On 0.30.1:** #1771 is in 0.30.1. Left: answers that change after an analysis without any file
+  changing, which #1771 doesn't outdate; not filed. Kept since the 0.30.0 branch; the removal gate
+  hasn't been run on 0.30.1, so this stays open.
 - [x] UP18 (#1711): advertise `AsIs` again; gate: X150 keeps exact source, placeholders and Undo.
   On the 0.30.0 branch: `06acfabc96`.
   **On 0.30.1:** `18478c0c46`.
@@ -926,7 +935,7 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   `ClosedRefactoringDocuments` stays for a rename that also moves its directory (`e1fa5fd017`,
   X116), so this stays open.
 - [x] UP22 (#1699): no workaround to remove; gate: native reconnect and typing acceptance.
-  **On 0.30.1:** released in 0.30.0, with nothing to remove.
+  **On 0.30.1:** released in 0.30.1, with nothing to remove.
 - [x] UP25 (#1749): advertise `workspace/textDocumentContent` to IntelliJ; gate: X254 without the
   read-only file fallback. On the 0.30.0 branch: `e1ca98fdb0`; X254's checks `56c699eb5a`.
   **On 0.30.1:** `d5b0f22282`. X350 checks the library view through the server's documents
@@ -938,9 +947,12 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   X137/X146/X259 run. On the 0.30.0 branch: `bba29c4b4d`.
   **On 0.30.1:** `e96ffc056d`.
 - [ ] UP03 (#1720, #1739): narrow the guarded Rename/Move entry points; gate: X103 and X130.
-  **On 0.30.1:** 0.30.0 has #1720, #1739 and #1755; kept on purpose, so this stays open.
+  **On 0.30.1:** 0.30.1 has #1720, #1739 and #1755: it sends `willRenameFiles` before a rename's or
+  move's write action (`WillRenameFilesPreparation`) and renames a resource whose parent changes, so
+  the UP03 tags describe 0.21.0. Kept since the 0.30.0 branch, with no LSP4IJ issue open; the
+  removal gate hasn't been run on 0.30.1, so this stays open.
 - [x] UP03: LSP4IJ #1740, the UI wait during the `will*` requests of an IDE rename or move, was fixed by our
-  [#1755](https://github.com/redhat-developer/lsp4ij/pull/1755), merged 2026-10-26 (`d85f2c9b`), released in 0.30.0; the
+  [#1755](https://github.com/redhat-developer/lsp4ij/pull/1755), merged 2026-10-26 (`d85f2c9b`), released in 0.30.1; the
   guarded entry points stay until a release with it passes X103 and X130 without them.
 - [x] UP30 ([#1757](https://github.com/redhat-developer/lsp4ij/pull/1757), merged 2026-10-26): `DAPDebugProcess` did not implement `startPausing()`,
   so IntelliJ's Pause Program did nothing for any DAP session; X308 passes natively with it. Gate:
@@ -998,7 +1010,7 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   XVM code or case refers to it; and [#1858](https://github.com/redhat-developer/lsp4ij/pull/1858),
   0.30.0's LSP and DAP changes in LSP4IJ's docs. The other 96 are merged
   ([the register](errs-upstream-issues.md#upstream-pull-requests-2026-10-18)). To do: get them merged.
-  **On 0.30.1:** all three merged on 2026-11-04, and are in 0.30.0.
+  **On 0.30.1:** all three merged on 2026-11-04, and are in 0.30.1.
 - [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
   prints after Resume, but that was our probe's race: it read the console before the exit code, so a
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
@@ -1033,7 +1045,7 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   pull request [#1857](https://github.com/redhat-developer/lsp4ij/pull/1857), opened 2026-11-04 at
   the user's go-ahead. To do: get it merged, and after a release with it, check X285's prompt in
   IntelliJ's Debug console. Nothing of ours to remove.
-  **On 0.30.1:** #1857 is in 0.30.0, with nothing of ours to remove. Still to do: check X285's
+  **On 0.30.1:** #1857 is in 0.30.1, with nothing of ours to remove. Still to do: check X285's
   prompt in IntelliJ's Debug console.
 
 ### LSP4IJ: a line typed in the Debug console goes nowhere (UP71): filed as #1862, fixed by our #1866
@@ -1157,7 +1169,7 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   our local draft of a patch is in `errs-upstream-issues.md`'s UP72 row, for reference. No plugin
   workaround (2026-11-05). To do: after a release with the fixes, the tour's "the server's process
   dies" check should see one restart.
-  **On 0.30.1:** #1865 and #1867 are in 0.30.0, and #1863 was closed on 2026-11-05. Still to do:
+  **On 0.30.1:** #1865 and #1867 are in 0.30.1, and #1863 was closed on 2026-11-05. Still to do:
   check that the tour's "the server's process dies" sees one restart.
 
 ### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
@@ -1189,7 +1201,7 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   among them, and LSP4IJ's DAP model stays at DAP 1.60. Our
   [#1793](https://github.com/redhat-developer/lsp4ij/pull/1793) (merged 2026-10-28, unreleased, `2afdaf45`)
   bundles them at LSP4J's one version. UP41's LSP4J part needs it to reach IntelliJ.
-  **On 0.30.1:** released in 0.30.0, with nothing to remove.
+  **On 0.30.1:** released in 0.30.1, with nothing to remove.
 
 ### IntelliJ Platform and LSP4IJ: evaluations cannot be canceled (UP41): IJPL-260358, LSP4J part our #1009
 
@@ -1275,7 +1287,7 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   [#166450](https://github.com/microsoft/vscode/issues/166450) is open, and LSP4IJ has none. R11's
   last item is built anyway (2026-11-02): the server takes `singleThread`. To do: check it from an
   editor once one sends it, with a catalog case.
-  **On 0.30.1:** LSP4IJ 0.30.0 has #1869, which steps only the current thread with `singleThread`.
+  **On 0.30.1:** LSP4IJ 0.30.1 has #1869, which steps only the current thread with `singleThread`.
   Still to do: an IntelliJ catalog case.
 
 ### LSP4IJ: no inline values for Ecstasy (UP50): our #1781, merged
@@ -1353,7 +1365,7 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   guide demo, which found that our server linked nothing at a caret just after a name
   (`394bb23eb8` fixes it). To do: after a release with #1812, make IntelliJ's X133 turn it on, type
   in a local's declaration and see its uses follow.
-  **On 0.30.1:** #1812 is in 0.30.0. Still to do: X133.
+  **On 0.30.1:** #1812 is in 0.30.1. Still to do: X133.
 
 ### LSP4IJ: only the first of several ranges is formatted (UP54): our #1786, merged
 
@@ -1386,7 +1398,7 @@ branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halve
   (`DAPDebugProcess.PROGRAM_EXIT_CODE`) and shows it when the adapter's process ends; CodeRabbit's
   finding, a child session's exit code replacing its parent's, was fixed in it first. To do: after a
   release with it, have our handler take the exit code from that key instead of reading `exited`.
-  **On 0.30.1:** #1791 is in 0.30.0. Still to do: our handler still reads `exited`, not
+  **On 0.30.1:** #1791 is in 0.30.1. Still to do: our handler still reads `exited`, not
   `PROGRAM_EXIT_CODE`.
 
 ### LSP4IJ: inline-value and folding-range refreshes (UP57, UP58): our #1790, merged
@@ -1649,7 +1661,7 @@ editor, which its probe never measured (the probe item below).
     cases, in both editors (`95b4cfa2f1`, `5e6a0f2391`, `c2a9b296d5`); the server reported a module
     container that moved away during discovery as an invalid `xtc.compiler` setting, seen in X130
     (`f71c9cc0a5`).
-  - The nightly run is under [LSP4IJ](#lsp4ij-released-in-0300).
+  - The nightly run is under [LSP4IJ](#lsp4ij-released-in-0301).
 - [ ] Release 0.5.0, the agreed boundary for the breaking listener and embedding API, with migration
   and recompilation notes.
 - [ ] Settle the reconciliation inventory in the roadmap's
