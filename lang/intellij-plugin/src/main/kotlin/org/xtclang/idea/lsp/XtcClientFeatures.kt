@@ -76,10 +76,9 @@ class XtcClientFeatures : LSPClientFeatures() {
                         super.isInlayHintSupported(file)
             },
         )
-        // TODO LSP4IJ: UP04 — remove this override when native symbol rename checks document
-        // epochs.
-        // XtcRenameHandler supplies the guarded native entry point until then.
-        // Keep LSP4IJ's independent file-operation support enabled.
+        // Ecstasy symbols rename with XtcRenameHandler, which carries a change of the configured source modules
+        // with the edit (xtc/rename); LSP4IJ's own rename can't. Keep LSP4IJ's independent file-operation support
+        // enabled.
         setRenameFeature(
             object : LSPRenameFeature() {
                 override fun isRenameSupported(file: PsiFile): Boolean = false

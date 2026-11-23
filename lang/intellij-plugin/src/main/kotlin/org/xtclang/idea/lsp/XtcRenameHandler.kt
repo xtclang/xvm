@@ -20,8 +20,10 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import java.util.concurrent.CompletableFuture
 
-// TODO LSP4IJ: UP04 — apply rename edits only after checking captured document versions/epochs.
-// This native handler can go once upstream provides the guarded application used by XtcRenameEdit.
+// The XTC rename, not LSP4IJ's: it asks the XTC server with xtc/rename, whose proposal carries the change of the
+// configured source modules with the edit, and applies both in one command (XtcRenameEdit, SourceGraphEdit).
+// textDocument/rename can't carry that change, and the server refuses it when a rename needs it, so this handler
+// stays whatever LSP4IJ's own rename checks.
 
 /** Uses Community platform refactoring UI with an atomic stale-document guard. */
 class XtcRenameHandler : RenameHandler {
