@@ -21,7 +21,9 @@ import org.xvm.debug.StopState
 import org.xvm.lsp.LIVELOCK
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLibraries
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitCall
 import org.xvm.lsp.awaited
 import org.xvm.lsp.server.DebugSessions
@@ -81,7 +83,7 @@ class XtcDebugAgentTest {
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
             assertThat(attached.module).isEqualTo("Looped")
-            attached.debug(emptyMap(), program.breakpointAt(LOOP_LINE)).awaited()
+            attached.debug(program.sourceDirs, program.breakpointAt(LOOP_LINE)).awaited()
             assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
             assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
 
@@ -107,7 +109,7 @@ class XtcDebugAgentTest {
         launch(COUNTERS, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
-            attached.debug(emptyMap(), program.firstCounterAt(1000)).awaited()
+            attached.debug(program.sourceDirs, program.firstCounterAt(1000)).awaited()
             assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
             assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
             val alone =
@@ -143,42 +145,46 @@ class XtcDebugAgentTest {
     fun `a debug session attaches to the program, stops it at a breakpoint, and once it disconnects the program runs on`() {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val client = DebugClient()
-            val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
-            DebugSessions(runs, { client }).use { sessions ->
-                val id = sessions.start().sessionId
-                sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-                sessions.request(id, 2, "attach", """{"port": ${program.port()}}""")
-                sessions.request(
-                    id,
-                    3,
-                    "setBreakpoints",
-                    """{"source": {"path": "${program.source}"}, "breakpoints": [{"line": $LOOP_LINE}]}""",
-                )
-                sessions.request(id, 4, "configurationDone")
-                val untilStop = client.until(id) { it.event == "stopped" }
-                assertThat(untilStop.single { it.response == "attach" }["success"].asBoolean).isTrue()
-                val installed = untilStop.single { it.event == "breakpoint" }["body"].asJsonObject["breakpoint"].asJsonObject
-                assertThat(installed["verified"].asBoolean).isTrue()
-                val stopped = untilStop.last()["body"].asJsonObject
-                assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
+            // an attach gives the debugger the directories of the source graph's modules, as the compiler has them
+            XdkAdapter().use { adapter ->
+                adapter.replaceSourceModules(listOf(XdkSourceModule("Looped", File(program.source).toURI().toString())))
+                val runs = EmbeddedRuns(adapter, { client }, attachLimit = ATTACH_LIMIT)
+                DebugSessions(runs, { client }).use { sessions ->
+                    val id = sessions.start().sessionId
+                    sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+                    sessions.request(id, 2, "attach", """{"port": ${program.port()}}""")
+                    sessions.request(
+                        id,
+                        3,
+                        "setBreakpoints",
+                        """{"source": {"path": "${program.source}"}, "breakpoints": [{"line": $LOOP_LINE}]}""",
+                    )
+                    sessions.request(id, 4, "configurationDone")
+                    val untilStop = client.until(id) { it.event == "stopped" }
+                    assertThat(untilStop.single { it.response == "attach" }["success"].asBoolean).isTrue()
+                    val installed = untilStop.single { it.event == "breakpoint" }["body"].asJsonObject["breakpoint"].asJsonObject
+                    assertThat(installed["verified"].asBoolean).isTrue()
+                    val stopped = untilStop.last()["body"].asJsonObject
+                    assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
 
-                sessions.request(id, 5, "stackTrace", """{"threadId": ${stopped["threadId"].asInt}}""")
-                val frames =
-                    client
-                        .until(id) { it.response == "stackTrace" }
-                        .last()["body"]
-                        .asJsonObject["stackFrames"]
-                        .asJsonArray
-                assertThat(frames.first().asJsonObject["line"].asInt).isEqualTo(LOOP_LINE)
+                    sessions.request(id, 5, "stackTrace", """{"threadId": ${stopped["threadId"].asInt}}""")
+                    val frames =
+                        client
+                            .until(id) { it.response == "stackTrace" }
+                            .last()["body"]
+                            .asJsonObject["stackFrames"]
+                            .asJsonArray
+                    assertThat(frames.first().asJsonObject["line"].asInt).isEqualTo(LOOP_LINE)
 
-                sessions.request(id, 6, "disconnect")
-                val end = client.until(id) { it.event == "terminated" }
-                assertThat(end.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
-                    .contains("Detached from Looped, which runs on.")
-                assertThat(end.none { it.event == "exited" }).isTrue()
-                assertThat(program.exit()).isEqualTo(0)
-                assertThat(program.output).contains("sum 3")
-                assertThat(runs.tracked()).isZero()
+                    sessions.request(id, 6, "disconnect")
+                    val end = client.until(id) { it.event == "terminated" }
+                    assertThat(end.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString })
+                        .contains("Detached from Looped, which runs on.")
+                    assertThat(end.none { it.event == "exited" }).isTrue()
+                    assertThat(program.exit()).isEqualTo(0)
+                    assertThat(program.output).contains("sum 3")
+                    assertThat(runs.tracked()).isZero()
+                }
             }
         }
     }
@@ -191,7 +197,7 @@ class XtcDebugAgentTest {
                 val id = sessions.start().sessionId
                 val source = directory.resolve("Looped.x").toFile().canonicalPath
                 sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-                sessions.request(id, 2, "launch", """{"module": "Looped", "buildMode": "gradle"}""")
+                sessions.request(id, 2, "launch", """{"module": "Looped", "moduleUri": "${File(source).toURI()}", "buildMode": "gradle"}""")
                 sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": [{"line": $LOOP_LINE}]}""")
                 sessions.request(id, 4, "configurationDone")
                 val untilStop = client.messages.until(id) { it.event == "stopped" }
@@ -226,7 +232,7 @@ class XtcDebugAgentTest {
                 val id = sessions.start().sessionId
                 val source = directory.resolve("Looped.x").toFile().canonicalPath
                 sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-                sessions.request(id, 2, "launch", """{"module": "Looped", "buildMode": "gradle"}""")
+                sessions.request(id, 2, "launch", """{"module": "Looped", "moduleUri": "${File(source).toURI()}", "buildMode": "gradle"}""")
                 sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": [{"line": $LOOP_LINE}]}""")
                 sessions.request(id, 4, "configurationDone")
                 client.messages.until(id) { it.event == "stopped" }
@@ -270,7 +276,12 @@ class XtcDebugAgentTest {
                 val id = sessions.start().sessionId
                 val source = directory.resolve("Looped.x").toFile().canonicalPath
                 sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-                sessions.request(id, 2, "launch", """{"module": "Looped", "args": ["a"], "buildMode": "commandLine"}""")
+                sessions.request(
+                    id,
+                    2,
+                    "launch",
+                    """{"module": "Looped", "moduleUri": "${File(source).toURI()}", "args": ["a"], "buildMode": "commandLine"}""",
+                )
                 sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": [{"line": $LOOP_LINE}]}""")
                 sessions.request(id, 4, "configurationDone")
                 val untilStop = client.messages.until(id) { it.event == "stopped" }
@@ -302,7 +313,12 @@ class XtcDebugAgentTest {
                 val id = sessions.start().sessionId
                 val source = directory.resolve("Looped.x").toFile().canonicalPath
                 sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-                sessions.request(id, 2, "launch", """{"module": "Looped", "buildMode": "commandLine"}""")
+                sessions.request(
+                    id,
+                    2,
+                    "launch",
+                    """{"module": "Looped", "moduleUri": "${File(source).toURI()}", "buildMode": "commandLine"}""",
+                )
                 sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": [{"line": $LOOP_LINE}]}""")
                 sessions.request(id, 4, "configurationDone")
                 client.messages.until(id) { it.event == "stopped" }
@@ -339,7 +355,7 @@ class XtcDebugAgentTest {
         launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
             val events = Events()
             val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
-            attached.debug(emptyMap(), program.breakpointAt(LOOP_LINE)).awaited()
+            attached.debug(program.sourceDirs, program.breakpointAt(LOOP_LINE)).awaited()
             assertThat(events.next()).startsWith("breakpoints")
             assertThat(events.next()).startsWith("stopped")
 
@@ -461,16 +477,20 @@ class XtcDebugAgentTest {
                 options,
                 source.path,
             ).redirectErrorStream(true).start()
-        return Program(process, source.canonicalPath)
+        return Program(process, source.canonicalPath, name)
     }
 
-    /** A program's JVM, its output lines as they come, and its source file. */
+    /** A program's JVM, its output lines as they come, its source file, and the name of its module. */
     private class Program(
         private val process: Process,
         val source: String,
+        module: String,
     ) : AutoCloseable {
         private val lines = LinkedBlockingQueue<String>()
         private val seen = CopyOnWriteArrayList<String>()
+
+        /** The directory of the program's source, by its module's name, as a host gives it to the debugger. */
+        val sourceDirs = mapOf(module to File(source).parent)
 
         init {
             Thread.ofVirtual().start {
