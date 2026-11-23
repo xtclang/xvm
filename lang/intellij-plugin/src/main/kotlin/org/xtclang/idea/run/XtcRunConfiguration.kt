@@ -139,7 +139,7 @@ class XtcRunConfiguration(
                         override fun startProcess() =
                             OSProcessHandler(
                                 if (mode == XtcRunMode.GRADLE) createGradleCommandLine() else createXtcCommandLine(),
-                            )
+                            ).also { missingTask(it, project) }
                     }
                 }
             }
@@ -163,7 +163,7 @@ class XtcRunConfiguration(
         GeneralCommandLine().apply {
             exePath = gradleWrapper()
             if (quietMode) addParameter("-q")
-            addParameter("runXtc")
+            addParameter(XtcBuildSettings.gradleTask(gradleProjects(), moduleName.ifBlank { null }, "runXtc"))
             // Pass configuration as Gradle task options (--module, --method, --args)
             moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
             methodName.takeIf { it.isNotBlank() }?.let { addParameter("--method=$it") }
@@ -172,14 +172,25 @@ class XtcRunConfiguration(
             logger.info("Running Gradle: $commandLineString")
         }
 
+    /** The Gradle project of each of the project's source modules, from its imported Gradle model. */
+    private fun gradleProjects() = XtcBuildSettings.getInstance(project).gradleProjects
+
     /** `testXtc` for [tests] of the module, with xunit's `json` report, whose events the test console reads. */
     private fun createGradleTestCommandLine(tests: List<TestSelector>) =
         GeneralCommandLine().apply {
             exePath = gradleWrapper()
             if (quietMode) addParameter("-q")
-            addParameter("testXtc")
-            moduleName.takeIf { it.isNotBlank() && !allTestModules }?.let { addParameter("--module=$it") }
-            addParameters(gradleTestOptions(tests))
+            if (allTestModules) {
+                // a task's options are its own, so each project's testXtc has them
+                XtcBuildSettings.gradleTasks(gradleProjects(), "testXtc").forEach {
+                    addParameter(it)
+                    addParameters(gradleTestOptions(tests))
+                }
+            } else {
+                addParameter(XtcBuildSettings.gradleTask(gradleProjects(), moduleName.ifBlank { null }, "testXtc"))
+                moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
+                addParameters(gradleTestOptions(tests))
+            }
             workDirectory = project.basePath?.let { Path(it).toFile() }
             logger.info("Running Gradle tests: $commandLineString")
         }

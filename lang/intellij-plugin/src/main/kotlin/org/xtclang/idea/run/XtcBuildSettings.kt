@@ -1,5 +1,9 @@
 package org.xtclang.idea.run
 
+import com.intellij.execution.process.ProcessEvent
+import com.intellij.execution.process.ProcessHandler
+import com.intellij.execution.process.ProcessListener
+import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.components.SerializablePersistentStateComponent
@@ -7,6 +11,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.util.xmlb.annotations.OptionTag
 import org.xtclang.idea.lsp.XtcFileOperations
 import java.nio.file.Files
@@ -26,6 +31,24 @@ enum class XtcBuildMode(
     ;
 
     override fun toString() = label
+}
+
+/** Has [handler]'s errors, a Gradle run's, tell [project] to import its Gradle build once Gradle finds no task of the run. */
+internal fun missingTask(
+    handler: ProcessHandler,
+    project: Project,
+) {
+    val settings = XtcBuildSettings.getInstance(project)
+    handler.addProcessListener(
+        object : ProcessListener {
+            override fun onTextAvailable(
+                event: ProcessEvent,
+                outputType: Key<*>,
+            ) {
+                if (outputType == ProcessOutputTypes.STDERR) settings.missingTask(project, event.text)
+            }
+        },
+    )
 }
 
 /** Shared with the project, as the choice belongs to the project rather than to one developer. */
@@ -69,6 +92,37 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
         }
     }
 
+    /**
+     * The Gradle project of each of this project's source modules, by module name, as its path in the build tree, which
+     * the language server says from the imported Gradle model: a module's runXtc and testXtc run in it, the only way to
+     * reach an included build of a composite build. Not saved: each server says it again.
+     */
+    @Volatile
+    var gradleProjects: Map<String, String> = emptyMap()
+
+    /** Whether this project was told to import its Gradle build, after Gradle found no task of a module's run. */
+    private val toldImport = AtomicBoolean()
+
+    /**
+     * Says once, when [text] of a Gradle run's output is Gradle finding no such task while no imported model names the
+     * module's project, as at a composite build's root, to import the Gradle build.
+     */
+    fun missingTask(
+        project: Project,
+        text: String,
+    ) {
+        if (gradleProjects.isEmpty() && MISSING_TASK.containsMatchIn(text) && toldImport.compareAndSet(false, true)) {
+            Notification(
+                XtcFileOperations.NOTIFICATIONS,
+                "Import the Gradle build to run its Ecstasy modules",
+                "Gradle has no runXtc or testXtc at this build's root, as in a composite build, whose included builds a " +
+                    "task's bare name does not reach. Refresh the Gradle model in $COMPILER_PAGE, and Run, Debug and " +
+                    "tests use the task of each module's own project.",
+                NotificationType.INFORMATION,
+            ).notify(project)
+        }
+    }
+
     data class Options(
         // Explicit bindings preserve immutable fields in IntelliJ's XML serializer.
         @field:OptionTag @JvmField val mode: XtcBuildMode = XtcBuildMode.EMBEDDED,
@@ -79,6 +133,40 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
 
         /** Where the mode is chosen; consoles link it to the page ([BuildSettingsLink]). */
         internal const val SETTINGS_PAGE = "Settings | Build, Execution, Deployment | Ecstasy"
+
+        /** Where the Gradle model is imported, with its Refresh Gradle model button. */
+        private const val COMPILER_PAGE = "Settings | Languages & Frameworks | Ecstasy Compiler"
+
+        // Gradle's answer to a task that no project of the build has, such as a bare runXtc at a composite build's root
+        private val MISSING_TASK = Regex("Task '(run|test)Xtc' not found")
+
+        /**
+         * [task] of [module]'s Gradle project, by its path in the build tree from [projects], such as
+         * `:xdk:lib-json:testXtc`, which reaches a composite build's included builds; the bare name when no imported
+         * model names the module's project.
+         */
+        fun gradleTask(
+            projects: Map<String, String>,
+            module: String?,
+            task: String,
+        ): String = module?.let(projects::get)?.let { taskOf(it, task) } ?: task
+
+        /** [task] of every project that the imported model names, as for every test module; the bare name without one. */
+        fun gradleTasks(
+            projects: Map<String, String>,
+            task: String,
+        ): List<String> =
+            projects.values
+                .distinct()
+                .sorted()
+                .map { taskOf(it, task) }
+                .ifEmpty { listOf(task) }
+
+        // a root project's path is ":", whose task is ":runXtc"
+        private fun taskOf(
+            project: String,
+            task: String,
+        ) = if (project == ":") ":$task" else "$project:$task"
 
         fun getInstance(project: Project): XtcBuildSettings = project.getService(XtcBuildSettings::class.java)
 

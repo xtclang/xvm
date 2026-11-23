@@ -91,8 +91,11 @@ class XtcLanguageClient(
             project.getServiceIfCreated(DebugSessions::class.java)?.endAll("The Ecstasy language server stopped, ending the debug session")
             // as LSP4IJ clears the problem files of the documents it held for the server
             project.getServiceIfCreated(ProjectErrors::class.java)?.disconnected()
-            // the next server says again which libraries the project's modules replace
-            project.getServiceIfCreated(XtcBuildSettings::class.java)?.replaced(project, emptyList())
+            // the next server says again which libraries the project's modules replace, and its modules' Gradle projects
+            project.getServiceIfCreated(XtcBuildSettings::class.java)?.let {
+                it.replaced(project, emptyList())
+                it.gradleProjects = emptyMap()
+            }
         }
         super.dispose()
     }
@@ -113,6 +116,12 @@ class XtcLanguageClient(
     @JsonNotification("xtc/replacedLibraries")
     fun replacedLibraries(params: ReplacedLibrariesParams) {
         if (!project.isDisposed) XtcBuildSettings.getInstance(project).replaced(project, params.libraries)
+    }
+
+    /** The Gradle project of each of this project's source modules, from its imported Gradle model, where runs run its tasks. */
+    @JsonNotification("xtc/gradleProjects")
+    fun gradleProjects(params: GradleProjectsParams) {
+        if (!project.isDisposed) XtcBuildSettings.getInstance(project).gradleProjects = params.projects
     }
 
     @JsonNotification("xtc/runExited")

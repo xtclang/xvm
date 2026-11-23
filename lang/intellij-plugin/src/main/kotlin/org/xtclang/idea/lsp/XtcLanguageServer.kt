@@ -239,6 +239,11 @@ data class ReplacedLibrariesParams(
     val libraries: List<String> = emptyList(),
 )
 
+/** `xtc/gradleProjects` parameters: the Gradle project that owns each source module, by module name, as its path in the build tree. */
+data class GradleProjectsParams(
+    val projects: Map<String, String> = emptyMap(),
+)
+
 data class RunOutputParams(
     val runId: String = "",
     val text: String = "",
