@@ -2,15 +2,11 @@ package org.xtclang.idea.lsp
 
 import com.intellij.application.options.CodeStyle
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiManager
 import com.intellij.psi.codeStyle.CodeStyleSettingsListener
 import com.intellij.util.concurrency.SequentialTaskExecutor
-import com.redhat.devtools.lsp4ij.LSPFileSupport
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
@@ -161,7 +157,6 @@ class XtcLanguageClient(
     override fun publishDiagnostics(params: PublishDiagnosticsParams) {
         semanticUpdate {
             val file = clientFeatures.findFileByUri(params.uri)
-            file?.let(::invalidateSemanticFacts)
             super.publishDiagnostics(params)
             // a publication follows each analysis, which is what decides whether the module can run
             file?.let {
@@ -178,7 +173,6 @@ class XtcLanguageClient(
 
     override fun refreshDiagnostics(): CompletableFuture<Void> =
         semanticUpdate {
-            FileEditorManager.getInstance(project).openFiles.forEach(::invalidateSemanticFacts)
             // IntelliJ pulls diagnostics, so this refresh, not a publication, follows each analysis
             refreshRunIcons()
         }.thenCompose {
@@ -206,45 +200,6 @@ class XtcLanguageClient(
             { if (!isDisposed && !project.isDisposed) update() },
             semanticUpdates,
         )
-
-    private fun invalidateSemanticFacts(file: VirtualFile) {
-        ReadAction.runBlocking<RuntimeException> {
-            if (project.isDisposed) return@runBlocking
-            val psi = PsiManager.getInstance(project).findFile(file) ?: return@runBlocking
-            if (!LSPFileSupport.hasSupport(psi)) return@runBlocking
-            val support = LSPFileSupport.getSupport(psi)
-            // TODO LSP4IJ: UP14 — invalidate semantic caches on diagnostic refresh, not just PSI changes.
-            // A dependency can change this file's semantics without changing its PSI stamp.
-            // LSP4IJ keys these caches to that stamp, so retire completed results when the
-            // compiler publishes a new analysis. Pending requests already target the current
-            // compiler queue and retain their normal cancellation/version checks.
-            with(support) {
-                listOf(
-                    completionSupport,
-                    definitionSupport,
-                    typeDefinitionSupport,
-                    implementationSupport,
-                    referenceSupport,
-                    hoverSupport,
-                    signatureHelpSupport,
-                    highlightSupport,
-                    prepareRenameSupport,
-                    renameSupport,
-                    intentionCodeActionSupport,
-                    codeLensSupport,
-                    documentSymbolSupport,
-                    semanticTokensSupport,
-                    inlayHintsSupport,
-                    prepareTypeHierarchySupport,
-                    typeHierarchySupertypesSupport,
-                    typeHierarchySubtypesSupport,
-                    prepareCallHierarchySupport,
-                    callHierarchyIncomingCallsSupport,
-                    callHierarchyOutgoingCallsSupport,
-                ).forEach { feature -> if (feature.future?.isDone == true) feature.cancel() }
-            }
-        }
-    }
 
     /**
      * Specialize editor formatting and reference-lens preferences. Other sections preserve compiler graphs,
