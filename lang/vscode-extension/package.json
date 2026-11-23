@@ -619,6 +619,12 @@
                         "default": true,
                         "description": "Compile an XDK library's sources as a whole when one of them is opened, so that Go to Definition, hover and references work for every name in it, also in method bodies. The compile takes about 10 seconds when a library's first source opens, and some hundred MB while one stays open; it needs a server heap of at least 1 GB (-Xmx1G). Off: an opened XDK source resolves only its own declarations, imports and type names. Restart to apply."
                     },
+                    "xtc.server.replaceLibraries": {
+                        "type": "boolean",
+                        "scope": "machine",
+                        "default": true,
+                        "description": "Use the workspace's own modules in place of the bundled XDK libraries of their names, as in the XVM repository: a workspace module named as an XDK library, such as json.xtclang.org, replaces the bundled one, so code is checked against the workspace's version, and builds and runs use Gradle. Off: the bundled libraries stay, and such modules are not compiled. Restart to apply."
+                    },
                     "xtc.server.logs": {
                         "type": "object",
                         "scope": "machine",

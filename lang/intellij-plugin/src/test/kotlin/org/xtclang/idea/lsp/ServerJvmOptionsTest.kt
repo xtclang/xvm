@@ -62,4 +62,12 @@ class ServerJvmOptionsTest {
         store.install(before, before.copy(compileLibraries = false))
         assertThat(store.launchArguments()).contains("-Dxtc.lsp.compileLibraries=false").doesNotContain("-Dxtc.lsp.compileLibraries=true")
     }
+
+    @Test fun `a workspace module replaces the bundled library of its name unless the setting turns it off`() {
+        val store = ServerRuntimeSettings()
+        val before = store.state
+        assertThat(store.launchArguments()).contains("-Dxtc.lsp.replaceLibraries=true")
+        store.install(before, before.copy(replaceLibraries = false))
+        assertThat(store.launchArguments()).contains("-Dxtc.lsp.replaceLibraries=false").doesNotContain("-Dxtc.lsp.replaceLibraries=true")
+    }
 }

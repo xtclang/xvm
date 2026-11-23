@@ -31,6 +31,14 @@ class ServerRuntimeConfigurable : Configurable {
                 "while one stays open; it needs a server heap of at least 1 GB (-Xmx1G). Off: an XDK source resolves " +
                 "only its own declarations, imports and type names."
         }
+    private val replacement =
+        JBCheckBox("Use the workspace's own modules in place of the bundled XDK libraries of their names").apply {
+            name = "xtc.lsp.replaceLibraries"
+            toolTipText =
+                "As in the XVM repository: a workspace module named as an XDK library, such as json.xtclang.org, " +
+                "replaces the bundled one, so code is checked against the workspace's version, and builds and runs " +
+                "use Gradle. Off: the bundled libraries stay, and such modules are not compiled."
+        }
     private var original = ServerRuntimeSettings.Options()
 
     override fun getDisplayName(): String = "Ecstasy Server Runtime and Logs"
@@ -58,6 +66,8 @@ class ServerRuntimeConfigurable : Configurable {
                             add(sessions)
                             add(libraries)
                             add(JBLabel("Navigation in XDK sources, also in method bodies."))
+                            add(replacement)
+                            add(JBLabel("For working on the XDK's own libraries, as in the XVM repository."))
                             add(JBLabel("Active processes are protected. Old sessions are pruned on server start."))
                             add(JBLabel("Tools → Export Ecstasy Server Logs saves bounded recent logs and status."))
                         },
@@ -90,6 +100,7 @@ class ServerRuntimeConfigurable : Configurable {
             logTotalSizeMb = totalSize.value as Int,
             logRetainedSessions = sessions.value as Int,
             compileLibraries = libraries.isSelected,
+            replaceLibraries = replacement.isSelected,
         )
 
     override fun isModified(): Boolean = draft() != original
@@ -102,6 +113,7 @@ class ServerRuntimeConfigurable : Configurable {
         totalSize.value = original.logTotalSizeMb
         sessions.value = original.logRetainedSessions
         libraries.isSelected = original.compileLibraries
+        replacement.isSelected = original.replaceLibraries
     }
 
     override fun apply() {
