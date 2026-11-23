@@ -1061,8 +1061,12 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   entries.
 - [ ] UP80 ([#2093](https://github.com/redhat-developer/lsp4ij/issues/2093), fixed upstream): a Go to
   Declaration, Implementation, Type Definition or References request that ends unanswered, canceled or
-  failed shows "No … found". Only the playbook waits (`// TODO LSP4IJ: UP80`). To do: look for a plugin
-  hook; probably recorded as a known gap until 0.30.2, the least harmful of the four.
+  failed shows "No … found". Decided 2026-11-23: no product bridge, a known gap until 0.30.2. The message
+  comes from the `finally` of LSP4IJ's `AbstractLSPGoToAction` task, which the plugin cannot reach: a bridge
+  would replace LSP4IJ's Go to Declaration, Implementation, Type Definition and References actions for Ecstasy
+  files with copies of its own, a large and risky change for a misleading message that shows only when such
+  a request is canceled or fails. The playbook keeps waiting until LSP4IJ's Go to task has ended
+  (`NativeSemanticViews`, `// TODO LSP4IJ: UP80`). To do after 0.30.2: remove that wait.
 
 ### LSP4IJ: pull requests open
 
