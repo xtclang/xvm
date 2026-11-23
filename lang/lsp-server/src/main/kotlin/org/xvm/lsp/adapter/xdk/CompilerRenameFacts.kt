@@ -252,6 +252,8 @@ internal fun captureRenameFacts(
     missingInputs: CompilerMissingInputs = CompilerMissingInputs(),
     constantProperties: Set<SemanticModel.SourceLocation> = emptySet(),
     packageImports: Map<String, String> = emptyMap(),
+    /** The compiled module's name, which is the workspace's own source even when it is a bundled library's. */
+    module: String? = null,
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -271,6 +273,18 @@ internal fun captureRenameFacts(
             }.mapTo(hashSetOf()) { it.id }
     val identities = mutableMapOf<Constant, ProofIdentity>()
     val binaryModules = sortedSetOf<String>()
+    // a workspace module of a bundled library's name replaces it (XdkLibraryReplacement) and is proven as the
+    // workspace's sources: the compiled module itself, or a dependency that the server compiled from source; the
+    // bundled libraries' own declarations, which their source copies locate, stay binary
+    val replaced =
+        (
+            dependencies
+                ?.artifacts
+                ?.filterValues { it.fromSource }
+                ?.keys
+                .orEmpty() + setOfNotNull(module)
+        ).intersect(XdkLibraries.moduleNames)
+    val bundled = XdkLibraries.moduleNames - replaced
 
     fun identity(constant: Constant): ProofIdentity =
         identities.getOrPut(constant) {
@@ -289,7 +303,7 @@ internal fun captureRenameFacts(
 
                 // Bundled source navigation must use the same artifact identity as binary-only
                 // views.
-                location != null && module !in XdkLibraries.moduleNames ->
+                location != null && module !in bundled ->
                     ProofIdentity.Source(
                         location,
                         constant.format,
@@ -297,7 +311,7 @@ internal fun captureRenameFacts(
                     )
 
                 constant is PackageConstant &&
-                    module !in XdkLibraries.moduleNames &&
+                    module !in bundled &&
                     (
                         packageParent is ProofIdentity.Source ||
                             packageParent is ProofIdentity.Directory
@@ -323,7 +337,7 @@ internal fun captureRenameFacts(
                     } == true -> ProofIdentity.PrimaryConstructor(identity(host))
 
                 constant is MethodConstant &&
-                    module !in XdkLibraries.moduleNames &&
+                    module !in bundled &&
                     sourceHost &&
                     errors != null -> {
                     val structure = host.component as? ClassStructure
@@ -355,7 +369,7 @@ internal fun captureRenameFacts(
                     }
                 }
 
-                module != null && module in XdkLibraries.moduleNames -> {
+                module != null && module in bundled -> {
                     val index =
                         XdkLibraries
                             .module(module)

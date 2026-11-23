@@ -138,6 +138,7 @@ internal fun EmbeddingSupport.Compilation.renameFacts(
                         CompilerMissingInputs()
                     },
                 packageImports = packageImports(),
+                module = file()?.moduleId?.name,
             )
         }
     }
@@ -178,6 +179,7 @@ internal fun EmbeddingSupport.Compilation.compiledSemantics(
                         errors = errors,
                         supers = builder.superBindings(),
                         receivers = builder.receiverBindings(),
+                        module = file()?.moduleId?.name,
                     )
                 } else {
                     null
@@ -226,6 +228,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 if (includeMembers) builder.extractionFacts(this) else null,
                 constantProperties = if (includeMembers) builder.constantProperties(this) else emptySet(),
                 packageImports = packageImports(),
+                module = file()?.moduleId?.name,
             )
         }
     }
@@ -344,6 +347,7 @@ private class SemanticModelBuilder(
                     missingMethodInputs,
                     dependencies.missingMethodDestinations(missingDestinations),
                 ),
+            module = analysis.file().moduleId.name,
         )
     }
 
