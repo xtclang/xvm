@@ -17,12 +17,16 @@ internal class XdkBuildModel private constructor(
         val resources: List<String>,
         val dependencies: Set<String>,
         val modulePath: List<File>,
+        /** The project's path in the whole build tree, such as `:xdk:lib-json`, which names its tasks; null from an older plugin. */
+        val buildTreePath: String? = null,
     )
 
     /** Source modules and binary dependencies assembled from an accepted Gradle build model. */
     data class Inputs(
         val modules: List<XdkSourceModule>,
         val binaries: List<XdkDependency>,
+        /** The Gradle project that owns each source module, by module name, as its path in the build tree, where known. */
+        val projects: Map<String, String> = emptyMap(),
     )
 
     fun resolve(): Inputs =
@@ -104,7 +108,9 @@ internal class XdkBuildModel private constructor(
                     }
                     values.first()
                 }.toList()
-        return Inputs(modules, binaries)
+        val owned = owners.entries.associate { (module, owner) -> module.name to owner.buildTreePath }
+        val projects = modules.mapNotNull { module -> owned[module.name]?.let { module.name to it } }.toMap()
+        return Inputs(modules, binaries, projects)
     }
 
     companion object {
@@ -166,6 +172,7 @@ internal class XdkBuildModel private constructor(
                             files("resourceRoots").map { it.toURI().toString() },
                             strings("projectDependencies").toSet(),
                             files("modulePath"),
+                            entry["buildTreePath"]?.let { string("buildTreePath") },
                         )
                     }
                 }

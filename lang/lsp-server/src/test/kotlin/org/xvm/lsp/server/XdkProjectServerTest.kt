@@ -1,5 +1,6 @@
 package org.xvm.lsp.server
 
+import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.DefinitionParams
@@ -340,6 +341,56 @@ class XdkProjectServerTest {
             val mark = session.published.size
             session.change(first, first.readText(), 2)
             session.expect(first, mark, 2, false)
+        }
+    }
+
+    @Test
+    fun `the client hears each module's Gradle project from the imported build model, and none once there is no model`() {
+        val workspace =
+            directory
+                .toRealPath()
+                .resolve("gradle")
+                .toFile()
+                .also { it.mkdirs() }
+        val json = workspace.resolve("lib/Json.x").also { it.parentFile.mkdirs() }.also { it.writeText("module Json {}") }
+        val entry =
+            mapOf(
+                "projectId" to "lib",
+                "sourceSet" to "main",
+                "sourceFiles" to listOf(json.toURI().toString()),
+                "moduleRoots" to listOf(json.toURI().toString()),
+                "resourceRoots" to emptyList<String>(),
+                "projectDependencies" to emptyList<String>(),
+                "modulePath" to emptyList<String>(),
+                "buildTreePath" to ":xdk:lib-json",
+            )
+        val heard = CopyOnWriteArrayList<Map<String, String>>()
+        val client =
+            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+                override fun runOutput(params: RunOutputParams) {}
+
+                override fun runExited(params: RunExitedParams) {}
+
+                override fun gradleProjects(params: GradleProjectsParams) {
+                    heard += params.projects
+                }
+            }
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(client)
+            server
+                .initialize(
+                    editorInitializeParams().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "gradle"))
+                        initializationOptions =
+                            mapOf(
+                                "xtcCompiler" to mapOf("buildModels" to listOf(mapOf("schemaVersion" to 1, "sourceSets" to listOf(entry)))),
+                            )
+                    },
+                ).awaited()
+            awaitAsserted { assertThat(heard.lastOrNull()).isEqualTo(mapOf("Json" to ":xdk:lib-json")) }
+            // the workspace's conventions, without a model, name no project
+            server.changeCompilerConfig(JsonParser.parseString("""{"xtc": {"compiler": {"sourceModules": null}}}"""))
+            awaitAsserted { assertThat(heard.lastOrNull()).isEmpty() }
         }
     }
 
