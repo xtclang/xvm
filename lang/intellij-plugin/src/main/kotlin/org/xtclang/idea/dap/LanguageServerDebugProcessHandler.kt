@@ -6,6 +6,7 @@ import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
+import com.redhat.devtools.lsp4ij.dap.DAPDebugProcess
 import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.lsp.DebugSessionParams
 import org.xtclang.idea.lsp.TestEvent
@@ -21,7 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * the session as `xtc/debugMessage` notifications; the session's messages come back as this process's output,
  * framed as an adapter on stdio writes them, which LSP4IJ's console does not show. The session starts with the
  * process, and messages written before it exists wait for it. Ending the process ends the session, which stops the program it launched, and the
- * process's exit code is the program's, from the session's `exited` event. A line typed in the session's console,
+ * process's exit code is the program's, which LSP4IJ keeps from the session's `exited` event
+ * (`DAPDebugProcess.PROGRAM_EXIT_CODE`). A line typed in the session's console,
  * which IntelliJ writes to the same input, is what it is in a debug console: see [DebugConsoleLines].
  */
 internal class LanguageServerDebugProcessHandler(
@@ -38,9 +40,6 @@ internal class LanguageServerDebugProcessHandler(
     private var connection: Connection? = null
     private val finished = AtomicBoolean()
     private val console = DebugConsoleLines()
-
-    @Volatile
-    private var exitCode = 0
 
     private class Connection(
         val server: XtcLanguageServer,
@@ -128,13 +127,6 @@ internal class LanguageServerDebugProcessHandler(
                 ?.asString
                 ?.let(output)
         }
-        if (message["type"]?.asString == "event" && message["event"]?.asString == "exited") {
-            message["body"]
-                ?.asJsonObject
-                ?.get("exitCode")
-                ?.asInt
-                ?.let { exitCode = it }
-        }
         // as an adapter on stdio writes it
         notifyTextAvailable(DapFrames.frame(message.toString()), ProcessOutputTypes.STDOUT)
     }
@@ -147,7 +139,8 @@ internal class LanguageServerDebugProcessHandler(
         }
     }
 
-    override fun destroyProcessImpl() = finish { notifyProcessTerminated(exitCode) }
+    // LSP4IJ puts the program's exit code on the process as the session's exited event arrives, before it ends it
+    override fun destroyProcessImpl() = finish { notifyProcessTerminated(getUserData(DAPDebugProcess.PROGRAM_EXIT_CODE) ?: 0) }
 
     override fun detachProcessImpl() = finish { notifyProcessDetached() }
 

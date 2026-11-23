@@ -6,6 +6,7 @@ import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.openapi.util.Key
+import com.redhat.devtools.lsp4ij.dap.DAPDebugProcess
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -131,7 +132,7 @@ class LanguageServerDebugProcessHandlerTest {
     }
 
     @Test
-    fun `the session's messages are framed output, its exited code is the exit code, and ending the process ends it`() {
+    fun `messages are framed output, the exited code LSP4IJ keeps is the exit code, and ending the process ends it`() {
         val sessions = DebugSessions()
         val server = FakeServer().apply { started.complete(Unit) }
         val handler = LanguageServerDebugProcessHandler(sessions) { CompletableFuture.completedFuture(server.proxy) }
@@ -141,6 +142,8 @@ class LanguageServerDebugProcessHandlerTest {
         val event = """{"seq":5,"type":"event","event":"exited","body":{"exitCode":42}}"""
         sessions.receive(DebugMessageParams("session-1", JsonParser.parseString(event).asJsonObject))
         assertThat(events.text(ProcessOutputTypes.STDOUT)).isEqualTo(DapFrames.frame(JsonParser.parseString(event).toString()))
+        // as LSP4IJ's DAPDebugProcess does when it reads the exited event from the process's output
+        handler.putUserData(DAPDebugProcess.PROGRAM_EXIT_CODE, 42)
 
         handler.destroyProcess()
         assertThat(server.ended).containsExactly("session-1")
