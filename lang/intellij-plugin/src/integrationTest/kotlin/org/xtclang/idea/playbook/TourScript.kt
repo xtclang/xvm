@@ -2757,13 +2757,8 @@ private fun Tour.settings() {
         expect(within(HANG) { firstHover(pid) != null } && firstHover(pid) == "replied") {
             "The server's first hover after the restart: ${firstHover(pid)}"
         }
-        // TODO LSP4IJ: UP82 — Quick Documentation waits 500 ms at most for the hover, whose answer after a restart
-        //  waits for the module's compile, and a later answer shows at the next Ctrl+Q at the same place: in
-        //  run-tour-3696415223983703475 the answer took 834 ms, and the first Ctrl+Q showed nothing
-        if ("Number of cards dealt" !in popupText()) {
-            dismiss()
-            action("QuickJavaDoc")
-        }
+        // the hover after a restart waits for the module's compile, which can take LSP4IJ 0.30.1 longer than the 500 ms
+        // it waits (UP82): the plugin's LateHoverDocumentation shows it once it comes, at the first Ctrl+Q
         expect(within(HANG) { "Number of cards dealt" in popupText() }) {
             "The documentation after the restart: ${popupText().take(300)}"
         }
