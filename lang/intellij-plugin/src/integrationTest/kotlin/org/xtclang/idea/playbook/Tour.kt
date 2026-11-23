@@ -217,6 +217,13 @@ internal class Tour(
         return null
     }
 
+    /** The process ids of the language servers that have written a trace in this run, which ended ones keep. */
+    fun tracedServers(): Set<String> =
+        runCatching { Files.list(run.resolve("server-trace")).use { paths -> paths.toList() } }
+            .getOrDefault(emptyList())
+            .mapNotNull { TRACE_FILE.matchEntire(it.fileName.toString())?.groupValues?.get(1) }
+            .toSet()
+
     fun section(name: String) {
         section = name
         progress("Section $name")
@@ -502,6 +509,9 @@ internal interface TourProbe {
     fun ready(): Boolean
 
     fun serverState(): String
+
+    /** The process ids of the language servers that the IDE runs, as a JSON array. */
+    fun serverProcesses(): String
 
     /** Got It tooltips on, with [id] unseen, for a check of it. */
     fun enableGotIt(id: String)
@@ -1367,6 +1377,9 @@ internal fun TourProbe.frameNames(): List<String> =
         .parseString(frames())
         .asJsonArray
         .map { it.asJsonObject["name"].asString }
+
+/** A language server's trace file, `lsp-trace-<pid>-….jsonl`, with the process id of the server that wrote it. */
+private val TRACE_FILE = Regex("lsp-trace-(\\d+)-.*\\.jsonl")
 
 /** LSP's RequestCancelled: the error a request ends with when the client cancels it. */
 private const val REQUEST_CANCELLED = -32800
