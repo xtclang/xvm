@@ -59,6 +59,9 @@ What --repo=<repo> does:
 
 What --check does:
   Checks target repo metadata without changing files.
+
+In CI (CI or GITHUB_ACTIONS is true), only --check runs: every other mode
+fails before it changes anything.
 EOF
 }
 
@@ -127,6 +130,11 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# An upgrade rewrites files, and its branch modes commit and push: only a person runs one, never CI
+if [[ "$mode" != "check" && ( "${CI:-}" == "true" || "${GITHUB_ACTIONS:-}" == "true" ) ]]; then
+    fail "Only --check runs in CI: a Gradle upgrade is for a person to run"
+fi
 
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"

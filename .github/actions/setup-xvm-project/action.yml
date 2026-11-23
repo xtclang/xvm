@@ -218,6 +218,26 @@ runs:
           if: ${{ inputs.setup-build == 'true' }}
           uses: gradle/actions/wrapper-validation@v6
 
+        # Read-only: compares distributionSha256Sum with the checksum that services.gradle.org publishes for the
+        # wrapper's distribution, so a wrong one fails here even when the distribution comes from a cache. It changes
+        # no file and runs neither Gradle nor bin/gradle-upgrade.sh: only a person upgrades Gradle.
+        - name: Check the Gradle distribution's checksum
+          if: ${{ inputs.setup-build == 'true' }}
+          shell: bash
+          run: |
+              props=gradle/wrapper/gradle-wrapper.properties
+              version=$(sed -n 's|^distributionUrl=.*/gradle-\(.*\)-bin\.zip$|\1|p' "$props")
+              actual=$(sed -n 's|^distributionSha256Sum=||p' "$props")
+              expected=""
+              if [[ -n "$version" ]]; then
+                  expected=$(curl -fsSL --retry 3 "https://services.gradle.org/distributions/gradle-${version}-bin.zip.sha256" || true)
+              fi
+              if [[ -z "$expected" || "$actual" != "$expected" ]]; then
+                  echo "::error file=${props}::distributionSha256Sum must be the published checksum of Gradle ${version:-(unknown)}: ${expected:-(not available)}, not ${actual:-(missing)}"
+                  exit 1
+              fi
+              echo "${props} has the published checksum of Gradle ${version}"
+
 branding:
     icon: 'package'
     color: 'purple'
