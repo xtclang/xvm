@@ -14,7 +14,8 @@ import com.intellij.util.xmlb.annotations.OptionTag
 internal class ServerRuntimeSettings : SerializablePersistentStateComponent<ServerRuntimeSettings.Options>(Options()) {
     /**
      * Persisted JVM, log-retention and library settings used when launching the language server. [compileLibraries]: an
-     * opened XDK source is compiled with its whole library, for navigation in it.
+     * opened XDK source is compiled with its whole library, for navigation in it. [replaceLibraries]: a workspace module
+     * of a bundled library's name replaces that library, as the XVM repository's replace them all.
      */
     data class Options(
         // Explicit bindings preserve immutable fields in IntelliJ's XML serializer.
@@ -24,6 +25,7 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
         @field:OptionTag @JvmField val logTotalSizeMb: Int = 50,
         @field:OptionTag @JvmField val logRetainedSessions: Int = 5,
         @field:OptionTag @JvmField val compileLibraries: Boolean = true,
+        @field:OptionTag @JvmField val replaceLibraries: Boolean = true,
     ) {
         fun arguments(): List<String> =
             ServerJvmOptions.validate(
@@ -58,8 +60,12 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
     }
 }
 
-/** Whether the server compiles an opened XDK source's whole library, as the server's `xtc.lsp.compileLibraries` takes it. */
-internal fun ServerRuntimeSettings.Options.libraryArguments(): List<String> = listOf("-Dxtc.lsp.compileLibraries=$compileLibraries")
+/**
+ * Whether the server compiles an opened XDK source's whole library, and whether the workspace's own modules replace
+ * bundled libraries of their names, as the server's `xtc.lsp.compileLibraries` and `xtc.lsp.replaceLibraries` take them.
+ */
+internal fun ServerRuntimeSettings.Options.libraryArguments(): List<String> =
+    listOf("-Dxtc.lsp.compileLibraries=$compileLibraries", "-Dxtc.lsp.replaceLibraries=$replaceLibraries")
 
 internal fun ServerRuntimeSettings.Options.logArguments(): List<String> {
     require(logHistoryDays in 1..90 && logMaxFileMb in 1..100 && logTotalSizeMb in logMaxFileMb..1000 && logRetainedSessions in 1..20) {

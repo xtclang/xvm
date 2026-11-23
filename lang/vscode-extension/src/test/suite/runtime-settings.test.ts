@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import { defaultJvmOptions, validateJvmOptions, validateLogRetention } from '../../runtime-settings';
+import { defaultJvmOptions, runtimeLibraryArguments, validateJvmOptions, validateLogRetention } from '../../runtime-settings';
 
 suite('Machine-local JVM options', () => {
     test('supported tuning remains separate arguments', () => {
@@ -18,5 +18,8 @@ suite('Machine-local JVM options', () => {
     test('retention rejects malformed values and impossible caps', () => {
         assert.strictEqual(validateLogRetention({ historyDays: 2 }).historyDays, 2);
         for (const value of [null, [], { historyDays: 0 }, { historyDays: 1.5 }, { totalSizeMb: 1 }, { retainedSessions: 21 }, { typo: 2 }]) assert.throws(() => validateLogRetention(value));
+    });
+    test('the server compiles opened XDK libraries and takes the workspace\'s own in their place unless the settings turn it off', () => {
+        assert.deepStrictEqual(runtimeLibraryArguments(), ['-Dxtc.lsp.compileLibraries=true', '-Dxtc.lsp.replaceLibraries=true']);
     });
 });
