@@ -4565,7 +4565,9 @@
           "Int one",
           "input)"
         ],
-        "broken": "module Linked { Missing broken; Int one() { Int value = 1; return value; } }"
+        "broken": "module Linked { Missing broken; Int one() { Int value = 1; return value; } }",
+        "typed": "s",
+        "typedSource": "module Linked { Int one() { Int values = 1; return values; } Int two() { Int value = 2; return value; } Int identity(Int input) = input; }"
       },
       "intellij": {
         "coverage": "full",
