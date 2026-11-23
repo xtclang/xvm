@@ -321,6 +321,8 @@ internal class EmbeddedRuns(
         events: ProgramEvents,
         ready: CompletionStage<out DebugSetup>,
     ): CompletableFuture<String> {
+        // TODO: only the source graph's modules have their directory, and an attach names no module by a source file,
+        // so the debugger refuses each breakpoint in a module of the program that the graph lacks
         val sourceDirs = sourceDirs()
         val listener =
             object : ProgramEvents by events {
@@ -367,6 +369,11 @@ internal class EmbeddedRuns(
             client() as? XtcLanguageClient
                 ?: return CompletableFuture.failedFuture(UnsupportedOperationException(noTasks(kind)))
         val sourceDirs = sourceDirs()
+        // a module that the source graph lacks, such as a file compiled alone, or one with no compiler to know it, has
+        // its directory from the source file that the launch names it by, since its binary no longer records one
+        // TODO: a launch that names the module only by name has no such file, so the debugger refuses each breakpoint
+        // in a module that the source graph lacks; that directory has to come from somewhere other than the graph
+        val moduleDir = XdkSources.file(target.module)?.parentFile?.path
         val token = UUID.randomUUID().toString()
         // IPv4's loopback address, which the agent's --debug options can name
         val server = ServerSocket(0, 1, InetAddress.getByName(LOOPBACK))
@@ -427,8 +434,9 @@ internal class EmbeddedRuns(
                 logger.info("run attached after {} started it: run={} module={}", kind.tool, runId, program.module)
                 ready
                     .toCompletableFuture()
-                    .thenCompose { setup -> program.debug(sourceDirs, setup) }
-                    .thenApply { program.module }
+                    .thenCompose { setup ->
+                        program.debug(moduleDir?.let { mapOf(program.module to it) + sourceDirs } ?: sourceDirs, setup)
+                    }.thenApply { program.module }
                     .whenComplete { _, failure -> if (failure != null && attached.remove(runId) != null) program.close() }
             }.whenComplete { _, failure -> if (failure != null) taskRuns.remove(runId)?.stop() }
     }
@@ -968,8 +976,13 @@ internal class EmbeddedRuns(
 
     /**
      * The workspace's own modules and the directory of each one's sources, by module name, for the debugger: it finds a
-     * module's files there rather than where the module records it was compiled, which may be another checkout or
-     * another machine, such as for a module from a build cache.
+     * module's files only where its host says, as a compiled module does not record where it was compiled.
+     *
+     * Only the source graph's modules are named, so the debugger refuses each breakpoint in a module that the graph
+     * lacks, such as a file compiled alone or a module outside an explicit graph, and in every module when the server
+     * runs without the compiler. A launch that names its module by a source file adds that module's directory
+     * ([launchWithTask]); one that names it only by name, and an [attach] to a program already running, have no file
+     * to take it from.
      */
     private fun sourceDirs(): Map<String, String> =
         compiler()?.sourceModuleInputs()?.associate { it.name to it.root.parentFile.path }.orEmpty()
