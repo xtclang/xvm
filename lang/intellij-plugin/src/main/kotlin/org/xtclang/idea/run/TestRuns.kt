@@ -86,7 +86,8 @@ internal class TestCommandLineState(
     environment: ExecutionEnvironment,
     private val command: GeneralCommandLine,
 ) : CommandLineState(environment) {
-    override fun startProcess(): ProcessHandler = OSProcessHandler(command).also(ProcessTerminatedListener::attach)
+    override fun startProcess(): ProcessHandler =
+        OSProcessHandler(command).also(ProcessTerminatedListener::attach).also { missingTask(it, environment.project) }
 
     override fun execute(
         executor: Executor,
