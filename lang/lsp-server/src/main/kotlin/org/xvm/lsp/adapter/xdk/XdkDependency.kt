@@ -35,6 +35,11 @@ class XdkDependency
         documentation: Map<Int, String> = emptyMap(),
         /** Emitted by the server's compiler from a source module, not read from a binary on disk. */
         internal val fromSource: Boolean = false,
+        /**
+         * The importable declarations of a workspace module that replaces a bundled library, which import suggestions
+         * offer instead of the bundle's ([XdkAutoImports]); none for any other module. The artifact's revision covers them.
+         */
+        internal val imports: List<XdkAutoImports.Target> = emptyList(),
     ) {
         /** By URI, in URI order, as the server's info lists them; a Map.copyOf's order changes with each JVM. */
         internal val documents: Map<String, ReadOnlyDocument> = Collections.unmodifiableMap(documents.toSortedMap())
@@ -47,7 +52,7 @@ class XdkDependency
 
         internal fun withSources(roots: List<File>): XdkDependency {
             val index = XdkAttachedSources.read(this, roots)
-            return XdkDependency(module, artifact, index.declarations, index.documents, index.documentation, fromSource)
+            return XdkDependency(module, artifact, index.declarations, index.documents, index.documentation, fromSource, imports)
         }
 
         val declarations: Map<Int, SemanticModel.SourceLocation> = immutableMap(declarations)
@@ -207,7 +212,17 @@ class XdkDependency
                                 ?.position
                                 ?.let { it to location }
                         }.toMap()
-                return XdkDependency(file.module.name, artifact, declarations, fromSource = true)
+                // a workspace module of a bundled library's name replaces the bundle's import suggestions with its own
+                val imports =
+                    if (file.module.name in XdkLibraries.moduleNames) {
+                        file.constantPool.constants
+                            .mapNotNull(XdkAutoImports::target)
+                            .filter { it.module == file.module.name }
+                            .distinct()
+                    } else {
+                        emptyList()
+                    }
+                return XdkDependency(file.module.name, artifact, declarations, fromSource = true, imports = imports)
             }
         }
     }

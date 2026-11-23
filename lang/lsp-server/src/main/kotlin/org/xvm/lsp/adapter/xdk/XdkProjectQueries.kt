@@ -1302,7 +1302,7 @@ internal class XdkProjectQueries(
         val packages = before.within(setOf(owner.uri)).packageImports
         val actions =
             names
-                .flatMap { XdkAutoImports.targets(it, before) }
+                .flatMap { XdkAutoImports.targets(it, before, replacedImports()) }
                 .distinct()
                 .take(32)
                 .mapNotNull { target ->
@@ -1808,6 +1808,18 @@ internal class XdkProjectQueries(
         declaration?.let { range ->
             declarationSource?.let { SemanticModel.SourceLocation(it, range) }
         }
+
+    /**
+     * The import targets of the libraries that the workspace's own modules replace, from the artifacts of their last
+     * successful compiles; only a workspace module compiled from source may have a library's name.
+     */
+    private fun replacedImports(): Map<String, List<XdkAutoImports.Target>> =
+        navigationIndex
+            .snapshot()
+            .builds.values
+            .mapNotNull { it.artifact }
+            .filter { it.fromSource && it.module in XdkLibraries.moduleNames }
+            .associate { it.module to it.imports }
 }
 
 /** Why `textDocument/rename` refuses a rename that also changes the configured source modules. */

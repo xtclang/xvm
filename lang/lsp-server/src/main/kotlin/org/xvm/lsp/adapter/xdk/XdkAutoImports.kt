@@ -36,22 +36,36 @@ internal object XdkAutoImports {
         val path: String,
     )
 
+    /**
+     * The import candidates named [name]: the compilation's own, and the libraries', where a library that the workspace
+     * replaces offers its own compiled declarations, [replaced] by module name, instead of the bundle's.
+     */
     fun targets(
         name: String,
         facts: CompilerRenameFacts,
+        replaced: Map<String, List<Target>> = emptyMap(),
     ): List<Target> =
-        (facts.imports.filter { it.name == name } + bundled[name].orEmpty())
+        (facts.imports.filter { it.name == name } + libraries(replaced)[name].orEmpty())
             .distinct()
             .sortedWith(compareBy(Target::module, Target::path))
 
     fun matchingTargets(
         prefix: String,
         facts: CompilerRenameFacts,
+        replaced: Map<String, List<Target>> = emptyMap(),
     ): List<Target> =
-        (facts.imports + bundled.filterKeys { it.startsWith(prefix) }.values.flatten())
+        (facts.imports + libraries(replaced).filterKeys { it.startsWith(prefix) }.values.flatten())
             .filter { it.name.startsWith(prefix) }
             .distinct()
             .sortedWith(compareBy(Target::name, Target::module, Target::path))
+
+    /** The libraries' targets by name: the bundle's, but a replaced library's from its workspace artifact. */
+    private fun libraries(replaced: Map<String, List<Target>>): Map<String, List<Target>> =
+        if (replaced.isEmpty()) {
+            bundled
+        } else {
+            (bundled.values.flatten().filter { it.module !in replaced } + replaced.values.flatten()).groupBy { it.name }
+        }
 
     internal fun target(constant: Constant): Target? {
         if (constant !is ClassConstant && constant !is TypedefConstant) return null

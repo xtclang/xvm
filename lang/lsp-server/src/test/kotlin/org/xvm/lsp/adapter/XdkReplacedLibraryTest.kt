@@ -3,8 +3,14 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
+import org.xvm.compiler.Source
+import org.xvm.lsp.adapter.xdk.CompilerRenameFacts
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkAutoImports
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 
 /**
@@ -38,6 +44,26 @@ class XdkReplacedLibraryTest {
             assertThat(apply(json, edit.changes.getValue(jsonUri))).isEqualTo(json.replace("Answer", "Reply"))
             assertThat(apply(app, edit.changes.getValue(appUri))).isEqualTo(app.replace("Answer", "Reply"))
         }
+    }
+
+    @Test
+    fun `import candidates for a replaced library come from the workspace's compiled library, not the bundle`() {
+        CompilerTestSupport.configure()
+        val errors = ErrorList()
+        val compilation =
+            EmbeddingSupport.instance().compileModule(Source("module json.xtclang.org { class WorkspaceOnly {} }", "json.x"), null, errors)
+        assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        // the server compiles a workspace module of a library's name from source, and indexes what it can import
+        val artifact = compilation.toDependency()
+        assertThat(artifact.imports.map { it.path }).containsExactly("WorkspaceOnly")
+        val facts = CompilerRenameFacts(emptyList(), emptyMap())
+        val replaced = mapOf(JSON to artifact.imports)
+        assertThat(XdkAutoImports.targets("WorkspaceOnly", facts, replaced).map { it.module }).containsExactly(JSON)
+        // the bundled json's Parser is not offered once the workspace replaces json, and the bundled xml's still is
+        assertThat(XdkAutoImports.targets("Parser", facts, replaced).map { it.module })
+            .doesNotContain(JSON)
+            .contains("xml.xtclang.org")
+        assertThat(XdkAutoImports.targets("Parser", facts).map { it.module }).contains(JSON)
     }
 
     private fun source(
