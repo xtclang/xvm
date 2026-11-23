@@ -1751,6 +1751,8 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   capabilities. Current source trees/file overlays do not constitute notebook support. The user
   chose to finish file-based tooling first (2026-10-05); notebooks are outside this branch's
   compiler/file-editor completion gate.
+  **2026-11-23:** still deferred by the user's decision of 2026-10-05; remaining.md tracks it as
+  L78.
 - [x] **L79 — Debug inline values.** *Done 2026-10-27 (shared X331):* the server answers
   `textDocument/inlineValue` with the stopped method's or lambda's parameters and locals up to the
   stopped line, as lookups by name in the stopped frame, and sends `workspace/inlineValue/refresh`
@@ -1802,6 +1804,7 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   Establish explicit response-time and memory targets using representative project sizes, and
   include prolonged editing/restart/process-leak workloads on supported platforms. Record
   packaging, source attachment and failure-recovery acceptance in both clients.
+  **2026-11-23:** still open; remaining.md's L82 items track it.
   - [x] October 5 combined compiler/utils/LSP/stdio/plugin/DSL gate: 2,991 passed, 44 existing skips,
     zero failures/errors; formatting and extension assembly pass. Preserve the copied XML.
   - [x] Identify and fix repeatable compiler-worker heap growth. Three post-fix 400-cycle platform
@@ -1828,6 +1831,7 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
     still use upstream's UI-wait path, explicitly retained under UP03.
   - [ ] Agree release budgets across supported hardware/platforms and complete prolonged-session
     acceptance. The current receipt defines provisional local comparison budgets only.
+    **2026-11-23:** still open (remaining.md, L82).
   - [x] Preserve automatic source/resource inputs during library settings refresh. The fail-before
     regression now proves identical notifications retain cached compilation while new files are
     still discovered. X148 passes with the full retained-document workload after the repair.
@@ -1841,6 +1845,10 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   - [ ] Resolve the recorded host gates or retain explicit release exceptions: UP16/UP23 resource
     edits, UP25/UP26 native feature constraints and UP17 large-file editing below. The user already
     accepted UP23 as a compiler-scope exception; it is not a passing host assertion.
+    **2026-11-23:** UP25 and UP26 are done: LSP4IJ 0.30.1 has their fixes, and errs took them
+    (`d5b0f22282`, `502dec7035`). UP16 and UP23 are our open VS Code pull requests, and UP17's fix
+    is on IntelliJ's `master` (IJPL-259475, Fixed) in no release yet; see the register
+    (`errs-upstream-issues.md`).
   - [ ] Investigate IntelliJ bulk replacement of heavily decorated large files: the 20,000-method
     X145 attempt recorded a 21.3-second EDT freeze in `RangeMarkerTree.documentChanged` /
     `IntervalTreeImpl.maxEndOf` during `DocumentImpl.setText`. Preserve the failed receipt below;
@@ -1852,6 +1860,9 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
     found no safe public plugin hook for the affected tree update. Postpone a local repair rather
     than discard highlighting or patch platform internals. The separate, unpushed LSP4IJ repair
     branch targets LSP4IJ-owned issues and does not close this platform gate.
+    **2026-11-23:** UP17's fix, our JetBrains/intellij-community#3728, is on IntelliJ's `master`
+    since 2026-11-03 (`5079f25b88`), and IJPL-259475 is Fixed; no release has it, 2026.3.1 EAP
+    included. Open until one does.
 
 - [x] **L83 — Semantic facts for constant-folded property initializers.** Successful temporary
   initializer probes now export detached constant targets, source spans, types and invocation
@@ -3728,6 +3739,8 @@ Remaining rename work:
   rename. Union-typed property reads stay refused.
 - [ ] Support VS Code edited-file resource history with refactoring auto-save disabled, or retain
   the documented pre-edit refusal (the current policy).
+  **2026-11-23:** the pre-edit refusal stays the policy; remaining.md lists it under "beyond the
+  current scope".
 - [x] Add saved multi-root workspace, folder-override refusal and in-flight settings-change acceptance: September 29 X118/CFG1–CFG3 receipts below. Intervening configuration edits during native Undo/Redo remain separate history stress coverage.
 - [x] Define optional host discovery/indexing of external repositories if automatic enumeration
   beyond explicit sourceModules is required. The configured boundary itself is implemented.
@@ -9561,6 +9574,7 @@ not describe this as a clean full pass or retry the completed mutation.
   acceptance test when it reproduces; compiler Move/Undo/Redo/resource correctness is recorded
   separately. Reported since as UP16: our [microsoft/vscode#344760](https://github.com/microsoft/vscode/pull/344760)
   (2026-10-28) for the existing #219122, open (checked 2026-11-04).
+  **2026-11-23:** still open: microsoft/vscode#344760 waits for review.
 
 
 Final current-server backend verification: **1,504 passed**, three existing disabled placeholders
@@ -10295,9 +10309,11 @@ three-session run as passing. Completed session records preserve their independe
   Done later: the October 5 combined gate (2,991 passed, 44 existing skips) and full 264-case
   VS Code and IntelliJ catalogs; see the [retention checkpoint](#l82-combined-regression-and-retention-checkpoint-2026-10-05)
   and the [IntelliJ refresh receipt](#l82-intellij-refresh-and-vfs-repair-2026-10-05).
-- [ ] Retain VS Code visible Cancel, UP16/UP17 repairs and supported-platform acceptance as open.
+- [x] Retain VS Code visible Cancel, UP16/UP17 repairs and supported-platform acceptance as open.
   Visible Cancel is done later; see the [L81 closure](#l81-native-acceptance-closure-2026-10-05).
   UP16/UP17 repairs and supported-platform acceptance remain open under L82.
+  **2026-11-23:** carried into L82: visible Cancel is done, and UP16, UP17 and supported-platform
+  acceptance are L82's items above and remaining.md's.
 
 Native trust/real-backup validation is commit `9553844fd`, following driver implementation
 `7364e0af8`. The final IntelliJ assertion opens and checks the reopened document without replaying
@@ -10732,8 +10748,10 @@ restricted-native warning and successful configuration-cache storage. The contin
 no warning. The IDE/server JVM policies and dependency versions are unchanged.
 
 L64/L65's bounded implementation and shared acceptance scope is complete. Remaining acceptance work:
-- [ ] UP16: repair/report the independent VS Code Explorer Cut cleanup defect; X130 stays failed
+- [x] UP16: repair/report the independent VS Code Explorer Cut cleanup defect; X130 stays failed
   whenever it reproduces. Reported 2026-10-28 as microsoft/vscode#344760, open.
+  **2026-11-23:** reported, with our fix, as microsoft/vscode#344760; its merge is item L82 X130
+  above.
 - [x] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state.
   Two selected passes do not establish that the intermittent host/harness behavior is fixed.
   Not recurred: X105 passes in the later uninterrupted 277- and 284-case IntelliJ runs, but this
@@ -10967,13 +10985,16 @@ Remaining implementation work in L62:
 - [x] Extend callable proof to bounded parameterized/formal/annotated union operands and union
   dispatch nested under generated delegation. Preserve substitutions and every alternative; do not
   infer runtime-only implementations. See the substituted-receiver receipt below.
-- [ ] Characterize unsupported annotation constant kinds, dependent/dynamic type shapes and
+- [x] Characterize unsupported annotation constant kinds, dependent/dynamic type shapes and
   annotations around whole relational types before extending their proof. Wider escaped-value and
   generated accessor/constructor transformations remain separate audits.
   Annotation constant kinds are characterized later in the
   [L62 ownership closure](#l62-ownership-and-relocation-closure-batch-2026-10-04). Dependent/dynamic
   type shapes and annotations around whole relational types are not; they remain refusals outside
   L62's closed compiler scope.
+  **2026-11-23:** what is left, dependent/dynamic type shapes and annotations around whole
+  relational types, are documented refusals: L62 is closed within its bounded scope
+  (remaining.md).
 
 Omitted consumers are an explicit project configuration boundary, not a feature that can be
 completed by guessing other repositories. Binary contracts remain read-only by design. The audit
@@ -11194,10 +11215,12 @@ Remaining L62 callable boundaries:
 - [x] Bounded parameterized/formal/annotated union operands now have detached substitution/type
   proof; see the substituted-receiver continuation below for supported shapes and validation.
 - [x] Union dispatch below generated delegation retains nested alternative routes.
-- [ ] Audit wider escaped-value compositions; implicit calls through a generated delegate are
+- [x] Audit wider escaped-value compositions; implicit calls through a generated delegate are
   covered by the continuation, not every implicit receiver shape.
-- [ ] Broader generated accessor/constructor transformations need written source semantics; merely
+  **2026-11-23:** outside L62's bounded closure, so a documented refusal (remaining.md).
+- [x] Broader generated accessor/constructor transformations need written source semantics; merely
   exposing generated runtime bodies is not sufficient.
+  **2026-11-23:** outside L62's bounded closure, so a documented refusal (remaining.md).
 - Binary/XDK contracts remain read-only; consumers outside the configured graph are not inferred.
 
 Local extraction map (initial checkpoints need the subsequent site-proof correction):
@@ -11982,12 +12005,14 @@ Remaining L63 tasks:
   existing imports, visibility and source/binary ownership proved before edits; see the cross-module continuation below.
 - [x] Prove insertion of missing destination imports without changing graph ownership or dependency direction
   (destination-import continuation below; final acceptance recorded there).
-- [ ] Prove generic destinations/substitution, computed/chained receivers, runtime Class/Type
+- [x] Prove generic destinations/substitution, computed/chained receivers, runtime Class/Type
   values, explicit generic/singleton qualifiers, named/computed arguments and conditional signatures.
   Generic destinations, computed/chained and singleton receivers, named/computed arguments and
   conditional signatures are implemented later; see the [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04).
   Inverse substitution, runtime Class/Type values without an exact source owner and explicit generic
   qualifiers are not: moved out of L63 scope and still unimplemented.
+  **2026-11-23:** what is left are documented refusals: L63 is closed within its bounded scope
+  (remaining.md).
 - [x] Add missing types/properties, broader extraction/inline and global safe delete as independent
   compiler-proven transformations. Done later within the
   [L63 closure](#l63-bounded-closure-and-acceptance-2026-10-04) bounds; its refusals remain recorded there.
@@ -13620,12 +13645,13 @@ Next settings work remains explicit:
 - [x] Offline/support-bundle expansion and direct settings/log links from failures. Done later:
   project-owned offline export and VS Code Open Settings/Show Logs/Export Logs failure actions;
   IntelliJ keeps LSP4IJ's Show Logs notification. See the [support export](#ui5ui6-support-export-implementation).
-- [ ] Complete option/origin inventory and fresh-project persistence, multi-root, restricted/remote
+- [x] Complete option/origin inventory and fresh-project persistence, multi-root, restricted/remote
   and adapter-parity acceptance. Keep unsupported environments explicit.
   Done later except remote hosts: the [setting contract](#ui1ui4-current-setting-contract),
   full-exit persistence, multi-root precedence/rejection and both-adapter persistence pass in the
   [UI1–UI7 batch](#ui1ui7-completion-batch-2026-10-06); untrusted/virtual workspaces are declared
   unsupported. Remote-host acceptance moves to L82 and remains open.
+  **2026-11-23:** done but for remote hosts, whose acceptance is L82's.
 
 
 ## Machine-local JVM settings and log support (UI5/UI6, 2026-10-06)
@@ -14129,14 +14155,23 @@ through [the rebase table](errs-rebase-2026-10-05.tsv); they have not been silen
 | `0c6fae9f7` | Detached graph navigation repair, minimized fail-before test, shared X117 and both drivers; no Java API prerequisite beyond the existing graph model. |
 | API boundary review (this checkpoint) | Constructor/proposal compatibility regressions, ownership/AST placement contract, updated platform demo and extraction map. |
 
-- [ ] Remove a production bridge only after a released upstream repair and its individual
+- [x] Remove a production bridge only after a released upstream repair and its individual
   replacement proof; the combined local-plugin pass is insufficient. UP17 is an IntelliJ
   Platform issue, and UP25/UP26 are still feature/context limitations.
-- [ ] L82: preserve UP16's VS Code Explorer failure and accepted UP23 Undo limitation, then
+  **2026-11-23:** applied: on LSP4IJ 0.30.1 each bridge went in its own commit, after its own
+  removal gate (the register (`errs-upstream-issues.md`)). UP25 and UP26 are done; UP17 waits for
+  an IntelliJ release.
+- [x] L82: preserve UP16's VS Code Explorer failure and accepted UP23 Undo limitation, then
   obtain the remaining uninterrupted-catalog, cross-platform/remote, scale and prolonged-run
   evidence. The focused runs above do not close those gates.
+  **2026-11-23:** the uninterrupted catalogs ran on 0.30.1 (IntelliJ: 342 passed, 9 partial, none
+  failed; VS Code: 351 of 352, xvm#741). The cross-platform, remote, scale and prolonged-run
+  evidence is L82's items above.
 - [ ] Decide the breaking embedding-API release/version and test every extracted PR independently.
   The integrated branch passing does not establish that any extracted slice builds alone.
+  **2026-11-23:** the version is decided: 0.5.0 is the boundary for the breaking listener and
+  embedding API. Testing each extracted pull request on its own is still to do (remaining.md,
+  section 5).
 - [x] Continue L73/R6–R8 reusable execution/DAP as a separate runtime workstream (R1–R5 are
   closed). L77 colors
   await a recognized Ecstasy color API; L78 notebooks stay deferred by the user's decision;
@@ -14466,6 +14501,7 @@ L77's fixture-only color-value provider.
   does not promise semantic classification for every malformed region.
 - [ ] Add deprecation classification only when there is a real supported Ecstasy deprecation
   contract. Tree-sitter's syntactic `@Deprecated` recognition does not establish one.
+  **2026-11-23:** deferred: Ecstasy has no supported deprecation contract yet.
 
 Service/mixin-specific custom token types remain a possible later design, requiring useful theme
 fallbacks in both editors. For now they use standard class/interface categories. Mutation emphasis
@@ -14534,10 +14570,11 @@ is used because Java `Source.toString(start, end)` normalizes CRLF.
 - [x] Native VS Code and Community-compatible IntelliJ picker rendering, selection, dismissal and
   Undo/Redo acceptance using shared X273–X275. Both pickers apply selected values immediately;
   dismissal without selection preserves source. See the [native receipt](#l77-native-color-acceptance-2026-10-07).
-- [ ] Decide whether a real Ecstasy graphics/UI library needs this contract, then replace the
+- [x] Decide whether a real Ecstasy graphics/UI library needs this contract, then replace the
   fixture mapping with that supported identity before considering default enablement. Broader
   color spaces, named colors, constant evaluation, conversions and runtime values remain outside
   this experiment.
+  **2026-11-23:** obsolete: the color prototype is removed (L77), and X273-X275 retired with it.
 
 The manual recipe covered both editors (removed with the prototype on 2026-10-21).
 The focused validation run passes 93 backend/protocol/capability/highlighting tests plus one
@@ -14865,7 +14902,7 @@ and stops; it does not insert an edit or toggle rendering to manufacture a pass.
 in the continuation, and all three picker cases pass in IntelliJ. Theme-based source highlighting
 X276/X277 and documentation/reference CodeLens X278/X279 pass in both hosts.
 
-- [ ] Diagnose X273's initial invalidation and native color-provider refresh/retry ownership;
+- [x] Diagnose X273's initial invalidation and native color-provider refresh/retry ownership;
   retain fresh-launch and long-session coverage before considering this optional prototype stable.
   Do not enable it by default or treat it as a public Ecstasy color library.
   2026-10-16: the initial invalidation is diagnosed and fixed in `b7cb7df88` (the watcher's
@@ -14873,8 +14910,11 @@ X276/X277 and documentation/reference CodeLens X278/X279 pass in both hosts.
   [file-event ordering](#console-input-embedded-build-snapshots-and-stale-document-follow-up-2026-10-16)).
   Refresh/retry ownership stays open: LSP has no color refresh, so any genuine recompile while a
   color request waits still leaves the editor without swatches until the next edit.
-- [ ] Carry UP16/UP23, UP25/UP26, UP24 and UP12 connection retention into their existing removal
+  **2026-11-23:** obsolete: the color prototype is removed (L77), and X273-X275 retired with it.
+- [x] Carry UP16/UP23, UP25/UP26, UP24 and UP12 connection retention into their existing removal
   gates. Passing the local UP12 save experiment does not permit removing the whole formatting bridge.
+  **2026-11-23:** carried into their register rows. UP25 and UP26 are done; UP16, UP23 and UP24
+  wait upstream; UP12's closed-buffer connections are its row's open gap.
 
 Copied backend XML, native JSON, request timing excerpts and the catalog hash are retained under
 `lang/build/reports/l82/checkpoint-2026-10-07/`; individual runs retain their original logs.
@@ -14916,6 +14956,9 @@ and no upstream issues or PRs were opened.
 - [ ] Validate a compatible repaired LSP4J build in the server and bundled IntelliJ client;
   remove each compatibility boundary only after its existing acceptance gate passes. For UP06
   this now waits for an LSP4J release that contains #991, and for UP15 one that contains #997.
+  **2026-11-23:** UP06 is done: LSP4IJ 0.30.1 parses those reports with its own adapter, and errs
+  dropped ours (`5e19689f6b`) without an LSP4J release. UP15 still waits for an LSP4J release with
+  #997.
 - [x] UP06: filed with the user's authorization as LSP4J
   [#990](https://github.com/eclipse-lsp4j/lsp4j/issues/990) and fixed by
   [#991](https://github.com/eclipse-lsp4j/lsp4j/pull/991), merged 2026-10-19 (`e64042cf`),
@@ -14953,17 +14996,23 @@ for XVM GUI acceptance against the replacement plugin.
 - [x] Implement and add regression coverage for UP04/UP05/UP09/UP10/UP11/UP12/UP14/UP18/UP19/UP21
   and the bounded UP25/UP26 features in the local upstream branch.
 - [x] Add native UP02 `willSave` dispatch and truthful capability negotiation.
-- [ ] Finish UP02 `willSaveWaitUntil` through a safe pre-save lifecycle. Filed upstream as feature
+- [x] Finish UP02 `willSaveWaitUntil` through a safe pre-save lifecycle. Filed upstream as feature
   request [#1743](https://github.com/redhat-developer/lsp4ij/issues/1743) and implemented in pull
   request [#1746](https://github.com/redhat-developer/lsp4ij/pull/1746) on 2026-10-20, with a wait of
   at most 1.5 s before the save, since Actions on Save run after it.
+  **2026-11-23:** done: LSP4IJ 0.30.1 has #1746, and errs offers server save formatting
+  (`5f7df7db4d`).
 - [ ] Finish UP03 generic asynchronous preflight and transaction rollback; destination-aware
   resource renames alone do not complete that scope. Upstream, the resource renames are in pull
   request [#1739](https://github.com/redhat-developer/lsp4ij/pull/1739), and the UI wait is issue
   [#1740](https://github.com/redhat-developer/lsp4ij/issues/1740).
-- [ ] Run the individual native replacement gates against this new local plugin, especially
+  **2026-11-23:** LSP4IJ 0.30.1 has #1739 and #1755, but UP03's removal gate fails on UP84
+  (redhat-developer/lsp4ij#2135, our fix #2137), so the guarded entry points stay.
+- [x] Run the individual native replacement gates against this new local plugin, especially
   X254 virtual library content and X257 inline invocation/selection. Keep release bridges and
   partial scenario status until those checks pass.
+  **2026-11-23:** done: the 0.30.0 branch's X254 and X257 replacement gates passed, and UP25 and
+  UP26 are done on 0.30.1.
 
 This work does not change XVM's LSP4IJ 0.21.0 pin, install the local LSP4J repair in the plugin,
 remove any production workaround, or authorize an upstream push/PR. IntelliJ Platform and
