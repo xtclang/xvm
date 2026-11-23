@@ -2819,6 +2819,7 @@ private fun Tour.settings() {
         // the first unexpected stop shows, once, in the Ecstasy editor, how to restart the server and see its log
         open(source("Eights.x"), 0)
         enableGotIt("xtc.serverStopped")
+        val traced = tracedServers()
         try {
             ProcessHandle.of(pid!!).ifPresent(ProcessHandle::destroyForcibly)
             expect(within(HANG) { serverState() != before }) { "The server still runs: ${serverState()}" }
@@ -2834,6 +2835,12 @@ private fun Tour.settings() {
         expect(within(HANG) { serverState().startsWith("started") && serverHasFile(source("Eights.x")) }) {
             "The server did not come back with Eights.x: ${serverState()}"
         }
+        // one server comes back: LSP4IJ 0.21.0 started another for each request while one initialized, up to 20, and
+        // two of them served the project at once, one never stopped (UP72); a server stopped before it wrote its trace
+        // is not seen in the traces, one that stays is among the processes
+        val back = serverState().substringAfter(' ')
+        expect(tracedServers() - traced == setOf(back)) { "Servers started after the kill: ${tracedServers() - traced}, serving: $back" }
+        expect(within(HANG) { serverProcesses() == "[$back]" }) { "Server processes: ${serverProcesses()}, serving: $back" }
         hasError(source("Eights.x"), "popCrd")
         restore()
     }
