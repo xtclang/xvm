@@ -493,6 +493,19 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   handler that carries the session over the language server connection (`69c2ff2f8`; X304 in
   IntelliJ `run-6846671860304618586`). LSP4IJ's DAP API is experimental, which Plugin Verifier reports
   without failing the build.
+- [ ] Closing a run hung once in CI after a stop that held a spinning service (2026-11-23, #693 at
+  `89870a4272`, run 45245467896): `SessionDebuggerTest`'s
+  `anotherServicesWaitingFiberHasItsVariablesAndStandsStillAndAStepEndsInTheSteppedFiber` failed at
+  `Await.run(control::close)`, after a step over and `resume()`, with the spinner meant to spin on. The
+  whole javatools test task took 3 minutes, so the watchdog did not find a livelock, which would have
+  taken 10 minutes: it found a deadlock, or a minute in which nothing used CPU, so the spinner no longer
+  spun while the close waited. The stop's wait (`waitWhile`) and `release()` both run under the
+  debugger's monitor and check `halt` again, so it is not a lost wakeup there. Not reproduced: alone 10
+  times, with every core busy 20 times, and the javatools suite with the language server's in parallel,
+  as CI runs them, 3 times, all passed. The CI run kept no javatools results, as its diagnostics step
+  copies none (nor on master), so the watchdog's verdict and thread dumps were lost. To do: have CI keep
+  javatools' test results, and read the dumps the next time it fails. Its other failure (2026-10-28,
+  `errs-integration-plan.md`) was a different line, a stop before `count` existed.
 
 ### R9–R13: debugger features beyond R7
 
