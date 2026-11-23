@@ -1037,8 +1037,28 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   filter.
 - [ ] UP82 ([#2129](https://github.com/redhat-developer/lsp4ij/issues/2129), our fix merged): Quick
   Documentation shows nothing when the hover answer takes more than 500 ms, as right after a start or
-  during a large compile. Only the tour retries (`// TODO LSP4IJ: UP82`). To do: an Ecstasy documentation
-  provider that waits longer, if it doesn't show the documentation twice beside LSP4IJ's own on 0.30.1.
+  during a large compile. Bridged in the plugin on 2026-11-23: `LateHoverDocumentation`, a documentation
+  target provider registered after LSP4IJ's, takes the hover request that LSP4IJ's provider made
+  (`getValidLSPFuture`), or asks again, as LSP4IJ's next Quick Documentation would, once LSP4IJ counts it as
+  outdated, which it does once any file of the project has changed since. When that request has its answer, LSP4IJ's targets show
+  it and the plugin's provider gives none; when it hasn't, LSP4IJ gave up, and the plugin's target shows
+  the answer once it comes. IntelliJ 2026.2.3 shows the targets of every provider (it collects them all), so
+  the documentation shows once. `LateHoverDocumentationTest` holds the stub server's answer until LSP4IJ
+  has stopped waiting: without the provider it gets no target, with it the late answer; an answer at once
+  shows once; and documentation that IntelliJ cancels while it waits leaves LSP4IJ's request alone. A first
+  version awaited the request itself, with kotlinx's `await`, which cancels what it waits for when its
+  coroutine is canceled: the tour's first hover after a restart then ended in an error. It awaits a stage of
+  its own now, and the third test fails with the old version. A second version still asked LSP4IJ for the
+  hover (`getHover`), which starts a new request, and cancels LSP4IJ's, whenever a file of the project has
+  changed since it asked, as right after a restart: the tour's first hover after a restart again ended in
+  an error, the cancel arriving 6 ms after the provider's call. A third version only took LSP4IJ's request,
+  and so showed nothing when LSP4IJ already counted it as outdated. The provider now takes LSP4IJ's request
+  while LSP4IJ counts it, and otherwise asks again, which cancels only an outdated request, as LSP4IJ does
+  itself; its target waits for the answer outside the read action, and asks again while LSP4IJ keeps counting
+  the answered request as outdated. The tour's first-hover check skips hovers that the client canceled
+  (RequestCancelled, -32800) and still fails on one the server rejected. The tour's second Ctrl+Q is gone. The provider uses five LSP4IJ internal APIs, reviewed
+  in `verifier-lsp4ij-apis.txt`. To do after 0.30.2: remove the provider, its registration and those
+  entries.
 - [ ] UP80 ([#2093](https://github.com/redhat-developer/lsp4ij/issues/2093), fixed upstream): a Go to
   Declaration, Implementation, Type Definition or References request that ends unanswered, canceled or
   failed shows "No … found". Only the playbook waits (`// TODO LSP4IJ: UP80`). To do: look for a plugin
