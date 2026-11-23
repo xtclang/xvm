@@ -1025,9 +1025,16 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   edit falls in the window. To do after 0.30.2: remove `OpenedTextRepair` and its registration in
   `XtcLanguageServerFactory`.
 - [ ] UP81 ([#2097](https://github.com/redhat-developer/lsp4ij/issues/2097), fixed upstream): when the server
-  stops with 100 or more closed documents, IntelliJ reports an IDE error (the playbook's X145 hit it). No
-  bridge yet. To do: a plugin workaround, such as clearing those documents' problems in batches before the
-  plugin's own restarts, or the reason none is possible.
+  stops with 100 or more closed documents, LSP4IJ 0.30.1 submits a read action per file at once to clear their
+  Project view marks, and IntelliJ logs "Too many non-blocking read actions submitted at once" as an IDE error.
+  The marks are cleared all the same: users see an error report, nothing stops working. Decided 2026-11-23: no
+  product bridge. The plugin could keep LSP4IJ from that clear (`canReportProblem` of its client features), but
+  would then have to clear the marks itself, without LSP4IJ's private check of a file's current errors, so a clear
+  that ran after the restarted server reported a file's errors would wipe them: worse than the logged error. The
+  playbook records this one error under `knownIdeFailures` in results.json instead of failing the run
+  (`PlaybookIde`, `// TODO LSP4IJ: UP81`); any other IDE error still fails it. The filter matches the error of the
+  full run of 2026-11-22 (`run-2421176764147966521`), which failed on it in X145. To do after 0.30.2: remove the
+  filter.
 - [ ] UP82 ([#2129](https://github.com/redhat-developer/lsp4ij/issues/2129), our fix merged): Quick
   Documentation shows nothing when the hover answer takes more than 500 ms, as right after a start or
   during a large compile. Only the tour retries (`// TODO LSP4IJ: UP82`). To do: an Ecstasy documentation
