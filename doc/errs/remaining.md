@@ -1005,6 +1005,38 @@ IntelliJ's UP24, and UP07's waits for a baseline. UP13 is LSP4IJ's extension poi
   **On 0.30.1:** `d01cd346a0`.
 - UP13 stays: the `createSettings` override is LSP4IJ's supported extension point.
 
+### LSP4IJ: fixed for 0.30.2, not released (UP80–UP83)
+
+The plugin ships against LSP4IJ 0.30.1, and 0.30.2 has no release date, so these four fixes are not yet in
+users' hands. Decided 2026-11-23: until 0.30.2 is out, the plugin works around each one well enough in the
+product itself, not only in the playbook, or the gap is recorded here; each workaround is tagged
+`// TODO LSP4IJ: UPxx` and goes once a release has the fix ([the register](errs-upstream-issues.md)).
+
+- [ ] UP83 ([#2126](https://github.com/redhat-developer/lsp4ij/issues/2126), our
+  [#2127](https://github.com/redhat-developer/lsp4ij/pull/2127), merged): an edit made while LSP4IJ connects
+  a file never reaches the server. Bridged in the plugin on 2026-11-23: `OpenedTextRepair` watches the
+  didOpen notifications that go to the server, and when one carried older text than the document now has,
+  sends the current text through the document's synchronizer, with LSP4IJ's next version. That works with
+  full text synchronization, the default. With incremental synchronization, which a user chooses in the
+  Ecstasy settings, the synchronizer can only send ranges, which cannot repair text the server does not
+  have: the plugin then logs a warning naming UP83, and the server's text stays wrong until the file is
+  opened again. Accepted as good enough until 0.30.2, rather than switching such users to full
+  synchronization. The tour's kill step no longer waits for the restarted server before its edit, so the
+  edit falls in the window. To do after 0.30.2: remove `OpenedTextRepair` and its registration in
+  `XtcLanguageServerFactory`.
+- [ ] UP81 ([#2097](https://github.com/redhat-developer/lsp4ij/issues/2097), fixed upstream): when the server
+  stops with 100 or more closed documents, IntelliJ reports an IDE error (the playbook's X145 hit it). No
+  bridge yet. To do: a plugin workaround, such as clearing those documents' problems in batches before the
+  plugin's own restarts, or the reason none is possible.
+- [ ] UP82 ([#2129](https://github.com/redhat-developer/lsp4ij/issues/2129), our fix merged): Quick
+  Documentation shows nothing when the hover answer takes more than 500 ms, as right after a start or
+  during a large compile. Only the tour retries (`// TODO LSP4IJ: UP82`). To do: an Ecstasy documentation
+  provider that waits longer, if it doesn't show the documentation twice beside LSP4IJ's own on 0.30.1.
+- [ ] UP80 ([#2093](https://github.com/redhat-developer/lsp4ij/issues/2093), fixed upstream): a Go to
+  Declaration, Implementation, Type Definition or References request that ends unanswered, canceled or
+  failed shows "No … found". Only the playbook waits (`// TODO LSP4IJ: UP80`). To do: look for a plugin
+  hook; probably recorded as a known gap until 0.30.2, the least harmful of the four.
+
 ### LSP4IJ: pull requests open
 
 - [x] Our open pull requests (checked 2026-11-04), filed 2026-11-04: [#1857](https://github.com/redhat-developer/lsp4ij/pull/1857)
