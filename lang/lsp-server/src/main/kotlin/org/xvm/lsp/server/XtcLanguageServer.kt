@@ -152,7 +152,10 @@ class XtcLanguageServer internal constructor(
     /** The client's requests the server has received and not yet answered, by their IDs, with their methods. */
     internal val openRequests = ConcurrentHashMap<Any, String>()
     internal val partialResults = PartialResults(client = { client })
-    private val embeddedRuns = EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = workerLimits))
+    private val embeddedRuns =
+        EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = workerLimits)) {
+            compilerSettings.get().folders.mapNotNull { XdkSources.file(it) }
+        }
     private val debugSessions = DebugSessions(embeddedRuns, { client })
 
     /** The heap the garbage collections leave in use and the compile queue's waits, which the status reports. */
