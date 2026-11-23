@@ -48,6 +48,9 @@ data class Diagnostic(
         /** A configured root declares a different module than its configured name. */
         const val PROJECT_MODULE = "PROJECT-MODULE"
 
+        /** A workspace module that replaces a bundled library has errors, which the server's own compiler may cause. */
+        const val REPLACED_LIBRARY = "REPLACED-LIBRARY"
+
         /** The editor sent changes the server could not apply, so its text no longer matches the editor's. */
         const val DOCUMENT_OUT_OF_SYNC = "DOCUMENT-OUT-OF-SYNC"
     }
