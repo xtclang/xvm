@@ -4,6 +4,7 @@ import com.intellij.codeInsight.actions.onSave.FormatOnSaveOptions
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.Balloon
@@ -66,6 +67,8 @@ class XtcLanguageServerFactory : LanguageServerFactory {
             logger.info(
                 "Creating Ecstasy LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}",
             )
+            // before the server starts, so that the didOpen of every file it opens is checked (UP83)
+            project.service<OpenedTextRepair>().listen()
         }
 
     override fun createLanguageClient(project: Project) = XtcLanguageClient(project)
