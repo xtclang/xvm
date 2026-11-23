@@ -277,7 +277,7 @@ internal fun Tour.script() {
     debugging()
     testing()
     settings()
-    coming()
+    withLsp4ij()
 }
 
 private fun Tour.start() {
@@ -2879,15 +2879,17 @@ private fun Tour.answers() {
     ui.compilesCleanly(source("Eights.x"))
 }
 
-private fun Tour.coming() {
-    section("Coming with LSP4IJ 0.30.0")
+// each of these is a playbook case on LSP4IJ 0.30.1, which the tour does not show: X308, X311, X312, X314, X317, X318,
+// X326 and X328–X331 for the debugger, X133 for linked editing
+private fun Tour.withLsp4ij() {
+    section("With LSP4IJ 0.30.1")
     card(
-        "Coming with LSP4IJ 0.30.0",
-        "The server already does these; the IDE shows them once it moves to LSP4IJ 0.30.0, and the tour adds them then.",
+        "With LSP4IJ 0.30.1",
+        "The debugger and editing features of the server that LSP4IJ 0.30.1's client brings to the IDE.",
         TourCard(
-            eyebrow = "COMING WITH LSP4IJ 0.30.0",
-            heading = "Already in the server, next in the IDE",
-            lead = "Features of the debug adapter and the language server that need LSP4IJ 0.30.0's client",
+            eyebrow = "WITH LSP4IJ 0.30.1",
+            heading = "More of the server, now in the IDE",
+            lead = "Features of the debug adapter and the language server that LSP4IJ 0.30.1's client shows",
             boxes =
                 listOf(
                     TourBox(
@@ -2900,7 +2902,11 @@ private fun Tour.coming() {
                         "Pause, restart a frame, inline values, hex display, paged values, the variables a console line " +
                             "changed, and loaded sources and modules.",
                     ),
-                    TourBox("Editing", "Linked editing: a name's occurrences change together as one is typed."),
+                    TourBox(
+                        "Editing",
+                        "Linked editing, on in Settings | Editor | General | Smart Keys: a local's occurrences change " +
+                            "together as one is typed.",
+                    ),
                 ),
         ),
     )
