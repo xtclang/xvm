@@ -21,7 +21,7 @@ import java.util.concurrent.CountDownLatch
  * plugin's client asks every started wrapper for its run lenses and tests as it refreshes, which started that one
  * again, and the stub's factory connected each start to the stub of the test then running, whose requests to the
  * client went to the latest connection: the disposed wrapper's, which answers nothing. So ClosedFileProblemsTest's
- * refresh once waited forever, and the four tests after it found two wrappers. LSP4IJ 0.30.0 starts no disposed wrapper
+ * refresh once waited forever, and the four tests after it found two wrappers. LSP4IJ 0.30.1 starts no disposed wrapper
  * again (#1873); the teardown still disposes the wrappers a test leaves.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
