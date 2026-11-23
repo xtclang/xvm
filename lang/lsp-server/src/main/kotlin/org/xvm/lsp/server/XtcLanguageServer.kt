@@ -142,6 +142,9 @@ class XtcLanguageServer internal constructor(
     ) : this(adapter, onExit, startupWarning, rescans, RunWorkerProcess.Limits())
 
     private val connectedClient = AtomicReference<LanguageClient?>()
+
+    /** The Gradle project of each source module that the applied build model names, as the client last heard them. */
+    private val gradleProjects = AtomicReference<Map<String, String>>(emptyMap())
     private val client: LanguageClient?
         get() = connectedClient.get()
 
@@ -479,6 +482,17 @@ class XtcLanguageServer internal constructor(
         logger.info("connect: connected to language client")
     }
 
+    /** Tells the client the Gradle projects of the build model's modules, none without a model, when they change. */
+    private fun gradleProjects(projects: Map<String, String>) {
+        if (gradleProjects.getAndSet(projects) == projects) return
+        // read when sent, under one lock, so the last one sent is the current map
+        CompletableFuture.runAsync {
+            synchronized(connectedClient) {
+                (client as? XtcLanguageClient)?.gradleProjects(GradleProjectsParams(gradleProjects.get()))
+            }
+        }
+    }
+
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
         supportsProgress.set(params.capabilities?.window?.workDoneProgress == true)
         clientPresentation.set(ClientPresentation.read(params))
@@ -499,8 +513,10 @@ class XtcLanguageServer internal constructor(
                     if (applyLibraryConfiguration(raw, folders, model)) {
                         // All source and binary inputs were validated and installed together.
                     } else if (model != null) {
+                        val inputs = model.resolve()
+                        gradleProjects(inputs.projects)
                         textDocumentService.refreshDependencies {
-                            adapter.replaceBuildInputs(model.resolve())
+                            adapter.replaceBuildInputs(inputs)
                         }
                     } else {
                         CompilerConfiguration
@@ -786,16 +802,19 @@ class XtcLanguageServer internal constructor(
                     updateResourceWatchers()
                 } else if (model != null) {
                     val inputs = model.resolve()
+                    gradleProjects(inputs.projects)
                     textDocumentService.refreshDependencies {
                         (adapter as XdkAdapter).replaceBuildInputs(inputs)
                     }
                     updateResourceWatchers()
                 } else if (CompilerConfiguration.automatic(raw)) {
+                    gradleProjects(emptyMap())
                     textDocumentService.refreshDependencies {
                         (adapter as XdkAdapter).discoverSourceModules()
                     }
                     updateResourceWatchers()
                 } else {
+                    gradleProjects(emptyMap())
                     CompilerConfiguration
                         .modules(raw, settings.folders)
                         ?.let(::replaceCompilerSourceModules)
@@ -817,6 +836,7 @@ class XtcLanguageServer internal constructor(
         val evaluated =
             model?.resolve()
                 ?: if (libraries.modulePath == null) CompilerConfiguration.buildModel(raw, includeExplicit = true)?.resolve() else null
+        gradleProjects(evaluated?.projects.orEmpty())
         val inputs =
             XdkBuildModel.Inputs(
                 explicit ?: if (model !=
@@ -1419,6 +1439,8 @@ class XtcLanguageServer internal constructor(
                 "compilerLibraries" to (adapter as? XdkAdapter)?.libraryConfiguration(),
                 // the bundled libraries that the workspace's own modules replace, as the XVM repository's replace them all
                 "replacedLibraries" to (adapter as? XdkAdapter)?.replacedLibraries().orEmpty().sorted(),
+                // the Gradle project of each source module, which the client runs its tasks in, from the build model
+                "gradleProjects" to gradleProjects.get().toSortedMap(),
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
                 // the runs it still tracks, builds, programs and test runs, which is none once each, and its program, ended
                 "embeddedRuns" to embeddedRuns.tracked(),

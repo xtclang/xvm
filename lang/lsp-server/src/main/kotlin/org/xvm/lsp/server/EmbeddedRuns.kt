@@ -120,6 +120,11 @@ data class ReplacedLibrariesParams(
     val libraries: List<String> = emptyList(),
 )
 
+/** `xtc/gradleProjects` parameters: the Gradle project that owns each source module, by module name, as its path in the build tree. */
+data class GradleProjectsParams(
+    val projects: Map<String, String> = emptyMap(),
+)
+
 data class RunOutputParams(
     val runId: String,
     val text: String,
@@ -183,6 +188,14 @@ interface XtcLanguageClient : LanguageClient {
      */
     @JsonNotification("xtc/replacedLibraries")
     fun replacedLibraries(params: ReplacedLibrariesParams) {}
+
+    /**
+     * The Gradle project of each source module that the workspace's imported build model names, each time they change:
+     * the client runs a module's `runXtc` and `testXtc` by their full path, such as `:xdk:lib-json:testXtc`, which in a
+     * composite build reaches the included build that a bare name does not. Empty without a build model.
+     */
+    @JsonNotification("xtc/gradleProjects")
+    fun gradleProjects(params: GradleProjectsParams) {}
 
     /**
      * Runs a debug session's module with its Gradle task or the xtc command, as [DebugTaskParams] says, and answers
