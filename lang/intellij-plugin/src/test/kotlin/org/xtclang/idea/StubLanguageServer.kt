@@ -28,6 +28,8 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentDiagnosticReport
+import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.Position
@@ -71,7 +73,8 @@ import java.util.concurrent.Future
  * item its documentation only then, as the real server does. With [diagnostics] it has a diagnostic provider with a
  * workspace report, as the real server does: a document's pull reports its [pulled] diagnostics, and the workspace
  * report has the [reported] ones. With [codeActions] it has a code action provider that resolves actions, as the real
- * server does, and offers none of its own: a test gives LSP4IJ the action that it resolves. The client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's
+ * server does, and offers none of its own: a test gives LSP4IJ the action that it resolves. With [hover] it has a hover
+ * provider, which answers as [hovers] says. The client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's
  * own. Each connection runs [connecting] as it starts, on LSP4IJ's thread, where a test can hold it. [LightEditor]
  * connects it as the Ecstasy server, with the plugin's own client features, so LSP4IJ's code runs as it does against
  * the real server.
@@ -83,6 +86,7 @@ class StubLanguageServer(
     val signature: SignatureHelp? = null,
     val diagnostics: Boolean = false,
     val codeActions: Boolean = false,
+    val hover: Boolean = false,
     val client: (Project) -> LanguageClientImpl = ::LanguageClientImpl,
     val connecting: () -> Unit = {},
 ) : LanguageServer,
@@ -117,6 +121,10 @@ class StubLanguageServer(
     @Volatile
     var resolve: (CodeAction) -> CodeAction = { it }
 
+    /** How the server answers textDocument/hover, which a test can answer when it chooses: by default, with none. */
+    @Volatile
+    var hovers: (HoverParams) -> CompletableFuture<Hover?> = { CompletableFuture.completedFuture(null) }
+
     /** How the server answers textDocument/rename: by default, with no edit. */
     @Volatile
     var renameEdit: (RenameParams) -> WorkspaceEdit? = { null }
@@ -140,6 +148,9 @@ class StubLanguageServer(
                     }
                     if (codeActions) {
                         setCodeActionProvider(CodeActionOptions().apply { resolveProvider = true })
+                    }
+                    if (hover) {
+                        setHoverProvider(true)
                     }
                 },
             ),
@@ -188,6 +199,11 @@ class StubLanguageServer(
         signatureLines += texts[params.textDocument.uri]?.lines()?.getOrNull(params.position.line).orEmpty()
         requests += "textDocument/signatureHelp"
         return CompletableFuture.completedFuture(signature)
+    }
+
+    override fun hover(params: HoverParams): CompletableFuture<Hover?> {
+        requests += "textDocument/hover"
+        return hovers(params)
     }
 
     override fun diagnostic(params: DocumentDiagnosticParams): CompletableFuture<DocumentDiagnosticReport> {

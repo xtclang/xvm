@@ -25,3 +25,12 @@ Internal interface com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleL
 Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleLSPMessage(org.eclipse.lsp4j.jsonrpc.messages.Message, org.eclipse.lsp4j.jsonrpc.MessageConsumer, com.redhat.devtools.lsp4ij.LanguageServerWrapper) : void
 Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleError(com.redhat.devtools.lsp4ij.LanguageServerWrapper, java.lang.Throwable) : void
 Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleStatusChanged(com.redhat.devtools.lsp4ij.LanguageServerWrapper) : void
+
+# LateHoverDocumentation (UP82): the hover at an offset, which LSP4IJ answers with the request its own documentation
+# provider made, and LSP4IJ's documentation targets of it once it has the answer, so that a hover that takes more
+# than 500 ms still shows. Remove with LateHoverDocumentation once a release has redhat-developer/lsp4ij#2130.
+Internal class com.redhat.devtools.lsp4ij.LSPFileSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getSupport(com.intellij.psi.PsiFile) : com.redhat.devtools.lsp4ij.LSPFileSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getHoverSupport() : com.redhat.devtools.lsp4ij.features.documentation.LSPHoverSupport
+Internal method com.redhat.devtools.lsp4ij.features.documentation.LSPDocumentationTargetProvider.getHoverTargets(com.intellij.psi.PsiFile, int) : java.util.List
+Internal method com.redhat.devtools.lsp4ij.features.documentation.LSPDocumentationTarget.getHtml() : java.lang.String
