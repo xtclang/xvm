@@ -337,9 +337,12 @@ public class XtcProjectDelegate {
         resolveXtcRuntimeExtension(project);
         resolveXtcTestExtension(project);
 
-        // This is all config phase. Warn if a project isn't versioned when the XTC plugin is applied, so that we
-        // are sure no skew/version conflicts exist for inter-module dependencies and cross publication.
-        checkProjectIsVersioned(project);
+        // Warn if a project isn't versioned, so that we are sure no skew/version conflicts exist for inter-module
+        // dependencies and cross publication. The check waits for the project's evaluation, which reads a version
+        // that the build script sets after applying the plugin. Gradle never evaluates the project it creates to
+        // generate the accessors of a precompiled script plugin that applies this plugin, so that project, which
+        // has no version, gets no warning.
+        checkProjectIsVersionedWhenEvaluated(project);
         createDefaultSourceSets(project);
         createXtcDependencyConfigs(project);
         registerModuleApiTransform(project);
@@ -922,6 +925,14 @@ public class XtcProjectDelegate {
 
     private static String requestToNotation(final ModuleVersionSelector request) {
         return String.format("%s:%s:%s", request.getGroup(), request.getName(), request.getVersion());
+    }
+
+    private void checkProjectIsVersionedWhenEvaluated(final Project project) {
+        if (project.getState().getExecuted()) {
+            checkProjectIsVersioned(project);
+        } else {
+            project.afterEvaluate(this::checkProjectIsVersioned);
+        }
     }
 
     private void checkProjectIsVersioned(final Project project) {
