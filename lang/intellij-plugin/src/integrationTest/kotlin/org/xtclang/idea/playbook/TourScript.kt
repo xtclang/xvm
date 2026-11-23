@@ -2831,15 +2831,14 @@ private fun Tour.settings() {
         } finally {
             dismissGotIt()
         }
-        // the open editor's next request starts the server again, which opens the file once it has initialized
+        // the open editor's next request starts the server again, which opens the file once it has initialized; the
+        // edit is made while it starts, before the file is open there, and must still reach it: on LSP4IJ 0.30.1 the
+        // plugin's OpenedTextRepair sends the text again when the didOpen was older (UP83)
         open(source("Eights.x"), 0)
-        // TODO LSP4IJ: UP83 — an edit before the file is open at the new server is lost: LSP4IJ opens it with the text
-        //  it took when it asked for the connection, and listens to the document only from then on. In
-        //  run-tour-7164529137914405705 the server opened Eights.x without the edit, and never got it
+        replace("return drawPile.popCard();", 0, "return drawPile.popCrd();")
         expect(within(HANG) { serverState().startsWith("started") && serverHasFile(source("Eights.x")) }) {
             "The server did not come back with Eights.x: ${serverState()}"
         }
-        replace("return drawPile.popCard();", 0, "return drawPile.popCrd();")
         hasError(source("Eights.x"), "popCrd")
         restore()
     }
