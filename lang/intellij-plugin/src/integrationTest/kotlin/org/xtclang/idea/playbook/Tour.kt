@@ -193,9 +193,11 @@ internal class Tour(
     fun test(name: String): String = file("src/test/x/$name")
 
     /**
-     * How the language server of process [pid] ended the first `textDocument/hover` request it got, as its trace says:
-     * `replied`, or `error` for one it rejected; null until that request has ended. A line still being written does
-     * not parse, and is read the next time.
+     * How the language server of process [pid] ended the first `textDocument/hover` request it got that the client did
+     * not cancel, as its trace says: `replied`, or `error` for one it rejected; null until that request has ended. A
+     * request the client canceled ends with RequestCancelled (-32800): LSP4IJ cancels a hover it counts as outdated
+     * once a file of the project has changed, as often right after a restart, and asks again. A line still being
+     * written does not parse, and is read the next time.
      */
     fun firstHover(pid: String): String? {
         val files =
@@ -207,8 +209,12 @@ internal class Tour(
                 .flatMap { it.readText().lines() }
                 .mapNotNull { line -> runCatching { JsonParser.parseString(line).asJsonObject }.getOrNull() }
                 .filter { it["kind"]?.asString == "lsp-request" && it["operation"]?.asString == "textDocument/hover" }
-        val first = hovers.firstOrNull { it["event"]?.asString == "start" }?.get("id") ?: return null
-        return hovers.firstOrNull { it["id"] == first && it["event"]?.asString == "end" }?.get("outcome")?.asString
+        val ends = hovers.filter { it["event"]?.asString == "end" }.associateBy { it["id"] }
+        for (start in hovers.filter { it["event"]?.asString == "start" && it["direction"]?.asString == "from-client" }) {
+            val end = ends[start["id"]] ?: return null
+            if (end["errorCode"]?.asInt != REQUEST_CANCELLED) return end["outcome"]?.asString
+        }
+        return null
     }
 
     fun section(name: String) {
@@ -1361,3 +1367,6 @@ internal fun TourProbe.frameNames(): List<String> =
         .parseString(frames())
         .asJsonArray
         .map { it.asJsonObject["name"].asString }
+
+/** LSP's RequestCancelled: the error a request ends with when the client cancels it. */
+private const val REQUEST_CANCELLED = -32800

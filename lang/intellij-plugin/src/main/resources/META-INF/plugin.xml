@@ -212,6 +212,11 @@
         <!-- Probe active editor delegates in the sandbox so we can verify registration -->
         <postStartupActivity implementation="org.xtclang.idea.editor.XtcEditorStartupActivity"/>
 
+        <!-- Quick Documentation of a hover that takes LSP4IJ 0.30.1 longer than 500 ms (UP82): after LSP4IJ's -->
+        <platform.backend.documentation.targetProvider id="xtcLateHoverDocumentation"
+                                                       implementation="org.xtclang.idea.lsp.LateHoverDocumentation"
+                                                       order="after LSPDocumentationTargetProvider"/>
+
     </extensions>
 
     <!-- LSP4IJ Language Server registration -->
