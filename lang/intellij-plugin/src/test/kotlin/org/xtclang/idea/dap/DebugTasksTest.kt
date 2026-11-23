@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.xtclang.idea.lsp.DebugTaskParams
 import org.xtclang.idea.lsp.ServerTest
 import org.xtclang.idea.lsp.TestSelector
+import org.xtclang.idea.run.XtcBuildSettings
 import org.xtclang.idea.run.XtcRunConfiguration
 
 /**
@@ -38,6 +39,35 @@ class DebugTasksTest {
         assertThat(plain.parametersList.list)
             .containsExactly("-q", "runXtc", "--mode=ATTACHED", "--module=App", "-PxtcDebug=connect:127.0.0.1:5005,suspend,token=t")
         assertThat(DebugTasks.commandLine(params.copy(buildMode = "gradle")).parametersList.list).contains("runXtc")
+    }
+
+    @Test
+    fun `a module's task is its Gradle project's, as the imported model names it, which reaches a composite's included build`() {
+        val params =
+            DebugTaskParams(
+                sessionId = "s",
+                module = "json.xtclang.org",
+                method = null,
+                args = emptyList(),
+                debug = "connect:127.0.0.1:5005,suspend,token=t",
+            )
+        val projects = mapOf("json.xtclang.org" to ":xdk:lib-json", "App" to ":")
+        assertThat(DebugTasks.commandLine(params, projects).parametersList.list)
+            .containsExactly(
+                "-q",
+                ":xdk:lib-json:runXtc",
+                "--mode=ATTACHED",
+                "--module=json.xtclang.org",
+                "-PxtcDebug=connect:127.0.0.1:5005,suspend,token=t",
+            )
+        assertThat(DebugTasks.commandLine(params.copy(tests = emptyList()), projects).parametersList.list)
+            .startsWith("-q", ":xdk:lib-json:testXtc", "--mode=ATTACHED", "--module=json.xtclang.org")
+        // a root project's task, and the bare name for a module that no model names
+        assertThat(DebugTasks.commandLine(params.copy(module = "App"), projects).parametersList.list).contains(":runXtc")
+        assertThat(DebugTasks.commandLine(params.copy(module = "Other"), projects).parametersList.list).contains("runXtc")
+        // every test module: each project's testXtc, or the bare name without a model
+        assertThat(XtcBuildSettings.gradleTasks(projects, "testXtc")).containsExactly(":testXtc", ":xdk:lib-json:testXtc")
+        assertThat(XtcBuildSettings.gradleTasks(emptyMap(), "testXtc")).containsExactly("testXtc")
     }
 
     @Test
