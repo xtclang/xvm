@@ -10,6 +10,7 @@ import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.CodeActionCompiles
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.adapter.RenameRefused
 import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
@@ -355,13 +356,21 @@ internal class XdkProjectQueries(
 
     fun referenceLenses(uri: String) = navigation()?.referenceLenses(uri).orEmpty()
 
-    /** Rename ordinary source methods and their complete compiler override family in this graph. */
+    /**
+     * Rename ordinary source methods and their complete compiler override family in this graph. A rename that also
+     * changes the configured source modules is refused with [RenameRefused]: a [WorkspaceEdit] can't change them, and
+     * only [renameProposal], which `xtc/rename` answers, carries them.
+     */
     fun rename(
         uri: String,
         line: Int,
         column: Int,
         name: String,
-    ): WorkspaceEdit? = renameProposal(uri, line, column, name)?.takeIf { it.sourceModules == null }?.edit
+    ): WorkspaceEdit? =
+        renameProposal(uri, line, column, name)?.let { proposal ->
+            if (proposal.sourceModules != null) throw RenameRefused(SOURCE_MODULES_RENAME)
+            proposal.edit
+        }
 
     fun renameProposal(
         uri: String,
@@ -1800,3 +1809,9 @@ internal class XdkProjectQueries(
             declarationSource?.let { SemanticModel.SourceLocation(it, range) }
         }
 }
+
+/** Why `textDocument/rename` refuses a rename that also changes the configured source modules. */
+private const val SOURCE_MODULES_RENAME =
+    "This rename also changes the configured source modules (xtc.compiler.sourceModules), which " +
+        "textDocument/rename can't update; rename it in a client that sends xtc/rename, " +
+        "such as the Ecstasy plugins for IntelliJ and VS Code"
