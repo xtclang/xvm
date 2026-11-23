@@ -43,6 +43,18 @@ internal class PlaybookIde(
     val lsp4ijVersion: String = localLsp4ij?.version ?: System.getProperty("xtc.playbook.lsp4ijVersion")
     val ideFailures = CopyOnWriteArrayList<String>()
 
+    /** The IDE errors that fail a run: [ideFailures] but the known ones, which a run still records. */
+    val unexpectedIdeFailures: List<String> get() = ideFailures.filterNot(::isKnown)
+
+    /** The IDE errors of [ideFailures] that come from a known, unreleased upstream fix, and do not fail a run. */
+    val knownIdeFailures: List<String> get() = ideFailures.filter(::isKnown)
+
+    // TODO LSP4IJ: UP81 — LSP4IJ 0.30.1, stopping a language server that held 100 or more closed documents, submits a read
+    //  action for each of their files at once, which IntelliJ logs as an error (redhat-developer/lsp4ij#2097, fixed by
+    //  our #2101 for 0.30.2). The files' problem marks are cleared all the same, so a run records it without failing
+    private fun isKnown(failure: String) =
+        "Too many non-blocking read actions submitted at once" in failure && "LSPDiagnosticUtils" in failure
+
     /**
      * Starts the IDE [phases] times, each time running [body] with its driver and then closing it. [options] are
      * further files of the IDE's `options` directory, by name, such as a tour's editor settings.

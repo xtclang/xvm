@@ -199,7 +199,6 @@ class CompilerPlaybookTest {
         val localLsp4ij = ide.localLsp4ij
         val lsp4ijChannel = ide.lsp4ijChannel
         val lsp4ijVersion = ide.lsp4ijVersion
-        val ideFailures = ide.ideFailures
         val selection =
             System
                 .getProperty("xtc.playbook.cases", "")
@@ -228,7 +227,7 @@ class CompilerPlaybookTest {
         try {
             ide.run(if (mode == PlaybookMode.SETTINGS_PERSISTENCE) 2 else 1) { phase -> cases.run(this, phase) }
             Files.writeString(run.resolve(".completed"), "IDE closed\n")
-            check(ideFailures.isEmpty()) { ideFailures.joinToString("\n\n") }
+            check(ide.unexpectedIdeFailures.isEmpty()) { ide.unexpectedIdeFailures.joinToString("\n\n") }
         } finally {
             val report =
                 mapOf(
@@ -258,7 +257,8 @@ class CompilerPlaybookTest {
                     "counts" to cases.results.groupingBy { it.status }.eachCount(),
                     "scope" to
                         "Native IntelliJ actions with Ultimate disabled. Partial and unimplemented cases are explicit; manual visual checks remain separate.",
-                    "ideFailures" to ideFailures.toList(),
+                    "ideFailures" to ide.unexpectedIdeFailures,
+                    "knownIdeFailures" to ide.knownIdeFailures,
                 )
             Files.writeString(
                 run.resolve("results.json"),
