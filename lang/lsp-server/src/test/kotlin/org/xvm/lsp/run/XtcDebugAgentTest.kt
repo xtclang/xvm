@@ -190,6 +190,43 @@ class XtcDebugAgentTest {
     }
 
     @Test
+    fun `an attach finds the program's module in the workspace's folders when no source graph names it`() {
+        launch(LOOPED, "listen:127.0.0.1:0,suspend").use { program ->
+            val client = DebugClient()
+            // no compiler, so no source graph: only the workspace's folders have the module's directory
+            val folder = File(program.source).parentFile
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT) { listOf(folder) }
+            DebugSessions(runs, { client }).use { sessions ->
+                val id = sessions.start().sessionId
+                sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+                sessions.request(id, 2, "attach", """{"port": ${program.port()}}""")
+                sessions.request(
+                    id,
+                    3,
+                    "setBreakpoints",
+                    """{"source": {"path": "${program.source}"}, "breakpoints": [{"line": $LOOP_LINE}]}""",
+                )
+                sessions.request(id, 4, "configurationDone")
+                // a refused breakpoint is a breakpoint event too, and then no stop comes
+                val installed =
+                    client
+                        .until(id) { it.event == "breakpoint" }
+                        .last()["body"]
+                        .asJsonObject["breakpoint"]
+                        .asJsonObject
+                assertThat(installed["verified"].asBoolean).describedAs(installed.toString()).isTrue()
+                val stopped = client.until(id) { it.event == "stopped" }.last()["body"].asJsonObject
+                assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
+
+                sessions.request(id, 5, "disconnect")
+                client.until(id) { it.event == "terminated" }
+                assertThat(program.exit()).isEqualTo(0)
+                assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
     fun `a Gradle launch has the client run the program, which connects, stops at a breakpoint and exits`() {
         TaskClient(LOOPED).use { client ->
             val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
@@ -219,6 +256,43 @@ class XtcDebugAgentTest {
                 val program = client.programs.single()
                 assertThat(program.exit()).isEqualTo(0)
                 assertThat(program.output).contains("sum 3")
+                assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
+    fun `a Gradle launch that names its module only by name finds it in the workspace's folders`() {
+        TaskClient(LOOPED).use { client ->
+            val folder = directory.toRealPath().toFile()
+            // no compiler, so no source graph, and no source file in the launch: only the workspace's folders
+            val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT) { listOf(folder) }
+            DebugSessions(runs, { client }).use { sessions ->
+                val id = sessions.start().sessionId
+                val source = File(folder, "Looped.x").path
+                sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+                sessions.request(id, 2, "launch", """{"module": "Looped", "buildMode": "gradle"}""")
+                sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": [{"line": $LOOP_LINE}]}""")
+                sessions.request(id, 4, "configurationDone")
+                // a refused breakpoint is a breakpoint event too, and then no stop comes
+                val installed =
+                    client.messages
+                        .until(id) { it.event == "breakpoint" }
+                        .last()["body"]
+                        .asJsonObject["breakpoint"]
+                        .asJsonObject
+                assertThat(installed["verified"].asBoolean).describedAs(installed.toString()).isTrue()
+                val stopped =
+                    client.messages
+                        .until(id) { it.event == "stopped" }
+                        .last()["body"]
+                        .asJsonObject
+                assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
+
+                sessions.request(id, 5, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": []}""")
+                sessions.request(id, 6, "continue", """{"threadId": ${stopped["threadId"].asInt}}""")
+                val end = client.messages.until(id) { it.event == "terminated" }
+                assertThat(end.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isZero()
                 assertThat(runs.tracked()).isZero()
             }
         }
