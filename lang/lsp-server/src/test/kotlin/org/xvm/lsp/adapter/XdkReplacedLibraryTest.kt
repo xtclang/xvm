@@ -11,6 +11,8 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkAutoImports
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.awaited
+import org.xvm.lsp.model.Diagnostic
 import java.nio.file.Path
 
 /**
@@ -64,6 +66,20 @@ class XdkReplacedLibraryTest {
             .doesNotContain(JSON)
             .contains("xml.xtclang.org")
         assertThat(XdkAutoImports.targets("Parser", facts).map { it.module }).contains(JSON)
+    }
+
+    @Test
+    fun `a workspace library with errors says that the server's compiler may be older than the repository's`() {
+        source("json", "module json.xtclang.org { Missing value; }")
+        source("xml", "module xml.xtclang.org {}")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val reports = adapter.workspaceDiagnosticsAsync().awaited().flatMap { it.diagnostics }
+
+            fun codes(module: String) = reports.filter { it.location.uri.endsWith("/$module.x") }.map { it.code }
+            assertThat(codes("json")).contains(Diagnostic.Codes.REPLACED_LIBRARY)
+            assertThat(codes("xml")).doesNotContain(Diagnostic.Codes.REPLACED_LIBRARY)
+        }
     }
 
     private fun source(
