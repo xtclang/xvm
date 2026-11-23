@@ -6,6 +6,7 @@ import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.FileEditorManager
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.getToolWindow
@@ -1239,6 +1240,33 @@ internal fun ParityScenarios.platformCases() {
         replace(document, data.string("source"))
         clean(document)
         check(ranges(data.string("anchor"))?.size() == 2)
+
+        // as a user types with linked editing on: at the end of a local's declaration, its use follows, and the other
+        // method's local of the same name does not
+        with(driver) {
+            val linking = utility(LinkedEditingProbe::class)
+            val editor = document.editor
+            focusEditor(editor)
+            val was = withContext(OnDispatcher.EDT) { linking.linkedEditing(true) }
+            try {
+                val uses = data.strings("uses").map { data.string("source").indexOf(it) }
+                val name = data.string("anchor").length
+                withContext(OnDispatcher.EDT) { linking.moveCaret(editor.editor, uses.first() + name) }
+
+                fun linked() = withContext(OnDispatcher.EDT) { linking.ranges(editor.editor) }
+                awaitUi("LSP4IJ links the ranges at the caret", HANG_LIMIT) { linked().isNotEmpty() }
+                val expected = uses.map { listOf(it, it + name) }
+                check(JsonParser.parseString(linked()).asJsonArray.map { range -> range.asJsonArray.map { it.asInt } } == expected) {
+                    "Linked ranges ${linked()}, expected $expected"
+                }
+                withContext(OnDispatcher.EDT) { utility(TypingProbe::class).type(editor.editor, data.string("typed")) }
+                check(document.text == data.string("typedSource")) { "After typing: ${document.text}" }
+            } finally {
+                withContext(OnDispatcher.EDT) { linking.linkedEditing(was) }
+            }
+        }
+        replace(document, data.string("source"))
+        clean(document)
     }
     case("X134") { data ->
         val external = Files.createTempDirectory("xtc-playbook-source-").toRealPath()
@@ -1321,4 +1349,17 @@ interface FileTreeOperations {
     )
 
     fun loadDirectory(path: String)
+}
+
+/** LSP4IJ's linked editing in an editor, turned on as in Smart Keys; see the IDE-side probe. */
+@Remote("org.xtclang.idea.playbook.probe.LinkedEditingUi", plugin = "org.xtclang.playbook.probe")
+interface LinkedEditingProbe {
+    fun linkedEditing(on: Boolean): Boolean
+
+    fun moveCaret(
+        editor: Editor,
+        offset: Int,
+    )
+
+    fun ranges(editor: Editor): String
 }
