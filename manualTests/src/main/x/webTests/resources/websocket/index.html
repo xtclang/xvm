@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WebSocket Hello</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; max-width: 42rem; margin: 4rem auto; padding: 0 1rem; }
+    #messages { min-height: 16rem; max-height: 26rem; overflow: auto; padding: 1rem; background: #f4f5f7; border-radius: .5rem; }
+    form { display: flex; gap: .5rem; margin-top: 1rem; }
+    input, button { font: inherit; padding: .65rem; }
+    input { flex: 1; min-width: 0; }
+    #status { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>WebSocket Hello</h1>
+  <p>Open this page in another tab to join the same room.</p>
+  <p id="status" role="status">Connecting…</p>
+  <div id="messages" role="log" aria-live="polite"></div>
+  <form>
+    <input id="message" aria-label="Message" maxlength="4096" placeholder="Write a message" required>
+    <button disabled>Send</button>
+  </form>
+  <script>
+    const status = document.querySelector('#status');
+    const log = document.querySelector('#messages');
+    const input = document.querySelector('#message');
+    const button = document.querySelector('button');
+    const socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/socket`);
+    socket.onopen = () => { status.textContent = 'Connected'; button.disabled = false; input.focus(); };
+    socket.onmessage = event => {
+      const line = document.createElement('p');
+      line.textContent = event.data;
+      log.append(line);
+      log.scrollTop = log.scrollHeight;
+    };
+    socket.onclose = () => { status.textContent = 'Disconnected'; button.disabled = true; };
+    socket.onerror = () => { status.textContent = 'Connection failed'; button.disabled = true; };
+    document.querySelector('form').onsubmit = event => {
+      event.preventDefault();
+      if (socket.readyState === WebSocket.OPEN && input.value.trim()) {
+        socket.send(input.value);
+        input.value = '';
+      }
+    };
+    window.addEventListener('pagehide', () => socket.close());
+  </script>
+</body>
+</html>

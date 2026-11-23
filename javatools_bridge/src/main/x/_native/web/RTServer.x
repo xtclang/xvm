@@ -12,8 +12,10 @@ import libnet.Uri;
 
 import libweb.Header;
 import libweb.HttpMethod;
+import libweb.HttpStatus;
 import libweb.Protocol;
 import libweb.Scheme;
+import libweb.WebSocket;
 
 import libweb.http.HostInfo;
 
@@ -180,6 +182,29 @@ service RTServer
         }
     }
 
+    // ----- WebSocket support ---------------------------------------------------------------------
+
+    /**
+     * Upgrade a request and connect the application socket to its native implementation.
+     *
+     * @return True if the request was upgraded and the socket was connected
+     */
+    Boolean upgradeWebSocket(RequestContext context, WebSocket<String|Byte[]> socket,
+                             String? protocol, Int maxMessageSize, String[] headerNames,
+                             String[] headerValues) {
+        if (Object socketContext ?=
+                upgradeWebSocketImpl(context, protocol, maxMessageSize, headerNames, headerValues)) {
+
+            // the caller's WebSocket type may be wider than the endpoint's actual Message type
+            Type<String|Byte[]> messageType = socket.Message;
+            connectWebSocket(socketContext,
+                    new RTWebSocket<messageType.DataType>(this, socketContext, protocol, maxMessageSize,
+                            socket.as(WebSocket<messageType.DataType>)));
+            return True;
+        }
+        return False;
+    }
+
     // ----- request handling ----------------------------------------------------------------------
 
     /**
@@ -209,7 +234,9 @@ service RTServer
         conditional Byte[] getBodyBytes();
         Boolean containsNestedBodies();
         void observe(function void(Int) notify);
-        void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body);
+        void upgradeWebSocket(WebSocket<String|Byte[]> socket, String? protocol, Int maxMessageSize,
+                              String[] headerNames, String[] headerValues);
+        void respond(HttpStatus|Int status, String[] headerNames, String[] headerValues, Byte[]|String body);
         void setHeaders(Int status, String[] headerNames, String[] headerValues, Int responseLength);
         void setBodyBytes(Byte[] bytes);
         void streamBodyBytes(BinaryInput source);
@@ -233,6 +260,12 @@ service RTServer
     void setHeaders(RequestContext context, Int status, String[] headerNames, String[] headerValues,
                     Int responseLength)                                                              = TODO("Native");
     void setBodyBytes(RequestContext context, Byte[] bytes, Boolean final)                           = TODO("Native");
+    Object? upgradeWebSocketImpl(RequestContext context, String? protocol, Int maxMessageSize,
+                                 String[] headerNames, String[] headerValues)                        = TODO("Native");
+    void connectWebSocket(Object context, WebSocket socket)                                          = TODO("Native");
+    void sendWebSocket(Object context, String|Byte[] message)                                        = TODO("Native");
+    Boolean isWebSocketOpen(Object context)                                                          = TODO("Native");
+    void closeWebSocket(Object context, UInt16 code, String reason)                                  = TODO("Native");
     private void closeImpl()                                                                         = TODO("Native");
 
     // ----- internal classes ----------------------------------------------------------------------

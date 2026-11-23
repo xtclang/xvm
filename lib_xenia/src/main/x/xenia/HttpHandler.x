@@ -1,6 +1,5 @@
 import crypto.Decryptor;
 
-import web.HttpStatus;
 import web.Registry;
 
 import web.http.HostInfo;
@@ -103,7 +102,7 @@ service HttpHandler
     @Override
     void handle(RequestInfo request) {
         if (closing) {
-            request.respond(HttpStatus.Gone.code, [], [], []);
+            request.respond(Gone, [], [], []);
             return;
         }
 
@@ -115,7 +114,7 @@ service HttpHandler
                 @Inject Console console;
                 console.print($"HttpHandler: unhandled exception for {request.uriString.quoted()}: {e}");
 
-                request.respond(HttpStatus.InternalServerError.code, [], [], []);
+                request.respond(InternalServerError, [], [], []);
             }
             busy[index] = False;
         });
