@@ -2,10 +2,11 @@ package org.xvm.runtime.template._native.web;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
+
+import java.nio.ByteBuffer;
 
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -670,11 +671,7 @@ public class xRTServer
         boolean           fFinal = ((BooleanHandle) ahArg[2]).get();
 
         byte[]                  abBody = xByteArray.getBytes(hBody);
-        CompletableFuture<Void> cf     = frame.f_context.f_container.scheduleIO(() -> {
-            hCtx.writeBody(abBody, fFinal);
-            return null;
-        });
-
+        CompletableFuture<Void> cf     = hCtx.writeBody(abBody, fFinal);
         return frame.waitForIO(cf, frameCaller -> {
             try {
                 cf.get();
@@ -763,10 +760,7 @@ public class xRTServer
             if (fStarted) {
                 hCtx.complete(t);
             } else {
-                f_context.f_container.scheduleIO(() -> {
-                    hCtx.writeBody(Handy.EMPTY_BYTE_ARRAY, true);
-                    return null;
-                });
+                hCtx.writeBody(Handy.EMPTY_BYTE_ARRAY, true);
             }
         }
 
@@ -1077,41 +1071,37 @@ public class xRTServer
         }
 
         /**
-         * Write response body bytes using Jetty's blocking output stream. A final write closes the
-         * stream and completes the HTTP exchange.
+         * Write response body bytes asynchronously. A final write completes the HTTP exchange.
          *
          * @param ab      the response body bytes
          * @param fFinal  true if this is the last write
+         *
+         * @return a future completed when the write finishes
          */
-        protected void writeBody(byte[] ab, boolean fFinal)
-                throws IOException {
+        protected CompletableFuture<Void> writeBody(byte[] ab, boolean fFinal) {
+            CompletableFuture<Void> cf = new CompletableFuture<>();
             try {
-                OutputStream out;
                 synchronized (this) {
-                    if (m_stage != Stage.HEADERS_SET || m_fWriting) {
+                    if (m_stage != Stage.HEADERS_SET) {
                         throw new IOException("Invalid HTTP response write");
                     }
-                    if (m_out == null) {
-                        m_out = Content.Sink.asOutputStream(f_response);
-                    }
-                    out        = m_out;
-                    m_fWriting = true;
-                    m_stage    = fFinal ? Stage.FINAL_WRITE_PENDING : Stage.HEADERS_SET;
+                    m_stage = fFinal ? Stage.FINAL_WRITE_PENDING : Stage.HEADERS_SET;
                 }
-
-                try {
-                    out.write(ab);
-                    if (fFinal) {
-                        out.close();
-                        complete(null);
-                    }
-                } finally {
-                    m_fWriting = false;
-                }
+                f_response.write(fFinal, ab.length == 0 ? null : ByteBuffer.wrap(ab),
+                        Callback.from(() -> {
+                            if (fFinal) {
+                                complete(null);
+                            }
+                            cf.complete(null);
+                        }, e -> {
+                            complete(e);
+                            cf.completeExceptionally(e);
+                        }));
             } catch (Throwable e) {
                 complete(e);
-                throw e;
+                cf.completeExceptionally(e);
             }
+            return cf;
         }
 
         /**
@@ -1126,7 +1116,6 @@ public class xRTServer
                 m_stage = Stage.COMPLETED;
                 in      = m_fReading ? null : m_in;
                 m_in    = null;
-                m_out   = null;
             }
             IO.close(in);
             if (e == null) {
@@ -1148,13 +1137,7 @@ public class xRTServer
          */
         private Stage        m_stage = Stage.OPEN;
         private InputStream  m_in;
-        private OutputStream m_out;
         private boolean      m_fReading;
-
-        /**
-         * Indicates whether a response write is in progress.
-         */
-        private volatile boolean m_fWriting;
     }
 
     private enum Stage {OPEN, HEADERS_SET, FINAL_WRITE_PENDING, COMPLETED}
