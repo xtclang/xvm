@@ -1,6 +1,7 @@
 # Remaining work
 
-Everything still open on `lagergren/errs`, as one list to tick off. Checked on 2026-11-04
+Everything still open on `lagergren/errs`, as one list to tick off. Section 4 was rechecked on
+2026-11-23 against LSP4IJ 0.30.1, which errs builds against since 2026-11-19. Checked on 2026-11-04
 against [the integration plan](errs-integration-plan.md),
 [the execution plan](plan-embedded-execution.md),
 [the upstream register](errs-upstream-issues.md), [the PR roadmap](pr-roadmap.md), and the live
@@ -781,14 +782,20 @@ breakpoint list, which the editors replace.
 
 ## 4. Upstream fixes
 
-### LSP4IJ: merged on `main`, waiting for a release
+### LSP4IJ: released in 0.30.0
 
-XVM pins LSP4IJ 0.21.0 (`gradle/libs.versions.toml`, `lang-intellij-lsp4ij`), still the latest
-release (2026-08-31). Each workaround stays until a release contains the fix and its removal gate
-passes with the workaround disabled. The gates are in
+LSP4IJ released 0.30.0 and then 0.30.1, the same code, on 2026-11-19, with every fix this section
+waited for. XVM pins 0.30.1 (`gradle/libs.versions.toml`, `lang-intellij-lsp4ij`) since `b449d8a746`,
+and the 0.30.0 branch's commits are on errs, rebased with the subjects the items below name. The
+full IntelliJ playbook on 0.30.1 passed every case: 342 passed and 9 partial, the 8 partial on 0.21.0
+too and X350 ([#741](https://github.com/xtclang/xvm/issues/741)). Rechecked on 2026-11-23: each item
+says which errs commit took the release, or why it stays open. Kept on purpose since the 0.30.0
+branch: UP03's guarded entry points, UP04's rename guard, UP12, UP13, both halves of UP14 and UP21's
+`ClosedRefactoringDocuments`. What waits for 0.30.2 is in #741's to-do list. The gates are in
 [the register](errs-upstream-issues.md#register).
 
-- [ ] Watch for the next LSP4IJ release and bump the pin.
+- [x] Watch for the next LSP4IJ release and bump the pin.
+  **On 0.30.1:** released on 2026-11-19, and the pin is 0.30.1 since `b449d8a746`.
 - [x] Checked against LSP4IJ's nightly 0.21.1-20261027-160212 (`main` `0d3c64de`, 2026-10-27), with
   `-Plsp4ijChannel=nightly` (`4ca6f5993d`): IntelliJ's X308 (UP30), X312 (UP33, UP34), X326 (UP45),
   X328 (UP46) and X329 (UP47) pass, made full for the runs; X308, X312 and X326 are new
@@ -805,7 +812,7 @@ passes with the workaround disabled. The gates are in
   full for the run, and so do X259, X74 and X150. The UP25 gate passes. Failed: X323, as its UP44
   gate does once #1773 is in; X257 (the UP26 gate) and X324, which fail only in the full run (see
   [test harness stability](#test-harness-stability)). No IDE exception.
-- [ ] The bump is prepared on the local branch `lagergren/lsp4ij-0.30.0`: 35 commits, made on errs
+- [x] The bump is prepared on the local branch `lagergren/lsp4ij-0.30.0`: 35 commits, made on errs
   `4e3b1b65e7` (tip `a67965ede2`, 2026-10-28) and rebased on 2026-10-29 onto that day's errs history,
   at its record of the #742 rebase (tip `9cb776697c`). Rebased again on 2026-11-11 onto errs
   `f4092dbb61` (master `856fa585e4`), as `lagergren/lsp4ij-0.30.0-rebased-20261111` (`e98f38a07c`), 34
@@ -851,33 +858,51 @@ passes with the workaround disabled. The gates are in
   fails on #1786's `LSPFormattingParams` constructor. The internal API list is reviewed against the
   candidate's source (`c81995303f`). To do after the release: build against it, pass `verifyPlugin`
   and a full native run, and merge the branch.
-- [ ] UP01 (#1696): remove the `ConnectionLifetime` guard in `XtcLspServerSupportProvider`; gate:
+  **On 0.30.1:** done. The branch's commits are on errs, rebased with their subjects (`5e3bd36546`
+  builds against 0.30.0), and `b449d8a746` pins 0.30.1, which `verifyPlugin` resolves from the
+  Marketplace.
+- [x] UP01 (#1696): remove the `ConnectionLifetime` guard in `XtcLspServerSupportProvider`; gate:
   `ConnectionLifetimeTest`, the packaged process regressions, START/STARTUP and
   START/START_PROJECTS. On the 0.30.0 branch: `9ca54e5fe4`; `ConnectionProcessTest` drives the
   provider.
-- [ ] UP02 (#1746): enable `willSaveWaitUntil` and server save formatting; gate: real pre-save
+  **On 0.30.1:** `32fdff4453`.
+- [x] UP02 (#1746): enable `willSaveWaitUntil` and server save formatting; gate: real pre-save
   requests apply version-checked edits before persistence, and X139 extended. On the 0.30.0 branch:
   `97cdb4e25d`, its settings texts `d5d64a8caf`.
+  **On 0.30.1:** `5f7df7db4d`, its settings texts `603fbd394b`.
 - [ ] UP04 (#1698, #1718): remove the rename snapshot guard and client edit validation; gate: stale,
   closed and reopened document tests and X144. On the 0.30.0 branch: `2be956ad8c` removes the
   client's edit validation (`applyEdit`); the rename guard stays (`XtcRenameEdit`,
   `PreflightedRenames`).
-- [ ] UP05 (#1742): remove `CompilerRootWatches`; gate: changes under external roots observed while
+  **On 0.30.1:** `daeaf6563e` removes the client's edit validation. The rename guard stays on
+  purpose (`XtcRenameEdit`, `XtcRenameHandler`, `XtcClientFeatures`), so this stays open.
+- [x] UP05 (#1742): remove `CompilerRootWatches`; gate: changes under external roots observed while
   focused, watchers released on disposal, X124. On the 0.30.0 branch: `26e2f7440e`.
+  **On 0.30.1:** `a6077c9942`.
 - [ ] UP07 (#1730, #1735): remove `DiagnosticResultMessages` and the quick-fix data revision; gate:
   X181–X185, X202, X213 and diagnostic/action Undo/Redo. On the 0.30.0 branch: `9afed877da`.
-- [ ] UP08 (#1710): remove `ConfigurationJson`'s null handling; gate: X266, X268, CFG1–CFG3.
+  **On 0.30.1:** `a41465a51e` removes the `previousResultId` part, and `DiagnosticResultMessages`
+  stays as the playbook's report record. Still open: the playbook's three UP07 waits for a lazy fix
+  that overlapping pulls cancel (`CompilerPlaybook`, `RefactoringActions`, `Tour`), to check on
+  0.30.1.
+- [x] UP08 (#1710): remove `ConfigurationJson`'s null handling; gate: X266, X268, CFG1–CFG3.
   On the 0.30.0 branch: `d8ad697b7f`.
-- [ ] UP09 (#1724, #1725, #1728, #1736): remove `DocumentStartupMessages`; gate: startup typing and
+  **On 0.30.1:** `fca2ed0b85`.
+- [x] UP09 (#1724, #1725, #1728, #1736): remove `DocumentStartupMessages`; gate: startup typing and
   close/reopen regressions. On the 0.30.0 branch: `2be956ad8c`.
-- [ ] UP10 (#1712, #1734): remove `XtcParameterInfoHandler`; gate: X20 and the retrigger and
+  **On 0.30.1:** `daeaf6563e`; X259's flush went in `e324a3b8ff`.
+- [x] UP10 (#1712, #1734): remove `XtcParameterInfoHandler`; gate: X20 and the retrigger and
   constructor signature cases. On the 0.30.0 branch: `10b92e3803`, with the server's `df11487151`
   for X20.
-- [ ] UP11 (#1733): remove the `CodeActionMessages` routing; gate: X105, X122, stale refusal and
+  **On 0.30.1:** `0b17368f85`; `XtcParameterInfoHandler` itself went with UP73 (`2e389c9510`).
+- [x] UP11 (#1733): remove the `CodeActionMessages` routing; gate: X105, X122, stale refusal and
   native Undo/Redo. On the 0.30.0 branch: `58782992f6`.
+  **On 0.30.1:** `ea87035263`.
 - [ ] UP12 (#1707): narrow the `XtcFormattingService` override; gate: absent-editor, snapshot,
   cancellation and server-lifetime guards, X138 and X139. The UP24 command ownership stays.
+  **On 0.30.1:** kept on purpose, so this stays open.
 - [ ] UP14 (#1716): remove the semantic-result retirement in `XtcLanguageClient`; gate: X146.
+  **On 0.30.1:** kept on purpose, so this stays open.
 - [ ] UP14's other half ([#1771](https://github.com/redhat-developer/lsp4ij/pull/1771), merged 2026-10-27,
   unreleased, `7fa1794f`): hover, definition, declaration, type
   definition, implementation, references, completion, rename and the hierarchy prepares reuse a
@@ -887,32 +912,47 @@ passes with the workaround disabled. The gates are in
   fix for hover and definition. Gate after a release: `XtcLanguageClient`'s retirement shrinks to
   what #1771 leaves, answers that change after an analysis without any file changing, and the
   features still on the file stamp; X146 passes.
-- [ ] UP18 (#1711): advertise `AsIs` again; gate: X150 keeps exact source, placeholders and Undo.
+  **On 0.30.1:** #1771 is in 0.30.0; kept on purpose, so this stays open.
+- [x] UP18 (#1711): advertise `AsIs` again; gate: X150 keeps exact source, placeholders and Undo.
   On the 0.30.0 branch: `06acfabc96`.
-- [ ] UP19 (#1708): remove `DirectoryDocumentMoves`; gate: X118, X161, X162, X163 and the
+  **On 0.30.1:** `18478c0c46`.
+- [x] UP19 (#1708): remove `DirectoryDocumentMoves`; gate: X118, X161, X162, X163 and the
   connection lifecycle tests. On the 0.30.0 branch: `4d7a8a361a`.
+  **On 0.30.1:** `592538e145`.
 - [ ] UP21 (#1726, #1731): remove `ClosedRefactoringDocuments`; gate: X169 (exact disk text and
   current diagnostics). On the 0.30.0 branch: `1172c649d8`; `XtcRenameEdit` still refuses an unsaved
   closed target.
-- [ ] UP22 (#1699): no workaround to remove; gate: native reconnect and typing acceptance.
-- [ ] UP25 (#1749): advertise `workspace/textDocumentContent` to IntelliJ; gate: X254 without the
+  **On 0.30.1:** `bb2cb51ba4` lets LSP4IJ save the documents a rename changes.
+  `ClosedRefactoringDocuments` stays for a rename that also moves its directory (`e1fa5fd017`,
+  X116), so this stays open.
+- [x] UP22 (#1699): no workaround to remove; gate: native reconnect and typing acceptance.
+  **On 0.30.1:** released in 0.30.0, with nothing to remove.
+- [x] UP25 (#1749): advertise `workspace/textDocumentContent` to IntelliJ; gate: X254 without the
   read-only file fallback. On the 0.30.0 branch: `e1ca98fdb0`; X254's checks `56c699eb5a`.
-- [ ] UP26 (#1715): gate: X257 with explicit invocation and selection forwarded.
+  **On 0.30.1:** `d5b0f22282`. X350 checks the library view through the server's documents
+  (`f207e1560a`) until a release has #2028.
+- [x] UP26 (#1715): gate: X257 with explicit invocation and selection forwarded.
   On the 0.30.0 branch: `12ac9ec06b`; X257 waits for the Invoked request (`357045d859`).
-- [ ] UP27 (#1700): remove `EditorRefresh`; gate: the many-file X146 burst and the long
+  **On 0.30.1:** `502dec7035`.
+- [x] UP27 (#1700): remove `EditorRefresh`; gate: the many-file X146 burst and the long
   X137/X146/X259 run. On the 0.30.0 branch: `bba29c4b4d`.
+  **On 0.30.1:** `e96ffc056d`.
 - [ ] UP03 (#1720, #1739): narrow the guarded Rename/Move entry points; gate: X103 and X130.
+  **On 0.30.1:** 0.30.0 has #1720, #1739 and #1755; kept on purpose, so this stays open.
 - [x] UP03: LSP4IJ #1740, the UI wait during the `will*` requests of an IDE rename or move, was fixed by our
-  [#1755](https://github.com/redhat-developer/lsp4ij/pull/1755), merged 2026-10-26 (`d85f2c9b`), unreleased; the
+  [#1755](https://github.com/redhat-developer/lsp4ij/pull/1755), merged 2026-10-26 (`d85f2c9b`), released in 0.30.0; the
   guarded entry points stay until a release with it passes X103 and X130 without them.
-- [ ] UP30 ([#1757](https://github.com/redhat-developer/lsp4ij/pull/1757), merged 2026-10-26): `DAPDebugProcess` did not implement `startPausing()`,
+- [x] UP30 ([#1757](https://github.com/redhat-developer/lsp4ij/pull/1757), merged 2026-10-26): `DAPDebugProcess` did not implement `startPausing()`,
   so IntelliJ's Pause Program did nothing for any DAP session; X308 passes natively with it. Gate:
   X308 in IntelliJ with coverage full, and its IntelliJ case restored.
-- [ ] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), merged 2026-10-26): the exception hint from `exceptionInfo`. Gate: X307's
+  **On 0.30.1:** `a0185cd0cd`.
+- [x] UP33 ([#1761](https://github.com/redhat-developer/lsp4ij/pull/1761), merged 2026-10-26): the exception hint from `exceptionInfo`. Gate: X307's
   hint shows the exception and its stack without the runner's frames.
-- [ ] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), merged 2026-10-26): conditions on exception filters, sent as
+  **On 0.30.1:** `a0185cd0cd` and `7bbf0ecfa4`.
+- [x] UP34 ([#1760](https://github.com/redhat-developer/lsp4ij/pull/1760), merged 2026-10-26): conditions on exception filters, sent as
   `filterOptions`. Gate: X312 in IntelliJ.
-- [ ] UP37 ([#1763](https://github.com/redhat-developer/lsp4ij/pull/1763), merged 2026-10-26): `DAPExpressionCodeFragment` honors the `isPhysical`
+  **On 0.30.1:** `a0185cd0cd` and `46d8bdd0ff`.
+- [x] UP37 ([#1763](https://github.com/redhat-developer/lsp4ij/pull/1763), merged 2026-10-26): `DAPExpressionCodeFragment` honors the `isPhysical`
   that IntelliJ asks for, so IntelliJ 2026.2's inline logpoint editor no longer fails its inspection
   pass's assertion, and an edit of Evaluate Expression's expression, a typed character or a chosen
   completion, no longer fails IntelliJ's Document/PSI check (found by R10e's X320). Checked natively
@@ -921,36 +961,44 @@ passes with the workaround disabled. The gates are in
   with no IDE error; X320 in IntelliJ through the inserted text, its 0.21.0 path and UP37 tags
   removed, with the plugin's bridge, `PhysicalExpressionFragments` (2026-11-05), which also ends the
   daemon's restart every 300 ms while a session is paused.
-- [ ] UP40 ([#1766](https://github.com/redhat-developer/lsp4ij/pull/1766), merged 2026-10-25): LSP4IJ announces `supportsInvalidatedEvent` and
+  **On 0.30.1:** `790fe3a08c`; `PhysicalExpressionFragments` went in `b202818c3c`.
+- [x] UP40 ([#1766](https://github.com/redhat-developer/lsp4ij/pull/1766), merged 2026-10-25): LSP4IJ announces `supportsInvalidatedEvent` and
   handles `invalidated`, refreshing the threads, the stopped stacks and the views. Gate: X314 and X315
   full in IntelliJ, their `invalidated` checks restored.
-- [ ] UP31 ([#1758](https://github.com/redhat-developer/lsp4ij/pull/1758), merged 2026-10-26): an exception hint on an editor closed
+  **On 0.30.1:** `8f454cbfae`.
+- [x] UP31 ([#1758](https://github.com/redhat-developer/lsp4ij/pull/1758), merged 2026-10-26): an exception hint on an editor closed
   since the stop no longer fails with `DisposalException`. Gate: X307 without its wait for the hint, and
   no IDE errors.
-- [ ] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), merged 2026-10-26): breakpoints that don't suspend as DAP logpoints,
+  **On 0.30.1:** `7bbf0ecfa4`.
+- [x] UP32 ([#1759](https://github.com/redhat-developer/lsp4ij/pull/1759), merged 2026-10-26): breakpoints that don't suspend as DAP logpoints,
   their "Evaluate and log" expression logged. Gate: X311's and X313's logpoints in IntelliJ, their UP32
   tags removed.
-- [ ] UP36 ([#1769](https://github.com/redhat-developer/lsp4ij/pull/1769), merged 2026-10-26): a "Show Values as Hexadecimal" toggle,
+  **On 0.30.1:** `7bbf0ecfa4`.
+- [x] UP36 ([#1769](https://github.com/redhat-developer/lsp4ij/pull/1769), merged 2026-10-26): a "Show Values as Hexadecimal" toggle,
   checked natively with R10b (`run-5016431580533175464`). Gate: X317's hexadecimal check always on,
   its UP36 tag removed.
-- [ ] UP35 ([#1768](https://github.com/redhat-developer/lsp4ij/pull/1768), merged 2026-10-26, `42f1f16e`): lazy variables
+  **On 0.30.1:** `d01cd346a0`.
+- [x] UP35 ([#1768](https://github.com/redhat-developer/lsp4ij/pull/1768), merged 2026-10-26, `42f1f16e`): lazy variables
   behind a "Show value" link, checked natively with R10a. Gate: X316 in IntelliJ through the link
   only, its 0.21.0 path and UP35 tag removed.
-- [ ] UP42 ([#1770](https://github.com/redhat-developer/lsp4ij/pull/1770), merged 2026-10-26, `642d0e9d`): a variable with more
+  **On 0.30.1:** `d01cd346a0`.
+- [x] UP42 ([#1770](https://github.com/redhat-developer/lsp4ij/pull/1770), merged 2026-10-26, `642d0e9d`): a variable with more
   than 100 indexed children read a page at a time behind IntelliJ's own `...` node, checked natively
   with R10c (`run-9236570344305345016`). Gate: X318 through the `...` node only, its 0.21.0 path and
   UP42 tag removed.
+  **On 0.30.1:** `d01cd346a0`.
 - UP13 stays: the `createSettings` override is LSP4IJ's supported extension point.
 
 ### LSP4IJ: pull requests open
 
-- [ ] Our open pull requests (checked 2026-11-04), filed 2026-11-04: [#1857](https://github.com/redhat-developer/lsp4ij/pull/1857)
+- [x] Our open pull requests (checked 2026-11-04), filed 2026-11-04: [#1857](https://github.com/redhat-developer/lsp4ij/pull/1857)
   (UP67, below); [#1854](https://github.com/redhat-developer/lsp4ij/pull/1854), which has Ctrl+hover
   underline only the reference, not the whole file, in a plugin's file type without a language (LSP4IJ
   issue [#1612](https://github.com/redhat-developer/lsp4ij/issues/1612)), not a UP entry, since no
   XVM code or case refers to it; and [#1858](https://github.com/redhat-developer/lsp4ij/pull/1858),
   0.30.0's LSP and DAP changes in LSP4IJ's docs. The other 96 are merged
   ([the register](errs-upstream-issues.md#upstream-pull-requests-2026-10-18)). To do: get them merged.
+  **On 0.30.1:** all three merged on 2026-11-04, and are in 0.30.0.
 - [x] X304 on LSP4IJ `main` is not an LSP4IJ regression. Its console seemed to lose what the program
   prints after Resume, but that was our probe's race: it read the console before the exit code, so a
   program that ended in between was reported without its last output. R7n's probe fix (`c966674fc`)
@@ -985,10 +1033,12 @@ passes with the workaround disabled. The gates are in
   pull request [#1857](https://github.com/redhat-developer/lsp4ij/pull/1857), opened 2026-11-04 at
   the user's go-ahead. To do: get it merged, and after a release with it, check X285's prompt in
   IntelliJ's Debug console. Nothing of ours to remove.
+  **On 0.30.1:** #1857 is in 0.30.0, with nothing of ours to remove. Still to do: check X285's
+  prompt in IntelliJ's Debug console.
 
 ### LSP4IJ: a line typed in the Debug console goes nowhere (UP71): filed as #1862, fixed by our #1866
 
-- [ ] UP71 (2026-11-05): LSP4IJ's `DAPConsoleView` attaches to the adapter's process for output
+- [x] UP71 (2026-11-05): LSP4IJ's `DAPConsoleView` attaches to the adapter's process for output
   only (`ConsoleViewRunningState(..., true, false)`, on 0.21.0 and `main` `1988ab6c`), so a line
   typed in a debug session's Console goes nowhere: a program that reads its input cannot be debugged
   in IntelliJ, and the console evaluates nothing. The IntelliJ tour found it with the card game, which
@@ -999,17 +1049,19 @@ passes with the workaround disabled. The gates are in
   [#1866](https://github.com/redhat-developer/lsp4ij/pull/1866), merged the same day (`171f1a7c`);
   unreleased, checked 2026-11-11 (see `errs-upstream-issues.md`'s UP71 row). To do: after a release
   with #1866, remove `DebugConsoleInput`.
+  **On 0.30.1:** `e5b7f0dcf2` removes `DebugConsoleInput`.
 
 ### LSP4IJ: a closed file's errors never reached IntelliJ (UP69, UP70): bridged
 
-- [ ] UP69 (2026-11-05): LSP4IJ 0.21.0 never asks for `workspace/diagnostic` and pulls the diagnostics
+- [x] UP69 (2026-11-05): LSP4IJ 0.21.0 never asks for `workspace/diagnostic` and pulls the diagnostics
   of open documents only, so with our server, which IntelliJ pulls, a closed file's errors never
   reached IntelliJ: the IntelliJ tour found `SaveEights.x` unmarked after `cardMatches`' signature
   change broke its caller. `ClosedDocumentDiagnostics` asks for the workspace report after each
   refresh and publishes the closed documents' reports through LSP4IJ's push path, which marks a file
   with errors red (X341). LSP4IJ `main` (`d1a281d6`) has its own workspace pull, unreleased. To do:
   remove the bridge after a release with it.
-- [ ] UP70 (2026-11-05): LSP4IJ's problem mark goes stale as a document opens or closes, also on
+  **On 0.30.1:** `3ba76ac505`.
+- [x] UP70 (2026-11-05): LSP4IJ's problem mark goes stale as a document opens or closes, also on
   `main`. As a closed document opens, LSP4IJ drops its diagnostics without telling
   `WolfTheProblemSolver`, so a file that an edit elsewhere fixed, opened before the next publication,
   stayed red; the bridge reports the file again. Filed as
@@ -1022,6 +1074,7 @@ passes with the workaround disabled. The gates are in
   [#1868](https://github.com/redhat-developer/lsp4ij/pull/1868), all merged 2026-11-05 and
   unreleased, checked 2026-11-11 (see `errs-upstream-issues.md`'s UP70 row). To do: after a release
   with them, remove both parts of the bridge.
+  **On 0.30.1:** `27802b4150`.
 - [x] Run the IntelliJ playbook on 2026.3: `-PintellijPlaybookIde=2026.3` drives it while the plugin still
   builds against 2026.2.3. IDE Starter and its driver follow the IDE they drive, so the few classes whose
   Starter API differs have a copy per line (`src/starter262`, `src/starter263`), and the probes are a
@@ -1104,34 +1157,39 @@ passes with the workaround disabled. The gates are in
   our local draft of a patch is in `errs-upstream-issues.md`'s UP72 row, for reference. No plugin
   workaround (2026-11-05). To do: after a release with the fixes, the tour's "the server's process
   dies" check should see one restart.
+  **On 0.30.1:** #1865 and #1867 are in 0.30.0, and #1863 was closed on 2026-11-05. Still to do:
+  check that the tour's "the server's process dies" sees one restart.
 
 ### LSP4IJ: a stack frame's file is looked up without a refresh (UP65): our #1799, merged
 
-- [ ] UP65 (2026-10-29): LSP4IJ's `DAPStackFrame` finds a frame's file with
+- [x] UP65 (2026-10-29): LSP4IJ's `DAPStackFrame` finds a frame's file with
   `LocalFileSystem.findFileByPath`, which never refreshes, and keeps the null, so a file in a
   folder made after the VFS listed its parent has no source. The debug process handler refreshes
   the nearest known folder before a `stackTrace` response goes on (X324). Filed as our
   [#1799](https://github.com/redhat-developer/lsp4ij/pull/1799) (merged 2026-10-29, unreleased,
   `0ff8b7aa`, for 0.30.0): a lookup that refreshes off the EDT and outside a read action. To do: drop
   the handler's refresh once a release has it.
+  **On 0.30.1:** `9b00d41506`.
 
 ### LSP4IJ: an attach cannot use the adapter's own process (UP64): our #1798, merged
 
-- [ ] UP64 (2026-10-29): LSP4IJ's `DebugMode.ATTACH` replaces the adapter's process with a
+- [x] UP64 (2026-10-29): LSP4IJ's `DebugMode.ATTACH` replaces the adapter's process with a
   `NopProcessHandler` and reaches the adapter by its socket, so an adapter whose transport is its
   process handler, as ours is, can only be launched. The Ecstasy Attach configuration keeps the
   descriptor's mode at `LAUNCH` and makes only its client in `ATTACH` mode. Filed as our
   [#1798](https://github.com/redhat-developer/lsp4ij/pull/1798) (merged 2026-10-29, unreleased,
   `8c4a5ba3`, for 0.30.0), which adds `DebugAdapterDescriptor.startServer(DebugMode)`. To do: use it
   once a release has it.
+  **On 0.30.1:** `d78e7514b4`.
 
 ### LSP4IJ: LSP4J's debug modules at 0.21.0 (UP63): our #1793, merged
 
-- [ ] UP63 (2026-10-28): LSP4IJ bundles LSP4J's LSP modules at 1.0.0 and its debug modules at 0.21.0,
+- [x] UP63 (2026-10-28): LSP4IJ bundles LSP4J's LSP modules at 1.0.0 and its debug modules at 0.21.0,
   so no fix to LSP4J's DAP endpoint since 0.21.0 reaches IntelliJ, our LSP4J #1004, #1008 and #1009
   among them, and LSP4IJ's DAP model stays at DAP 1.60. Our
   [#1793](https://github.com/redhat-developer/lsp4ij/pull/1793) (merged 2026-10-28, unreleased, `2afdaf45`)
   bundles them at LSP4J's one version. UP41's LSP4J part needs it to reach IntelliJ.
+  **On 0.30.1:** released in 0.30.0, with nothing to remove.
 
 ### IntelliJ Platform and LSP4IJ: evaluations cannot be canceled (UP41): IJPL-260358, LSP4J part our #1009
 
@@ -1155,7 +1213,7 @@ passes with the workaround disabled. The gates are in
 
 ### LSP4IJ: Run to Cursor removes its breakpoint too early (UP44): our #1773, merged
 
-- [ ] UP44 (2026-10-27): `DAPDebugProcess.runToPosition()` registers a temporary breakpoint and
+- [x] UP44 (2026-10-27): `DAPDebugProcess.runToPosition()` registers a temporary breakpoint and
   resumes, and `resume(context, position)` removes it once the `continue` request is answered, not
   when the program stops there (0.21.0 and `main`, `42f1f16e`). A program that takes longer to reach
   the cursor than that round trip runs past it: with the cursor two statements after the stop,
@@ -1171,20 +1229,22 @@ passes with the workaround disabled. The gates are in
   until then, and X323 is full in IntelliJ. The IntelliJ tour's Run to cursor, after ten deals in a
   just-started worker, had run past dealAll (`run-tour-18322434560654050888`). To do: after a release
   with #1773, drop the workaround.
+  **On 0.30.1:** `03fe6dfe21`.
 
 ### LSP4IJ: no loaded sources or modules (UP45): our #1774, merged
 
-- [ ] UP45 (2026-10-27): LSP4IJ never sends `loadedSources` or `modules`, and has no view for them
+- [x] UP45 (2026-10-27): LSP4IJ never sends `loadedSources` or `modules`, and has no view for them
   (0.21.0 and `main`, `42f1f16e`). XVM's adapter answers both since R12, which VS Code shows in
   Loaded Scripts (X326). Implemented by our
   [#1774](https://github.com/redhat-developer/lsp4ij/pull/1774) (merged 2026-10-27, unreleased): Loaded Sources and
   Modules tabs, added once the adapter reports any; with a plugin built from it, a temporary X326
   found both, with the program's sources and modules. To do: after a release with it, implement
   IntelliJ's X326.
+  **On 0.30.1:** `a0185cd0cd`.
 
 ### LSP4IJ: no function breakpoints (UP46): our #1780, merged
 
-- [ ] UP46 (2026-10-27): LSP4IJ has no function breakpoints: it never sends `setFunctionBreakpoints`
+- [x] UP46 (2026-10-27): LSP4IJ has no function breakpoints: it never sends `setFunctionBreakpoints`
   (0.21.0 and `main`, `42f1f16e`); its breakpoints are lines, disassembly instructions and
   exception filters. XVM's adapter installs them since R9 (X328), which VS Code's Breakpoints view
   adds. Implemented by our [#1780](https://github.com/redhat-developer/lsp4ij/pull/1780) (merged
@@ -1193,10 +1253,11 @@ passes with the workaround disabled. The gates are in
   built from it, IntelliJ's X328 stops in `Entered.twice` and runs to its exit
   (`run-11586456472789120644`), and again at `bef74868`, rebased onto `main` with #1752
   (`run-551361467612578401`). To do: after a release with it, make IntelliJ's X328 full.
+  **On 0.30.1:** `a0185cd0cd`.
 
 ### LSP4IJ: no restart frame (UP47): our #1778, merged
 
-- [ ] UP47 (2026-10-27): LSP4IJ never sends `restartFrame`, and ignores `supportsRestartFrame` and a
+- [x] UP47 (2026-10-27): LSP4IJ never sends `restartFrame`, and ignores `supportsRestartFrame` and a
   frame's `canRestart` (0.21.0 and `main`, `42f1f16e`), so IntelliJ's Reset Frame is not offered in
   a DAP session. XVM's adapter restarts frames since R11 (X329), which VS Code's Call Stack view
   offers. Fixed by our [#1778](https://github.com/redhat-developer/lsp4ij/pull/1778) (merged
@@ -1205,6 +1266,7 @@ passes with the workaround disabled. The gates are in
   (2026-10-27): with a plugin built from it, IntelliJ's X329 resets outer() through the Reset Frame
   action, which is hidden on run(), and passes (`run-17331679936087029005`). To do: after a
   release with it, make IntelliJ's X329 full.
+  **On 0.30.1:** `a0185cd0cd`.
 
 ### VS Code and LSP4IJ: no single-thread execution (UP49): open upstream
 
@@ -1213,10 +1275,12 @@ passes with the workaround disabled. The gates are in
   [#166450](https://github.com/microsoft/vscode/issues/166450) is open, and LSP4IJ has none. R11's
   last item is built anyway (2026-11-02): the server takes `singleThread`. To do: check it from an
   editor once one sends it, with a catalog case.
+  **On 0.30.1:** LSP4IJ 0.30.0 has #1869, which steps only the current thread with `singleThread`.
+  Still to do: an IntelliJ catalog case.
 
 ### LSP4IJ: no inline values for Ecstasy (UP50): our #1781, merged
 
-- [ ] UP50 (2026-10-27): IntelliJ shows no inline values for Ecstasy. LSP4IJ never sends
+- [x] UP50 (2026-10-27): IntelliJ shows no inline values for Ecstasy. LSP4IJ never sends
   `textDocument/inlineValue` (0.21.0 and `main`, `f22304a4`); its scan of the editor's TextMate tokens
   places none of the frame's variables; and it leaves the frame's Locals group collapsed, while
   IntelliJ computes inline data only for the variables it shows. LSP4IJ issue
@@ -1226,10 +1290,11 @@ passes with the workaround disabled. The gates are in
   the language server, falls back to the token scan, and expands the locals' group; with a plugin
   built from it, IntelliJ draws the values and X331 passes (`run-4604772112093360200`). To do: after a
   release with it, make IntelliJ's X331 full.
+  **On 0.30.1:** `a0185cd0cd`.
 
 ### LSP4IJ: no data breakpoints (UP48): our #1782, merged
 
-- [ ] UP48 (2026-10-27): LSP4IJ never sends `dataBreakpointInfo` or `setDataBreakpoints` (0.21.0 and
+- [x] UP48 (2026-10-27): LSP4IJ never sends `dataBreakpointInfo` or `setDataBreakpoints` (0.21.0 and
   `main`, `42f1f16e`), so IntelliJ has no breakpoint on a variable's value in a DAP session. XVM's
   adapter installs them since R9 (X330), which VS Code's Break on Value Change adds. Fixed by our
   [#1782](https://github.com/redhat-developer/lsp4ij/pull/1782) (merged 2026-10-28, unreleased,
@@ -1240,6 +1305,7 @@ passes with the workaround disabled. The gates are in
   runs a debug session against a DAP server in the test's process. With a plugin built from it,
   IntelliJ's X330 passes (`run-15563293796254899407`, `b6191ffbce`). To do: after a release with
   it, make IntelliJ's X330 full.
+  **On 0.30.1:** `a0185cd0cd`.
 
 ### A DAP completion's `start` (UP43): not filed
 
@@ -1262,7 +1328,7 @@ passes with the workaround disabled. The gates are in
 
 ### LSP4IJ: document links without a target (UP52): our #1785, merged
 
-- [ ] UP52 (2026-10-28): LSP4IJ declares document links but never resolves one, and its Ctrl+Click
+- [x] UP52 (2026-10-28): LSP4IJ declares document links but never resolves one, and its Ctrl+Click
   ignores a link without a target (0.21.0 and `main`, `7469aab9`). XVM's server defers every link's
   target to `documentLink/resolve` for any client that declares document links, so an HTTP(S) link
   in a comment very likely opens nothing in IntelliJ. X131 resolves links itself, so it can't show
@@ -1272,6 +1338,7 @@ passes with the workaround disabled. The gates are in
   (`run-2626450875688172472`), and a plugin built from #1785 resolves the link and opens it
   (`run-8879176847449743226`, gate UP52 passed). To do: after a release with it,
   make X131's UP52 step pass without the gate.
+  **On 0.30.1:** `620eeb5374`.
 
 ### LSP4IJ: no linked editing (UP53): our #1812, merged
 
@@ -1286,10 +1353,11 @@ passes with the workaround disabled. The gates are in
   guide demo, which found that our server linked nothing at a caret just after a name
   (`394bb23eb8` fixes it). To do: after a release with #1812, make IntelliJ's X133 turn it on, type
   in a local's declaration and see its uses follow.
+  **On 0.30.1:** #1812 is in 0.30.0. Still to do: X133.
 
 ### LSP4IJ: only the first of several ranges is formatted (UP54): our #1786, merged
 
-- [ ] UP54 (2026-10-28): when IntelliJ formats several ranges of a file at once, LSP4IJ formats the
+- [x] UP54 (2026-10-28): when IntelliJ formats several ranges of a file at once, LSP4IJ formats the
   first and drops the rest, and never sends LSP 3.18's `rangesFormatting`, which XVM's server
   supports. Our `XtcFormattingService` takes the first range too. Fixed in LSP4IJ by our
   [#1786](https://github.com/redhat-developer/lsp4ij/pull/1786) (merged 2026-10-28, unreleased, `0616567a`): one
@@ -1297,15 +1365,17 @@ passes with the workaround disabled. The gates are in
   To do: make `XtcFormattingService` send every range too; after a release with #1786, a native case that
   formats two separate ranges. 0.30.0's `LSPFormattingParams` takes the list of ranges, so
   `XtcFormattingService.kt:76` must change when XVM moves to it.
+  **On 0.30.1:** `5e3bd36546` sends every range, and `de91701c94` formats two ranges natively.
 
 ### LSP4IJ: no hit counts on line breakpoints (UP55): our #1787, merged
 
-- [ ] UP55 (2026-10-28): LSP4IJ's line breakpoints send a condition and a log message, never a hit
+- [x] UP55 (2026-10-28): LSP4IJ's line breakpoints send a condition and a log message, never a hit
   condition; function and data breakpoints do (#1780, #1782). XVM's adapter supports hit conditions
   since R9. The R9 item above put IntelliJ's hit counts under UP32 until 2026-11-04, but our #1759
   added logpoints only. Fixed by our [#1787](https://github.com/redhat-developer/lsp4ij/pull/1787) (merged 2026-10-28,
   unreleased, `0ecbcdeb`): a DAP line breakpoint has a `Hit condition`, sent as `hitCondition`. To do:
   after a release with it, a native IntelliJ hit-count case.
+  **On 0.30.1:** `7bbf0ecfa4`.
 
 ### LSP4IJ: the `exited` event (UP56): bridged, our #1791, merged
 
@@ -1316,6 +1386,8 @@ passes with the workaround disabled. The gates are in
   (`DAPDebugProcess.PROGRAM_EXIT_CODE`) and shows it when the adapter's process ends; CodeRabbit's
   finding, a child session's exit code replacing its parent's, was fixed in it first. To do: after a
   release with it, have our handler take the exit code from that key instead of reading `exited`.
+  **On 0.30.1:** #1791 is in 0.30.0. Still to do: our handler still reads `exited`, not
+  `PROGRAM_EXIT_CODE`.
 
 ### LSP4IJ: inline-value and folding-range refreshes (UP57, UP58): our #1790, merged
 
@@ -1327,15 +1399,16 @@ passes with the workaround disabled. The gates are in
 
 ### LSP4IJ: no workspace symbol resolve (UP59): our #1788, merged
 
-- [ ] UP59 (2026-10-28): LSP4IJ resolves no workspace symbol, so XVM's server sends it each
+- [x] UP59 (2026-10-28): LSP4IJ resolves no workspace symbol, so XVM's server sends it each
   symbol's full location. Our [#1788](https://github.com/redhat-developer/lsp4ij/pull/1788) (merged
   2026-10-28, unreleased, `44675cb3`) declares `resolveSupport` for `location.range` and resolves a URI-only symbol when it
   is opened. To do: after a release with it, a native Go to Symbol case that opens a URI-only symbol
   at its range.
+  **On 0.30.1:** `de91701c94`.
 
 ### LSP4IJ: inlay hint tooltips never showed (UP60): our #1789, merged
 
-- [ ] UP60 (2026-10-28): LSP4IJ showed only the plain-string tooltips of a hint's label parts, so
+- [x] UP60 (2026-10-28): LSP4IJ showed only the plain-string tooltips of a hint's label parts, so
   XVM's Markdown tooltips, which its server puts on the hint, never showed in IntelliJ. This was
   first recorded as having no effect on XVM, which was wrong. Fixed by our
   [#1789](https://github.com/redhat-developer/lsp4ij/pull/1789) (merged 2026-10-28, unreleased,
@@ -1343,6 +1416,7 @@ passes with the workaround disabled. The gates are in
   no tooltip lazily, which IntelliJ's declarative inlays don't allow, so XVM's server keeps sending
   tooltips with the hints. To do: after a release with it, a native case that shows an inlay hint's
   tooltip.
+  **On 0.30.1:** `de91701c94`.
 
 ### LSP4IJ: its support lists disagreed with its code (UP61): our #1784, merged
 
@@ -1371,11 +1445,12 @@ passes with the workaround disabled. The gates are in
   its 64-bit and unsigned 32-bit fields as `long`.
 - [ ] UP15: after an LSP4J release with #997, adopt it and change `XdkStdioTest`'s assertion to
   `ResponseErrorCode.InvalidParams`, keeping reader recovery.
-- [ ] UP06: after an LSP4IJ release with #1723 (0.30.0), remove the `DiagnosticReportJson` adapter;
+- [x] UP06: after an LSP4IJ release with #1723 (0.30.0), remove the `DiagnosticReportJson` adapter;
   gate: full and unchanged reports round-trip in the bundled client. No LSP4J release is needed:
   #1723 registers its own adapter in `configureCompatibilityAdapters`, which the client's Gson applies
   (checked 2026-10-28 against LSP4IJ's `main`; done on the local branch `lagergren/lsp4ij-0.30.0`,
   `fe12afc23e`).
+  **On 0.30.1:** `5e19689f6b`.
 
 ### vscode-languageclient
 
@@ -1439,6 +1514,7 @@ editor, which its probe never measured (the probe item below).
   at about 17:37 UTC (it now answers "not found", to our token too); our [#3730](https://github.com/JetBrains/intellij-community/pull/3730) (open, 2026-10-28;
   JetBrains asked anastakats to review it on 2026-11-02).
   To do: get it merged.
+  **On 0.30.1:** JetBrains pushed #3730 to `master` on 2026-11-03; no release has it yet (#741).
 - [ ] UP16 (VS Code): our [microsoft/vscode#344760](https://github.com/microsoft/vscode/pull/344760) (open, 2026-10-28) for the existing
   microsoft/vscode#219122. To do: get it merged.
 - [ ] After each is fixed and released: remove the matching test or editor workaround and pass its
@@ -1573,7 +1649,7 @@ editor, which its probe never measured (the probe item below).
     cases, in both editors (`95b4cfa2f1`, `5e6a0f2391`, `c2a9b296d5`); the server reported a module
     container that moved away during discovery as an invalid `xtc.compiler` setting, seen in X130
     (`f71c9cc0a5`).
-  - The nightly run is under [LSP4IJ](#lsp4ij-merged-on-main-waiting-for-a-release).
+  - The nightly run is under [LSP4IJ](#lsp4ij-released-in-0300).
 - [ ] Release 0.5.0, the agreed boundary for the breaking listener and embedding API, with migration
   and recompilation notes.
 - [ ] Settle the reconciliation inventory in the roadmap's
