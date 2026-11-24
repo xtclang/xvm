@@ -9,6 +9,7 @@ import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.util.ExecutionTrace
+import java.util.IdentityHashMap
 
 /** Worker-only edit planning and binding comparison. Compiler constants never escape this proof. */
 internal object XdkRename {
@@ -430,7 +431,7 @@ internal object XdkRename {
             val expected =
                 before.extraction.types[old]?.let { type -> composedTarget(type, plan.original, { it }, plan::map) } ?: return false
             val actual =
-                after.extraction.types[new]?.let { type -> composedTarget(type, plan.proposed, { it }) { _, at -> at } } ?: return false
+                after.extraction.types[new]?.let { type -> composedTarget(type, plan.proposed, { it }, { _, at -> at }) } ?: return false
             return expected == actual
         }
         val expressionStart = insertionStart + candidate.relocation.contentOffset
@@ -933,6 +934,7 @@ internal object XdkRename {
         removedMembers: Set<ProofIdentity> = emptySet(),
         translate: (String, Int) -> Int?,
     ): Set<Dispatch>? {
+        val lines = LineIndexes()
         val declarations =
             facts.models
                 .flatMap { it.symbols }
@@ -943,14 +945,14 @@ internal object XdkRename {
         fun target(constant: ProofIdentity): Target? {
             if (constant is ProofIdentity.Directory) return Target.Directory(moved(constant.path))
             if (constant is ProofIdentity.Composed || constant is ProofIdentity.Generated) {
-                return composedTarget(constant, texts, moved, translate)
+                return composedTarget(constant, texts, moved, translate, lines)
             }
             val symbol = declarations[constant] ?: return Target.External(constant)
             val source = symbol.declarationSource ?: return Target.External(constant)
             val text = texts[source] ?: return Target.External(constant)
             val range = symbol.declaration ?: return null
-            val start = offset(text, range.start)?.let { translate(source, it) } ?: return null
-            val end = offset(text, range.end)?.let { translate(source, it) } ?: return null
+            val start = lines.offset(text, range.start)?.let { translate(source, it) } ?: return null
+            val end = lines.offset(text, range.end)?.let { translate(source, it) } ?: return null
             return Target.Declaration(Site(moved(source), start, end), symbol.kind)
         }
         return (facts.methods.chains + facts.properties.chains)
@@ -962,8 +964,8 @@ internal object XdkRename {
                     target(chain.owner) ?: return null,
                     chain.members.map { target(it) ?: return null },
                     chain.supported,
-                    chain.cycles.map { composedTarget(it, texts, moved, translate) ?: return null },
-                    chain.alternatives.map { composedTarget(it, texts, moved, translate) ?: return null },
+                    chain.cycles.map { composedTarget(it, texts, moved, translate, lines) ?: return null },
+                    chain.alternatives.map { composedTarget(it, texts, moved, translate, lines) ?: return null },
                 )
             }
     }
@@ -1087,7 +1089,7 @@ internal object XdkRename {
         plan: Plan,
     ): Boolean {
         val expected = composedTarget(before, plan.original, { it }, plan::map) ?: return false
-        val actual = composedTarget(after, plan.proposed, { it }) { _, at -> at } ?: return false
+        val actual = composedTarget(after, plan.proposed, { it }, { _, at -> at }) ?: return false
         return expected == actual
     }
 
@@ -1096,13 +1098,14 @@ internal object XdkRename {
         texts: Map<String, String>,
         moved: (String) -> String,
         translate: (String, Int) -> Int?,
+        lines: LineIndexes = LineIndexes(),
     ): Target? {
         return when (identity) {
             is ProofIdentity.TypeShape ->
                 Target.TypeShape(
                     identity.format,
                     identity.components.map {
-                        composedTarget(it, texts, moved, translate)
+                        composedTarget(it, texts, moved, translate, lines)
                             ?: return null
                     },
                 )
@@ -1110,38 +1113,38 @@ internal object XdkRename {
             is ProofIdentity.Alternatives -> {
                 Target.Alternatives(
                     identity.targets.mapTo(linkedSetOf()) {
-                        composedTarget(it, texts, moved, translate) ?: return null
+                        composedTarget(it, texts, moved, translate, lines) ?: return null
                     },
                 )
             }
 
             is ProofIdentity.Parameter -> {
-                composedTarget(identity.method, texts, moved, translate)?.let {
+                composedTarget(identity.method, texts, moved, translate, lines)?.let {
                     Target.Parameter(it, identity.index)
                 }
             }
 
             is ProofIdentity.MethodFormal -> {
-                composedTarget(identity.method, texts, moved, translate)?.let {
+                composedTarget(identity.method, texts, moved, translate, lines)?.let {
                     Target.MethodFormal(it, identity.index)
                 }
             }
 
             is ProofIdentity.PrimaryConstructor -> {
-                composedTarget(identity.owner, texts, moved, translate)
+                composedTarget(identity.owner, texts, moved, translate, lines)
                     ?.let(Target::PrimaryConstructor)
             }
 
             is ProofIdentity.Generated -> {
-                val owner = composedTarget(identity.owner, texts, moved, translate) ?: return null
+                val owner = composedTarget(identity.owner, texts, moved, translate, lines) ?: return null
                 val contracts =
                     identity.contracts.map {
-                        composedTarget(it, texts, moved, translate) ?: return null
+                        composedTarget(it, texts, moved, translate, lines) ?: return null
                     }
                 Target.Generated(owner, contracts)
             }
 
-            is ProofIdentity.Super -> composedTarget(identity.method, texts, moved, translate)?.let(Target::Super)
+            is ProofIdentity.Super -> composedTarget(identity.method, texts, moved, translate, lines)?.let(Target::Super)
 
             is ProofIdentity.Receiver ->
                 composedTarget(
@@ -1152,17 +1155,17 @@ internal object XdkRename {
                 )?.let { Target.Receiver(it, identity.register) }
 
             is ProofIdentity.Composed -> {
-                val owner = composedTarget(identity.owner, texts, moved, translate) ?: return null
+                val owner = composedTarget(identity.owner, texts, moved, translate, lines) ?: return null
                 val members =
                     identity.members.map {
-                        composedTarget(it, texts, moved, translate) ?: return null
+                        composedTarget(it, texts, moved, translate, lines) ?: return null
                     }
                 val delegates =
                     identity.delegates.map {
-                        composedTarget(it, texts, moved, translate) ?: return null
+                        composedTarget(it, texts, moved, translate, lines) ?: return null
                     }
-                val cycles = identity.cycles.map { composedTarget(it, texts, moved, translate) ?: return null }
-                val alternatives = identity.alternatives.map { composedTarget(it, texts, moved, translate) ?: return null }
+                val cycles = identity.cycles.map { composedTarget(it, texts, moved, translate, lines) ?: return null }
+                val alternatives = identity.alternatives.map { composedTarget(it, texts, moved, translate, lines) ?: return null }
                 Target.Composed(owner, members, delegates, cycles, alternatives)
             }
 
@@ -1170,10 +1173,10 @@ internal object XdkRename {
                 val source = identity.location.sourceName ?: return null
                 val text = texts[source] ?: return Target.External(identity)
                 val start =
-                    offset(text, identity.location.range.start)?.let { translate(source, it) }
+                    lines.offset(text, identity.location.range.start)?.let { translate(source, it) }
                         ?: return null
                 val end =
-                    offset(text, identity.location.range.end)?.let { translate(source, it) }
+                    lines.offset(text, identity.location.range.end)?.let { translate(source, it) }
                         ?: return null
                 Target.SourceProof(Site(moved(source), start, end), identity.format)
             }
@@ -1203,6 +1206,7 @@ internal object XdkRename {
         callStart: ((String, Int) -> Int?)? = null,
         translate: (String, Int) -> Int?,
     ): Map<Site, Target>? {
+        val lines = LineIndexes()
         val declarations =
             facts.models
                 .flatMap { it.symbols }
@@ -1217,9 +1221,9 @@ internal object XdkRename {
         ): Site? {
             val text = texts[source] ?: return null
             val start =
-                offset(text, range.start)?.let { (if (call) callStart else null)?.invoke(source, it) ?: translate(source, it) }
+                lines.offset(text, range.start)?.let { (if (call) callStart else null)?.invoke(source, it) ?: translate(source, it) }
                     ?: return null
-            val end = offset(text, range.end)?.let { translate(source, it) } ?: return null
+            val end = lines.offset(text, range.end)?.let { translate(source, it) } ?: return null
             return Site(moved(source), start, end, call)
         }
 
@@ -1259,7 +1263,7 @@ internal object XdkRename {
                 identity is ProofIdentity.Parameter ||
                 identity is ProofIdentity.MethodFormal
             ) {
-                return composedTarget(identity, texts, moved, translate)
+                return composedTarget(identity, texts, moved, translate, lines)
             }
             val source = symbol.declarationSource
             val range = symbol.declaration
@@ -1281,7 +1285,7 @@ internal object XdkRename {
                         val callable = facts.callables[SemanticModel.SourceLocation(source, occurrence.range)]
                         val bound =
                             if (callable != null) {
-                                composedTarget(callable, texts, moved, translate) ?: return null
+                                composedTarget(callable, texts, moved, translate, lines) ?: return null
                             } else {
                                 target(model, occurrence.symbol)
                                     // a register the model cannot place, such as a primary constructor's parameter
@@ -1297,7 +1301,7 @@ internal object XdkRename {
                     val callable = facts.callables[SemanticModel.SourceLocation(source, call.callee)]
                     result[site(source, call.callee, true) ?: return null] =
                         if (callable != null) {
-                            composedTarget(callable, texts, moved, translate) ?: return null
+                            composedTarget(callable, texts, moved, translate, lines) ?: return null
                         } else {
                             target(model, call.method) ?: return null
                         }
@@ -1321,20 +1325,33 @@ internal object XdkRename {
     internal fun offset(
         text: String,
         position: SemanticModel.Position,
-    ): Int? {
-        val breaks = newlines.findAll(text).toList()
-        val start =
-            if (position.line == 0) {
-                0
-            } else {
-                breaks
-                    .getOrNull(position.line - 1)
-                    ?.range
-                    ?.last
-                    ?.plus(1) ?: return null
-            }
-        val end = breaks.getOrNull(position.line)?.range?.first ?: text.length
-        return (start + position.column).takeIf { it <= end }
+    ): Int? = LineIndex(text).offset(position)
+
+    /** A text's line breaks, found once for the many positions a proof converts in it, where [offset] finds them for one. */
+    private class LineIndex(
+        text: String,
+    ) {
+        private val length = text.length
+        private val breaks: List<IntRange> = newlines.findAll(text).map { it.range }.toList()
+
+        fun offset(position: SemanticModel.Position): Int? {
+            val start = if (position.line == 0) 0 else breaks.getOrNull(position.line - 1)?.last?.plus(1) ?: return null
+            val end = breaks.getOrNull(position.line)?.first ?: length
+            return (start + position.column).takeIf { it <= end }
+        }
+    }
+
+    /**
+     * The line indexes of one comparison's texts, by identity, as each text of a proof is its own: a comparison converts
+     * positions in a whole module's sources, and finding a large file's line breaks for each one made it take minutes.
+     */
+    private class LineIndexes {
+        private val indexes = IdentityHashMap<String, LineIndex>()
+
+        fun offset(
+            text: String,
+            position: SemanticModel.Position,
+        ): Int? = indexes.getOrPut(text) { LineIndex(text) }.offset(position)
     }
 
     internal fun position(
