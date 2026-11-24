@@ -249,6 +249,20 @@ class XdkCursorServerTest {
         }
     }
 
+    @Test
+    fun `client cancellation of xtc rename reaches the backend of an adapter other than the compiler's`() {
+        val backend = Backend()
+        Session(backend).use { session ->
+            session.open()
+            // without the compiler's adapter, xtc/rename answers with textDocument/rename's edit
+            val response = session.server.renameProposal(RenameParams(TextDocumentIdentifier(URI), Position(0, 0), "renamed"))
+            val work = backend.next()
+            assertThat(response.cancel(false)).isTrue()
+            assertThat(backend.canceled.awaited()).isTrue()
+            assertThat(work.future.isCancelled).isTrue()
+        }
+    }
+
     @ParameterizedTest
     @EnumSource(Feature::class)
     fun `cancellation while waiting for analysis does not start cursor work`(feature: Feature) {

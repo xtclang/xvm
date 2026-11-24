@@ -47,9 +47,11 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
+import org.xvm.lsp.logged
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit.SECONDS
@@ -583,6 +585,73 @@ class XdkRenameServerTest {
             ).isEqualTo(3)
         } finally {
             server.shutdown().awaited()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["textDocument/rename", "xtc/rename"])
+    fun `a rename that the client cancels stops its proof at the adapter`(method: String) {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val text = "module Library { class Box { Int pick(Int value) = value; } }"
+        val library = directory.resolve("Library.x").toFile().apply { writeText(text) }
+        val consumer =
+            directory.resolve("Consumer.x").toFile().apply {
+                writeText("module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }")
+            }
+        val uri = library.toURI().toString()
+        val hold = AtomicBoolean()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val support = EmbeddingSupport.instance()
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    if (hold.compareAndSet(true, false)) {
+                        entered.countDown()
+                        check(release.awaited())
+                    }
+                    support.compileModule(sources, repository, errors)
+                },
+                { source, _, cursor, repository, errors ->
+                    support.analyzeIncomplete(source, cursor, repository, errors)
+                },
+            )
+        val lines = CopyOnWriteArrayList<String>()
+        logged(lines) {
+            val server = XtcLanguageServer(adapter)
+            server.connect(mock(LanguageClient::class.java))
+            try {
+                server.initialize(parameters()).awaited()
+                server.replaceCompilerSourceModules(
+                    listOf(
+                        XdkSourceModule("Library", uri),
+                        XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                    ),
+                )
+                val documents = server.textDocumentService
+                documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+                documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).awaited()
+                hold.set(true)
+                val params = RenameParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("pick")), "choose")
+                val renamed = if (method == "xtc/rename") server.renameProposal(params) else documents.rename(params)
+                // the proof's first compile, Library's before the edit
+                assertThat(entered.awaited()).isTrue()
+                // as the client's cancellation does
+                assertThat(renamed.cancel(false)).isTrue()
+                release.countDown()
+                // the proof stops after the compile it was in, where it would go on to compile Consumer, and both again
+                // after the edit
+                val kind = if (method == "xtc/rename") "rename_proposal" else "rename"
+                awaitUntil { lines.any { it.startsWith("project query: kind=$kind ") } }
+                assertThat(lines.single { it.startsWith("project query: kind=$kind ") })
+                    .contains("outcome=cancelled")
+                    .contains("compiles=1 in")
+            } finally {
+                release.countDown()
+                server.shutdown().awaited()
+            }
         }
     }
 
