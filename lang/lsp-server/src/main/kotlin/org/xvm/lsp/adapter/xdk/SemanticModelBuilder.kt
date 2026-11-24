@@ -45,6 +45,7 @@ import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.compiler.ast.NewExpression
 import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.PropertyDeclarationStatement
+import org.xvm.compiler.ast.StatementBlock.TargetInfo
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.compiler.ast.TypeExpression
 import org.xvm.compiler.ast.TypedefStatement
@@ -324,6 +325,9 @@ private class SemanticModelBuilder(
     private val parameters = mutableMapOf<Pair<MethodConstant, Int>, SymbolId>()
     private val supers = mutableMapOf<SymbolId, MethodConstant>()
 
+    // The this of each property accessor, by the method that names it and the class whose instance it is ([outerThis]).
+    private val outerReceivers = linkedMapOf<Pair<IdentityConstant?, IdentityConstant>, SymbolId>()
+
     fun declarationFacts(
         analysis: EmbeddingSupport.DeclarationAnalysis,
         dependencies: XdkDependencies.Open,
@@ -363,7 +367,7 @@ private class SemanticModelBuilder(
                 val type = register.type
                 if (!copyableType(type) || !type.isSingleUnderlyingClass(false)) return@mapNotNull null
                 id to CompilerReceiver(type.getSingleUnderlyingClass(false), register.index)
-            }.toMap()
+            }.toMap() + outerReceivers.entries.associate { (key, id) -> id to CompilerReceiver(key.second, Op.A_THIS) }
 
     /** A selected declaration alone loses union alternatives and recursive receiver provenance. */
     fun callableBindings(compilation: EmbeddingSupport.Compilation): Map<SourceLocation, Pair<TypeConstant, MethodConstant>> =
@@ -659,7 +663,10 @@ private class SemanticModelBuilder(
             if (node is InvocationExpression) {
                 val callee = node.invokedExpression
                 val method = bindings[node]?.method() ?: node.resolvedMethod
-                if (callee is NameExpression && method != null) callees[callee] = method
+                // The name of a function bound at a register, as in &super(_) or &fn(_), is resolved by the
+                // invocation alone. A super with a method to dispatch to has it as the invocation's method.
+                val target = method ?: node.boundRegister
+                if (callee is NameExpression && target != null) callees[callee] = target
             }
             recordHeaderStart(node)
         }
@@ -726,8 +733,17 @@ private class SemanticModelBuilder(
                             null
                         }
                     val target = callees[node] ?: node.resolvedTarget ?: delegate
-                    refer(node.nameToken, target, expressionType, node.source, writes[at])
-                    if (node.isSuppressDeref) (normalized(target) as? Register)?.let(referenced::add)
+                    if (target is TargetInfo && node.name == "this") {
+                        val symbol = outerThis(node, target)
+                        if (at !in occurrences) {
+                            val type = type(expressionType) ?: symbols[symbol]?.type
+                            occurrences[at] = Occurrence(at.range, node.name, Role.REFERENCE, symbol, type, SemanticModel.Usage.READ)
+                        }
+                    } else {
+                        refer(node.nameToken, target, expressionType, node.source, writes[at])
+                    }
+                    // &fn(_) binds the function that fn holds; it makes no Ref to fn.
+                    if (node.isSuppressDeref && node.resolvedTarget != null) (normalized(target) as? Register)?.let(referenced::add)
                     if (complete && target is Register && target.isSuper) {
                         val method =
                             generateSequence(node.parent) { it.parent }
@@ -1505,6 +1521,28 @@ private class SemanticModelBuilder(
         val symbol = symbols[id] ?: return
         val start = location(declaration.source, declaration.startPosition, declaration.startPosition).range.start
         symbols[id] = symbol.copy(headerStart = start)
+    }
+
+    /**
+     * The symbol of `this` in a property's accessor, such as a lazy property's `calc()`: the instance that holds the
+     * property, which the compiler reaches as an outer this ([TargetInfo]) that names its class rather than a register.
+     * Each method has its own, as each has its own this register, and a proof knows it as that class's receiver.
+     */
+    private fun outerThis(
+        node: AstNode,
+        receiver: TargetInfo,
+    ): SymbolId {
+        val method =
+            generateSequence(node.parent) { it.parent }
+                .filterIsInstance<MethodDeclarationStatement>()
+                .firstOrNull()
+                ?.let(::identity)
+        return outerReceivers.getOrPut(method to receiver.id) {
+            SymbolId(id, symbols.size).also {
+                symbols[it] =
+                    Symbol(it, "this", SymbolKind.VARIABLE, null, type(receiver.type), null, null, setOf(SemanticModel.Modifier.READONLY))
+            }
+        }
     }
 
     private fun declare(

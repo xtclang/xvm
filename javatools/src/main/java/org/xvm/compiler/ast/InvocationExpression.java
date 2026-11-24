@@ -284,10 +284,25 @@ public class InvocationExpression
      * outside the compiler, which is what a host needs to answer "where is this method declared".
      *
      * @return the method this resolved to, or null if it never resolved to one, which covers a
-     *         call through a function reference as well as source that does not compile
+     *         call through a function reference as well as source that does not compile; for a
+     *         bound super, as in {@code &super(_)}, the method that super dispatches to, when the
+     *         host asked for bindings
      */
     public MethodConstant getResolvedMethod() {
-        return m_method == null ? null : m_method.getIdentityConstant();
+        return m_method == null ? m_idSuper : m_method.getIdentityConstant();
+    }
+
+    /**
+     * The register that the name of a bound function refers to, as in {@code &super(_)} or
+     * {@code &fn(_)}: this invocation resolves such a name itself and does not validate its name
+     * expression, which would produce a reference, so that expression holds no target.
+     *
+     * @return the register that the bound name refers to, or null if the invocation does not bind
+     *         a function held by a register
+     */
+    public Register getBoundRegister() {
+        return expr instanceof NameExpression exprName && exprName.isSuppressDeref()
+                && m_argMethod instanceof Register reg ? reg : null;
     }
 
     @Override
@@ -1010,6 +1025,13 @@ public class InvocationExpression
                                 Arrays.copyOfRange(atypeFnParams, cTypeParams, atypeFnParams.length),
                                 atypeFnReturns);
                         cTypeParams = 0;
+                    }
+                    if (((Register) argMethod).isSuper() && bindings.isEnabled()) {
+                        // a host reads the method that a bound super dispatches to, as a call's
+                        // binding names the method it calls
+                        TypeInfo   info   = ctx.getThisType().ensureAccess(Access.PRIVATE).ensureTypeInfo(errs);
+                        MethodInfo method = info.getMethodById(ctx.getMethod().getIdentityConstant());
+                        m_idSuper = method == null ? null : method.getSuperMethod(info).orElse(null);
                     }
                 } else {
                     Expression exprNew = exprName.validate(ctx, typeFn, errs);
@@ -3031,6 +3053,8 @@ public class InvocationExpression
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
                                                          // this holds the corresponding structure
+    private transient MethodConstant  m_idSuper;         // the method a bound super dispatches to,
+                                                         // when a host asks for bindings
     private transient TypeConstant    m_typeTarget;      // if m_argMethod is a PropertyConstant,
                                                          // referring to a function and the target
                                                          // is not "this context", it holds the
