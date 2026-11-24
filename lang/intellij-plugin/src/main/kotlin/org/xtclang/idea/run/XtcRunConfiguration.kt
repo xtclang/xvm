@@ -440,7 +440,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
             row("Run with:") {
                 comboBox(XtcRunMode.entries.toList())
                     .bindItem({ runWith }, { runWith = it ?: XtcRunMode.PROJECT })
-                    .comment("The project default is set in Settings | Build, Execution, Deployment | Ecstasy")
+                    .comment("The project default is set in ${XtcBuildSettings.SETTINGS_PAGE}")
             }
             row { checkBox("Quiet mode (-q, Gradle only)").bindSelected(::quietMode) }
             row {

@@ -54,7 +54,7 @@ open class LanguageServiceConfigurable(
     private var original: JsonObject? = null
     private var initial = LanguageServiceConfiguration()
 
-    override fun getDisplayName(): String = if (project == null) "Ecstasy Language Service Defaults" else "Ecstasy Language Service"
+    override fun getDisplayName(): String = if (project == null) "Language Service Defaults" else "Language Service"
 
     override fun createComponent(): JComponent {
         inherit.addItemListener { updateEnabled() }
@@ -84,7 +84,7 @@ open class LanguageServiceConfigurable(
                     "<html>Full is the default. Incremental sends changed text; it does not enable incremental compilation.<br>" +
                         "The server formats on save while Tools → Actions on Save doesn't reformat Ecstasy files.<br>" +
                         "Indentation and the compiler wrapping margin are configured under Editor → Code Style → Ecstasy.<br>" +
-                        "Compiler paths remain under Ecstasy Compiler. Trace controls remain in Language Servers; JVM and log limits are under Ecstasy Server Runtime and Logs.</html>",
+                        "Compiler paths are on Ecstasy › Compiler. Trace controls remain in Language Servers; JVM and log limits are on Ecstasy › Server Runtime and Logs.</html>",
                 ),
                 BorderLayout.CENTER,
             )

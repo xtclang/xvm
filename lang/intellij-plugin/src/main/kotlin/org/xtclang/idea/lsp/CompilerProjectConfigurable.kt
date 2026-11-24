@@ -75,7 +75,7 @@ class CompilerProjectConfigurable
         private val reportRevision = AtomicLong()
         private var original: List<SourceModuleConfiguration>? = null
 
-        override fun getDisplayName(): String = "Ecstasy Compiler"
+        override fun getDisplayName(): String = "Compiler"
 
         override fun createComponent(): JComponent {
             val add =

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Element
 import org.xtclang.idea.PluginPaths
+import org.xtclang.idea.lsp.EcstasyConfigurable
 import java.io.InputStream
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -148,6 +149,25 @@ class PluginManifestTest {
         val elements = lsp4ijPluginXml().getElementsByTagName("*")
         val ids = (0 until elements.length).map { (elements.item(it) as Element).getAttribute("id") }.toSet()
         assertThat(TEXT_CHECKS.keys - ids).withFailMessage("LSP4IJ has none of these extensions any more").isEmpty()
+    }
+
+    @Test
+    @DisplayName("every settings page stands under Languages & Frameworks | Ecstasy, which links each one")
+    fun settingsPagesShareOneNode() {
+        val elements = pluginXml.getElementsByTagName("*")
+        val pages =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .filter { it.tagName == "applicationConfigurable" || it.tagName == "projectConfigurable" }
+                .filter { it.getAttribute("instance").startsWith("org.xtclang.") }
+                .associateBy { it.getAttribute("id") }
+        assertThat(pages.getValue("xtc").getAttribute("parentId")).isEqualTo("language")
+        // a pointer beside the IDE's build tools leads to the build mode's page
+        assertThat(pages.getValue("xtc.build.pointer").getAttribute("parentId")).isEqualTo("build")
+        val children = pages.filterKeys { it != "xtc" && it != "xtc.build.pointer" }
+        assertThat(children.values.map { it.getAttribute("parentId") }).containsOnly("xtc")
+        assertThat(EcstasyConfigurable.PAGES.associate { it.id to it.name })
+            .isEqualTo(children.mapValues { it.value.getAttribute("displayName") })
     }
 
     private fun lsp4ijPluginXml(): Element =

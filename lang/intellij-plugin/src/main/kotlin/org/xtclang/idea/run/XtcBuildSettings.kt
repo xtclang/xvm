@@ -132,10 +132,10 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
         private val GRADLE_BUILD_FILES = listOf("build.gradle.kts", "build.gradle", "settings.gradle.kts", "settings.gradle")
 
         /** Where the mode is chosen; consoles link it to the page ([BuildSettingsLink]). */
-        internal const val SETTINGS_PAGE = "Settings | Build, Execution, Deployment | Ecstasy"
+        internal const val SETTINGS_PAGE = "Settings | Languages & Frameworks | Ecstasy | Build and Run"
 
         /** Where the Gradle model is imported, with its Refresh Gradle model button. */
-        private const val COMPILER_PAGE = "Settings | Languages & Frameworks | Ecstasy Compiler"
+        private const val COMPILER_PAGE = "Settings | Languages & Frameworks | Ecstasy | Compiler"
 
         // Gradle's answer to a task that no project of the build has, such as a bare runXtc at a composite build's root
         private val MISSING_TASK = Regex("Task '(run|test)Xtc' not found")

@@ -91,19 +91,22 @@
         <postStartupActivity implementation="org.xtclang.idea.lsp.ServerControlStartup"/>
         <postStartupActivity implementation="org.xtclang.idea.lsp.CompilerBuildUpdates"/>
         <externalSystemTaskNotificationListener implementation="org.xtclang.idea.lsp.CompilerGradleSync"/>
-        <applicationConfigurable id="xtc.service.defaults" parentId="language"
-                                 displayName="Ecstasy Language Service Defaults"
-                                 instance="org.xtclang.idea.lsp.LanguageServiceApplicationConfigurable"/>
-        <applicationConfigurable id="xtc.runtime" parentId="language" displayName="Ecstasy Server Runtime and Logs"
-                                 instance="org.xtclang.idea.lsp.ServerRuntimeConfigurable"/>
-        <projectConfigurable id="xtc.service" parentId="language"
-                             displayName="Ecstasy Language Service"
+        <!-- Languages & Frameworks | Ecstasy: one node for every settings page of the plugin, project and application -->
+        <applicationConfigurable id="xtc" parentId="language" displayName="Ecstasy"
+                                 instance="org.xtclang.idea.lsp.EcstasyConfigurable"/>
+        <projectConfigurable id="xtc.service" parentId="xtc" displayName="Language Service"
                              instance="org.xtclang.idea.lsp.LanguageServiceProjectConfigurable"/>
-        <projectConfigurable id="xtc.compiler" parentId="language" displayName="Ecstasy Compiler"
+        <applicationConfigurable id="xtc.service.defaults" parentId="xtc" displayName="Language Service Defaults"
+                                 instance="org.xtclang.idea.lsp.LanguageServiceApplicationConfigurable"/>
+        <projectConfigurable id="xtc.compiler" parentId="xtc" displayName="Compiler"
                              instance="org.xtclang.idea.lsp.CompilerProjectConfigurable"/>
-        <!-- Build, Execution, Deployment | Ecstasy: build and run with the embedded compiler or Gradle -->
-        <projectConfigurable id="xtc.build" parentId="build" displayName="Ecstasy"
+        <applicationConfigurable id="xtc.runtime" parentId="xtc" displayName="Server Runtime and Logs"
+                                 instance="org.xtclang.idea.lsp.ServerRuntimeConfigurable"/>
+        <!-- build and run with the embedded compiler or Gradle; a pointer to it stays beside the IDE's build tools -->
+        <projectConfigurable id="xtc.build" parentId="xtc" displayName="Build and Run"
                              instance="org.xtclang.idea.run.XtcBuildConfigurable"/>
+        <projectConfigurable id="xtc.build.pointer" parentId="build" displayName="Ecstasy"
+                             instance="org.xtclang.idea.run.XtcBuildPointerConfigurable"/>
         <!-- Build and Rebuild Project in embedded mode; ahead of the IDE's own builder for Ecstasy modules, and of
              Gradle's, which is first as well and takes every module of a Gradle project that IntelliJ imported -->
         <projectTaskRunner implementation="org.xtclang.idea.run.XtcProjectTaskRunner" order="first, before gradle"/>
