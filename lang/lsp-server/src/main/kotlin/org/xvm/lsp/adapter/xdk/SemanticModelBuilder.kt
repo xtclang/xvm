@@ -754,8 +754,15 @@ private class SemanticModelBuilder(
                             occurrences[at] = Occurrence(at.range, node.name, Role.REFERENCE, symbol, type, SemanticModel.Usage.READ)
                         }
                     } else {
+                        // this.Outer, or this.Host in a property's class, names the outer instance by a class, which
+                        // the compiler reaches as an outer TargetInfo: the name is an occurrence of the class it spells,
+                        // ecstasy's Outer interface, which any virtual child may name, as this.Host in a method is of Host
+                        val named =
+                            (target as? TargetInfo)?.let { outer ->
+                                outer.id.takeIf { it.name == node.name } ?: pool?.clzOuter()?.takeIf { it.name == node.name }
+                            }
                         val property = (target as? Register)?.let { headerProperty(node, it) }
-                        refer(node.nameToken, property ?: target, expressionType, node.source, writes[at])
+                        refer(node.nameToken, named ?: property ?: target, expressionType, node.source, writes[at])
                     }
                     // &fn(_) binds the function that fn holds; it makes no Ref to fn.
                     if (node.isSuppressDeref && node.resolvedTarget != null) (normalized(target) as? Register)?.let(referenced::add)
