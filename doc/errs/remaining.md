@@ -2039,7 +2039,7 @@ change shows in them. In the order worth doing:
 
 | ID | Limitation | Estimate | Worth it |
 |----|------------|----------|----------|
-| K2a | IntelliJ's Run 'All Ecstasy Tests' has no Rerun Failed Tests | 1 day | Yes, first: the usual next step after a full run |
+| K2a | IntelliJ's Run 'All Ecstasy Tests' has no Rerun Failed Tests | 1 day | Done 2026-11-24, embedded and with `xtc test`; Gradle mode's one `testXtc` still has none |
 | K5a | Evaluations stop after 2 s, lazy values after 1 s | 0.5–1 day | Yes: a setting, small |
 | K6b | Rename and safe delete miss consumers the server does not know of | 0.5–1 day | Yes, as a prompt; automatic discovery is not |
 | K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Yes, after the release: arguments and JVM options, not the XDK version |
@@ -2050,12 +2050,17 @@ change shows in them. In the order worth doing:
 | K4 | A debugged program keeps the code it was built from | weeks, in the runtime | No, not here: a runtime feature |
 | K8 | The Tree-sitter adapter knows only syntax | — | No: by design |
 
-- [ ] K2a: Rerun Failed Tests after Run 'All Ecstasy Tests'. `XtcTestConsoleProperties.createRerunFailedTestsAction`
-  (`TestRuns.kt`) offers none for an all-modules run, as a failed test's selector does not name its
-  module and `XtcTestLocator` resolves locations in the configuration's one module. `AllTestModulesState`
-  runs the modules in turn, so it knows which module each test event comes from: give each node a
-  location with its module, and a rerun that groups the failed tests by module and runs each module's
-  selection in turn. 1 day.
+- [x] K2a: Rerun Failed Tests after Run 'All Ecstasy Tests'. `XtcTestConsoleProperties.createRerunFailedTestsAction`
+  (`TestRuns.kt`) offered none for an all-modules run, as a failed test's selector does not name its
+  module and `XtcTestLocator` resolved locations in the configuration's one module. Done 2026-11-24
+  (`lagergren/k2a-rerun-all-tests`): `AllTestModulesState` names each module in its output ahead of the
+  module's run (`XtcTestEventsConverter.moduleLine`), so each test's location is
+  `xunit://<module>/<selector>` (`XtcTestLocation`), which `XtcTestLocator` finds in that module; Rerun
+  Failed Tests groups the failed tests by module and runs each module with only its failed tests, in
+  turn, into one console, as `AllTestModulesState` with tests. A run of one module's tests keeps
+  `xunit://<selector>`. None under Debug, as before, and none in Gradle mode, whose one `testXtc` for
+  every module does not say which module an event is of: that needs xunit's events to name their module,
+  or a `testXtc` per module. X348 checks it in IntelliJ.
 - [ ] K2b: Debug for Run 'All Ecstasy Tests'. LSP4IJ's DAP launch debugs one configuration, one program,
   and an all-modules run is one program per module, in turn. Either the debug server runs the modules
   one after another in one session, keeping its breakpoints (2–3 days), or xunit runs every test module

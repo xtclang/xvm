@@ -115,7 +115,7 @@ in that editor, with the editor's usual action for it.
 | Run or debug a test, class, package or module | Gutter icons | Testing view, gutter, Run Test at Cursor | |
 | Results, messages and the failing line | Test runner | Testing view, Test Results | |
 | Rerun failed tests | Yes | Yes | |
-| Run every test module's tests | Run 'All Ecstasy Tests' | Run All Tests | IntelliJ's has no Debug or Rerun Failed yet |
+| Run every test module's tests | Run 'All Ecstasy Tests' | Run All Tests | IntelliJ's has no Debug yet, nor Rerun Failed in Gradle mode |
 | Tests with Gradle's `testXtc` | Yes | Yes | In Gradle mode |
 | Tests with `xtc test` | Yes | No | In command-line mode |
 
@@ -747,7 +747,8 @@ Some common problems:
 ### Known limitations
 
 - VS Code has no `xtc` command-line build mode; use embedded or Gradle.
-- IntelliJ's **Run 'All Ecstasy Tests'** has no Debug and no Rerun Failed Tests yet.
+- IntelliJ's **Run 'All Ecstasy Tests'** has no Debug yet. In Gradle mode, which runs every module's tests
+  in one `testXtc` build, it has no **Rerun Failed Tests** either.
 - In embedded mode, the project's Gradle settings don't apply to builds and runs.
 - A program being debugged keeps the code it was built from: edits apply the next time you run it.
 - Code run from the Debug Console or Evaluate Expression stops after two seconds, and a lazy value
