@@ -135,7 +135,8 @@ case "$mode" in
     gradle)
         start_display
         status=0
-        ./gradlew "$@" || status=$?
+        # the lang build flags, as the header says, so that :lang:* tasks resolve; passing them again is harmless
+        ./gradlew -PincludeBuildLang=true -PincludeBuildAttachLang=true "$@" || status=$?
         stop_recording
         copy_runs
         # the VS Code extension's reports (its suite, playbook, lifecycle and explorer runs), when there are any
