@@ -25,9 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * A revision's compile for code actions starts from the previous revision's: it compiles only the modules whose sources
- * changed and those that depend on them, and keeps the rest. Each case compares it, after one edit, with the compile of
- * the same sources from nothing: the same errors, the same modules compiled, the same artifacts, with the module compiles
- * counted, never timed.
+ * changed and those of the modules that depend on them that use what changed ([org.xvm.lsp.adapter.xdk.XdkMemberUseTracker]),
+ * and keeps the rest. Each case compares it, after one edit, with the compile of the same sources from nothing: the same
+ * errors, the same modules compiled, the same artifacts and facts, with the module compiles counted, never timed.
  */
 class XdkIncrementalBaseTest {
     @TempDir lateinit var directory: Path
@@ -36,14 +36,15 @@ class XdkIncrementalBaseTest {
     private val compiles = AtomicInteger()
 
     /**
-     * What a revision's compile gives each module, by its name: its errors, whether it has facts, its artifact, and the
-     * modules that its facts name by artifact revision.
+     * What a revision's compile gives each module, by its name: its errors, whether it has facts, its artifact, the
+     * modules that its facts name by artifact revision, and its facts ([factsText]).
      */
     private data class Outcome(
         val errors: Map<String, List<String>>,
         val facts: Set<String>,
         val artifacts: Map<String, String>,
         val named: Map<String, Set<String>>,
+        val texts: Map<String, String>,
     )
 
     @Test
@@ -59,11 +60,11 @@ class XdkIncrementalBaseTest {
     }
 
     @Test
-    fun `an edit of the root module that moves its declarations compiles every module that depends on it`() {
+    fun `an edit of the root module that moves its declarations compiles the modules whose facts name one`() {
         val root = cardGame()
         val card = root.resolve("src/main/x/cardGame/Card.x")
-        // the modules that depend on it name its declarations where they are
-        assertThat(incremental(root, null, mapOf(card to "// edited\n" + card.readText()))).isEqualTo(CARD_GAME)
+        // the modules that depend on it name Card's declarations where they are, but CardGameTest, which keeps its compile
+        assertThat(incremental(root, null, mapOf(card to "// edited\n" + card.readText()))).isEqualTo(CARD_GAME - 1)
     }
 
     @Test
@@ -93,32 +94,35 @@ class XdkIncrementalBaseTest {
     }
 
     @Test
-    fun `a body edit of the root module before a declaration compiles every module that depends on it`() {
+    fun `a body edit of the root module before a declaration that no module names compiles it alone`() {
         val root = cardGame()
         val hand = root.resolve("src/main/x/cardGame/Hand.x")
-        // the constructor's body grows by a line, which moves display, declared after it
+        // the constructor's body grows by a line, which moves display, declared after it, whose place no other module's
+        // facts name: they keep their compile
         val edited =
             hand.readText().replaceFirst(
                 "        construct CardCollection(label);\n",
                 "        construct CardCollection(label);\n\n",
             )
-        assertThat(incremental(root, null, mapOf(hand to edited))).isEqualTo(CARD_GAME)
+        assertThat(incremental(root, null, mapOf(hand to edited))).isEqualTo(1)
     }
 
     @Test
-    fun `a signature edit of the root module compiles every module that depends on it`() {
+    fun `a signature edit of the root module compiles the modules that use the class whose method it changes`() {
         val root = cardGame()
         val hand = root.resolve("src/main/x/cardGame/Hand.x")
         val edited = hand.readText().replaceFirst("    void display() {", "    void display(Int indent = 0) {")
-        assertThat(incremental(root, null, mapOf(hand to edited))).isEqualTo(CARD_GAME)
+        // CardCollectionTest, CardGameTest and CardTest use no Hand, and keep their compile
+        assertThat(incremental(root, null, mapOf(hand to edited))).isEqualTo(CARD_GAME - 3)
     }
 
     @Test
-    fun `an edit of a constant's value in the root module compiles every module that depends on it`() {
+    fun `an edit of a constant's value in the root module compiles the modules that name the constant`() {
         val root = cardGame()
         val constants = root.resolve("src/main/x/cardGame/GameConstants.x")
         val edited = constants.readText().replaceFirst("static Int INITIAL_HAND_SIZE = 5;", "static Int INITIAL_HAND_SIZE = 7;")
-        assertThat(incremental(root, null, mapOf(constants to edited))).isEqualTo(CARD_GAME)
+        // CardGameTest, CardTest and HandTest do not name INITIAL_HAND_SIZE, and keep their compile
+        assertThat(incremental(root, null, mapOf(constants to edited))).isEqualTo(CARD_GAME - 3)
     }
 
     @Test
@@ -293,6 +297,7 @@ class XdkIncrementalBaseTest {
                         ?.binaryModules
                         .orEmpty()
             },
+            modules.associate { module -> module.name to factsText(base.facts.module(module.uri)) },
         )
     }
 

@@ -14,12 +14,12 @@ import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * After a rename's edit, its proof compiles only the modules that depend on the edited ones that the edit can reach
- * ([org.xvm.lsp.adapter.xdk.XdkRenameReach]): those that write the old or the new name, use a type whose members the
- * rename changes, or name a declaration on an edited line. Each case is a module that writes neither name, and must
- * either be compiled, as its bindings can change, or keep its compile. Each checks the rename's outcome, which is the
- * one that compiling every dependent module gives, and the modules compiled after the edit, counted by name, never
- * timed.
+ * After a rename's edit, its proof compiles only the modules that depend on the edited ones that use what the edit
+ * changes ([org.xvm.lsp.adapter.xdk.XdkMemberUseTracker]): those that write a name of a declaration whose API it
+ * changes, use a type whose members it changes as a whole, or name a declaration whose place it moves. Each case is a
+ * module that writes neither name, and must either be compiled, as its bindings can change, or keep its compile. Each
+ * checks the rename's outcome, which is the one that compiling every dependent module gives, and the modules compiled
+ * after the edit, counted by name, never timed.
  */
 class XdkRenameReachTest {
     @TempDir lateinit var directory: Path
@@ -172,7 +172,7 @@ class XdkRenameReachTest {
     }
 
     @Test
-    fun `a rename to a name that is not a plain identifier compiles every module that depends on the edited one, and says so`() {
+    fun `a rename to a name that is not a plain identifier keeps the compile of the modules it does not reach, and says why`() {
         val lines = CopyOnWriteArrayList<String>()
         val rename =
             logged(lines) {
@@ -182,12 +182,12 @@ class XdkRenameReachTest {
                     "föo",
                 )
             }
+        // Far and Top keep their compile, as for any other name: the tracker reads names of any letters
         assertThat(rename.edited).containsExactlyInAnyOrder("Lib", "Uses")
-        assertThat(rename.compiled).containsExactlyInAnyOrder("Lib", "Uses", "Far", "Top")
-        assertThat(lines).contains(
-            "rename: the proof compiles every module that depends on the edited ones after the edit, as a name it replaces " +
-                "or writes is not a plain identifier",
-        )
+        assertThat(rename.compiled).containsExactly("Lib", "Uses")
+        assertThat(
+            lines,
+        ).contains("compile: of the 2 modules that depend on those compiled again, 2 keep their compile (Far, Top) and 0 compile again")
     }
 
     /** What a rename did: the modules it edits, or null when refused, and those its proof compiled after the edit. */
