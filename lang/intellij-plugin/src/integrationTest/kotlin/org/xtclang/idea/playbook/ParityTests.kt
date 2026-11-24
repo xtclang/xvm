@@ -213,6 +213,13 @@ internal interface TestRunProbe {
     fun runAllTests(project: Project)
 
     fun testRunsEnded(project: Project): Boolean
+
+    fun rerunFailedOffered(
+        project: Project,
+        name: String,
+    ): Boolean
+
+    fun gradleProjects(project: Project): String
 }
 
 /** Whether the results hold the test at [location] as finished: the probe also lists a test while it runs. */

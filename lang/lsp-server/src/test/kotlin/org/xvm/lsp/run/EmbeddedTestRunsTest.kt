@@ -1,5 +1,7 @@
 package org.xvm.lsp.run
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler
 import org.eclipse.lsp4j.services.LanguageClient
@@ -12,6 +14,7 @@ import org.xvm.debug.TestSelector
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkTest
 import org.xvm.lsp.awaitUntil
@@ -263,6 +266,64 @@ class EmbeddedTestRunsTest {
 
     @Test
     @Slow
+    fun `each event's ID starts with its module's declared name, a qualified one too, which names its Gradle project`() {
+        val qualified = source("lib/src/test/x/Qualified.x", QUALIFIED)
+        // the module as an imported Gradle model has it, its project's path by the module's name
+        val inputs =
+            XdkBuildModel
+                .read(
+                    listOf(
+                        JsonObject().apply {
+                            addProperty("schemaVersion", 1)
+                            add(
+                                "sourceSets",
+                                Gson().toJsonTree(
+                                    listOf(
+                                        mapOf(
+                                            "projectId" to "lib",
+                                            "sourceSet" to "test",
+                                            "sourceFiles" to listOf(qualified),
+                                            "moduleRoots" to listOf(qualified),
+                                            "resourceRoots" to emptyList<String>(),
+                                            "projectDependencies" to emptyList<String>(),
+                                            "modulePath" to emptyList<String>(),
+                                            "buildTreePath" to ":lib",
+                                        ),
+                                    ),
+                                ),
+                            )
+                        },
+                    ),
+                ).resolve()
+        assertThat(inputs.projects).containsExactlyEntriesOf(mapOf(QUALIFIED_NAME to ":lib"))
+        val client = RunClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceBuildInputs(inputs)
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS)).use { runs ->
+                runs
+                    .run(
+                        RunParams(module = QUALIFIED_NAME, moduleName = QUALIFIED_NAME, runId = "qualified", tests = emptyList()),
+                    ).awaited()
+                val exit = client.exits.awaited()!!
+                val started = client.events("qualified").filter { it.event == TestEvent.STARTED }
+
+                assertThat(exit.exitCode).isZero()
+                assertThat(started.map { it.id }).containsExactly(
+                    "$QUALIFIED_NAME:",
+                    "$QUALIFIED_NAME:void adds()",
+                    "$QUALIFIED_NAME:Inner",
+                    "$QUALIFIED_NAME:Inner.void works()",
+                )
+                // the module before the ID's first colon, as the editors read it, is the name the model gives its project by
+                assertThat(started.map { it.id!!.substringBefore(':') }.distinct()).containsExactlyElementsOf(inputs.projects.keys)
+                assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
+    @Slow
     fun `stop ends a test run that never finishes, which reports that it was stopped`() {
         val endless = source("Endless.x", ENDLESS)
         val client = RunClient()
@@ -457,6 +518,27 @@ class EmbeddedTestRunsTest {
                 void cleanUp() {
                     Int n = 1;
                     assert n + n == 3 as "not cleaned up";
+                }
+            }
+            """.trimIndent() + "\n"
+
+        /** The qualified name of [QUALIFIED], as such names as `json.xtclang.org` are. */
+        const val QUALIFIED_NAME = "qualified.example.org"
+
+        /** A module with a qualified name, with a test of its own and one of a class in it, which both pass. */
+        val QUALIFIED =
+            """
+            module $QUALIFIED_NAME {
+                @Test
+                void adds() {
+                    assert 1 + 1 == 2;
+                }
+
+                class Inner {
+                    @Test
+                    void works() {
+                        assert 2 + 2 == 4;
+                    }
                 }
             }
             """.trimIndent() + "\n"
