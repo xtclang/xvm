@@ -10,7 +10,6 @@ import org.xvm.asm.MethodStructure
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.PropertyStructure
 import org.xvm.asm.constants.IdentityConstant
-import org.xvm.asm.constants.MethodConstant
 import org.xvm.compiler.BuildRepository
 import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.util.ExecutionTrace
@@ -127,48 +126,31 @@ class XdkDependency
                 val file = FileStructure(ByteArrayInputStream(artifact))
                 ConstantPool.withPool(file.constantPool).use {
                     val pool = file.constantPool
-                    // read before the write below renumbers the constants: each declaration's constant and place, with
-                    // whether it is private, and whether each method is abstract, has code or is native
+                    // read before writing the API renumbers the constants: each declaration's constant and place, with
+                    // whether it is private
                     val located =
                         declarations.entries.map { (index, location) ->
                             val constant = pool.getConstant(index)
                             val private = constant is IdentityConstant && isPrivate(constant)
                             Triple(constant, "${location.sourceName} ${location.range}", private)
                         }
-                    val methods =
-                        pool.constants
-                            .filterIsInstance<MethodConstant>()
-                            .mapNotNull { it.component as? MethodStructure }
-                            .distinct()
-                    val implemented = methods.map { it.identityConstant to "${it.isAbstract} ${it.hasCode()} ${it.isNative}" }
-                    methods.forEach { method ->
-                        // marking a method abstract drops its code; it is then marked as it was
-                        val abstract = method.isAbstract
-                        method.setAbstract(true)
-                        method.setAbstract(abstract)
-                        method.configureSource(null, 0)
-                    }
-                    file.moduleIds().forEach { id ->
-                        file.getModule(id).apply {
-                            timestamp = null
-                            sourceDir = null
-                        }
-                    }
-                    val stripped = ByteArrayOutputStream().also(file::writeTo).toByteArray()
+                    // what a module that imports this one compiles against, as javatools defines it for Gradle's builds
+                    // (FileStructure.writeApi): the module without its methods' code and source text, its build time and
+                    // its source directory, with whether each method is abstract, native or has code
+                    val api = ByteArrayOutputStream().also(file::writeApiTo).toByteArray()
 
-                    // A constant is named by its index in the stripped pool, where the write put it: two artifacts whose
-                    // stripped forms are the same hold the same constant at each index. A description of it would ask of
-                    // its signature's types what only the dependencies' classes answer, which the artifact read alone holds
+                    // A constant is named by its index in the API's pool, where the write put it: two artifacts whose
+                    // APIs are the same hold the same constant at each index. A description of it would ask of its
+                    // signature's types what only the dependencies' classes answer, which the artifact read alone holds
                     // only as fingerprints, such as whether a parameterized type is a function's: in a library of the XVM
                     // repository, which depends on the workspace's ecstasy, "missing class for constant". A constant that
-                    // the stripped form does not hold is described, as before.
+                    // the API does not hold is described, as before.
                     fun named(constant: Constant): String = constant.position.takeIf { it >= 0 }?.let { "#$it" } ?: constant.toString()
-                    val kinds = implemented.map { (method, kind) -> "${named(method)} $kind" }
 
                     fun digest(places: List<String>): String {
                         val digest = MessageDigest.getInstance("SHA-256")
-                        digest.update(stripped)
-                        (places.sorted() + kinds.sorted()).forEach {
+                        digest.update(api)
+                        places.sorted().forEach {
                             digest.update(it.toByteArray(Charsets.UTF_8))
                             digest.update(0)
                         }
