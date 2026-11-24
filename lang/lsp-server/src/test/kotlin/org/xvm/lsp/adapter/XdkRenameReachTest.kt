@@ -172,6 +172,21 @@ class XdkRenameReachTest {
     }
 
     @Test
+    fun `a module that matches a virtual child of the renamed method's class with an interface is compiled, and the rename refused`() {
+        // the rename's own foo is the first: the method of Base's virtual Child, which make returns and Duck matches with
+        // HasFoo; Duck names Base and make, and the child only by Base's name and its own
+        val lib =
+            "module Lib {\n    class Base {\n        class Child {\n            Int foo() = 1;\n        }\n\n" +
+                "        Child make() = new Child();\n    }\n}\n"
+        val duck =
+            "module Duck {\n    package lib import Lib;\n    package iface import Iface;\n\n" +
+                "    Int run() {\n        iface.HasFoo h = new lib.Base().make();\n        return 0;\n    }\n}\n"
+        val rename = rename(mapOf("Lib" to lib, "Iface" to HAS_FOO, "Duck" to duck), mapOf("Duck" to setOf("Lib", "Iface")))
+        assertThat(rename.edited).isNull()
+        assertThat(rename.compiled).containsExactly("Lib", "Duck")
+    }
+
+    @Test
     fun `a rename to a name that is not a plain identifier keeps the compile of the modules it does not reach, and says why`() {
         val lines = CopyOnWriteArrayList<String>()
         val rename =

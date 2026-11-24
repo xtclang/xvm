@@ -3,7 +3,6 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.asm.Annotation
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.Component
-import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.DeclarationDigests
 import org.xvm.asm.FileStructure
@@ -26,8 +25,6 @@ internal class XdkModuleUses private constructor(
      * member it names among them, and each module or package named as a type.
      */
     val types: Set<String>,
-    /** The path of each module and package of another module that its constants name, in which it finds members by name. */
-    val scopes: Set<String>,
     /**
      * The path of each class of another module whose members it can see even when private: each that its own classes
      * extend, implement, incorporate, delegate to or are annotated with ([supers]), each annotation it applies, and each
@@ -54,10 +51,6 @@ internal class XdkModuleUses private constructor(
                 XdkModuleUses(
                     identities.mapNotNullTo(hashSetOf()) { it.name },
                     types(constants).filterNotTo(hashSetOf()) { it.startsWith(own) },
-                    identities
-                        .filter { it.format == Constant.Format.Module || it.format == Constant.Format.Package }
-                        .map(::path)
-                        .filterNotTo(hashSetOf()) { it.startsWith(own) },
                     (contributions + annotations + accesses).filterNotTo(hashSetOf()) { it.startsWith(own) },
                 )
             }
