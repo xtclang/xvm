@@ -2029,3 +2029,76 @@ with one pass for the XDK; in-process compiles for the XDK's own build in the me
   server's embedded build on it.
 - [ ] The Gradle plugin's in-process compile on it, and one pass over the XDK's libraries.
 - [ ] Meanwhile, if wanted: `ExecutionMode.DIRECT` for the XDK's own build, its compiles serialized.
+
+## 8. The user guide's known limitations
+
+The limits that [the user guide](../../lang/doc/user-guide.md#known-limitations) lists, each looked at on
+2026-11-24 for what blocks it, what would solve it, how much work that is and whether it is worth it.
+Estimates are working days for one person, with tests and both editors' playbook cases where the
+change shows in them. In the order worth doing:
+
+| ID | Limitation | Estimate | Worth it |
+|----|------------|----------|----------|
+| K2a | IntelliJ's Run 'All Ecstasy Tests' has no Rerun Failed Tests | 1 day | Yes, first: the usual next step after a full run |
+| K5a | Evaluations stop after 2 s, lazy values after 1 s | 0.5–1 day | Yes: a setting, small |
+| K6b | Rename and safe delete miss consumers the server does not know of | 0.5–1 day | Yes, as a prompt; automatic discovery is not |
+| K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Yes, after the release: arguments and JVM options, not the XDK version |
+| K1 | VS Code has no `xtc` command-line build mode | 1.5–2 days | When a VS Code user asks |
+| K7 | The formatter does not reflow comments or split strings | 1.5–2 days for comments | Comments later; strings never |
+| K2b | IntelliJ's Run 'All Ecstasy Tests' has no Debug | 2–3 days, after a check of xunit | Later: one module's tests already debug |
+| K5b | IntelliJ cannot cancel an evaluation | upstream | Ours is done; waits on IJPL-260358, LSP4J #1009 and LSP4IJ (UP41) |
+| K4 | A debugged program keeps the code it was built from | weeks, in the runtime | No, not here: a runtime feature |
+| K8 | The Tree-sitter adapter knows only syntax | — | No: by design |
+
+- [ ] K2a: Rerun Failed Tests after Run 'All Ecstasy Tests'. `XtcTestConsoleProperties.createRerunFailedTestsAction`
+  (`TestRuns.kt`) offers none for an all-modules run, as a failed test's selector does not name its
+  module and `XtcTestLocator` resolves locations in the configuration's one module. `AllTestModulesState`
+  runs the modules in turn, so it knows which module each test event comes from: give each node a
+  location with its module, and a rerun that groups the failed tests by module and runs each module's
+  selection in turn. 1 day.
+- [ ] K2b: Debug for Run 'All Ecstasy Tests'. LSP4IJ's DAP launch debugs one configuration, one program,
+  and an all-modules run is one program per module, in turn. Either the debug server runs the modules
+  one after another in one session, keeping its breakpoints (2–3 days), or xunit runs every test module
+  in one program, which needs a look at whether xunit and the runtime can load several test modules into
+  one container first. Debugging one module's tests works today, from the gutter or its configuration.
+- [ ] K5a: evaluation limits as settings. `XtcDebugServer.CONSOLE_LIMIT` (2 s, decided 2026-10-23) bounds
+  code run from the Debug Console and Evaluate Expression, and `SessionDebugger.ON_DEMAND` (1 s) a lazy
+  value. `XtcDebugServer.Limits` already carries the console limit: a launch attribute for each, and a
+  setting in both editors, 0.5–1 day. In IntelliJ, which cannot cancel (K5b), a longer limit holds the
+  dialog that long, so its setting should say so, or stay capped.
+- [ ] K5b: IntelliJ cannot cancel an evaluation: UP41 in section 4. Our debug server answers DAP `cancel`
+  (`supportsCancelRequest`, X314 in VS Code); IntelliJ's evaluator has no obsolescence
+  ([IJPL-260358](https://youtrack.jetbrains.com/issue/IJPL-260358)), LSP4J cannot send DAP `cancel`
+  ([LSP4J #1009](https://github.com/eclipse-lsp4j/lsp4j/pull/1009), ours, open), and LSP4IJ sends none.
+  Nothing to do here until those land.
+- [ ] K6b: consumers outside the workspace. A rename's proof covers the modules the server knows of; others
+  come in only through Add consumers from folders (`XdkConsumerDiscovery`). Scanning the disk outside the
+  workspace on its own is unbounded and not worth it, and a Gradle composite build's included builds are
+  already known once its model is imported. Worth doing: when a rename or safe delete changes a public
+  declaration and no consumer folders are configured, say so in its preview, with the way to add them.
+  0.5–1 day.
+- [ ] K3: Gradle's settings in embedded runs. Embedded builds and runs use the server's compiler and
+  runtime, and run in an execution worker JVM (`RunWorkerProcess`); `xtcRun`'s module arguments, method
+  and `jvmArgs` are never read. The XTC plugin's model export (`compiler-model.init.gradle`,
+  `.gradle/xtc/lsp-model.json`) could carry each module's, for the server to apply the arguments and
+  method to its runs and the JVM options to their worker: the plugin's export with a manualTests check,
+  the server, both editors' run configurations, 2–3 days. The build's XDK version can never apply, as the
+  server runs its own runtime; the embedded notice keeps saying so.
+- [ ] K1: an `xtc` command-line mode in VS Code. IntelliJ's command-line mode runs `xtc run --deduce`,
+  `xtc test` and `--debug` (`XtcRunConfiguration.xtcCommandLine`); VS Code's `xtc.build.mode` has
+  embedded, Gradle and automatic, and its debug launch says it does not run `commandLine`
+  (`debug-adapter.ts`). The same shell tasks as its Gradle mode, with `xtc` on the PATH or a setting
+  naming it: 1.5–2 days. Worth it only for checking a program against an installed XDK of another
+  version than the server's, which no one has asked for.
+- [ ] K7: comment reflow. The compiler adapter's formatter wraps code at `maxLineWidth` and moves a comment
+  only as a whole, and never changes a literal (`XdkLexical.kt`). Reflowing doc and block comments to the
+  margin, keeping paragraphs, `@param` lines, lists and indented code: 1.5–2 days with fixtures. Splitting
+  string literals changes tokens, and in a template `$"…"` what it means: not worth it.
+- [ ] K4: no hot code replace. The runtime loads a module's compiled form once per container and has no
+  redefinition of a loaded type; the debugger steps against that code (`SessionDebugger`). Replacing
+  method bodies in a running container, as the JVM's HotSwap does, is runtime work of weeks across the
+  interpreter's frames, constant pools and the JIT's generated classes, and DAP has no standard request
+  for it. Not for this project; restart frame and a rerun are the way.
+- [x] K8: the Tree-sitter adapter is syntax only by design: the compiler adapter, the default, is the
+  semantic one, and Tree-sitter is the fallback without it. Making it semantic would be writing a second
+  compiler. Closed; the guide states it as a fact.
