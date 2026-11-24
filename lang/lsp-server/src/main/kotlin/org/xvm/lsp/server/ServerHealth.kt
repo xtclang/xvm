@@ -10,10 +10,12 @@ import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import javax.management.Notification
 import javax.management.NotificationEmitter
 import javax.management.NotificationListener
 import javax.management.openmbean.CompositeData
+import com.sun.management.OperatingSystemMXBean as ProcessCpu
 
 /**
  * What the server notices about its own health, for `xtc/languageServiceStatus` and the server log: the heap that the
@@ -36,6 +38,8 @@ internal class ServerHealth(
             .map { it.name }
             .toSet()
     private val collectors = ManagementFactory.getGarbageCollectorMXBeans()
+    private val requests = AtomicLong()
+    private val activity = ActivityWatch(sample())
     private val listener = NotificationListener { notification, _ -> collected(notification) }
     private val checks: ScheduledExecutorService =
         Executors.newSingleThreadScheduledExecutor(
@@ -49,6 +53,7 @@ internal class ServerHealth(
     init {
         collectors.filterIsInstance<NotificationEmitter>().forEach { it.addNotificationListener(listener, null, null) }
         checks.scheduleWithFixedDelay(::checkQueue, QUEUE_CHECK_SECONDS, QUEUE_CHECK_SECONDS, TimeUnit.SECONDS)
+        checks.scheduleWithFixedDelay(::checkActivity, ACTIVITY_SECONDS, ACTIVITY_SECONDS, TimeUnit.SECONDS)
     }
 
     /** The heap's figures for `xtc/languageServiceStatus`, with what the collections have left in use. */
@@ -69,7 +74,16 @@ internal class ServerHealth(
     /** The latest lines the server logged about its health, oldest first. */
     fun events(): List<Map<String, Any>> = events.recent()
 
+    /** The latest minute in which the server worked, as its activity line logged it; null before one has. */
+    fun activity(): Map<String, Any>? = activity.latest()
+
+    /** Counts a request that the server answered, for its activity lines. */
+    fun answered() {
+        requests.incrementAndGet()
+    }
+
     override fun close() {
+        runCatching { activity.session(sample(), heap.peak(), maxHeap()) }
         checks.shutdownNow()
         collectors.filterIsInstance<NotificationEmitter>().forEach { runCatching { it.removeNotificationListener(listener) } }
     }
@@ -85,6 +99,21 @@ internal class ServerHealth(
         // ZGC's pauses report no usage; only its cycles do
         if (after > 0) heap.collected(System.currentTimeMillis(), after, ManagementFactory.getMemoryMXBean().heapMemoryUsage.max)
     }
+
+    private fun checkActivity() {
+        runCatching { activity.window(sample(), heap.range(), maxHeap()) }
+    }
+
+    private fun sample() =
+        ActivityWatch.Sample(
+            System.currentTimeMillis(),
+            (ManagementFactory.getOperatingSystemMXBean() as? ProcessCpu)?.processCpuTime?.coerceAtLeast(0) ?: 0,
+            collectors.sumOf { it.collectionCount.coerceAtLeast(0) },
+            collectors.sumOf { it.collectionTime.coerceAtLeast(0) },
+            requests.get(),
+        )
+
+    private fun maxHeap() = ManagementFactory.getMemoryMXBean().heapMemoryUsage.max
 
     private fun checkQueue() {
         runCatching {
@@ -112,6 +141,9 @@ internal class ServerHealth(
     companion object {
         /** How often the compile queue is checked. */
         const val QUEUE_CHECK_SECONDS = 5L
+
+        /** How often the server logs what it did, if it worked; see [ActivityWatch]. */
+        const val ACTIVITY_SECONDS = 60L
 
         private val logger = LoggerFactory.getLogger(ServerHealth::class.java)
     }
@@ -201,6 +233,14 @@ internal class HeapWatch(
         }
     }
 
+    /** The lowest and the most that the collections of the last [WINDOW_MILLIS] left in use; null without one. */
+    @Synchronized
+    fun range(): LongRange? = window.takeIf { it.isNotEmpty() }?.let { it.minOf { e -> e.second }..it.maxOf { e -> e.second } }
+
+    /** The most that a collection has left in use since the server started; null before one. */
+    @Synchronized
+    fun peak(): Long? = peak.takeIf { window.isNotEmpty() }
+
     /** What the collections have left in use: after the last, the lowest in the last [WINDOW_MILLIS], and the most. */
     @Synchronized
     fun status(): Map<String, Any?> =
@@ -261,6 +301,86 @@ internal class QueueWatch(
         const val QUEUED_JOBS = 10
         const val WAIT_MILLIS = 30_000L
         const val RUN_MILLIS = 120_000L
+    }
+}
+
+/**
+ * What the server did in each minute in which it worked, and in its whole session, for the server log: the CPU it used,
+ * its collections and their time, the range of heap they left in use, and the requests it answered. A minute in which
+ * it used less than [BUSY_CPU_NANOS] of CPU logs nothing, so an idle server's log stays quiet; the session's line comes
+ * when the server stops.
+ */
+internal class ActivityWatch(
+    private val start: Sample,
+    private val log: (String) -> Unit = { logger.info(it) },
+) {
+    /** The server's totals at [at] milliseconds, of which a line gives the differences. */
+    data class Sample(
+        val at: Long,
+        val cpuNanos: Long,
+        val collections: Long,
+        val collectionMillis: Long,
+        val requests: Long,
+    )
+
+    private var last = start
+    private var latest: Map<String, Any>? = null
+
+    /** Logs the minute up to [now] if the server worked in it, with the heap that its collections left in use. */
+    @Synchronized
+    fun window(
+        now: Sample,
+        heap: LongRange?,
+        max: Long,
+    ) {
+        val previous = last
+        last = now
+        val cpu = now.cpuNanos - previous.cpuNanos
+        if (cpu < BUSY_CPU_NANOS) return
+        val seconds = (now.at - previous.at) / 1000
+        val share = cpu * 100 / maxOf(1, (now.at - previous.at) * 1_000_000)
+        log(
+            "activity in the last $seconds s: CPU ${seconds(cpu)} ($share% of a core), " +
+                "${now.collections - previous.collections} collections in ${(now.collectionMillis - previous.collectionMillis)} ms, " +
+                "heap left in use ${heap?.let { "${mb(it.first)} to ${mb(it.last)}" } ?: "unknown"} of ${mb(max)}, " +
+                "${now.requests - previous.requests} requests answered",
+        )
+        latest =
+            mapOf(
+                "at" to Instant.ofEpochMilli(now.at).toString(),
+                "seconds" to seconds,
+                "cpuMillis" to cpu / 1_000_000,
+                "collections" to now.collections - previous.collections,
+                "collectionMillis" to now.collectionMillis - previous.collectionMillis,
+                "requests" to now.requests - previous.requests,
+            ) + (heap?.let { mapOf("lowestAfterCollectionBytes" to it.first, "mostAfterCollectionBytes" to it.last) } ?: emptyMap())
+    }
+
+    /** Logs the whole session up to [now], with the most heap that a collection left in use. */
+    @Synchronized
+    fun session(
+        now: Sample,
+        peak: Long?,
+        max: Long,
+    ) {
+        val minutes = (now.at - start.at) / 60_000
+        log(
+            "session of ${minutes / 60} h ${minutes % 60} min: CPU ${seconds(now.cpuNanos - start.cpuNanos)}, " +
+                "${now.collections - start.collections} collections in ${(now.collectionMillis - start.collectionMillis) / 1000} s, " +
+                "heap left in use at most ${peak?.let(::mb) ?: "unknown"} of ${mb(max)}, " +
+                "${now.requests - start.requests} requests answered",
+        )
+    }
+
+    @Synchronized
+    fun latest(): Map<String, Any>? = latest
+
+    companion object {
+        /** The CPU in a minute below which the server is idle: under 2% of a core. */
+        const val BUSY_CPU_NANOS = 1_000_000_000L
+        private val logger = LoggerFactory.getLogger(ServerHealth::class.java)
+
+        private fun seconds(nanos: Long) = "%.1f s".format(nanos / 1e9)
     }
 }
 
