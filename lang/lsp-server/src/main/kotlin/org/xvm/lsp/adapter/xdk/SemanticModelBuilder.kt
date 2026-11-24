@@ -769,15 +769,16 @@ private class SemanticModelBuilder(
                             )?.importedModule
                                 ?.identityConstant
                         }
-                    // A dynamic type, such as t1.DataType, names a value's formal type: the compiler validates
-                    // its names as expressions, which bind the first to the local or parameter.
+                    // A dynamic type, such as t1.DataType, or type in new Pair<String, type>(), names a value's
+                    // formal type: the compiler validates its names as expressions, which bind the first to the local
+                    // or parameter that it spells, also where the type binding is that value's type.
                     val dynamic =
                         generateSequence(node.dynamicExpression) { it.leftExpression as? NameExpression }
                             .associate { it.nameToken to it.resolvedTarget }
                     node.nameBindings.forEach {
                         refer(
                             it.name(),
-                            it.target() ?: dynamic[it.name()] ?: imported,
+                            dynamic[it.name()] ?: it.target() ?: imported,
                             expressionType.takeIf { _ -> it.name() === node.nameToken },
                             node.source,
                             annotation =

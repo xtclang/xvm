@@ -248,6 +248,38 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a local or parameter used as a type, as in new Pair of String and type, is an occurrence of it`() {
+        val source =
+            """
+            module Dynamic {
+                const Pair<A, B>(A a) {}
+                <Other> conditional Pair<String, Other> narrowed(Type<Other> /*parameter*/type) {
+                    if (/*tested*/type.is(Type<String>)) {
+                        return True, new Pair<String, /*narrowed*/type>("x");
+                    }
+                    return False;
+                }
+                <Other> Pair<String, Other> plain(Type<Other> /*declared*/kind) = new Pair<String, /*plain*/kind>("y");
+            }
+            """.trimIndent()
+        withSource("Dynamic", source) { adapter, uri ->
+            val type = listOf(range(source, "parameter", "type"), range(source, "tested", "type"), range(source, "narrowed", "type"))
+            val narrowed = position(source, "narrowed")
+            assertThat(adapter.findReferences(uri, narrowed.line, narrowed.column, true).map(::range)).containsExactlyElementsOf(type)
+            assertThat(
+                adapter.findDefinition(uri, narrowed.line, narrowed.column)?.let(::range),
+            ).isEqualTo(range(source, "parameter", "type"))
+            val renamed = requireNotNull(adapter.rename(uri, narrowed.line, narrowed.column, "target")) { "No rename of type" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("type", "target"))
+
+            // without narrowing, the type binding is the parameter's formal type, Other; the name is still the parameter
+            val plain = position(source, "plain")
+            assertThat(adapter.findReferences(uri, plain.line, plain.column, true).map(::range))
+                .containsExactly(range(source, "declared", "kind"), range(source, "plain", "kind"))
+        }
+    }
+
     private fun snapshot(
         name: String,
         text: String,
