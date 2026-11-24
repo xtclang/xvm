@@ -1956,9 +1956,23 @@ public class TypeCompositionStatement
             }
         }
 
-        if (fExplicitDefault || fExplicitShorthand) {
-            // when there is an explicit shorthand or default constructor, we don't allow
-            // parameterized contributions ("extends" or "incorporates")
+        if (fExplicitShorthand) {
+            // the explicit constructor replaces the shorthand one, and a property that the class
+            // declares itself takes no initial value from the shorthand declaration, so a default
+            // value written there would never be compiled
+            for (Parameter param : listParams) {
+                Component prop = mapChildren.get(param.getName());
+                if (param.value != null && prop != null && !prop.isSynthetic()) {
+                    param.value.log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_UNUSED,
+                            param.getName());
+                }
+            }
+        }
+
+        if (fExplicitShorthand || (listParams == null && constructors != null)) {
+            // only a synthetic constructor passes the arguments of a parameterized contribution
+            // ("extends" or "incorporates"); explicit constructors construct the contributions
+            // themselves, so the arguments would be neither used nor compiled
             for (CompositionNode composition : compositions) {
                 List<Expression> listArgs =
                         composition instanceof Extends nodeExtends
