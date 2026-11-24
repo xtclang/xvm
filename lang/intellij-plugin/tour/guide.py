@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Rebuild the user guide's screenshots, lang/doc/user-guide/*.png, from tour runs.
+Rebuild the user guide's screenshots, lang/doc/user-guide/images/*.png, from tour runs.
 
 A tour step that a guide image comes from names it in its tour.json entry, with the part of the frame to keep, as
 ImageMagick geometry on a 1920x936 frame: "guide": {"name": "intellij-completion", "crop": "1205x815+675+85"}, or no
@@ -9,7 +9,7 @@ For each such step of the given runs that captured its frame, this crops the fra
 size, scales the result to at most 1280 px wide and writes it as a 256-color PNG, <out>/<name>.png. The images of
 steps that failed, and of sections a run did not record, are left as they were.
 
-It then compares the images the tours name with those that user-guide.md, beside <out>, shows: an image the guide
+It then compares the images the tours name with those that the guide, README.md beside <out>, shows: an image the guide
 shows that no step of these runs names is listed, as it was not refreshed; with runs of both tours that record every
 section, that means no step makes it any more.
 
@@ -33,7 +33,7 @@ from pathlib import Path
 FRAME = (1920, 936)
 WIDTH = 1280
 GEOMETRY = re.compile(r"(\d+)x(\d+)\+(\d+)\+(\d+)")
-GUIDE = Path(__file__).resolve().parents[2] / "doc" / "user-guide"
+GUIDE = Path(__file__).resolve().parents[2] / "doc" / "user-guide" / "images"
 
 
 def imagemagick() -> str:
@@ -74,7 +74,7 @@ def write(tool: str, frame: Path, geometry: str | None, out: Path) -> None:
 def shown(guide: Path) -> set[str]:
     """The images that the guide's markdown shows, by name."""
     text = guide.read_text(encoding="utf-8") if guide.is_file() else ""
-    return set(re.findall(r"user-guide/([A-Za-z0-9_.-]+)\.png", text))
+    return set(re.findall(r"images/([A-Za-z0-9_.-]+)\.png", text))
 
 
 def main() -> int:
@@ -105,7 +105,7 @@ def main() -> int:
             write(tool, frame, guide.get("crop"), out)
             width, height = size(out)
             print(f"{out.name}: {width}x{height}, {out.stat().st_size // 1024} KB, from {where}")
-    stale = sorted(shown(options.out.parent / "user-guide.md") - set(named))
+    stale = sorted(shown(options.out.parent / "README.md") - set(named))
     if stale:
         print(f"not refreshed, no step of these runs names them: {', '.join(stale)}")
     for problem in problems:
