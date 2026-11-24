@@ -2323,8 +2323,8 @@ public abstract class Builder {
     public JitMethodDesc callNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
                                  MethodConstant ctorId, RegisterInfo outer,
                                  Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
-        TypeInfo     targetInfo = targetType.ensureTypeInfo();
-        MethodInfo   ctor       = targetInfo.getMethodById(ctorId);
+        TypeInfo   targetInfo = targetType.ensureTypeInfo();
+        MethodInfo ctor       = targetInfo.getMethodById(ctorId);
 
         if (ctor == null) {
             targetInfo = targetType.ensureAccess(Access.PRIVATE).ensureTypeInfo();
