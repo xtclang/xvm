@@ -58,6 +58,9 @@ internal class XdkProject(
     /** The bundled libraries that this project's own modules replace ([XdkLibraryReplacement]). */
     val replaced: Set<String> = immutableSet(modules.map { it.name }.filter(XdkLibraryReplacement::replaces))
 
+    /** The modules built against a replaced library: the replacing modules and every module that depends on one. */
+    val onReplaced: Set<String>
+
     private val configuration =
         modules.map { Configuration(it.name, it.uri, it.dependencies, it.resourceRoots) }.toSet()
     private val ordered: List<XdkSourceModule>
@@ -102,6 +105,13 @@ internal class XdkProject(
         modules.sortedBy { it.name }.forEach(::visit)
         ordered = immutableList(result)
         this.modules = Collections.unmodifiableMap(ordered.associateByTo(LinkedHashMap()) { it.name })
+        // in build order, each module's dependencies come before it
+        onReplaced =
+            immutableSet(
+                ordered.fold(setOf<String>()) { found, module ->
+                    if (module.name in replaced || module.dependencies.any(found::contains)) found + module.name else found
+                },
+            )
     }
 
     /** Canonical source-module inputs used to compare project configurations. */

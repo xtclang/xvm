@@ -149,6 +149,13 @@ class XdkAdapter
         /** The bundled libraries that the workspace's own modules replace ([XdkLibraryReplacement]). */
         internal fun replacedLibraries(): Set<String> = synchronized(lifecycle) { project.replaced }
 
+        /** The workspace folders that hold a module built against a [replacedLibraries] library, as file URIs. */
+        internal fun replacedFolders(): List<String> =
+            synchronized(lifecycle) {
+                val built = project.onReplaced.mapNotNull(project.modules::get)
+                discovery.get().folders.filter { folder -> built.any { XdkLibraryReplacement.folderOf(it, listOf(folder)) != null } }
+            }.map { it.toURI().toString() }
+
         /** Called each time [replacedLibraries] changes, under the adapter's lock, so it must not block. */
         @Volatile
         private var replacedLibrariesChanged: () -> Unit = {}
@@ -318,7 +325,7 @@ class XdkAdapter
             current: () -> Boolean,
         ): Set<String>? {
             if (synchronized(lifecycle) { closed }) return null
-            val discovered = catalog.modules(previous.modules.values)
+            val discovered = catalog.modules(previous.modules.values, settings.folders)
             // a name that two module files declare leaves the graph, so that the rest of the workspace stays in it:
             // each of those files is analyzed on its own, and a warning names the others
             val duplicates =
@@ -447,20 +454,20 @@ class XdkAdapter
             }
 
         /**
-         * Compile [target] (a module name or root URI) and its source dependencies, or every source module
-         * when [target] is null, into the embedded build directory of the owning workspace folder. Shares the
-         * compiler worker with editor analysis, so it never runs concurrently with another compilation.
+         * Compile [target] (a module name or root URI) and its source dependencies, or when [target] is null the
+         * source modules of the workspace folder [folder] and their dependencies, or every source module without
+         * one, into the embedded build directory of the owning workspace folder. Shares the compiler worker with
+         * editor analysis, so it never runs concurrently with another compilation. Refused when a module it builds
+         * is built against a replaced library ([XdkLibraryReplacement]).
          */
         fun buildAsync(
             target: String?,
             rebuild: Boolean,
             fallback: String? = null,
+            folder: String? = null,
         ): CompletableFuture<XdkBuildResult> =
             synchronized(lifecycle) {
                 if (closed) return closedAdapter()
-                if (project.replaced.isNotEmpty()) {
-                    return CompletableFuture.failedFuture(IllegalStateException(XdkLibraryReplacement.NO_EMBEDDED_RUNS))
-                }
                 val graph = project
                 val inputs = dependencies
                 val find = { name: String ->
@@ -471,9 +478,24 @@ class XdkAdapter
                 if (target != null && module == null) {
                     return CompletableFuture.failedFuture(IllegalArgumentException("Unknown source module: $target"))
                 }
-                val order = module?.let { graph.buildOrder(it.uri) } ?: graph.buildOrder()
-                val folder = buildFolder(module ?: order.firstOrNull())
-                val scope = module?.uri ?: folder.toURI().toString()
+                val within = folder?.let { XdkSources.file(it) }?.takeIf { module == null }
+                val order =
+                    when {
+                        module != null -> graph.buildOrder(module.uri)
+
+                        within != null -> {
+                            val roots = graph.modules.values.filter { XdkLibraryReplacement.folderOf(it, listOf(within)) != null }
+                            val names = roots.flatMapTo(hashSetOf()) { root -> graph.buildOrder(root.uri).map { it.name } }
+                            graph.buildOrder().filter { it.name in names }
+                        }
+
+                        else -> graph.buildOrder()
+                    }
+                if (order.any { it.name in graph.onReplaced }) {
+                    return CompletableFuture.failedFuture(IllegalStateException(XdkLibraryReplacement.NO_EMBEDDED_RUNS))
+                }
+                val output = within ?: buildFolder(module ?: order.firstOrNull())
+                val scope = module?.uri ?: output.toURI().toString()
                 // the exact text the editor shows now, saved or not; later edits are not part of this build
                 val snapshot = overlays.toMap()
                 val problem = discovery.get().problem
@@ -491,7 +513,7 @@ class XdkAdapter
                                         inputs,
                                         graph,
                                         problem,
-                                        folder,
+                                        output,
                                         rebuild,
                                         result,
                                     ).copy(id = task.id)
@@ -1599,7 +1621,7 @@ class XdkAdapter
                             replacement.buildOrder(request.scope).any { it.name in changed } ||
                             request.overlays.keys.any { project.scope(it) != replacement.scope(it) }
                     }.mapTo(linkedSetOf()) { it.scope }
-            val replaced = project.replaced != replacement.replaced
+            val replaced = project.replaced != replacement.replaced || project.onReplaced != replacement.onReplaced
             project = replacement
             dependencies = artifacts
             if (replaced) replacedLibrariesChanged()

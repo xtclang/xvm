@@ -51,7 +51,11 @@ internal object XdkWorkspaceDiscovery {
                 Catalog(withoutLeftBuffers(files + (file to header(file, text, files[file], cancelled)), mapOf(file to text)))
             }
 
-        fun modules(previous: Collection<XdkSourceModule>): List<XdkSourceModule> {
+        /** The catalog's modules, under the library replacement of the workspace [folders] ([XdkLibraryReplacement]). */
+        fun modules(
+            previous: Collection<XdkSourceModule>,
+            folders: List<File> = emptyList(),
+        ): List<XdkSourceModule> {
             val declared =
                 files
                     .mapNotNull { (file, header) -> (header.module ?: previousAt(file, previous)?.name)?.let { file to it } }
@@ -74,7 +78,7 @@ internal object XdkWorkspaceDiscovery {
                                 }
                         XdkSourceModule(name, root.toURI().toString(), imports.filterTo(linkedSetOf()) { it in names && it != name })
                     }
-            return XdkLibraryReplacement.apply(modules)
+            return XdkLibraryReplacement.apply(modules, folders)
         }
 
         /**
@@ -220,7 +224,7 @@ internal object XdkWorkspaceDiscovery {
         overlays: Map<String, String>,
         previous: Collection<XdkSourceModule>,
         cancelled: () -> Boolean,
-    ): List<XdkSourceModule> = Catalog().rescan(folders, overlays, cancelled).modules(previous)
+    ): List<XdkSourceModule> = Catalog().rescan(folders, overlays, cancelled).modules(previous, folders)
 
     /**
      * [file]'s header, from its open buffer or its text on disk; null when the file cannot be read, as one deleted
