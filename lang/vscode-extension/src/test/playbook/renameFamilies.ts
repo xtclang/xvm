@@ -119,10 +119,24 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                             for (const file of data.files) assert.strictEqual(await contents(workspace, file.file), file.source);
                         } finally { await configuration.update('autoSave', previous, vscode.ConfigurationTarget.Workspace); }
                     }
+                    // the server's message on modules outside the workspace, which it shows as it answers the rename
+                    const shown: string[] = [];
+                    const observer = 'outsideUses' in data
+                        ? client().onNotification('window/showMessage', (params: { message: string }) => { shown.push(params.message); })
+                        : undefined;
                     const edit = await eventually(
                         async () => provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token),
-                        Boolean, `${id} rename proof after fixture discovery`);
+                        Boolean, `${id} rename proof after fixture discovery`).finally(() => observer?.dispose());
                     assert.ok(edit);
+                    if ('outsideUses' in data) {
+                        const notes = shown.filter(message => message.includes('modules outside the workspace'));
+                        if (data.outsideUses === null) assert.deepStrictEqual(notes, [], 'A local\'s rename has no message');
+                        else {
+                            const message = `Ecstasy: ${data.outsideUses}. To include them, run Ecstasy: Configure Compiler Paths and choose Add consumers from folders.`;
+                            // a proof that the project overtook and that ran again says it again
+                            assert.ok(notes.length > 0 && notes.every(note => note === message), JSON.stringify(notes));
+                        }
+                    }
                     assert.ok(await vscode.workspace.applyEdit(edit, { isRefactoring: true }));
                 } finally { cancellation.dispose(); }
                 for (const file of data.files) {
@@ -171,6 +185,9 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                     for (const file of data.files) assert.strictEqual(await contents(workspace, file.file), file.source);
                     assert.ok(await vscode.workspace.saveAll());
                 }
+            }).finally(async () => {
+                // gives back the language client's own handler of the messages, which observing them took
+                if ('outsideUses' in data) await vscode.commands.executeCommand('xtc.restartServer');
             });
         });
     }

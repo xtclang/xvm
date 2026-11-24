@@ -5,6 +5,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.WaitForException
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
@@ -285,4 +286,18 @@ fun Driver.rejectFormatting(editor: JEditorUiComponent) {
     val text = editor.text
     invokeAction("ReformatCode", now = true, component = editor.component)
     check(editor.text == text) { "Reformat Code changed a read-only library source" }
+}
+
+/** The text of each notification that shows a message of the language server, such as a refactoring's, as IntelliJ shows it. */
+fun Driver.serverMessages(): List<String> = withContext(OnDispatcher.EDT) { utility(ServerMessagesProbe::class).shown(singleProject()) }
+
+/** Closes the notifications that show messages of the language server, so that the next ones are a step's own. */
+fun Driver.dismissServerMessages() = withContext(OnDispatcher.EDT) { utility(ServerMessagesProbe::class).dismiss(singleProject()) }
+
+/** Reads and closes the notifications in which LSP4IJ shows the language server's window/showMessage. */
+@Remote("org.xtclang.idea.playbook.probe.ServerMessages", plugin = "org.xtclang.playbook.probe")
+internal interface ServerMessagesProbe {
+    fun shown(project: Project): List<String>
+
+    fun dismiss(project: Project)
 }
