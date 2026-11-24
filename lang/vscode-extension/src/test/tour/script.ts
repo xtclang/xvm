@@ -2720,6 +2720,7 @@ async function testing(tour: Tour): Promise<void> {
     const deckTest = tour.test('DeckTest.x');
     await tour.shot({
         title: 'The Testing view',
+        guide: { name: 'vscode-testing-view', crop: '1000x860+0+40' },
         caption: "The Testing view lists the test modules and their tests, from the server's analysis; it runs, debugs and filters them.",
         feature: 'xtc/tests',
         focus: 'sidebar',
@@ -2877,6 +2878,7 @@ async function testing(tour: Tour): Promise<void> {
     };
     await tour.shot({
         title: 'A new test',
+        guide: { name: 'vscode-new-test', crop: '1440x860+0+40' },
         caption: 'A test written while the project is open is in the Testing view as soon as the server has read it, with its gutter icon, and runs: no restart.',
         feature: 'testController.items',
         needs: [NEEDS.tests],
@@ -2912,6 +2914,7 @@ async function testing(tour: Tour): Promise<void> {
     const shuffle = await lineOf(deckTest, 'deck.shuffle();');
     await tour.shot({
         title: 'Debug a test',
+        guide: { name: 'vscode-debug-test', crop: '1440x860+0+40' },
         caption: 'Debug Test at Cursor runs it under the debugger: it stops at the test\'s breakpoint, here before the shuffle.',
         feature: 'testController.debugProfile',
         needs: [NEEDS.tests],
@@ -2941,6 +2944,7 @@ async function testing(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Tests with Gradle',
+        guide: { name: 'vscode-gradle-tests', crop: '1920x330+0+606' },
         caption: "In Gradle mode the same Testing view runs the XTC plugin's testXtc, and xunit's results come back to it.",
         feature: 'testXtc',
         needs: [NEEDS.tests],
