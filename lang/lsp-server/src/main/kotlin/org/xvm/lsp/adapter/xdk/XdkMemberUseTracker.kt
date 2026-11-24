@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.slf4j.LoggerFactory
 import org.xvm.asm.Component
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.ECSTASY_MODULE
@@ -21,21 +22,27 @@ import org.xvm.asm.Constants.TURTLE_MODULE
  *   strings alike, or that its constants name ([XdkModuleUses.names]): a name it looks up, an overload set it resolves,
  *   a named argument, or a name that a new declaration would capture. A constructor, found only on the class a module
  *   names, and an accessor, reached only through its property, have no name of their own here;
- * - and none is seen through a type that it uses as a whole: each type its constants name, each named by the
- *   declaration of a member of such a type, or of a namespace it uses, whose name it writes, each that such a type
- *   extends, implements, incorporates or is constrained by, and so on, each with all its members and their order. The
- *   compiler matches a type with an interface by its members (duck typing), whether to assign it, to infer a type
- *   parameter or to pick an overload; finds whether a class it instantiates is abstract from all its members; checks a
- *   switch over an enum against all its values; resolves operators and conversions by their annotations, not their
- *   names; and builds a class's members from all of its base's. Each of those consults a type as a whole, not a member
- *   by name. A private member counts only for the types that the module's own classes extend, implement, incorporate or
- *   are annotated with, and those it names with another access than public ([XdkModuleUses.extended]): other types are
+ * - and none is seen through a type that it uses as a whole, each type its constants name ([XdkModuleUses.types]), with
+ *   all its members and their order. A change is seen through the declaration that changed and what holds it, up to the
+ *   nearest type or namespace, and past a type held by a type to its holder, as a module writes such a virtual child's
+ *   type as its holder's and its name; and, to a fixpoint over the modules it depends on ([World.deep]), through each
+ *   declaration whose own declaration names a type through which a change is seen, as a method's signature or a
+ *   property's type does, and through each type that extends, implements or incorporates one. The compiler matches a
+ *   type with an interface by its members (duck typing), and their types with the interface's members' types, whether to
+ *   assign it, to infer a type parameter or to pick an overload; finds whether a class it instantiates is abstract from
+ *   all its members; checks a switch over an enum against all its values; resolves operators and conversions by their
+ *   annotations, not their names; and builds a class's members from all of its base's. Each of those consults a type as
+ *   a whole, not a member by name. A member of a namespace that such a change reaches counts by its name, as above. A
+ *   private member counts only for the types that the module's own classes extend, implement, incorporate or are
+ *   annotated with, and those it names with another access than public ([XdkModuleUses.extended]): other types are
  *   public to it. A module or package that it uses as a type, as a value, has its members matched with an interface by
  *   their names only, so a change of one counts when its name is that of a member of a type the module uses as a whole.
- *   The modules that the compiler knows by name, ecstasy and its turtle, are used as a whole by every module, as the
- *   compiler consults their types (Object, Iterable, Const, ...) where no constant of the module names them.
+ *   The types of the modules that the compiler knows by name, ecstasy and its turtle, are used as a whole by every
+ *   module, as the compiler consults them (Object, Iterable, Const, ...) where no constant of the module names them: a
+ *   change in one of them counts for every module, but for a private member's, which only its own class sees, and a
+ *   namespace's member's, which a module finds by name.
  *
- * A module whose compile failed before keeps it only when the whole API of each such artifact ([XdkDependency.api]) is
+ * A module whose compile failed before keeps it only when the whole API of each such artifact ([XdkModuleApi.all]) is
  * as it was. A digest gap, an API that changed where no declaration's did, compiles every module that depends on it
  * again. Whatever the tracker cannot read compiles the module again; each decision says why, for the log.
  */
@@ -49,16 +56,16 @@ internal class XdkMemberUseTracker(
     )
 
     /**
-     * A declaration of [module] that changed, whether a module that writes its name compiles again, and the paths of the
-     * types and namespaces through which a module that uses them as a whole sees the change ([visible]), and one whose
-     * classes extend them ([enclosing]).
+     * A declaration of [module] that changed, whether a module that writes its name compiles again, and the declarations
+     * through which a module that uses them as a whole sees the change ([seen], [XdkModuleApi.Declaration.visible]), and
+     * one whose classes extend them ([extended]).
      */
     private class Changed(
         val module: String,
         val declaration: XdkModuleApi.Declaration,
         named: Boolean,
-        val visible: List<String>,
-        val enclosing: List<String>,
+        seen: List<XdkModuleApi.Declaration>,
+        extended: List<XdkModuleApi.Declaration>,
     ) {
         /**
          * Whether a module that writes its name compiles again. A constructor, which a module finds only on the class it
@@ -67,16 +74,28 @@ internal class XdkMemberUseTracker(
         val named: Boolean =
             named && declaration.name != "construct" && declaration.parent?.kind != XdkModuleApi.Kind.MEMBER
 
+        /** The paths of the declarations through which a module that uses them as a whole sees the change. */
+        val visible: List<String> = seen.map { it.path }
+
+        /** The paths of the declarations through which a module whose classes extend them sees the change. */
+        val enclosing: List<String> = extended.map { it.path }
+
         /**
          * The namespace through which [visible] sees it as a member, if any: a module or a package that a module uses as a
          * type sees its members as an interface sees a type's, by their names alone, as no class extends a namespace.
          */
         val namespace: String? =
-            generateSequence(declaration.parent) { it.parent }
-                .take((visible.size - 1).coerceAtLeast(0))
+            seen
+                .drop(1)
                 .lastOrNull()
                 ?.takeIf { it.kind == XdkModuleApi.Kind.NAMESPACE }
                 ?.path
+
+        /** The types among [visible], without the members and namespaces: those whose members another type's can match. */
+        val visibleTypes: List<String> = seen.filter { it.kind == XdkModuleApi.Kind.TYPE }.map { it.path }
+
+        /** The types among [enclosing]. */
+        val enclosingTypes: List<String> = extended.filter { it.kind == XdkModuleApi.Kind.TYPE }.map { it.path }
     }
 
     /** How a module's artifact changed in this build. */
@@ -176,32 +195,32 @@ internal class XdkMemberUseTracker(
         val uses =
             requireNotNull(prior.artifacts[module.name]).uses
                 ?: return Decision(false, "its artifact cannot be read alone")
-        val names = Names(uses.names, texts)
-        declarations.firstOrNull { it.named && names.spells(it.declaration.name) }?.let {
-            return Decision(false, "it uses the name ${it.declaration.name}, which ${it.module} changes")
-        }
-        // a change that only its own class sees, such as the order of a type's private members, is seen through no type
+        // a change that only its own class sees, such as the order of a type's private members, is seen through no type,
+        // and one of a namespace's member is found by name
         declarations
-            .firstOrNull {
-                it.module in IMPLICIT && !it.declaration.fingerprint && it.visible.isNotEmpty() && it.declaration.seenThroughType()
-            }?.let {
+            .firstOrNull { it.module in IMPLICIT && !it.declaration.fingerprint && it.visibleTypes.isNotEmpty() }
+            ?.let {
                 return Decision(false, "every module uses ${it.module} as a whole, whose ${it.declaration} changes")
             }
-        val world = World(artifacts, changed)
-        val extended = world.supers(uses.extended)
-        val observed = world.close(uses.types + uses.extended, names, uses.scopes)
-        world.unknown.firstOrNull()?.let { return Decision(false, it) }
+        val world = World(artifacts, changed, upstream)
+        val all = declarations + world.deep(declarations)
+        val names = Names(uses.names, texts)
+        all.firstOrNull { it.named && names.spells(it.declaration.name) }?.let {
+            return Decision(false, "it uses the name ${it.declaration.name}, which ${it.module} changes")
+        }
+        val observed = uses.types + uses.extended
+        world.unknown(observed)?.let { return Decision(false, it) }
         // a namespace that it uses as a type is matched with an interface, as a value, by the names of its members
         val matched by lazy { world.memberNames(observed) }
-        declarations
+        all
             .firstOrNull { change ->
                 !change.declaration.fingerprint &&
                     (
                         change.visible.any { it in observed && (it != change.namespace || change.declaration.name in matched) } ||
-                            change.enclosing.any(extended::contains)
+                            change.enclosing.any(uses.extended::contains)
                     )
             }?.let { change ->
-                val through = (change.visible.filter(observed::contains) + change.enclosing.filter(extended::contains)).first()
+                val through = (change.visible.filter(observed::contains) + change.enclosing.filter(uses.extended::contains)).first()
                 return Decision(false, "it uses $through as a whole, whose ${change.declaration} in ${change.module} changes")
             }
         return Decision(true, "it uses none of the declarations of ${changed.joinToString { it.name }} that changed")
@@ -241,45 +260,106 @@ internal class XdkMemberUseTracker(
     }
 
     /**
-     * The declarations a module can see: those of the artifacts its compile reads now, and of those that the modules
-     * compiled again in this build had, by module name; [unknown] says why a type could not be looked up.
+     * The declarations a module can see: those of the artifacts its compile reads now, of the modules it depends on and
+     * of the host's binaries, and of those that the modules compiled again in this build had, by module name.
      */
     private class World(
         private val artifacts: Map<String, XdkDependency>,
         changed: List<Recompiled>,
+        /** The source modules that the module depends on, directly or not, whose declarations it can see. */
+        private val upstream: Set<String>,
     ) {
         private val before = changed.associate { it.name to it.before }
         private val replaced = changed.map { it.name }.filter { it in XdkLibraries.moduleNames }
-        val unknown = linkedSetOf<String>()
+
+        /** Why a module's artifact cannot be read alone, by module name. */
+        private val unreadable = linkedMapOf<String, String>()
 
         private val apis = hashMapOf<String, List<XdkModuleApi>?>()
 
         private fun apis(module: String): List<XdkModuleApi>? =
             apis.getOrPut(module) {
-                val current = artifacts[module]
-                when {
-                    current != null -> {
-                        listOfNotNull(current, before[module]).map { artifact ->
-                            artifact.moduleApi ?: return@getOrPut null.also {
-                                unknown += "the API of $module's artifact cannot be read alone"
-                            }
-                        }
-                    }
-
-                    module in XdkLibraries.moduleNames -> {
-                        // a bundled library can depend on a workspace module only when it replaces another bundled one
-                        if (replaced.isNotEmpty()) {
-                            unknown += "it uses the bundled $module, which can depend on the replaced ${replaced.joinToString()}"
-                        }
-                        null
-                    }
-
-                    else -> {
-                        unknown += "it uses $module, whose artifact it does not have"
-                        null
+                val current = artifacts[module] ?: return@getOrPut null
+                listOfNotNull(current, before[module]).map { artifact ->
+                    artifact.moduleApi ?: return@getOrPut null.also {
+                        unreadable[module] = "the API of $module's artifact cannot be read alone"
                     }
                 }
             }
+
+        /**
+         * The declarations whose own API is as it was but that change with [changes], to a fixpoint: each that names, in
+         * its own declaration, a type through which another change is seen, as a method's signature or a property's type
+         * does, and each type that extends, implements or incorporates one, whose members it takes. The compiler that
+         * matches a type with an interface compares the types of their members, and those of their members' types, and
+         * so on; a type takes its base's private members too, which only a module whose classes extend it sees. A member
+         * of a namespace, found by name, is found by its name again.
+         */
+        fun deep(changes: List<Changed>): List<Changed> {
+            val seen = changes.mapTo(hashSetOf()) { it.declaration }
+            val sources = changes.filterNot { it.declaration.fingerprint }
+            // the types through which the changes are seen, whose members another type's can match; a namespace's
+            // members are found by name, which the change of each of them is checked by
+            val visible = sources.flatMapTo(hashSetOf()) { it.visibleTypes }
+            val enclosing = sources.flatMapTo(hashSetOf()) { it.enclosingTypes }.apply { addAll(visible) }
+            val candidates =
+                artifacts.keys
+                    .filter { it in upstream || artifacts[it]?.fromSource == false }
+                    .flatMap { module -> apis(module).orEmpty() }
+                    .flatMap { api -> api.declarations }
+                    .filter { !it.nested && !it.fingerprint }
+            val found = mutableListOf<Changed>()
+            do {
+                val grown = found.size
+                candidates.forEach { declaration ->
+                    if (declaration in seen) return@forEach
+                    val module = declaration.path.substringBefore(':')
+                    when {
+                        declaration.header.any(visible::contains) || declaration.supers.any(visible::contains) -> {
+                            seen += declaration
+                            val named = declaration.parent?.kind == XdkModuleApi.Kind.NAMESPACE
+                            val change = Changed(module, declaration, named, declaration.visible, declaration.enclosing)
+                            found += change
+                            visible += change.visibleTypes
+                            enclosing += change.enclosingTypes
+                        }
+
+                        declaration.supers.any(enclosing::contains) -> {
+                            seen += declaration
+                            val extending = declaration.enclosing.filter { it.kind == XdkModuleApi.Kind.TYPE }
+                            val change = Changed(module, declaration, named = false, emptyList(), extending)
+                            found += change
+                            enclosing += change.enclosingTypes
+                        }
+                    }
+                }
+            } while (found.size != grown)
+            return found
+        }
+
+        /**
+         * Why a module that uses the types of [paths] cannot be shown to use none of what changed, or null: an artifact of
+         * the build that cannot be read alone, whose declarations are not known; or a bundled library, which this does
+         * not read, when another bundled library is replaced and may change what it holds.
+         */
+        fun unknown(paths: Set<String>): String? {
+            artifacts.keys.forEach(::apis)
+            unreadable.values.firstOrNull()?.let { return it }
+            return paths
+                .map { it.substringBefore(':') }
+                .distinct()
+                .firstNotNullOfOrNull { module ->
+                    when {
+                        module in artifacts -> null
+
+                        module in XdkLibraries.moduleNames ->
+                            "it uses the bundled $module, which can depend on the replaced ${replaced.joinToString()}"
+                                .takeIf { replaced.isNotEmpty() }
+
+                        else -> "it uses $module, whose artifact it does not have"
+                    }
+                }
+        }
 
         /**
          * The names of the members of the types among [paths]: from their artifacts' APIs, or from the bundled library
@@ -317,67 +397,6 @@ internal class XdkMemberUseTracker(
                     .orEmpty()
             }
         }
-
-        /**
-         * The classes reached from [roots] through the classes each extends, implements, incorporates and so on, and
-         * through its child classes, which a subclass takes as virtual children.
-         */
-        fun supers(roots: Set<String>): Set<String> {
-            val seen = hashSetOf<String>()
-            val work = ArrayDeque(roots)
-            while (work.isNotEmpty()) {
-                val type = work.removeFirst()
-                if (!seen.add(type)) continue
-                apis(type.substringBefore(':')).orEmpty().forEach { api ->
-                    api.byPath[type].orEmpty().forEach { work += it.supers }
-                    api.members[type].orEmpty().values.forEach { members ->
-                        members.filter { it.kind == XdkModuleApi.Kind.TYPE }.forEach { work += it.path }
-                    }
-                }
-            }
-            return seen
-        }
-
-        /**
-         * The types reached from [roots] and from the members of [scopes] whose name [names] spells: each with the types
-         * that its own declaration names, and, with [names], those that the declarations of its members whose name it
-         * spells name, and so on.
-         */
-        fun close(
-            roots: Set<String>,
-            names: Names?,
-            scopes: Set<String>,
-        ): Set<String> {
-            val seen = hashSetOf<String>()
-            val work = ArrayDeque<String>()
-
-            fun members(holder: String): Sequence<XdkModuleApi.Declaration> =
-                if (names == null) {
-                    emptySequence()
-                } else {
-                    apis(holder.substringBefore(':'))
-                        .orEmpty()
-                        .asSequence()
-                        .flatMap { api ->
-                            api.members[holder]
-                                .orEmpty()
-                                .entries
-                                .asSequence()
-                        }.filter { (name, _) -> names.spells(name) }
-                        .flatMap { it.value.asSequence() }
-                }
-            scopes.forEach { scope -> members(scope).forEach { work += it.types } }
-            work += roots
-            while (work.isNotEmpty()) {
-                val type = work.removeFirst()
-                if (!seen.add(type)) continue
-                apis(type.substringBefore(':')).orEmpty().forEach { api ->
-                    api.byPath[type].orEmpty().forEach { work += it.types }
-                }
-                members(type).forEach { work += it.types }
-            }
-            return seen
-        }
     }
 
     private companion object {
@@ -394,6 +413,14 @@ internal class XdkMemberUseTracker(
             if (before == null || after == null) return Change.Unreadable("$name has no earlier artifact")
             val old = before.moduleApi ?: return Change.Unreadable("the API of $name's earlier artifact cannot be read alone")
             val new = after.moduleApi ?: return Change.Unreadable("the API of $name's artifact cannot be read alone")
+            (old.unstable + new.unstable).takeIf { it > 0 }?.let { unstable ->
+                logger.info(
+                    "compile: {} components and constants of the APIs of {}'s artifacts have a digest that no other compile gives " +
+                        "them (DeclarationDigests.unstable), and count as changed",
+                    unstable,
+                    name,
+                )
+            }
             val oldKeys = old.declarations.groupBy { it.key }
             val newKeys = new.declarations.groupBy { it.key }
             var any = false
@@ -406,7 +433,9 @@ internal class XdkMemberUseTracker(
                     val publicOrder = before.map { it.publicOrder } != after.map { it.publicOrder }
                     any = any || own || order
                     (before + after).filterNot { it.nested }.mapNotNull { declaration ->
-                        val path = listOf(declaration.path)
+                        // the type itself, and each type that holds it as its virtual child
+                        val types = declaration.visible.filter { it.kind == XdkModuleApi.Kind.TYPE }
+                        val extending = declaration.enclosing.filter { it.kind == XdkModuleApi.Kind.TYPE }
                         when {
                             own || (publicOrder && declaration.kind == XdkModuleApi.Kind.MEMBER) ->
                                 Changed(name, declaration, named = true, declaration.visible, declaration.enclosing)
@@ -421,9 +450,9 @@ internal class XdkMemberUseTracker(
                             // which finds its members by name alone
                             declaration.kind == XdkModuleApi.Kind.NAMESPACE -> null
 
-                            publicOrder -> Changed(name, declaration, named = false, path, path)
+                            publicOrder -> Changed(name, declaration, named = false, types, extending)
 
-                            order -> Changed(name, declaration, named = false, emptyList(), path)
+                            order -> Changed(name, declaration, named = false, emptyList(), extending)
 
                             else -> null
                         }
@@ -480,3 +509,5 @@ internal class XdkMemberUseTracker(
             }
     }
 }
+
+private val logger = LoggerFactory.getLogger(XdkMemberUseTracker::class.java)

@@ -17,8 +17,11 @@ import java.util.concurrent.CopyOnWriteArrayList
  * modules that depend on each other, the next revision's compile, which starts from the one before and keeps the compile
  * of each module the tracker keeps, gives every module the facts, artifact and errors that compiling every module from
  * nothing gives it; and so does a proof's compile of the same edit, which starts from the revision's. Each case also says
- * which modules the tracker compiles again, by name, never timed: each edit breaks or changes a module that it reaches,
- * which the comparison would find if the tracker kept that module's compile.
+ * which modules the tracker compiles again, by name, never timed. Most edits break or change a module that they reach,
+ * which the comparison finds when the tracker keeps that module's compile. Some do not, and only the modules compiled
+ * carry them: the edits that compile the edited module alone; a changed default value, as a call that leaves the
+ * argument out passes the callee's default; and a private method added to a class that another module's class extends,
+ * which no case shows that module to see.
  */
 class XdkMemberUseTrackerTest {
     @TempDir lateinit var directory: Path
@@ -405,6 +408,183 @@ class XdkMemberUseTrackerTest {
     }
 
     @Test
+    fun `a class that stops being an R compiles the module that matches a class whose method returns it with an interface`() {
+        // C matches HasR while its get returns an R, which RImpl is: matching C checks RImpl, which Deep names nowhere,
+        // nor get, nor x; only that C's get names RImpl shows that the edit reaches Deep
+        val iface =
+            """
+            module Iface {
+                interface R {
+                    Int x();
+                }
+
+                interface HasR {
+                    R get();
+                }
+            }
+            """.trimIndent()
+        val lib =
+            """
+            module Lib {
+                package iface import Iface;
+
+                static Int other() = 2;
+
+                class C {
+                    RImpl get() = new RImpl();
+                }
+
+                class RImpl
+                        implements iface.R {
+                    @Override
+                    Int x() = 1;
+                }
+            }
+            """.trimIndent()
+        val deep =
+            """
+            module Deep {
+                package lib import Lib;
+                package iface import Iface;
+
+                Int run() {
+                    iface.HasR h = new lib.C();
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Iface" to iface, "Lib" to lib, "Deep" to deep, "Far" to FAR),
+                mapOf("Lib" to setOf("Iface"), "Deep" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to
+                    lib.replace(
+                        "    class RImpl\n            implements iface.R {\n        @Override\n        Int x() = 1;",
+                        "    class RImpl {\n        Int y() = 1;",
+                    ),
+            )
+        assertThat(outcome.before.errors["Deep"].orEmpty()).noneMatch { it.startsWith("ERROR") }
+        assertThat(outcome.compiled).containsExactly("Lib", "Deep")
+        assertThat(outcome.errors("Deep")).isNotEmpty()
+    }
+
+    @Test
+    fun `a method renamed in a virtual child compiles the module that matches the child, which a method returns, with an interface`() {
+        // Duck's constants name Base and its make, whose type is Base's virtual child, named by Base and its name alone
+        val duck =
+            """
+            module Duck {
+                package lib import Lib;
+                package iface import Iface;
+
+                Int run() {
+                    iface.HasFoo h = new lib.Base().make();
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to CHILD, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
+                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to CHILD.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
+        assertThat(outcome.errors("Duck")).isNotEmpty()
+    }
+
+    @Test
+    fun `a method renamed in a virtual child compiles the module that names the child's type and matches it with an interface`() {
+        val duck =
+            """
+            module Duck {
+                package lib import Lib;
+                package iface import Iface;
+
+                Int run(lib.Base.Child child) {
+                    iface.HasFoo h = child;
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to CHILD, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
+                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to CHILD.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
+        assertThat(outcome.errors("Duck")).isNotEmpty()
+    }
+
+    @Test
+    fun `a method renamed in a virtual child compiles the module that matches the child, which a property holds, with an interface`() {
+        val lib = CHILD.replace("        Child make() = new Child();", "        Child child.get() = new Child();")
+        val duck =
+            """
+            module Duck {
+                package lib import Lib;
+                package iface import Iface;
+
+                Int run() {
+                    iface.HasFoo h = new lib.Base().child;
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to lib, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
+                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
+        assertThat(outcome.errors("Duck")).isNotEmpty()
+    }
+
+    @Test
+    fun `a method renamed in a virtual child compiles the module that matches another module's override of the child with an interface`() {
+        // Sub's Child overrides Base's, and takes its foo; Duck names Sub and its make, neither Base nor its Child
+        val mid =
+            """
+            module Mid {
+                package lib import Lib;
+
+                class Sub
+                        extends lib.Base {
+                    @Override
+                    class Child {
+                        Int bar() = 2;
+                    }
+
+                    @Override
+                    Child make() = new Child();
+                }
+            }
+            """.trimIndent()
+        val duck =
+            """
+            module Duck {
+                package mid import Mid;
+                package iface import Iface;
+
+                Int run() {
+                    iface.HasFoo h = new mid.Sub().make();
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to CHILD, "Mid" to mid, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
+                mapOf("Mid" to setOf("Lib"), "Duck" to setOf("Mid", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to CHILD.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Mid", "Duck")
+        assertThat(outcome.errors("Duck")).isNotEmpty()
+    }
+
+    @Test
     fun `a member removed from a class compiles the module that matches the class with its own interface`() {
         val own =
             """
@@ -739,6 +919,22 @@ class XdkMemberUseTrackerTest {
                 }
 
                 static C make() = new C();
+            }
+            """.trimIndent()
+
+        /** A class with a virtual child, which a method makes, and a function of the module. */
+        val CHILD =
+            """
+            module Lib {
+                static Int other() = 2;
+
+                class Base {
+                    class Child {
+                        Int foo() = 1;
+                    }
+
+                    Child make() = new Child();
+                }
             }
             """.trimIndent()
 
