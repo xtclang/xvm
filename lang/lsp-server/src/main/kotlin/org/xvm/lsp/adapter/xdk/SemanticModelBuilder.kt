@@ -547,7 +547,25 @@ private class SemanticModelBuilder(
             // Conditional incorporation names refer to the mixin's registered formals. Their
             // parser representation is a Parameter, but they do not declare another formal.
             if (it.parent is CompositionNode.Incorporates) return@forEach
-            val method = (it.parent as? MethodDeclarationStatement)?.component as? MethodStructure
+            val declaration = it.parent as? MethodDeclarationStatement
+            val method = declaration?.component as? MethodStructure
+            // A name of a method's return values, as in (Int count, String label) pair(), declares the value it
+            // names, which no code refers to; the method's structure holds the values after a conditional's Boolean.
+            val returned = declaration?.returns?.indexOfFirst { value -> value === it } ?: -1
+            if (returned >= 0) {
+                val value = method?.returns?.getOrNull(returned + if (method.isConditionalReturn) 1 else 0)
+                val token = it.nameToken
+                if (value == null || token == null) {
+                    declare(token, null, SymbolKind.PARAMETER, it.source)
+                    return@forEach
+                }
+                val at = location(it.source, token.startPosition, token.endPosition)
+                val symbol = SymbolId(id, symbols.size)
+                symbols[symbol] =
+                    Symbol(symbol, it.name, SymbolKind.PARAMETER, at.range, type(value.type), null, at.sourceName, renameable = true)
+                occurrences[at] = Occurrence(at.range, it.name, Role.DECLARATION, symbol, symbols.getValue(symbol).type)
+                return@forEach
+            }
             val parameter = method?.params?.singleOrNull { parameter -> parameter.name == it.name }
             if (it.resolvedTarget == null && method != null && parameter != null) {
                 // A bodyless method has no register. Its written parameter is still a real source

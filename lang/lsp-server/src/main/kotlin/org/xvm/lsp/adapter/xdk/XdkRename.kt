@@ -1103,8 +1103,8 @@ internal object XdkRename {
     /** Binding identity normalized through a proposed edit for comparison across compilation attempts. */
     private sealed interface Target {
         /**
-         * An occurrence in compiled code that the semantic model leaves without a symbol, such as a name of a method's
-         * multiple return values or `this` in a lazy property's `calc()` ([preservesBindings]).
+         * An occurrence in compiled code that the semantic model leaves without a symbol, such as a name of a function
+         * type's return values or `this` in a lazy property's `calc()` ([preservesBindings]).
          */
         data object Unbound : Target
 
