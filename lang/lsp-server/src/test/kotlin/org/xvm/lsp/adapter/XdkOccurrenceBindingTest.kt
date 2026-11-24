@@ -3,7 +3,12 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
+import org.xvm.compiler.Source
+import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.lsp.model.Location
 import java.nio.file.Path
 
@@ -42,6 +47,46 @@ class XdkOccurrenceBindingTest {
             val parameter = requireNotNull(adapter.rename(uri, formal.line, formal.column, "t9")) { "No rename of t0" }
             assertThat(apply(source, parameter.changes.getValue(uri))).isEqualTo(source.replace("t0", "t9"))
         }
+    }
+
+    @Test
+    fun `the _ placeholder is no occurrence, so it no longer refuses the proof of a safe delete in its module`() {
+        val source =
+            """
+            module Placeholders {
+                (Int, String) pair() = (1, "one");
+                Int size() {
+                    (/*assigned*/_, String label) = pair();
+                    function Int(Int, Int) second = (/*parameter*/_, n) -> n;
+                    return second(0, label.size);
+                }
+                class Box { Int unused() { return 1; } }
+            }
+            """.trimIndent()
+        withSource("Placeholders", source) { adapter, uri ->
+            listOf("assigned", "parameter").map { position(source, it) }.forEach { at ->
+                assertThat(adapter.findReferences(uri, at.line, at.column, true)).isEmpty()
+                assertThat(adapter.getDocumentHighlights(uri, at.line, at.column)).isEmpty()
+            }
+            // the proofs of code actions other than a rename refuse every occurrence without a symbol in the modules
+            // they compile, and an unused member's deletion was refused in any module with a _ (a marker comment in
+            // the member would refuse it too, as its deletion would lose the comment)
+            val at = source.positionOf("unused()")
+            assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
+                .contains("Safely delete member 'unused', unused in Placeholders")
+        }
+        assertThat(snapshot("Placeholders", source).occurrences).noneMatch { it.name == "_" }
+    }
+
+    private fun snapshot(
+        name: String,
+        text: String,
+    ): SemanticModel {
+        CompilerTestSupport.configure()
+        val errors = ErrorList()
+        val compilation = EmbeddingSupport.instance().compileModule(Source(text, "$name.x"), null, errors)
+        assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        return compilation.semanticSnapshot()
     }
 
     private fun withSource(
