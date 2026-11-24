@@ -1144,7 +1144,12 @@ object TourUi {
                     descendants(window).filterIsInstance<AbstractButton>().firstOrNull { it.isShowing && it.isEnabled && it.text == text }
                 }
             } ?: return false
-        val at = anyEdt { center(button) }
+        val at =
+            anyEdt {
+                // a button below a scrolled page's visible part comes into view first, as a user scrolls to it
+                button.scrollRectToVisible(Rectangle(0, 0, button.width, button.height))
+                center(button)
+            }
         logAction("click", "click: $text", at)
         robotClick(at)
         return true

@@ -26,6 +26,9 @@ import com.intellij.execution.runners.ProgramRunner
 import com.intellij.execution.ui.RunContentManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.SearchableConfigurable
+import com.intellij.openapi.options.ex.ConfigurableExtensionPointUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
@@ -71,6 +74,32 @@ object EmbeddedExecutionUi {
         override fun processTerminated(event: ProcessEvent) {
             exitCode = event.exitCode
         }
+    }
+
+    /**
+     * The path of the settings page with the configurable [id] in [project]'s Settings tree, by display names, as
+     * `Languages & Frameworks/Ecstasy/Build and Run`; empty when no page has the id.
+     */
+    @JvmStatic
+    fun settingsPath(
+        project: Project,
+        id: String,
+    ): String {
+        fun find(
+            configurables: Array<out Configurable>,
+            path: List<String>,
+        ): List<String>? =
+            configurables.firstNotNullOfOrNull { configurable ->
+                val here = path + configurable.displayName
+                if ((configurable as? SearchableConfigurable)?.id == id) {
+                    here
+                } else {
+                    (configurable as? Configurable.Composite)?.let { find(it.configurables, here) }
+                }
+            }
+        return find(ConfigurableExtensionPointUtil.getConfigurableGroup(project, true).configurables, emptyList())
+            ?.joinToString("/")
+            .orEmpty()
     }
 
     /** Sets the project's build mode and returns the previous one. */
