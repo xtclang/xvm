@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter.xdk
 
 import org.slf4j.LoggerFactory
 import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.FileStructure
@@ -103,10 +104,8 @@ class XdkDependency
         )
 
         /**
-         * [api] and [accessibleApi], or null when the artifact cannot be read alone: its declarations are described by
-         * their signatures, and a signature whose type the compiler relates to a dependency's class that the artifact
-         * does not hold, as in a library of the XVM repository that depends on its ecstasy, cannot be described. A module
-         * that depends on such an artifact is then compiled again whenever it is, as the log says.
+         * [api] and [accessibleApi], or null when the artifact cannot be read alone, though no artifact is known that
+         * cannot: a module that depends on such an artifact is then compiled again whenever it is, as the log says.
          */
         private val apis: Apis? by lazy {
             try {
@@ -128,19 +127,20 @@ class XdkDependency
                 val file = FileStructure(ByteArrayInputStream(artifact))
                 ConstantPool.withPool(file.constantPool).use {
                     val pool = file.constantPool
-                    // read before the write below renumbers the constants, each with whether it is private
+                    // read before the write below renumbers the constants: each declaration's constant and place, with
+                    // whether it is private, and whether each method is abstract, has code or is native
                     val located =
                         declarations.entries.map { (index, location) ->
                             val constant = pool.getConstant(index)
-                            val place = "$constant ${location.sourceName} ${location.range}"
-                            place to (constant is IdentityConstant && isPrivate(constant))
+                            val private = constant is IdentityConstant && isPrivate(constant)
+                            Triple(constant, "${location.sourceName} ${location.range}", private)
                         }
                     val methods =
                         pool.constants
                             .filterIsInstance<MethodConstant>()
                             .mapNotNull { it.component as? MethodStructure }
                             .distinct()
-                    val implemented = methods.map { "${it.identityConstant} ${it.isAbstract} ${it.hasCode()} ${it.isNative}" }
+                    val implemented = methods.map { it.identityConstant to "${it.isAbstract} ${it.hasCode()} ${it.isNative}" }
                     methods.forEach { method ->
                         // marking a method abstract drops its code; it is then marked as it was
                         val abstract = method.isAbstract
@@ -156,16 +156,26 @@ class XdkDependency
                     }
                     val stripped = ByteArrayOutputStream().also(file::writeTo).toByteArray()
 
+                    // A constant is named by its index in the stripped pool, where the write put it: two artifacts whose
+                    // stripped forms are the same hold the same constant at each index. A description of it would ask of
+                    // its signature's types what only the dependencies' classes answer, which the artifact read alone holds
+                    // only as fingerprints, such as whether a parameterized type is a function's: in a library of the XVM
+                    // repository, which depends on the workspace's ecstasy, "missing class for constant". A constant that
+                    // the stripped form does not hold is described, as before.
+                    fun named(constant: Constant): String = constant.position.takeIf { it >= 0 }?.let { "#$it" } ?: constant.toString()
+                    val kinds = implemented.map { (method, kind) -> "${named(method)} $kind" }
+
                     fun digest(places: List<String>): String {
                         val digest = MessageDigest.getInstance("SHA-256")
                         digest.update(stripped)
-                        (places.sorted() + implemented.sorted()).forEach {
+                        (places.sorted() + kinds.sorted()).forEach {
                             digest.update(it.toByteArray(Charsets.UTF_8))
                             digest.update(0)
                         }
                         return HexFormat.of().formatHex(digest.digest())
                     }
-                    Apis(digest(located.map { it.first }), digest(located.filterNot { it.second }.map { it.first }))
+                    val places = located.map { (constant, place, private) -> "${named(constant)} $place" to private }
+                    Apis(digest(places.map { it.first }), digest(places.filterNot { it.second }.map { it.first }))
                 }
             }
 

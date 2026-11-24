@@ -5,15 +5,23 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.eclipse.lsp4j.CodeActionContext
+import org.eclipse.lsp4j.CodeActionKind
+import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeActionTriggerKind
 import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.services.LanguageClient
@@ -34,12 +42,12 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * A workspace that holds the XDK's own sources, over copies of the repository's lib_ecstasy and lib_json: json compiles
- * against the workspace's ecstasy, unsaved edits included, its definitions go to the workspace's sources rather than the
- * bundled copies, the status names the libraries the workspace replaces, and embedded builds are refused; and a rename of
- * a method of the workspace's ecstasy is proven over both and a module that depends on json, edits json's call too, and
- * one of json's compiles only what depends on json. Heavy: each case compiles ecstasy from
- * source, and a rename's proof compiles it again after the edit, which needs a 2 GB heap
- * (XdkLibrarySources.PROOF_HEAP_BYTES).
+ * against the workspace's ecstasy, unsaved edits included, its definitions go to the workspace's sources rather than
+ * the bundled copies, the status names the libraries the workspace replaces, and embedded builds are refused; and a
+ * rename of a method of the workspace's ecstasy is proven over both and a module that depends on json, edits json's
+ * call too, one of json's compiles only what depends on json, and an edit that leaves json's API as it was compiles
+ * json alone. Heavy: each case compiles ecstasy from source, and a rename's proof compiles it again after the edit,
+ * which needs a 2 GB heap (XdkLibrarySources.PROOF_HEAP_BYTES).
  */
 @Heavy
 class XdkRepositoryWorkspaceTest {
@@ -108,7 +116,7 @@ class XdkRepositoryWorkspaceTest {
     }
 
     @Test
-    fun `a rename of a method of the workspace's ecstasy edits json's call of it, and one of json's compiles what depends on json`() {
+    fun `a rename of a method of the workspace's ecstasy edits json's call of it, and json's API decides what depends on it compiles`() {
         val root = File(requireNotNull(System.getProperty("xtc.composite.root")) { "xtc.composite.root is not set" })
         val workspace = directory.toRealPath().toFile()
         listOf("lib_ecstasy", "lib_json").forEach { library ->
@@ -182,21 +190,47 @@ class XdkRepositoryWorkspaceTest {
                     // a rename in json, of the same revision, whose compile is kept
                     val probed = rename(input, "probe", "probed")
                     assertThat(probed.map { File(URI(it.textDocument.uri)).canonicalFile }).containsExactly(input.canonicalFile)
+
+                    // an edit in a method's body, which leaves json's API as it was; the next revision's compile, which
+                    // a code action request makes and which starts from the one before, compiles json alone
+                    val edited = input.readText().replace("\"x\".workspaceOnly()", "\"y\".workspaceOnly()")
+                    server.textDocumentService.didChange(
+                        DidChangeTextDocumentParams(
+                            VersionedTextDocumentIdentifier(input.toURI().toString(), 2),
+                            listOf(TextDocumentContentChangeEvent(edited)),
+                        ),
+                    )
+                    server.textDocumentService
+                        .codeAction(
+                            CodeActionParams(
+                                TextDocumentIdentifier(input.toURI().toString()),
+                                Range(Position(0, 0), Position(0, 0)),
+                                CodeActionContext(emptyList(), listOf(CodeActionKind.RefactorInline)).apply {
+                                    triggerKind = CodeActionTriggerKind.Invoked
+                                },
+                            ),
+                        ).awaited()
                 }
             }
         val queries = lines.filter { it.startsWith("project query: kind=") }
         queries.forEach(::println)
         // prepareRename's compile of ecstasy, json and jsonUse; the proof of the rename in ecstasy compiles them all
-        // again, as they depend on it; the proof of the one in json compiles json and jsonUse, and not ecstasy
+        // again, as they depend on it; the proof of the one in json compiles json and, as json's API changes, jsonUse,
+        // and not ecstasy
         assertThat(queries.map { "${it.substringBefore(" in ")} ${Regex("compiles=[0-9]+").find(it)?.value}" })
             .containsExactly(
                 "project query: kind=prepare_rename uri=String.x outcome=completed compiles=3",
                 "project query: kind=rename uri=String.x outcome=completed compiles=3",
                 "project query: kind=rename uri=DocInput.x outcome=completed compiles=2",
             )
-        // json's artifact names the workspace's ecstasy's classes, which it does not hold, so its API cannot be read
-        // alone, and what depends on json is compiled again with it, rather than the proof failing
-        assertThat(lines).anyMatch { it.startsWith("compile: the API of json.xtclang.org's artifact cannot be read alone") }
+        // the body edit's revision compiles json alone: jsonUse compiles against json's API as it did
+        assertThat(lines.filter { it.startsWith("code actions: uri=DocInput.x") })
+            .singleElement()
+            .asString()
+            .contains("outcome=answered", "compiles=base 1 + proofs 0 cached-base=false")
+        // json's artifact names the workspace's ecstasy's classes, which it holds only as fingerprints, and its API is
+        // read all the same
+        assertThat(lines).noneMatch { "cannot be read alone" in it }
     }
 
     /** The lines that the server's loggers log at INFO while [body] runs. */
