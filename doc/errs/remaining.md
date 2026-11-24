@@ -939,11 +939,13 @@ breakpoint list, which the editors replace.
 
 ### Debug adapter: failures that reach the editor as "Internal error."
 
-- [ ] Found 2026-11-24 while making the evaluation limits settings (K5a): `XtcDebugServer`'s `stackTrace`,
+- [x] Found 2026-11-24 while making the evaluation limits settings (K5a): `XtcDebugServer`'s `stackTrace`,
   `scopes` and `exceptionInfo` pass a failure on as it is, so the editor shows only "Internal error."
   instead of why. `evaluate` maps its failures to their reason, and since K5a so does `variables`, whose
   lazy value that timed out or threw did the same. Map these three's failures the same way, with a test
   each that a failing request answers with its reason. Small, under half a day.
+  Done 2026-11-24: the four requests answer through one helper, `answered`, which keeps a cancellation and
+  an error response as they are; `XtcDebugServerTest` checks the three with a run whose state cannot be read.
 
 ## 4. Upstream fixes
 
