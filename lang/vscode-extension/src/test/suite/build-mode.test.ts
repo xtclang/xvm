@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { buildModeStatusText } from '../../build-mode-selection';
+import { buildModeChoices, buildModeStatusText, embeddedUnavailable } from '../../build-mode-selection';
 import { buildMode, GRADLE_NOT_USED, hasGradleBuild, replacedIn } from '../../embedded-execution';
 
 suite('Build mode', () => {
@@ -37,6 +37,17 @@ suite('Build mode', () => {
         } finally {
             fs.rmSync(root, { recursive: true, force: true });
         }
+    });
+    test('the picker says the embedded compiler is not available where libraries are replaced', () => {
+        const description = (replaced: string[], current = 'gradle') =>
+            buildModeChoices(current, replaced).find(choice => choice.mode === 'embedded')?.description;
+        assert.match(description(['json.xtclang.org']) ?? '', /^Not available: .*json\.xtclang\.org$/);
+        assert.match(description(['json.xtclang.org'], 'embedded') ?? '', /; selected$/);
+        assert.strictEqual(description([]), undefined);
+        assert.strictEqual(description([], 'embedded'), 'Selected');
+        assert.strictEqual(buildModeChoices('gradle', ['json.xtclang.org']).find(choice => choice.mode === 'gradle')?.description, 'Selected');
+        // a choice of it there, by the picker or the settings, warns that the folder keeps using Gradle
+        assert.match(embeddedUnavailable('xvm', ['ecstasy.xtclang.org']), /cannot build or run xvm .*ecstasy\.xtclang\.org.*keeps using Gradle/);
     });
     test('the status bar names the effective mode', () => {
         assert.strictEqual(buildModeStatusText('embedded'), '$(tools) Embedded build');
