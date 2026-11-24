@@ -177,12 +177,42 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   name (`XdkRename.equivalent`); its comparison went from 4½ minutes to seconds (a line index per
   text). Such a rename needs a 2 GB heap, below which it is refused with a message
   (`XdkLibrarySources.PROOF_HEAP_BYTES`).
-- [ ] A rename compiles the whole workspace twice, before and after the edit, with no reuse: in the
-  XVM repository every rename, also one of a local in `json`, compiles all 21 libraries twice, 50 s
-  with `ecstasy`'s (`compiles=44`). Fix: take the "before" compile from the revision's compile, as code
-  actions do (`XdkCodeActionCache`), started at `prepareRename`, and compile only the edited module
-  and its consumers after the edit (the proofs' `reuse`). A rename in `json` then takes seconds; one
-  in `ecstasy`, which every module depends on, still compiles everything once, 15–20 s.
+- [x] A rename compiled the whole workspace twice, before and after the edit, with no reuse: in the
+  XVM repository every rename but a local's compiled all its modules twice, 50 s with `ecstasy`'s
+  (`compiles=44`). Done 2026-11-24 (`lagergren/rename-speed`): a rename's proof starts from the
+  revision's compile that code actions share (`XdkCodeActionCache`), which `prepareRename` starts,
+  and after the edit compiles only the modules whose sources it changes and those that depend on
+  them. A move or a renamed module still compiles every module after the edit, and a revision's
+  compile in which a module did not compile is not used: the proof compiles the sources itself, and
+  is refused as before. The log says so in both cases. From the server's log, over all 21 libraries:
+  a rename of a method of `String`, 53.1 s and `compiles=44` before, is now 28.5 s and
+  `compiles=22`, after 31.3 s of `prepareRename`'s compile (`compiles=22`), which overlaps the
+  typing of the new name, or is cached already by code actions; one of a method of `json`, 50.9 s
+  and `compiles=44`, is now 10.4 s and `compiles=12`, json and the modules that depend on it. Over
+  copies of `ecstasy` and `json` (`XdkRepositoryWorkspaceTest`, heavy): 32.3 s and `compiles=4`
+  before, 15.6 s and `compiles=2` after 17.5 s of `prepareRename`; json's method 27.6 s and
+  `compiles=4` before, 2.1 s and `compiles=1` after. A rename with nothing cached and no
+  `prepareRename` costs what it did, over the two copies 33.1 s and `compiles=4`; one sent right
+  after `prepareRename`, with nothing cached, waits for both, 59.7 s over all libraries where it was
+  53.1 s. Correction: a local, also one in `json`, was never a project rename; its proof compiles
+  its module alone, twice, 2.4 s in `json`, before and after. Found on the way: the API of the
+  repository's libraries other than `ecstasy` cannot be read alone (next item), which failed every
+  compile that started from an earlier one, code actions' too, with "missing class for constant";
+  such an API now counts as changed.
+- [ ] The API fingerprint of an XVM repository library's artifact, other than `ecstasy`'s, cannot be
+  read alone (`XdkDependency.api`): its declarations are described by their signatures, and the
+  compiler relates a signature's types to classes of the workspace's `ecstasy` that the artifact
+  does not hold. A module that depends on one is then compiled again whenever it is, though the API
+  it compiles against may be unchanged: a rename of a method of `json` compiles json and every
+  module that depends on it, directly or not, 12 modules. Fix: read the API linked to the
+  dependencies the artifact was compiled with.
+- [ ] A rename that the client cancels runs its proof to the end: `textDocument/rename` maps a
+  refusal with `exceptionallyCompose` (`856d5ef01b`), whose new future the cancellation cancels
+  without reaching the adapter's, so the proof, half a minute over the XVM repository's libraries,
+  keeps the compiler worker, and a rename asked again waits for it. `XdkCursorServerTest`'s two
+  RENAME cases, which only `-PlspTests=all` runs, fail on it (found 2026-11-24 on
+  `lagergren/rename-speed`, and on its base `f51064654e`). Fix: cancel the adapter's future with the
+  one the server returns.
 - [ ] The semantic model leaves some occurrences unbound that the rename's proof now tolerates, which
   navigation still misses, in order of value: a local used for its formal type (`t1.DataType`, about
   50 in `ecstasy`: Find References and highlighting miss them, and a rename of such a local is refused);
