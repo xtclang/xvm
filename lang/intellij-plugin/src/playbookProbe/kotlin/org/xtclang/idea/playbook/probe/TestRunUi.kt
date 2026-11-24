@@ -40,6 +40,7 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import org.xtclang.idea.run.XtcRunAllTestsAction
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
@@ -48,8 +49,9 @@ import javax.swing.SwingUtilities
 
 /**
  * Drives the test icons in an Ecstasy editor's gutter, and reports the tests as IntelliJ's test console has them: each
- * test's result by its location, `xunit://<selector>`, with a failure's message and the line its location resolves
- * to, and the debug session of a test run, by the run's name.
+ * test's result by its location, `xunit://<selector>`, or `xunit://<module>/<selector>` in a run of every test
+ * module's tests, with a failure's message and the line its location resolves to, and the debug session of a test
+ * run, by the run's name.
  */
 object TestRunUi {
     /** The latest result of each test, by its location. */
@@ -197,6 +199,18 @@ object TestRunUi {
         }
     }
 
+    /**
+     * Runs Run 'All Ecstasy Tests', every test module's tests, each module in turn, as its action in the Project window's
+     * context menu does: the project's configuration, or else a new temporary one.
+     */
+    @JvmStatic
+    fun runAllTests(project: Project) {
+        watch(project)
+        ApplicationManager.getApplication().invokeAndWait {
+            ProgramRunnerUtil.executeConfiguration(XtcRunAllTestsAction.configuration(project), DefaultRunExecutor.getRunExecutorInstance())
+        }
+    }
+
     /** Runs an Ecstasy test configuration of [module]'s tests, all of them, with the xtc command line, named [module]. */
     @JvmStatic
     fun runCommandLine(
@@ -247,6 +261,17 @@ object TestRunUi {
             .lastOrNull()
             ?.testsRootNode
             ?.wasTerminated() == true
+
+    /**
+     * Whether every test run has ended: the process of each run whose console is a test console, and that console's
+     * tree of tests; on the EDT. Other runs, such as a program's, may still run.
+     */
+    @JvmStatic
+    fun testRunsEnded(project: Project): Boolean =
+        RunContentManager.getInstance(project).allDescriptors.all { run ->
+            val tree = (run.executionConsole as? SMTRunnerConsoleView)?.resultsViewer?.testsRootNode ?: return@all true
+            run.processHandler?.isProcessTerminated != false && !tree.isInProgress
+        }
 
     /**
      * Whether the runs' consoles show all that they will: every run's process has ended, no test run's tree is still in

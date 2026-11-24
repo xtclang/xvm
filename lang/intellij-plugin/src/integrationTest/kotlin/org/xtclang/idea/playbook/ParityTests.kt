@@ -209,6 +209,10 @@ internal interface TestRunProbe {
         module: String,
         uri: String,
     )
+
+    fun runAllTests(project: Project)
+
+    fun testRunsEnded(project: Project): Boolean
 }
 
 /** Whether the results hold the test at [location] as finished: the probe also lists a test while it runs. */

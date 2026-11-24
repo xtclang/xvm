@@ -10732,38 +10732,36 @@
       }
     },
     "X348": {
-      "title": "Run All in a project with several test modules runs every module's tests embedded and reports each (IntelliJ: each module's tests, a module at a time)",
+      "title": "Run All in a project with several test modules runs every module's tests embedded and reports each as its own module's, though both modules have a test three (IntelliJ: Run 'All Ecstasy Tests', whose Rerun Failed Tests then reruns only the failed three, in its module)",
       "manual": [
         "The tests run embedded, with xunit in a process the language server starts, as X339's do",
-        "VS Code's Run All runs each module's tests in turn; IntelliJ runs a module's tests from its module's icon, and has no action yet that runs every module's tests at once"
+        "VS Code's Run All runs each module's tests in turn; IntelliJ's Run 'All Ecstasy Tests' does too, into one test console, where each test goes to its own module's source, and that console's Rerun Failed Tests runs each module that has failed tests, with only those"
       ],
       "values": {
         "modules": [
           {
             "file": "FirstSuite.x",
             "module": "FirstSuite",
-            "source": "module FirstSuite {\n    @Test\n    void one() {\n        assert 1 + 1 == 2;\n    }\n}\n",
-            "runAll": "Tests of FirstSuite"
+            "source": "module FirstSuite {\n    @Test\n    void one() {\n        assert 1 + 1 == 2;\n    }\n\n    @Test\n    void three() {\n        assert 3 + 3 == 6;\n    }\n}\n"
           },
           {
             "file": "SecondSuite.x",
             "module": "SecondSuite",
-            "source": "module SecondSuite {\n    @Test\n    void two() {\n        assert 2 + 2 == 4;\n    }\n\n    @Test\n    void three() {\n        assert 3 + 3 == 7 as \"three and three are not seven\";\n    }\n}\n",
-            "runAll": "Tests of SecondSuite"
+            "source": "module SecondSuite {\n    @Test\n    void two() {\n        assert 2 + 2 == 4;\n    }\n\n    @Test\n    void three() {\n        assert 3 + 3 == 7 as \"three and three are not seven\";\n    }\n}\n"
           }
         ],
         "passed": [
           "FirstSuite/one",
+          "FirstSuite/three",
           "SecondSuite/two"
         ],
         "failed": "SecondSuite/three",
-        "failure": "three and three are not seven"
+        "failure": "three and three are not seven",
+        "runAll": "All Ecstasy Tests"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "IntelliJ runs a module's tests from that module's gutter icon, a module at a time; an action that runs every module's tests at once is not there yet, so the case runs each module's."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X349": {
