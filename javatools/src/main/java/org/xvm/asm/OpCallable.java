@@ -52,11 +52,10 @@ import static java.lang.constant.ConstantDescs.CD_MethodType;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 
-import static org.xvm.javajit.Builder.CD_Class;
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nType;
+import static org.xvm.javajit.Builder.MD_xvmClass;
 import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -716,7 +715,7 @@ public abstract class OpCallable extends Op {
                 cdTarget   = bctx.builder.getCCDesc(typeTarget);
                 sJitName   = infoMethod.ensureJitMethodName(ts);
                 jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
-                fInterface = typeTarget.isJitCCInterface();
+                fInterface = typeTarget.isJitCCInterface(bctx.typeSystem);
                 fCond      = infoMethod.isConditionalReturn(infoTarget);
             } else {
                 callSuper  = bctx.resolveSuperCall();
@@ -807,7 +806,7 @@ public abstract class OpCallable extends Op {
                 }
                 // generated class-of-class extends Class and implements the funky interface
                 bctx.loadCtx(code);
-                code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
+                code.invokevirtual(CD_nType, "$xvmClass", MD_xvmClass)
                     .checkcast(cdTarget);
             } else {
                 // inherited functions live on their declaring implementation; for virtual children,
@@ -815,7 +814,7 @@ public abstract class OpCallable extends Op {
                 TypeConstant typeImpl = body.resolveDeclaringType(pool, typeTarget);
 
                 cdTarget   = typeImpl.getJitImplDesc(ts);
-                fInterface = typeImpl.isJitImplInterface();
+                fInterface = typeImpl.isJitImplInterface(bctx.typeSystem);
                 jmdCall    = infoMethod.getJitDesc(builder, typeImpl);
             }
         } else {
@@ -1041,7 +1040,7 @@ public abstract class OpCallable extends Op {
 
         // generated class-of-class must implement the virtual constructor interface
         bctx.loadCtx(code);
-        code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
+        code.invokevirtual(CD_nType, "$xvmClass", MD_xvmClass)
             .checkcast(cdInterface);
         bctx.loadCtx(code);
 
@@ -1111,7 +1110,7 @@ public abstract class OpCallable extends Op {
         bctx.loadThis(code);
 
         TypeConstant typeReceiver = jmdCtor.typeTarget;
-        if (VirtualChildBuilder.isHardLeft(typeReceiver) && bctx.thisType.isJitCCInterface()) {
+        if (VirtualChildBuilder.isHardLeft(typeReceiver) && bctx.thisType.isJitCCInterface(bctx.typeSystem)) {
             // a hard-left constructor requires a concrete receiver; e.g. a super-constructor call
             // from D.C0 to B.C0 loads "this" as D_iC0, so the verifier requires a cast to B_C0
             code.checkcast(typeReceiver.getJitCCDesc(bctx.typeSystem));

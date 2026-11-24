@@ -404,7 +404,7 @@ public class JitMethodDesc {
                     optParamList.add(
                             new JitParamDesc(type, NullableXvmPrimitive, CD_boolean, iOrig, iOpt++, true));
                 }
-            } else if ((cd = JitTypeDesc.getWidenedClass(builder, type)) != null) {
+            } else if ((cd = JitTypeDesc.getWidenedClass(builder.typeSystem, type)) != null) {
                 JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
 
                 if (iOrig >= 0) {
@@ -479,7 +479,7 @@ public class JitMethodDesc {
                 }
                 optParamList.add(new JitParamDesc(pool.typeBoolean(),
                         NullableXvmPrimitive, CD_boolean, iOrig, ixLong++, true));
-            } else if ((cd = JitTypeDesc.getWidenedClass(builder, type)) != null) {
+            } else if ((cd = JitTypeDesc.getWidenedClass(builder.typeSystem, type)) != null) {
                 stdParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixOptObj++, false));
             } else {

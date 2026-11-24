@@ -71,7 +71,7 @@ public class HostedPropertyRefBuilder extends Builder {
                     .withSuperclass(CD_nRefProp)
                     .withInterfaceSymbols(interfaces);
 
-        MethodTypeDesc init = md(CD_void, CD_Ctx, CD_TypeConstant, CD_boolean,
+        MethodTypeDesc init = mdx(CD_void, CD_TypeConstant, CD_boolean,
                 CD_nObject, CD_MethodHandle, CD_MethodHandle, CD_MethodHandle);
         classBuilder.withMethodBody(INIT_NAME, init, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0);
@@ -113,7 +113,7 @@ public class HostedPropertyRefBuilder extends Builder {
                     assembleAccessor(classBuilder, property, opName, name + OPT, desc, true, emitted);
                 }
 
-                TypeConstant  targetType = methodId.getClassIdentity().getFormalType().getJitCCType();
+                TypeConstant  targetType = methodId.getClassIdentity().getFormalType().getJitType(typeSystem);
                 JitMethodDesc jmd        = body.getJitDesc(this, targetType);
 
                 assembleAccessor(classBuilder, property, opName, name, jmd, false, emitted);
@@ -137,7 +137,7 @@ public class HostedPropertyRefBuilder extends Builder {
             }
 
             String        methodName = method.ensureJitMethodName(typeSystem);
-            TypeConstant  targetType = methodId.getClassIdentity().getFormalType().getJitCCType();
+            TypeConstant  targetType = methodId.getClassIdentity().getFormalType().getJitType(typeSystem);
             JitMethodDesc jmd        = method.getJitDesc(this, targetType);
             String        targetName = prefix + '$' + methodName;
 
@@ -162,7 +162,7 @@ public class HostedPropertyRefBuilder extends Builder {
                 load(code, md.parameterType(i), code.parameterSlot(i));
             }
             String target = targetName + (optimized ? OPT : "");
-            if (owner.isJitCCInterface()) {
+            if (owner.isJitCCInterface(typeSystem)) {
                 code.invokeinterface(ownerCD, target, md);
             } else {
                 code.invokevirtual(ownerCD, target, md);
@@ -197,9 +197,10 @@ public class HostedPropertyRefBuilder extends Builder {
                         box(code, type);
                     }
                 }
-                code.invokespecial(CD_nRefProp, "set", md(CD_void, CD_Ctx, CD_Object)).return_();
+                code.invokespecial(CD_nRefProp, "set", mdx(CD_void, CD_Object))
+                    .return_();
             } else {
-                code.invokespecial(CD_nRefProp, "get", md(CD_Object, CD_Ctx));
+                code.invokespecial(CD_nRefProp, "get", MD_xvmObject);
                 if (optimized) {
                     if (type.isNullable()) {
                         unboxNullable(code, type, getCCDesc(type.removeNullable()));

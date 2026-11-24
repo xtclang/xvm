@@ -430,7 +430,7 @@ public class IntNumberBuilder extends NumberBuilder {
             code.invokespecial(CD_BigDecimal, INIT_NAME, md(CD_void, CD_long));
         }
 
-        code.invokestatic(CD_Dec128, "$toLongBits", md(CD_long, CD_Ctx, CD_BigDecimal))
+        code.invokestatic(CD_Dec128, "$toLongBits", mdx(CD_long, CD_BigDecimal))
             .lreturn();
     }
 

@@ -11,6 +11,8 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
+import org.xvm.javajit.ModuleLoader;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
@@ -259,9 +261,10 @@ public class VirtualChildTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getJitCCType() {
-        return getConstantPool().ensureVirtualChildTypeConstant(
-                getParentType().getJitCCType(), getChildName());
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        TypeConstant type = loader.module.getConstantPool().ensureVirtualChildTypeConstant(
+                getParentType().getJitType(loader.typeSystem), getChildName());
+        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false));
     }
 
     // ----- type comparison support ---------------------------------------------------------------

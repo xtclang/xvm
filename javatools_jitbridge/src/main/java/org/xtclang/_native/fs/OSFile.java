@@ -258,7 +258,7 @@ public class OSFile
         java.nio.file.Path path = $getJavaPath(ctx);
         try {
             java.nio.channels.FileChannel channel = java.nio.channels.FileChannel.open(path, openOpts);
-            return new RawOSFileChannel(ctx, channel, path, openOpts);
+            return new RawOSFileChannel(ctx, channel, openOpts);
         } catch (IOException e) {
             throw $io(ctx, e);
         }

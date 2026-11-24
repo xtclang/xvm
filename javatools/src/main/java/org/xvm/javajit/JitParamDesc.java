@@ -90,7 +90,7 @@ public class JitParamDesc extends JitTypeDesc {
             }
             apdOptParam[cds.length] =
                     new JitParamDesc(type, NullableXvmPrimitive, CD_boolean, 0, altIndex, true);
-        } else if ((cd = JitTypeDesc.getWidenedClass(builder, type)) != null) {
+        } else if ((cd = JitTypeDesc.getWidenedClass(builder.typeSystem, type)) != null) {
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Widened, cd, 0, 0, false)};
         } else {

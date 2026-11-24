@@ -14,8 +14,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.javajit.TypeSystem;
-
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
@@ -196,23 +194,6 @@ public class AccessTypeConstant
     @Override
     public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams) {
         return super.checkProduction(sTypeName, m_access, listParams);
-    }
-
-    // ----- JIT support ---------------------------------------------------------------------------
-
-    @Override
-    public String getJitCCName(TypeSystem ts) {
-        return m_constType.getJitCCName(ts);
-    }
-
-    @Override
-    public String getJitICName(TypeSystem ts) {
-        return m_constType.getJitICName(ts);
-    }
-
-    @Override
-    public String getJitImplName(TypeSystem ts) {
-        return m_constType.getJitImplName(ts);
     }
 
     // ----- Constant methods ----------------------------------------------------------------------

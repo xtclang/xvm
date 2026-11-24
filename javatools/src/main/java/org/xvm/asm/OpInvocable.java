@@ -462,7 +462,7 @@ public abstract class OpInvocable extends Op {
         if (isPropCall) {
             call = hosting.resolveCall(infoMethod);
         } else {
-            if (typeTarget.getJitCCType().isAnnotated()) {
+            if (typeTarget.getJitType(bctx.typeSystem).isAnnotated()) {
                 // annotated targets are widened; dispatch through the declaring callable contract
                 typeInvoke = bodyHead.resolveDeclaringType(bctx.pool(), typeTarget);
                 cdInvoke   = bctx.builder.getCCDesc(typeInvoke);
@@ -477,7 +477,7 @@ public abstract class OpInvocable extends Op {
                 if (!typeOwner.equals(typeTarget)) {
                     typeInvoke = typeOwner;
                     cdInvoke   = bctx.builder.getCCDesc(typeOwner);
-                    if (!typeTarget.isJitAssignableTo(typeOwner)) {
+                    if (!typeTarget.isJitAssignableTo(bctx.typeSystem, typeOwner)) {
                         // the target type could be a mixin, which is a Java interface, so invoking a
                         // method from its "into" class requires a cast to that class
                         code.checkcast(cdInvoke);
@@ -545,7 +545,7 @@ public abstract class OpInvocable extends Op {
         } else if (fPrimitive) {
             cdInvoke = typeInvoke.getJitCCDesc(bctx.typeSystem);
             code.invokestatic(cdInvoke, methodName, md);
-        } else if (typeInvoke.isJitCCInterface()) {
+        } else if (typeInvoke.isJitCCInterface(bctx.typeSystem)) {
             code.invokeinterface(typeInvoke.isDerivedVirtualChildClass()
                     ? typeInvoke.getJitCCDesc(bctx.typeSystem) : cdInvoke, methodName, md);
         } else {

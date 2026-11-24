@@ -41,12 +41,12 @@ import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 import static org.xvm.javajit.JitMethodDesc.JMD_STATIC;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -334,7 +334,7 @@ public class FBind
                 // all JIT primitives are immutable, so we can only become mutable after binding to
                 // a non-primitive mutable value
                 if (!argType.isJitPrimitive()) {
-                    computeImmutable(code, slotImm, regArg);
+                    computeImmutable(bctx, code, slotImm, regArg);
                 }
             } else if (!fOptAfter) {
                 assert argType.isJitPrimitive(); // transition from opt -> !opt
@@ -355,7 +355,7 @@ public class FBind
 
                 if (!argType.isJitPrimitive()) {
                     // it can become mutable
-                    computeImmutable(code, slotImm, regArg);
+                    computeImmutable(bctx, code, slotImm, regArg);
                 }
             }
 
@@ -370,7 +370,7 @@ public class FBind
         code.aload(slotStd)
             .aload(slotOpt)
             .iload(slotImm)
-            .invokespecial(cdFn, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
+            .invokespecial(cdFn, INIT_NAME, mdx(CD_void, CD_TypeConstant,
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
         RegisterInfo regRet = bctx.ensureRegister(code, m_nRetValue, typeFn, cdFn, "");
@@ -427,7 +427,7 @@ public class FBind
                     code.aastore();
                 }
             } else {
-                code.loadConstant(1)
+                code.iconst_1()
                     .anewarray(CD_JavaObject)
                     .dup()
                     .iconst_0();
@@ -435,7 +435,7 @@ public class FBind
                 code.aastore();
             }
         } else {
-            code.loadConstant(1)
+            code.iconst_1()
                 .anewarray(CD_JavaObject)
                 .dup()
                 .iconst_0();
@@ -452,13 +452,14 @@ public class FBind
      * Check if the specified (newly bound) argument is mutable and change the immutability flag
      * for the MethodHandle accordingly.
      */
-    private static void computeImmutable(CodeBuilder code, int slotImm, RegisterInfo regArg) {
+    private static void computeImmutable(BuildContext bctx, CodeBuilder code, int slotImm,
+                                         RegisterInfo regArg) {
         // this.immutable &= ((nObject) value).$isImmut();
         Label labelEnd = code.newLabel();
         code.iload(slotImm)
             .ifeq(labelEnd);
         regArg.load(code);
-        if (regArg.type().isJitCCInterface()) {
+        if (regArg.type().isJitCCInterface(bctx.typeSystem)) {
             code.checkcast(CD_nObject);
         }
         code.invokevirtual(CD_nObject, "$isImmut", md(CD_boolean))

@@ -50,6 +50,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
+import org.xvm.javajit.TypeSystem;
+
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Fiber;
 import org.xvm.runtime.Frame;
@@ -974,20 +976,22 @@ public class MethodStructure
      * Resolve the signature of this method as being called on the specified type.
      *
      * @param pool        the ConstantPool to use
+     * @param ts          the TypeSystem used to resolve JIT type metadata
      * @param typeTarget  the target type
      *
      * @return the resolved signature
      */
-    public SignatureConstant resolveJitSignature(ConstantPool pool, TypeConstant typeTarget) {
+    public SignatureConstant resolveJitSignature(ConstantPool pool, TypeSystem ts,
+                                                 TypeConstant typeTarget) {
         SignatureConstant sig     = getIdentityConstant().getSignature();
-        TypeConstant      typeJit = typeTarget.getJitCCType();
+        TypeConstant      typeJit = typeTarget.getJitType(ts);
 
         // resolve captured lambda type parameters and method type parameters on primitive or
         // layer-two specialized targets, including both primitive and reference bindings;
         // function targets always use the central nFunction interface, not a specialized wrapper
         if (getTypeParamCount() > 0 &&
                 (isLambda() || typeJit.isJitPrimitive() ||
-                 !typeJit.isFunction() && typeJit.isJitL2Specialized())) {
+                 !typeJit.isFunction() && typeJit.isJitL2Specialized(ts))) {
             SignatureConstant sigOrig = sig;
 
             sig = sig.resolveGenericTypes(pool, formalConst -> {

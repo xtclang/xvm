@@ -178,10 +178,10 @@ public class EnumerationBuilder
                 .loadConstant(i)
                 .aload(ctxSlot)
                 .loadConstant(value.getName())
-                .invokestatic(CD_String, "of", md(CD_String, CD_Ctx, CD_JavaString))
+                .invokestatic(CD_String, "of", mdx(CD_String, CD_JavaString))
                 .aastore();
         }
-        MethodTypeDesc mdBoxString = md(CD_ArrayObj, CD_Ctx, CD_String.arrayType());
+        MethodTypeDesc mdBoxString = mdx(CD_ArrayObj, CD_String.arrayType());
         code.invokestatic(CD_ArrayObj, "$makeStringArray", mdBoxString)
             .putstatic(thisCD, FIELD_NAMES, CD_ArrayObj);
 
@@ -202,7 +202,7 @@ public class EnumerationBuilder
         PropertyInfo   propValues = typeInfo.findProperty(PROP_VALUES);
         JitMethodDesc  jmdValues  = propValues.getGetterJitDesc(this);
         ClassDesc      arrayCD    = jmdValues.standardMD.returnType();
-        MethodTypeDesc mdBoxObj   = md(arrayCD, CD_Ctx, paramCD.arrayType());
+        MethodTypeDesc mdBoxObj   = mdx(arrayCD, paramCD.arrayType());
 
         code.invokestatic(arrayCD, "$makeArray", mdBoxObj)
             .putstatic(thisCD, FIELD_VALUES, arrayCD);
@@ -211,14 +211,12 @@ public class EnumerationBuilder
     @Override
     protected void assembleMethods(ClassBuilder classBuilder) {
         // don't call super!
-        MethodTypeDesc mdSuper = md(CD_void, CD_Ctx, CD_TypeConstant);
-        int            flags   = ClassFile.ACC_PUBLIC;
 
-        classBuilder.withMethodBody(INIT_NAME, MD_xvmVoid, flags, code -> {
+        classBuilder.withMethodBody(INIT_NAME, MD_xvmVoid, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0)
                 .aload(code.parameterSlot(0))
                 .getstatic(art.CD(), "$sc0", CD_TypeConstant)
-                .invokespecial(CD_Enumeration, INIT_NAME, mdSuper)
+                .invokespecial(CD_Enumeration, INIT_NAME, MD_xvmInitType)
                 .return_();
         });
     }

@@ -39,7 +39,7 @@ import static org.xvm.javajit.JitFlavor.Specific;
 public class RefBuilder extends CommonBuilder {
     public RefBuilder(TypeSystem typeSystem, Artifact art) {
         super(typeSystem, art);
-        assert jitType.isJitAnnotatedRef();
+        assert jitType.isJitAnnotatedRef(typeSystem);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class RefBuilder extends CommonBuilder {
         // this.$type = type;
         // [initialize hosted properties]
         // [initialize annotation fields]
-        classBuilder.withMethodBody(INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant),
+        classBuilder.withMethodBody(INIT_NAME, MD_xvmInitType,
                 ClassFile.ACC_PUBLIC, code -> {
             callSuperInitializer(code);
             code.aload(0)
@@ -97,7 +97,7 @@ public class RefBuilder extends CommonBuilder {
             .invokevirtual(CD_TypeConstant, "getParamType", md(CD_TypeConstant, CD_int));
         loadBoolean(code, thisId.equals(pool().clzVar()));
         code.invokespecial(CD_nRef, INIT_NAME,
-                md(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
+                mdx(CD_void, CD_nObject, CD_TypeConstant, CD_boolean));
     }
 
     @Override
@@ -124,7 +124,7 @@ public class RefBuilder extends CommonBuilder {
                 code.new_(art.CD()).dup()
                     .aload(ctxSlot)
                     .aload(code.parameterSlot(1))
-                    .invokespecial(art.CD(), INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant))
+                    .invokespecial(art.CD(), INIT_NAME, MD_xvmInitType)
                     .astore(thisSlot);
                 annotated.invokeAnnotationConstructors(code, variant.constructors(),
                         ctxSlot, -1, thisSlot, 2);

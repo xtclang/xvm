@@ -13,8 +13,7 @@ import org.xvm.javajit.registers.Ref;
 
 import static org.xvm.asm.Op.*;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 /**
  * An interface of default utility methods for implementing in-place operations.
@@ -143,7 +142,7 @@ public interface InPlaceSupport
                 case OP_IP_DEC, OP_IIP_DEC, OP_IP_DECA, OP_IIP_DECA, OP_IP_DECB, OP_IIP_DECB,
                         OP_PIP_DEC, OP_PIP_DECA, OP_PIP_DECB:
                     // decrementing
-                    code.loadConstant(0);
+                    code.iconst_0();
                     msg = "OutOfBounds: text.Char underflow";
                     break;
                 case OP_IP_INC, OP_IIP_INC, OP_IP_INCA, OP_IIP_INCA, OP_IP_INCB, OP_IIP_INCB,
@@ -443,7 +442,7 @@ public interface InPlaceSupport
         int            op       = getOpCode();
         int            slot     = reg.slot();
         ClassDesc      cd       = bctx.builder.getCCDesc(baseType);
-        MethodTypeDesc mdSeqOp  = md(cd, CD_Ctx);
+        MethodTypeDesc mdSeqOp  = mdx(cd);
         switch (getOpCode()) {
             case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
                 reg.load(code);

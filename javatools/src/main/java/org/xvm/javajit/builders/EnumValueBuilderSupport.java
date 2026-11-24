@@ -18,13 +18,11 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
-import static java.lang.constant.ConstantDescs.CD_boolean;
-
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.Instance;
 import static org.xvm.javajit.Builder.MD_StringOf;
+import static org.xvm.javajit.Builder.MD_xvmBoolean;
 import static org.xvm.javajit.Builder.OPT;
 
 /**
@@ -196,17 +194,16 @@ public interface EnumValueBuilderSupport {
      */
     private void assembleNextOrPrev(CommonBuilder builder, ClassBuilder classBuilder,
                                     String methodName, ClassDesc valueCD) {
-        MethodTypeDesc md      = MethodTypeDesc.of(CD_boolean, CD_Ctx);
-        String         jitName = methodName + OPT;
+        String jitName = methodName + OPT;
 
-        if (builder.isNativeMethod(jitName, md)) {
+        if (builder.isNativeMethod(jitName, MD_xvmBoolean)) {
             return;
         }
 
-        classBuilder.withMethodBody(jitName, md, ClassFile.ACC_PUBLIC, code -> {
+        classBuilder.withMethodBody(jitName, MD_xvmBoolean, ClassFile.ACC_PUBLIC, code -> {
             if (valueCD == null) {
                 // no next or prev, return false
-                code.loadConstant(0)
+                code.iconst_0()
                     .ireturn();
             } else {
                 // load the next or prev value to the stack
@@ -214,7 +211,7 @@ public interface EnumValueBuilderSupport {
                 // store it in the context
                 Builder.storeToContext(code, CD_JavaObject, 0);
                 // return true
-                code.loadConstant(1)
+                code.iconst_1()
                     .ireturn();
             }
         });

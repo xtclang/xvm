@@ -118,11 +118,11 @@ public class JitTypeDesc {
     /**
      * @return the widening ClassDesc if the specified type needs to be widened; null otherwise
      */
-    public static ClassDesc getWidenedClass(Builder builder, TypeConstant type) {
+    public static ClassDesc getWidenedClass(TypeSystem ts, TypeConstant type) {
         // annotated types are always widened (rule V.4 at "jit_class_names.txt" spec)
-        return type.isSingleUnderlyingClass(true) && !type.getJitCCType().isAnnotated()
+        return type.isSingleUnderlyingClass(true) && !type.getJitType(ts).isAnnotated()
                 ? null
-                : type.getJitCCDesc(builder.typeSystem);
+                : type.getJitCCDesc(ts);
     }
 
     public static ClassDesc getNullableXvmPrimitiveClass(TypeConstant type) {

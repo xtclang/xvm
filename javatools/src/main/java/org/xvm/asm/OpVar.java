@@ -26,12 +26,11 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.CD_nTuple;
 import static org.xvm.javajit.Builder.MD_xvmVoid;
-import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -265,7 +264,7 @@ public abstract class OpVar
         bctx.loadTypeConstant(code, type.removeImmutable());
         code.loadConstant((long) anArgValue.length)
                 .iconst_0()
-                .invokestatic(cdArray, "$new$p", md(cdArray, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+                .invokestatic(cdArray, "$new$p", mdx(cdArray, CD_TypeConstant, CD_long, CD_boolean));
 
         for (int nArg : anArgValue) {
             code.dup();
@@ -315,12 +314,12 @@ public abstract class OpVar
             RegisterInfo arg = bctx.loadArgument(code, anArgValue[i]);
             if (arg.flavor().isOptimized) {
                 Builder.box(code, arg);
-            } else if (arg.type().isJitCCInterface()) {
+            } else if (arg.type().isJitCCInterface(bctx.typeSystem)) {
                 code.checkcast(CD_nObject);
             }
             code.aastore();
         }
-        code.invokespecial(CD_nTuple, "<init>", md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+        code.invokespecial(CD_nTuple, "<init>", mdx(CD_void, CD_TypeConstant, CD_nObject.arrayType()));
         reg.store(bctx, code, type);
         return -1;
     }

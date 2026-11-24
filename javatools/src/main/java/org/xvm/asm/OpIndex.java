@@ -43,6 +43,7 @@ import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.MD_xvmVoid;
 import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 import static org.xvm.javajit.registers.MultiSlot.NO_EXT;
 
@@ -263,7 +264,7 @@ public abstract class OpIndex
                 bctx.loadArgument(code, m_nIndex);
                 switch (getOpCode()) {
                     case OP_I_GET -> {
-                        code.invokevirtual(cdArray, "getElement$p", md(CD_Object, CD_Ctx, CD_long));
+                        code.invokevirtual(cdArray, "getElement$p", mdx(CD_Object, CD_long));
                         if (!typeEl.equals(pool.typeObject())) {
                             code.checkcast(bctx.builder.getCCDesc(typeEl));
                         }
@@ -279,7 +280,7 @@ public abstract class OpIndex
 
                     case OP_I_SET -> {
                         bctx.loadArgument(code, getValueId());
-                        code.invokevirtual(cdArray, "setElement$p", md(CD_void, CD_Ctx, CD_long, CD_Object));
+                        code.invokevirtual(cdArray, "setElement$p", mdx(CD_void, CD_long, CD_Object));
                     }
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
@@ -337,7 +338,7 @@ public abstract class OpIndex
             } else {
                 bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
             }
-            if (typeTarget.isJitCCInterface()) {
+            if (typeTarget.isJitCCInterface(bctx.typeSystem)) {
                 code.invokeinterface(reg.cd(), sJitName, jmd.optimizedMD);
             } else {
                 code.invokevirtual(reg.cd(), sJitName, jmd.optimizedMD);
@@ -506,7 +507,7 @@ public abstract class OpIndex
         // get the element from the array
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nIndex);
-        code.invokevirtual(cdArray, "getElement$pi", md(cdEl, CD_Ctx, CD_long));
+        code.invokevirtual(cdArray, "getElement$pi", mdx(cdEl, CD_long));
 
         RegisterInfo regElement = null;
 

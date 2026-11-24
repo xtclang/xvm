@@ -36,13 +36,13 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
-import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_nUtil;
 import static org.xvm.javajit.Builder.MD_StringOf;
 import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 /**
  * ASSERT_V rvalue, STRING, #vals(rvalue)
@@ -232,17 +232,20 @@ public class AssertV
     protected void buildMessage(BuildContext bctx, CodeBuilder code) {
         String[] asParts = splitMessage(bctx.getString(m_nMsgConstId));
 
-        bctx.loadCtx(code);
         code.new_(CD_StringBuilder)
             .dup()
             .invokespecial(CD_StringBuilder, INIT_NAME, MD_BuilderInit);
-        for (int i = 0, c = m_anValue.length; i < c; ++i) {
-            appendString(code, asParts[i]);
-            appendValue(bctx, code, m_anValue[i]);
-        }
-        appendString(code, asParts[m_anValue.length]);
 
-        code.invokevirtual(CD_StringBuilder, "toString", MD_JavaToString)
+        int slotBuf = bctx.storeTempValue(code, CD_StringBuilder);
+        for (int i = 0, c = m_anValue.length; i < c; ++i) {
+            appendString(code, slotBuf, asParts[i]);
+            appendValue(bctx, code, m_anValue[i], slotBuf);
+        }
+        appendString(code, slotBuf, asParts[m_anValue.length]);
+
+        bctx.loadCtx(code)
+            .aload(slotBuf)
+            .invokevirtual(CD_StringBuilder, "toString", MD_JavaToString)
             .invokestatic(CD_String, "of", MD_StringOf);
     }
 
@@ -251,7 +254,7 @@ public class AssertV
      * so a short-circuited primitive expression can incorrectly be reported using an existing or
      * verifier-initialized default value (such as zero or False), rather than being omitted.
      */
-    private void appendValue(BuildContext bctx, CodeBuilder code, int argId) {
+    private void appendValue(BuildContext bctx, CodeBuilder code, int argId, int slotBuf) {
         RegisterInfo reg = null;
         if (argId >= 0) {
             reg = bctx.getRegisterInfo(argId);
@@ -262,8 +265,8 @@ public class AssertV
             }
         }
 
-        // keep ctx and buffer on stack after "appendValue" consumes its arguments
-        code.dup2();
+        bctx.loadCtx(code)
+            .aload(slotBuf);
         if (argId >= 0) {
             // narrowing may initialize primitive slots only on one branch;
             // use the original representation, which is available on every failure path
@@ -307,7 +310,7 @@ public class AssertV
     }
 
     private void appendNullablePrimitive(CodeBuilder code, RegisterInfo reg) {
-        // stack: (ctx, buffer, ctx, buffer, primitive value, isNull)
+        // stack: (ctx, buffer, primitive value, isNull)
         Label ifNull = code.newLabel();
         Label endIf  = code.newLabel();
         code.ifne(ifNull);
@@ -318,7 +321,7 @@ public class AssertV
         code.goto_(endIf)
             .labelBinding(ifNull);
 
-        // stack: (ctx, buffer, ctx, buffer, primitive value)
+        // stack: (ctx, buffer, primitive value)
         Builder.pop(code, reg.cd());
         Builder.loadNull(code);
         appendLoadedValue(code);
@@ -326,7 +329,7 @@ public class AssertV
     }
 
     private void appendNullableXvmPrimitive(CodeBuilder code, RegisterInfo reg) {
-        // stack: (ctx, buffer, ctx, buffer, xvm primitive slot values, isNull)
+        // stack: (ctx, buffer, xvm primitive slot values, isNull)
         Label ifNull = code.newLabel();
         Label endIf  = code.newLabel();
         code.ifne(ifNull);
@@ -337,7 +340,7 @@ public class AssertV
         code.goto_(endIf)
             .labelBinding(ifNull);
 
-        // stack: (ctx, buffer, ctx, buffer, xvm primitive slot values)
+        // stack: (ctx, buffer, xvm primitive slot values)
         ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
         for (int i = cds.length - 1; i >= 0; --i) {
             Builder.pop(code, cds[i]);
@@ -352,10 +355,10 @@ public class AssertV
         code.invokestatic(CD_nUtil, "appendValue", MD_AppendValue);
     }
 
-    private void appendString(CodeBuilder code, String sText) {
-        // stack: buffer
+    private void appendString(CodeBuilder code, int bufferSlot, String sText) {
+        // appendText consumes the buffer reference; subsequent appends reload it from the local
         if (!sText.isEmpty()) {
-            code.dup()
+            code.aload(bufferSlot)
                 .ldc(sText)
                 .invokestatic(CD_nUtil, "appendText", MD_AppendText);
         }
@@ -389,7 +392,7 @@ public class AssertV
     private static final ClassDesc      CD_StringBuilder = ClassDesc.of(StringBuilder.class.getName());
     private static final MethodTypeDesc MD_BuilderInit   = md(CD_void);
     private static final MethodTypeDesc MD_AppendText    = md(CD_void, CD_StringBuilder, CD_JavaString);
-    private static final MethodTypeDesc MD_AppendValue   = md(CD_void, CD_Ctx, CD_StringBuilder, CD_Object);
+    private static final MethodTypeDesc MD_AppendValue   = mdx(CD_void, CD_StringBuilder, CD_Object);
     private static final MethodTypeDesc MD_JavaToString  = md(CD_JavaString);
 
     private int[] m_anValue;

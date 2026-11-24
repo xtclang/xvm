@@ -3,6 +3,8 @@ package org.xvm.asm.constants;
 import java.io.DataOutput;
 
 import org.xvm.asm.ConstantPool;
+
+import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
 
 /**
@@ -79,28 +81,24 @@ public class CastTypeConstant
     }
 
     @Override
-    public String getJitCCName(TypeSystem ts) {
-        return this.getJitCCType().getJitCCName(ts);
-    }
-
-    @Override
-    public TypeConstant getJitCCType() {
-        TypeConstant typeBase = getBaseType().getJitCCType();
-        TypeConstant typeCast = getUnderlyingType2().getJitCCType();
+    protected JitInfo buildJitInfo(ModuleLoader loader) {
+        TypeSystem   ts       = loader.typeSystem;
+        TypeConstant typeBase = getBaseType().getJitType(ts);
+        TypeConstant typeCast = getUnderlyingType2().getJitType(ts);
 
         // the code below could be written mush simpler, but first, we want to isolate the
         // simplest paths and there is a possibility we need to do something special the
         // "orthogonal" scenario at the bottom
         if (typeBase.isA(typeCast)) {
-            return typeBase;
+            return new JitInfo(this, loader, typeBase, typeBase.ensureTypeInfo().isNewable(false));
         }
         if (typeCast.isA(typeBase)) {
-            return typeCast;
+            return new JitInfo(this, loader, typeCast, typeCast.ensureTypeInfo().isNewable(false));
         }
 
         // the types are orthogonal; keep the base, since this is what the JIT compiler knows;
         // it will have to cast the targets...
-        return typeBase;
+        return new JitInfo(this, loader, typeBase, typeBase.ensureTypeInfo().isNewable(false));
     }
 
     // ----- Constant methods ----------------------------------------------------------------------

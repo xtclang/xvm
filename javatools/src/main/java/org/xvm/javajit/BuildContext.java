@@ -91,6 +91,7 @@ import static java.lang.constant.ConstantDescs.CD_String;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
+import static java.lang.constant.ConstantDescs.MTD_void;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_ConstantPool;
@@ -111,9 +112,11 @@ import static org.xvm.javajit.Builder.DetachedBody;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.MD_EnsureType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
+import static org.xvm.javajit.Builder.MD_xvmBoolean;
 import static org.xvm.javajit.Builder.MD_xvmType;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.md;
+import static org.xvm.javajit.Builder.mdx;
 
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
@@ -167,7 +170,7 @@ public class BuildContext {
         this.className       = builder.art.className();
         this.typeInfo        = typeInfo;
         this.thisType        = thisType;
-        this.jitType         = thisType.getJitCCType();
+        this.jitType         = thisType.getJitType(typeSystem);
         this.callChain       = methodInfo.ensureOptimizedMethodChain(typeInfo);
         this.methodStruct    = callChain[callDepth].getMethodStructure();
         this.callDepth       = callDepth;
@@ -176,7 +179,7 @@ public class BuildContext {
         this.isConstructor   = methodInfo.isCtorOrValidator();
         this.isStatic        = jmd.isStandardStatic && !isConstructor;
         this.isOptimized     = jmd.optimizedMD != null;
-        this.isSpecialized   = jitType.isJitL2Specialized();
+        this.isSpecialized   = jitType.isJitL2Specialized(typeSystem);
         this.typeMatrix      = new TypeMatrix(this);
         this.propertyHosting = hosting;
     }
@@ -199,7 +202,7 @@ public class BuildContext {
         this.className       = builder.art.className();
         this.typeInfo        = typeInfo;
         this.thisType        = typeInfo.getType();
-        this.jitType         = thisType.getJitCCType();
+        this.jitType         = thisType.getJitType(typeSystem);
         this.callDepth       = 0;
         MethodBody[] chain   = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
@@ -213,7 +216,7 @@ public class BuildContext {
         this.isStatic        = propInfo.isConstant();
         this.isConstructor   = false;
         this.isOptimized     = methodDesc.optimizedMD != null;
-        this.isSpecialized   = jitType.isJitL2Specialized();
+        this.isSpecialized   = jitType.isJitL2Specialized(typeSystem);
         this.typeMatrix      = new TypeMatrix(this);
         this.propertyHosting = hosting;
     }
@@ -1048,7 +1051,7 @@ public class BuildContext {
         // runMD:     () -> void; Runnable.run() forwards those values to the finalizer body
         // primitive body parameters remain primitive factory parameters; no boxing is needed
         ClassDesc      CD_runnable = ClassDesc.of(Runnable.class.getName());
-        MethodTypeDesc runMD       = md(CD_void);
+        MethodTypeDesc runMD       = MTD_void;
         MethodTypeDesc factoryMD   = finalizerHandle.invocationType().changeReturnType(CD_runnable);
 
         // describe the bootstrap method the JVM uses to link the factory
@@ -1349,7 +1352,7 @@ public class BuildContext {
             } else if (isSpecialized &&
                     constant instanceof MethodConstant methodId && methodId.isLambda()) {
                 MethodStructure   lambda = (MethodStructure) methodId.getComponent();
-                SignatureConstant sig    = lambda.resolveJitSignature(pool(), thisType);
+                SignatureConstant sig    = lambda.resolveJitSignature(pool(), typeSystem, thisType);
                 type = lambda.isFunction()
                         ? sig.asFunctionType()
                         : sig.asMethodType(pool(), thisType);
@@ -1637,7 +1640,7 @@ public class BuildContext {
                 .invokevirtual(CD_TypeConstant, "getConstantPool", md(CD_ConstantPool));
 
             RegisterInfo regThis = loadThis(code);
-            if (regThis.type().isJitCCInterface()) {
+            if (regThis.type().isJitCCInterface(typeSystem)) {
                 code.checkcast(CD_nObject);
             }
             loadCtx(code);
@@ -1681,7 +1684,7 @@ public class BuildContext {
             if (dataType.isGenericType()) {
                 String       name    = ((FormalConstant) dataType.getDefiningConstant()).getName();
                 RegisterInfo regThis = loadThis(code);
-                if (regThis.type().isJitCCInterface()) {
+                if (regThis.type().isJitCCInterface(typeSystem)) {
                     code.checkcast(CD_nObject);
                 }
                 Builder.loadTypeForName(code, name, ctxSlot(code));
@@ -1734,11 +1737,11 @@ public class BuildContext {
             // incoming nType's $dataType, and then resolve Element on that type
             loadCtx(code);
             code.ldc(child.getName())
-                .invokevirtual(CD_nType, "$dataTypeForName", md(CD_nType, CD_Ctx, CD_JavaString));
+                .invokevirtual(CD_nType, "$dataTypeForName", mdx(CD_nType, CD_JavaString));
             return new SingleSlot(child.getFormalValueType(), Specific, CD_nType, "");
         }
 
-        if (targetReg.type().isJitCCInterface()) {
+        if (targetReg.type().isJitCCInterface(typeSystem)) {
             code.checkcast(CD_nObject);
         }
         Builder.loadTypeForName(code, formalConst.getName(), ctxSlot(code));
@@ -1835,7 +1838,7 @@ public class BuildContext {
             }
         }
         code.iconst_1() // immutable = true
-            .invokespecial(cd, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
+            .invokespecial(cd, INIT_NAME, mdx(CD_void, CD_TypeConstant,
                 CD_MethodHandle, CD_MethodHandle, CD_boolean));
         return new SingleSlot(fnType, Specific, cd, "");
     }
@@ -2059,7 +2062,7 @@ public class BuildContext {
 
         // an AlwaysNull register loads the Null singleton directly, regardless of its cd
         if (srcFlavor != AlwaysNull && srcFlavor != NullablePrimitive &&
-                !typeFrom.isJitAssignableTo(typeTo)) {
+                !typeFrom.isJitAssignableTo(typeSystem, typeTo)) {
             if (cdFrom.isPrimitive()) {
                 // this can only be caused by a dead/unreachable code
                 ensureRegisterScope(code, regTo);
@@ -2789,9 +2792,9 @@ public class BuildContext {
         loadPropertyAssigned(code, targetReg, propInfo);
 
         MethodTypeDesc init = isHosted
-                ? md(CD_void, CD_Ctx, CD_TypeConstant, CD_boolean, CD_nObject,
+                ? mdx(CD_void, CD_TypeConstant, CD_boolean, CD_nObject,
                         CD_MethodHandle, CD_MethodHandle, CD_MethodHandle)
-                : md(CD_void, CD_Ctx, CD_TypeConstant, CD_boolean,
+                : mdx(CD_void, CD_TypeConstant, CD_boolean,
                         CD_MethodHandle, CD_MethodHandle, CD_MethodHandle);
         code.invokespecial(refClass, INIT_NAME, init)
             .astore(refReg.slot());
@@ -2803,7 +2806,7 @@ public class BuildContext {
     private void loadPropertyAccessor(CodeBuilder code, RegisterInfo targetReg,
                                       PropertyInfo propInfo, String methodName, JitMethodDesc jmd) {
         TypeConstant ownerType   = propInfo.getCallableOwnerType(builder, targetReg.type());
-        boolean      isInterface = !propInfo.isNative() && ownerType.isJitCCInterface();
+        boolean      isInterface = !propInfo.isNative() && ownerType.isJitCCInterface(typeSystem);
 
         assert !jmd.isStandardStatic;
 
@@ -2829,11 +2832,11 @@ public class BuildContext {
         }
 
         TypeConstant ownerType = prop.getFieldOwnerType(builder, targetReg.type());
-        Kind         kind      = ownerType.isJitCCInterface() ? Kind.INTERFACE_VIRTUAL : Kind.VIRTUAL;
+        Kind         kind      = ownerType.isJitCCInterface(typeSystem) ? Kind.INTERFACE_VIRTUAL : Kind.VIRTUAL;
 
         // -> prop$assigned$get()
         code.ldc(MethodHandleDesc.ofMethod(kind, builder.getCCDesc(ownerType),
-                prop.ensureJitName(typeSystem) + Builder.AssignedGet, md(CD_boolean, CD_Ctx)));
+                prop.ensureJitName(typeSystem) + Builder.AssignedGet, MD_xvmBoolean));
         targetReg.load(code);
         code.invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject));
     }
@@ -2865,7 +2868,7 @@ public class BuildContext {
             if (i > 0) {
                 targetReg.load(code);
             }
-            if (!targetReg.type().isJitAssignableTo(ownerType)) {
+            if (!targetReg.type().isJitAssignableTo(typeSystem, ownerType)) {
                 // may happen for a derived child's receiver
                 code.checkcast(builder.getCCDesc(ownerType));
             }
@@ -2985,7 +2988,7 @@ public class BuildContext {
             buildSetPropertyField(code, targetReg, propInfo, jmd, propInfo.ensureJitName(typeSystem));
         } else if (jmd.isOptimizedStatic) {
             code.invokestatic(builder.getCCDesc(jmd.typeTarget), setterName, md);
-        } else if (callType.isJitCCInterface()) {
+        } else if (callType.isJitCCInterface(typeSystem)) {
             code.invokeinterface(callType.isDerivedVirtualChildClass()
                     ? callType.getJitCCDesc(typeSystem) : targetCD, setterName, md);
         } else {
@@ -3046,7 +3049,7 @@ public class BuildContext {
 
             case "Widened->Specific" -> {
                 TypeConstant dstType = propInfo.getType();
-                if (!srcType.isJitAssignableTo(dstType)) {
+                if (!srcType.isJitAssignableTo(typeSystem, dstType)) {
                     code.checkcast(builder.getCCDesc(dstType));
                 }
             }
@@ -3139,7 +3142,7 @@ public class BuildContext {
             if (i > 0) {
                 targetReg.load(code);
             }
-            if (!targetReg.type().isJitAssignableTo(typeOwner)) {
+            if (!targetReg.type().isJitAssignableTo(typeSystem, typeOwner)) {
                 // may happen for a derived child's receiver
                 code.checkcast(builder.getCCDesc(typeOwner));
             }
@@ -3382,14 +3385,14 @@ public class BuildContext {
             } else {
                 loadFromContext(code, ret.cd, ret.altIndex);
             }
-            if (ret.type.isJitCCInterface()) {
+            if (ret.type.isJitCCInterface(typeSystem)) {
                 code.checkcast(CD_nObject);
             }
             code.aastore();
         }
 
         code.invokespecial(CD_nTuple, INIT_NAME,
-                md(CD_void, CD_Ctx, CD_TypeConstant, CD_nObject.arrayType()));
+                mdx(CD_void, CD_TypeConstant, CD_nObject.arrayType()));
         storeValue(code, regId, tupleType);
     }
 
@@ -3612,7 +3615,7 @@ public class BuildContext {
     public void throwUnsupported(CodeBuilder code) {
         loadCtx(code);
         code.aconst_null()
-            .invokestatic(CD_Exception, "$unsupported", md(CD_nException, CD_Ctx, CD_JavaString))
+            .invokestatic(CD_Exception, "$unsupported", mdx(CD_nException, CD_JavaString))
             .athrow();
     }
 
@@ -3676,7 +3679,7 @@ public class BuildContext {
      */
     public CodeBuilder generateIsA(CodeBuilder code, TypeConstant targetType, TypeConstant testType) {
         // target.$xvmType(ctx).isA(typeTest)
-        if (targetType.isJitCCInterface()) {
+        if (targetType.isJitCCInterface(typeSystem)) {
             code.checkcast(CD_nObject);
         }
         loadCtx(code)
@@ -3812,13 +3815,12 @@ public class BuildContext {
             .dup();
         loadCtx(code);
         referentLoader.run();
-        if (referentType.isJitCCInterface()) {
+        if (referentType.isJitCCInterface(typeSystem)) {
             code.checkcast(CD_nObject);
         }
         loadTypeConstant(code, referentType);
         Builder.loadBoolean(code, isVar);
-        code.invokespecial(cd, INIT_NAME,
-            md(CD_void, CD_Ctx, CD_nObject, CD_TypeConstant, CD_boolean));
+        code.invokespecial(cd, INIT_NAME, mdx(CD_void, CD_nObject, CD_TypeConstant, CD_boolean));
     }
 
     /**
