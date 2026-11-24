@@ -258,6 +258,10 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### Test harness stability
 
+- [ ] Found 2026-11-24 with K6b: the VS Code playbook's CFG2 replaces the client's `window/showMessage` handler
+  and disposes it without restarting the server, so the server's messages no longer show for the rest of that
+  session. K6b's cases that watch the message restart the server after watching; CFG2 should too, or put the
+  client's own handler back.
 - [ ] Found 2026-11-24: after a restart of the server, IntelliJ's tour now and then misses the error of an edit.
   In the Settings and the server section, a check restarts the server (from LSP4IJ's Language Servers window, or by
   killing its process), hovers in Eights.x, which answers, then types `popCard` → `popCrd` and waits for the error,
@@ -2151,7 +2155,7 @@ change shows in them. In the order worth doing:
 - [x] K6b: consumers outside the workspace. A rename's proof covers the modules the server knows of; others
   come in only through Add consumers from folders (`XdkConsumerDiscovery`). Scanning the disk outside the
   workspace on its own is unbounded and not worth it, and a Gradle composite build's included builds are
-  already known once its model is imported. Done on `lagergren/k6b-rename-consumers`: a rename or safe
+  already known once its model is imported. Done on `775ad1dfdc`: a rename or safe
   delete of a declaration that other modules can name (the compiler's access: public, or protected in a
   class another module can extend, up to the module) says, as a `window/showMessage` that both editors show
   as a notification, that modules outside the workspace that use it are not changed, and how to add them in
@@ -2163,6 +2167,12 @@ change shows in them. In the order worth doing:
   annotation was not used: VS Code shows one only in its refactor preview, which a `needsConfirmation`
   forces open on every rename, and LSP4IJ 0.30.1 shows none. Plain `textDocument/rename`, which neither
   editor sends, and file moves say nothing.
+- [ ] K6b's gaps, found 2026-11-24 with it: the note comes with `xtc/rename` and safe delete only; a plain
+  `textDocument/rename`, which neither editor sends, and a file move or rename through `xtc/renameFiles` say
+  nothing, though a move changes a public declaration's module path. And if the tour's workspace graph is
+  discovered rather than imported from Gradle, its rename frames now show the notification (IntelliJ's rename
+  steps, VS Code's Renamed everywhere): look at them on the next tour run, and give the guide's rename images a
+  crop or a moment that leaves it out if it hides the code.
 - [ ] K3: Gradle's settings in embedded runs. Embedded builds and runs use the server's compiler and
   runtime, and run in an execution worker JVM (`RunWorkerProcess`); `xtcRun`'s module arguments, method
   and `jvmArgs` are never read. The XTC plugin's model export (`compiler-model.init.gradle`,
