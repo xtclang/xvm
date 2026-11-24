@@ -2051,7 +2051,7 @@ with one pass for the XDK; in-process compiles for the XDK's own build in the me
 
 ## 8. The user guide's known limitations
 
-The limits that [the user guide](../../lang/doc/user-guide.md#known-limitations) lists, each looked at on
+The limits that [the user guide](../../lang/doc/user-guide/README.md#known-limitations) lists, each looked at on
 2026-11-24 for what blocks it, what would solve it, how much work that is and whether it is worth it.
 Estimates are working days for one person, with tests and both editors' playbook cases where the
 change shows in them. In the order worth doing:
