@@ -6,8 +6,10 @@ import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
@@ -27,8 +29,9 @@ import java.util.concurrent.CopyOnWriteArrayList
 /**
  * A workspace that holds the XDK's own sources, over copies of the repository's lib_ecstasy and lib_json: json compiles
  * against the workspace's ecstasy, unsaved edits included, its definitions go to the workspace's sources rather than the
- * bundled copies, the status names the libraries the workspace replaces, and embedded builds are refused. Heavy: each
- * case compiles ecstasy from source.
+ * bundled copies, the status names the libraries the workspace replaces, and embedded builds are refused; and a rename of
+ * a method of the workspace's ecstasy is proven over both, edits json's call too. Heavy: each case compiles ecstasy from
+ * source, and the rename's proof twice, which needs a 2 GB heap (XdkLibrarySources.PROOF_HEAP_BYTES).
  */
 @Heavy
 class XdkRepositoryWorkspaceTest {
@@ -93,6 +96,67 @@ class XdkRepositoryWorkspaceTest {
                 .contains("ecstasy.xtclang.org", "json.xtclang.org")
                 .doesNotContain("mack.xtclang.org")
             assertThatThrownBy { server.build(BuildParams()).awaited() }.hasStackTraceContaining("own modules replace bundled libraries")
+        }
+    }
+
+    @Test
+    fun `a rename of a method of the workspace's ecstasy edits json's call of it, as the workspace's sources`() {
+        val root = File(requireNotNull(System.getProperty("xtc.composite.root")) { "xtc.composite.root is not set" })
+        val workspace = directory.toRealPath().toFile()
+        listOf("lib_ecstasy", "lib_json").forEach { library ->
+            root.resolve("$library/src/main").copyRecursively(workspace.resolve("$library/src/main"))
+        }
+        val string = workspace.resolve("lib_ecstasy/src/main/x/ecstasy/text/String.x")
+        val input = workspace.resolve("lib_json/src/main/x/json/DocInput.x")
+
+        fun withMember(
+            text: String,
+            member: String,
+        ) = text.substring(0, text.trimEnd().lastIndexOf('}')) + "    $member\n}\n"
+        // a method only the workspace's String has, which json calls: a rename that the bundled ecstasy would refuse
+        string.writeText(withMember(string.readText(), "Int workspaceOnly() = 1;"))
+        input.writeText(withMember(input.readText(), "void probe() { Int n = \"x\".workspaceOnly(); }"))
+        val published = CopyOnWriteArrayList<PublishDiagnosticsParams>()
+        val client = mock(LanguageClient::class.java)
+        doAnswer { call ->
+            published.add(call.getArgument(0))
+            null
+        }.`when`(client).publishDiagnostics(any())
+
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(client)
+            server
+                .initialize(
+                    editorInitializeParams().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "xdk"))
+                        // a rename's edit is versioned, which a client takes as document changes, as both editors do
+                        capabilities.workspace.workspaceEdit = WorkspaceEditCapabilities().apply { documentChanges = true }
+                    },
+                ).awaited()
+            listOf(string, input).forEach {
+                server.textDocumentService.didOpen(
+                    DidOpenTextDocumentParams(TextDocumentItem(it.toURI().toString(), "ecstasy", 1, it.readText())),
+                )
+            }
+            awaitAsserted {
+                val report = published.lastOrNull { it.uri == input.toURI().toString() }
+                assertThat(report).describedAs(published.toString()).isNotNull()
+                assertThat(report!!.diagnostics).isEmpty()
+            }
+
+            val text = string.readText()
+            val line = text.lines().indexOfFirst { "workspaceOnly()" in it }
+            val at = Position(line, text.lines()[line].indexOf("workspaceOnly"))
+            val edit =
+                requireNotNull(
+                    server.textDocumentService
+                        .rename(RenameParams(TextDocumentIdentifier(string.toURI().toString()), at, "workspaceRenamed"))
+                        .awaited(),
+                ) { "No rename of the workspace's ecstasy" }
+            val changes = edit.documentChanges.map { it.left }
+            assertThat(changes.map { File(URI(it.textDocument.uri)).canonicalFile })
+                .containsExactlyInAnyOrder(string.canonicalFile, input.canonicalFile)
+            assertThat(changes.flatMap { it.edits }).allMatch { it.left.newText == "workspaceRenamed" }
         }
     }
 }

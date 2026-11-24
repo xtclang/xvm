@@ -338,9 +338,6 @@ fun Test.serverTestSettings() {
             .map(String::toInt)
             .orElse(providers.provider { (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 8) })
             .get()
-    // The heap the server needs to compile an XDK library as a whole (XdkLibrarySources.LIBRARY_HEAP_BYTES), which a
-    // test of it does; Gradle's default for a test JVM is 512 MB, in which the server compiles each XDK source alone
-    maxHeapSize = "1g"
     // Which tests run, by their JUnit tags: by default every test but the slow ones, which start processes, and the
     // heavy ones, long repetition workloads (the test sources' Slow and Heavy), and only the first case of each
     // parameterized test (ParameterizedCases). -PlspTests=all runs every test and every case, and any other value is a
@@ -352,6 +349,11 @@ fun Test.serverTestSettings() {
             .gradleProperty("lspTests")
             .orElse("default")
             .get()
+    // The heap the server needs to compile an XDK library as a whole (XdkLibrarySources.LIBRARY_HEAP_BYTES), which a
+    // test of it does; Gradle's default for a test JVM is 512 MB, in which the server compiles each XDK source alone. The
+    // tiers that run more than the default tests, the heavy ones among them, get the heap that a rename's proof over
+    // ecstasy's sources needs (XdkLibrarySources.PROOF_HEAP_BYTES).
+    maxHeapSize = if (tests == "default") "1g" else "2g"
     systemProperty("xtc.lsp.parameterizedCases", if (tests == "default") "first" else "all")
     systemProperty(
         "xtc.lsp.retentionCycles",
