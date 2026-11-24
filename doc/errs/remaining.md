@@ -2267,14 +2267,20 @@ change shows in them. In the order worth doing:
   for private and local declarations, for a module that a configured module outside the workspace folders
   consumes, and for a Gradle model's graph, which holds every module of its composite build. A change
   annotation was not used: VS Code shows one only in its refactor preview, which a `needsConfirmation`
-  forces open on every rename, and LSP4IJ 0.30.1 shows none. Plain `textDocument/rename`, which neither
-  editor sends, and file moves say nothing.
-- [ ] K6b's gaps, found 2026-11-24 with it: the note comes with `xtc/rename` and safe delete only; a plain
-  `textDocument/rename`, which neither editor sends, and a file move or rename through `xtc/renameFiles` say
-  nothing, though a move changes a public declaration's module path. And if the tour's workspace graph is
-  discovered rather than imported from Gradle, its rename frames now show the notification (IntelliJ's rename
-  steps, VS Code's Renamed everywhere): look at them on the next tour run, and give the guide's rename images a
-  crop or a moment that leaves it out if it hides the code.
+  forces open on every rename, and LSP4IJ 0.30.1 shows none. Moves and plain renames came after, below.
+- [ ] K6b's gaps, found 2026-11-24 with it.
+  - [x] Moves and plain renames, done on `lagergren/k6b-gaps`: a file move or rename through `xtc/renameFiles`,
+    which both editors send, or `workspace/willRenameFiles` names what it changes that other modules name by
+    its place, with the same rules for staying quiet: a moved file's type, which gets another qualified name, a
+    module root moved under another name, and what renaming a file in its folder renames. The message says
+    "… are not changed by this move", or "by this rename" when every file stays in its folder; it comes as the
+    server answers, before the client applies the edit: as a toast in VS Code, whose Explorer runs the move's
+    participant, and as a balloon in IntelliJ, whose Move dialog asks for the proposal. A root moved under its own
+    name says nothing, as other modules name it by its name. `textDocument/rename`, which neither editor sends,
+    says so as `xtc/rename` does.
+  - [ ] The tours' rename frames: the workspace graph is discovered, so the notification shows in the frames
+    after a rename or move (IntelliJ's Renamed everywhere and Rename a class, VS Code's Renamed everywhere):
+    look at them, and keep it out of the guide's images where it hides the code.
 - [ ] K3: Gradle's settings in embedded runs. Embedded builds and runs use the server's compiler and
   runtime, and run in an execution worker JVM (`RunWorkerProcess`); `xtcRun`'s module arguments, method
   and `jvmArgs` are never read. The XTC plugin's model export (`compiler-model.init.gradle`,
