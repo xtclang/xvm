@@ -35,6 +35,7 @@ import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.ComponentStatement
 import org.xvm.compiler.ast.CompositionNode
 import org.xvm.compiler.ast.Expression
+import org.xvm.compiler.ast.FunctionTypeExpression
 import org.xvm.compiler.ast.IgnoredNameExpression
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LabeledExpression
@@ -551,6 +552,18 @@ private class SemanticModelBuilder(
             // Conditional incorporation names refer to the mixin's registered formals. Their
             // parser representation is a Parameter, but they do not declare another formal.
             if (it.parent is CompositionNode.Incorporates) return@forEach
+            // A name in a function type, as of its return values in function (String name, String password)(String),
+            // labels a value to which no code refers: a call through a function value takes and returns by position.
+            if (it.parent is FunctionTypeExpression) {
+                val token = it.nameToken ?: return@forEach
+                val at = location(it.source, token.startPosition, token.endPosition)
+                val symbol = SymbolId(id, symbols.size)
+                val declared = it.type.ensureTypeConstant().takeUnless { type -> type.containsUnresolved() }
+                symbols[symbol] =
+                    Symbol(symbol, it.name, SymbolKind.PARAMETER, at.range, type(declared), null, at.sourceName, renameable = true)
+                occurrences[at] = Occurrence(at.range, it.name, Role.DECLARATION, symbol, symbols.getValue(symbol).type)
+                return@forEach
+            }
             val declaration = it.parent as? MethodDeclarationStatement
             val method = declaration?.component as? MethodStructure
             // A name of a method's return values, as in (Int count, String label) pair(), declares the value it
