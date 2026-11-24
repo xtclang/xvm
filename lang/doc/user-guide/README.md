@@ -1,4 +1,4 @@
-<!-- The screenshots in user-guide/ come from the editor tours: each one's tour step names it and its crop (GuideImage in the IntelliJ
+<!-- The screenshots in images/ come from the editor tours: each one's tour step names it and its crop (GuideImage in the IntelliJ
      tour's TourScript.kt, guide in the VS Code tour's script.ts), and lang/intellij-plugin/tour/guide.py rebuilds them from a tour run. -->
 # Ecstasy Language Tooling: User Guide
 
@@ -18,16 +18,16 @@ So the features below behave the same in both editors. Where they differ, it is 
 interface, and this guide says where.
 
 The screenshots come from the editors' scripted tours, which play the card game in
-[`lang/test-fixtures/tour/cardGame`](../test-fixtures/tour/cardGame) in a Linux container. The
+[`lang/test-fixtures/tour/cardGame`](../../test-fixtures/tour/cardGame) in a Linux container. The
 shortcuts are the editors' default Windows keymaps, as the tours give them, and IntelliJ's Linux
 keymap is the same. On macOS, most shortcuts use Cmd in place of Ctrl; each editor's keymap
 reference lists the rest. The Ecstasy chord **Ctrl+Alt+X, then a letter** is **Control+Option+X,
 then the letter** on macOS.
 
 For the details behind each feature, see the reference documents:
-[IntelliJ plugin](../intellij-plugin/README.md), [VS Code extension](../vscode-extension/README.md),
-[language server](../lsp-server/README.md), [configuration reference](configuration.md) and the
-[manual test plan](manual-test-plan.md), whose numbered cases (X1, X2 and so on) are copyable examples
+[IntelliJ plugin](../../intellij-plugin/README.md), [VS Code extension](../../vscode-extension/README.md),
+[language server](../../lsp-server/README.md), [configuration reference](../configuration.md) and the
+[manual test plan](../manual-test-plan.md), whose numbered cases (X1, X2 and so on) are copyable examples
 with their expected results.
 
 ## Contents
@@ -159,20 +159,20 @@ in that editor, with the editor's usual action for it.
 
 1. Download the plugin ZIP from the
    [IntelliJ plugin snapshot release](https://github.com/xtclang/xvm/releases/tag/intellij-plugin-snapshots),
-   or build it from this repository (see [Building from source](../intellij-plugin/README.md#building-from-source)).
+   or build it from this repository (see [Building from source](../../intellij-plugin/README.md#building-from-source)).
 2. In IntelliJ, open **Settings | Plugins**, click the gear icon and choose **Install Plugin from
    Disk...**, then select the ZIP.
 3. Restart IntelliJ when it asks. If it reports that LSP4IJ is missing, install **LSP4IJ** from the
    Marketplace first.
 
-The [plugin README](../intellij-plugin/README.md#installation) also covers the JetBrains Marketplace
+The [plugin README](../../intellij-plugin/README.md#installation) also covers the JetBrains Marketplace
 and its release channels.
 
 ### Install the VS Code extension
 
 1. Download `xtc-language-<version>.vsix` from the
    [VS Code extension snapshot release](https://github.com/xtclang/xvm/releases/tag/vscode-extension-snapshots),
-   or build it (see [Building from source](../vscode-extension/README.md#building-from-source)).
+   or build it (see [Building from source](../../vscode-extension/README.md#building-from-source)).
 2. In the Extensions view, open the **...** menu and choose **Install from VSIX...**, or run
    `code --install-extension xtc-language-<version>.vsix`.
 3. Reload VS Code when it asks.
@@ -200,12 +200,12 @@ To make a new one:
 
 <table><tr><td width="50%">
 
-![IntelliJ's New Project dialog with Ecstasy selected: name, location, project type and Multi-module project](user-guide/intellij-new-project.png)
+![IntelliJ's New Project dialog with Ecstasy selected: name, location, project type and Multi-module project](images/intellij-new-project.png)
 *IntelliJ: File | New | Project | Ecstasy makes the same project as `xtc init`.*
 
 </td><td width="50%">
 
-![VS Code creating an Ecstasy application project with xtc init](user-guide/vscode-create-project.png)
+![VS Code creating an Ecstasy application project with xtc init](images/vscode-create-project.png)
 *VS Code: **Ecstasy: Create New Project** asks for a name, a kind and a folder, and runs `xtc init` in the terminal.*
 
 </td></tr></table>
@@ -223,12 +223,12 @@ Open `~/projects/cardGame` in either editor.
 
 <table><tr><td width="50%">
 
-![IntelliJ with the card game project open: the Project view and Eights.x in the editor](user-guide/intellij-open-project.png)
+![IntelliJ with the card game project open: the Project view and Eights.x in the editor](images/intellij-open-project.png)
 *IntelliJ with the card game open. The plugin starts its language server, with the XDK bundled.*
 
 </td><td width="50%">
 
-![VS Code with the card game open: the Explorer, Eights.x, and the status bar's Ecstasy item](user-guide/vscode-open-project.png)
+![VS Code with the card game open: the Explorer, Eights.x, and the status bar's Ecstasy item](images/vscode-open-project.png)
 *VS Code with the card game open. The status bar shows `✓ Ecstasy · Compiler` once the server is ready, and the build mode, `Embedded build`.*
 
 </td></tr></table>
@@ -282,12 +282,12 @@ included, and a click lists them.
 
 <table><tr><td width="50%">
 
-![IntelliJ: Eights.x with parameter name hints such as numCards, and reference counts above each declaration](user-guide/intellij-inlay-hints.png)
+![IntelliJ: Eights.x with parameter name hints such as numCards, and reference counts above each declaration](images/intellij-inlay-hints.png)
 *IntelliJ: inlay hints name a call's parameters, such as `numCards:`, and the line above each declaration counts its references.*
 
 </td><td width="50%">
 
-![VS Code: Eights.x with parameter name hints and reference counts](user-guide/vscode-inlay-hints.png)
+![VS Code: Eights.x with parameter name hints and reference counts](images/vscode-inlay-hints.png)
 *VS Code: hints name `deal`'s parameters, `that` and `numCards`, and the line above each declaration counts its references.*
 
 </td></tr></table>
@@ -297,12 +297,12 @@ comment, as the compiler sees it. This works for the XDK's own types too.
 
 <table><tr><td width="50%">
 
-![IntelliJ quick documentation for INITIAL_HAND_SIZE, its type and doc comment](user-guide/intellij-hover.png)
+![IntelliJ quick documentation for INITIAL_HAND_SIZE, its type and doc comment](images/intellij-hover.png)
 *IntelliJ: Ctrl+Q, or hovering, on `INITIAL_HAND_SIZE` shows its declaration and doc comment.*
 
 </td><td width="50%">
 
-![VS Code hover over INITIAL_HAND_SIZE showing its type and doc comment, with reference counts and parameter hints in the code](user-guide/vscode-hover.png)
+![VS Code hover over INITIAL_HAND_SIZE showing its type and doc comment, with reference counts and parameter hints in the code](images/vscode-hover.png)
 *VS Code: hovering `INITIAL_HAND_SIZE` shows its declaration and doc comment.*
 
 </td></tr></table>
@@ -323,12 +323,12 @@ module adds its import.
 
 <table><tr><td width="50%">
 
-![IntelliJ completion list after hand., listing Hand's members with their types](user-guide/intellij-completion.png)
+![IntelliJ completion list after hand., listing Hand's members with their types](images/intellij-completion.png)
 *IntelliJ: after `hand.`, completion lists the members of `Hand`, with their types.*
 
 </td><td width="50%">
 
-![VS Code completion list after hand., listing Hand's members](user-guide/vscode-completion.png)
+![VS Code completion list after hand., listing Hand's members](images/vscode-completion.png)
 *VS Code: after `hand.`, completion lists the members of `Hand`.*
 
 </td></tr></table>
@@ -338,12 +338,12 @@ calls, with the one at the cursor in bold. It also opens by itself as you type t
 
 <table><tr><td width="50%">
 
-![IntelliJ parameter info for deal, with the current parameter in bold](user-guide/intellij-parameter-info.png)
+![IntelliJ parameter info for deal, with the current parameter in bold](images/intellij-parameter-info.png)
 *IntelliJ: Ctrl+P inside a call of `deal` shows its parameters, with `numCards` in bold.*
 
 </td><td width="50%">
 
-![VS Code parameter hints inside a call, with the current parameter in bold](user-guide/vscode-parameter-hints.png)
+![VS Code parameter hints inside a call, with the current parameter in bold](images/vscode-parameter-hints.png)
 *VS Code: inside a call of `deal`, the parameter hints show its signature, with `numCards` in bold, and its doc comment.*
 
 </td></tr></table>
@@ -368,12 +368,12 @@ you make it. Warnings show too, such as an assertion that can never fail.
 
 <table><tr><td width="50%">
 
-![IntelliJ: popCrd underlined as an error, with the COMPILER-56 message and a fix that creates the method](user-guide/intellij-error-message.png)
+![IntelliJ: popCrd underlined as an error, with the COMPILER-56 message and a fix that creates the method](images/intellij-error-message.png)
 *IntelliJ: a misspelled `popCard` is an error as soon as it is typed; Ctrl+F1 shows the compiler's message, with a fix.*
 
 </td><td width="50%">
 
-![VS Code: the COMPILER-56 message for popCrd, shown under the line](user-guide/vscode-error-message.png)
+![VS Code: the COMPILER-56 message for popCrd, shown under the line](images/vscode-error-message.png)
 *VS Code: F8 shows the compiler's message, COMPILER-56, under the line.*
 
 </td></tr></table>
@@ -385,12 +385,12 @@ until you fix them. IntelliJ also draws such files red in the Project view.
 
 <table><tr><td width="50%">
 
-![IntelliJ Problems window with the file's problems and the Project Errors tab](user-guide/intellij-problems.png)
+![IntelliJ Problems window with the file's problems and the Project Errors tab](images/intellij-problems.png)
 *IntelliJ: the Problems window lists the file's errors and warnings, and Project Errors the rest of the project's.*
 
 </td><td width="50%">
 
-![VS Code: Card.x with rank renamed to rnk, unsaved; the Explorer marks the files that break, and the Problems view lists their errors](user-guide/vscode-problems.png)
+![VS Code: Card.x with rank renamed to rnk, unsaved; the Explorer marks the files that break, and the Problems view lists their errors](images/vscode-problems.png)
 *VS Code: renaming `Card.rank` without saving breaks its uses in files that aren't open, and the test modules that depend on them; the Problems view lists them all.*
 
 </td></tr></table>
@@ -409,40 +409,40 @@ until you fix them. IntelliJ also draws such files red in the Project view.
 
 <table><tr><td width="50%">
 
-![IntelliJ call hierarchy of cardMatches, called by the player and both strategies](user-guide/intellij-call-hierarchy.png)
+![IntelliJ call hierarchy of cardMatches, called by the player and both strategies](images/intellij-call-hierarchy.png)
 *IntelliJ: Ctrl+Alt+H on `cardMatches` lists its callers: the player, both strategies' `choose` and the tests.*
 
 </td><td width="50%">
 
-![VS Code call hierarchy of cardMatches in the side bar](user-guide/vscode-call-hierarchy.png)
+![VS Code call hierarchy of cardMatches in the side bar](images/vscode-call-hierarchy.png)
 *VS Code: **Show Call Hierarchy** on `cardMatches` lists its callers in the side bar: the player, both strategies and the tests.*
 
 </td></tr></table>
 
 <table><tr><td width="50%">
 
-![IntelliJ Find usages of cardMatches in the Find window](user-guide/intellij-find-usages.png)
+![IntelliJ Find usages of cardMatches in the Find window](images/intellij-find-usages.png)
 *IntelliJ: Alt+F7 on `cardMatches` finds its uses, the tests' included, in the Find window.*
 
 </td><td width="50%">
 
-![VS Code References view: 9 results for cardMatches in 4 files](user-guide/vscode-find-references.png)
+![VS Code References view: 9 results for cardMatches in 4 files](images/vscode-find-references.png)
 *VS Code: Find All References on `cardMatches` finds 9 uses in 4 files, the tests' included.*
 
 </td></tr></table>
 
 Navigation reaches into the XDK as well: going to `HashMap`'s declaration opens the `ecstasy`
 module's source, read-only. Its names are links too, as the language server compiles the library's
-sources when the first one opens ([X350](manual-test-plan.md#navigation-inside-an-xdk-librarys-source-x350)).
+sources when the first one opens ([X350](../manual-test-plan.md#navigation-inside-an-xdk-librarys-source-x350)).
 
 <table><tr><td width="50%">
 
-![IntelliJ with the XDK's HashMap.x open, read-only](user-guide/intellij-xdk-sources.png)
+![IntelliJ with the XDK's HashMap.x open, read-only](images/intellij-xdk-sources.png)
 *IntelliJ: Go to Declaration on `HashMap` opens the XDK's source, read-only.*
 
 </td><td width="50%">
 
-![The XDK's HashMap source, opened read-only from a Go to Definition](user-guide/vscode-xdk-sources.png)
+![The XDK's HashMap source, opened read-only from a Go to Definition](images/vscode-xdk-sources.png)
 *VS Code: Go to Definition on `HashMap` opens the XDK's source, read-only; the status bar shows the server compiling the library's sources.*
 
 </td></tr></table>
@@ -462,12 +462,12 @@ included.
 
 <table><tr><td width="50%">
 
-![IntelliJ Rename dialog on cardMatches, with canFollow typed in](user-guide/intellij-rename.png)
+![IntelliJ Rename dialog on cardMatches, with canFollow typed in](images/intellij-rename.png)
 *IntelliJ: Shift+F6 on `cardMatches` renames it, here to `canFollow`.*
 
 </td><td width="50%">
 
-![VS Code rename box on cardMatches, with the new name canFollow typed in](user-guide/vscode-rename.png)
+![VS Code rename box on cardMatches, with the new name canFollow typed in](images/vscode-rename.png)
 *VS Code: F2 on `cardMatches` renames it, here to `canFollow`; the server checks the new name before anything changes.*
 
 </td></tr></table>
@@ -483,7 +483,7 @@ Moving a file to another package's folder moves its type, and every use follows:
 qualified names and imports, also in files that aren't open. In IntelliJ, use **Refactor | Move** (F6) or
 drag the file in the Project view; in VS Code, cut and paste or drag it in the Explorer.
 
-![VS Code Explorer with Suit.x moved into a cards folder, and the files that use it open with unsaved edits](user-guide/vscode-move-file.png)
+![VS Code Explorer with Suit.x moved into a cards folder, and the files that use it open with unsaved edits](images/vscode-move-file.png)
 *VS Code: `Suit` moved to the `cards` package in the Explorer; the files that use it are rewritten, as their tabs show.*
 
 ### Extract, inline and safe delete
@@ -501,17 +501,17 @@ Ctrl+. (VS Code); VS Code also lists the refactorings of a selection with Ctrl+S
 
 <table><tr><td width="50%">
 
-![IntelliJ refactoring menu on a selected expression](user-guide/intellij-extract.png)
+![IntelliJ refactoring menu on a selected expression](images/intellij-extract.png)
 *IntelliJ: Alt+Enter on a selected expression offers to extract it to a local or a private method.*
 
 </td><td width="50%">
 
-![VS Code refactoring menu on a selected expression: Extract expression to local variable, Extract expression to private method](user-guide/vscode-extract.png)
+![VS Code refactoring menu on a selected expression: Extract expression to local variable, Extract expression to private method](images/vscode-extract.png)
 *VS Code: Ctrl+Shift+R on a returned expression offers to extract it to a local or a private method.*
 
 </td></tr></table>
 
-![IntelliJ offering Safely delete private member 'heading'](user-guide/intellij-safe-delete.png)
+![IntelliJ offering Safely delete private member 'heading'](images/intellij-safe-delete.png)
 *IntelliJ: Alt+Enter on `heading`, a private method that nothing uses, offers to delete it safely.*
 
 ### Quick fixes and imports
@@ -526,12 +526,12 @@ On an error, Alt+Enter (IntelliJ) or Ctrl+. (VS Code) offers its fixes:
 
 <table><tr><td width="50%">
 
-![IntelliJ quick fixes for a call to a method that does not exist yet](user-guide/intellij-quick-fix.png)
+![IntelliJ quick fixes for a call to a method that does not exist yet](images/intellij-quick-fix.png)
 *IntelliJ: Alt+Enter on a call of `announce`, which doesn't exist yet, offers to create it.*
 
 </td><td width="50%">
 
-![VS Code quick fix: Create private method 'announce'](user-guide/vscode-quick-fix.png)
+![VS Code quick fix: Create private method 'announce'](images/vscode-quick-fix.png)
 *VS Code: Ctrl+. on the call of `announce`, which doesn't exist yet, offers to create it.*
 
 </td></tr></table>
@@ -565,12 +565,12 @@ The next build or run uses the new mode; nothing restarts.
 
 <table><tr><td width="50%">
 
-![IntelliJ Languages & Frameworks, Ecstasy, Build and Run settings page with Build and run using](user-guide/intellij-build-mode.png)
+![IntelliJ Languages & Frameworks, Ecstasy, Build and Run settings page with Build and run using](images/intellij-build-mode.png)
 *IntelliJ: **Settings | Languages & Frameworks | Ecstasy | Build and Run**, with **Build and run using** on its default, the embedded compiler.*
 
 </td><td width="50%">
 
-![VS Code quick pick for the build mode: embedded compiler, Gradle or automatic](user-guide/vscode-build-mode.png)
+![VS Code quick pick for the build mode: embedded compiler, Gradle or automatic](images/vscode-build-mode.png)
 *VS Code: **Ecstasy: Select Build Mode**, which Ctrl+Alt+X, then B, and a click on the status bar's build mode open too.*
 
 </td></tr></table>
@@ -584,12 +584,12 @@ file and line, a click away from its code: in IntelliJ's **Build** window, and i
 
 <table><tr><td width="50%">
 
-![IntelliJ Build window listing a failed build's error with its file and line](user-guide/intellij-build-failed.png)
+![IntelliJ Build window listing a failed build's error with its file and line](images/intellij-build-failed.png)
 *IntelliJ: a failed build in the Build window: the error in `Eights.x`, and the test modules that need the module that failed.*
 
 </td><td width="50%">
 
-![VS Code terminal with a failed embedded build and its errors](user-guide/vscode-build-failed.png)
+![VS Code terminal with a failed embedded build and its errors](images/vscode-build-failed.png)
 *VS Code: a failed build lists its errors, with their files and lines, in the build's terminal.*
 
 </td></tr></table>
@@ -605,16 +605,16 @@ Run icon in the gutter of that line. Click either to run it. Other ways:
   with: the project default, embedded, Gradle or `xtc` command line.
 - **VS Code:** the editor's Run button, Ctrl+Shift+F10 (Ctrl+Shift+R on macOS), **Ecstasy: Run Module**,
   or an `xtc` task in `.vscode/tasks.json` with arguments (see
-  [Tasks](../vscode-extension/README.md#tasks)).
+  [Tasks](../../vscode-extension/README.md#tasks)).
 
 <table><tr><td width="50%">
 
-![IntelliJ: the Run cardGame lens and the gutter Run icon on module cardGame, and the game's output in the Run window](user-guide/intellij-run.png)
+![IntelliJ: the Run cardGame lens and the gutter Run icon on module cardGame, and the game's output in the Run window](images/intellij-run.png)
 *IntelliJ: the Run lens and the gutter icon run the module; the game reads each Enter from the Run window.*
 
 </td><td width="50%">
 
-![VS Code running the card game from its Run lens, with its output in a terminal](user-guide/vscode-run.png)
+![VS Code running the card game from its Run lens, with its output in a terminal](images/vscode-run.png)
 *VS Code: the game runs in a terminal of its own, which also says that the folder's Gradle build doesn't apply in embedded mode.*
 
 </td></tr></table>
@@ -623,7 +623,7 @@ The program reads its input from the Run window (IntelliJ) or its terminal (VS C
 press Enter. IntelliJ's **Send EOF**, or Ctrl+D on an empty line in VS Code, ends the input. Stop ends
 the program; IntelliJ's **Rerun** runs it again.
 
-![IntelliJ Run Configuration dialog for an Ecstasy Application](user-guide/intellij-run-configuration.png)
+![IntelliJ Run Configuration dialog for an Ecstasy Application](images/intellij-run-configuration.png)
 *IntelliJ: an Ecstasy Application configuration, with its arguments and what it runs with.*
 
 In embedded mode, each run gets a fresh program, in an execution worker beside the language server.
@@ -632,7 +632,7 @@ task; IntelliJ's Gradle window also lists the plugin's tasks.
 
 ### Tests
 
-The language server finds the [xunit](../../lib_xunit/README.md) tests of each module as you write
+The language server finds the [xunit](../../../lib_xunit/README.md) tests of each module as you write
 them: every `@Test` method, and the classes, packages and modules that hold them. Each has a test
 icon in the gutter, and VS Code's **Testing** view lists them in a tree.
 
@@ -648,17 +648,17 @@ icon in the gutter, and VS Code's **Testing** view lists them in a tree.
 
 <table><tr><td width="50%">
 
-![IntelliJ: DeckTest with test icons in the gutter, and the test runner reporting 1 test failed and 7 passed](user-guide/intellij-test-results.png)
+![IntelliJ: DeckTest with test icons in the gutter, and the test runner reporting 1 test failed and 7 passed](images/intellij-test-results.png)
 *IntelliJ: the gutter's test icons run DeckTest, embedded, and the test runner shows each test's result and output; one was made to fail.*
 
 </td><td width="50%">
 
-![VS Code: the failed assertion's message, Deck should have 52 cards, at line 16, with its stack](user-guide/vscode-failing-test.png)
+![VS Code: the failed assertion's message, Deck should have 52 cards, at line 16, with its stack](images/vscode-failing-test.png)
 *VS Code: a failing test's message shows at the line that failed, with its stack.*
 
 </td></tr></table>
 
-![VS Code Testing view with 64 of 64 tests passed, gutter icons, and the Test Results view](user-guide/vscode-run-all-tests.png)
+![VS Code Testing view with 64 of 64 tests passed, gutter icons, and the Test Results view](images/vscode-run-all-tests.png)
 *VS Code: Run All Tests runs every module's tests; the Testing view and the gutter show each result, and Test Results what they printed.*
 
 The build mode applies to tests too: embedded runs them with xunit in a process of its own, Gradle
@@ -676,7 +676,7 @@ A debug session builds and runs the program as Run does, under the debugger.
 - **VS Code:** F5 debugs the module of the active editor, with no configuration needed. To give
   arguments, choose a method or stop at the first line, add a configuration to `.vscode/launch.json`
   (**Add Configuration**, then **Ecstasy: Launch Module**); see
-  [Debugging](../vscode-extension/README.md#debugging) for its fields.
+  [Debugging](../../vscode-extension/README.md#debugging) for its fields.
 
 In Gradle mode, Debug runs the module's `runXtc` task with the debugger, and the program connects to
 the session; in IntelliJ's command-line mode, it runs `xtc run`. The breakpoints are the same.
@@ -705,7 +705,7 @@ Breakpoints, stepping and evaluation work as in a launched session. Stopping the
 and the program runs on. The program's XDK must be one with the same tools as your plugin or
 extension, and one debugger at a time can attach.
 
-![VS Code attached to the card game that xtc run started in a terminal, stopped at a breakpoint](user-guide/vscode-attach.png)
+![VS Code attached to the card game that xtc run started in a terminal, stopped at a breakpoint](images/vscode-attach.png)
 *VS Code: `xtc run` with the copied `--debug` option waits in the terminal; the attach configuration connects, and the program stops at its breakpoint.*
 
 ### Breakpoints
@@ -736,29 +736,29 @@ attached sessions alike.
 
 <table><tr><td width="50%">
 
-![IntelliJ conditional breakpoint in Deck's constructor](user-guide/intellij-conditional-breakpoint.png)
+![IntelliJ conditional breakpoint in Deck's constructor](images/intellij-conditional-breakpoint.png)
 *IntelliJ: right-click a breakpoint for its **Condition** and **Hit condition**; this one stops only when the deck adds the Queen of Spades.*
 
 </td><td width="50%">
 
-![VS Code: a breakpoint's condition typed in the editor](user-guide/vscode-conditional-breakpoint.png)
+![VS Code: a breakpoint's condition typed in the editor](images/vscode-conditional-breakpoint.png)
 *VS Code: right-click a breakpoint, **Edit Condition**, to give it a condition, or a hit count; this one stops only for the Queen of Spades.*
 
 </td></tr></table>
 
 <table><tr><td width="50%">
 
-![IntelliJ stopped at the OutOfBounds exception, with its message and stack](user-guide/intellij-exception.png)
+![IntelliJ stopped at the OutOfBounds exception, with its message and stack](images/intellij-exception.png)
 *IntelliJ: an uncaught `OutOfBounds` stops the program where it is thrown, with its message and stack.*
 
 </td><td width="50%">
 
-![VS Code stopped at an uncaught OutOfBounds exception, showing its message and stack](user-guide/vscode-exception.png)
+![VS Code stopped at an uncaught OutOfBounds exception, showing its message and stack](images/vscode-exception.png)
 *VS Code: an uncaught `OutOfBounds` stops the program where it is thrown, with its message and stack; it is also the frame's first variable.*
 
 </td></tr></table>
 
-![VS Code stopped after two.strategy changed, with Player.strategy Write listed in the Breakpoints view](user-guide/vscode-data-breakpoint.png)
+![VS Code stopped after two.strategy changed, with Player.strategy Write listed in the Breakpoints view](images/vscode-data-breakpoint.png)
 *VS Code: **Break on Value Change** on `two`'s `strategy` stops right after the line that changes it.*
 
 The running program keeps the code it was built from. When you edit a file while debugging, a
@@ -784,12 +784,12 @@ IntelliJ, use Force Step Into (Alt+Shift+F7) to go into the XDK's code.
 
 <table><tr><td width="50%">
 
-![IntelliJ Smart Step Into offering deal or size](user-guide/intellij-smart-step-into.png)
+![IntelliJ Smart Step Into offering deal or size](images/intellij-smart-step-into.png)
 *IntelliJ: Shift+F7 on a line that calls `deal` and `size` asks which call to step into.*
 
 </td><td width="50%">
 
-![VS Code Step Into Target offering deal or size](user-guide/vscode-step-into-target.png)
+![VS Code Step Into Target offering deal or size](images/vscode-step-into-target.png)
 *VS Code: **Step Into Target**, in the editor's context menu, asks which call on the line to step into: `deal` or `size`.*
 
 </td></tr></table>
@@ -811,17 +811,17 @@ When the program stops, the debugger shows:
 - **Watches and hovers.** Expressions such as `point.x + 1` or `ints[i] > 0`, evaluated again at every
   stop, without running the program's code. One that would run code, such as a call, says so.
 
-![IntelliJ Debug window stopped while dealing: frames, variables with identity codes, and inline values beside the code](user-guide/intellij-debug-frames.png)
+![IntelliJ Debug window stopped while dealing: frames, variables with identity codes, and inline values beside the code](images/intellij-debug-frames.png)
 *IntelliJ: stopped while dealing: the frames, the variables with their identity codes, and inline values beside the code.*
 
 <table><tr><td width="50%">
 
-![IntelliJ Debug window with a watch beside the variables](user-guide/intellij-watches.png)
+![IntelliJ Debug window with a watch beside the variables](images/intellij-watches.png)
 *IntelliJ: a watch, evaluated again at every stop, beside the frame's variables.*
 
 </td><td width="50%">
 
-![VS Code stopped at a step, with the Variables, Watch and Call Stack views and inline values](user-guide/vscode-debug-watches.png)
+![VS Code stopped at a step, with the Variables, Watch and Call Stack views and inline values](images/vscode-debug-watches.png)
 *VS Code: the Variables, Watch and Call Stack views, inline values beside the code, and the exception filters under Breakpoints.*
 
 </td></tr></table>
@@ -850,12 +850,12 @@ While the program runs, a line typed in the Debug Console (VS Code) or the Debug
 
 <table><tr><td width="50%">
 
-![IntelliJ Evaluate Expression dialog evaluating size() in the paused frame](user-guide/intellij-evaluate-expression.png)
+![IntelliJ Evaluate Expression dialog evaluating size() in the paused frame](images/intellij-evaluate-expression.png)
 *IntelliJ: Alt+F8 evaluates `size()`, a call, in the paused frame: 42 cards are left.*
 
 </td><td width="50%">
 
-![VS Code Debug Console evaluating size() + 1 to 43 in the paused frame](user-guide/vscode-debug-console.png)
+![VS Code Debug Console evaluating size() + 1 to 43 in the paused frame](images/vscode-debug-console.png)
 *VS Code: the Debug Console evaluates `size() + 1` in the paused frame.*
 
 </td></tr></table>
@@ -864,7 +864,7 @@ While the program runs, a line typed in the Debug Console (VS Code) or the Debug
 
 ### Settings that matter
 
-The [configuration reference](configuration.md) lists every setting. These are the ones you are
+The [configuration reference](../configuration.md) lists every setting. These are the ones you are
 most likely to change. In IntelliJ, every page of the plugin is under **Settings | Languages &
 Frameworks | Ecstasy**, which links each of them.
 
@@ -887,38 +887,38 @@ unsaved files; the others apply at once.
 
 <table><tr><td width="50%">
 
-![IntelliJ Languages & Frameworks, Ecstasy, Language Service settings page](user-guide/intellij-language-service.png)
+![IntelliJ Languages & Frameworks, Ecstasy, Language Service settings page](images/intellij-language-service.png)
 *IntelliJ: **Settings | Languages & Frameworks | Ecstasy | Language Service**: the language adapter, text
 synchronization, who formats on save, inlay hints and reference counts, then the running server's effective
 configuration.*
 
 </td><td width="50%">
 
-![VS Code Settings editor filtered to the Ecstasy extension's settings](user-guide/vscode-settings.png)
+![VS Code Settings editor filtered to the Ecstasy extension's settings](images/vscode-settings.png)
 *VS Code: **Ecstasy: Open Language Service Settings** shows the extension's settings, in four groups.*
 
 </td></tr></table>
 
-![IntelliJ Languages & Frameworks, Ecstasy, Server Runtime and Logs settings page with the memory policy](user-guide/intellij-server-runtime.png)
+![IntelliJ Languages & Frameworks, Ecstasy, Server Runtime and Logs settings page with the memory policy](images/intellij-server-runtime.png)
 *IntelliJ: **Settings | Languages & Frameworks | Ecstasy | Server Runtime and Logs**: the server's JVM options, its
 memory policy and maximum heap, and how long its logs are kept, with a button that restarts running servers with
 the saved settings.*
 
 <table><tr><td width="50%">
 
-![IntelliJ Languages & Frameworks, Ecstasy, Compiler settings page, Build import tab](user-guide/intellij-compiler.png)
+![IntelliJ Languages & Frameworks, Ecstasy, Compiler settings page, Build import tab](images/intellij-compiler.png)
 *IntelliJ: **Settings | Languages & Frameworks | Ecstasy | Compiler**: what the compiler builds, from the project's
 layout or its Gradle build, with buttons that import the Gradle model again.*
 
 </td><td width="50%">
 
-![VS Code Configure Compiler Paths picker: show effective paths, refresh Gradle model, edit explicit module paths, add consumers](user-guide/vscode-configure-compiler-paths.png)
+![VS Code Configure Compiler Paths picker: show effective paths, refresh Gradle model, edit explicit module paths, add consumers](images/vscode-configure-compiler-paths.png)
 *VS Code: **Ecstasy: Configure Compiler Paths**, from the Command Palette, offers the same choices as IntelliJ's
 Compiler page.*
 
 </td></tr></table>
 
-![VS Code Switch Language Adapter picker: Ecstasy Compiler, Tree-sitter or the bundled default](user-guide/vscode-switch-adapter.png)
+![VS Code Switch Language Adapter picker: Ecstasy Compiler, Tree-sitter or the bundled default](images/vscode-switch-adapter.png)
 *VS Code: Ctrl+Alt+X, then A, or a click on Ecstasy in the status bar, switches the server's adapter. IntelliJ's
 **Tools | Switch Ecstasy Language Adapter**, or the same keys, opens the same choice in a popup.*
 
@@ -944,12 +944,12 @@ When something doesn't work as you expect, look at the language server first.
 
 <table><tr><td width="50%">
 
-![IntelliJ Language Servers window: Ecstasy Language Server started, with its traces](user-guide/intellij-language-servers.png)
+![IntelliJ Language Servers window: Ecstasy Language Server started, with its traces](images/intellij-language-servers.png)
 *IntelliJ: LSP4IJ's Language Servers window shows the server's state, its traces and its logs.*
 
 </td><td width="50%">
 
-![VS Code Output panel showing the Ecstasy Language Server's log](user-guide/vscode-server-log.png)
+![VS Code Output panel showing the Ecstasy Language Server's log](images/vscode-server-log.png)
 *VS Code: Ctrl+Alt+X, then L shows the language server's log.*
 
 </td></tr></table>
@@ -982,5 +982,5 @@ Some common problems:
 - The Tree-sitter adapter knows only syntax: no type errors, no type-aware completion or checked
   refactorings, and no embedded builds or runs.
 
-The [manual test plan](manual-test-plan.md#client-compatibility-limits) lists the remaining
+The [manual test plan](../manual-test-plan.md#client-compatibility-limits) lists the remaining
 differences between the editors in detail.
