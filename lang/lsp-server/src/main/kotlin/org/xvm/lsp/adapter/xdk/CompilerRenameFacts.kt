@@ -183,7 +183,8 @@ internal class CompilerRenameFacts(
     val packageImports: Map<String, String> = emptyMap(),
     /**
      * The project's modules whose artifacts these facts name by revision, for a member with no declaration: facts that
-     * name none of a module's are as true against another artifact of it with the same [XdkDependency.api].
+     * name none of a module's are as true against another artifact of it with the same declarations at the same places
+     * ([XdkMemberUseTracker]).
      */
     val binaryModules: Set<String> = emptySet(),
     /**
