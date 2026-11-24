@@ -242,6 +242,7 @@ async function start(tour: Tour, coverage: Coverage): Promise<void> {
     });
     await tour.shot({
         title: 'Open the project',
+        guide: { name: 'vscode-open-project' },
         caption: 'The project in the Explorer, and the game in the editor. The extension starts its language server, with the XDK bundled, and the status bar says it is ready.',
         feature: 'initialize',
         focus: 'sidebar',
@@ -360,6 +361,7 @@ async function editingCode(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Hover documentation',
+        guide: { name: 'vscode-hover', crop: '1140x720+360+180' },
         caption: "Hovering a name, or Ctrl+K Ctrl+I, shows its declaration and its doc comment, from the compiler's view of it.",
         feature: 'textDocument/hover',
         focus: 'hover',
@@ -396,6 +398,7 @@ async function editingCode(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Parameter hints',
+        guide: { name: 'vscode-parameter-hints', crop: '1140x420+360+480' },
         caption: 'Inside a call, Ctrl+Shift+Space shows the parameters of the method it calls, with the one at the cursor in bold.',
         feature: 'textDocument/signatureHelp',
         focus: 'parameterHints',
@@ -847,6 +850,7 @@ async function navigation(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Find all references',
+        guide: { name: 'vscode-find-references', crop: '1300x860+0+40' },
         caption: "Shift+Alt+F12 finds every use of a declaration across the project's modules, the tests' included, in the References view.",
         feature: 'textDocument/references',
         focus: 'sidebar',
@@ -942,6 +946,7 @@ async function navigation(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: "The XDK's sources",
+        guide: { name: 'vscode-xdk-sources' },
         caption: "Go to Definition also opens the XDK's sources, read-only: HashMap is in the ecstasy module's maps package.",
         feature: 'workspace/textDocumentContent',
         focus: 'editor',
@@ -1022,6 +1027,7 @@ async function diagnostics(tour: Tour): Promise<void> {
     const card = tour.source('Card.x');
     await tour.shot({
         title: 'Errors in other files',
+        guide: { name: 'vscode-problems' },
         caption: 'Renaming a property breaks its uses in other files and in the test modules, which are not open: the Problems view lists them all.',
         feature: 'workspace/diagnostic',
         focus: 'panel',
@@ -1177,6 +1183,7 @@ async function refactoring(tour: Tour): Promise<void> {
     const call = 'cardMatches(card, prev)';
     await tour.shot({
         title: 'Rename a method',
+        guide: { name: 'vscode-rename', crop: '1000x560+360+70' },
         caption: 'F2 renames a method: the box takes the new name, which the server checks before anything changes.',
         feature: 'textDocument/prepareRename',
         focus: 'css:.rename-box',
@@ -1320,6 +1327,7 @@ async function refactoring(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Move a file',
+        guide: { name: 'vscode-move-file', crop: '960x525+0+35' },
         caption: "Cut and Paste in the Explorer moves a type to another package: Suit moves to cards, and every use follows, as cards.Suit, or in Deck, whose cards is a property, by an import.",
         feature: 'xtc/renameFiles',
         focus: 'sidebar',
@@ -1367,6 +1375,7 @@ async function refactoring(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Refactorings',
+        guide: { name: 'vscode-extract', crop: '1000x340+360+440' },
         caption: "Ctrl+Shift+R on a selection offers the server's refactorings: extract it to a local or a method.",
         feature: 'textDocument/codeAction',
         focus: 'menu',
@@ -1519,6 +1528,7 @@ async function commands(tour: Tour): Promise<void> {
     tour.section('commands', "The extension's commands");
     await tour.shot({
         title: "The server's log",
+        guide: { name: 'vscode-server-log', crop: '1555x290+355+610' },
         caption: "Ctrl+Alt+X L shows the language server's log, and again hides it: what it started with, and what it did.",
         feature: 'xtc.showServerOutput',
         focus: 'panel',
@@ -1700,6 +1710,7 @@ async function building(tour: Tour): Promise<void> {
     const eights = tour.source('Eights.x');
     await tour.shot({
         title: 'The build mode',
+        guide: { name: 'vscode-build-mode', crop: '840x400+430+0' },
         caption: "In a folder with a Gradle build, the status bar says how it builds; a click chooses the embedded compiler, Gradle, or automatic.",
         feature: 'xtc.selectBuildMode',
         focus: 'quickInput',
@@ -1763,6 +1774,7 @@ async function building(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Run from the editor',
+        guide: { name: 'vscode-run', crop: '1555x860+355+40' },
         caption: "The Run button of a module's editor runs it in the embedded execution worker, beside the language server, in a terminal of its own.",
         feature: 'xtc/run',
         focus: 'panel',
@@ -2214,6 +2226,7 @@ async function debugging(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Watches',
+        guide: { name: 'vscode-debug-watches', crop: '1340x860+0+40' },
         caption: "A watch, here deal's numCards, is evaluated again at every stop; watches, as hovers, read the program's values and run none of its code.",
         feature: 'evaluate',
         needs: [NEEDS.paused],
@@ -2251,6 +2264,7 @@ async function debugging(tour: Tour): Promise<void> {
     }, [NEEDS.paused]);
     await tour.shot({
         title: 'The Debug Console',
+        guide: { name: 'vscode-debug-console', crop: '1555x290+355+610' },
         caption: 'Ctrl+Shift+Y opens the Debug Console: an expression typed there runs in the paused frame, with completion of its names.',
         feature: 'evaluate',
         needs: [NEEDS.paused],
@@ -2459,6 +2473,7 @@ async function debugging(tour: Tour): Promise<void> {
     const strategy = await lineOf(eights, 'two.strategy = new SaveEights();');
     await tour.shot({
         title: 'A data breakpoint',
+        guide: { name: 'vscode-data-breakpoint', crop: '1440x860+0+40' },
         caption: "Break on Value Change, on a field in the Variables view, stops where it changes: who gives Bob his strategy?",
         feature: 'setDataBreakpoints',
         focus: `line:${strategy + 1}`,
@@ -2492,6 +2507,7 @@ async function debugging(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'An exception',
+        guide: { name: 'vscode-exception', crop: '1440x560+0+40' },
         caption: "A bug: popCard reads past the end of its cards. The debugger stops where the uncaught exception is thrown, with its message and stack.",
         feature: 'exceptionInfo',
         focus: 'css:.exception-widget',
@@ -2613,6 +2629,7 @@ async function debugging(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Attach to a program',
+        guide: { name: 'vscode-attach', crop: '1500x690+0+40' },
         caption: "Ecstasy: Copy Option to Debug a Program copies xtc run's --debug option; the program waits for the Attach configuration, and stops at its breakpoints.",
         feature: 'attach',
         focus: 'sidebar',
@@ -2659,7 +2676,9 @@ async function debugging(tour: Tour): Promise<void> {
                 name: each.task.name,
                 args: ((each.task.execution as vscode.ShellExecution | undefined)?.args ?? []).map(arg => typeof arg === 'string' ? arg : arg.value),
             }));
-            expect(tasks.some(each => each.args.includes('runXtc') && each.args.some(arg => arg.includes('xtcDebug'))),
+            // the task of the module's Gradle project, as :runXtc at a build's root (gradle-projects.ts)
+            expect(tasks.some(each => each.args.some(arg => arg === 'runXtc' || arg.endsWith(':runXtc'))
+                && each.args.some(arg => arg.includes('xtcDebug'))),
                 () => `The tasks: ${JSON.stringify(tasks)}`);
         },
         after: async () => {
@@ -2763,6 +2782,7 @@ async function testing(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Run all the tests',
+        guide: { name: 'vscode-run-all-tests' },
         caption: "Run All Tests runs every module's tests, and the Test Results view shows what they printed.",
         feature: 'testing.runAll',
         needs: [NEEDS.tests],
@@ -2803,6 +2823,7 @@ async function testing(tour: Tour): Promise<void> {
     const failing = await lineOf(deckTest, 'assert deck.size() == GameConstants.DECK_SIZE as');
     await tour.shot({
         title: 'A failing test',
+        guide: { name: 'vscode-failing-test', crop: '1435x450+355+90' },
         caption: "A failing test is red, and its assertion's message shows at the line that failed.",
         feature: 'testController.runProfile',
         needs: [NEEDS.tests],
@@ -2940,6 +2961,7 @@ async function settings(tour: Tour): Promise<void> {
     tour.section('settings', 'Settings');
     await tour.shot({
         title: "The extension's settings",
+        guide: { name: 'vscode-settings', crop: '1465x830+355+70' },
         caption: "Ecstasy: Open Language Service Settings lists the extension's settings: the build mode, formatting, hints and lenses, and the server's runtime.",
         feature: 'xtc.openLanguageSettings',
         focus: 'editor',
