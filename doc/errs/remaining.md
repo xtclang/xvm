@@ -245,10 +245,14 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   K6b's, says how many string literals and comments of the modules it reaches spell the old name, and where, and
   that they are not changed, as IntelliJ's search in comments and strings does (half a day to a day); (2) the user
   guide's known limitations say what a rename does not change: names in strings or computed at runtime, runtime
-  type checks by member name, and serialized property names.
+  type checks by member name, and serialized property names. (2) is done 2026-11-24, in the guide's known
+  limitations.
 - [ ] Queued 2026-11-24, after that: track the members each module uses from its dependencies, and recompile a
-  dependent only when a member it uses changes, not on any change of its dependency's public API. Helps
-  every edit and code action, not only renames; a dependency tracker in the server, three to five days. Its API side
+  dependent only when a member it uses changes, not on any change of its dependency's public API. This is the
+  generic case: it serves every edit and code action, and subsumes the rename-specific reach rule
+  (`XdkRenameReach`, 28d1c73e51) and the whole-API fingerprint (`XdkDependency.api`), which should become its
+  special cases or go once it lands; a rename of a `String` method, which every module uses, needs it to compile
+  fewer than all 22. A dependency tracker in the server, three to five days. Its API side
   is a per-declaration API: a consumer whose facts name none of the declarations whose API changed, nor any name a
   changed or added declaration takes, which a new name could capture, keeps its compile, and its proof compares its
   bindings unchanged, as for a module the edit does not reach.
