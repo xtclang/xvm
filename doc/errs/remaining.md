@@ -640,7 +640,7 @@ recorded partial coverage.
 - [x] R9: the call stack and `exceptionInfo`'s stack trace without the embedding runner's frames
   (`TaskRegistry`, `runner.x`), seen in IntelliJ's hint with #1761; the call stack had them too, in both
   editors, under the program's (`ad8268260`, `48dabb5a5`; X304 and X307 check the whole stack).
-- [x] R9 gap, a flake (found 2026-11-24 in K5a's validation, fixed the same day): rarely, the call stack still ended
+- [x] R9 gap, a flake (found 2026-11-24 in K5a's validation, fixed the same day, `bb85345009`): rarely, the call stack still ended
   with the runner's `Container.invoke` at line 0, below the program's root frame.
   `EmbeddedExecutionTest`'s "a breakpoint stops a debugged program…" failed so once in three full
   runs, as `[(Stops.twice, 11), (Stops.run, 5), (Container.invoke, 0)]`. Cause: when the program
