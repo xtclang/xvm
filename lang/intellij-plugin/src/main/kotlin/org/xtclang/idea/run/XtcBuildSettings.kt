@@ -190,6 +190,18 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
                 else -> XtcBuildMode.EMBEDDED
             }
 
+        /** Whether [mode] can apply while the project's own modules replace [replaced] bundled libraries: embedded cannot. */
+        internal fun available(
+            mode: XtcBuildMode,
+            replaced: List<String>,
+        ): Boolean = mode != XtcBuildMode.EMBEDDED || replaced.isEmpty()
+
+        /** Why the embedded compiler is not available while the project's own modules replace [replaced] libraries. */
+        internal fun unavailable(replaced: List<String>): String =
+            "Not available while this project's own modules replace the bundled libraries ${replaced.joinToString()}: the " +
+                "language server builds and runs only with the bundled XDK, so builds and runs use Gradle. A choice of the " +
+                "embedded compiler is kept, and applies again once no library is replaced."
+
         /** Whether [root] has its own Gradle build. */
         internal fun hasGradleBuild(root: Path?): Boolean = root != null && GRADLE_BUILD_FILES.any { Files.isRegularFile(root.resolve(it)) }
 
