@@ -550,6 +550,18 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a stack trace, scopes or exception that cannot be read fail with the reason, not as an internal error`() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).awaited()
+        runs.events.stopped(StopState("exception", null, 12, listOf(4)))
+        runs.unreadable = "The program's worker has ended."
+
+        assertFailsWith("The program's worker has ended.") { server.stackTrace(StackTraceArguments().apply { threadId = 12 }) }
+        assertFailsWith("The program's worker has ended.") { server.scopes(ScopesArguments().apply { frameId = 1 }) }
+        assertFailsWith("The program's worker has ended.") { server.exceptionInfo(ExceptionInfoArguments().apply { threadId = 12 }) }
+    }
+
+    @Test
     fun `next, stepIn and stepOut step the stopped fiber, and a fiber that does not wait cannot be stepped`() {
         server.configurationDone(null)
         server.launch(mutableMapOf("module" to "App")).awaited()
@@ -1563,6 +1575,9 @@ class XtcDebugServerTest {
         var onReady: () -> Unit = {}
         var attachTarget: AttachTarget? = null
         var attachFailure: Exception? = null
+
+        /** Why the program's state cannot be read, as when its worker has gone: stack traces, scopes and exceptions fail. */
+        var unreadable: String? = null
         var taskTarget: LaunchTarget? = null
         var task: DebugTask? = null
         val inputs = CopyOnWriteArrayList<String>()
@@ -1721,7 +1736,7 @@ class XtcDebugServerTest {
             runId: String,
             threadId: Int,
         ): CompletableFuture<ExceptionInfoState?> =
-            CompletableFuture.completedFuture(
+            unreadable?.let { CompletableFuture.failedFuture(IllegalStateException(it)) } ?: CompletableFuture.completedFuture(
                 ExceptionInfoState("IllegalArgument", "bad 5", "at check() (Throws.x:12)", uncaught = true).takeIf { threadId == 12 },
             )
 
@@ -1775,7 +1790,8 @@ class XtcDebugServerTest {
         override fun stackTrace(
             runId: String,
             threadId: Int,
-        ) = CompletableFuture.completedFuture(frames)
+        ): CompletableFuture<List<FrameState>> =
+            unreadable?.let { CompletableFuture.failedFuture(IllegalStateException(it)) } ?: CompletableFuture.completedFuture(frames)
 
         override fun librarySource(
             module: String,
@@ -1798,7 +1814,9 @@ class XtcDebugServerTest {
         override fun scopes(
             runId: String,
             frameId: Int,
-        ) = CompletableFuture.completedFuture(if (frameId == 1) listOf(ScopeState("Locals", 7)) else emptyList())
+        ): CompletableFuture<List<ScopeState>> =
+            unreadable?.let { CompletableFuture.failedFuture(IllegalStateException(it)) }
+                ?: CompletableFuture.completedFuture(if (frameId == 1) listOf(ScopeState("Locals", 7)) else emptyList())
 
         override fun variables(
             runId: String,
