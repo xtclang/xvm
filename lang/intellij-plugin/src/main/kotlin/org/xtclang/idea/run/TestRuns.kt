@@ -101,7 +101,7 @@ internal class TestCommandLineState(
 /**
  * A test run's result: the test console, attached to [handler], and its Rerun Failed Tests, which the run's toolbar
  * shows beside Rerun only as a restart action that the result gives it, reading the failed tests from the console's
- * tree; none under Debug, nor for Gradle's run of every test module
+ * tree; none under Debug, nor for Gradle's run of every test module without an imported model
  * ([XtcTestConsoleProperties.createRerunFailedTestsAction]).
  */
 internal fun testResult(
@@ -141,10 +141,13 @@ internal class XtcTestConsoleProperties(
     ): OutputToGeneralTestEventsConverter = XtcTestEventsConverter(testFrameworkName, consoleProperties)
 
     // under Debug, the rerun would be LSP4IJ's DAP launch, which takes the configuration itself and no rerun's profile;
-    // Gradle's testXtc runs every test module's tests in one build, whose events do not say which module each test is of
+    // in Gradle mode, a rerun of every test module's failed tests runs each in its module's project, which only an
+    // imported model names
     override fun createRerunFailedTestsAction(consoleView: ConsoleView): AbstractRerunFailedTestsAction? {
         val all = (configuration as? XtcRunConfiguration)?.takeIf { it.allTestModules }
-        return if (executor.id == DefaultDebugExecutor.EXECUTOR_ID || all?.effectiveRunMode() == XtcRunMode.GRADLE) {
+        val unplaced =
+            all?.effectiveRunMode() == XtcRunMode.GRADLE && XtcBuildSettings.getInstance(all.project).gradleProjects.isEmpty()
+        return if (executor.id == DefaultDebugExecutor.EXECUTOR_ID || unplaced) {
             null
         } else {
             XtcRerunFailedTestsAction(consoleView).also { it.init(this) }
@@ -155,7 +158,8 @@ internal class XtcTestConsoleProperties(
 /**
  * The test console's Rerun Failed Tests: runs its configuration again, as it ran, with only the tests that failed,
  * each by the selector that its `xunit://` location names. After Run 'All Ecstasy Tests', whose locations name each
- * test's module too, it runs each module that has failed tests, in turn, with only those ([AllTestModulesState]).
+ * test's module too, it runs each module that has failed tests with only those ([XtcRunConfiguration.rerun]): in Gradle
+ * mode in one build, each in its module's project, and else each module in turn.
  */
 internal class XtcRerunFailedTestsAction(
     console: ComponentContainer,
@@ -166,11 +170,12 @@ internal class XtcRerunFailedTestsAction(
         if (configuration.allTestModules) {
             // a run of every test module's tests names each test's module, and a location without one has none to run in
             val modules = (failed - "").takeIf { it.isNotEmpty() } ?: return null
+            val rerun = configuration.rerun(modules) ?: return null
             return object : MyRunProfile(configuration) {
                 override fun getState(
                     executor: Executor,
                     environment: ExecutionEnvironment,
-                ): RunProfileState = AllTestModulesState(configuration, environment, modules)
+                ): RunProfileState = rerun(environment)
             }
         }
         val own = failed[""] ?: return null

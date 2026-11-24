@@ -60,38 +60,23 @@ class AllTestModulesTest {
     private val started = CopyOnWriteArrayList<String>()
 
     @Test
-    fun `the runs go one after another, each one's output in turn after its header, and the process ends with the last`() {
-        val all =
-            SequentialProcessHandler(CompletableFuture.completedFuture(listOf(run("one\n", 0, "[1] "), run("two\n", 0, "[2] "))))
+    fun `the runs go one after another, each one's output in turn, and the process ends with the last`() {
+        val all = SequentialProcessHandler(CompletableFuture.completedFuture(listOf(run("one\n", 0), run("two\n", 0))))
         val output = listen(all)
         all.startNotify()
 
         assertThat(all.waitFor(BOUND)).isTrue()
         assertThat(started).containsExactly("one\n", "two\n")
-        assertThat(output.joinToString("")).isEqualTo("[1] one\n[2] two\n")
+        assertThat(output.joinToString("")).isEqualTo("one\ntwo\n")
         assertThat(all.exitCode).isEqualTo(0)
     }
 
     @Test
-    fun `each module's tests have locations that name the module, though two modules have a test of the same selector`() {
-        val project = editor.fixture.project
-        val configuration = XtcRunConfiguration(project, XtcRunConfigurationType().configurationFactories.first(), "")
-        XtcAllTestsConfigurationProducer.runAll(configuration)
-        val converter =
-            XtcTestEventsConverter(TEST_FRAMEWORK, XtcTestConsoleProperties(configuration, DefaultRunExecutor.getRunExecutorInstance()))
-        val located = Located(project)
-        Disposer.register(editor.fixture.testRootDisposable, converter)
-        Disposer.register(editor.fixture.testRootDisposable, located)
-        converter.setProcessor(located)
-        // each module's output, as Run All Ecstasy Tests runs it, its module's line ahead of it; the first ends partway
-        // through a line, which the second's module line ends
+    fun `each module's tests, run in turn, have locations that name the module their IDs give, a selector two share too`() {
+        val (converter, located) = converter(allModules = true)
         val all =
             SequentialProcessHandler(
-                CompletableFuture.completedFuture(
-                    listOf("FirstSuite", "SecondSuite").map { module ->
-                        run(events(module, "three") + "printed without a line end", 0, XtcTestEventsConverter.moduleLine(module))
-                    },
-                ),
+                CompletableFuture.completedFuture(listOf("FirstSuite", "SecondSuite").map { run(events(it, "three").joinToString(""), 0) }),
             )
         all.addProcessListener(
             object : ProcessListener {
@@ -113,17 +98,27 @@ class AllTestModulesTest {
     }
 
     @Test
-    fun `a run of one module's tests names no module in its locations`() {
-        val project = editor.fixture.project
-        val configuration = XtcRunConfiguration(project, XtcRunConfigurationType().configurationFactories.first(), "")
-        val converter =
-            XtcTestEventsConverter(TEST_FRAMEWORK, XtcTestConsoleProperties(configuration, DefaultRunExecutor.getRunExecutorInstance()))
-        val located = Located(project)
-        Disposer.register(editor.fixture.testRootDisposable, converter)
-        Disposer.register(editor.fixture.testRootDisposable, located)
-        converter.setProcessor(located)
+    fun `Gradle's one stream of every module's events, interleaved and in pieces, locates each test in the module its ID gives`() {
+        val (converter, located) = converter(allModules = true)
+        // two projects' testXtc in one build: a qualified module's events between a simple one's
+        val first = events("json.xtclang.org", "Parser.reads")
+        val second = events("DeckTest", "three")
+        val output = listOf(second[0], first[0], second[1], first[1], first[2], second[2], second[3], first[3]).joinToString("")
+        output.chunked(37).forEach { converter.process(it, ProcessOutputTypes.STDOUT) }
 
-        converter.process(events("DeckTest", "three"), ProcessOutputTypes.STDOUT)
+        assertThat(located.locations).containsExactly(
+            "xunit://DeckTest/",
+            "xunit://json.xtclang.org/",
+            "xunit://DeckTest/three",
+            "xunit://json.xtclang.org/Parser.reads",
+        )
+    }
+
+    @Test
+    fun `a run of one module's tests names no module in its locations`() {
+        val (converter, located) = converter(allModules = false)
+
+        converter.process(events("DeckTest", "three").joinToString(""), ProcessOutputTypes.STDOUT)
         assertThat(located.locations).containsExactly("xunit://", "xunit://three")
     }
 
@@ -325,52 +320,67 @@ class AllTestModulesTest {
         ): Boolean = true
     }
 
-    /**
-     * A run, after [header], that prints [text] as it starts, and ends with [exitCode] then, or, for none, only when
-     * stopped.
-     */
+    /** A run that prints [text] as it starts, and ends with [exitCode] then, or, for none, only when stopped. */
     private fun run(
         text: String,
         exitCode: Int?,
-        header: String = "",
-    ) = SequentialProcessHandler.Run(header) {
-        object : ProcessHandler() {
-            init {
-                addProcessListener(
-                    object : ProcessListener {
-                        override fun startNotified(event: ProcessEvent) {
-                            started += text
-                            notifyTextAvailable(text, ProcessOutputTypes.STDOUT)
-                            exitCode?.let(::notifyProcessTerminated)
-                        }
-                    },
-                )
+    ): () -> ProcessHandler =
+        {
+            object : ProcessHandler() {
+                init {
+                    addProcessListener(
+                        object : ProcessListener {
+                            override fun startNotified(event: ProcessEvent) {
+                                started += text
+                                notifyTextAvailable(text, ProcessOutputTypes.STDOUT)
+                                exitCode?.let(::notifyProcessTerminated)
+                            }
+                        },
+                    )
+                }
+
+                override fun destroyProcessImpl() = notifyProcessTerminated(143)
+
+                override fun detachProcessImpl() = notifyProcessDetached()
+
+                override fun detachIsDefault() = false
+
+                override fun getProcessInput(): OutputStream? = null
             }
-
-            override fun destroyProcessImpl() = notifyProcessTerminated(143)
-
-            override fun detachProcessImpl() = notifyProcessDetached()
-
-            override fun detachIsDefault() = false
-
-            override fun getProcessInput(): OutputStream? = null
         }
+
+    /** The test console's converter of a run of every test module's tests, or of one module's, and the tree it builds. */
+    private fun converter(allModules: Boolean): Pair<XtcTestEventsConverter, Located> {
+        val project = editor.fixture.project
+        val configuration = XtcRunConfiguration(project, XtcRunConfigurationType().configurationFactories.first(), "")
+        if (allModules) XtcAllTestsConfigurationProducer.runAll(configuration)
+        val converter =
+            XtcTestEventsConverter(TEST_FRAMEWORK, XtcTestConsoleProperties(configuration, DefaultRunExecutor.getRunExecutorInstance()))
+        val located = Located(project)
+        Disposer.register(editor.fixture.testRootDisposable, converter)
+        Disposer.register(editor.fixture.testRootDisposable, located)
+        converter.setProcessor(located)
+        return converter to located
     }
 
     /**
-     * xunit's events of a run of [module]'s tests, each its line of the output: the module's container starts, then its
-     * test [test], which passes, and both finish.
+     * xunit's events of a run of [module]'s tests, each its line of the output, with IDs as xunit gives them, its models'
+     * `UniqueId.path`: the module's container starts, then its test [test], which passes, and both finish.
      */
     private fun events(
         module: String,
         test: String,
-    ): String =
-        listOf(
+    ): List<String> {
+        // a test of a class has its class's path ahead of its signature, as Mathy:Inner.void works()
+        val owner = test.substringBeforeLast('.', "")
+        val id = "$module:${if (owner.isEmpty()) "" else "$owner."}void ${test.substringAfterLast('.')}()"
+        return listOf(
             TestEvent(TestEvent.STARTED, id = "$module:", name = module, selector = "", container = true),
-            TestEvent(TestEvent.STARTED, id = "$module:void $test()", parent = "$module:", name = test, selector = test, container = false),
-            TestEvent(TestEvent.FINISHED, id = "$module:void $test()", status = "passed", durationMillis = 1),
+            TestEvent(TestEvent.STARTED, id = id, parent = "$module:", name = test, selector = test, container = false),
+            TestEvent(TestEvent.FINISHED, id = id, status = "passed", durationMillis = 1),
             TestEvent(TestEvent.FINISHED, id = "$module:", status = "passed", durationMillis = 1),
-        ).joinToString("") { it.line() }
+        ).map { it.line() }
+    }
 
     /** The test console's tree as the converter builds it: the location of each container and test that starts, in turn. */
     private class Located(

@@ -34,8 +34,7 @@ import kotlin.io.path.Path
  * Runs every test module's tests, each module in turn, into one test console, as Run All Ecstasy Tests does: embedded,
  * each module's run in the language server, or with `xtc test`, each module's command; Gradle's `testXtc` runs them all
  * itself. The modules are those the language server lists tests of (`xtc/tests`), by name. With [tests], as Rerun
- * Failed Tests gives them, it runs only those, each module's in turn. Each module's output follows a line that names the
- * module ([XtcTestEventsConverter.moduleLine]), so that the location of each of its tests names it too.
+ * Failed Tests gives them, it runs only those, each module's in turn.
  */
 internal class AllTestModulesState(
     private val configuration: XtcRunConfiguration,
@@ -51,11 +50,7 @@ internal class AllTestModulesState(
         val mode = configuration.effectiveRunMode()
         val runs =
             XtcTestCatalog.refresh(project).thenApply { listed ->
-                selection(listed, tests).map { (module, selected) ->
-                    SequentialProcessHandler.Run(XtcTestEventsConverter.moduleLine(module.module)) {
-                        run(project, mode, module, selected)
-                    }
-                }
+                selection(listed, tests).map { (module, selected) -> { run(project, mode, module, selected) } }
             }
         val handler = SequentialProcessHandler(runs)
         ProcessTerminatedListener.attach(handler)
@@ -102,11 +97,11 @@ internal class AllTestModulesState(
 
 /**
  * A process made of [runs], run one after another once it starts: each run's output is its own, xunit's events among
- * it, after its [Run.header], and it ends when the last run ends, with 1 if a run failed, else 0. Stop stops the run
- * that runs and starts no other; the runs come once they are known, as the test modules come from the language server.
+ * it, and it ends when the last run ends, with 1 if a run failed, else 0. Stop stops the run that runs and starts no
+ * other; the runs come once they are known, as the test modules come from the language server.
  */
 internal class SequentialProcessHandler(
-    private val runs: CompletableFuture<List<Run>>,
+    private val runs: CompletableFuture<List<() -> ProcessHandler>>,
 ) : ProcessHandler() {
     private val stopped = AtomicBoolean()
     private val failed = AtomicBoolean()
@@ -139,15 +134,14 @@ internal class SequentialProcessHandler(
     }
 
     private fun next(
-        list: List<Run>,
+        list: List<() -> ProcessHandler>,
         index: Int,
     ) {
         if (stopped.get() || index == list.size) {
             end(if (failed.get()) 1 else 0)
             return
         }
-        val planned = list[index]
-        val run = planned.start()
+        val run = list[index]()
         run.addProcessListener(
             object : ProcessListener {
                 override fun onTextAvailable(
@@ -169,7 +163,6 @@ internal class SequentialProcessHandler(
             end(if (failed.get()) 1 else 0)
             return
         }
-        notifyTextAvailable(planned.header, ProcessOutputTypes.STDOUT)
         run.startNotify()
     }
 
@@ -199,12 +192,6 @@ internal class SequentialProcessHandler(
     override fun detachIsDefault(): Boolean = false
 
     override fun getProcessInput(): OutputStream? = null
-
-    /** One of the runs: [header], the output that goes ahead of the run's own, and [start], which makes its process. */
-    class Run(
-        val header: String,
-        val start: () -> ProcessHandler,
-    )
 }
 
 /**
