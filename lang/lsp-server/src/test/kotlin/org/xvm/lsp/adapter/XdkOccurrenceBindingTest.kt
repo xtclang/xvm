@@ -184,6 +184,35 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a primary constructor's parameter passed in the extends clause is an occurrence of the property it declares`() {
+        val source =
+            """
+            module Header {
+                class Base {
+                    construct(Int value, Int limit) {}
+                }
+                class Derived(Int /*declared*/seed, Int limit) extends Base(/*passed*/seed + 1, limit) {
+                    Int twice() = /*used*/seed * 2;
+                }
+            }
+            """.trimIndent()
+        withSource("Header", source) { adapter, uri ->
+            val seed = listOf(range(source, "declared", "seed"), range(source, "passed", "seed"), range(source, "used", "seed"))
+            val passed = position(source, "passed")
+            assertThat(adapter.findReferences(uri, passed.line, passed.column, true).map(::range)).containsExactlyElementsOf(seed)
+            assertThat(
+                adapter.getDocumentHighlights(uri, passed.line, passed.column).map { it.range },
+            ).containsExactlyInAnyOrderElementsOf(seed)
+            assertThat(adapter.findDefinition(uri, passed.line, passed.column)?.let(::range)).isEqualTo(range(source, "declared", "seed"))
+            for (from in listOf("passed", "declared")) {
+                val at = position(source, from)
+                val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "start")) { "No rename of seed from $from" }
+                assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("seed", "start"))
+            }
+        }
+    }
+
     private fun snapshot(
         name: String,
         text: String,
