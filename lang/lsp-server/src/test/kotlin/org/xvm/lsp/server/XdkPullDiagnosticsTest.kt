@@ -340,6 +340,47 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `an open document whose analysis fails pulls that error, and fails no other document's pull`() {
+        CompilerTestSupport.configure()
+        val support = EmbeddingSupport.instance()
+        // the compile of one module throws, as one did that read the files of a folder as it went
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    check(sources.sourceFile.name != "Failing.x") { "the compile failed" }
+                    support.compileModule(sources, repository, errors)
+                },
+                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+            )
+        val failing = directory.resolve("Failing.x").toFile().apply { writeText(FAILING) }
+        val failingUri = failing.canonicalFile.toURI().toString()
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        val uri = file.canonicalFile.toURI().toString()
+        Session(adapter = adapter).use { session ->
+            session.open(failingUri, FAILING, 1)
+            session.open(uri, BROKEN, 1)
+
+            assertThat(
+                session
+                    .pull(uri)
+                    .left.items
+                    .map { it.message.left },
+            ).anyMatch { "missing" in it }
+            assertThat(
+                session
+                    .pull(failingUri)
+                    .left.items
+                    .map { it.code.left },
+            ).containsExactly("ANALYSIS-FAILED")
+            val workspace = session.workspace().items.mapNotNull { it.left }
+            assertThat(workspace.filter { it.uri == failingUri }.flatMap { it.items }.map { it.code.left })
+                .containsExactly("ANALYSIS-FAILED")
+            assertThat(workspace.filter { it.uri == uri }.flatMap { it.items }).isNotEmpty()
+        }
+    }
+
+    @Test
     fun `workspace pull diagnoses unopened roots and does not install editor buffers`() {
         val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
         Session().use { session ->
@@ -877,5 +918,6 @@ class XdkPullDiagnosticsTest {
         const val VALID = "module Pull { Int run() = 1; }"
         const val BROKEN = "module Pull { Int run() = missing; }"
         const val ARRAY = "ecstasy/collections/Array.x"
+        const val FAILING = "module Failing { Int run() = 1; }"
     }
 }
