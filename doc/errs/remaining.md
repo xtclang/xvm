@@ -206,6 +206,18 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   it compiles against may be unchanged: a rename of a method of `json` compiles json and every
   module that depends on it, directly or not, 12 modules. Fix: read the API linked to the
   dependencies the artifact was compiled with.
+- [ ] Queued 2026-11-24, after the API fingerprint above: compile after a rename's edit only the modules that
+  spell its old or its new name, the edited ones among them, and keep every other module's compile, even one
+  that depends on the edited module. A rename can change a binding only where its name is written, the rule
+  `XdkRename.spells` already applies to unbound occurrences: an override in another module spells the old
+  name and is renamed with it, and code that already calls the new name, which could now bind to the renamed
+  method, spells the new one. To prove first, each with a test that the scope includes or refuses: a type
+  alias, a method reference through a property, generic inference and imports, any binding that could change
+  without either name in its module. A rename in `json` then compiles json and the few modules that use the
+  method; one in `ecstasy`, the modules that mention the name instead of all 21. One to two days.
+- [ ] Queued 2026-11-24, after that: track the members each module uses from its dependencies, and recompile a
+  dependent only when a member it uses changes, not on any change of its dependency's public API. Helps
+  every edit and code action, not only renames; a dependency tracker in the server, three to five days.
 - [x] A rename that the client cancelled ran its proof to the end: `textDocument/rename` maps a
   refusal with `exceptionallyCompose` (`856d5ef01b`), whose new future the cancellation cancelled
   without reaching the adapter's, so the proof, half a minute over the XVM repository's libraries,
