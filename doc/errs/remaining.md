@@ -2060,7 +2060,7 @@ change shows in them. In the order worth doing:
 |----|------------|----------|----------|
 | K2a | IntelliJ's Run 'All Ecstasy Tests' has no Rerun Failed Tests | 1 day | Done 2026-11-24, embedded and with `xtc test`; Gradle mode's one `testXtc` still has none |
 | K2c | ... and in Gradle mode none yet | 0.5–1 day | Yes, next: the XVM repository runs its tests in Gradle mode |
-| K5a | Evaluations stop after 2 s, lazy values after 1 s | 0.5–1 day | Yes: a setting, small |
+| K5a | Evaluations stop after 2 s, lazy values after 1 s, by default | done | Done: a launch and attach attribute each, and options of both IntelliJ configurations |
 | K6b | Rename and safe delete miss consumers the server does not know of | 0.5–1 day | Yes, as a prompt; automatic discovery is not |
 | K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Yes, after the release: arguments and JVM options, not the XDK version |
 | K1 | VS Code has no `xtc` command-line build mode | 1.5–2 days | When a VS Code user asks |
@@ -2100,11 +2100,22 @@ change shows in them. In the order worth doing:
   one after another in one session, keeping its breakpoints (2–3 days), or xunit runs every test module
   in one program, which needs a look at whether xunit and the runtime can load several test modules into
   one container first. Debugging one module's tests works today, from the gutter or its configuration.
-- [ ] K5a: evaluation limits as settings. `XtcDebugServer.CONSOLE_LIMIT` (2 s, decided 2026-10-23) bounds
-  code run from the Debug Console and Evaluate Expression, and `SessionDebugger.ON_DEMAND` (1 s) a lazy
-  value. `XtcDebugServer.Limits` already carries the console limit: a launch attribute for each, and a
-  setting in both editors, 0.5–1 day. In IntelliJ, which cannot cancel (K5b), a longer limit holds the
-  dialog that long, so its setting should say so, or stay capped.
+- [x] K5a: evaluation limits as settings (2026-11-24). `XtcDebugServer.CONSOLE_LIMIT` (2 s, decided 2026-10-23)
+  bounds code run from the Debug Console and Evaluate Expression, and `SessionDebugger.ON_DEMAND` (1 s) a lazy
+  value; both stay the defaults. A launch or an attach now sets either, in milliseconds: `evaluationTimeLimit`,
+  100 to 60000, which `XtcDebugServer.Limits.console` carries, and `lazyValueTimeLimit`, 100 to 30000, which goes
+  to the program's debugger with its setup (`DebugProtocol.Setup.onDemand`, protocol version 26), so embedded,
+  Gradle, command-line and attached runs all take it; one out of range or not a number refuses the launch.
+  Nothing cancels a lazy value's read, hence its lower maximum. A lazy value's read that fails, at its limit or
+  by what its code throws, now answers with the reason; it answered lsp4j's "Internal error." before, as
+  `variables` passed the failure on unmapped. VS Code declares both for launch and attach in
+  `package.json`; IntelliJ's Ecstasy Application and Ecstasy Attach configurations have **Evaluation time limit
+  (ms)** and **Lazy value time limit (ms)**, 100 to 30000, sent only when changed, whose text says that
+  Evaluate Expression waits out the limit, as IntelliJ cannot cancel (K5b). VS Code has no user setting for
+  them, as the extension keeps no debug defaults among its settings: a launch without a `launch.json` has the
+  defaults. Proven with code that never ends: `EmbeddedExecutionTest` (a launch's limits end a console line's
+  `spin()` and a lazy getter's loop, under the livelock guard's session and worker limits) and
+  `XtcDebugAgentTest` (an attached program's debugger takes the setup's lazy limit).
 - [ ] K5b: IntelliJ cannot cancel an evaluation: UP41 in section 4. Our debug server answers DAP `cancel`
   (`supportsCancelRequest`, X314 in VS Code); IntelliJ's evaluator has no obsolescence
   ([IJPL-260358](https://youtrack.jetbrains.com/issue/IJPL-260358)), LSP4J cannot send DAP `cancel`

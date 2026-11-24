@@ -12,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
+import org.xvm.debug.ChildFilter
 import org.xvm.debug.DebugSetup
 import org.xvm.debug.DebugTask
 import org.xvm.debug.ProgramEvents
@@ -41,14 +42,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.LinkedBlockingQueue
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Programs that the launcher runs with `--debug`, in a JVM of their own from the test classpath, where the launcher
  * finds javatools' `DebugAgent` through its service file, as it does in an XDK: a debugger attaches over the
  * socket before the program's first line, stops it at a breakpoint, or at its first line, and sees it exit; a detach
- * lets it run on without the breakpoints; a wrong token is refused; the agent connects to a debugger that waits for the
- * program; and with no debugger attached, `assert:debug` does not hold the program. A language server's debug session
+ * lets it run on without the breakpoints; the debugger's setup sets how long a lazy variable's code may run; a wrong
+ * token is refused; the agent connects to a debugger that waits for the program; and with no debugger attached,
+ * `assert:debug` does not hold the program. A language server's debug session
  * attaches so too, and its disconnect detaches. A Gradle launch has its client run the program as the task would, with
  * the task's `--debug`: the program connects, stops at a breakpoint and exits; stopping the launch ends the task, and
  * the program with it; and a task that ends before its program connects fails the launch. The runner compiles each
@@ -463,6 +467,35 @@ class XtcDebugAgentTest {
     }
 
     @Test
+    fun `the debugger's setup sets how long a lazy variable's code may run, and code that never ends stops then`() {
+        launch(SPINNING, "listen:127.0.0.1:0,suspend").use { program ->
+            val events = Events()
+            val attached = AttachedProgram.attach("127.0.0.1", program.port(), null, events, ATTACH_LIMIT)
+            attached.debug(program.sourceDirs, program.breakpointAt(SPINNING_LINE).copy(onDemand = 300.milliseconds)).awaited()
+            assertThat(events.next()).isEqualTo("breakpoints ${program.source} [true]")
+            assertThat(events.next()).isEqualTo("stopped breakpoint [1]")
+
+            fun variables(reference: Int) =
+                attached.variables(AttachedProgram.RUN, reference, false, ChildFilter.ALL, 0, 0).awaited().associateBy { it.name }
+            val thread = attached.threads(AttachedProgram.RUN).awaited().first()
+            val frame = attached.stackTrace(AttachedProgram.RUN, thread.id).awaited().first()
+            val locals = attached.scopes(AttachedProgram.RUN, frame.id).awaited().single()
+            val spinner = variables(locals.variablesReference).getValue("spinner")
+            val spins = variables(spinner.variablesReference).getValue("spins")
+            assertThat(spins.lazy).isTrue()
+            assertThatThrownBy { variables(spins.variablesReference) }
+                .isInstanceOf(ExecutionException::class.java)
+                .cause()
+                .hasMessage("spins did not finish within 300 ms, so it was ended.")
+
+            attached.setBreakpoints(AttachedProgram.RUN, SourceBreakpoints(program.source, emptyList())).awaited()
+            attached.resume(AttachedProgram.RUN)
+            assertThat(events.next()).isEqualTo("exited 0")
+            assertThat(program.exit()).isEqualTo(0)
+        }
+    }
+
+    @Test
     fun `a debugger without the program's token is refused, and the program waits for one with it`() {
         launch(LOOPED, "listen:127.0.0.1:0,suspend,token=secret").use { program ->
             val port = program.port()
@@ -717,6 +750,28 @@ class XtcDebugAgentTest {
             """
 
         const val COUNT_LINE = 7
+
+        /** A module whose run() stops on line 14 with a Spinner, whose spins never ends. */
+        const val SPINNING = """
+            module Spinning {
+                class Spinner {
+                    Int spins.get() {
+                        Int count = 0;
+                        while (True) {
+                            ++count;
+                        }
+                    }
+                }
+
+                void run() {
+                    Spinner spinner = new Spinner();
+                    @Inject Console console;
+                    console.print("spinner");
+                }
+            }
+            """
+
+        const val SPINNING_LINE = 14
 
         const val BREAKS = """
             module Breaks {

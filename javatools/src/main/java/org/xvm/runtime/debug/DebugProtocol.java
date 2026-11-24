@@ -32,7 +32,7 @@ public final class DebugProtocol {
      * The worker protocol's version, which a worker and an agent report in {@link Ready}; raised whenever a command
      * or event, of a run or of its debugger, changes.
      */
-    public static final int VERSION = 25;
+    public static final int VERSION = 26;
 
     private static final Gson GSON = new Gson();
 
@@ -60,11 +60,13 @@ public final class DebugProtocol {
 
     /**
      * What a run under the debugger starts with: the breakpoints of its files, its exception stops, whether it stops
-     * at its first line, its function breakpoints, and the directory of each module's sources that the host knows, by
-     * module name, in place of the directory the module records (see {@link SessionDebugger#setSourceDirs}).
+     * at its first line, its function breakpoints, the directory of each module's sources that the host knows, by
+     * module name, in place of the directory the module records (see {@link SessionDebugger#setSourceDirs}), and how
+     * many milliseconds the code that computes a lazy variable's value may run, in place of the debugger's own limit
+     * (see {@link SessionDebugger#setOnDemandLimit}), or null to keep it.
      */
     public record Setup(List<Source> breakpoints, ExceptionStops exceptions, boolean stopOnEntry,
-                        List<SessionDebugger.Method> functions, Map<String, String> sourceDirs) {
+                        List<SessionDebugger.Method> functions, Map<String, String> sourceDirs, Long onDemand) {
     }
 
     // ----- the commands --------------------------------------------------------------------------

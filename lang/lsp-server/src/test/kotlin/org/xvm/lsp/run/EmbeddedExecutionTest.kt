@@ -1639,6 +1639,88 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `a launch's time limits end a console line's code and a lazy variable's code that never end, in place of the session's`() {
+        CompilerTestSupport.configure()
+        val module = source("Spinners.x", SPINNERS.trimIndent())
+        val path = directory.resolve("Spinners.x").toString()
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Spinners", module)))
+            // the session's and the worker's own limits are the livelock guard's, so only the launch's end the code
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client }, LIVELOCK_DEBUG_LIMITS)
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            sessions.request(
+                id,
+                2,
+                "launch",
+                """{"module": "Spinners", "moduleUri": "$module", "evaluationTimeLimit": 2500, "lazyValueTimeLimit": 1500}""",
+            )
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
+            sessions.request(id, 4, "configurationDone")
+            val thread =
+                client
+                    .until(id) { it.event == "stopped" }
+                    .last()["body"]
+                    .asJsonObject["threadId"]
+                    .asInt
+            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
+            val frameId =
+                client
+                    .until(id) { it.response == "stackTrace" }
+                    .last()["body"]
+                    .asJsonObject["stackFrames"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject["id"]
+                    .asInt
+
+            sessions.request(id, 6, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
+            val ended = client.until(id) { it.response == "evaluate" }.last()
+            assertThat(ended["success"].asBoolean).isFalse()
+            assertThat(ended["message"].asString).isEqualTo("spin() did not finish within 2500 ms, so it was ended.")
+
+            fun variables(
+                seq: Int,
+                reference: Int,
+            ): JsonObject {
+                sessions.request(id, seq, "variables", """{"variablesReference": $reference}""")
+                return client.until(id) { it.response == "variables" }.last()
+            }
+
+            fun named(answer: JsonObject) =
+                answer["body"]
+                    .asJsonObject["variables"]
+                    .asJsonArray
+                    .map { it.asJsonObject }
+                    .associateBy { it["name"].asString }
+            sessions.request(id, 7, "scopes", """{"frameId": $frameId}""")
+            val locals =
+                client
+                    .until(id) { it.response == "scopes" }
+                    .last()["body"]
+                    .asJsonObject["scopes"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject["variablesReference"]
+                    .asInt
+            val spinner = named(variables(8, locals)).getValue("spinner")
+            val spins = named(variables(9, spinner["variablesReference"].asInt)).getValue("spins")
+            assertThat(spins["presentationHint"].asJsonObject["lazy"].asBoolean).isTrue()
+            val read = variables(10, spins["variablesReference"].asInt)
+            assertThat(read["success"].asBoolean).isFalse()
+            assertThat(read["message"].asString).isEqualTo("spins did not finish within 1500 ms, so it was ended.")
+
+            // the program goes on from its stop
+            sessions.request(id, 11, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(3)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a launch with evaluationRunsProgram lets a console line's code wait on work that another fiber does`() {
         CompilerTestSupport.configure()
         val module = source("Program.x", PROGRAM.trimIndent())
@@ -2921,6 +3003,35 @@ class EmbeddedExecutionTest {
                     while (True) {
                         ++count;
                     }
+                }
+            }
+            """
+
+        /** Stops at line 21, where the console runs spin() and the Variables view reads spinner's spins: both never end. */
+        const val SPINNERS =
+            """
+            module Spinners {
+                class Spinner {
+                    Int spins.get() {
+                        Int count = 0;
+                        while (True) {
+                            ++count;
+                        }
+                    }
+                }
+
+                void spin() {
+                    Int count = 0;
+                    while (True) {
+                        ++count;
+                    }
+                }
+
+                Int run() {
+                    Spinner spinner = new Spinner();
+                    @Inject Console console;
+                    console.print("spinner");
+                    return 3;
                 }
             }
             """
