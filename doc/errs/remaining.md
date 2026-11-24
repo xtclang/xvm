@@ -238,7 +238,18 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   the `_` placeholder, which binds nothing and should be no occurrence (75); the names of a method's
   multiple return values (the largest group: hover and their rename); `this` and `super` in a lazy
   property's `calc()` and in a method reference (27); and the unproven identities (about 200, such as
-  `DataType` itself), only if a wanted rename is refused for one.
+  `DataType` itself), only if a wanted rename is refused for one. The 358 are those of `ecstasy` (293)
+  and `json` (65), the two libraries `XdkRepositoryWorkspaceTest` copies; over both, as counted
+  2026-11-24 by a temporary census test (each library compiled from the repository's sources, its
+  rename facts' occurrences without a symbol sorted by the construct that wrote them; all 21 libraries
+  in parentheses): a local or parameter used for its formal type 84 (124), `_` 75 (145), a return
+  value's name 168 (389), `this` and `super` 27 (53), others 4 (14); and 190 bindings through unproven
+  identities (261), 134 of them in `ecstasy`. Closed on `lagergren/semantic-gaps`, one commit each:
+  - A local or parameter used for its formal type binds to its declaration: the compiler validates the
+    names of such a dynamic type as a chain of name expressions, which is not a child of the type's
+    node (`NamedTypeExpression.getDynamicExpression`). 84 (124) unbound before, 0 after. Find
+    References, highlighting, hover and the rename of the local or parameter cover it
+    (`XdkOccurrenceBindingTest`).
 - [x] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
   (`XdkLibrarySources`) still read the bundle, and may offer its older names. Done 2026-11-23/24
   (decided: index the workspace's): a source artifact of a library's name records its importable
