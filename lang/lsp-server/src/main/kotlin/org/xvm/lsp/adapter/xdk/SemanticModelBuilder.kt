@@ -328,6 +328,7 @@ private class SemanticModelBuilder(
 
     // The this of each property accessor, by the method that names it and the class whose instance it is ([outerThis]).
     private val outerReceivers = linkedMapOf<Pair<IdentityConstant?, IdentityConstant>, SymbolId>()
+    private val outerReserved = linkedMapOf<Triple<IdentityConstant?, IdentityConstant, String>, SymbolId>()
 
     fun declarationFacts(
         analysis: EmbeddingSupport.DeclarationAnalysis,
@@ -746,8 +747,8 @@ private class SemanticModelBuilder(
                             null
                         }
                     val target = callees[node] ?: node.resolvedTarget ?: delegate
-                    if (target is TargetInfo && node.name == "this") {
-                        val symbol = outerThis(node, target)
+                    if (target is TargetInfo && (node.name == "this" || node.name.startsWith("this:"))) {
+                        val symbol = if (node.name == "this") outerThis(node, target) else outerReserved(node, target)
                         if (at !in occurrences) {
                             val type = type(expressionType) ?: symbols[symbol]?.type
                             occurrences[at] = Occurrence(at.range, node.name, Role.REFERENCE, symbol, type, SemanticModel.Usage.READ)
@@ -1563,19 +1564,35 @@ private class SemanticModelBuilder(
     private fun outerThis(
         node: AstNode,
         receiver: TargetInfo,
-    ): SymbolId {
-        val method =
-            generateSequence(node.parent) { it.parent }
-                .filterIsInstance<MethodDeclarationStatement>()
-                .firstOrNull()
-                ?.let(::identity)
-        return outerReceivers.getOrPut(method to receiver.id) {
+    ): SymbolId =
+        outerReceivers.getOrPut(enclosingMethod(node) to receiver.id) {
             SymbolId(id, symbols.size).also {
                 symbols[it] =
                     Symbol(it, "this", SymbolKind.VARIABLE, null, type(receiver.type), null, null, setOf(SemanticModel.Modifier.READONLY))
             }
         }
-    }
+
+    /**
+     * The symbol of a reserved name other than `this`, such as `this:class`, in a property's accessor, which the compiler
+     * reaches through the instance that holds the property ([TargetInfo]), as it does `this` ([outerThis]). In a method of
+     * the class it is a register; here, too, each method has its own, which no proof binds, as it binds no such register.
+     */
+    private fun outerReserved(
+        node: NameExpression,
+        target: TargetInfo,
+    ): SymbolId =
+        outerReserved.getOrPut(Triple(enclosingMethod(node), target.id, node.name)) {
+            SymbolId(id, symbols.size).also {
+                symbols[it] =
+                    Symbol(it, node.name, SymbolKind.VARIABLE, null, type(target.type), null, null, setOf(SemanticModel.Modifier.READONLY))
+            }
+        }
+
+    private fun enclosingMethod(node: AstNode): IdentityConstant? =
+        generateSequence(node.parent) { it.parent }
+            .filterIsInstance<MethodDeclarationStatement>()
+            .firstOrNull()
+            ?.let(::identity)
 
     private fun declare(
         token: Token?,
