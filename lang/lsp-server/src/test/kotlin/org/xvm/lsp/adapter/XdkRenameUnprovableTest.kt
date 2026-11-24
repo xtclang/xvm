@@ -7,8 +7,9 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
 /**
- * A rename's proof where the semantic model cannot bind every occurrence, such as the names of a function type's return
- * values: the rename is proven, unless such an occurrence spells the name it changes.
+ * A rename's proof where the semantic model cannot bind every occurrence, such as a name in the extends clause of a class
+ * whose explicit constructor calls the super constructor itself, which the compiler never compiles: the rename is proven,
+ * unless such an occurrence spells the name it changes.
  */
 class XdkRenameUnprovableTest {
     @TempDir lateinit var directory: Path
@@ -61,6 +62,9 @@ class XdkRenameUnprovableTest {
 
     private companion object {
         // the names of Pairing's return values are occurrences that the model leaves without a symbol
-        const val PAIRS = "module Pairs { typedef function (Int count, String label) () as Pairing; Int size() = 2; Int use() = size(); }"
+        const val PAIRS =
+            "module Pairs { class Base { construct(Int n) {} } " +
+                "class Store extends Base(label) { construct(Int n) { construct Base(n); } } " +
+                "Int size() = 2; Int use() = size(); }"
     }
 }
