@@ -206,13 +206,20 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   it compiles against may be unchanged: a rename of a method of `json` compiles json and every
   module that depends on it, directly or not, 12 modules. Fix: read the API linked to the
   dependencies the artifact was compiled with.
-- [ ] A rename that the client cancels runs its proof to the end: `textDocument/rename` maps a
-  refusal with `exceptionallyCompose` (`856d5ef01b`), whose new future the cancellation cancels
+- [x] A rename that the client cancelled ran its proof to the end: `textDocument/rename` maps a
+  refusal with `exceptionallyCompose` (`856d5ef01b`), whose new future the cancellation cancelled
   without reaching the adapter's, so the proof, half a minute over the XVM repository's libraries,
-  keeps the compiler worker, and a rename asked again waits for it. `XdkCursorServerTest`'s two
-  RENAME cases, which only `-PlspTests=all` runs, fail on it (found 2026-11-24 on
-  `lagergren/rename-speed`, and on its base `f51064654e`). Fix: cancel the adapter's future with the
-  one the server returns.
+  kept the compiler worker, and a rename asked again waited for it. `XdkCursorServerTest`'s two
+  RENAME cases, which only `-PlspTests=all` runs, failed on it (found 2026-11-24 on
+  `lagergren/rename-speed`, and on its base `f51064654e`). Done 2026-11-24
+  (`lagergren/rename-cancel`): the refusal is mapped by `mapFailureCancellable`, which asks the
+  adapter's future of every cancellation of the one it returns, and a cancelled rename's proof stops
+  after the compile it is in (`XdkRenameServerTest`: `compiles=1`, `outcome=cancelled`, where it
+  went on to 4). Two requests had the same gap: `xtc/rename` without the compiler's adapter answered
+  with `thenApply` over `textDocument/rename`, and `xtc/build` with `thenApply` over the build, so
+  VS Code's build terminal, which cancels the request as it closes, did not stop the build; both map
+  with `mapCancellable` now (`XdkCursorServerTest`, `XdkProjectServerTest`). `xtc/run` stops a
+  building run with `xtc/stopRun`, not the request's cancellation, and is unchanged.
 - [ ] The semantic model leaves some occurrences unbound that the rename's proof now tolerates, which
   navigation still misses, in order of value: a local used for its formal type (`t1.DataType`, about
   50 in `ecstasy`: Find References and highlighting miss them, and a rename of such a local is refused);
