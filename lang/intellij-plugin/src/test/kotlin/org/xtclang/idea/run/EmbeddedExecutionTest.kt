@@ -55,6 +55,11 @@ class EmbeddedExecutionTest {
         XtcBuildMode.entries.forEach {
             assertThat(XtcBuildSettings.resolve(it, root, replaced)).describedAs(it.name).isEqualTo(XtcBuildMode.GRADLE)
         }
+        // the page and the popup show the embedded compiler unavailable, saying why, and keep a choice of it
+        assertThat(XtcBuildMode.entries.filter { XtcBuildSettings.available(it, replaced) })
+            .containsExactly(XtcBuildMode.AUTOMATIC, XtcBuildMode.GRADLE)
+        assertThat(XtcBuildMode.entries.filter { XtcBuildSettings.available(it, emptyList()) }).isEqualTo(XtcBuildMode.entries)
+        assertThat(XtcBuildSettings.unavailable(replaced)).contains("json.xtclang.org", "Gradle", "is kept")
     }
 
     @Test
