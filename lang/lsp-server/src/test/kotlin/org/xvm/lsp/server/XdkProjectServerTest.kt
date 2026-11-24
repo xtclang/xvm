@@ -35,7 +35,9 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.lsp.awaitAsserted
+import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
+import org.xvm.lsp.logged
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -532,6 +534,56 @@ class XdkProjectServerTest {
                     .contains("externalValue")
             } finally {
                 release.countDown()
+            }
+        }
+    }
+
+    @Test
+    fun `a build that the client cancels stops at the adapter`() {
+        CompilerTestSupport.configure()
+        val library = file("Library", LIBRARY)
+        val consumer = file("Consumer", CONSUMER)
+        val hold = AtomicBoolean()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val support = EmbeddingSupport.instance()
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    if (hold.compareAndSet(true, false)) {
+                        entered.countDown()
+                        check(release.awaited())
+                    }
+                    support.compileModule(sources, repository, errors)
+                },
+                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+            )
+        val lines = CopyOnWriteArrayList<String>()
+        logged(lines) {
+            XtcLanguageServer(adapter).use { server ->
+                try {
+                    server.connect(mock(LanguageClient::class.java))
+                    server.initialize(editorInitializeParams()).awaited()
+                    server.replaceCompilerSourceModules(
+                        listOf(
+                            XdkSourceModule("Library", library.toURI().toString()),
+                            XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                        ),
+                    )
+                    hold.set(true)
+                    val built = server.build(BuildParams("Consumer", rebuild = true))
+                    // the build's compile of Library, the first of the two
+                    assertThat(entered.awaited()).isTrue()
+                    // as the client's cancellation does, as when VS Code's build terminal closes
+                    assertThat(built.cancel(false)).isTrue()
+                    release.countDown()
+                    awaitUntil { lines.any { it.startsWith("embedded build:") } }
+                    // it stops after the compile it was in, where it would go on to compile Consumer
+                    assertThat(lines.single { it.startsWith("embedded build:") }).contains("outcome=cancelled")
+                } finally {
+                    release.countDown()
+                }
             }
         }
     }

@@ -115,6 +115,7 @@ import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.InlineCompletionContext
 import org.xvm.lsp.adapter.RenameRefused
 import org.xvm.lsp.adapter.mapCancellable
+import org.xvm.lsp.adapter.mapFailureCancellable
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRenameProposal
 import org.xvm.lsp.adapter.xdk.XdkSources
@@ -1475,16 +1476,15 @@ class XtcTextDocumentService(
                         params.position.line,
                         params.position.character,
                         params.newName,
-                    ).exceptionallyCompose { failure ->
-                        // a refusal the client shows, instead of an edit-less answer after prepareRename accepted it
+                    ).mapFailureCancellable { failure ->
+                        // a refusal the client shows, instead of an edit-less answer after prepareRename accepted it; a
+                        // client's cancellation still reaches the adapter's future, and stops the proof's compiles
                         val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.last()
-                        CompletableFuture.failedFuture(
-                            if (cause is RenameRefused) {
-                                ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, cause.message, null))
-                            } else {
-                                failure
-                            },
-                        )
+                        if (cause is RenameRefused) {
+                            ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, cause.message, null))
+                        } else {
+                            failure
+                        }
                     }
             },
             workspace = true,
@@ -1499,7 +1499,7 @@ class XtcTextDocumentService(
      */
     fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> {
         val compiler =
-            adapter as? XdkAdapter ?: return rename(params).thenApply { it?.let(::RenameProposal) }
+            adapter as? XdkAdapter ?: return rename(params).mapCancellable { it?.let(::RenameProposal) }
         return queryAsync(
             "xtc/rename",
             params.textDocument.uri,
