@@ -241,6 +241,63 @@ class XdkMemberUseTrackerTest {
     }
 
     @Test
+    fun `an operator added under another name compiles the module that uses the operator, which writes no name of it`() {
+        val lib =
+            """
+            module Lib {
+                static Int other() = 2;
+
+                const Money(Int cents) {
+                    @Op("+") Money add(Money more) = new Money(cents + more.cents);
+                }
+            }
+            """.trimIndent()
+        val sum =
+            """
+            module Sum {
+                package lib import Lib;
+
+                lib.Money total(lib.Money a, lib.Money b) = a + b;
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to lib, "Sum" to sum, "Far" to FAR),
+                mapOf("Sum" to setOf("Lib"), "Far" to setOf("Lib")),
+                "Lib" to lib.replace("cents + more.cents);", "cents + more.cents);\n\n        @Op(\"+\") Money plus(Money more) = this;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Sum")
+    }
+
+    @Test
+    fun `a typedef given another type compiles the module that names it`() {
+        val lib =
+            """
+            module Lib {
+                static Int other() = 2;
+
+                typedef Int as Count;
+            }
+            """.trimIndent()
+        val half =
+            """
+            module Half {
+                package lib import Lib;
+
+                lib.Count half(lib.Count count) = count / 2;
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to lib, "Half" to half, "Far" to FAR),
+                mapOf("Half" to setOf("Lib"), "Far" to setOf("Lib")),
+                "Lib" to lib.replace("typedef Int as Count;", "typedef String as Count;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Half")
+        assertThat(outcome.errors("Half")).isNotEmpty()
+    }
+
+    @Test
     fun `a class made abstract compiles the module that instantiates it`() {
         val lib =
             """
