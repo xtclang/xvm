@@ -211,7 +211,7 @@
  *   embedded and Gradle results, test by test       check embedded and Gradle runs give each test the same result
  *   Debug a test                                    step Debug a test
  *   LSP4IJ's Restart                                check Restart in the Language Servers window restarts the server; the
- *                                                   plugin's own Restart, on Settings | Ecstasy Server Runtime and Logs, clicked
+ *                                                   plugin's own Restart, on Settings | Ecstasy | Server Runtime and Logs, clicked
  *   LSP4IJ's log and trace                          step Language servers; check Toggle Ecstasy Language Server Log
  *   the server's process dies                       check the server comes back when its process dies
  *
@@ -1568,8 +1568,8 @@ private fun Tour.building() {
     )
     shot(
         "The build mode",
-        "Settings | Build, Execution, Deployment | Ecstasy: the embedded compiler is the default, also beside a Gradle build.",
-        feature = "Settings | Build | Ecstasy",
+        "Settings | Languages & Frameworks | Ecstasy | Build and Run: the embedded compiler is the default, also beside a Gradle build.",
+        feature = "Settings | Ecstasy | Build and Run",
         focus = "popup",
         until = { "Embedded compiler" in popupText() },
         check = { popupText().let { expect("Embedded compiler" in it) { "The page: ${it.take(300)}" } } },
@@ -2573,8 +2573,8 @@ private fun Tour.settings() {
     section("Settings and the server")
     shot(
         "The language server",
-        "Settings | Languages & Frameworks: the Ecstasy language service's features can each be turned off, per project.",
-        feature = "Settings | Ecstasy Language Service",
+        "Settings | Languages & Frameworks | Ecstasy: the language service's features can each be turned off, per project.",
+        feature = "Settings | Ecstasy | Language Service",
         focus = "popup",
         until = { "Show Ecstasy inlay hints" in popupText() },
         check = {
@@ -2654,7 +2654,7 @@ private fun Tour.settings() {
     shot(
         "The server's runtime",
         "The server's runtime: the Java it runs on, its memory, and its logs, for when something goes wrong.",
-        feature = "Settings | Ecstasy Server Runtime",
+        feature = "Settings | Ecstasy | Server Runtime and Logs",
         focus = "popup",
         settle = 3.seconds,
         until = { "Log history (days)" in popupText() },
@@ -2804,7 +2804,7 @@ private fun Tour.settings() {
         expect(within(HANG) { pick("Bundled default") }) { "No adapter chooser: ${popupText().take(300)}" }
         expect(!within(HANG) { serverState() != same }) { "Choosing the adapter in use restarted the server: ${serverState()}" }
     }
-    verify("Restart on the Ecstasy Server Runtime and Logs page, clicked, restarts the server, which answers") {
+    verify("Restart on the Ecstasy | Server Runtime and Logs page, clicked, restarts the server, which answers") {
         val before = serverState()
         settings("xtc.runtime")
         expect(within(HANG) { realClick("Restart running Ecstasy servers with saved settings") }) { "No Restart: ${popupText().take(300)}" }
@@ -2921,9 +2921,9 @@ private fun Tour.withLsp4ij() {
             code =
                 """
                 File | New | Project | Ecstasy          a new project, with the XTC Gradle plugin
-                Settings | Build, Execution, Deployment | Ecstasy
-                                                        the build mode: embedded or Gradle
-                Settings | Languages & Frameworks       the language service and its compiler
+                Settings | Languages & Frameworks | Ecstasy
+                                                        the language service, its compiler and server,
+                                                        and the build mode: embedded or Gradle
                 """.trimIndent(),
         ),
     )

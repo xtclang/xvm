@@ -5,14 +5,11 @@ import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
-import java.awt.BorderLayout
-import java.awt.GridLayout
-import javax.swing.JButton
+import com.intellij.ui.dsl.builder.Align
+import com.intellij.ui.dsl.builder.panel
 import javax.swing.JComponent
-import javax.swing.JPanel
 import javax.swing.JSpinner
 import javax.swing.JTextArea
 import javax.swing.SpinnerNumberModel
@@ -50,60 +47,45 @@ class ServerRuntimeConfigurable : Configurable {
         }
     private var original = ServerRuntimeSettings.Options()
 
-    override fun getDisplayName(): String = "Ecstasy Server Runtime and Logs"
+    override fun getDisplayName(): String = "Server Runtime and Logs"
 
     override fun createComponent(): JComponent =
-        JPanel(BorderLayout(0, 8)).apply {
-            add(
-                JBLabel(
-                    "<html>Machine-local settings; uses IntelliJ's bundled Java runtime. Apply saves for the next server start.<br>One JVM option per line: -Xms/-Xmx/-Xss sizes, -XX:MaxMetaspaceSize, -XX:ReservedCodeCacheSize,<br>-XX:ActiveProcessorCount, or -XX:+UseG1GC/UseSerialGC/UseParallelGC/UseZGC. Sizes use K, M or G.<br>An -Xmx or a collector here overrides the memory policy below. No shell quoting, agents, classpath or system-property overrides.</html>",
-                ),
-                BorderLayout.NORTH,
-            )
-            add(
-                JPanel(BorderLayout(0, 8)).apply {
-                    add(JBScrollPane(options), BorderLayout.CENTER)
-                    add(
-                        JPanel(GridLayout(0, 2, 8, 8)).apply {
-                            add(JBLabel("Memory policy"))
-                            add(policy)
-                            add(JBLabel("Maximum heap, with the Default policy"))
-                            add(maxHeap)
-                            add(JBLabel("Log history (days)"))
-                            add(history)
-                            add(JBLabel("Each log file (MB)"))
-                            add(fileSize)
-                            add(JBLabel("Rolled archive cap per stream (MB)"))
-                            add(totalSize)
-                            add(JBLabel("Retired process sessions to keep"))
-                            add(sessions)
-                            add(libraries)
-                            add(JBLabel("Navigation in XDK sources, also in method bodies."))
-                            add(replacement)
-                            add(JBLabel("For working on the XDK's own libraries, as in the XVM repository."))
-                            add(JBLabel("Active processes are protected. Old sessions are pruned on server start."))
-                            add(JBLabel("Tools → Export Ecstasy Server Logs saves bounded recent logs and status."))
-                        },
-                        BorderLayout.SOUTH,
+        panel {
+            row { comment("Machine-local settings; uses IntelliJ's bundled Java runtime. Apply saves them for the next server start.") }
+            row {
+                button("Restart running Ecstasy servers with saved settings") {
+                    ProjectManager
+                        .getInstance()
+                        .openProjects
+                        .filterNot { it.isDisposed }
+                        .forEach(::restartEcstasyServers)
+                }.applyToComponent { name = "xtc.runtime.restart" }
+            }
+            row {
+                cell(JBScrollPane(options))
+                    .align(Align.FILL)
+                    .comment(
+                        "One JVM option per line: -Xms/-Xmx/-Xss sizes, -XX:MaxMetaspaceSize, -XX:ReservedCodeCacheSize, " +
+                            "-XX:ActiveProcessorCount, or -XX:+UseG1GC/UseSerialGC/UseParallelGC/UseZGC. Sizes use K, M or G. " +
+                            "An -Xmx or a collector here overrides the memory policy below. No shell quoting, agents, " +
+                            "classpath or system-property overrides.",
                     )
-                },
-                BorderLayout.CENTER,
-            )
-            add(
-                JButton("Restart running Ecstasy servers with saved settings").apply {
-                    name = "xtc.runtime.restart"
-                    addActionListener {
-                        ProjectManager
-                            .getInstance()
-                            .openProjects
-                            .filterNot { it.isDisposed }
-                            .forEach(::restartEcstasyServers)
-                    }
-                },
-                BorderLayout.SOUTH,
-            )
-            reset()
-        }
+            }.resizableRow()
+            row("Memory policy:") { cell(policy) }
+            row("Maximum heap, with the Default policy:") { cell(maxHeap) }
+            row("Log history (days):") { cell(history) }
+            row("Each log file (MB):") { cell(fileSize) }
+            row("Rolled archive cap per stream (MB):") { cell(totalSize) }
+            row("Retired process sessions to keep:") { cell(sessions) }
+            row { cell(libraries).comment("Navigation in XDK sources, also in method bodies.") }
+            row { cell(replacement).comment("For working on the XDK's own libraries, as in the XVM repository.") }
+            row {
+                comment(
+                    "Active processes are protected. Old sessions are pruned on server start. " +
+                        "Tools → Export Ecstasy Server Logs saves bounded recent logs and status.",
+                )
+            }
+        }.also { reset() }
 
     private fun draft() =
         original.copy(

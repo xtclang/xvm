@@ -422,8 +422,10 @@ parameters and return value.
 The build mode decides how Build, Run, Debug and the tests work. Press **Ctrl+Alt+X, then B** to
 choose it in either editor, or:
 
-- **IntelliJ:** **Tools | Select Ecstasy Build Mode**, or **Settings | Build, Execution, Deployment |
-  Ecstasy | Build and run using**. It is saved with the project.
+- **IntelliJ:** **Tools | Select Ecstasy Build Mode**, or **Settings | Languages & Frameworks |
+  Ecstasy | Build and Run**. It is saved with the project. Where the project's own modules replace
+  bundled XDK libraries, as in the XVM repository, the embedded compiler is shown as not available,
+  and builds and runs use Gradle.
 - **VS Code:** **Ecstasy: Select Build Mode**, or the status bar item that a folder with a Gradle build
   shows. It is the `xtc.build.mode` setting, per folder.
 
@@ -436,8 +438,8 @@ choose it in either editor, or:
 
 The next build or run uses the new mode; nothing restarts.
 
-![IntelliJ Build, Execution, Deployment, Ecstasy settings page with Build and run using](user-guide/intellij-build-mode.png)
-*IntelliJ: **Settings | Build, Execution, Deployment | Ecstasy**, with **Build and run using** on its default, the embedded compiler.*
+![IntelliJ Languages & Frameworks, Ecstasy, Build and Run settings page with Build and run using](user-guide/intellij-build-mode.png)
+*IntelliJ: **Settings | Languages & Frameworks | Ecstasy | Build and Run**, with **Build and run using** on its default, the embedded compiler.*
 
 ![VS Code quick pick for the build mode: embedded compiler, Gradle or automatic](user-guide/vscode-build-mode.png)
 *VS Code: **Ecstasy: Select Build Mode**, which Ctrl+Alt+X, then B, and a click on the status bar's build mode open too.*
@@ -669,17 +671,18 @@ While the program runs, a line typed in the Debug Console (VS Code) or the Debug
 ### Settings that matter
 
 The [configuration reference](configuration.md) lists every setting. These are the ones you are
-most likely to change.
+most likely to change. In IntelliJ, every page of the plugin is under **Settings | Languages &
+Frameworks | Ecstasy**, which links each of them.
 
 | What | IntelliJ | VS Code |
 |------|----------|---------|
-| Build mode | **Settings \| Build, Execution, Deployment \| Ecstasy**, or Ctrl+Alt+X, then B | `xtc.build.mode`, or Ctrl+Alt+X, then B |
+| Build mode | **Settings \| Languages & Frameworks \| Ecstasy \| Build and Run**, or Ctrl+Alt+X, then B | `xtc.build.mode`, or Ctrl+Alt+X, then B |
 | Language adapter: compiler or Tree-sitter | **Tools \| Switch Ecstasy Language Adapter**, or Ctrl+Alt+X, then A | **Ecstasy: Switch Language Adapter**, Ctrl+Alt+X, then A, or the status bar |
-| Inlay hints, reference counts | **Settings \| Languages & Frameworks \| Ecstasy Language Service** | `xtc.inlayHints.enabled`, `xtc.codeLens.references` |
+| Inlay hints, reference counts | **Settings \| Languages & Frameworks \| Ecstasy \| Language Service** | `xtc.inlayHints.enabled`, `xtc.codeLens.references` |
 | Indentation and line width | **Settings \| Editor \| Code Style \| Ecstasy** | `xtc.formatting.*` |
-| The server's memory and logs | **Settings \| Languages & Frameworks \| Ecstasy Server Runtime and Logs** | `xtc.java.vmOptions`, `xtc.server.logs`, in user settings |
+| The server's memory and logs | **Settings \| Languages & Frameworks \| Ecstasy \| Server Runtime and Logs**: the memory policy, a maximum heap, JVM options, logs | `xtc.server.memoryPolicy`, `xtc.server.maxHeap`, `xtc.java.vmOptions`, `xtc.server.logs`, in user settings |
 | The Java that runs the server | IntelliJ's own | `xtc.java.home` |
-| Which modules the compiler builds, and libraries | **Settings \| Languages & Frameworks \| Ecstasy Compiler** | **Ecstasy: Configure Compiler Paths**, **Ecstasy: Configure Libraries and Sources** |
+| Which modules the compiler builds, and libraries | **Settings \| Languages & Frameworks \| Ecstasy \| Compiler** | **Ecstasy: Configure Compiler Paths**, **Ecstasy: Configure Libraries and Sources** |
 
 In VS Code, **Ecstasy: Open Language Service Settings** opens the extension's settings. Without any
 of these settings, the compiler finds the project's modules itself, from its folders or its Gradle
@@ -697,7 +700,7 @@ When something doesn't work as you expect, look at the language server first.
 
 - **Its state.** VS Code's status bar item, and **Ecstasy: Show Effective Language Service
   Configuration**, which reports the settings the server runs with and what it found. In IntelliJ,
-  the **Ecstasy Language Service** settings page shows the running server's configuration, and
+  the **Ecstasy | Language Service** settings page shows the running server's configuration, and
   LSP4IJ's **Language Servers** window its state and traces.
 - **Its log.** **Ctrl+Alt+X, then L** shows the server's log, and again hides it: IntelliJ's **Tools |
   Toggle Ecstasy Language Server Log**, VS Code's **Ecstasy: Show Language Server Output**. Each
@@ -727,7 +730,7 @@ Some common problems:
 | Gradle mode can't find `runXtc` or `testXtc` | The project's Gradle build needs the XTC Gradle plugin; IntelliJ also needs the Gradle build linked. |
 | A breakpoint is unverified | The line changed since the program was built, or has no code; debug again. |
 | **Ecstasy: Create New Project** fails | Install an XDK and put its `xtc` on your `PATH`. |
-| The server runs short of memory on a large project | Give it more with `-Xmx`, in the runtime settings above, and restart it. |
+| The server runs short of memory on a large project | Choose the **Adaptive** memory policy, which grows the heap as the work needs and gives memory back, or a larger maximum heap with the Default policy, in the runtime settings above, and restart it. |
 
 ### Known limitations
 
@@ -738,7 +741,7 @@ Some common problems:
 - Code run from the Debug Console or Evaluate Expression stops after two seconds, and a lazy value
   after one. IntelliJ can't cancel an evaluation sooner.
 - Rename and safe delete cover the modules the language server knows of. To include modules in
-  other folders that use yours, add them with **Add consumers from folders** (IntelliJ's **Ecstasy
+  other folders that use yours, add them with **Add consumers from folders** (IntelliJ's **Ecstasy |
   Compiler** page, VS Code's **Ecstasy: Configure Compiler Paths**).
 - The formatter doesn't reflow comments or split string literals.
 - The Tree-sitter adapter knows only syntax: no type errors, no type-aware completion or checked

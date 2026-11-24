@@ -7,12 +7,12 @@ import com.intellij.ui.dsl.builder.bind
 import com.intellij.ui.dsl.builder.panel
 
 /**
- * Settings | Build, Execution, Deployment | Ecstasy: what Build, Rebuild and Ecstasy run configurations use. The
+ * Settings | Languages & Frameworks | Ecstasy | Build and Run: what Build, Rebuild and Ecstasy run configurations use. The
  * embedded compiler is shown unavailable while the project's own modules replace bundled libraries.
  */
 class XtcBuildConfigurable(
     private val project: Project,
-) : BoundConfigurable("Ecstasy") {
+) : BoundConfigurable("Build and Run") {
     override fun createPanel(): DialogPanel {
         val settings = XtcBuildSettings.getInstance(project)
         val replaced = settings.replacedLibraries

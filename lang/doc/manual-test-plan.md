@@ -1251,7 +1251,7 @@ and VS Code render them automatically from the LSP server response — no plugin
 `xtc/testEvent`, `xtc/debugMessage` (both ways), `xtc/debugEnd`
 **Status:** Implemented 2026-10-15 for the compiler adapter, in both editors
 **Mode:** VS Code `xtc.build.mode`, **Ecstasy: Select Build Mode** or the status bar's build mode (shown in a folder
-with a Gradle build); IntelliJ Settings › Build, Execution, Deployment › Ecstasy, or **Tools → Select Ecstasy Build
+with a Gradle build); IntelliJ Settings › Languages & Frameworks › Ecstasy › Build and Run, or **Tools → Select Ecstasy Build
 Mode**. **Ctrl+Alt+X, then B** (macOS: **Control+Option+X, then B**) chooses it in either editor; after a choice in
 IntelliJ a notification says what Build and Run now use. The next build or run uses the mode, with no restart, Gradle
 sync or reindexing; Build in Gradle mode needs the Gradle project linked in IntelliJ.
@@ -1283,7 +1283,7 @@ module Hello {
 | 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A debug session starts; its Debug Console shows the build, the program's output and exit code, and the session ends with the program (automated in X285). A breakpoint stops the program (X304). In Gradle mode, the Gradle run task runs in the terminal and the session debugs the program it starts: a breakpoint stops it, Continue runs it to its exit, and Stop ends the task and the program. IntelliJ's Debug of an Ecstasy Application configuration in Gradle mode does the same, with the task's output in the Debug console, and in command-line mode with `xtc run` (X338) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 | 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
-| 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; in IntelliJ the line's settings path opens Settings › Build, Execution, Deployment › Ecstasy; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
+| 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; in IntelliJ the line's settings path opens Settings › Languages & Frameworks › Ecstasy › Build and Run; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
 | 18a.14 | Switching modes (VS Code) | In that folder, click **Embedded build** in the status bar and choose **Gradle**; Build; then choose **Ecstasy compiler (embedded)** with **Ecstasy: Select Build Mode** and Build again | The status bar shows **Gradle build**, and Build runs `./gradlew build`; after switching back it shows **Embedded build** and builds with the embedded compiler. The choice is stored in the folder's `xtc.build.mode`. A folder without a Gradle build shows no build mode in the status bar. X288 automates the switch through the command and checks the status bar text; the quick pick and the click are manual |
 | 18a.15 | Fresh program state | Run a module twice whose static service counts the calls made to it in a run | Each run counts from the start; nothing carries over from the run before (automated in X292) |
 | 18a.16 | No callable entry method | Run a module without a `run` method, or one whose `run` requires two parameters, from a run configuration or task | The build succeeds, the run is refused with the reason and exit code 1, and no user code runs (automated in X293) |
@@ -2057,7 +2057,7 @@ roots may be outside workspace folders. A scope receipt does not authorize apply
   before any edits: VS Code cannot reliably restore that unsaved resource history. Text-only
   renames and moves of unedited companions remain available. The harness checks both refusal
   and the enabled-policy transaction; it uses refactoring metadata like the native action.
-- **IntelliJ:** open **Settings > Languages & Frameworks > Ecstasy Compiler**. Select automatic
+- **IntelliJ:** open **Settings > Languages & Frameworks > Ecstasy > Compiler**. Select automatic
   discovery, or disable it and add module names, root URIs/relative paths and comma-separated
   dependencies. **Apply** saves through LSP4IJ's project settings and refreshes the running server.
   The resource-root column accepts a JSON array such as `["assets/templates", "shared/resources"]`.
@@ -2724,7 +2724,7 @@ does not start another server, clear history or change the logging level.
 
 In an IntelliJ Ecstasy editor press **Ctrl+Alt+X, then R** (macOS: **Control+Option+X, then R**),
 or choose **Tools → Restart Ecstasy Language Server**. The project's server stops and starts
-again with the same adapter and the saved **Ecstasy Server Runtime and Logs** settings; the
+again with the same adapter and the saved **Ecstasy → Server Runtime and Logs** settings; the
 Language Servers view shows it, and open buffers get their diagnostics again. **Restart running
 Ecstasy servers with saved settings** on that settings page restarts the servers of every open
 project the same way. In a project where no Ecstasy file has been opened yet, the shortcut
@@ -2756,8 +2756,8 @@ Selected X118/X132/X135–X139 pass in VS Code `run-1aSPTX` and IntelliJ
 `run-3866544261762285778` (also START; zero IDE errors). The [acceptance reports](#acceptance-reports)
 retains the earlier failures and fixes. These receipts cover seven selected scenarios, not all 144.
 
-IntelliJ Community: Settings → Languages & Frameworks → **Ecstasy Language Service Defaults**
-(application) or **Ecstasy Language Service** (project). The project page inherits defaults until
+IntelliJ Community: Settings → Languages & Frameworks → **Ecstasy → Language Service Defaults**
+(application) or **Ecstasy → Language Service** (project). The project page inherits defaults until
 unchecked. Use Apply, Reset, Cancel and re-open to verify persistence. Transport applies with a
 restart; inlays and Code Style apply live. Save formatting applies with a restart: the editor owns it
 through Settings → Tools → Actions on Save → Reformat code, or the server does, through LSP4IJ's
@@ -3692,7 +3692,7 @@ acceptance remain manual checks; the new cases do not claim complete UI coverage
 
 ### Machine-local runtime and logs (X269–X272)
 
-In IntelliJ open **Settings → Ecstasy Server Runtime and Logs**. In VS Code open User Settings
+In IntelliJ open **Settings → Languages & Frameworks → Ecstasy → Server Runtime and Logs**. In VS Code open User Settings
 and search `xtc.java.vmOptions` / `xtc.server.logs`. Values belong to this machine, not shared
 project configuration. Defaults are 7 days, 10 MB per file, 50 MB archived per stream and five
 stopped-server sessions. Running processes are protected; cleanup runs on the next server start.
@@ -3795,7 +3795,7 @@ startup comparisons are recorded in the [acceptance reports](#acceptance-reports
 ### Embedded build and run (X280–X285)
 
 These cases switch the workspace or project to the embedded build mode for their duration
-(VS Code `xtc.build.mode`, IntelliJ Build, Execution, Deployment › Ecstasy) and configure only their
+(VS Code `xtc.build.mode`, IntelliJ Languages & Frameworks › Ecstasy › Build and Run) and configure only their
 own modules. Manual steps for the same behavior are in [section 18a](#18a-embedded-build-and-run).
 
 | ID | Actions | Expected result |
@@ -3831,7 +3831,7 @@ Gradle build runs. All three files are removed afterwards. Manual mode switching
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X288 | With no build mode chosen, Build, then Run BuildModes. Choose **Gradle** (VS Code **Ecstasy: Select Build Mode**; IntelliJ Settings › Build, Execution, Deployment › Ecstasy), Build, then Run it. Choose the embedded compiler again and Run it. | First both use the embedded compiler: the build output says the Gradle build's settings do not apply (in IntelliJ with a link to the settings page), the program prints `built and run embedded`, and the wrapper records nothing. In Gradle mode VS Code's Build calls `./gradlew build` and Run calls `./gradlew -q runXtc --module=BuildModes`; IntelliJ's Build Project is not taken by the embedded compiler and Run calls the wrapper the same way. After switching back, Run is embedded again and the wrapper records nothing more. VS Code's status bar shows **Embedded build**, then **Gradle build**, then **Embedded build**. The IntelliJ driver sets the mode through the project's build settings rather than the Settings page. |
+| X288 | With no build mode chosen, Build, then Run BuildModes. Choose **Gradle** (VS Code **Ecstasy: Select Build Mode**; IntelliJ Settings › Languages & Frameworks › Ecstasy › Build and Run), Build, then Run it. Choose the embedded compiler again and Run it. | First both use the embedded compiler: the build output says the Gradle build's settings do not apply (in IntelliJ with a link to the settings page), the program prints `built and run embedded`, and the wrapper records nothing. In Gradle mode VS Code's Build calls `./gradlew build` and Run calls `./gradlew -q runXtc --module=BuildModes`; IntelliJ's Build Project is not taken by the embedded compiler and Run calls the wrapper the same way. After switching back, Run is embedded again and the wrapper records nothing more. VS Code's status bar shows **Embedded build**, then **Gradle build**, then **Embedded build**. The IntelliJ driver sets the mode through the project's build settings rather than the Settings page. |
 
 ### Running a module again (X289)
 
@@ -4015,7 +4015,7 @@ the embedded runs it still tracks, which is none once every run, and its program
 
 A bundled library's source that navigation opens is a read-only copy (IntelliJ: a protected file, UP25; VS Code: the
 server's `ecstasy-library` content). With **Compile an XDK library as a whole** on, as it is by default (IntelliJ's
-Ecstasy Server Runtime page; VS Code's `xtc.server.compileLibraries`), the server compiles the copy with every source
+Ecstasy › Server Runtime and Logs page; VS Code's `xtc.server.compileLibraries`), the server compiles the copy with every source
 of its library, which takes some 10 seconds for `ecstasy` when its first source opens, so that every name in it goes
 to its declaration. The compile needs a server heap of at least 1 GB, which the server's default heap is on a machine
 with 4 GB or more; with a smaller heap, or the setting off, the copy compiles on its own, where only its imports and

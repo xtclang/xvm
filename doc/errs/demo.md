@@ -25,7 +25,7 @@ needed by consumer builds, and launches the pinned IntelliJ sandbox with platfor
 No separate `installDist`, plugin installation, XDK download or Ultimate subscription is needed.
 Keep the terminal open; close the sandbox IDE when finished. This does not start the UI test driver.
 
-Before opening `.x` files, open **Settings → Languages & Frameworks → Ecstasy Compiler**.
+Before opening `.x` files, open **Settings → Languages & Frameworks → Ecstasy → Compiler**.
 Select **Source modules** in the left-hand list. Uncheck **Use Gradle model or automatic source
 discovery**, remove any old rows, and **Add module** twice:
 
@@ -204,8 +204,8 @@ use the shared playbook's exact examples to demonstrate those proof/refusal boun
 pretty-printer, runtime call graph, reusable Run worker and debugger remain outside this tour.
 
 Use **Toggle Ecstasy Language Server Log** to show/hide the docked log, or **Export Ecstasy Server
-Logs** for a support ZIP. **Ecstasy Server Runtime and Logs** configures Java, heap, VM options and
-retention; **Ecstasy Language Service** controls live presentation/transport preferences. The export
+Logs** for a support ZIP. **Ecstasy › Server Runtime and Logs** configures Java, heap, VM options and
+retention; **Ecstasy › Language Service** controls live presentation/transport preferences. The export
 and effective-state view identify the actual log directory and server process. Queue size, ordered
 job names, compile/API times and reply latency are traced; no platform application is executed by
 the demo. Use the **Run** lens only when intentionally ready for that application's side effects.

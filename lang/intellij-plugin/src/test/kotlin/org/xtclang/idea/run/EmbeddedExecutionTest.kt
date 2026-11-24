@@ -90,7 +90,7 @@ class EmbeddedExecutionTest {
         val notice = checkNotNull(XtcBuildSettings.gradleNotUsed(root)) + "\n"
         val link = checkNotNull(BuildSettingsLink.applyFilter(notice, before.length + notice.length)).resultItems.single()
         assertThat((before + notice).substring(link.highlightStartOffset, link.highlightEndOffset))
-            .isEqualTo("Settings | Build, Execution, Deployment | Ecstasy")
+            .isEqualTo("Settings | Languages & Frameworks | Ecstasy | Build and Run")
         assertThat(link.hyperlinkInfo).isNotNull()
         assertThat(BuildSettingsLink.applyFilter(before, before.length)).isNull()
     }

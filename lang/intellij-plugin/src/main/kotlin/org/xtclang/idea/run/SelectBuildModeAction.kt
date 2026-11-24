@@ -12,7 +12,7 @@ import com.intellij.openapi.ui.popup.util.BaseListPopupStep
 import org.xtclang.idea.lsp.XtcFileOperations
 
 /**
- * Chooses how the project's Ecstasy Build, Rebuild and Run work, as Build, Execution, Deployment › Ecstasy does. The
+ * Chooses how the project's Ecstasy Build, Rebuild and Run work, as Languages & Frameworks › Ecstasy › Build and Run does. The
  * next build or run uses the choice; nothing else needs to restart or sync.
  */
 class SelectBuildModeAction : DumbAwareAction() {
