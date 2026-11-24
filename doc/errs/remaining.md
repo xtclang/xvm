@@ -163,29 +163,40 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   (`RunWorkerProcess.kt:523` starts them from the server's classpath today; their identity check
   takes only the bundled XDK). Not needed for the XVM repository, whose core developers change
   javatools with the libraries and build, run and debug with Gradle.
-- [ ] Renames of an XDK library's symbols in such a workspace are still proven against the bundled
+- [x] Renames of an XDK library's symbols in such a workspace are still proven against the bundled
   library (`CompilerRenameFacts.kt:358`), so they treat the repository's `ecstasy` as the bundle.
-  Fix: give the rename facts the project's replaced libraries (`XdkProject.replaced`) and treat those
-  modules as sources. A rename of a public `ecstasy` API then edits every dependent in the
-  repository, the largest rename the server makes, so it wants a heavy test over the whole XDK.
-  **2026-11-23, partly done:** the rename facts prove a replaced library as sources, the compiled
-  module itself and each dependency compiled from source (`XdkReplacedLibraryTest`: a rename in the
-  workspace's own `json` edits its importer). Still open, a rename in the workspace's own `ecstasy`:
-  a heavy test over copies of `lib_ecstasy` and `lib_json`, renaming a `String` method that `json`
-  calls, runs out of heap at the tests' 1 GB, and at 3 GB compiles four times in 30 s and is then
-  refused by `preservesBindings` (the proposed edit compiles; a binding differs). Likely the same
-  root as the import proofs below.
-- [ ] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
-  (`XdkLibrarySources`) still read the bundle, and may offer its older names. Alternatives: index
-  the workspace's compiled `ecstasy` instead, whose declarations its artifact already maps; or keep
-  the bundle's and say so. **2026-11-23, partly done** (decided: index the workspace's): a source
-  artifact of a library's name records its importable declarations, and the candidates of a replaced
-  library come from it, the bundle's skipped. Hover takes a symbol's declaration from the
-  dependencies before the bundle (`SemanticModelBuilder.kt`, `dependencies[it] ?: …`). Still open:
-  in a workspace that replaces a library no import candidate survives its proof, not even the
-  bundled `xml`'s `Parser`, as before the change: `XdkProjectQueries` treats a dependency of a
-  library's name as satisfied by the bundle in several places (the `!in XdkLibraries.moduleNames`
-  filters), which the proofs of a replaced library's importers need to see as sources.
+  Done 2026-11-24: the rename facts prove a replaced library as sources (`XdkReplacedLibraryTest`),
+  and a rename in the workspace's own `ecstasy` is proven (`XdkRepositoryWorkspaceTest`, heavy, over
+  copies of `lib_ecstasy` and `lib_json`; also checked over all 21 libraries). The last obstacle was
+  not the library: the proof refused on any binding it could not represent, and `ecstasy`'s ninety
+  thousand bindings hold 358 that the model leaves unbound and about 200 through unproven identities.
+  The proof now compares those by their spelling and refuses only where one spells the old or new
+  name (`XdkRename.equivalent`); its comparison went from 4½ minutes to seconds (a line index per
+  text). Such a rename needs a 2 GB heap, below which it is refused with a message
+  (`XdkLibrarySources.PROOF_HEAP_BYTES`).
+- [ ] A rename compiles the whole workspace twice, before and after the edit, with no reuse: in the
+  XVM repository every rename, also one of a local in `json`, compiles all 21 libraries twice, 50 s
+  with `ecstasy`'s (`compiles=44`). Fix: take the "before" compile from the revision's compile, as code
+  actions do (`XdkCodeActionCache`), started at `prepareRename`, and compile only the edited module
+  and its consumers after the edit (the proofs' `reuse`). A rename in `json` then takes seconds; one
+  in `ecstasy`, which every module depends on, still compiles everything once, 15–20 s.
+- [ ] The semantic model leaves some occurrences unbound that the rename's proof now tolerates, which
+  navigation still misses, in order of value: a local used for its formal type (`t1.DataType`, about
+  50 in `ecstasy`: Find References and highlighting miss them, and a rename of such a local is refused);
+  the `_` placeholder, which binds nothing and should be no occurrence (75); the names of a method's
+  multiple return values (the largest group: hover and their rename); `this` and `super` in a lazy
+  property's `calc()` and in a method reference (27); and the unproven identities (about 200, such as
+  `DataType` itself), only if a wanted rename is refused for one.
+- [x] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
+  (`XdkLibrarySources`) still read the bundle, and may offer its older names. Done 2026-11-23/24
+  (decided: index the workspace's): a source artifact of a library's name records its importable
+  declarations, and a replaced library's candidates come from it, the bundle's skipped; in a workspace
+  whose own `json` replaces the bundled one, `WorkspaceOnly` is offered from it and the bundled
+  `json`'s `Parser` is not. Hover takes a symbol's declaration from the dependencies before the bundle
+  (`SemanticModelBuilder.kt`, `dependencies[it] ?: …`). Correction (2026-11-24): an earlier note here,
+  and the commit `ada6b74f70`, said that no candidate survived its proof in such a workspace; that came
+  from the tests, which left a second unresolved name, or a second broken module, under the proof's
+  whole-graph compile. With one, the proofs pass.
 - [x] The server reads the repository's `ecstasy` with its own compiler, the plugin's, so a compiler
   change newer than the plugin's build is not understood. Done 2026-11-23, by saying so (decided):
   a replaced library with errors gets an information diagnostic on its root (`REPLACED-LIBRARY`),
