@@ -349,10 +349,12 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### Test harness stability
 
-- [ ] Found 2026-11-24 with K6b: the VS Code playbook's CFG2 replaces the client's `window/showMessage` handler
+- [x] Found 2026-11-24 with K6b: the VS Code playbook's CFG2 replaces the client's `window/showMessage` handler
   and disposes it without restarting the server, so the server's messages no longer show for the rest of that
   session. K6b's cases that watch the message restart the server after watching; CFG2 should too, or put the
-  client's own handler back.
+  client's own handler back. Done on `lagergren/k6b-gaps`: CFG2 puts the shared graph back, as the server would
+  refuse to start with its cyclic one, and restarts the server, whose new client has its own handler again;
+  CFG1–CFG3, 7a.8 and 7a.9 pass in the container (run-s7sjBd).
 - [ ] Found 2026-11-24: after a restart of the server, IntelliJ's tour now and then misses the error of an edit.
   In the Settings and the server section, a check restarts the server (from LSP4IJ's Language Servers window, or by
   killing its process), hovers in Eights.x, which answers, then types `popCard` → `popCrd` and waits for the error,

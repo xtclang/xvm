@@ -153,14 +153,24 @@ export function configurationCases(): void {
         // Observe the error notification as well as unchanged navigation: otherwise a query
         // could race ahead of processing the rejected configuration.
         let rejected = false;
-        const registration = client().onNotification('window/showMessage', (message: { message: string }) => {
+        const observed = client();
+        const registration = observed.onNotification('window/showMessage', (message: { message: string }) => {
             if (scenarioRegex(data.pattern).test(message.message)) { rejected = true; }
         });
         try {
             await workspace.configure(data.sourceModules.map(module => ({ ...module, uri: workspace.uri(module.uri).toString() })));
             await eventually(async () => rejected, Boolean, 'Invalid configuration rejected');
             await linked(consumer, workspace);
-        } finally { registration.dispose(); }
+        } finally {
+            registration.dispose();
+            // Observing took the language client's own handler of the server's messages, which disposing does not give
+            // back: the messages of the rest of the session would not show. A restart makes a client with its own; it
+            // starts with the shared graph, as the cyclic one would fail its initialization.
+            await workspace.configureSharedGraph();
+            await vscode.commands.executeCommand('xtc.restartServer');
+        }
+        assert.notStrictEqual(client(), observed, 'A new client shows the server\'s messages again');
+        await linked(await workspace.open(shared.configuration.consumer), workspace);
     });
 
     playbook('CFG3', async workspace => {
