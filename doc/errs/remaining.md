@@ -235,7 +235,11 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   proven where a module breaks or binds elsewhere, and the edited-line one refused. Over all 21
   libraries, a rename of a method of `json` compiles 2 modules, json and jsondb, 6.0 s, where it
   compiled 12; one of `String`, all 22 still, as every module uses `String`;
-  `XdkRepositoryWorkspaceTest`, 3 and 1 where they were 3 and 2.
+  `XdkRepositoryWorkspaceTest`, 3 and 1 where they were 3 and 2. Superseded 2026-11-24 by the
+  member-use tracker (`lagergren/member-use-tracker`, the item after next), which serves every edit
+  and compiles the same modules or fewer: `XdkRenameReach` is removed, and `XdkRenameReachTest`'s cases
+  keep their outcomes and modules; its rename to a name that is not a plain identifier compiles 2
+  modules where it compiled 4, as the tracker reads a name of any letters.
 - [ ] Found 2026-11-24: what a rename's proof cannot see. It proves that every name binds to the same
   declaration in compiled code, as compiling every dependent would; behavior that no binding carries is outside
   it, for any rename: a method or property found by a string at runtime (reflection by name), a runtime check
@@ -247,15 +251,43 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   guide's known limitations say what a rename does not change: names in strings or computed at runtime, runtime
   type checks by member name, and serialized property names. (2) is done 2026-11-24, in the guide's known
   limitations.
-- [ ] Queued 2026-11-24, after that: track the members each module uses from its dependencies, and recompile a
-  dependent only when a member it uses changes, not on any change of its dependency's public API. This is the
-  generic case: it serves every edit and code action, and subsumes the rename-specific reach rule
-  (`XdkRenameReach`, 28d1c73e51) and the whole-API fingerprint (`XdkDependency.api`), which should become its
-  special cases or go once it lands; a rename of a `String` method, which every module uses, needs it to compile
-  fewer than all 22. A dependency tracker in the server, three to five days. Its API side
-  is a per-declaration API: a consumer whose facts name none of the declarations whose API changed, nor any name a
-  changed or added declaration takes, which a new name could capture, keeps its compile, and its proof compares its
-  bindings unchanged, as for a module the edit does not reach.
+- [x] Track the members each module uses from its dependencies, and compile a dependent again only when
+  something it uses changes, not on any change of its dependency's API (queued 2026-11-24). This is the
+  generic case, which subsumes the rename reach rule (`XdkRenameReach`, 28d1c73e51) and the whole-API rule.
+  Done 2026-11-24 (`lagergren/member-use-tracker`, `XdkMemberUseTracker`), for the compile that code
+  actions and renames start from, and each proof's compile from it; `XdkRenameReach` and the
+  `alike`/`privatelyMoved` rule are removed with `XdkDependency.api` and `accessibleApi`; the whole-API
+  digest (`XdkModuleApi.all`, what `api` was) stays as the oracle for a digest gap and the rule for a
+  module that did not compile. javatools' `DeclarationDigests` digests each declaration's own API
+  apart, naming the constants it refers to by their content, not their pool index (`XdkModuleApi`); a
+  dependent's uses come from its artifact's constants (`XdkModuleUses`). A module whose sources are as
+  they were keeps its compile when, of each module it depends on that compiled to another artifact, its
+  facts name nothing by revision and no declaration place they name moved; no changed, added or
+  removed declaration has a name it writes or its constants name; and none is seen through a type it
+  uses as a whole, a type its constants name or its classes extend. A change is seen through what
+  holds it, past a virtual child to the class that holds it (whose type a module writes as the
+  holder's and the child's name), and, to a fixpoint, through each declaration that names a type it is
+  seen through, a signature, a property's type or a contribution, as the compiler matches types with
+  interfaces by their members and their members' types, checks abstractness and enum switches against
+  all members, and resolves operators by annotation (the reach rule's fixpoint, for every change).
+  Every module uses each type of ecstasy and the turtle as a whole, but for their private members and
+  their namespaces' members, which a module finds by name. Proof: `XdkMemberUseTrackerTest`, 26 cases
+  whose kept modules compile to the same facts, artifact and errors as from nothing; each rule but one
+  has a case that fails without it, some of them renames that must be refused (`XdkRenameReachTest`,
+  12 cases) and are proven without it. The exception, the private members of the types a module's
+  classes extend, which no case shows another module to see, is kept as a conservative rule; a changed
+  default value, which a call leaves to the callee, is carried by the modules its case compiles alone.
+  `XdkIncrementalBaseTest` compares whole facts now; heavy `XdkMemberUseTrackerLibrariesTest`, over
+  the 22 modules of the 21 libraries, renames among its edits. Over all 21 libraries, the modules that the next revision's compile compiles after an edit,
+  before and after: a method body of `String`, 3 and 3 (ecstasy, and json and xenia, whose facts name
+  ecstasy's members by artifact); a private method added to `String`, 22 and 3; a public method added
+  to json's `Parser`, 12 and 4; a comment line that moves `Parser`'s declarations, 12 and 4. A rename's
+  proof after the edit: of `Parser.expectString`, 4 and 4, as the reach rule; of a `String` method,
+  22 and 22 (`splitMap`'s is refused before and after). Not applied to the diagnostics and navigation
+  builds, keyed by artifact revisions, whose navigation names other modules' declarations by revision
+  and constant index. A rename of a `String` method still compiles every module, as every module uses
+  ecstasy's types as a whole; getting below that would need the compiler to record which whole-type consults
+  each module makes, which is deliberately not pursued.
 - [x] A rename that the client cancelled ran its proof to the end: `textDocument/rename` maps a
   refusal with `exceptionallyCompose` (`856d5ef01b`), whose new future the cancellation cancelled
   without reaching the adapter's, so the proof, half a minute over the XVM repository's libraries,
