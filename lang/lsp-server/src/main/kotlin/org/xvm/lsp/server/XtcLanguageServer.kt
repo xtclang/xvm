@@ -164,6 +164,9 @@ class XtcLanguageServer internal constructor(
     /** The heap the garbage collections leave in use and the compile queue's waits, which the status reports. */
     private val health = ServerHealth { (adapter as? XdkAdapter)?.compilerQueueSnapshot() }
 
+    /** Counts a request that the server answered, for its activity lines in the log. */
+    internal fun answered() = health.answered()
+
     /** Rescans walk the workspace on disk, so they run here, coalesced, never on the JSON-RPC reader thread. */
     private val discoveryRefresh = CoalescingTask("xtc-discovery") { rescans(::rediscover) }
 
@@ -1452,6 +1455,8 @@ class XtcLanguageServer internal constructor(
                 // file on disk compares with the time of its change
                 "watchedFileChanges" to workspaceService.receivedFileChanges(),
                 "heap" to health.heapStatus(),
+                // the latest minute in which the server worked, as its activity line logged it
+                "activity" to health.activity(),
                 // the latest lines the server logged about its heap and its compile queue, oldest first
                 "health" to health.events(),
             ),
