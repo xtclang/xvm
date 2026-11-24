@@ -10,10 +10,16 @@ import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.IdentityHashMap
+import java.util.UUID
 
 /** Worker-only edit planning and binding comparison. Compiler constants never escape this proof. */
 internal object XdkRename {
     private val newlines = Regex("\\r\\n|\\r|\\n")
+
+    private val IDENTIFIER = Regex("[A-Za-z_][A-Za-z0-9_]*")
+
+    /** Every unproven identity, as [erased] makes it. */
+    private val UNPROVEN = ProofIdentity.Unproven(UUID(0, 0))
 
     /** Replacement text and offsets in the original source, before any edits are applied. */
     data class Edit(
@@ -252,11 +258,14 @@ internal object XdkRename {
                 }
         val afterPrefixes = qualificationSites(after, plan.proposed, afterQualifications) ?: return false
         val expected =
-            edges(before, plan.original, plan::sourceAfter, ignored = beforePrefixes, callStart = plan::callStart) { source, offset ->
+            edges(before, plan.original, plan::sourceAfter, ignored = beforePrefixes, callStart = plan::callStart, unbound = true) {
+                source,
+                offset,
+                ->
                 plan.map(source, offset)
             } ?: return false
-        val actual = edges(after, plan.proposed, ignored = afterPrefixes) { _, offset -> offset } ?: return false
-        if (expected != actual) return false
+        val actual = edges(after, plan.proposed, ignored = afterPrefixes, unbound = true) { _, offset -> offset } ?: return false
+        if (!equivalent(expected, actual, plan)) return false
         // Relocation must retain import targets in the new lexical owner. Ordinary source
         // actions may intentionally remove unused imports; their remaining bindings suffice.
         if (plan.moves.isNotEmpty() && (!preservesImports(before, after, plan) || !preservesResources(before, after, plan))) return false
@@ -280,8 +289,96 @@ internal object XdkRename {
                             }
                     }
                 }.toSet()
-        return expectedDispatch == retainedDispatch
+        // a route through an unproven identity, which differs in each compile, is the same route once they are alike
+        return expectedDispatch == retainedDispatch ||
+            expectedDispatch.mapTo(hashSetOf()) { it.erased() } == retainedDispatch.mapTo(hashSetOf()) { it.erased() }
     }
+
+    /**
+     * Whether [expected] and [actual] bind each site alike. A binding that the facts cannot prove, an occurrence that the
+     * model leaves unbound or one bound to an unproven identity, which is new in each compile, is alike when it is the
+     * same apart from those identities and its site spells no name that [plan] changes: a rename can capture or lose only
+     * the occurrences spelled with its old or new name. Every other binding compares exactly. Operators and implicit
+     * conversions find their methods by their `@Op` and `@Auto` annotations, which a rename does not change. A rename in
+     * a module as broad as ecstasy, whose sources use nearly every construct, otherwise found one such binding among some
+     * ninety thousand and was refused, although none was the renamed declaration's.
+     */
+    private fun equivalent(
+        expected: Map<Site, Target>,
+        actual: Map<Site, Target>,
+        plan: Plan,
+    ): Boolean {
+        if (expected.keys != actual.keys) return false
+        val names = changedNames(plan)
+        return expected.all { (site, before) ->
+            val after = actual.getValue(site)
+            if (before.unprovable() || after.unprovable()) {
+                before.erased() == after.erased() && !spells(plan.proposed[site.source], site, names)
+            } else {
+                before == after
+            }
+        }
+    }
+
+    /** The identifiers that [plan]'s edits replace and write. */
+    private fun changedNames(plan: Plan): Set<String> =
+        plan.edits.flatMapTo(hashSetOf()) { (source, edits) ->
+            val text = plan.original[source].orEmpty()
+            edits.flatMap { edit ->
+                (IDENTIFIER.findAll(edit.text) + IDENTIFIER.findAll(text.substring(edit.start, edit.end))).map { it.value }
+            }
+        }
+
+    /** Whether [site] of [text] spells one of [names]; true when its text is not known, as nothing then shows it does not. */
+    private fun spells(
+        text: String?,
+        site: Site,
+        names: Set<String>,
+    ): Boolean = text == null || IDENTIFIER.findAll(text.substring(site.start, site.end)).any { it.value in names }
+
+    /** Whether the facts cannot prove this binding: unbound, or through an unproven identity. */
+    private fun Target.unprovable(): Boolean = this == Target.Unbound || erased() != this
+
+    /** This binding with each unproven identity replaced by one that is the same in every compile. */
+    private fun Target.erased(): Target =
+        when (this) {
+            is Target.External -> if (constant is ProofIdentity.Unproven) Target.External(UNPROVEN) else this
+
+            is Target.Parameter -> copy(method = method.erased())
+
+            is Target.MethodFormal -> copy(method = method.erased())
+
+            is Target.PrimaryConstructor -> copy(owner = owner.erased())
+
+            is Target.Generated -> copy(owner = owner.erased(), contracts = contracts.map { it.erased() })
+
+            is Target.Super -> copy(method = method.erased())
+
+            is Target.Receiver -> copy(owner = owner.erased())
+
+            is Target.Composed ->
+                copy(
+                    owner = owner.erased(),
+                    members = members.map { it.erased() },
+                    delegates = delegates.map { it.erased() },
+                    cycles = cycles.map { it.erased() },
+                    alternatives = alternatives.map { it.erased() },
+                )
+
+            is Target.Alternatives -> copy(targets = targets.mapTo(linkedSetOf()) { it.erased() })
+
+            is Target.TypeShape -> copy(components = components.map { it.erased() })
+
+            is Target.Declaration, is Target.Directory, is Target.SourceProof, Target.Unbound -> this
+        }
+
+    private fun Dispatch.erased(): Dispatch =
+        copy(
+            owner = owner.erased(),
+            members = members.map { it.erased() },
+            cycles = cycles.map { it.erased() },
+            alternatives = alternatives.map { it.erased() },
+        )
 
     /** Only static namespace/type prefixes may disappear; terminal bindings and calls still match. */
     private fun qualificationSites(
@@ -1005,6 +1102,12 @@ internal object XdkRename {
 
     /** Binding identity normalized through a proposed edit for comparison across compilation attempts. */
     private sealed interface Target {
+        /**
+         * An occurrence in compiled code that the semantic model leaves without a symbol, such as a name of a method's
+         * multiple return values, the `_` placeholder or a local used for its formal type ([preservesBindings]).
+         */
+        data object Unbound : Target
+
         /** Written declaration identified by its translated location and symbol kind. */
         data class Declaration(
             val site: Site,
@@ -1204,6 +1307,7 @@ internal object XdkRename {
         ignored: Set<SemanticModel.SourceLocation> = emptySet(),
         ignoredCalls: Set<SemanticModel.SourceLocation> = emptySet(),
         callStart: ((String, Int) -> Int?)? = null,
+        unbound: Boolean = false,
         translate: (String, Int) -> Int?,
     ): Map<Site, Target>? {
         val lines = LineIndexes()
@@ -1292,7 +1396,14 @@ internal object XdkRename {
                                     // passed in its own extends clause, is left out on both sides, as an unresolved
                                     // name is: the edited source must still compile, and a new binding of the name
                                     // is still a difference
-                                    ?: if (unplaced(facts, model, occurrence.symbol)) return@occurrences else return null
+                                    ?: when {
+                                        unplaced(facts, model, occurrence.symbol) -> return@occurrences
+
+                                        // compared by its spelling, which only a rename's proof asks for
+                                        unbound && occurrence.symbol == null -> Target.Unbound
+
+                                        else -> return null
+                                    }
                             }
                         result[site(source, occurrence.range) ?: return null] = bound
                     }
