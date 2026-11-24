@@ -1,3 +1,5 @@
+<!-- The screenshots in user-guide/ come from the editor tours: each one's tour step names it and its crop (GuideImage in the IntelliJ
+     tour's TourScript.kt, guide in the VS Code tour's script.ts), and lang/intellij-plugin/tour/guide.py rebuilds them from a tour run. -->
 # Ecstasy Language Tooling: User Guide
 
 This guide is for developers who are new to the Ecstasy (XTC) tools in IntelliJ IDEA and VS Code. It
