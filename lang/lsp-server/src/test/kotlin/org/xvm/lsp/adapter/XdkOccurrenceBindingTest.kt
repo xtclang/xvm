@@ -304,6 +304,41 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a reserved name such as this class in a property's accessor is an occurrence, as in a method`() {
+        val source =
+            """
+            module Reserved {
+                service Registry {
+                    @Unassigned
+                    String app {
+                        @Override
+                        String get() {
+                            if (!assigned) {
+                                assert /*accessor*/this:class.name.size > 0;
+                            }
+                            return super();
+                        }
+                    }
+                    String /*declared*/label() = /*method*/this:class.name;
+                }
+            }
+            """.trimIndent()
+        withSource("Reserved", source) { adapter, uri ->
+            for (marker in listOf("accessor", "method")) {
+                val at = position(source, marker)
+                assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range })
+                    .describedAs(marker)
+                    .containsExactly(range(source, marker, "this:class"))
+                assertThat(adapter.getHoverInfo(uri, at.line, at.column)).describedAs(marker).contains("this:class")
+            }
+            // a rename in the module is proven beside both
+            val declared = position(source, "declared")
+            val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "title")) { "No rename of label" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("/*declared*/label", "/*declared*/title"))
+        }
+    }
+
     private fun snapshot(
         name: String,
         text: String,
