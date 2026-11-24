@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.slf4j.LoggerFactory
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
@@ -19,6 +20,7 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.Collections
 import java.util.HexFormat
+import java.util.concurrent.CancellationException
 import java.util.Map.copyOf as immutableMap
 
 /**
@@ -80,17 +82,19 @@ class XdkDependency
          * What a module that depends on this one compiles against: the artifact without its methods' code and source
          * text, its build time and its source directory, with whether each method has code, and where each declaration
          * is. A module that depends on this one compiles against another artifact with the same as it did against this
-         * one, and its facts name this one's declarations at the same places.
+         * one, and its facts name this one's declarations at the same places. Null when the artifact cannot be read
+         * alone ([apis]), which no other artifact's API equals.
          */
-        internal val api: String get() = apis.all
+        internal val api: String? get() = apis?.all
 
         /**
          * [api] without where the private methods and properties are, and what they declare. A module that compiled
          * against this one cannot name them, so against another artifact with the same it compiles as it did, and its
          * facts name this one's declarations at the same places. The facts of a module whose compile failed are what it
-         * got that far, which name every member of a type it used, private ones too: [api] is what keeps those.
+         * got that far, which name every member of a type it used, private ones too: [api] is what keeps those. Null
+         * when [api] is.
          */
-        internal val accessibleApi: String get() = apis.accessible
+        internal val accessibleApi: String? get() = apis?.accessible
 
         /** [api] and [accessibleApi], from one read of the artifact. */
         private class Apis(
@@ -98,7 +102,28 @@ class XdkDependency
             val accessible: String,
         )
 
-        private val apis: Apis by lazy {
+        /**
+         * [api] and [accessibleApi], or null when the artifact cannot be read alone: its declarations are described by
+         * their signatures, and a signature whose type the compiler relates to a dependency's class that the artifact
+         * does not hold, as in a library of the XVM repository that depends on its ecstasy, cannot be described. A module
+         * that depends on such an artifact is then compiled again whenever it is, as the log says.
+         */
+        private val apis: Apis? by lazy {
+            try {
+                readApis()
+            } catch (failure: CancellationException) {
+                throw failure
+            } catch (failure: RuntimeException) {
+                logger.info(
+                    "compile: the API of {}'s artifact cannot be read alone ({}), so the modules that depend on it compile again with it",
+                    module,
+                    failure.message,
+                )
+                null
+            }
+        }
+
+        private fun readApis(): Apis =
             ExecutionTrace.api("FileStructure.api", module) {
                 val file = FileStructure(ByteArrayInputStream(artifact))
                 ConstantPool.withPool(file.constantPool).use {
@@ -143,7 +168,6 @@ class XdkDependency
                     Apis(digest(located.map { it.first }), digest(located.filterNot { it.second }.map { it.first }))
                 }
             }
-        }
 
         /**
          * Whether [identity] is a private method or property, other than a constructor, or is declared in one: what
@@ -294,3 +318,5 @@ internal class XdkDependencies(
         val artifacts: Map<String, XdkDependency> = emptyMap(),
     )
 }
+
+private val logger = LoggerFactory.getLogger(XdkDependency::class.java)

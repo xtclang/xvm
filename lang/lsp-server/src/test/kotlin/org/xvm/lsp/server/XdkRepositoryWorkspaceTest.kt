@@ -1,12 +1,17 @@
 package org.xvm.lsp.server
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.AppenderBase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
@@ -17,6 +22,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import org.slf4j.LoggerFactory
 import org.xvm.lsp.Heavy
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.awaitAsserted
@@ -30,8 +36,10 @@ import java.util.concurrent.CopyOnWriteArrayList
  * A workspace that holds the XDK's own sources, over copies of the repository's lib_ecstasy and lib_json: json compiles
  * against the workspace's ecstasy, unsaved edits included, its definitions go to the workspace's sources rather than the
  * bundled copies, the status names the libraries the workspace replaces, and embedded builds are refused; and a rename of
- * a method of the workspace's ecstasy is proven over both, edits json's call too. Heavy: each case compiles ecstasy from
- * source, and the rename's proof twice, which needs a 2 GB heap (XdkLibrarySources.PROOF_HEAP_BYTES).
+ * a method of the workspace's ecstasy is proven over both and a module that depends on json, edits json's call too, and
+ * one of json's compiles only what depends on json. Heavy: each case compiles ecstasy from
+ * source, and a rename's proof compiles it again after the edit, which needs a 2 GB heap
+ * (XdkLibrarySources.PROOF_HEAP_BYTES).
  */
 @Heavy
 class XdkRepositoryWorkspaceTest {
@@ -100,7 +108,7 @@ class XdkRepositoryWorkspaceTest {
     }
 
     @Test
-    fun `a rename of a method of the workspace's ecstasy edits json's call of it, as the workspace's sources`() {
+    fun `a rename of a method of the workspace's ecstasy edits json's call of it, and one of json's compiles what depends on json`() {
         val root = File(requireNotNull(System.getProperty("xtc.composite.root")) { "xtc.composite.root is not set" })
         val workspace = directory.toRealPath().toFile()
         listOf("lib_ecstasy", "lib_json").forEach { library ->
@@ -116,6 +124,8 @@ class XdkRepositoryWorkspaceTest {
         // a method only the workspace's String has, which json calls: a rename that the bundled ecstasy would refuse
         string.writeText(withMember(string.readText(), "Int workspaceOnly() = 1;"))
         input.writeText(withMember(input.readText(), "void probe() { Int n = \"x\".workspaceOnly(); }"))
+        // a module that depends on json, as the repository's web and xenia do
+        workspace.resolve("jsonUse.x").writeText("module jsonUse {\n    package json import json.xtclang.org;\n}\n")
         val published = CopyOnWriteArrayList<PublishDiagnosticsParams>()
         val client = mock(LanguageClient::class.java)
         doAnswer { call ->
@@ -123,40 +133,89 @@ class XdkRepositoryWorkspaceTest {
             null
         }.`when`(client).publishDiagnostics(any())
 
-        XtcLanguageServer(XdkAdapter()).use { server ->
-            server.connect(client)
-            server
-                .initialize(
-                    editorInitializeParams().apply {
-                        workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "xdk"))
-                        // a rename's edit is versioned, which a client takes as document changes, as both editors do
-                        capabilities.workspace.workspaceEdit = WorkspaceEditCapabilities().apply { documentChanges = true }
-                    },
-                ).awaited()
-            listOf(string, input).forEach {
-                server.textDocumentService.didOpen(
-                    DidOpenTextDocumentParams(TextDocumentItem(it.toURI().toString(), "ecstasy", 1, it.readText())),
-                )
-            }
-            awaitAsserted {
-                val report = published.lastOrNull { it.uri == input.toURI().toString() }
-                assertThat(report).describedAs(published.toString()).isNotNull()
-                assertThat(report!!.diagnostics).isEmpty()
-            }
+        val lines =
+            logged {
+                XtcLanguageServer(XdkAdapter()).use { server ->
+                    server.connect(client)
+                    server
+                        .initialize(
+                            editorInitializeParams().apply {
+                                workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "xdk"))
+                                // a rename's edit is versioned, which a client takes as document changes, as both editors do
+                                capabilities.workspace.workspaceEdit = WorkspaceEditCapabilities().apply { documentChanges = true }
+                            },
+                        ).awaited()
+                    listOf(string, input).forEach {
+                        server.textDocumentService.didOpen(
+                            DidOpenTextDocumentParams(TextDocumentItem(it.toURI().toString(), "ecstasy", 1, it.readText())),
+                        )
+                    }
+                    awaitAsserted {
+                        val report = published.lastOrNull { it.uri == input.toURI().toString() }
+                        assertThat(report).describedAs(published.toString()).isNotNull()
+                        assertThat(report!!.diagnostics).isEmpty()
+                    }
 
-            val text = string.readText()
-            val line = text.lines().indexOfFirst { "workspaceOnly()" in it }
-            val at = Position(line, text.lines()[line].indexOf("workspaceOnly"))
-            val edit =
-                requireNotNull(
-                    server.textDocumentService
-                        .rename(RenameParams(TextDocumentIdentifier(string.toURI().toString()), at, "workspaceRenamed"))
-                        .awaited(),
-                ) { "No rename of the workspace's ecstasy" }
-            val changes = edit.documentChanges.map { it.left }
-            assertThat(changes.map { File(URI(it.textDocument.uri)).canonicalFile })
-                .containsExactlyInAnyOrder(string.canonicalFile, input.canonicalFile)
-            assertThat(changes.flatMap { it.edits }).allMatch { it.left.newText == "workspaceRenamed" }
+                    // as an editor renames: prepareRename, which starts the compile that the proof starts from, then
+                    // the rename, which compiles after the edit only
+                    fun rename(
+                        file: File,
+                        name: String,
+                        newName: String,
+                    ): List<TextDocumentEdit> {
+                        val text = file.readText()
+                        val line = text.lines().indexOfFirst { "$name()" in it }
+                        val at = Position(line, text.lines()[line].indexOf(name))
+                        val document = TextDocumentIdentifier(file.toURI().toString())
+                        server.textDocumentService.prepareRename(PrepareRenameParams(document, at)).awaited()
+                        val edit =
+                            requireNotNull(server.textDocumentService.rename(RenameParams(document, at, newName)).awaited()) {
+                                "No rename of $name"
+                            }
+                        return edit.documentChanges.map { it.left }
+                    }
+                    val changes = rename(string, "workspaceOnly", "workspaceRenamed")
+                    assertThat(changes.map { File(URI(it.textDocument.uri)).canonicalFile })
+                        .containsExactlyInAnyOrder(string.canonicalFile, input.canonicalFile)
+                    assertThat(changes.flatMap { it.edits }).allMatch { it.left.newText == "workspaceRenamed" }
+
+                    // a rename in json, of the same revision, whose compile is kept
+                    val probed = rename(input, "probe", "probed")
+                    assertThat(probed.map { File(URI(it.textDocument.uri)).canonicalFile }).containsExactly(input.canonicalFile)
+                }
+            }
+        val queries = lines.filter { it.startsWith("project query: kind=") }
+        queries.forEach(::println)
+        // prepareRename's compile of ecstasy, json and jsonUse; the proof of the rename in ecstasy compiles them all
+        // again, as they depend on it; the proof of the one in json compiles json and jsonUse, and not ecstasy
+        assertThat(queries.map { "${it.substringBefore(" in ")} ${Regex("compiles=[0-9]+").find(it)?.value}" })
+            .containsExactly(
+                "project query: kind=prepare_rename uri=String.x outcome=completed compiles=3",
+                "project query: kind=rename uri=String.x outcome=completed compiles=3",
+                "project query: kind=rename uri=DocInput.x outcome=completed compiles=2",
+            )
+        // json's artifact names the workspace's ecstasy's classes, which it does not hold, so its API cannot be read
+        // alone, and what depends on json is compiled again with it, rather than the proof failing
+        assertThat(lines).anyMatch { it.startsWith("compile: the API of json.xtclang.org's artifact cannot be read alone") }
+    }
+
+    /** The lines that the server's loggers log at INFO while [body] runs. */
+    private fun logged(body: () -> Unit): List<String> {
+        val lines = CopyOnWriteArrayList<String>()
+        val logger = LoggerFactory.getLogger("org.xvm.lsp") as Logger
+        val appender =
+            object : AppenderBase<ILoggingEvent>() {
+                override fun append(event: ILoggingEvent) {
+                    lines += event.formattedMessage
+                }
+            }.apply { start() }
+        logger.addAppender(appender)
+        try {
+            body()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
         }
+        return lines
     }
 }

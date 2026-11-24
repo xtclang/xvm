@@ -191,7 +191,9 @@ The navigation index holds one detached build per configured root, reused only w
 text, resources and dependency binary/source-index revisions match. Editor and workspace-diagnostic
 compilation seed the same index; changing a module rebuilds its affected dependency closure. Removed
 roots are evicted, and stale/canceled work cannot republish an older index generation. Refactoring
-proofs remain fresh compilations. There is no disk-persistent index or incremental compiler; warm
+proofs start from the revision's compile, which code actions and renames share and `prepareRename`
+starts, and compile only the modules that an edit changes and those that depend on them; a move or a
+changed graph compiles every module. There is no disk-persistent index or incremental compiler; warm
 queries still capture the graph inputs to detect closed-file changes without relying on watchers.
 Workspace implementation and type/call hierarchy queries also include unopened consumers, joining
 compiler identities across module artifacts. Hierarchy handles reject changed graph/source/binary
