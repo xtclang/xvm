@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.driver.model.OnDispatcher
@@ -57,6 +58,151 @@ private class TestConsole(
             getter = { ids.map(::result) },
             checker = { all -> all.all { it != null && it.string("state") != "running" } },
         ).map { checkNotNull(it) }
+}
+
+/**
+ * X348 in Gradle mode, which runs every project's testXtc in one build: here a wrapper that records what it is asked to
+ * run and prints xunit's events of the [modules]' tests, as such a build's `json` report does, each event's ID naming its
+ * module. Without an imported model, which names each module's project, the build runs the bare testXtc and its console
+ * has no Rerun Failed Tests; with one, each project's testXtc, and Rerun Failed Tests reruns the failed test in its own
+ * module's project only.
+ */
+private fun ParityWorkspace.gradleTests(
+    data: JsonObject,
+    modules: List<JsonObject>,
+    console: TestConsole,
+) {
+    val rootFiles = listOf("gradleFile", "wrapper", "windowsWrapper", "invocations", "events").map { projectRoot.resolve(data.string(it)) }
+    rootFiles.forEach { check(!Files.exists(it)) { "X348 needs a project root without $it" } }
+    // Gradle's project cache, which holds the imported model, as X129's
+    val cache = projectRoot.resolve(".gradle")
+    val report = cache.resolve(data.string("model"))
+    check(!Files.exists(report)) { "X348 needs a project root without $report" }
+    val made = !Files.exists(cache)
+    val invocations = projectRoot.resolve(data.string("invocations"))
+
+    fun calls() = if (Files.exists(invocations)) Files.readAllLines(invocations).filter { it.isNotBlank() } else emptyList()
+
+    fun projects() = JsonParser.parseString(console.tests.gradleProjects(console.project))
+
+    val passed = data.strings("passed")
+    val failed = data.string("failed")
+    val runAll = data.string("runAll")
+    val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
+    val previous = with(driver) { withContext(OnDispatcher.EDT) { execution.mode(console.project, "GRADLE") } }
+    try {
+        Files.writeString(projectRoot.resolve(data.string("gradleFile")), data.string("gradleSource"))
+        val wrapper = projectRoot.resolve(data.string("wrapper"))
+        Files.writeString(wrapper, data.string("wrapperSource"))
+        wrapper.toFile().setExecutable(true)
+        Files.writeString(projectRoot.resolve(data.string("windowsWrapper")), data.string("windowsWrapperSource"))
+        Files.writeString(projectRoot.resolve(data.string("events")), xunitEvents(passed, listOf(failed), data.string("failure")))
+
+        // without an imported model: the bare testXtc, every project's, and no project to send a rerun to
+        awaitUi("no Gradle projects without a model", HANG_LIMIT, errorMessage = { projects().toString() }) {
+            projects() == JsonObject()
+        }
+        console.tests.reset(console.project)
+        console.tests.runAllTests(console.project)
+        val bare = console.ended(passed + failed, "the Gradle build reports every module's tests")
+        console.runsEnded("the Gradle build ends")
+        check(bare.map { it.string("state") } == passed.map { "passed" } + "failed") { "The Gradle build: ${console.results()}" }
+        check(calls() == listOf(data.string("gradleRun"))) { "Run 'All Ecstasy Tests' in Gradle mode: ${calls()}" }
+        check(!with(driver) { withContext(OnDispatcher.EDT) { console.tests.rerunFailedOffered(console.project, runAll) } }) {
+            "Without a model, the Gradle build has no Rerun Failed Tests"
+        }
+
+        // the model that an import writes, whose source sets name each module's project, which the plugin gives the
+        // language server once no explicit modules replace it, as it reads the modules from it
+        val paths = data.getAsJsonObject("projects")
+        Files.createDirectories(report.parent)
+        Files.writeString(report, Gson().toJson(model(modules, paths)))
+        configure(null)
+        awaitUi("the model's Gradle projects", HANG_LIMIT, errorMessage = { projects().toString() }) { projects() == paths }
+        console.tests.reset(console.project)
+        console.tests.runAllTests(console.project)
+        val built = console.ended(passed + failed, "each project's testXtc reports its module's tests")
+        console.runsEnded("the projects' build ends")
+        check(built.map { it.string("state") } == passed.map { "passed" } + "failed") { "The projects' build: ${console.results()}" }
+        check(calls().drop(1) == listOf(data.string("gradleProjectsRun"))) { "Each project's testXtc: ${calls()}" }
+
+        // Rerun Failed Tests: the failed test's module's project only, with its module and the test
+        console.tests.reset(console.project)
+        console.tests.rerunFailed(console.project, runAll)
+        awaitUi("Rerun Failed Tests runs Gradle", HANG_LIMIT, errorMessage = { calls().toString() }) { calls().size == 3 }
+        console.runsEnded("the rerun's build ends")
+        check(calls().last() == data.string("gradleRerun")) { "Rerun Failed Tests in Gradle mode: ${calls()}" }
+    } finally {
+        with(driver) { withContext(OnDispatcher.EDT) { execution.mode(console.project, previous) } }
+        rootFiles.forEach(Files::deleteIfExists)
+        Files.deleteIfExists(report)
+        if (made) cache.toFile().deleteRecursively()
+        configure(emptyList())
+    }
+}
+
+/**
+ * The model that a Gradle import writes of [modules], `lsp-model.json`: each module the test source set of its own
+ * project, whose path in the build tree [paths] gives by the module's name.
+ */
+private fun ParityWorkspace.model(
+    modules: List<JsonObject>,
+    paths: JsonObject,
+): Map<String, Any> =
+    mapOf(
+        "schemaVersion" to 1,
+        "sourceSets" to
+            modules.map { module ->
+                val path = paths.string(module.string("module"))
+                val file = uri(module.string("file"))
+                mapOf(
+                    "projectId" to "${directory.toUri()}#$path",
+                    "projectPath" to path,
+                    "projectDirectory" to directory.toUri().toString(),
+                    "buildFile" to directory.resolve("build.gradle.kts").toUri().toString(),
+                    "sourceSet" to "test",
+                    "sourceRoots" to listOf(directory.toUri().toString()),
+                    "sourceFiles" to listOf(file),
+                    "moduleRoots" to listOf(file),
+                    "resourceSourceRoots" to emptyList<String>(),
+                    "resourceRoots" to emptyList<String>(),
+                    "resourceTask" to "$path:processTestXtcResources",
+                    "projectDependencies" to emptyList<String>(),
+                    "modulePath" to emptyList<String>(),
+                    "buildTreePath" to path,
+                )
+            },
+    )
+
+/**
+ * xunit's events of the tests [passed] and [failed], by their IDs as VS Code's, `<module>/<selector>`, each a line as a
+ * Gradle build's `json` report prints them, with IDs as xunit's `UniqueId.path`, which start with the module's name;
+ * each failed test fails with [failure].
+ */
+private fun xunitEvents(
+    passed: List<String>,
+    failed: List<String>,
+    failure: String,
+): String {
+    val tests = passed.map { it to "passed" } + failed.map { it to "failed" }
+    val events =
+        listOf(mapOf("event" to "run", "version" to 1)) +
+            tests.groupBy { it.first.substringBefore('/') }.flatMap { (module, results) ->
+                val root = "$module:"
+                val started = mapOf("event" to "started", "id" to root, "name" to module, "selector" to "", "container" to true)
+                listOf(started) +
+                    results.flatMap { (id, status) ->
+                        val selector = id.substringAfter('/')
+                        val test = "$module:void $selector()"
+                        listOf(
+                            mapOf("event" to "started", "id" to test, "parent" to root, "name" to selector, "selector" to selector),
+                            mapOf("event" to "finished", "id" to test, "status" to status) +
+                                if (status == "failed") mapOf("message" to failure) else emptyMap(),
+                        )
+                    } +
+                    mapOf("event" to "finished", "id" to root, "status" to "passed")
+            }
+    return events.joinToString("") { "##xunit ${Gson().toJson(it)}\n" }
 }
 
 /** Writes [file] with [source] as the module [module], configured as the workspace's, with no errors. */
@@ -228,6 +374,7 @@ internal fun ParityScenarios.xunitCases() {
         check(console.results().keySet() == setOf(console.location(failed))) {
             "The rerun runs only the failed test, of its module: ${console.results()}"
         }
+        gradleTests(data, modules, console)
         documents.forEach(::closeEditor)
     }
 

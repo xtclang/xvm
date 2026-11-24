@@ -250,11 +250,13 @@ test console is a **Tests** tab of the debug session.
 **Run 'All Ecstasy Tests'**, in the Project window's context menu of the project's folder, `src`,
 `src/test` or `src/test/x`, runs every test module's tests into one test console: embedded and with
 `xtc test` each module in turn, and in Gradle mode one `testXtc` for all of them. **Stop** stops the
-module that runs and starts no other. Embedded and with `xtc test`, each test's location names its module,
-`xunit://<module>/<selector>`, so that **Jump to Source** goes to that module's test, and **Rerun Failed
-Tests** runs each module that has failed tests, in turn, with only those. Gradle's one `testXtc` does not
-say which module each test is of, so in Gradle mode it has no **Rerun Failed Tests**. It has no Debug yet,
-as LSP4IJ's debug launch runs one configuration's one program.
+module that runs and starts no other. Each test's location names its module, `xunit://<module>/<selector>`,
+the module that its xunit event's ID starts with (`<module>:<package>.<class>.<method>`), so that **Jump to
+Source** goes to that module's test, and **Rerun Failed Tests** runs each module that has failed tests with
+only those: embedded and with `xtc test` each module in turn, and in Gradle mode one build of each module's
+project's `testXtc`, such as `:a:testXtc --module=a --test-method=… :b:testXtc --module=b --test-method=…`.
+Only the imported Gradle model names a module's project, so without it Gradle mode has no **Rerun Failed
+Tests**. It has no Debug yet, as LSP4IJ's debug launch runs one configuration's one program.
 
 Gradle mode needs a Gradle plugin and XDK with
 `testXtc`'s test options and the JSON report, and command-line mode the `xtc` on the `PATH`, whose

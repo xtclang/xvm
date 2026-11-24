@@ -9,7 +9,7 @@ import org.xtclang.idea.lsp.TestSelector
 /**
  * The test console's Rerun Failed Tests, which runs a test run's configuration again with the tests that failed, and,
  * after Run 'All Ecstasy Tests', each module that has failed tests with those, by the module that each test's location
- * names.
+ * names: each module in turn, or in Gradle mode each in its project's testXtc, in one build.
  */
 class RerunFailedTestsTest {
     @Test
@@ -76,6 +76,47 @@ class RerunFailedTestsTest {
         assertThat(XtcTestLocation.of("SecondSuite/Inner.works")).isEqualTo(other)
         assertThat(XtcTestLocation.of("SecondSuite/")).isEqualTo(XtcTestLocation("SecondSuite", ""))
         assertThat(XtcTestLocation.parse("java:test://Other.test")).isNull()
+    }
+
+    @Test
+    fun `in Gradle mode the rerun is one build of each module's project's testXtc, with only its module's failed tests`() {
+        val projects = mapOf("json.xtclang.org" to ":xdk:lib-json", "DeckTest" to ":", "Other" to ":other")
+        val tasks =
+            XtcRunConfiguration.gradleRerunTasks(
+                projects,
+                mapOf(
+                    "json.xtclang.org" to
+                        listOf(TestSelector("Parser.reads", ServerTest.TEST), TestSelector("Parser.writes", ServerTest.TEST)),
+                    "DeckTest" to listOf(TestSelector("three", ServerTest.TEST)),
+                ),
+            )
+        // by the projects' paths, a root project's task as :testXtc, and nothing of a project without failed tests
+        assertThat(tasks).containsExactly(
+            ":testXtc",
+            "--module=DeckTest",
+            "--test-method=three",
+            "--test-report=json",
+            ":xdk:lib-json:testXtc",
+            "--module=json.xtclang.org",
+            "--test-method=Parser.reads",
+            "--test-method=Parser.writes",
+            "--test-report=json",
+        )
+    }
+
+    @Test
+    fun `two modules of one project rerun in its one testXtc, and a module that no project has stops the rerun`() {
+        val three = listOf(TestSelector("three", ServerTest.TEST))
+        val four = listOf(TestSelector("four", ServerTest.TEST))
+        val shared = mapOf("FirstSuite" to ":suites", "SecondSuite" to ":suites")
+
+        // testXtc takes one --module, so the project's modules each run the tests they have of both
+        assertThat(XtcRunConfiguration.gradleRerunTasks(shared, mapOf("FirstSuite" to three, "SecondSuite" to four)))
+            .containsExactly(":suites:testXtc", "--test-method=three", "--test-method=four", "--test-report=json")
+        // without an imported model, or one that lacks the module, there is no project to send it to
+        assertThat(XtcRunConfiguration.gradleRerunTasks(emptyMap(), mapOf("FirstSuite" to three))).isNull()
+        assertThat(XtcRunConfiguration.gradleRerunTasks(shared, mapOf("FirstSuite" to three, "Gone" to four))).isNull()
+        assertThat(XtcRunConfiguration.gradleRerunTasks(shared, emptyMap())).isNull()
     }
 
     @Test

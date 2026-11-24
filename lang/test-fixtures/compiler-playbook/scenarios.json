@@ -10732,10 +10732,11 @@
       }
     },
     "X348": {
-      "title": "Run All in a project with several test modules runs every module's tests embedded and reports each as its own module's, though both modules have a test three (IntelliJ: Run 'All Ecstasy Tests', whose Rerun Failed Tests then reruns only the failed three, in its module)",
+      "title": "Run All in a project with several test modules runs every module's tests embedded and reports each as its own module's, though both modules have a test three (IntelliJ: Run 'All Ecstasy Tests', whose Rerun Failed Tests then reruns only the failed three, in its module, embedded and in Gradle mode)",
       "manual": [
         "The tests run embedded, with xunit in a process the language server starts, as X339's do",
-        "VS Code's Run All runs each module's tests in turn; IntelliJ's Run 'All Ecstasy Tests' does too, into one test console, where each test goes to its own module's source, and that console's Rerun Failed Tests runs each module that has failed tests, with only those"
+        "VS Code's Run All runs each module's tests in turn; IntelliJ's Run 'All Ecstasy Tests' does too, into one test console, where each test goes to its own module's source, the module that its xunit event's ID names, and that console's Rerun Failed Tests runs each module that has failed tests, with only those",
+        "IntelliJ, Gradle mode: a wrapper that records what it is asked to run and prints xunit's events of the modules' tests stands in for Gradle. Without an imported model Run 'All Ecstasy Tests' runs the bare testXtc and has no Rerun Failed Tests; with the model that an import writes, .gradle/xtc/lsp-model.json, each project's testXtc, and Rerun Failed Tests the failed test's module's project's testXtc with that module and test only"
       ],
       "values": {
         "modules": [
@@ -10757,7 +10758,23 @@
         ],
         "failed": "SecondSuite/three",
         "failure": "three and three are not seven",
-        "runAll": "All Ecstasy Tests"
+        "runAll": "All Ecstasy Tests",
+        "gradleFile": "settings.gradle.kts",
+        "gradleSource": "rootProject.name = \"playbook\"\n",
+        "wrapper": "gradlew",
+        "wrapperSource": "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/gradle-invocations.txt\"\ncase \"$*\" in *testXtc*) cat \"$(dirname \"$0\")/xunit-events.txt\" ;; esac\n",
+        "windowsWrapper": "gradlew.bat",
+        "windowsWrapperSource": "@echo off\r\necho %*>> \"%~dp0gradle-invocations.txt\"\r\necho %* | findstr testXtc > nul && type \"%~dp0xunit-events.txt\"\r\n",
+        "invocations": "gradle-invocations.txt",
+        "events": "xunit-events.txt",
+        "model": "xtc/lsp-model.json",
+        "projects": {
+          "FirstSuite": ":first",
+          "SecondSuite": ":second"
+        },
+        "gradleRun": "-q testXtc --test-report=json",
+        "gradleProjectsRun": "-q :first:testXtc --test-report=json :second:testXtc --test-report=json",
+        "gradleRerun": "-q :second:testXtc --module=SecondSuite --test-method=three --test-report=json"
       },
       "intellij": {
         "coverage": "full",
