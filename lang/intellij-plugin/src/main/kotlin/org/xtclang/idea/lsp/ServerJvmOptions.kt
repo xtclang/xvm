@@ -6,13 +6,31 @@ internal object ServerJvmOptions {
     private val collector = Regex("-XX:\\+Use(G1|Serial|Parallel|Z)GC")
 
     /**
-     * What the server runs with unless [options] choose a collector or a maximum heap: ZGC, which keeps the heap near a
-     * 1 GB soft limit, grows past it only as far as the live data needs, up to the JVM's own maximum, and gives back the
-     * memory it no longer uses. A maximum heap the user chose keeps the JVM's default collector, since ZGC's uncompressed
-     * pointers make the same data take about half as much heap again.
+     * The adaptive policy's flags: ZGC, which starts with a small heap, keeps it near a 1 GB soft target, grows past it
+     * only as far as the live data needs, and gives back memory unused for a minute; its maximum, three quarters of the
+     * machine's memory, only guards the machine, as the JVM has none that adapts (ZGC's automatic heap sizing, JDK-8329758,
+     * is not in a release).
      */
-    fun defaults(options: List<String>): List<String> =
-        if (options.any { collector.matches(it) || it.startsWith("-Xmx") }) emptyList() else listOf("-XX:+UseZGC", "-XX:SoftMaxHeapSize=1G")
+    val ADAPTIVE =
+        listOf("-XX:+UseZGC", "-Xms64m", "-XX:SoftMaxHeapSize=1G", "-XX:MaxRAMPercentage=75", "-XX:ZUncommitDelay=60")
+
+    /**
+     * The memory flags of [policy], unless the free-form [options] choose a collector or a maximum heap, which then win.
+     * [MemoryPolicy.DEFAULT] gives the maximum heap [maxHeap], as `4G`, or none, the JVM's own: a quarter of the machine's
+     * memory, with its default collector, which a chosen maximum keeps, since ZGC's uncompressed pointers make the same
+     * data take about half as much heap again. [MemoryPolicy.ADAPTIVE] gives [ADAPTIVE].
+     */
+    fun memory(
+        policy: MemoryPolicy,
+        maxHeap: String,
+        options: List<String>,
+    ): List<String> =
+        when {
+            options.any { collector.matches(it) || it.startsWith("-Xmx") } -> emptyList()
+            policy == MemoryPolicy.ADAPTIVE -> ADAPTIVE
+            maxHeap.isBlank() -> emptyList()
+            else -> validate(listOf("-Xmx${maxHeap.trim()}"))
+        }
 
     fun validate(options: List<String>): List<String> {
         val keys =

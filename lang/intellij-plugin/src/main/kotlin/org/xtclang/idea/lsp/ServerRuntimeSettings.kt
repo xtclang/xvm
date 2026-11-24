@@ -8,6 +8,17 @@ import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.annotations.OptionTag
 
+/** How the language server's JVM uses memory, chosen on the Ecstasy Server Runtime and Logs page. */
+enum class MemoryPolicy(
+    private val label: String,
+) {
+    DEFAULT("Default: the maximum heap below, or the JVM's own, a quarter of this machine's memory"),
+    ADAPTIVE("Adaptive: starts small, grows as the work needs and gives memory back, using at most 3/4 of this machine's"),
+    ;
+
+    override fun toString() = label
+}
+
 /** Application-owned and excluded from Settings Sync and project files. */
 @Service(Service.Level.APP)
 @State(name = "EcstasyServerRuntime", storages = [Storage(value = "ecstasy-server-runtime.xml", roamingType = RoamingType.DISABLED)])
@@ -26,6 +37,9 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
         @field:OptionTag @JvmField val logRetainedSessions: Int = 5,
         @field:OptionTag @JvmField val compileLibraries: Boolean = true,
         @field:OptionTag @JvmField val replaceLibraries: Boolean = true,
+        @field:OptionTag @JvmField val memoryPolicy: MemoryPolicy = MemoryPolicy.DEFAULT,
+        /** The maximum heap of [MemoryPolicy.DEFAULT], as `4G`; blank for the JVM's own. */
+        @field:OptionTag @JvmField val maxHeap: String = "",
     ) {
         fun arguments(): List<String> =
             ServerJvmOptions.validate(
@@ -35,11 +49,14 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
                     .filter(String::isNotEmpty)
                     .toList(),
             )
+
+        /** The memory policy's flags, unless [arguments] choose a collector or a maximum heap. */
+        fun memoryArguments(): List<String> = ServerJvmOptions.memory(memoryPolicy, maxHeap, arguments())
     }
 
     fun launchArguments(): List<String> =
         state.let {
-            it.arguments().let { options -> ServerJvmOptions.defaults(options) + options } + it.logArguments() +
+            it.memoryArguments() + it.arguments() + it.logArguments() +
                 it.libraryArguments()
         }
 
@@ -48,6 +65,7 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
         replacement: Options,
     ) {
         replacement.arguments()
+        replacement.memoryArguments()
         replacement.logArguments()
         updateState {
             require(it == expected) { "Runtime settings changed while this page was open. Reset before applying." }

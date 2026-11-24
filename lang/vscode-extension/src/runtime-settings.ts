@@ -22,14 +22,34 @@ export function validateJvmOptions(raw: unknown): string[] {
     return [...raw];
 }
 
+/** How the language server's JVM uses memory: xtc.server.memoryPolicy. */
+export type MemoryPolicy = 'default' | 'adaptive';
+
 /**
- * What the server runs with unless the options choose a collector or a maximum heap: ZGC, which keeps the heap near a
- * 1 GB soft limit, grows past it only as far as the live data needs, up to the JVM's own maximum, and gives back the
- * memory it no longer uses. A maximum heap the user chose keeps the JVM's default collector, since ZGC's uncompressed
- * pointers make the same data take about half as much heap again.
+ * The adaptive policy's flags: ZGC, which starts with a small heap, keeps it near a 1 GB soft target, grows past it only
+ * as far as the live data needs, and gives back memory unused for a minute; its maximum, three quarters of the machine's
+ * memory, only guards the machine, as the JVM has none that adapts (ZGC's automatic heap sizing, JDK-8329758, is not in
+ * a release).
  */
-export function defaultJvmOptions(options: readonly string[]): string[] {
-    return options.some(option => /^-XX:\+Use(G1|Serial|Parallel|Z)GC$/.test(option) || option.startsWith('-Xmx')) ? [] : ['-XX:+UseZGC', '-XX:SoftMaxHeapSize=1G'];
+export const ADAPTIVE_JVM_OPTIONS = ['-XX:+UseZGC', '-Xms64m', '-XX:SoftMaxHeapSize=1G', '-XX:MaxRAMPercentage=75', '-XX:ZUncommitDelay=60'];
+
+/**
+ * The memory flags of [policy], unless the options choose a collector or a maximum heap, which then win. The default
+ * policy gives the maximum heap [maxHeap], as 4G, or none, the JVM's own: a quarter of the machine's memory, with its
+ * default collector, which a chosen maximum keeps, since ZGC's uncompressed pointers make the same data take about half
+ * as much heap again.
+ */
+export function memoryJvmOptions(options: readonly string[], policy: MemoryPolicy, maxHeap: string): string[] {
+    if (options.some(option => /^-XX:\+Use(G1|Serial|Parallel|Z)GC$/.test(option) || option.startsWith('-Xmx'))) return [];
+    if (policy === 'adaptive') return [...ADAPTIVE_JVM_OPTIONS];
+    return maxHeap.trim() === '' ? [] : validateJvmOptions([`-Xmx${maxHeap.trim()}`]);
+}
+
+/** The memory policy and maximum heap, machine-local like the other runtime settings. */
+export function runtimeMemoryOptions(options: readonly string[]): string[] {
+    const settings = vscode.workspace.getConfiguration('xtc');
+    const policy = settings.inspect<string>('server.memoryPolicy')?.globalValue === 'adaptive' ? 'adaptive' : 'default';
+    return memoryJvmOptions(options, policy, settings.inspect<string>('server.maxHeap')?.globalValue ?? '');
 }
 
 export function runtimeJvmOptions(): string[] {
