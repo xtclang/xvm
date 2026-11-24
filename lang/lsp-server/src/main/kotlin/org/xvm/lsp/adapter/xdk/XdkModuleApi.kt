@@ -77,34 +77,29 @@ internal class XdkModuleApi private constructor(
         val fingerprint: Boolean,
     ) {
         /**
-         * The paths of itself and of the declarations through which a module that uses a type as a whole sees it: what
-         * holds it, up to and with the nearest type or namespace, but no further than one that is private, which only its
-         * own class sees.
+         * Itself and the declarations through which a module that uses a type as a whole sees it: what holds it, up to and
+         * with the nearest type or namespace, and past a type that a type holds, to the type that holds that, but no
+         * further than one that is private, which only its own class sees. A type held by a type is the holder's virtual
+         * child, which a subclass of the holder takes and may override, and whose type a module writes as the holder's
+         * type and the child's name, never naming the child's class: a change in the child is one of each holder's.
          */
-        val visible: List<String> by lazy { chain(stopAtPrivate = true) }
+        val visible: List<Declaration> by lazy { chain(stopAtPrivate = true) }
 
         /** [visible], private declarations or not, through which a module whose classes extend the type sees it. */
-        val enclosing: List<String> by lazy { chain(stopAtPrivate = false) }
+        val enclosing: List<Declaration> by lazy { chain(stopAtPrivate = false) }
 
-        /** Whether a module sees it through a type: it, or the nearest type or namespace that holds it, short of a private one, is one. */
-        fun seenThroughType(): Boolean {
-            var next: Declaration? = this
-            while (next != null) {
-                if (next.kind == Kind.TYPE) return true
-                if (next.kind == Kind.NAMESPACE || next.private) return false
-                next = next.parent
-            }
-            return false
-        }
+        /** [types] without itself and what holds it: the types that its declaration names. */
+        val header: Set<String> by lazy { types - generateSequence(this) { it.parent }.mapTo(hashSetOf()) { it.path } }
 
-        private fun chain(stopAtPrivate: Boolean): List<String> =
+        private fun chain(stopAtPrivate: Boolean): List<Declaration> =
             buildList {
-                add(path)
+                add(this@Declaration)
                 var next: Declaration = this@Declaration
                 while (!(stopAtPrivate && next.private)) {
                     next = next.parent ?: break
-                    add(next.path)
-                    if (next.kind != Kind.MEMBER) break
+                    add(next)
+                    val held = next.parent?.kind == Kind.TYPE || next.parent?.kind == Kind.MEMBER
+                    if (next.kind == Kind.NAMESPACE || (next.kind == Kind.TYPE && !held)) break
                 }
             }
 
