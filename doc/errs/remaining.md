@@ -255,6 +255,11 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     constructs refused a safe delete, an inline, a removal, an extraction or a member's addition
     anywhere in its module; a safe delete in a module with a `_` is proven now
     (`XdkOccurrenceBindingTest`).
+  - A name of a method's return values declares the value it names, a parameter symbol of its type
+    (`MethodDeclarationStatement.getReturns`, the structure's returns after a conditional's
+    `Boolean`), which hover shows and a local rename changes. 168 (389) before, 0 after. The names of
+    a function type's return values, as in `function (Int count, String label) ()`, stay unbound
+    (others), and `XdkRenameUnprovableTest` takes them as its example.
 - [x] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
   (`XdkLibrarySources`) still read the bundle, and may offer its older names. Done 2026-11-23/24
   (decided: index the workspace's): a source artifact of a library's name records its importable
