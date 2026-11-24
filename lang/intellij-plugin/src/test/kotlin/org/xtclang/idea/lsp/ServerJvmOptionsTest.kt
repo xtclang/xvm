@@ -31,14 +31,23 @@ class ServerJvmOptionsTest {
         }
     }
 
-    @Test fun `the server runs ZGC under a 1 GB soft limit unless the options choose a collector or a maximum heap`() {
-        val defaults = listOf("-XX:+UseZGC", "-XX:SoftMaxHeapSize=1G")
-        assertThat(ServerJvmOptions.defaults(emptyList())).isEqualTo(defaults)
-        assertThat(ServerJvmOptions.defaults(listOf("-Xms256M", "-Xss1M"))).isEqualTo(defaults)
-        assertThat(ServerJvmOptions.defaults(listOf("-Xmx4G"))).isEmpty()
-        assertThat(ServerJvmOptions.defaults(listOf("-XX:+UseG1GC"))).isEmpty()
-        assertThat(ServerJvmOptions.defaults(listOf("-XX:+UseZGC"))).isEmpty()
-        assertThat(ServerRuntimeSettings().launchArguments()).startsWith("-XX:+UseZGC", "-XX:SoftMaxHeapSize=1G")
+    @Test fun `the memory policy gives the JVM's own heap, a chosen maximum, or ZGC that adapts, unless the options choose`() {
+        assertThat(ServerJvmOptions.memory(MemoryPolicy.DEFAULT, "", emptyList())).isEmpty()
+        assertThat(ServerJvmOptions.memory(MemoryPolicy.DEFAULT, "4G", listOf("-Xss1M"))).containsExactly("-Xmx4G")
+        assertThat(ServerJvmOptions.memory(MemoryPolicy.ADAPTIVE, "4G", emptyList())).isEqualTo(ServerJvmOptions.ADAPTIVE)
+        listOf("-Xmx2G", "-XX:+UseG1GC", "-XX:+UseZGC").forEach {
+            assertThat(ServerJvmOptions.memory(MemoryPolicy.ADAPTIVE, "4G", listOf(it))).describedAs(it).isEmpty()
+        }
+        assertThatThrownBy { ServerJvmOptions.memory(MemoryPolicy.DEFAULT, "lots", emptyList()) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        // the JVM's own heap, with no policy chosen
+        val store = ServerRuntimeSettings()
+        assertThat(store.launchArguments()).noneMatch { it.startsWith("-Xmx") || it == "-XX:+UseZGC" }
+        val before = store.state
+        store.install(before, before.copy(memoryPolicy = MemoryPolicy.ADAPTIVE))
+        assertThat(store.launchArguments()).startsWith(*ServerJvmOptions.ADAPTIVE.toTypedArray())
+        assertThatThrownBy { store.install(store.state, store.state.copy(memoryPolicy = MemoryPolicy.DEFAULT, maxHeap = "lots")) }
+            .isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test fun `retention validates before publishing the immutable machine snapshot`() {

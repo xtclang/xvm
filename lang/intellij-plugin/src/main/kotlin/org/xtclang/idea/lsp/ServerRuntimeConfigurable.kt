@@ -3,9 +3,11 @@ package org.xtclang.idea.lsp
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextField
 import java.awt.BorderLayout
 import java.awt.GridLayout
 import javax.swing.JButton
@@ -39,6 +41,13 @@ class ServerRuntimeConfigurable : Configurable {
                 "replaces the bundled one, so code is checked against the workspace's version, and builds and runs " +
                 "use Gradle. Off: the bundled libraries stay, and such modules are not compiled."
         }
+    private val policy = ComboBox(MemoryPolicy.entries.toTypedArray()).apply { name = "xtc.runtime.memoryPolicy" }
+    private val maxHeap =
+        JBTextField(8).apply {
+            name = "xtc.runtime.maxHeap"
+            emptyText.text = "the JVM's own"
+            toolTipText = "With the Default policy: the server's maximum heap, such as 4G. Empty: a quarter of this machine's memory."
+        }
     private var original = ServerRuntimeSettings.Options()
 
     override fun getDisplayName(): String = "Ecstasy Server Runtime and Logs"
@@ -47,7 +56,7 @@ class ServerRuntimeConfigurable : Configurable {
         JPanel(BorderLayout(0, 8)).apply {
             add(
                 JBLabel(
-                    "<html>Machine-local settings; uses IntelliJ's bundled Java runtime. Apply saves for the next server start.<br>One JVM option per line: -Xms/-Xmx/-Xss sizes, -XX:MaxMetaspaceSize, -XX:ReservedCodeCacheSize,<br>-XX:ActiveProcessorCount, or -XX:+UseG1GC/UseSerialGC/UseParallelGC/UseZGC. Sizes use K, M or G.<br>Example: -Xmx2G. No shell quoting, agents, classpath or system-property overrides.</html>",
+                    "<html>Machine-local settings; uses IntelliJ's bundled Java runtime. Apply saves for the next server start.<br>One JVM option per line: -Xms/-Xmx/-Xss sizes, -XX:MaxMetaspaceSize, -XX:ReservedCodeCacheSize,<br>-XX:ActiveProcessorCount, or -XX:+UseG1GC/UseSerialGC/UseParallelGC/UseZGC. Sizes use K, M or G.<br>An -Xmx or a collector here overrides the memory policy below. No shell quoting, agents, classpath or system-property overrides.</html>",
                 ),
                 BorderLayout.NORTH,
             )
@@ -56,6 +65,10 @@ class ServerRuntimeConfigurable : Configurable {
                     add(JBScrollPane(options), BorderLayout.CENTER)
                     add(
                         JPanel(GridLayout(0, 2, 8, 8)).apply {
+                            add(JBLabel("Memory policy"))
+                            add(policy)
+                            add(JBLabel("Maximum heap, with the Default policy"))
+                            add(maxHeap)
                             add(JBLabel("Log history (days)"))
                             add(history)
                             add(JBLabel("Each log file (MB)"))
@@ -101,6 +114,8 @@ class ServerRuntimeConfigurable : Configurable {
             logRetainedSessions = sessions.value as Int,
             compileLibraries = libraries.isSelected,
             replaceLibraries = replacement.isSelected,
+            memoryPolicy = policy.selectedItem as MemoryPolicy,
+            maxHeap = maxHeap.text.trim(),
         )
 
     override fun isModified(): Boolean = draft() != original
@@ -114,6 +129,8 @@ class ServerRuntimeConfigurable : Configurable {
         sessions.value = original.logRetainedSessions
         libraries.isSelected = original.compileLibraries
         replacement.isSelected = original.replaceLibraries
+        policy.selectedItem = original.memoryPolicy
+        maxHeap.text = original.maxHeap
     }
 
     override fun apply() {
