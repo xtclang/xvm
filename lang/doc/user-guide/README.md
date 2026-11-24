@@ -662,7 +662,9 @@ icon in the gutter, and VS Code's **Testing** view lists them in a tree.
 *VS Code: Run All Tests runs every module's tests; the Testing view and the gutter show each result, and Test Results what they printed.*
 
 The build mode applies to tests too: embedded runs them with xunit in a process of its own, Gradle
-runs `testXtc` for the chosen tests, and IntelliJ's command-line mode runs `xtc test`.
+runs `testXtc` for the chosen tests, and IntelliJ's command-line mode runs `xtc test`. Embedded
+tests run against the XDK and xunit that the language server comes with, not a version that the
+project's Gradle build may choose; Gradle mode runs them with the build's own.
 
 ## 6. The debugger
 
