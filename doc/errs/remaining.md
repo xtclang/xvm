@@ -232,7 +232,7 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   VS Code's build terminal, which cancels the request as it closes, did not stop the build; both map
   with `mapCancellable` now (`XdkCursorServerTest`, `XdkProjectServerTest`). `xtc/run` stops a
   building run with `xtc/stopRun`, not the request's cancellation, and is unchanged.
-- [ ] The semantic model leaves some occurrences unbound that the rename's proof now tolerates, which
+- [x] The semantic model leaves some occurrences unbound that the rename's proof now tolerates, which
   navigation still misses, in order of value: a local used for its formal type (`t1.DataType`, about
   50 in `ecstasy`: Find References and highlighting miss them, and a rename of such a local is refused);
   the `_` placeholder, which binds nothing and should be no occurrence (75); the names of a method's
@@ -244,7 +244,8 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   rename facts' occurrences without a symbol sorted by the construct that wrote them; all 21 libraries
   in parentheses): a local or parameter used for its formal type 84 (124), `_` 75 (145), a return
   value's name 168 (389), `this` and `super` 27 (53), others 4 (14); and 190 bindings through unproven
-  identities (261), 134 of them in `ecstasy`. Closed on `lagergren/semantic-gaps`, one commit each:
+  identities (261), 134 of them in `ecstasy`. Done 2026-11-24 (`lagergren/semantic-gaps`), one commit
+  each, 358 (725) unbound before, 4 (14) after:
   - A local or parameter used for its formal type binds to its declaration: the compiler validates the
     names of such a dynamic type as a chain of name expressions, which is not a child of the type's
     node (`NamedTypeExpression.getDynamicExpression`). 84 (124) unbound before, 0 after. Find
@@ -260,6 +261,26 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     `Boolean`), which hover shows and a local rename changes. 168 (389) before, 0 after. The names of
     a function type's return values, as in `function (Int count, String label) ()`, stay unbound
     (others), and `XdkRenameUnprovableTest` takes them as its example.
+  - `this` in a property's accessor, such as a lazy property's `calc()`, is the instance that holds
+    the property: the compiler reaches it as an outer this that names its class, and it binds to a
+    receiver symbol per method, which a proof knows as that class's receiver, as it knows a method's
+    `this`; Find References joins it with every `this` of the class, as it does a method's. `super`
+    in a method reference, as in `&super(_)`, binds to the method it dispatches to, as a call of
+    `super` does (`InvocationExpression.getResolvedMethod`), and in a mixin, whose `super` has no such
+    method, to the method's super register (`getBoundRegister`), as a call there does; a local
+    function bound the same way, as in `&add(_, 1)`, which no library has, binds to the local too. 27
+    (53) before, 0 after. Two of the 53, in an anonymous class of `jsondb`, bind through an unproven
+    identity, as a method's `this` there does.
+- [ ] The semantic model's remaining unbound occurrences and unproven identities, for the record
+  (2026-11-24, all 21 libraries): 14 others, 4 of them in `ecstasy` and none in `json`: names in a
+  class's extends clause, as `contents` in `extends MapSet<Element>(contents)` (6); a default value of
+  a class's constructor parameter, as `False` and `Null` (2); the names of a function type's return
+  values (2); `this.Outer`, `this:class` and `MaxValue` in a static property's initializer (1 each);
+  and `type` in `new NarrowingFormat<Doc, type>(this)`, a dynamic type among a `new`'s type arguments
+  (1). And 263 bindings through unproven identities (205 occurrences and 58 calls), 190 of them over
+  `ecstasy` and `json`; the largest group is a dynamic formal such as `t1.DataType`'s `DataType` (87),
+  then `Element`, `Value`, `Key`, `this` in anonymous classes and generated methods such as
+  `appendTo`. No wanted rename was refused for one: a rename's proof compares them by spelling.
 - [x] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
   (`XdkLibrarySources`) still read the bundle, and may offer its older names. Done 2026-11-23/24
   (decided: index the workspace's): a source artifact of a library's name records its importable
