@@ -280,6 +280,30 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a function type's return value names declare its values, which hover shows and a rename changes`() {
+        val source =
+            """
+            module Functions {
+                typedef function (String /*name*/name, String /*password*/password)(String) as Callback;
+                String call(Callback callback) {
+                    (String user, String secret) = callback("realm");
+                    return user + secret;
+                }
+            }
+            """.trimIndent()
+        withSource("Functions", source) { adapter, uri ->
+            val password = range(source, "password", "password")
+            val at = position(source, "password")
+            assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactly(password)
+            assertThat(adapter.getHoverInfo(uri, at.line, at.column)).contains("String password")
+            val name = position(source, "name")
+            assertThat(adapter.getHoverInfo(uri, name.line, name.column)).contains("String name")
+            val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "token")) { "No rename of password" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("/*password*/password", "/*password*/token"))
+        }
+    }
+
     private fun snapshot(
         name: String,
         text: String,
