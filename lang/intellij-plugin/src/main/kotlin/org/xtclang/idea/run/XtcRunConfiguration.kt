@@ -163,6 +163,21 @@ class XtcRunConfiguration(
 
     internal fun embeddedRequest() = embeddedRequest(moduleName, moduleUri, methodName, moduleArguments, tests)
 
+    /**
+     * What reruns [tests], by the module each is of, after a run of every test module's tests, as Rerun Failed Tests
+     * does, as a state for the rerun's environment: in Gradle mode one build of each module's project's `testXtc` with
+     * its tests ([gradleRerunTasks]), none where the imported model names no project of a module; else each module's
+     * run in turn ([AllTestModulesState]).
+     */
+    internal fun rerun(tests: Map<String, List<TestSelector>>): ((ExecutionEnvironment) -> RunProfileState)? =
+        if (effectiveRunMode() == XtcRunMode.GRADLE) {
+            gradleRerunTasks(gradleProjects(), tests)?.let { tasks ->
+                { environment -> TestCommandLineState(this, environment, gradleTestCommandLine(tasks)) }
+            }
+        } else {
+            { environment -> AllTestModulesState(this, environment, tests) }
+        }
+
     private fun createGradleCommandLine() =
         GeneralCommandLine().apply {
             exePath = gradleWrapper()
@@ -181,20 +196,23 @@ class XtcRunConfiguration(
 
     /** `testXtc` for [tests] of the module, with xunit's `json` report, whose events the test console reads. */
     private fun createGradleTestCommandLine(tests: List<TestSelector>) =
+        gradleTestCommandLine(
+            if (allTestModules) {
+                // a task's options are its own, so each project's testXtc has them
+                XtcBuildSettings.gradleTasks(gradleProjects(), "testXtc").flatMap { listOf(it) + gradleTestOptions(tests) }
+            } else {
+                listOf(XtcBuildSettings.gradleTask(gradleProjects(), moduleName.ifBlank { null }, "testXtc")) +
+                    listOfNotNull(moduleName.takeIf { it.isNotBlank() }?.let { "--module=$it" }) +
+                    gradleTestOptions(tests)
+            },
+        )
+
+    /** Gradle's `testXtc` [tasks], each followed by its options, in the project's directory. */
+    private fun gradleTestCommandLine(tasks: List<String>) =
         GeneralCommandLine().apply {
             exePath = gradleWrapper()
             if (quietMode) addParameter("-q")
-            if (allTestModules) {
-                // a task's options are its own, so each project's testXtc has them
-                XtcBuildSettings.gradleTasks(gradleProjects(), "testXtc").forEach {
-                    addParameter(it)
-                    addParameters(gradleTestOptions(tests))
-                }
-            } else {
-                addParameter(XtcBuildSettings.gradleTask(gradleProjects(), moduleName.ifBlank { null }, "testXtc"))
-                moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
-                addParameters(gradleTestOptions(tests))
-            }
+            addParameters(tasks)
             workDirectory = project.basePath?.let { Path(it).toFile() }
             logger.info("Running Gradle tests: $commandLineString")
         }
@@ -305,6 +323,29 @@ class XtcRunConfiguration(
             debug?.let { addParameters("--debug", it) }
             module.takeIf { it.isNotBlank() }?.let(::addParameter)
             addParameters(args)
+        }
+
+        /**
+         * The Gradle tasks, each followed by its options, that rerun [tests] in one build, by the module that each is of:
+         * the `testXtc` of each module's project from [projects], the imported model's, with `--module` where the
+         * project has one module of [tests], and the options that run its tests; null for none, or where [projects]
+         * names no project of a module, as without an imported model.
+         */
+        fun gradleRerunTasks(
+            projects: Map<String, String>,
+            tests: Map<String, List<TestSelector>>,
+        ): List<String>? {
+            if (tests.isEmpty() || !projects.keys.containsAll(tests.keys)) return null
+            return tests.entries
+                .groupBy { projects.getValue(it.key) }
+                .toSortedMap()
+                .values
+                .flatMap { modules ->
+                    // testXtc takes one --module; a project's several modules each run the tests they have of all
+                    listOf(XtcBuildSettings.gradleTask(projects, modules.first().key, "testXtc")) +
+                        listOfNotNull(modules.singleOrNull()?.let { "--module=${it.key}" }) +
+                        gradleTestOptions(modules.flatMap { it.value }.distinct())
+                }
         }
 
         /** `testXtc`'s options that run [tests], all of the module's for none, with xunit's `json` report. */

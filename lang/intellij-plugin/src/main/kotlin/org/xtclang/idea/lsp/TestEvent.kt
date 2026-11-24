@@ -31,6 +31,13 @@ data class TestEvent(
     /** The event as a line of a test process's output, as the test console reads it. */
     fun line(): String = "$MARKER${gson.toJson(this)}\n"
 
+    /**
+     * The module of the test or container that [id] names: xunit's IDs are its models' `UniqueId.path`,
+     * `<module>:<package>.<class>.<method>`, which starts with the module's qualified name, as it declares it; empty
+     * without an ID.
+     */
+    fun module(): String = id?.substringBefore(':', "").orEmpty()
+
     companion object {
         /** How the line of each event starts, ahead of its JSON object. */
         const val MARKER = "##xunit "
