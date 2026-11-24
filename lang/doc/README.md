@@ -1,6 +1,6 @@
 # Ecstasy Language Tooling Documentation
 
-New to the tools? Start with the [user guide](user-guide.md): getting started, editing, refactoring, running, testing and debugging in IntelliJ and VS Code, with screenshots.
+New to the tools? Start with the [user guide](user-guide/README.md): getting started, editing, refactoring, running, testing and debugging in IntelliJ and VS Code, with screenshots.
 
 ## Build, use and test the language tools
 

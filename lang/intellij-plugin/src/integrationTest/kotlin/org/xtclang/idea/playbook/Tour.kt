@@ -71,7 +71,7 @@ internal data class TourStep(
 )
 
 /**
- * A screenshot of the user guide, lang/doc/user-guide/[name].png, that a step's frame makes: lang/intellij-plugin/tour/
+ * A screenshot of the user guide, lang/doc/user-guide/images/[name].png, that a step's frame makes: lang/intellij-plugin/tour/
  * guide.py crops the frame to [crop], ImageMagick geometry on the tour's 1920x936 frame, or keeps all of it.
  */
 internal data class GuideImage(
