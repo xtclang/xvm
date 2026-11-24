@@ -65,6 +65,7 @@ fun Driver.renameFamily(
             .filter { it !== request }
             .forEach { check(root.resolve(it["file"].asString).toString() !in opened) }
     }
+    if (data.values.has("outsideUses")) dismissServerMessages()
     rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
     awaitUi("$id source and resource edits applied", HANG_LIMIT) {
         files.all { file ->
@@ -75,6 +76,21 @@ fun Driver.renameFamily(
                     destination == file["file"].asString ||
                         !Files.exists(root.resolve(file["file"].asString))
                 )
+        }
+    }
+    // the server's message on modules outside the workspace, which it shows as it answers the rename, and LSP4IJ as a
+    // notification
+    data.values["outsideUses"]?.let { value ->
+        fun notes() = serverMessages().filter { "modules outside the workspace" in it }
+        if (value.isJsonNull) {
+            check(notes().isEmpty()) { "A local's rename has no message: ${notes()}" }
+        } else {
+            val message =
+                "Ecstasy: ${value.asString}. To include them, use Add consumers from folders in " +
+                    "Settings | Languages & Frameworks | Ecstasy | Compiler."
+            awaitUi("$id message on modules outside the workspace", HANG_LIMIT) { notes().isNotEmpty() }
+            // a proof that the project overtook and that ran again says it again
+            check(notes().all { it == message }) { "The message: ${notes()}" }
         }
     }
     val renamed = open("$id/${request["destination"].asString}")

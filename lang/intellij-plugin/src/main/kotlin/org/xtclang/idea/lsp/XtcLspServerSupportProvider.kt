@@ -116,6 +116,13 @@ class XtcLspConnectionProvider(
         internal val LSP4IJ_CODE_ACTIONS = mapOf("xtcCodeActions" to mapOf("quickFixesPerDiagnostic" to true))
 
         /**
+         * How a user adds the modules of other folders that use the project's, which the server names when a rename or
+         * safe delete changes what modules outside the project may use.
+         */
+        internal val ADD_CONSUMERS =
+            mapOf("xtcAddConsumers" to "use Add consumers from folders in Settings | Languages & Frameworks | Ecstasy | Compiler")
+
+        /**
          * Resolve the LSP server JAR from a plugin directory. Returns the path to
          * `bin/xtc-lsp-server.jar` if it exists, or null otherwise.
          */
@@ -195,7 +202,7 @@ class XtcLspConnectionProvider(
             .initializationOptions(
                 // native Actions on Save owns formatting while it reformats Ecstasy files
                 FormatOnSaveOptions.getInstance(project).let { it.isRunOnSaveEnabled && it.isFileTypeSelected(XtcFileType) },
-            ) + LSP4IJ_CODE_ACTIONS
+            ) + LSP4IJ_CODE_ACTIONS + ADD_CONSUMERS
 
     override fun start() {
         logger.info("Starting Ecstasy LSP Server (out-of-process via JBR)")

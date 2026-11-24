@@ -164,7 +164,10 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         initializationOptions: {
             xtcDocumentSync: synchronizationOptions(preferences, false),
             xtcSourceRoots: vscode.workspace.getConfiguration('xtc').get<string[]>('sourceRoots', []),
-            xtcCompiler: compilerConfiguration()
+            xtcCompiler: compilerConfiguration(),
+            // how a user adds the modules of other folders that use the workspace's, which the server names when a
+            // rename or safe delete changes what modules outside the workspace may use
+            xtcAddConsumers: 'run Ecstasy: Configure Compiler Paths and choose Add consumers from folders'
         },
         // Our startup handler reports one actionable failure; the default handler also opens
         // raw JSON-RPC and initialization popups for the same failed process.

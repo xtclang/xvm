@@ -1082,9 +1082,11 @@ Some common problems:
   time limit (ms)** in IntelliJ's Ecstasy Application or Ecstasy Attach configuration. IntelliJ can't
   cancel an evaluation sooner, so Evaluate Expression waits out the whole limit for code that never
   ends.
-- Rename and safe delete cover the modules the language server knows of. To include modules in
-  other folders that use yours, add them with **Add consumers from folders** (IntelliJ's **Ecstasy |
-  Compiler** page, VS Code's **Ecstasy: Configure Compiler Paths**).
+- Rename and safe delete cover the modules the language server knows of. When one changes a public
+  declaration, which modules in other folders may use, a notification says that those modules are not
+  changed. To include them, add them with **Add consumers from folders** (IntelliJ's **Ecstasy |
+  Compiler** page, VS Code's **Ecstasy: Configure Compiler Paths**); a project whose Gradle model is
+  imported has all of its build's modules already.
 - The formatter doesn't reflow comments or split string literals.
 - The Tree-sitter adapter knows only syntax: no type errors, no type-aware completion or checked
   refactorings, and no embedded builds or runs.

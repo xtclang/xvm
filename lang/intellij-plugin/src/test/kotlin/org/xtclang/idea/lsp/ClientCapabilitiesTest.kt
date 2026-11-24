@@ -49,6 +49,14 @@ class ClientCapabilitiesTest {
     }
 
     @Test
+    fun `name the settings page that adds consumers, for the server's message on modules outside the project`() {
+        assertThat(XtcLspConnectionProvider.ADD_CONSUMERS)
+            .isEqualTo(
+                mapOf("xtcAddConsumers" to "use Add consumers from folders in Settings | Languages & Frameworks | Ecstasy | Compiler"),
+            )
+    }
+
+    @Test
     fun `advertise the save hooks LSP4IJ dispatches`() {
         val sync =
             SynchronizationCapabilities().apply {

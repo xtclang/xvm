@@ -152,6 +152,11 @@ data class CodeAction(
     val diagnostics: List<Diagnostic> = emptyList(),
     val edit: WorkspaceEdit? = null,
     val isPreferred: Boolean = false,
+    /**
+     * The changed declaration's name when modules outside the workspace may use it and the edit leaves them as they
+     * are, as a safe delete of a public member whose module has no consumer configured from outside the workspace.
+     */
+    val outsideUses: String? = null,
 ) {
     enum class CodeActionKind {
         QUICKFIX,

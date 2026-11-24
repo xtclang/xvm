@@ -114,6 +114,7 @@ import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.InlineCompletionContext
 import org.xvm.lsp.adapter.RenameRefused
+import org.xvm.lsp.adapter.mapCancellable
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRenameProposal
 import org.xvm.lsp.adapter.xdk.XdkSources
@@ -1493,7 +1494,8 @@ class XtcTextDocumentService(
         }
 
     /**
-     * Same lifecycle/version checks as standard Rename; settings are never installed by a proposal.
+     * Same lifecycle/version checks as standard Rename; settings are never installed by a proposal. A rename of what
+     * modules outside the workspace may use says so as it answers, before the client applies the edit.
      */
     fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> {
         val compiler =
@@ -1510,7 +1512,10 @@ class XtcTextDocumentService(
                 )
             },
             workspace = true,
-        ) { proposal -> proposal?.let(::protocolProposal) }
+        ) { proposal -> proposal?.let { protocolProposal(it)?.to(it.outsideUses) } }.mapCancellable { answer ->
+            answer?.second?.let { server.showInfo(server.presentation.outsideUses("rename", it)) }
+            answer?.first
+        }
     }
 
     private fun protocolProposal(proposal: XdkRenameProposal): RenameProposal? =
@@ -1647,10 +1652,12 @@ class XtcTextDocumentService(
                 }
                 val edit = action.edit
                 if (edit != null && !canConvertEdit(edit)) return@mapNotNull null
+                // TODO LSP4IJ: UP85 — 0.30.1 resolves an action only when it has neither an edit nor a command, and runs
+                // the command of one with a command alone, so an action with a command carries its edit
                 val handle =
                     edit
                         ?.takeIf {
-                            server.resolvesCodeActionEdit || !server.presentation.actionLiterals
+                            (server.resolvesCodeActionEdit && action.outsideUses == null) || !server.presentation.actionLiterals
                         }?.let {
                             actionReports.remember(
                                 diagnosticRevision,
@@ -1687,6 +1694,15 @@ class XtcTextDocumentService(
                             action.isPreferred.takeIf { server.presentation.preferredActions }
                         this.edit = proposed
                         data = handle
+                        // the client runs it after the edit, so the message comes as the edit applies, not as listed
+                        command =
+                            action.outsideUses?.let {
+                                Command(
+                                    action.title,
+                                    ClientPresentation.OUTSIDE_USES,
+                                    listOf(server.presentation.outsideUses("safe delete", it)),
+                                )
+                            }
                     },
                 )
             }
