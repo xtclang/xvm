@@ -236,6 +236,16 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   libraries, a rename of a method of `json` compiles 2 modules, json and jsondb, 6.0 s, where it
   compiled 12; one of `String`, all 22 still, as every module uses `String`;
   `XdkRepositoryWorkspaceTest`, 3 and 1 where they were 3 and 2.
+- [ ] Found 2026-11-24: what a rename's proof cannot see. It proves that every name binds to the same
+  declaration in compiled code, as compiling every dependent would; behavior that no binding carries is outside
+  it, for any rename: a method or property found by a string at runtime (reflection by name), a runtime check
+  against an interface whose matching depends on member names (`x.is(Duck)`, which the compiler checks only where
+  it is static, as in an assignment), and the JSON keys of a renamed property's values. Today a rename neither
+  changes nor reports a string literal or comment that spells the old name. To do: (1) the rename's note, as
+  K6b's, says how many string literals and comments of the modules it reaches spell the old name, and where, and
+  that they are not changed, as IntelliJ's search in comments and strings does (half a day to a day); (2) the user
+  guide's known limitations say what a rename does not change: names in strings or computed at runtime, runtime
+  type checks by member name, and serialized property names.
 - [ ] Queued 2026-11-24, after that: track the members each module uses from its dependencies, and recompile a
   dependent only when a member it uses changes, not on any change of its dependency's public API. Helps
   every edit and code action, not only renames; a dependency tracker in the server, three to five days. Its API side
