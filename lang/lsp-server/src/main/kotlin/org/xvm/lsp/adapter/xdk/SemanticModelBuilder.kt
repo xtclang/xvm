@@ -740,7 +740,8 @@ private class SemanticModelBuilder(
                             occurrences[at] = Occurrence(at.range, node.name, Role.REFERENCE, symbol, type, SemanticModel.Usage.READ)
                         }
                     } else {
-                        refer(node.nameToken, target, expressionType, node.source, writes[at])
+                        val property = (target as? Register)?.let { headerProperty(node, it) }
+                        refer(node.nameToken, property ?: target, expressionType, node.source, writes[at])
                     }
                     // &fn(_) binds the function that fn holds; it makes no Ref to fn.
                     if (node.isSuppressDeref && node.resolvedTarget != null) (normalized(target) as? Register)?.let(referenced::add)
@@ -1521,6 +1522,23 @@ private class SemanticModelBuilder(
         val symbol = symbols[id] ?: return
         val start = location(declaration.source, declaration.startPosition, declaration.startPosition).range.start
         symbols[id] = symbol.copy(headerStart = start)
+    }
+
+    /**
+     * The property that a primary constructor's parameter initializes, for [node], a name in an extends or incorporates
+     * clause's arguments that the compiler bound to [register]: it validates the arguments in the class's synthetic
+     * shorthand constructor, whose parameters no source declares apart from the header's, which declare the properties.
+     */
+    private fun headerProperty(
+        node: NameExpression,
+        register: Register,
+    ): PropertyConstant? {
+        val chain = generateSequence<AstNode>(node) { it.parent }.toList()
+        val header = chain.indexOfFirst { it is TypeCompositionStatement }
+        if (header < 1 || chain[header - 1] !is CompositionNode || chain.take(header).any { it is LambdaExpression }) return null
+        val owner = (chain[header] as TypeCompositionStatement).component as? ClassStructure ?: return null
+        val constructor = owner.findMethod("construct", MethodStructure::isShorthandConstructor) ?: return null
+        return constructor.primaryProperty(register.index - constructor.typeParamCount)?.takeIf { it.name == node.name }
     }
 
     /**
