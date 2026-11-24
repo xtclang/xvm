@@ -18,6 +18,7 @@ import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptorFactory
 import com.redhat.devtools.lsp4ij.dap.descriptors.ServerReadyConfig
 import org.xtclang.idea.run.DebugTestsTab
 import org.xtclang.idea.run.EmbeddedExecution
+import org.xtclang.idea.run.EvaluationLimits
 import org.xtclang.idea.run.TestEventsProcessHandler
 import org.xtclang.idea.run.XtcAttachConfiguration
 import org.xtclang.idea.run.XtcRunConfiguration
@@ -62,8 +63,8 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
 /**
  * One debug launch of an Ecstasy Application configuration: its "server" is a process that carries the session over
  * the language server's connection, ready at once, and its launch arguments are the configuration's module, method
- * and arguments, whether it stops at its first line, and whether evaluations run the whole program, in the form the
- * language server's `launch` takes them.
+ * and arguments, whether it stops at its first line, whether evaluations run the whole program, and the time limits
+ * of evaluations and lazy values, in the form the language server's `launch` takes them.
  */
 class XtcDebugAdapterDescriptor(
     options: RunConfigurationOptions,
@@ -106,6 +107,7 @@ class XtcDebugAdapterDescriptor(
             parameters["args"] = configuration.embeddedRequest().args
             if (configuration.stopOnEntry) parameters["stopOnEntry"] = true
             if (configuration.evaluationRunsProgram) parameters["evaluationRunsProgram"] = true
+            parameters.putAll(EvaluationLimits.parameters(configuration.evaluationTimeLimit, configuration.lazyValueTimeLimit))
             configuration.tests?.let { tests -> parameters["tests"] = tests.map { mapOf("selector" to it.selector, "kind" to it.kind) } }
             // the module's Gradle task or xtc run runs the program, under the session's debugger
             when (configuration.effectiveRunMode()) {

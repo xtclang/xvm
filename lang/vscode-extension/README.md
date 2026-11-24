@@ -240,7 +240,8 @@ first line. While the program is stopped, the Watch view and hovers evaluate exp
 `point.x + 1` or `ints[i] > 0` in the selected frame, without running the program's code, and expand
 their values like variables; what is not evaluated, such as a call or a name the frame does not
 have, shows why. The Debug Console evaluates them so too, and runs what that refuses, such as
-`box.bump(n)`, as code on the stopped fiber, for at most two seconds: it answers with the value as
+`box.bump(n)`, as code on the stopped fiber, for at most two seconds, or the configuration's
+`evaluationTimeLimit`: it answers with the value as
 its `toString()` makes it, or the reason it failed, and what the code changed stays changed, which
 the Variables view shows as it reads the variables again. Only that code, and the services it calls, run
 meanwhile, so code that waits on work the program's other fibers do waits out its time; with a
@@ -262,7 +263,9 @@ A launch configuration in `.vscode/launch.json` selects the module, entry method
     "args": "arg1,arg2",      // optional: comma-separated, or an array passed exactly as given
     "cwd": "${workspaceFolder}",  // optional: the program's root directory; the folder that owns the module by default
     "stopOnEntry": false,       // optional: stop at the program's first line
-    "evaluationRunsProgram": false  // optional: let the program run while Debug Console code does
+    "evaluationRunsProgram": false, // optional: let the program run while Debug Console code does
+    "evaluationTimeLimit": 2000,    // optional: how long Debug Console code may run, in ms, up to 60000
+    "lazyValueTimeLimit": 1000      // optional: how long a lazy value's code may run, in ms, up to 30000
 }
 ```
 
@@ -282,7 +285,9 @@ an attach configuration, which the **Ecstasy: Attach to Program** snippet adds:
     "port": 5005,               // the port the program's --debug option names
     "host": "localhost",        // optional: this machine's name or loopback address
     "token": "…",               // optional: the token the program's --debug option gives
-    "stopOnEntry": false        // optional: stop at the first line of a program under suspend
+    "stopOnEntry": false,       // optional: stop at the first line of a program under suspend
+    "evaluationTimeLimit": 2000, // optional: as a launch's
+    "lazyValueTimeLimit": 1000  // optional: as a launch's
 }
 ```
 

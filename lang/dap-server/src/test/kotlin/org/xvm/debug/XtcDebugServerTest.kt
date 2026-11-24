@@ -58,6 +58,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * A debug session launches through the language server's runs, owns the program it launched, installs its
@@ -539,6 +541,12 @@ class XtcDebugServerTest {
         val value = server.variables(VariablesArguments().apply { variablesReference = sum.variablesReference }).awaited()
         assertThat(value.variables.map { listOf(it.name, it.value, it.type) }).containsExactly(listOf("sum", "7", "Int"))
         assertThat(value.variables.single().presentationHint).isNull()
+
+        // a read whose code runs past its limit, or throws, fails with the reason
+        val toString = fields.single { it.name == "toString()" }
+        assertFailsWith("toString() did not finish within 1 second, so it was ended.") {
+            server.variables(VariablesArguments().apply { variablesReference = toString.variablesReference })
+        }
     }
 
     @Test
@@ -1214,6 +1222,95 @@ class XtcDebugServerTest {
     }
 
     @Test
+    fun `a launch's time limits are its console's limit and its debugger's lazy-value limit, and without them the session's apply`() {
+        server.configurationDone(null)
+        // a client's JSON numbers arrive as doubles
+        server
+            .launch(
+                mutableMapOf(
+                    "module" to "App",
+                    XtcDebugServer.EVALUATION_TIME_LIMIT to 5000.0,
+                    XtcDebugServer.LAZY_VALUE_TIME_LIMIT to 2500.0,
+                ),
+            ).awaited()
+        assertThat(
+            runs.ready
+                .toCompletableFuture()
+                .awaited()!!
+                .onDemand,
+        ).isEqualTo(2500.milliseconds)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+
+        server.evaluate(evaluate("spin()", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
+        assertThat(runs.ran).containsExactly(Ran(1, "spin()", 5.seconds, program = false))
+
+        // a session whose launch sets none has its own limits, and the program's debugger keeps its own
+        val other = Runs()
+        val session = XtcDebugServer(other, Executor(afterResponse::add)).apply { connect(Client()) }
+        session.configurationDone(null)
+        session.launch(mutableMapOf("module" to "App")).awaited()
+        assertThat(
+            other.ready
+                .toCompletableFuture()
+                .awaited()!!
+                .onDemand,
+        ).isNull()
+        other.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        session.evaluate(evaluate("spin()", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
+        assertThat(other.ran).containsExactly(Ran(1, "spin()", XtcDebugServer.CONSOLE_LIMIT, program = false))
+    }
+
+    @Test
+    fun `an attach's time limits, and a Gradle launch's, reach the program's debugger and its console`() {
+        server.configurationDone(ConfigurationDoneArguments())
+        server
+            .attach(
+                mutableMapOf(
+                    "port" to 5005.0,
+                    XtcDebugServer.EVALUATION_TIME_LIMIT to "60000",
+                    XtcDebugServer.LAZY_VALUE_TIME_LIMIT to 100.0,
+                ),
+            ).awaited()
+        assertThat(
+            runs.ready
+                .toCompletableFuture()
+                .awaited()!!
+                .onDemand,
+        ).isEqualTo(100.milliseconds)
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        server.evaluate(evaluate("spin()", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
+        assertThat(runs.ran).containsExactly(Ran(1, "spin()", 60.seconds, program = false))
+
+        val gradle = Runs()
+        val session = XtcDebugServer(gradle, Executor(afterResponse::add)).apply { connect(Client()) }
+        session.configurationDone(null)
+        session.launch(mutableMapOf("module" to "App", "buildMode" to "gradle", XtcDebugServer.LAZY_VALUE_TIME_LIMIT to 30000.0)).awaited()
+        assertThat(gradle.task).isEqualTo(DebugTask.GRADLE)
+        assertThat(
+            gradle.ready
+                .toCompletableFuture()
+                .awaited()!!
+                .onDemand,
+        ).isEqualTo(30.seconds)
+    }
+
+    @Test
+    fun `a time limit that is not a number of milliseconds in its range is refused, and the session can still launch`() {
+        val evaluation = "${XtcDebugServer.EVALUATION_TIME_LIMIT} is a number of milliseconds from 100 to 60000"
+        val lazyValue = "${XtcDebugServer.LAZY_VALUE_TIME_LIMIT} is a number of milliseconds from 100 to 30000"
+        assertFailsWith(evaluation) { server.launch(mutableMapOf("module" to "App", XtcDebugServer.EVALUATION_TIME_LIMIT to 99.0)) }
+        assertFailsWith(evaluation) { server.launch(mutableMapOf("module" to "App", XtcDebugServer.EVALUATION_TIME_LIMIT to 60001.0)) }
+        assertFailsWith(evaluation) { server.attach(mutableMapOf("port" to 5005, XtcDebugServer.EVALUATION_TIME_LIMIT to "soon")) }
+        assertFailsWith(lazyValue) { server.launch(mutableMapOf("module" to "App", XtcDebugServer.LAZY_VALUE_TIME_LIMIT to 30001.0)) }
+        assertFailsWith(lazyValue) { server.attach(mutableMapOf("port" to 5005, XtcDebugServer.LAZY_VALUE_TIME_LIMIT to true)) }
+        assertThat(runs.ran).isEmpty()
+
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).awaited()
+        assertThat(runs.target.moduleName).isEqualTo("App")
+    }
+
+    @Test
     fun `what code run from the console throws, or why it does not compile, is its answer, and a client without invalidated gets none`() {
         server.initialize(InitializeRequestArguments().apply { adapterID = "xtc" })
         server.configurationDone(null)
@@ -1710,8 +1807,14 @@ class XtcDebugServerTest {
             filter: ChildFilter,
             start: Int,
             count: Int,
-        ) = CompletableFuture
-            .completedFuture(
+        ): CompletableFuture<List<VariableState>> {
+            hexes.add(hex)
+            reads.add(Triple(filter, start, count))
+            // the read of the point's toString() runs past its time limit
+            if (reference == 10) {
+                return CompletableFuture.failedFuture(IllegalStateException("toString() did not finish within 1 second, so it was ended."))
+            }
+            val variables =
                 when (reference) {
                     7 ->
                         listOf(
@@ -1733,11 +1836,9 @@ class XtcDebugServerTest {
                     20 -> listOf(VariableState("squares", "Int[250]", "Array<Int>", 21, elements = 250))
 
                     else -> emptyList()
-                }.drop(start).let { if (count > 0) it.take(count) else it },
-            ).also {
-                hexes.add(hex)
-                reads.add(Triple(filter, start, count))
-            }
+                }
+            return CompletableFuture.completedFuture(variables.drop(start).let { if (count > 0) it.take(count) else it })
+        }
 
         /** The answer to the next step, which the test completes; an answer at once when null. */
         var stepAnswer: CompletableFuture<Boolean>? = null

@@ -275,23 +275,26 @@ send the same request.
 
 | Argument | Request | Type, default | What it does | Read at |
 |----------|---------|---------------|--------------|---------|
-| `module` | launch | string | The module to run; required unless `moduleUri` is given. | `dap/XtcDebugServer.kt:1516` |
-| `moduleUri` | launch | URI | The module's source; wins over `module`. | `dap/XtcDebugServer.kt:1517` |
-| `method` | launch | string, the module's `run` | Method to invoke. | `dap/XtcDebugServer.kt:1529` |
-| `args` | launch | array, or comma-separated string; none | Program arguments. | `dap/XtcDebugServer.kt:1520` |
-| `workingDirectory`, else `cwd` | launch | path; the build's workspace folder | Working directory. VS Code's default is `${workspaceFolder}`. | `dap/XtcDebugServer.kt:1531` |
-| `tests` | launch | array of `{selector, kind}`; absent | Run tests instead of `run`; `kind` is `module`, `package`, `class` or `test`. | `dap/XtcDebugServer.kt:1532`, `:1544` |
-| `stopOnEntry` | launch, attach | boolean, `false` | Stop at the program's first line. | `dap/XtcDebugServer.kt:630`, `:703` |
-| `noDebug` | launch | boolean, `false` | Run without the debugger; not allowed with `buildMode`. | `dap/XtcDebugServer.kt:621`, `:627` |
-| `evaluationRunsProgram` | launch | boolean, `false` | The rest of the program runs while console code runs. | `dap/XtcDebugServer.kt:628` |
-| `buildMode` | launch | `gradle` or `commandLine`; absent | The editor runs the program (`runXtc`, or `xtc run`) with `--debug connect:`; absent, the server builds and runs it. | `dap/XtcDebugServer.kt:620`, `dap/DebugRuns.kt:61` |
-| `port` | attach | 1 to 65535; VS Code default 5005 | The port of the program's `--debug` option; required. | `dap/XtcDebugServer.kt:1503` |
-| `host` | attach | string, `localhost` | Where the program listens. | `dap/XtcDebugServer.kt:1509` |
-| `token` | attach | string, none | The token of the program's `--debug` option. | `dap/XtcDebugServer.kt:1511` |
+| `module` | launch | string | The module to run; required unless `moduleUri` is given. | `dap/XtcDebugServer.kt:1585` |
+| `moduleUri` | launch | URI | The module's source; wins over `module`. | `dap/XtcDebugServer.kt:1586` |
+| `method` | launch | string, the module's `run` | Method to invoke. | `dap/XtcDebugServer.kt:1598` |
+| `args` | launch | array, or comma-separated string; none | Program arguments. | `dap/XtcDebugServer.kt:1589` |
+| `workingDirectory`, else `cwd` | launch | path; the build's workspace folder | Working directory. VS Code's default is `${workspaceFolder}`. | `dap/XtcDebugServer.kt:1600` |
+| `tests` | launch | array of `{selector, kind}`; absent | Run tests instead of `run`; `kind` is `module`, `package`, `class` or `test`. | `dap/XtcDebugServer.kt:1601`, `:1613` |
+| `stopOnEntry` | launch, attach | boolean, `false` | Stop at the program's first line. | `dap/XtcDebugServer.kt:661`, `:736` |
+| `noDebug` | launch | boolean, `false` | Run without the debugger; not allowed with `buildMode`. | `dap/XtcDebugServer.kt:651`, `:657` |
+| `evaluationRunsProgram` | launch | boolean, `false` | The rest of the program runs while console code runs. | `dap/XtcDebugServer.kt:658` |
+| `evaluationTimeLimit` | launch, attach | milliseconds, 100 to 60000; the session's limit, 2000 (section 3.2) | How long code that the Debug Console or Evaluate Expression runs may take before it is ended. VS Code declares it with that range; IntelliJ's Ecstasy Application and Ecstasy Attach configurations set it as **Evaluation time limit (ms)**, 100 to 30000, as IntelliJ cannot cancel an evaluation, and send it only when it is not 2000. Out of range or not a number, the launch or attach is refused. | `dap/XtcDebugServer.kt:323`, `:1541`, `:1551`, used at `:1083`; IntelliJ `idea/run/EvaluationLimits.kt:19`, `:27`, `:37`, sent at `idea/dap/XtcDebugAdapterFactory.kt:110`, `idea/run/XtcAttachConfiguration.kt:63`; VS Code `lang/vscode-extension/package.json:746`, `:784` |
+| `lazyValueTimeLimit` | launch, attach | milliseconds, 100 to 30000; the debugger's own, 1000 (section 3.2) | How long the code that computes a lazy value in the Variables view, such as a getter or `toString()`, may take before it is ended. It goes to the program's debugger with its setup, for embedded, Gradle, command-line and attached runs alike. IntelliJ: **Lazy value time limit (ms)**, sent only when it is not 1000. | `dap/XtcDebugServer.kt:326`, `:1541`, `:1551`, sent at `:680`, `:780`; `lsp/run/DebugRecords.kt:33`; `javatools/src/main/java/org/xvm/runtime/debug/DebugCommands.java:130`; IntelliJ `idea/run/EvaluationLimits.kt:20`, `:27`, `:37`; VS Code `lang/vscode-extension/package.json:753`, `:791` |
+| `buildMode` | launch | `gradle` or `commandLine`; absent | The editor runs the program (`runXtc`, or `xtc run`) with `--debug connect:`; absent, the server builds and runs it. | `dap/XtcDebugServer.kt:650`, `dap/DebugRuns.kt:61` |
+| `port` | attach | 1 to 65535; VS Code default 5005 | The port of the program's `--debug` option; required. | `dap/XtcDebugServer.kt:1572` |
+| `host` | attach | string, `localhost` | Where the program listens. | `dap/XtcDebugServer.kt:1578` |
+| `token` | attach | string, none | The token of the program's `--debug` option. | `dap/XtcDebugServer.kt:1580` |
 
 ### 3.2 Fixed limits
 
-These are constants in the code; no setting changes them.
+These are constants in the code; no setting changes them, but for the two debugger limits that a launch or an
+attach may set (section 3.1).
 
 | Limit | Value | Read at |
 |-------|-------|---------|
@@ -301,10 +304,10 @@ These are constants in the code; no setting changes them.
 | Idle worker kept | 10 minutes | `lsp/run/RunWorkerProcess.kt:75` |
 | Heap in use after a run, above which the worker serves no further run | 512 MB | `lsp/run/RunWorkerProcess.kt:76` |
 | Threads after a run, above which the worker serves no further run | 200 | `lsp/run/RunWorkerProcess.kt:77` |
-| Lazy-value computation in a debugged program | the debugger's own `ON_DEMAND` | `lsp/run/RunWorkerProcess.kt:78` |
+| Lazy-value computation in a debugged program | the debugger's own `ON_DEMAND`, 1 second, unless the launch's `lazyValueTimeLimit` sets another | `lsp/run/RunWorkerProcess.kt:78`, `javatools/src/main/java/org/xvm/runtime/SessionDebugger.java:308` |
 | Stop of a run inside the worker | 5 seconds | `lsp/run/RunWorker.kt:57` |
 | Program output per event, and held while waiting | 16,384 characters, sent after 20 ms | `lsp/run/RunWorker.kt:421`, `:424` |
-| Debug console code on a stopped fiber | 2 seconds | `dap/XtcDebugServer.kt:308` |
+| Debug console code on a stopped fiber | 2 seconds, unless the launch's `evaluationTimeLimit` sets another | `dap/XtcDebugServer.kt:320` |
 | Connecting to an attached program | 10 seconds | `lsp/run/AttachedProgram.kt:128` |
 
 The server's own instance uses the defaults (`lsp/server/XtcLanguageServer.kt:142`).

@@ -17,6 +17,7 @@ import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import org.jdom.Element
 import org.xtclang.idea.XtcIconProvider
 import org.xtclang.idea.dap.XtcDebugAdapterFactory
+import org.xtclang.idea.run.EvaluationLimits.limitRows
 import javax.swing.Icon
 
 /**
@@ -35,11 +36,14 @@ class XtcAttachConfiguration(
     var port = DEFAULT_PORT
     var token = ""
     var stopOnEntry = false // A program that waits for the debugger stops at its first line
+    var evaluationTimeLimit = EvaluationLimits.EVALUATION_DEFAULT // How long Evaluate Expression's code may run, in ms
+    var lazyValueTimeLimit = EvaluationLimits.LAZY_VALUE_DEFAULT // How long a lazy value's code may run, in ms
 
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> = XtcAttachSettingsEditor()
 
     override fun checkConfiguration() {
         if (port !in 1..65535) throw RuntimeConfigurationError("The port must be between 1 and 65535")
+        EvaluationLimits.check(evaluationTimeLimit, lazyValueTimeLimit)
     }
 
     override fun canRun(executorId: String): Boolean = executorId == DefaultDebugExecutor.EXECUTOR_ID
@@ -56,6 +60,7 @@ class XtcAttachConfiguration(
             put("port", port)
             token.takeIf { it.isNotEmpty() }?.let { put("token", it) }
             if (stopOnEntry) put("stopOnEntry", true)
+            putAll(EvaluationLimits.parameters(evaluationTimeLimit, lazyValueTimeLimit))
         }
 
     override fun readExternal(element: Element) {
@@ -64,6 +69,8 @@ class XtcAttachConfiguration(
         port = element.getAttributeValue("port")?.toIntOrNull() ?: DEFAULT_PORT
         token = element.getAttributeValue("token").orEmpty()
         stopOnEntry = element.getAttributeValue("stopOnEntry")?.toBoolean() ?: false
+        evaluationTimeLimit = EvaluationLimits.read(element, EvaluationLimits.EVALUATION, EvaluationLimits.EVALUATION_DEFAULT)
+        lazyValueTimeLimit = EvaluationLimits.read(element, EvaluationLimits.LAZY_VALUE, EvaluationLimits.LAZY_VALUE_DEFAULT)
     }
 
     override fun writeExternal(element: Element) {
@@ -72,6 +79,8 @@ class XtcAttachConfiguration(
         element.setAttribute("port", port.toString())
         element.setAttribute("token", token)
         element.setAttribute("stopOnEntry", stopOnEntry.toString())
+        element.setAttribute(EvaluationLimits.EVALUATION, evaluationTimeLimit.toString())
+        element.setAttribute(EvaluationLimits.LAZY_VALUE, lazyValueTimeLimit.toString())
     }
 
     internal companion object {
@@ -118,6 +127,8 @@ class XtcAttachSettingsEditor : SettingsEditor<XtcAttachConfiguration>() {
     private var port = XtcAttachConfiguration.DEFAULT_PORT
     private var token = ""
     private var stopOnEntry = false
+    private var evaluationTimeLimit = EvaluationLimits.EVALUATION_DEFAULT
+    private var lazyValueTimeLimit = EvaluationLimits.LAZY_VALUE_DEFAULT
 
     private val editorPanel by lazy {
         panel {
@@ -141,6 +152,7 @@ class XtcAttachSettingsEditor : SettingsEditor<XtcAttachConfiguration>() {
                     .bindSelected(::stopOnEntry)
                     .comment("For a program that waits for the debugger, as the option's suspend has it")
             }
+            limitRows(::evaluationTimeLimit, ::lazyValueTimeLimit)
         }
     }
 
@@ -152,6 +164,8 @@ class XtcAttachSettingsEditor : SettingsEditor<XtcAttachConfiguration>() {
         config.port = port
         config.token = token
         config.stopOnEntry = stopOnEntry
+        config.evaluationTimeLimit = evaluationTimeLimit
+        config.lazyValueTimeLimit = lazyValueTimeLimit
     }
 
     override fun resetEditorFrom(config: XtcAttachConfiguration) {
@@ -159,6 +173,8 @@ class XtcAttachSettingsEditor : SettingsEditor<XtcAttachConfiguration>() {
         port = config.port
         token = config.token
         stopOnEntry = config.stopOnEntry
+        evaluationTimeLimit = config.evaluationTimeLimit
+        lazyValueTimeLimit = config.lazyValueTimeLimit
         editorPanel.reset()
     }
 }

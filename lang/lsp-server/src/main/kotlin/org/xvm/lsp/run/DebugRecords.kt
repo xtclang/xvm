@@ -30,6 +30,7 @@ internal fun DebugSetup.record(sourceDirs: Map<String, String>) =
         stopOnEntry,
         functions.map(FunctionBreakpointRequest::record),
         sourceDirs,
+        onDemand?.inWholeMilliseconds,
     )
 
 internal fun SourceBreakpoints.record() =
