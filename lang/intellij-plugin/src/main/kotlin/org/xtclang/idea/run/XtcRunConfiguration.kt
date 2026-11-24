@@ -31,6 +31,7 @@ import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.ServerTest
 import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.TestSelector
+import org.xtclang.idea.run.EvaluationLimits.limitRows
 import kotlin.io.path.Path
 
 /** What a run configuration runs with; [PROJECT] follows the project's [XtcBuildSettings]. */
@@ -66,6 +67,8 @@ class XtcRunConfiguration(
     var quietMode = true // Use -q flag for less verbose Gradle output
     var stopOnEntry = false // Under Debug, the program stops at its first line
     var evaluationRunsProgram = false // While Evaluate Expression runs code under Debug, the rest of the program runs too
+    var evaluationTimeLimit = EvaluationLimits.EVALUATION_DEFAULT // Under Debug, how long Evaluate Expression's code may run, in ms
+    var lazyValueTimeLimit = EvaluationLimits.LAZY_VALUE_DEFAULT // Under Debug, how long a lazy value's code may run, in ms
 
     /** The module's tests that xunit runs instead of its entry method, all of them for an empty list; null for none. */
     var tests: List<TestSelector>? = null
@@ -94,6 +97,7 @@ class XtcRunConfiguration(
         if (!allTestModules && effectiveRunMode() == XtcRunMode.EMBEDDED && moduleName.isBlank() && moduleUri.isBlank()) {
             throw RuntimeConfigurationError("An embedded run needs the module name")
         }
+        EvaluationLimits.check(evaluationTimeLimit, lazyValueTimeLimit)
     }
 
     override fun getState(
@@ -217,6 +221,8 @@ class XtcRunConfiguration(
         quietMode = element.getAttributeValue("quietMode")?.toBoolean() ?: true
         stopOnEntry = element.getAttributeValue("stopOnEntry")?.toBoolean() ?: false
         evaluationRunsProgram = element.getAttributeValue("evaluationRunsProgram")?.toBoolean() ?: false
+        evaluationTimeLimit = EvaluationLimits.read(element, EvaluationLimits.EVALUATION, EvaluationLimits.EVALUATION_DEFAULT)
+        lazyValueTimeLimit = EvaluationLimits.read(element, EvaluationLimits.LAZY_VALUE, EvaluationLimits.LAZY_VALUE_DEFAULT)
         allTestModules = element.getAttributeValue("allTestModules")?.toBoolean() ?: false
         tests =
             element.getChild(TESTS)?.getChildren(TEST)?.map { test ->
@@ -234,6 +240,8 @@ class XtcRunConfiguration(
         element.setAttribute("quietMode", quietMode.toString())
         element.setAttribute("stopOnEntry", stopOnEntry.toString())
         element.setAttribute("evaluationRunsProgram", evaluationRunsProgram.toString())
+        element.setAttribute(EvaluationLimits.EVALUATION, evaluationTimeLimit.toString())
+        element.setAttribute(EvaluationLimits.LAZY_VALUE, lazyValueTimeLimit.toString())
         element.setAttribute("allTestModules", allTestModules.toString())
         element.removeChild(TESTS)
         tests?.let { chosen ->
@@ -403,6 +411,8 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
     private var quietMode = true
     private var stopOnEntry = false
     private var evaluationRunsProgram = false
+    private var evaluationTimeLimit = EvaluationLimits.EVALUATION_DEFAULT
+    private var lazyValueTimeLimit = EvaluationLimits.LAZY_VALUE_DEFAULT
     private var tests = ""
 
     private val editorPanel by lazy {
@@ -456,6 +466,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
                             "breakpoints, and their frames may then have moved",
                     )
             }
+            limitRows(::evaluationTimeLimit, ::lazyValueTimeLimit)
         }
     }
 
@@ -471,6 +482,8 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         config.quietMode = quietMode
         config.stopOnEntry = stopOnEntry
         config.evaluationRunsProgram = evaluationRunsProgram
+        config.evaluationTimeLimit = evaluationTimeLimit
+        config.lazyValueTimeLimit = lazyValueTimeLimit
         config.tests = XtcRunConfiguration.testsOf(tests)
     }
 
@@ -483,6 +496,8 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         quietMode = config.quietMode
         stopOnEntry = config.stopOnEntry
         evaluationRunsProgram = config.evaluationRunsProgram
+        evaluationTimeLimit = config.evaluationTimeLimit
+        lazyValueTimeLimit = config.lazyValueTimeLimit
         tests = XtcRunConfiguration.testsText(config.tests)
         editorPanel.reset() // Reset UI from backing properties
     }

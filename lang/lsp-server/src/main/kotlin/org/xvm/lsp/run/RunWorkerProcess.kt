@@ -68,7 +68,7 @@ internal class RunWorkerProcess(
      * How many programs run at once; how long a worker may take to start, to stop, or stay idle; how much
      * heap in use after the JVM's collections (in bytes) and how many threads a worker may keep after a run and
      * still serve the next; and how long the code that computes a lazy variable's value may run in a debugged
-     * program, [onDemand], the debugger's own `ON_DEMAND` when null.
+     * program, [onDemand], the debugger's own `ON_DEMAND` when null, unless the run's debug setup sets its own.
      */
     data class Limits(
         val running: Int = 4,
