@@ -25,7 +25,7 @@ import { attachGradleProjects, forgetGradleProjects } from './gradle-projects';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
-import { defaultJvmOptions, runtimeJvmOptions, runtimeLibraryArguments, runtimeLogArguments } from './runtime-settings';
+import { runtimeJvmOptions, runtimeLibraryArguments, runtimeLogArguments, runtimeMemoryOptions } from './runtime-settings';
 import { supportLogs } from './support-logs';
 import { serviceFailure } from './service-notifications';
 
@@ -133,7 +133,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
     const adapterArgs = preferences.adapter === 'default' ? [] : [`-Dxtc.lsp.adapter=${preferences.adapter}`];
     const jvmOptions = runtimeJvmOptions();
-    const jvmArgs = [...defaultJvmOptions(jvmOptions), ...jvmOptions, ...runtimeLogArguments(), ...runtimeLibraryArguments(), ...adapterArgs, ...buildJvmArgs(serverJar, logLevel)];
+    const jvmArgs = [...runtimeMemoryOptions(jvmOptions), ...jvmOptions, ...runtimeLogArguments(), ...runtimeLibraryArguments(), ...adapterArgs, ...buildJvmArgs(serverJar, logLevel)];
 
     outputChannel.appendLine('Starting Ecstasy Language Server...');
     outputChannel.appendLine(`Java: ${javaExecutable}`);

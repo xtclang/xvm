@@ -200,7 +200,8 @@ export function activate(context: vscode.ExtensionContext): void {
         }),
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('xtc.java.vmOptions') || event.affectsConfiguration('xtc.server.logs') || event.affectsConfiguration('xtc.server.compileLibraries')
-                || event.affectsConfiguration('xtc.server.replaceLibraries')) {
+                || event.affectsConfiguration('xtc.server.replaceLibraries')
+                || event.affectsConfiguration('xtc.server.memoryPolicy') || event.affectsConfiguration('xtc.server.maxHeap')) {
                 try {
                     runtimeJvmOptions();
                     runtimeLogArguments();
