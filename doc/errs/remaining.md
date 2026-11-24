@@ -309,16 +309,41 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     function bound the same way, as in `&add(_, 1)`, which no library has, binds to the local too. 27
     (53) before, 0 after. Two of the 53, in an anonymous class of `jsondb`, bind through an unproven
     identity, as a method's `this` there does.
-- [ ] The semantic model's remaining unbound occurrences and unproven identities, for the record
-  (2026-11-24, all 21 libraries): 14 others, 4 of them in `ecstasy` and none in `json`: names in a
-  class's extends clause, as `contents` in `extends MapSet<Element>(contents)` (6); a default value of
-  a class's constructor parameter, as `False` and `Null` (2); the names of a function type's return
-  values (2); `this.Outer`, `this:class` and `MaxValue` in a static property's initializer (1 each);
-  and `type` in `new NarrowingFormat<Doc, type>(this)`, a dynamic type among a `new`'s type arguments
-  (1). And 263 bindings through unproven identities (205 occurrences and 58 calls), 190 of them over
-  `ecstasy` and `json`; the largest group is a dynamic formal such as `t1.DataType`'s `DataType` (87),
-  then `Element`, `Value`, `Key`, `this` in anonymous classes and generated methods such as
-  `appendTo`. No wanted rename was refused for one: a rename's proof compares them by spelling.
+- [ ] The semantic model's remaining unbound occurrences and unproven identities (census of all 21
+  libraries). On 2026-11-24 there were 14 unbound occurrences and 263 bindings through unproven
+  identities (205 occurrences, 58 calls). A rename of a declaration that one of them spelled was
+  refused: in user code, `class Derived(Int seed) extends Base(seed)` could not rename `seed`. Fixed
+  2026-11-24, one commit per construct, each with an `XdkOccurrenceBindingTest` case that fails
+  without it:
+  - [x] a primary constructor's parameter passed in an extends or incorporates clause binds to the
+    property it declares (f24b6bba06);
+  - [x] a property declared in a loop's body, such as the static local `MAX = MaxValue / 10 - 1`,
+    keeps its folded initializer's facts: the loop validates a clone of its body (a822025209);
+  - [x] a local or parameter used as a type, as `type` in `new NarrowingFormat<Doc, type>(this)`,
+    binds to its declaration (ad0a7adcb7);
+  - [x] the names of a function type's return values have symbols of their own (b12d0a55e8);
+  - [x] `this:class` in a property's accessor, as in a method (9e88b156fe);
+  - [x] `this.Outer` in a virtual child binds to ecstasy's `Outer` (19db309dd2).
+
+  Left: 8 unbound occurrences and 138 unproven bindings (80 occurrences, 58 calls), down from 205
+  unproven occurrences. Through ad0a7adcb7, `DataType` in `t1.DataType` (87) and other dynamic names
+  now bind through their validated expressions; their hover, definition and references are the same.
+  The largest unproven groups left are `Element` (23), `this` in anonymous classes (17),
+  generated methods such as `appendTo` (15), and `Key` and `Value`.
+- [ ] The 8 unbound occurrences left are code the compiler never compiles, found 2026-11-24:
+  - 6 extends arguments, in `OrderedMapSet`, `JsonLogStoreBase`, `JsonProcessorStore` and
+    `KeyCredential`. Each class's explicit constructors call the super constructor themselves, so no
+    synthetic constructor uses the arguments, and the compiler never checks them:
+    `class C extends Base(noSuchName) { construct(Int n) { construct Base(n); } }` compiles without
+    an error. COMPILER-188 reports unused contribution arguments only beside an explicit default or
+    shorthand constructor.
+  - 2 primary-constructor defaults, `ConsoleAppender`'s `False` and `Instruction`'s `Null`, which an
+    explicit constructor of the same signature overrides with its own.
+
+  A rename of a declaration that such a name spells is refused, for example renaming
+  `OrderedMapSet.contents`. Fixing this means a compiler change on master: report every unused
+  contribution argument, and maybe an overridden header default, then drop the dead code from those
+  five library classes. Open: the user's decision.
 - [x] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
   (`XdkLibrarySources`) still read the bundle, and may offer its older names. Done 2026-11-23/24
   (decided: index the workspace's): a source artifact of a library's name records its importable
