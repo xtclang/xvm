@@ -1104,7 +1104,8 @@ internal object XdkRename {
     private sealed interface Target {
         /**
          * An occurrence in compiled code that the semantic model leaves without a symbol, such as a name of a function
-         * type's return values or `this` in a lazy property's `calc()` ([preservesBindings]).
+         * type's return values, or a name in a class's extends clause or in a default value of its constructor's
+         * parameters ([preservesBindings]).
          */
         data object Unbound : Target
 
