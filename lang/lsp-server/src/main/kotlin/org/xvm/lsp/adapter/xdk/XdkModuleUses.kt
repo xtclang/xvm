@@ -3,7 +3,6 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.asm.Annotation
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.Component
-import org.xvm.asm.Component.Composition
 import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.DeclarationDigests
@@ -30,9 +29,9 @@ internal class XdkModuleUses private constructor(
     /** The path of each module and package of another module that its constants name, in which it finds members by name. */
     val scopes: Set<String>,
     /**
-     * The path of each type of another module whose members it can see even when private: each that its own classes
-     * extend, implement, incorporate, delegate to or are annotated with, each annotation it applies, and each type it
-     * names with an access other than public, such as a struct.
+     * The path of each class of another module whose members it can see even when private: each that its own classes
+     * extend, implement, incorporate, delegate to or are annotated with ([supers]), each annotation it applies, and each
+     * class it names with an access other than public, such as a struct ([heads]).
      */
     val extended: Set<String>,
 ) {
@@ -44,21 +43,14 @@ internal class XdkModuleUses private constructor(
                 val own = "$module:"
                 val constants = file.constantPool.constants.toList()
                 val identities = constants.filterIsInstance<IdentityConstant>()
-                val contributions =
-                    components(file.module)
-                        .filterIsInstance<ClassStructure>()
-                        .flatMap { structure ->
-                            // a package's import names the module it imports, whose members no class takes
-                            structure.contributionsAsList.filter { it.composition != Composition.Import }.flatMap { contribution ->
-                                listOfNotNull<Constant>(
-                                    contribution.typeConstant,
-                                    contribution.annotation,
-                                    contribution.delegatePropertyConstant,
-                                ) + contribution.typeParams?.values.orEmpty()
-                            } + structure.typeParams.values
-                        }
-                val annotations = constants.filterIsInstance<Annotation>()
-                val accesses = constants.filterIsInstance<AccessTypeConstant>().filter { it.access != ComponentAccess.PUBLIC }
+                // a package's import names the module it imports, whose members no class takes
+                val contributions = components(file.module).filterIsInstance<ClassStructure>().flatMap(::supers)
+                val annotations = types(constants.filterIsInstance<Annotation>().map { it.annotationClass })
+                val accesses =
+                    constants
+                        .filterIsInstance<AccessTypeConstant>()
+                        .filter { it.access != ComponentAccess.PUBLIC }
+                        .flatMap { heads(it.underlyingType) }
                 XdkModuleUses(
                     identities.mapNotNullTo(hashSetOf()) { it.name },
                     types(constants).filterNotTo(hashSetOf()) { it.startsWith(own) },
@@ -66,7 +58,7 @@ internal class XdkModuleUses private constructor(
                         .filter { it.format == Constant.Format.Module || it.format == Constant.Format.Package }
                         .map(::path)
                         .filterNotTo(hashSetOf()) { it.startsWith(own) },
-                    types(contributions + annotations + accesses).filterNotTo(hashSetOf()) { it.startsWith(own) },
+                    (contributions + annotations + accesses).filterNotTo(hashSetOf()) { it.startsWith(own) },
                 )
             }
 
