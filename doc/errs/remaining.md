@@ -2040,6 +2040,7 @@ change shows in them. In the order worth doing:
 | ID | Limitation | Estimate | Worth it |
 |----|------------|----------|----------|
 | K2a | IntelliJ's Run 'All Ecstasy Tests' has no Rerun Failed Tests | 1 day | Done 2026-11-24, embedded and with `xtc test`; Gradle mode's one `testXtc` still has none |
+| K2c | ... and in Gradle mode none yet | 0.5–1 day | Yes, next: the XVM repository runs its tests in Gradle mode |
 | K5a | Evaluations stop after 2 s, lazy values after 1 s | 0.5–1 day | Yes: a setting, small |
 | K6b | Rename and safe delete miss consumers the server does not know of | 0.5–1 day | Yes, as a prompt; automatic discovery is not |
 | K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Yes, after the release: arguments and JVM options, not the XDK version |
@@ -2061,6 +2062,20 @@ change shows in them. In the order worth doing:
   `xunit://<selector>`. None under Debug, as before, and none in Gradle mode, whose one `testXtc` for
   every module does not say which module an event is of: that needs xunit's events to name their module,
   or a `testXtc` per module. X348 checks it in IntelliJ.
+- [ ] K2c: Rerun Failed Tests after Run 'All Ecstasy Tests' in Gradle mode, which K2a leaves without one.
+  Gradle mode runs every project's `testXtc` in one Gradle build, so IntelliJ cannot write the line that
+  names each module before its events, as K2a's embedded and `xtc test` runs do. K2a's report took this
+  to need xunit's events to name their module, but they already do: each event's `id` is the test's
+  `UniqueId.path`, `<module>:<package>.<class>.<method>` (`lib_xunit/src/main/x/xunit/UniqueId.x`,
+  written by `JsonExecutionListener.x`), and `XtcTestEventsConverter` reads only the selector. So: take
+  each test's module from its event's `id` in every mode, which makes the module line redundant; in
+  Gradle mode, group the failed tests by module, find each module's Gradle project in the imported model
+  (`xtc/gradleProjects`, as runs' `:xdk:lib-json:testXtc` do), and rerun them in one Gradle build,
+  `:a:testXtc --test-class=… :b:testXtc --test-method=…`; without an imported model there is no project to
+  send them to, and no rerun, as the import notice says. Check that the `id`'s module is the declared
+  name the model uses. A converter test on Gradle-mode output, a test of the rerun's command, and a
+  playbook case with X288's recording Gradle wrapper. 0.5–1 day; worth it, as the XVM repository, whose
+  own modules replace the bundled libraries, can run its tests only in Gradle mode.
 - [ ] K2b: Debug for Run 'All Ecstasy Tests'. LSP4IJ's DAP launch debugs one configuration, one program,
   and an all-modules run is one program per module, in turn. Either the debug server runs the modules
   one after another in one session, keeping its breakpoints (2–3 days), or xunit runs every test module
