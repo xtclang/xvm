@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.Constants.ECSTASY_MODULE
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
@@ -377,7 +378,17 @@ internal class XdkProjectQueries(
         line: Int,
         column: Int,
         name: String,
-    ): XdkRenameProposal? = compile(texts)?.let { renameProposal(it, uri, line, column, name) }
+    ): XdkRenameProposal? {
+        // the proof compiles the workspace before and after the edit, which with ecstasy's sources would run out of heap
+        if (ECSTASY_MODULE in project.replaced && !XdkLibrarySources.fitsProofs()) {
+            throw RenameRefused(
+                "A rename in a workspace that compiles ecstasy from its sources, as the XVM repository does, needs a " +
+                    "language server heap of at least 2 GB, and this one has ${Runtime.getRuntime().maxMemory() shr 20} MB: " +
+                    "add -Xmx2G to the server's JVM options.",
+            )
+        }
+        return compile(texts)?.let { renameProposal(it, uri, line, column, name) }
+    }
 
     private fun renameProposal(
         before: CompilerRenameFacts,

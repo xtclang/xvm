@@ -151,6 +151,9 @@ class XdkLibraryDocumentsTest {
         assertThat(XdkLibrarySources.fitsLibraries(384L shl 20)).isFalse()
         assertThat(XdkLibrarySources.fitsLibraries(512L shl 20)).isFalse()
         assertThat(XdkLibrarySources.fitsLibraries(1L shl 30)).isTrue()
+        // a rename's proof over ecstasy's sources holds two compiles of the workspace
+        assertThat(XdkLibrarySources.fitsProofs(1L shl 30)).isFalse()
+        assertThat(XdkLibrarySources.fitsProofs(2L shl 30)).isTrue()
         // the server's tests run with 1 GB, which the whole library's case needs
         assertThat(XdkLibrarySources.fitsLibraries()).isTrue()
     }
