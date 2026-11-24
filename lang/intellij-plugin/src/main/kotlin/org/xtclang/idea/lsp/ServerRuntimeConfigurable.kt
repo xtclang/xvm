@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.Align
+import com.intellij.ui.dsl.builder.MAX_LINE_LENGTH_WORD_WRAP
 import com.intellij.ui.dsl.builder.panel
 import javax.swing.JComponent
 import javax.swing.JSpinner
@@ -40,7 +41,7 @@ class ServerRuntimeConfigurable : Configurable {
         }
     private val policy = ComboBox(MemoryPolicy.entries.toTypedArray()).apply { name = "xtc.runtime.memoryPolicy" }
     private val maxHeap =
-        JBTextField(8).apply {
+        JBTextField(12).apply {
             name = "xtc.runtime.maxHeap"
             emptyText.text = "the JVM's own"
             toolTipText = "With the Default policy: the server's maximum heap, such as 4G. Empty: a quarter of this machine's memory."
@@ -51,7 +52,12 @@ class ServerRuntimeConfigurable : Configurable {
 
     override fun createComponent(): JComponent =
         panel {
-            row { comment("Machine-local settings; uses IntelliJ's bundled Java runtime. Apply saves them for the next server start.") }
+            row {
+                comment(
+                    "Machine-local settings; uses IntelliJ's bundled Java runtime. Apply saves them for the next server start.",
+                    MAX_LINE_LENGTH_WORD_WRAP,
+                )
+            }
             row {
                 button("Restart running Ecstasy servers with saved settings") {
                     ProjectManager
@@ -69,20 +75,32 @@ class ServerRuntimeConfigurable : Configurable {
                             "-XX:ActiveProcessorCount, or -XX:+UseG1GC/UseSerialGC/UseParallelGC/UseZGC. Sizes use K, M or G. " +
                             "An -Xmx or a collector here overrides the memory policy below. No shell quoting, agents, " +
                             "classpath or system-property overrides.",
+                        MAX_LINE_LENGTH_WORD_WRAP,
                     )
             }.resizableRow()
-            row("Memory policy:") { cell(policy) }
+            row("Memory policy:") {
+                cell(policy)
+            }.rowComment(
+                "Default: the maximum heap below, or the JVM's own, a quarter of this machine's memory. Adaptive: " +
+                    "starts small, grows as the work needs and gives memory back, using at most 3/4 of this machine's.",
+                MAX_LINE_LENGTH_WORD_WRAP,
+            )
             row("Maximum heap, with the Default policy:") { cell(maxHeap) }
             row("Log history (days):") { cell(history) }
             row("Each log file (MB):") { cell(fileSize) }
             row("Rolled archive cap per stream (MB):") { cell(totalSize) }
             row("Retired process sessions to keep:") { cell(sessions) }
-            row { cell(libraries).comment("Navigation in XDK sources, also in method bodies.") }
-            row { cell(replacement).comment("For working on the XDK's own libraries, as in the XVM repository.") }
+            row { cell(libraries).comment("Navigation in XDK sources, also in method bodies.", MAX_LINE_LENGTH_WORD_WRAP) }
+            row {
+                cell(
+                    replacement,
+                ).comment("For working on the XDK's own libraries, as in the XVM repository.", MAX_LINE_LENGTH_WORD_WRAP)
+            }
             row {
                 comment(
                     "Active processes are protected. Old sessions are pruned on server start. " +
                         "Tools → Export Ecstasy Server Logs saves bounded recent logs and status.",
+                    MAX_LINE_LENGTH_WORD_WRAP,
                 )
             }
         }.also { reset() }
