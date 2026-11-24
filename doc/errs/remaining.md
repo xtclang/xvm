@@ -199,14 +199,23 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   repository's libraries other than `ecstasy` cannot be read alone (next item), which failed every
   compile that started from an earlier one, code actions' too, with "missing class for constant";
   such an API now counts as changed.
-- [ ] The API fingerprint of an XVM repository library's artifact, other than `ecstasy`'s, cannot be
-  read alone (`XdkDependency.api`): its declarations are described by their signatures, and the
-  compiler relates a signature's types to classes of the workspace's `ecstasy` that the artifact
-  does not hold. A module that depends on one is then compiled again whenever it is, though the API
-  it compiles against may be unchanged: a rename of a method of `json` compiles json and every
-  module that depends on it, directly or not, 12 modules. Fix: read the API linked to the
-  dependencies the artifact was compiled with.
-- [ ] Queued 2026-11-24, after the API fingerprint above: compile after a rename's edit only the modules that
+- [x] The API fingerprint of an XVM repository library's artifact, other than `ecstasy`'s, could not
+  be read alone (`XdkDependency.api`), so a module that depended on one was compiled again whenever
+  it was. The fingerprint described each declaration with `Constant.toString()`, whose description
+  of a signature asks whether a parameterized type is a function's: a type relation over classes of
+  the workspace's `ecstasy` (`Number`, through `Array`'s conditional `NumberArray`; `Object`,
+  `Nullable`, `ConditionalTuple`) that the artifact read alone holds only as fingerprints, without
+  their structures, "missing class for constant". Done 2026-11-24 (`lagergren/json-rename-api`): the
+  fingerprint names each constant by its index in the stripped pool instead, which the stripped
+  bytes that it digests fix, so it resolves nothing and links nothing, and every library's reads.
+  Over all 21 libraries, the next revision's compile after an edit in a method body of `json`, which
+  code actions make, compiles 2 modules, 6.1 s, where it compiled 12, 19.9 s
+  (`XdkRepositoryWorkspaceTest`, heavy: 1 where it was 2). Correction: this did not make a rename of
+  a `json` method faster, which still compiles 12 modules: such a rename changes json's API, and
+  every module that depends on json, directly or not, is compiled again by design, as it can reach
+  json's members through another module's types, and the proof needs its bindings after the edit
+  (next item).
+- [ ] Queued 2026-11-24, in progress since (`lagergren/rename-name-scope`), after the API fingerprint above: compile after a rename's edit only the modules that
   spell its old or its new name, the edited ones among them, and keep every other module's compile, even one
   that depends on the edited module. A rename can change a binding only where its name is written, the rule
   `XdkRename.spells` already applies to unbound occurrences: an override in another module spells the old
@@ -217,7 +226,10 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   method; one in `ecstasy`, the modules that mention the name instead of all 21. One to two days.
 - [ ] Queued 2026-11-24, after that: track the members each module uses from its dependencies, and recompile a
   dependent only when a member it uses changes, not on any change of its dependency's public API. Helps
-  every edit and code action, not only renames; a dependency tracker in the server, three to five days.
+  every edit and code action, not only renames; a dependency tracker in the server, three to five days. Its API side
+  is a per-declaration API: a consumer whose facts name none of the declarations whose API changed, nor any name a
+  changed or added declaration takes, which a new name could capture, keeps its compile, and its proof compares its
+  bindings unchanged, as for a module the edit does not reach.
 - [x] A rename that the client cancelled ran its proof to the end: `textDocument/rename` maps a
   refusal with `exceptionallyCompose` (`856d5ef01b`), whose new future the cancellation cancelled
   without reaching the adapter's, so the proof, half a minute over the XVM repository's libraries,
