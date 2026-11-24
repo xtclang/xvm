@@ -27,6 +27,11 @@ internal class XdkBuildModel private constructor(
         val binaries: List<XdkDependency>,
         /** The Gradle project that owns each source module, by module name, as its path in the build tree, where known. */
         val projects: Map<String, String> = emptyMap(),
+        /**
+         * Whether [modules] are the model's own, every module of the composite build it was exported from with its
+         * included builds, rather than a host's explicit list.
+         */
+        val composite: Boolean = false,
     )
 
     fun resolve(): Inputs =
@@ -110,7 +115,7 @@ internal class XdkBuildModel private constructor(
                 }.toList()
         val owned = owners.entries.associate { (module, owner) -> module.name to owner.buildTreePath }
         val projects = modules.mapNotNull { module -> owned[module.name]?.let { module.name to it } }.toMap()
-        return Inputs(modules, binaries, projects)
+        return Inputs(modules, binaries, projects, composite = true)
     }
 
     companion object {

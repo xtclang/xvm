@@ -107,6 +107,17 @@ internal object LspJsonOptions {
             }
         }
 
+    /** Read [key] as a non-blank string, trimmed; null when it is missing or not a string. */
+    fun string(
+        raw: Any?,
+        key: String,
+    ): String? =
+        when (val value = lookup(raw, key)) {
+            is String -> value.trim().takeIf(String::isNotEmpty)
+            is JsonElement -> value.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.let(::stringOrNull)
+            else -> null
+        }
+
     /** The value of [key] in [raw], such as a nested options object for the readers above; null when it has none. */
     fun lookup(
         raw: Any?,

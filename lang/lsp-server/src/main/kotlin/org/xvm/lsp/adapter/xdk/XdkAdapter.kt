@@ -208,6 +208,8 @@ class XdkAdapter
             val folders: List<File> = emptyList(),
             val explicit: Boolean = false,
             val buildModel: Boolean = false,
+            /** Whether the source modules are a Gradle model's own: every module of its composite build. */
+            val composite: Boolean = false,
             val problem: String? = null,
             /** Each discovered module root whose name another root declares too, with those others' roots. */
             val duplicates: Map<String, List<String>> = emptyMap(),
@@ -1177,6 +1179,7 @@ class XdkAdapter
                             val heapBefore = heapInUse()
                             try {
                                 if (stale()) throw CancellationException()
+                                val settings = discovery.get()
                                 val result =
                                     try {
                                         query(
@@ -1186,11 +1189,12 @@ class XdkAdapter
                                                 work.dependencies,
                                                 compiler::compileTree,
                                                 ::stale,
-                                                discoverImports = !discovery.get().explicit,
+                                                discoverImports = !settings.explicit,
                                                 diagnosticCache = diagnosticCache,
                                                 navigationIndex = navigationIndex,
                                                 actionCache = actionCache,
-                                                discoveryFolders = discovery.get().folders,
+                                                discoveryFolders = settings.folders,
+                                                composite = settings.composite,
                                             ).also { queries = it },
                                         )
                                     } catch (_: IOException) {
@@ -1575,6 +1579,7 @@ class XdkAdapter
                         it.copy(
                             explicit = explicit,
                             buildModel = false,
+                            composite = false,
                             problem = if (explicit) null else it.problem,
                             duplicates = if (explicit) emptyMap() else it.duplicates,
                         )
@@ -1696,7 +1701,13 @@ class XdkAdapter
                 synchronized(lifecycle) {
                     check(!closed) { "XDK adapter is closed" }
                     discovery.updateAndGet {
-                        it.copy(explicit = !automatic, buildModel = !automatic, problem = null, duplicates = emptyMap())
+                        it.copy(
+                            explicit = !automatic,
+                            buildModel = !automatic,
+                            composite = inputs.composite && !automatic,
+                            problem = null,
+                            duplicates = emptyMap(),
+                        )
                     }
                     if (
                         project.sameConfiguration(replacement) &&
