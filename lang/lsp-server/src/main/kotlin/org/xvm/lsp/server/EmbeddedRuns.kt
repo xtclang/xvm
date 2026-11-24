@@ -30,6 +30,7 @@ import org.xvm.debug.TestSelector
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.mapCancellable
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildResult
 import org.xvm.lsp.adapter.xdk.XdkBuiltModule
@@ -276,8 +277,9 @@ internal class EmbeddedRuns(
         var stopped = false
     }
 
+    /** A client's cancellation of the request, as when VS Code's build terminal closes, stops the build. */
     fun build(params: BuildParams): CompletableFuture<BuildResponse> =
-        compiler()?.buildAsync(params.module, params.rebuild == true, folder = params.folder)?.thenApply(::response) ?: unsupported()
+        compiler()?.buildAsync(params.module, params.rebuild == true, folder = params.folder)?.mapCancellable(::response) ?: unsupported()
 
     fun run(params: RunParams): CompletableFuture<RunResponse> {
         val runId = params.runId ?: UUID.randomUUID().toString()
