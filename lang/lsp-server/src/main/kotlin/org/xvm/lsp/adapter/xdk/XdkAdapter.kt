@@ -1077,6 +1077,9 @@ class XdkAdapter
             CODE_LENSES,
             RENAME,
             RENAME_PROPOSAL,
+
+            /** The compile that a rename's proof starts from, which prepareRename starts so that the rename finds it. */
+            PREPARE_RENAME,
             FILE_RENAME,
             SYMBOLS,
             NAVIGATION,
@@ -2649,6 +2652,30 @@ class XdkAdapter
             uri: String,
             line: Int,
             column: Int,
+        ): PrepareRenameResult? =
+            renameRange(uri, line, column)?.also {
+                if (isProjectRename(uri, line, column)) prepareProjectRename(uri)
+            }
+
+        /**
+         * Starts the compile that a project rename's proof starts from, the revision's, which code actions share
+         * ([XdkProjectQueries.prepareRename]), unless one is under way: the rename comes once its new name is typed, and
+         * then finds it, or waits for the rest of it on the compiler worker. An edit meanwhile retires it, as it retires
+         * every project query, and the rename compiles that revision's itself.
+         */
+        private fun prepareProjectRename(uri: String) {
+            synchronized(lifecycle) {
+                if (projectQueries.keys.none { it.kind == ProjectQueryKind.PREPARE_RENAME }) {
+                    projectQuery(ProjectQueryKey(uri, ProjectQueryKind.PREPARE_RENAME), Unit) { it.prepareRename() }
+                }
+            }
+        }
+
+        /** The range that a rename at the position renames, and the name there, or null where nothing is renamed. */
+        private fun renameRange(
+            uri: String,
+            line: Int,
+            column: Int,
         ): PrepareRenameResult? {
             val model = module(uri)?.takeIf { it.succeeded }?.document(uri)?.semantics ?: return null
             if (hasProject(uri)) {
@@ -2868,7 +2895,7 @@ class XdkAdapter
                     val module =
                         completed[compilation.scope]?.takeIf { it.succeeded }
                             ?: return CompletableFuture.completedFuture(null)
-                    if (prepareRename(uri, line, column) == null) {
+                    if (renameRange(uri, line, column) == null) {
                         return CompletableFuture.completedFuture(null)
                     }
                     val request =

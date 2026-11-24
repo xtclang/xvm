@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.slf4j.LoggerFactory
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.Constants.ECSTASY_MODULE
 import org.xvm.asm.ErrorList
@@ -290,7 +291,7 @@ internal class XdkProjectQueries(
         }
     }
 
-    /** Navigation may reuse exact detached builds; edit/refactoring proofs below always compile. */
+    /** Navigation may reuse exact detached builds; edit/refactoring proofs below reuse only the revision's compile. */
     private fun navigationBuilds(previous: XdkNavigationIndex.Snapshot): Map<String, XdkNavigationIndex.Build>? {
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
         val builds =
@@ -406,23 +407,52 @@ internal class XdkProjectQueries(
         name: String,
     ): XdkRenameProposal? {
         // the proof compiles the workspace before and after the edit, which with ecstasy's sources would run out of heap
-        if (ECSTASY_MODULE in project.replaced && !XdkLibrarySources.fitsProofs()) {
+        if (!fitsRename()) {
             throw RenameRefused(
                 "A rename in a workspace that compiles ecstasy from its sources, as the XVM repository does, needs a " +
                     "language server heap of at least 2 GB, and this one has ${Runtime.getRuntime().maxMemory() shr 20} MB: " +
                     "choose the Adaptive memory policy, or a maximum heap of 2G or more, in the Ecstasy server's runtime settings.",
             )
         }
-        return compile(texts)?.let { renameProposal(it, uri, line, column, name) }
+        return renameBase()?.let { renameProposal(it, uri, line, column, name) }
+    }
+
+    /**
+     * Compiles the revision's compile that a rename's proof starts from ([renameBase]), unless a request of the revision
+     * already did: editors ask prepareRename as a rename starts, and the rename once its new name is typed, which then
+     * compiles only after the edit. Nothing when a rename here would be refused for the heap.
+     */
+    fun prepareRename() {
+        if (fitsRename()) revisionBase(revision())
+    }
+
+    private fun fitsRename(): Boolean = ECSTASY_MODULE !in project.replaced || XdkLibrarySources.fitsProofs()
+
+    /**
+     * The compile of this query's sources that a rename's proof starts from: the revision's, which code actions share
+     * ([revisionBase]), when every module compiled in it, as the proof needs. Its facts are a repair's, which hold what a
+     * rename's own compile holds and more. When a module did not compile in it, the sources are compiled here as a rename
+     * compiled them before, which fails where a module does not compile, and the log says so.
+     */
+    private fun renameBase(): XdkCodeActionCache.Base? {
+        val base = revisionBase(revision())
+        val missing = project.modules.keys - base?.artifacts?.keys.orEmpty()
+        if (sources.size == project.modules.size && missing.isEmpty()) return base
+        logger.info(
+            "rename: the revision's compile has no artifact of {}, so the proof compiles the sources before the edit itself",
+            missing.sorted().joinToString().ifEmpty { "a module whose sources it could not read" },
+        )
+        return build(texts)
     }
 
     private fun renameProposal(
-        before: CompilerRenameFacts,
+        base: XdkCodeActionCache.Base,
         uri: String,
         line: Int,
         column: Int,
         name: String,
     ): XdkRenameProposal? {
+        val before = base.facts
         val source = XdkSources.file(uri)?.path ?: return null
         val model = before.models.singleOrNull { it.sourceName == source } ?: return null
         model.importAt(line, column)?.let { alias ->
@@ -437,7 +467,7 @@ internal class XdkProjectQueries(
                     )
                 }
             val plan = XdkRename.Plan(texts, mapOf(source to replacements))
-            val after = compile(plan.proposed) ?: return null
+            val after = compile(plan.proposed, reuse = base) ?: return null
             if (!preservesBindings(before, after, plan) || !isCurrent()) return null
             return XdkRenameProposal(
                 WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
@@ -488,7 +518,7 @@ internal class XdkProjectQueries(
                 else -> return null
             }
         val ids = before.constants.filterValues { members(it).all(targets::contains) }.keys
-        val base = XdkRename.plan(before, texts, source, line, column, name, ids) ?: return null
+        val renamed = XdkRename.plan(before, texts, source, line, column, name, ids) ?: return null
         val file = File(declarationSource)
         val renamedModule =
             project.modules.values.singleOrNull {
@@ -556,8 +586,15 @@ internal class XdkProjectQueries(
                     },
                 )
             }
-        val plan = XdkRename.Plan(texts, base.edits, moves.paths)
-        val after = compile(plan.proposed, moves = moves.paths, graph = graph) ?: return null
+        val plan = XdkRename.Plan(texts, renamed.edits, moves.paths)
+        // the revision's compile serves only an edit of the same graph's sources where they are
+        if (moves.paths.isNotEmpty() || graph !== project) {
+            logger.info(
+                "rename: the edit {}, so the proof compiles every module after it",
+                if (graph === project) "moves sources" else "renames a module",
+            )
+        }
+        val after = compile(plan.proposed, moves = moves.paths, graph = graph, reuse = base) ?: return null
         if (!preservesBindings(before, after, plan) || !isCurrent()) return null
         return XdkRenameProposal(
             WorkspaceEdit(
@@ -647,7 +684,8 @@ internal class XdkProjectQueries(
         ) {
             return null
         }
-        val before = compile(texts) ?: return null
+        val base = renameBase() ?: return null
+        val before = base.facts
         val directories = sources.values.flatMap { it.inputs.directories }.toSet()
         val rootOperations =
             operations.filter { (from, to) ->
@@ -735,7 +773,7 @@ internal class XdkProjectQueries(
                     if (from.isFile && to.extension != "x") return null
                     val proposal =
                         renameProposal(
-                            before,
+                            base,
                             selected.first,
                             selected.second.line,
                             selected.second.column,
@@ -966,7 +1004,8 @@ internal class XdkProjectQueries(
         plan: XdkRename.Plan,
         graph: XdkProject = project,
     ): Boolean {
-        // Compilation still checks the complete graph. Binding/dispatch equivalence is needed
+        // Compilation still checks the complete graph; a module whose sources and dependencies' API the edit leaves
+        // as they were keeps the revision's compile, as it compiles alike. Binding/dispatch equivalence is needed
         // for every edited module and its transitive consumers; independent roots have identical
         // inputs and no path to an edited declaration. Unsupported dynamic bindings in those
         // unrelated roots must not veto an otherwise proven edit.
@@ -1026,18 +1065,9 @@ internal class XdkProjectQueries(
             }
         val source = XdkSources.file(uri)?.path ?: return emptyList()
         val text = texts[source] ?: return emptyList()
-        // The requests of one revision share its compile and its import cleanup. A request cancelled or replaced
-        // meanwhile keeps nothing: its compiles may have stopped short, and checkCurrent() throws before it is kept.
+        // The requests of one revision share its compile and its import cleanup.
         val revision = revision()
-        val base =
-            actionCache.base(revision) { since ->
-                val start = compiles
-                try {
-                    build(texts, Proof.REPAIR, since = since)?.also { checkCurrent() }
-                } finally {
-                    made.set(compiles - start)
-                }
-            } ?: return emptyList()
+        val base = revisionBase(revision, made::set) ?: return emptyList()
         val before = base.facts
         val complete =
             before.models.all { it.status == SemanticModel.Status.COMPLETE } &&
@@ -1341,6 +1371,25 @@ internal class XdkProjectQueries(
             emptyList()
         }
     }
+
+    /**
+     * The compile of [revision], this query's sources, which its code action requests and renames share: the cache's,
+     * unless no request of the revision made it, and then made here, from the latest earlier revision's compile if one
+     * is kept. [made] gets the module compiles that made it. A request cancelled or replaced meanwhile keeps nothing: its
+     * compiles may have stopped short, and checkCurrent() throws before it is kept.
+     */
+    private fun revisionBase(
+        revision: String,
+        made: (Int) -> Unit = {},
+    ): XdkCodeActionCache.Base? =
+        actionCache.base(revision) { since ->
+            val start = compiles
+            try {
+                build(texts, Proof.REPAIR, since = since)?.also { checkCurrent() }
+            } finally {
+                made(compiles - start)
+            }
+        }
 
     /**
      * A code action's proof compile of [proposed], which the requests of one [revision] share: editors ask on every
@@ -1805,9 +1854,10 @@ internal class XdkProjectQueries(
                     // only a module that others depend on needs its API compared
                     val before = prior?.artifacts?.get(module.name)
                     if (before != null && edited != null && project.affected(module.uri).any { it != module.uri }) {
+                        // an API that cannot be read is no other's, and the modules that depend on it compile again
                         when {
-                            before.api == artifact.api -> alike += module.name
-                            before.accessibleApi == artifact.accessibleApi -> privatelyMoved += module.name
+                            before.api != null && before.api == artifact.api -> alike += module.name
+                            before.accessibleApi != null && before.accessibleApi == artifact.accessibleApi -> privatelyMoved += module.name
                         }
                     }
                     if (proof == Proof.REPAIR) {
@@ -1900,6 +1950,8 @@ internal class XdkProjectQueries(
             .filter { it.fromSource && it.module in XdkLibraries.moduleNames }
             .associate { it.module to it.imports }
 }
+
+private val logger = LoggerFactory.getLogger(XdkProjectQueries::class.java)
 
 /** Why `textDocument/rename` refuses a rename that also changes the configured source modules. */
 private const val SOURCE_MODULES_RENAME =
