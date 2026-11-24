@@ -742,6 +742,20 @@
                                 "type": "boolean",
                                 "description": "While code typed in the Debug Console runs, let the rest of the program run too, without stopping at breakpoints; for code that waits on work the program's other fibers do. Their threads and stacks may then have moved.",
                                 "default": false
+                            },
+                            "evaluationTimeLimit": {
+                                "type": "integer",
+                                "description": "How long, in milliseconds, code that the Debug Console runs in the stopped frame, such as a call, may take before it is ended",
+                                "default": 2000,
+                                "minimum": 100,
+                                "maximum": 60000
+                            },
+                            "lazyValueTimeLimit": {
+                                "type": "integer",
+                                "description": "How long, in milliseconds, the code that computes a lazy value in the Variables view, such as a getter or toString(), may take before it is ended. Nothing cancels it sooner, so the view waits that long for code that never ends",
+                                "default": 1000,
+                                "minimum": 100,
+                                "maximum": 30000
                             }
                         }
                     },
@@ -766,6 +780,20 @@
                                 "type": "boolean",
                                 "description": "Stop the program at its first line, when its --debug option has suspend",
                                 "default": false
+                            },
+                            "evaluationTimeLimit": {
+                                "type": "integer",
+                                "description": "How long, in milliseconds, code that the Debug Console runs in the stopped frame, such as a call, may take before it is ended",
+                                "default": 2000,
+                                "minimum": 100,
+                                "maximum": 60000
+                            },
+                            "lazyValueTimeLimit": {
+                                "type": "integer",
+                                "description": "How long, in milliseconds, the code that computes a lazy value in the Variables view, such as a getter or toString(), may take before it is ended. Nothing cancels it sooner, so the view waits that long for code that never ends",
+                                "default": 1000,
+                                "minimum": 100,
+                                "maximum": 30000
                             }
                         }
                     }

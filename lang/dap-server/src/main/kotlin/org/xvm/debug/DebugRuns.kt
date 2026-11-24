@@ -237,13 +237,15 @@ data class ExceptionInfoState(
 
 /**
  * What a debugged program starts with: the breakpoints installed before its first line, its exception stops, whether
- * it stops at its first line, and its function breakpoints.
+ * it stops at its first line, its function breakpoints, and how long the code that computes a lazy variable's value
+ * may run, [onDemand], the debugger's own limit when null.
  */
 data class DebugSetup(
     val breakpoints: List<SourceBreakpoints>,
     val exceptions: ExceptionStops = ExceptionStops(),
     val stopOnEntry: Boolean = false,
     val functions: List<FunctionBreakpointRequest> = emptyList(),
+    val onDemand: Duration? = null,
 )
 
 /** How a stopped fiber is stepped: over a call, into one, or out of the current method. */

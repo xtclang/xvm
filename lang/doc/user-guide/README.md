@@ -841,7 +841,7 @@ the frame's names, and after a dot the members of the value before it; in Evalua
 Ctrl+Space.
 
 What a watch can't evaluate, such as the call `size()`, runs as code on the paused fiber, for at most
-two seconds, and answers with the result's `toString()`. What it changes stays changed. Meanwhile the rest of the program stays stopped, so code that waits for the program's
+two seconds by default, and answers with the result's `toString()`. What it changes stays changed. Meanwhile the rest of the program stays stopped, so code that waits for the program's
 other fibers runs out of time; to let them run too, check **Let the program run while Evaluate
 Expression runs code** (IntelliJ) or set `"evaluationRunsProgram": true` (VS Code).
 
@@ -974,7 +974,11 @@ Some common problems:
 - In embedded mode, the project's Gradle settings don't apply to builds and runs.
 - A program being debugged keeps the code it was built from: edits apply the next time you run it.
 - Code run from the Debug Console or Evaluate Expression stops after two seconds, and a lazy value
-  after one. IntelliJ can't cancel an evaluation sooner.
+  after one, by default. To give them longer, set `evaluationTimeLimit` and `lazyValueTimeLimit`, in
+  milliseconds, in VS Code's launch configuration, or **Evaluation time limit (ms)** and **Lazy value
+  time limit (ms)** in IntelliJ's Ecstasy Application or Ecstasy Attach configuration. IntelliJ can't
+  cancel an evaluation sooner, so Evaluate Expression waits out the whole limit for code that never
+  ends.
 - Rename and safe delete cover the modules the language server knows of. To include modules in
   other folders that use yours, add them with **Add consumers from folders** (IntelliJ's **Ecstasy |
   Compiler** page, VS Code's **Ecstasy: Configure Compiler Paths**).

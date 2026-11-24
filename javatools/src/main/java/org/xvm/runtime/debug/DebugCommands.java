@@ -113,9 +113,9 @@ public class DebugCommands {
     /**
      * Sets up a run's debugger, before the program starts or as a debugger attaches: installs the setup's
      * breakpoints, reporting how each file's were installed, and its function breakpoints, reporting how they were,
-     * its exception stops and, if it asks, the stop on entry. The program's modules are known by then, so the
-     * breakpoints in their files are verified and the stop on entry is in the program's code, not in the libraries
-     * before it. The commands with the run's ID then ask this debugger.
+     * its exception stops and, if it asks, the stop on entry and the time limit of a lazy variable's code. The
+     * program's modules are known by then, so the breakpoints in their files are verified and the stop on entry is
+     * in the program's code, not in the libraries before it. The commands with the run's ID then ask this debugger.
      *
      * @param id        the run's ID
      * @param debugger  the run's runtime debugger
@@ -125,6 +125,9 @@ public class DebugCommands {
         if (setup != null) {
             if (setup.sourceDirs() != null) {
                 debugger.setSourceDirs(setup.sourceDirs());
+            }
+            if (setup.onDemand() != null) {
+                debugger.setOnDemandLimit(Duration.ofMillis(setup.onDemand()));
             }
             for (var source : list(setup.breakpoints())) {
                 channel.send(new Breakpoints(id, source.path(), debugger.setBreakpoints(source.path(), list(source.breakpoints()))));
