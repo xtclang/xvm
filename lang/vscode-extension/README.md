@@ -1,6 +1,6 @@
 # Ecstasy (XTC) Language Support for VS Code
 
-New to the extension? The [user guide](../doc/user-guide.md) walks through it with screenshots, beside the IntelliJ plugin.
+New to the extension? The [user guide](../doc/user-guide/README.md) walks through it with screenshots, beside the IntelliJ plugin.
 
 The bundled language server uses the compiler adapter by default. Tree-sitter remains a selectable
 syntax-only alternative. Compiler features include diagnostics, navigation, references, completion,
