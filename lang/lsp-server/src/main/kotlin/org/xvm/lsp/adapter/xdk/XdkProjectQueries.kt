@@ -408,7 +408,7 @@ internal class XdkProjectQueries(
             throw RenameRefused(
                 "A rename in a workspace that compiles ecstasy from its sources, as the XVM repository does, needs a " +
                     "language server heap of at least 2 GB, and this one has ${Runtime.getRuntime().maxMemory() shr 20} MB: " +
-                    "add -Xmx2G to the server's JVM options.",
+                    "choose the Adaptive memory policy, or a maximum heap of 2G or more, in the Ecstasy server's runtime settings.",
             )
         }
         return compile(texts)?.let { renameProposal(it, uri, line, column, name) }
