@@ -54,13 +54,13 @@ class XdkRenameReuseTest {
             assertThat(compiled.drop(start)).containsExactly("Base", "Middle", "Other", "Top", "Top")
 
             // a rename of Base's function in the same revision: its compile is the cached one, and the proof compiles
-            // Base, Middle, whose call it edits, and Top, which depends on Middle; Other, which none of them reaches,
-            // keeps the revision's compile
+            // Base and Middle, whose call it edits; Top, which depends on Middle but uses nothing the edit changes
+            // (XdkMemberUseTracker), and Other, which none of them reaches, keep the revision's compile
             val next = compiled.size
             val (baseLine, baseColumn) = BASE.at("one")
             val renamed = requireNotNull(adapter.renameAsync(base, baseLine, baseColumn, "first").awaited())
             assertThat(renamed.changes.keys).containsExactlyInAnyOrder(base, middle)
-            assertThat(compiled.drop(next)).containsExactly("Base", "Middle", "Top")
+            assertThat(compiled.drop(next)).containsExactly("Base", "Middle")
         }
     }
 

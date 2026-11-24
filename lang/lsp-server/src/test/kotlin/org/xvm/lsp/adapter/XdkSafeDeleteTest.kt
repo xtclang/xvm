@@ -154,8 +154,9 @@ class XdkSafeDeleteTest {
         val text = hand.readText()
         val (actions, compiled) = displayActions(root)
         println("module compiles of the request: $compiled")
-        // the removal changes the game module's API, so the proof compiles the modules that depend on it too
-        assertThat(compiled).isEqualTo(CodeActionCompiles(CARD_GAME, CARD_GAME, cachedBase = false))
+        // the removal changes Hand's API, so the proof compiles the modules that use Hand too; CardCollectionTest,
+        // CardGameTest and CardTest use no Hand, and keep the revision's compile (XdkMemberUseTracker)
+        assertThat(compiled).isEqualTo(CodeActionCompiles(CARD_GAME, CARD_GAME - 3, cachedBase = false))
         assertThat(actions).hasSize(1)
         assertThat(actions.single().title).startsWith("Safely delete member 'display', unused in ")
         // the workspace's modules are all that it checked; others elsewhere may call it
