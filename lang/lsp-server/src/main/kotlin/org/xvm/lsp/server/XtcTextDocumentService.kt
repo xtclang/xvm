@@ -372,6 +372,7 @@ class XtcTextDocumentService(
                 }
             if (outcome == "failed") logger.error("$method: request failed for $uri", cause)
             ExecutionTrace.event(trace, "end", mapOf("outcome" to outcome))
+            server.answered()
             logger.info(
                 "{}: {} in {}",
                 method,
