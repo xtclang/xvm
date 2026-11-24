@@ -1,5 +1,6 @@
 package org.xvm.lsp.server
 
+import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.CodeActionOptions
@@ -851,6 +852,7 @@ class XtcLanguageServer internal constructor(
                     compiler.sourceModuleInputs()
                 },
                 evaluated?.binaries.orEmpty(),
+                composite = explicit == null && model != null,
             )
         val replacement = inputs.copy(binaries = libraries.resolve(inputs.binaries))
         val automatic = model == null && explicit == null && CompilerConfiguration.automatic(raw)
@@ -863,6 +865,30 @@ class XtcLanguageServer internal constructor(
     /** Shows [message] to the user as a warning, when a client is connected. */
     internal fun showWarning(message: String) {
         client?.showMessage(MessageParams(MessageType.Warning, message))
+    }
+
+    /** Shows [message] to the user as information, when a client is connected. */
+    internal fun showInfo(message: String) {
+        client?.showMessage(MessageParams(MessageType.Info, message))
+    }
+
+    /**
+     * Shows the message of a code action's [ClientPresentation.OUTSIDE_USES] command, its one argument, which the
+     * client runs after the action's edit.
+     */
+    internal fun showOutsideUses(params: ExecuteCommandParams): CompletableFuture<Any> {
+        val message =
+            when (val value = params.arguments.orEmpty().singleOrNull()) {
+                is String -> value
+                is JsonPrimitive -> value.takeIf { it.isString }?.asString
+                else -> null
+            } ?: return CompletableFuture.failedFuture(
+                ResponseErrorException(
+                    ResponseError(ResponseErrorCode.InvalidParams, "${params.command} takes the message to show", null),
+                ),
+            )
+        showInfo(message)
+        return CompletableFuture.completedFuture(null)
     }
 
     private fun reportCompilerConfigError(failure: IllegalArgumentException) {
@@ -1025,14 +1051,15 @@ class XtcLanguageServer internal constructor(
                 } else {
                     Either.forRight(CodeActionOptions(CODE_ACTION_KINDS).apply { resolveProvider = resolvesCodeActionEdit })
                 }
-            if (
-                !presentation.actionLiterals &&
-                presentation.applyEdit &&
-                AdapterCapability.CODE_ACTION in adapter.capabilities
-            ) {
-                executeCommandProvider =
-                    ExecuteCommandOptions(listOf(ClientPresentation.APPLY_CODE_ACTION))
-            }
+            // a client of legacy commands applies code actions through the server; one of literals runs a safe delete's
+            // message on modules outside the workspace after its edit
+            val actions = AdapterCapability.CODE_ACTION in adapter.capabilities
+            val commands =
+                listOfNotNull(
+                    ClientPresentation.APPLY_CODE_ACTION.takeIf { actions && !presentation.actionLiterals && presentation.applyEdit },
+                    ClientPresentation.OUTSIDE_USES.takeIf { actions && presentation.actionLiterals && adapter is XdkAdapter },
+                )
+            if (commands.isNotEmpty()) executeCommandProvider = ExecuteCommandOptions(commands)
             documentFormattingProvider = Either.forLeft(true)
             documentRangeFormattingProvider =
                 Either.forRight(DocumentRangeFormattingOptions().apply { rangesSupport = true })

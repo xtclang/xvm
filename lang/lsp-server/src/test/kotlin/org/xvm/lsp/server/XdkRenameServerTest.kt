@@ -3,16 +3,21 @@ package org.xvm.lsp.server
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeActionResolveSupportCapabilities
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.FileOperationsWorkspaceCapabilities
 import org.eclipse.lsp4j.FileRename
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.Range
@@ -35,12 +40,14 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.mockingDetails
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
+import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
@@ -883,6 +890,126 @@ class XdkRenameServerTest {
         }
     }
 
+    @Test
+    fun `a public rename says modules outside the workspace are not changed, unless one of them is configured`() {
+        directory = directory.toRealPath()
+        val library = directory.resolve("library/Library.x").toFile().apply { parentFile.mkdirs() }
+        val inside = directory.resolve("library/Consumer.x").toFile()
+        val outside = directory.resolve("app/App.x").toFile().apply { parentFile.mkdirs() }
+        val text = "module Library { class Box { Int pick(Int value) = value + hidden(); private Int hidden() = 1; } }"
+        library.writeText(text)
+        inside.writeText("module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }")
+        outside.writeText("module App { package lib import Library; Int run(lib.Box box) = box.pick(value = 2); }")
+        val uri = library.toURI().toString()
+        val modules =
+            listOf(
+                XdkSourceModule("Library", uri),
+                XdkSourceModule("Consumer", inside.toURI().toString(), setOf("Library")),
+            )
+        val client = mock(LanguageClient::class.java)
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(client)
+        try {
+            server.initialize(workspace(library.parentFile)).awaited()
+            server.replaceCompilerSourceModules(modules)
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+
+            fun notes(
+                anchor: String,
+                name: String,
+            ): List<MessageParams> {
+                val before = messages(client).size
+                requireNotNull(
+                    server.renameProposal(RenameParams(TextDocumentIdentifier(uri), Position(0, text.indexOf(anchor)), name)).awaited(),
+                )
+                return messages(client).drop(before)
+            }
+            // sent before the answer, so the client has it as it applies the edit: none came after
+            assertThat(notes("pick", "choose")).containsExactly(
+                MessageParams(
+                    MessageType.Info,
+                    "Ecstasy: modules outside the workspace that use 'pick' are not changed by this rename. To include them, $ADD_CONSUMERS.",
+                ),
+            )
+            // a named argument elsewhere may use a public method's parameter
+            assertThat(notes("value", "count").map { it.message }).singleElement().asString().contains("use 'value' are not changed")
+            assertThat(notes("hidden", "secret")).isEmpty()
+            // the consumer that Add consumers from folders finds outside the workspace is renamed too
+            server.replaceCompilerSourceModules(modules + XdkSourceModule("App", outside.toURI().toString(), setOf("Library")))
+            assertThat(notes("pick", "choose")).isEmpty()
+            assertThat(library.readText()).isEqualTo(text)
+        } finally {
+            server.shutdown().awaited()
+        }
+    }
+
+    @Test
+    fun `a public safe delete runs the command that says modules outside the workspace are not changed`() {
+        directory = directory.toRealPath()
+        val text = "module Delete { class Box { Int unused() { return 1; } private Int hidden() { return 2; } } }"
+        val file = directory.resolve("Delete.x").toFile().apply { writeText(text) }
+        val uri = file.toURI().toString()
+        val client = mock(LanguageClient::class.java)
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(client)
+        try {
+            // a client that resolves an action's edit when it is chosen, as LSP4IJ and VS Code do
+            val parameters =
+                workspace(directory.toFile()).apply {
+                    capabilities.textDocument.codeAction.apply {
+                        dataSupport = true
+                        resolveSupport = CodeActionResolveSupportCapabilities(listOf("edit"))
+                    }
+                }
+            val capabilities = server.initialize(parameters).awaited().capabilities
+            assertThat(capabilities.executeCommandProvider.commands).containsExactly(ClientPresentation.OUTSIDE_USES)
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+
+            fun deletion(name: String): CodeAction {
+                val at = Position(0, text.indexOf(name))
+                return server.textDocumentService
+                    .codeAction(CodeActionParams(TextDocumentIdentifier(uri), Range(at, at), CodeActionContext(emptyList())))
+                    .awaited()
+                    .map { it.right }
+                    .single { it.title.startsWith("Safely delete") }
+            }
+            val publicMember = deletion("unused")
+            val command = requireNotNull(publicMember.command)
+            assertThat(command.command).isEqualTo(ClientPresentation.OUTSIDE_USES)
+            val message =
+                "Ecstasy: modules outside the workspace that use 'unused' are not changed by this safe delete. To include them, $ADD_CONSUMERS."
+            assertThat(command.arguments).containsExactly(message)
+            // LSP4IJ resolves no action with a command (UP85): it carries its edit, which a private member's leaves for resolve
+            assertThat(publicMember.edit).isNotNull()
+            assertThat(publicMember.data).isNull()
+            val privateMember = deletion("hidden")
+            assertThat(privateMember.command).isNull()
+            assertThat(privateMember.edit).isNull()
+            assertThat(privateMember.data).isNotNull()
+            // listing it said nothing; its command, which the client runs after the edit, does
+            assertThat(messages(client)).isEmpty()
+            server.workspaceService.executeCommand(ExecuteCommandParams(command.command, command.arguments)).awaited()
+            assertThat(messages(client)).containsExactly(MessageParams(MessageType.Info, message))
+            assertThat(file.readText()).isEqualTo(text)
+        } finally {
+            server.shutdown().awaited()
+        }
+    }
+
+    /** The messages that [client] was shown, in order. */
+    private fun messages(client: LanguageClient): List<MessageParams> =
+        mockingDetails(client)
+            .invocations
+            .filter { it.method.name == "showMessage" }
+            .map { it.arguments.single() as MessageParams }
+
+    /** An editor's parameters with the one workspace [folder], whose client adds consumers as [ADD_CONSUMERS] says. */
+    private fun workspace(folder: File) =
+        parameters().apply {
+            workspaceFolders = listOf(WorkspaceFolder(folder.toURI().toString(), folder.name))
+            initializationOptions = mapOf("xtcAddConsumers" to ADD_CONSUMERS)
+        }
+
     private fun parameters() =
         InitializeParams().apply {
             capabilities =
@@ -895,4 +1022,9 @@ class XdkRenameServerTest {
                         }
                 }
         }
+
+    private companion object {
+        /** How the test's client says its user adds consumers. */
+        const val ADD_CONSUMERS = "use Add consumers from folders"
+    }
 }

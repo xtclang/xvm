@@ -2078,7 +2078,7 @@ change shows in them. In the order worth doing:
 | K2a | IntelliJ's Run 'All Ecstasy Tests' has no Rerun Failed Tests | 1 day | Done 2026-11-24, embedded and with `xtc test`; Gradle mode in K2c |
 | K2c | ... and in Gradle mode none yet | 0.5–1 day | Done 2026-11-24, where the Gradle model is imported |
 | K5a | Evaluations stop after 2 s, lazy values after 1 s, by default | done | Done: a launch and attach attribute each, and options of both IntelliJ configurations |
-| K6b | Rename and safe delete miss consumers the server does not know of | 0.5–1 day | Yes, as a prompt; automatic discovery is not |
+| K6b | Rename and safe delete miss consumers the server does not know of | Done | Yes, as a note: done 2026-11-24; automatic discovery is not |
 | K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Yes, after the release: arguments and JVM options, not the XDK version |
 | K1 | VS Code has no `xtc` command-line build mode | 1.5–2 days | When a VS Code user asks |
 | K7 | The formatter does not reflow comments or split strings | 1.5–2 days for comments | Comments later; strings never |
@@ -2148,12 +2148,21 @@ change shows in them. In the order worth doing:
   ([IJPL-260358](https://youtrack.jetbrains.com/issue/IJPL-260358)), LSP4J cannot send DAP `cancel`
   ([LSP4J #1009](https://github.com/eclipse-lsp4j/lsp4j/pull/1009), ours, open), and LSP4IJ sends none.
   Nothing to do here until those land.
-- [ ] K6b: consumers outside the workspace. A rename's proof covers the modules the server knows of; others
+- [x] K6b: consumers outside the workspace. A rename's proof covers the modules the server knows of; others
   come in only through Add consumers from folders (`XdkConsumerDiscovery`). Scanning the disk outside the
   workspace on its own is unbounded and not worth it, and a Gradle composite build's included builds are
-  already known once its model is imported. Worth doing: when a rename or safe delete changes a public
-  declaration and no consumer folders are configured, say so in its preview, with the way to add them.
-  0.5–1 day.
+  already known once its model is imported. Done on `lagergren/k6b-rename-consumers`: a rename or safe
+  delete of a declaration that other modules can name (the compiler's access: public, or protected in a
+  class another module can extend, up to the module) says, as a `window/showMessage` that both editors show
+  as a notification, that modules outside the workspace that use it are not changed, and how to add them in
+  that editor (its initialization option `xtcAddConsumers`). A rename's message comes as `xtc/rename`
+  answers; a safe delete's, from its code action's command `xtc.outsideUses`, which the client runs after
+  the edit (that action carries its edit, as LSP4IJ 0.30.1 resolves no action with a command: UP85). Quiet
+  for private and local declarations, for a module that a configured module outside the workspace folders
+  consumes, and for a Gradle model's graph, which holds every module of its composite build. A change
+  annotation was not used: VS Code shows one only in its refactor preview, which a `needsConfirmation`
+  forces open on every rename, and LSP4IJ 0.30.1 shows none. Plain `textDocument/rename`, which neither
+  editor sends, and file moves say nothing.
 - [ ] K3: Gradle's settings in embedded runs. Embedded builds and runs use the server's compiler and
   runtime, and run in an execution worker JVM (`RunWorkerProcess`); `xtcRun`'s module arguments, method
   and `jvmArgs` are never read. The XTC plugin's model export (`compiler-model.init.gradle`,

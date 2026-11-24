@@ -2,7 +2,7 @@ import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { focusTestEditor, focusTestWindow } from '../native-focus';
 import { discovered } from './liveWorkspace';
-import { diagnostics, eventually, noErrors, playbook, position } from './support';
+import { client, diagnostics, eventually, noErrors, playbook, position } from './support';
 
 export function memberActionCases(): void {
     playbook('X122', async (workspace, data) => {
@@ -43,6 +43,29 @@ export function memberActionCases(): void {
             }
         });
     });
+}
+
+/**
+ * Checks the server's message on modules outside the workspace, which [action]'s command shows after its edit, as VS
+ * Code runs it: for a public member, [expected] and how to add them in VS Code; for a private one, null, no command.
+ * Observing the message takes the language client's own handler, which only a restart of the server gives back.
+ */
+async function outsideUses(action: vscode.CodeAction, expected: string | null): Promise<void> {
+    if (expected === null) {
+        assert.strictEqual(action.command, undefined, 'A private member\'s safe delete has no message');
+        return;
+    }
+    const message = `Ecstasy: ${expected}. To include them, run Ecstasy: Configure Compiler Paths and choose Add consumers from folders.`;
+    const command = action.command;
+    assert.ok(command, 'A public member\'s safe delete has a message');
+    assert.strictEqual(command.command, 'xtc.outsideUses');
+    assert.deepStrictEqual(command.arguments, [message]);
+    const shown: string[] = [];
+    const observer = client().onNotification('window/showMessage', (params: { message: string }) => { shown.push(params.message); });
+    // the server shows it before it answers the command
+    try { await vscode.commands.executeCommand(command.command, ...(command.arguments ?? [])); }
+    finally { observer.dispose(); }
+    assert.deepStrictEqual(shown, [message]);
 }
 
 export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184' | 'X185' | 'X186' | 'X187' | 'X188' | 'X189' | 'X190' | 'X191' | 'X192' | 'X193' | 'X194' | 'X195' | 'X196' | 'X197' | 'X198' | 'X199' | 'X200' | 'X201' | 'X202' | 'X203' | 'X204' | 'X205' | 'X206' | 'X207' | 'X208' | 'X209' | 'X210' | 'X211' | 'X212' | 'X213' | 'X214' | 'X215' | 'X221' | 'X222' | 'X223' | 'X224' | 'X225' | 'X226' | 'X227' | 'X228' | 'X229' | 'X230' | 'X231' | 'X232' | 'X233' | 'X234' | 'X235' | 'X236' | 'X237' | 'X238' | 'X239' | 'X240' | 'X241' | 'X242' | 'X295' | 'X296' | 'X297' | 'X298' | 'X299' | 'X332' | 'X333' | 'X334')[] = ['X148']): void {
@@ -95,6 +118,7 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
             }, item => !!item?.edit, data.title);
             assert.ok(action?.edit);
             assert.ok(await vscode.workspace.applyEdit(action.edit));
+            if ('outsideUses' in data) await outsideUses(action, data.outsideUses);
             const destination = 'destinationFile' in data ? await workspace.open(data.destinationFile) : document;
             const original = 'destinationFile' in data ? data.destinationSource : data.source;
             assert.strictEqual(destination.getText(), data.expected);
@@ -110,6 +134,9 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
                 if (command === 'redo') await noErrors(document.uri);
                 else await originalDiagnostics();
             }
+        }).finally(async () => {
+            // gives back the language client's own handler of the messages, which observing one took
+            if ('outsideUses' in data && data.outsideUses !== null) await vscode.commands.executeCommand('xtc.restartServer');
         });
     });
 

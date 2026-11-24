@@ -3828,7 +3828,7 @@
       }
     },
     "X109": {
-      "title": "public parameter rename updates a closed caller and preserves another overload",
+      "title": "public parameter rename updates a closed caller, preserves another overload and says that modules outside the workspace are not changed",
       "manual": [],
       "values": {
         "file": "Library.x",
@@ -3853,7 +3853,8 @@
             "destination": "Other.x",
             "expected": "module Other { package lib import Library; String run(lib.Box box) = box.pick(input = \"text\"); }"
           }
-        ]
+        ],
+        "outsideUses": "modules outside the workspace that use 'input' are not changed by this rename"
       },
       "intellij": {
         "coverage": "full",
@@ -4149,7 +4150,7 @@
       }
     },
     "X120": {
-      "title": "lambda parameter rename follows nested captures and preserves sibling bindings",
+      "title": "lambda parameter rename follows nested captures and preserves sibling bindings, with no message on modules outside the workspace",
       "manual": [],
       "values": {
         "file": "Library.x",
@@ -4162,7 +4163,8 @@
             "destination": "Library.x",
             "expected": "module Library { Int run() { function Int(Int) f = (Int value) -> { function Int() nested = () -> value; return nested(); }; function Int(Int) g = (Int input) -> input; return f(1) + g(2); } }"
           }
-        ]
+        ],
+        "outsideUses": null
       },
       "intellij": {
         "coverage": "full",
@@ -7744,14 +7746,15 @@
     "X236": {
       "title": "safely delete an unused private method with parameter and call bindings",
       "manual": [
-        "Select unused and inspect Safely delete private member 'unused'. Apply it, inspect exact text and diagnostics, then Undo/Redo/Undo."
+        "Select unused and inspect Safely delete private member 'unused'. Apply it, inspect exact text and diagnostics and that no notification on modules outside the workspace follows, then Undo/Redo/Undo."
       ],
       "values": {
         "file": "Extract.x",
         "source": "module Extract {\n    private Int unused(Int input) { return input + kept(); }\n    Int kept() = 2;\n    Int read() { return kept(); }\n}",
         "selected": "unused",
         "title": "Safely delete private member 'unused'",
-        "expected": "module Extract {\n    Int kept() = 2;\n    Int read() { return kept(); }\n}"
+        "expected": "module Extract {\n    Int kept() = 2;\n    Int read() { return kept(); }\n}",
+        "outsideUses": null
       },
       "intellij": {
         "coverage": "full",
@@ -10190,16 +10193,17 @@
       }
     },
     "X334": {
-      "title": "safely delete an unused public method of a class, naming the modules that were checked",
+      "title": "safely delete an unused public method of a class, naming the modules that were checked and saying that modules outside the workspace are not changed",
       "manual": [
-        "Select unused and inspect Safely delete member 'unused', unused in Extract. Apply it, inspect exact text and diagnostics, then Undo/Redo/Undo."
+        "Select unused and inspect Safely delete member 'unused', unused in Extract. Apply it, inspect exact text and diagnostics and the notification on modules outside the workspace, then Undo/Redo/Undo."
       ],
       "values": {
         "file": "Extract.x",
         "source": "module Extract {\n    class Box {\n        Int unused(Int input) { return input + kept(); }\n        Int kept() = 2;\n    }\n    Int read() = new Box().kept();\n}",
         "selected": "unused",
         "title": "Safely delete member 'unused', unused in Extract",
-        "expected": "module Extract {\n    class Box {\n        Int kept() = 2;\n    }\n    Int read() = new Box().kept();\n}"
+        "expected": "module Extract {\n    class Box {\n        Int kept() = 2;\n    }\n    Int read() = new Box().kept();\n}",
+        "outsideUses": "modules outside the workspace that use 'unused' are not changed by this safe delete"
       },
       "intellij": {
         "coverage": "full",

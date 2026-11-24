@@ -34,7 +34,7 @@
  * | experimental xtcRenameProposal, xtc/rename| steps "Renamed everywhere", "Undo the rename", "Undone everywhere", "Rename a class" |
  * | textDocument/codeAction, codeAction/resolve | steps "Quick fixes", "Create a method", "Add an import", "Refactorings", "Extracted to a local", "Extract a method"; checks "Undo a quick fix", "Safe delete", "Generate a doc comment" |
  * | source.organizeImports                    | step "Organize imports"                                           |
- * | executeCommandProvider                    | - not advertised to VS Code, which takes code actions as literals |
+ * | executeCommandProvider: xtc.outsideUses   | - check "Safe delete" lists the action without applying it; applying a public member's runs it (playbook X334) |
  * | textDocument/formatting                   | step "Format the document"                                        |
  * | textDocument/rangesFormatting             | checks "Format a selection", "Format the selections"              |
  * | textDocument/rangeFormatting              | - VS Code asks a server that formats ranges for all of them at once, a selection's one too |

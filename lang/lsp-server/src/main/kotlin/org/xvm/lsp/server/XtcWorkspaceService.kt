@@ -135,7 +135,8 @@ class XtcWorkspaceService(
     override fun symbol(params: WorkspaceSymbolParams): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
         server.workspaceSymbols(params)
 
-    override fun executeCommand(params: ExecuteCommandParams): CompletableFuture<Any> = server.executeCodeAction(params)
+    override fun executeCommand(params: ExecuteCommandParams): CompletableFuture<Any> =
+        if (params.command == ClientPresentation.OUTSIDE_USES) server.showOutsideUses(params) else server.executeCodeAction(params)
 
     override fun resolveWorkspaceSymbol(symbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol> = server.resolveWorkspaceSymbol(symbol)
 }
