@@ -1,5 +1,7 @@
 # Ecstasy IntelliJ Plugin
 
+New to the plugin? The [user guide](../doc/user-guide.md) walks through it with screenshots, beside the VS Code extension.
+
 The bundled language server uses the compiler adapter by default. Tree-sitter remains a selectable
 syntax-only alternative. Compiler features include diagnostics, navigation, references, completion,
 theme-based semantic highlighting and guarded refactorings over configured source and library inputs.
