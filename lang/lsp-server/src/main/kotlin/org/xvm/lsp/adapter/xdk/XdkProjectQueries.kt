@@ -474,7 +474,7 @@ internal class XdkProjectQueries(
                     )
                 }
             val plan = XdkRename.Plan(texts, mapOf(source to replacements))
-            val after = compile(plan.proposed, reuse = base) ?: return null
+            val after = compile(plan.proposed, reuse = base, reach = reach(plan, base)) ?: return null
             if (!preservesBindings(before, after, plan) || !isCurrent()) return null
             return XdkRenameProposal(
                 WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
@@ -601,7 +601,8 @@ internal class XdkProjectQueries(
                 if (graph === project) "moves sources" else "renames a module",
             )
         }
-        val after = compile(plan.proposed, moves = moves.paths, graph = graph, reuse = base) ?: return null
+        val reach = if (moves.paths.isEmpty() && graph === project) reach(plan, base) else null
+        val after = compile(plan.proposed, moves = moves.paths, graph = graph, reuse = base, reach = reach) ?: return null
         if (!preservesBindings(before, after, plan) || !isCurrent()) return null
         return XdkRenameProposal(
             WorkspaceEdit(
@@ -1018,6 +1019,33 @@ internal class XdkProjectQueries(
                     symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.MODULE)
             }?.let { symbol -> facts.constants[symbol.id]?.let { symbol.name to it } }
 
+    /**
+     * The modules that depend on [plan]'s edited modules that its proof compiles after the edit, by root URI, the others
+     * keeping [base]'s compile ([XdkRenameReach]), or null for all of them; the log says which, and why.
+     */
+    private fun reach(
+        plan: XdkRename.Plan,
+        base: XdkCodeActionCache.Base,
+    ): Set<String>? {
+        val texts = sources.entries.associate { (module, source) -> module.uri to source.inputs.text.values }
+        val reach = XdkRenameReach.of(plan, project, texts, base)
+        val edited = plan.edits.keys.mapNotNullTo(hashSetOf()) { project.scope(it) }
+        val dependents = edited.flatMap(project::affected).toSet() - edited
+        val modules = reach.modules
+        if (modules == null) {
+            logger.info("rename: the proof compiles every module that depends on the edited ones after the edit, as {}", reach.reason)
+        } else if (dependents.isNotEmpty()) {
+            logger.info(
+                "rename: of the {} modules that depend on the edited ones, the proof compiles {} after the edit{}; {}",
+                dependents.size,
+                modules.size,
+                if (modules.isEmpty()) "" else " (${project.modules.values.filter { it.uri in modules }.joinToString { it.name }})",
+                reach.reason,
+            )
+        }
+        return modules
+    }
+
     private fun renameScope(): XdkRenameScope =
         XdkRenameScope(
             if (discoverImports) {
@@ -1037,7 +1065,8 @@ internal class XdkProjectQueries(
         graph: XdkProject = project,
     ): Boolean {
         // Compilation still checks the complete graph; a module whose sources and dependencies' API the edit leaves
-        // as they were keeps the revision's compile, as it compiles alike. Binding/dispatch equivalence is needed
+        // as they were keeps the revision's compile, as it compiles alike, and so does one that a rename does not reach
+        // (XdkRenameReach), whose facts then compare as they were. Binding/dispatch equivalence is needed
         // for every edited module and its transitive consumers; independent roots have identical
         // inputs and no path to an edited declaration. Unsupported dynamic bindings in those
         // unrelated roots must not veto an otherwise proven edit.
@@ -1672,7 +1701,8 @@ internal class XdkProjectQueries(
         resourceSnapshots: Map<XdkSourceModule, XdkResources> = emptyMap(),
         failed: (List<ErrorListener.ErrorInfo>) -> Unit = {},
         reuse: XdkCodeActionCache.Base? = null,
-    ): CompilerRenameFacts? = build(text, proof, moves, graph, resourceMoves, resourceSnapshots, failed, reuse)?.facts
+        reach: Set<String>? = null,
+    ): CompilerRenameFacts? = build(text, proof, moves, graph, resourceMoves, resourceSnapshots, failed, reuse, reach = reach)?.facts
 
     /**
      * The compile of [text], and what a proof, or the next revision's compile, needs of it to compile only some modules.
@@ -1680,7 +1710,9 @@ internal class XdkProjectQueries(
      * changes and the modules that depend on them: the others have the inputs they had, so they keep their facts and
      * artifacts, and a module that did not compile then does not now. With [since], an earlier revision's compile, the
      * revision's own compile of its sources does the same for the modules whose sources changed since, unless it cannot
-     * be sure of the rest ([changedSince]). A move, another graph or resources of their own compile it all.
+     * be sure of the rest ([changedSince]). A move, another graph or resources of their own compile it all. With
+     * [reach], a rename's, of the modules that depend on those whose sources [text] changes it compiles only those whose
+     * root URI it holds ([XdkRenameReach]), and the others keep their compile with [reuse]'s.
      */
     private fun build(
         text: Map<String, String>,
@@ -1692,6 +1724,7 @@ internal class XdkProjectQueries(
         failed: (List<ErrorListener.ErrorInfo>) -> Unit = {},
         reuse: XdkCodeActionCache.Base? = null,
         since: XdkCodeActionCache.Base? = null,
+        reach: Set<String>? = null,
     ): XdkCodeActionCache.Base? {
         checkCurrent()
         if (proof == Proof.COMPLETE && sources.size != graph.modules.size) return null
@@ -1736,11 +1769,16 @@ internal class XdkProjectQueries(
                     ?.binaryModules
                     ?.none { name -> upstream.any { it.name == name } } == true
         }
+
+        // a module that depends on a rename's edited modules, which its edit does not reach, compiles as it did
+        fun outOfReach(module: XdkSourceModule): Boolean =
+            prior === reuse && reach != null && module.uri !in reach && changed?.contains(module.uri) == false
+
         val attempts =
             graph
                 .buildOrder()
                 .mapNotNull { module ->
-                    if (prior != null && edited != null && (module.uri !in edited || unchangedBy(module))) {
+                    if (prior != null && edited != null && (module.uri !in edited || unchangedBy(module) || outOfReach(module))) {
                         if (module.uri in edited) alike += module.name
                         checkCurrent()
                         val artifact = prior.artifacts[module.name]

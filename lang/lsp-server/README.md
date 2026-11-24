@@ -192,8 +192,9 @@ text, resources and dependency binary/source-index revisions match. Editor and w
 compilation seed the same index; changing a module rebuilds its affected dependency closure. Removed
 roots are evicted, and stale/canceled work cannot republish an older index generation. Refactoring
 proofs start from the revision's compile, which code actions and renames share and `prepareRename`
-starts, and compile only the modules that an edit changes and those that depend on them; a move or a
-changed graph compiles every module. There is no disk-persistent index or incremental compiler; warm
+starts, and compile only the modules that an edit changes and those that depend on them; of those, a
+rename compiles only the ones that write its old or new name, use a type whose members it changes, or
+name a declaration on an edited line. A move or a changed graph compiles every module. There is no disk-persistent index or incremental compiler; warm
 queries still capture the graph inputs to detect closed-file changes without relying on watchers.
 Workspace implementation and type/call hierarchy queries also include unopened consumers, joining
 compiler identities across module artifacts. Hierarchy handles reject changed graph/source/binary

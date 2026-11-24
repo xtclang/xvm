@@ -215,15 +215,27 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   every module that depends on json, directly or not, is compiled again by design, as it can reach
   json's members through another module's types, and the proof needs its bindings after the edit
   (next item).
-- [ ] Queued 2026-11-24, in progress since (`lagergren/rename-name-scope`), after the API fingerprint above: compile after a rename's edit only the modules that
-  spell its old or its new name, the edited ones among them, and keep every other module's compile, even one
-  that depends on the edited module. A rename can change a binding only where its name is written, the rule
-  `XdkRename.spells` already applies to unbound occurrences: an override in another module spells the old
-  name and is renamed with it, and code that already calls the new name, which could now bind to the renamed
-  method, spells the new one. To prove first, each with a test that the scope includes or refuses: a type
-  alias, a method reference through a property, generic inference and imports, any binding that could change
-  without either name in its module. A rename in `json` then compiles json and the few modules that use the
-  method; one in `ecstasy`, the modules that mention the name instead of all 21. One to two days.
+- [x] Compile after a rename's edit only the modules that it reaches, the edited ones among them,
+  and keep every other module's compile, even one that depends on an edited module (queued
+  2026-11-24). Done 2026-11-24 (`lagergren/rename-name-scope`, `XdkRenameReach`). Writing the old or
+  the new name is not enough to prove: Ecstasy matches a class with an interface by its members
+  (duck typing), so a module that writes neither name can break or bind elsewhere, through an
+  assignment of the renamed method's class to an interface with the old name, either way round; a
+  class of its own that extends that class and so gets the new name's default from an interface; or
+  the same through a typedef, a property, a generic inference, an import alias or a conditional
+  return. A module is compiled after the edit when it writes either name; when its compile's
+  constants name a type whose members the rename changes, which are the edited modules' types with a
+  member of either name and, to a fixpoint, every type, typedef, method or property whose
+  declaration names one; when its facts name a declaration on an edited line, whose place the edit
+  moves, as keeping it refused a valid rename; or when its facts name a module compiled again by its
+  artifact's revision. The others keep their compile, as everything they read of the edited modules
+  is as it was. A name that is not a plain identifier, a move, or a compile that cannot be read
+  compiles them all, and the log says why. `XdkRenameReachTest` has a case of each, with the same
+  outcomes when every dependent is compiled; with the spelling alone, eight of its renames were
+  proven where a module breaks or binds elsewhere, and the edited-line one refused. Over all 21
+  libraries, a rename of a method of `json` compiles 2 modules, json and jsondb, 6.0 s, where it
+  compiled 12; one of `String`, all 22 still, as every module uses `String`;
+  `XdkRepositoryWorkspaceTest`, 3 and 1 where they were 3 and 2.
 - [ ] Queued 2026-11-24, after that: track the members each module uses from its dependencies, and recompile a
   dependent only when a member it uses changes, not on any change of its dependency's public API. Helps
   every edit and code action, not only renames; a dependency tracker in the server, three to five days. Its API side
