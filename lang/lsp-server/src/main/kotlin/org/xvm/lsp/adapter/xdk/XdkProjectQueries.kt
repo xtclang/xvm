@@ -27,6 +27,7 @@ import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.concurrent.CancellationException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -66,6 +67,9 @@ internal class XdkProjectQueries(
 
     private val compiled = AtomicInteger()
 
+    /** Nanoseconds that this query's module compiles took, by module name, each module's compiles together. */
+    private val compileNanos = ConcurrentHashMap<String, Long>()
+
     /** The module compiles that this query ran so far, which the server's log reports. */
     val compiles: Int get() = compiled.get()
 
@@ -73,7 +77,27 @@ internal class XdkProjectQueries(
         input: ModuleInfo,
         repository: ModuleRepository?,
         errors: ErrorListener,
-    ): EmbeddingSupport.Compilation = compiler(input, repository, errors).also { compiled.incrementAndGet() }
+    ): EmbeddingSupport.Compilation {
+        val start = System.nanoTime()
+        return compiler(input, repository, errors).also {
+            compiled.incrementAndGet()
+            compileNanos.merge(input.qualifiedModuleName ?: input.fileName, System.nanoTime() - start, Long::plus)
+        }
+    }
+
+    /**
+     * How long this query's module compiles took together, and the [count] modules that took longest, as in `12.4 s
+     * (ecstasy.xtclang.org 11.1 s, json.xtclang.org 0.6 s)`, for its log line.
+     */
+    fun compileTimes(count: Int = 3): String {
+        val times = compileNanos.toMap()
+        val slowest =
+            times.entries
+                .sortedByDescending { it.value }
+                .take(count)
+                .joinToString { (module, nanos) -> "$module ${seconds(nanos)}" }
+        return "${seconds(times.values.sum())} ($slowest)"
+    }
 
     /**
      * The diagnostics last reported, when the graph's inputs are those they were made from, or null: a check that
@@ -1863,3 +1887,12 @@ private fun replacedLibraryNote(
     } else {
         emptyList()
     }
+
+/** [nanos] as seconds with one decimal, as `12.4 s`. */
+internal fun seconds(nanos: Long): String = "%.1f s".format(nanos / 1e9)
+
+/** [bytes] in megabytes, as `1850 MB`. */
+internal fun megabytes(bytes: Long): String = "${bytes shr 20} MB"
+
+/** The heap in use now, garbage not yet collected included. */
+internal fun heapInUse(): Long = Runtime.getRuntime().let { it.totalMemory() - it.freeMemory() }
