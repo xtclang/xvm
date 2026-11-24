@@ -8830,7 +8830,7 @@
     "X288": {
       "title": "Build and Run follow the build mode beside a Gradle build: embedded by default, Gradle once chosen, embedded again after switching back",
       "manual": [
-        "Choosing the mode in the VS Code quick pick or status bar, or in IntelliJ's Build and run using box, is checked manually (18a.14); a real Gradle build is not run here (X303 runs one)."
+        "Choosing the mode in the VS Code quick pick or status bar, or in IntelliJ's Build and run using choices, is checked manually (18a.14); a real Gradle build is not run here (X303 runs one)."
       ],
       "values": {
         "file": "BuildModes.x",
@@ -8853,7 +8853,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "The mode is set through the project's build settings, which the Settings page's Build and run using box stores; the box is not clicked. In Gradle mode Build Project goes to the IDE's own builder, so the case checks only that the embedded compiler does not take it; Run goes through the Gradle wrapper."
+          "The mode is set through the project's build settings, which the Settings page's Build and run using choices store; they are not clicked. In Gradle mode Build Project goes to the IDE's own builder, so the case checks only that the embedded compiler does not take it; Run goes through the Gradle wrapper."
         ]
       }
     },

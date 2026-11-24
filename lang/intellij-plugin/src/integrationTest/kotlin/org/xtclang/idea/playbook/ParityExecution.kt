@@ -256,6 +256,14 @@ internal fun ParityScenarios.buildModeCases() {
             check(data.string("notice") in text) { text }
             // the notice links to the settings page that chooses the mode
             check(built["links"].asJsonArray.any { it.asString == SETTINGS_PAGE }) { "No link to $SETTINGS_PAGE: ${built["links"]}" }
+            // which stands with every other page of the plugin under one node, and is linked beside the build tools
+            val paths =
+                with(driver) {
+                    withContext(OnDispatcher.EDT) {
+                        SETTINGS_PAGES.keys.associateWith { execution.settingsPath(project, it) }
+                    }
+                }
+            check(paths == SETTINGS_PAGES) { "Settings pages: $paths" }
             runToEnd("embedded run finishes").let { check(data.string("output") in it) { it } }
             check(calls().isEmpty()) { "Embedded mode must not call Gradle: ${calls()}" }
 
@@ -1837,7 +1845,17 @@ private val LSP4IJ_STOP_DELAY = 8.seconds
 private const val EMBEDDED_BUILD = "with the embedded compiler"
 
 /** The settings page that chooses the build mode, which the embedded build's notice links to. */
-private const val SETTINGS_PAGE = "Settings | Build, Execution, Deployment | Ecstasy"
+private const val SETTINGS_PAGE = "Settings | Languages & Frameworks | Ecstasy | Build and Run"
+
+/** The plugin's settings pages by configurable id, with their paths in the Settings tree. */
+private val SETTINGS_PAGES =
+    listOf("Build and Run" to "xtc.build", "Compiler" to "xtc.compiler", "Language Service" to "xtc.service")
+        .associate { (name, id) -> id to "Languages & Frameworks/Ecstasy/$name" } +
+        mapOf(
+            "xtc.service.defaults" to "Languages & Frameworks/Ecstasy/Language Service Defaults",
+            "xtc.runtime" to "Languages & Frameworks/Ecstasy/Server Runtime and Logs",
+            "xtc.build.pointer" to "Build, Execution, Deployment/Ecstasy",
+        )
 
 /** Runs [body] with the project in embedded build mode, restoring the previous mode afterwards. */
 internal fun ParityWorkspace.embedded(body: (EmbeddedExecutionProbe, Project) -> Unit) {
@@ -2095,6 +2113,11 @@ internal interface RunGutterProbe {
 /** Embedded Build Project and runs, recorded by the IDE-side probe. */
 @Remote("org.xtclang.idea.playbook.probe.EmbeddedExecutionUi", plugin = "org.xtclang.playbook.probe")
 interface EmbeddedExecutionProbe {
+    fun settingsPath(
+        project: Project,
+        id: String,
+    ): String
+
     fun mode(
         project: Project,
         value: String,

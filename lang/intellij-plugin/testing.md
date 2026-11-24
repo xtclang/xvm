@@ -963,7 +963,7 @@ for native results; a successful fallback-file check does not close LSP4IJ's vir
 
 ### Machine-local JVM tuning and log support
 
-Open **Settings → Ecstasy Server Runtime and Logs**. Enter one supported JVM option per line
+Open **Settings → Languages & Frameworks → Ecstasy → Server Runtime and Logs**. Enter one supported JVM option per line
 (e.g. `-Xmx2G`). Apply saves locally, outside project files and Settings Sync; the explicit Restart
 button restarts running Ecstasy servers in this IDE using the saved settings.
 

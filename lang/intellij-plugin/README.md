@@ -12,8 +12,8 @@ The [configuration reference](../doc/configuration.md) lists the plugin's settin
 
 - **New Project Wizard** - Create Ecstasy projects directly from IntelliJ (File → New → Project → Ecstasy)
 - **Build and Run** - Build/Rebuild Project and Ecstasy run configurations use the language
-  server's embedded compiler or Gradle, chosen under Settings | Build, Execution, Deployment |
-  Ecstasy ([details](#running-your-application)); `xtc run` remains available per configuration
+  server's embedded compiler or Gradle, chosen under Settings | Languages & Frameworks | Ecstasy |
+  Build and Run ([details](#running-your-application)); `xtc run` remains available per configuration
 - **Debug** - Debug of an Ecstasy run configuration, with the embedded compiler, Gradle or `xtc run`,
   goes through LSP4IJ's DAP client to a debug session in the language server: breakpoints, stepping,
   variables, watches and Evaluate Expression ([details](#running-your-application)). An **Ecstasy
@@ -98,7 +98,7 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 
 ### Running Your Application
 
-**Settings | Build, Execution, Deployment | Ecstasy → Build and run using** chooses how the project
+**Settings | Languages & Frameworks | Ecstasy | Build and Run → Build and run using** chooses how the project
 builds and runs, like IntelliJ's own setting for Gradle projects. It is stored with the project
 (`.idea/ecstasy-build.xml`):
 
@@ -366,7 +366,7 @@ LSP4IJ stores these server settings at IDE scope. Relative paths resolve against
 single workspace folder; use absolute file URIs when needed. Applying settings notifies the
 running server. Setting `sourceModules` to `[]` clears the graph; omitting it preserves the
 current graph. This uses LSP4IJ's existing JSON editor, not a dedicated XTC project-settings UI.
-In **Languages & Frameworks > Ecstasy Compiler**, **Add consumers from folders** adds the modules under
+In **Languages & Frameworks > Ecstasy > Compiler**, **Add consumers from folders** adds the modules under
 the chosen folders that import the running graph as table rows (an empty table first takes the effective
 modules); they apply with **Apply**. Rename covers only modules in the graph.
 `XtcLanguageClient` delegates section lookup and configuration notifications to LSP4IJ; only
@@ -492,7 +492,7 @@ feature:
 
 Use **Tools → Switch Ecstasy Language Adapter**, Find Action, or **Ctrl+Alt+X, then A**
 (**Control+Option+X, then A** on macOS) to select **Ecstasy Compiler**, **Tree-sitter** or
-**Bundled default**. The same choice is available in **Ecstasy Language Service** settings.
+**Bundled default**. The same choice is available in the **Ecstasy → Language Service** settings.
 Compiler provides semantic analysis; Tree-sitter provides syntax-based features without compiler
 type checking. Switching restarts the server and reopens unsaved buffers. Both adapters ship in
 the plugin, so switching does not require rebuilding or changing LSP4IJ.
@@ -823,7 +823,7 @@ intellij-plugin/
 │   │   │   ├── TestRuns.kt                    # Test runs in IntelliJ's test console, embedded, Gradle or xtc test
 │   │   │   ├── XtcTestEventsConverter.kt      # Reads xunit's JSON events into the test console
 │   │   │   ├── XtcAttachConfiguration.kt      # Ecstasy Attach configuration, for a program run with --debug
-│   │   │   ├── XtcBuildConfigurable.kt        # Build, Execution, Deployment | Ecstasy page
+│   │   │   ├── XtcBuildConfigurable.kt        # Languages & Frameworks | Ecstasy | Build and Run page
 │   │   │   ├── XtcBuildSettings.kt            # Project build mode (automatic, embedded, Gradle)
 │   │   │   ├── XtcProjectTaskRunner.kt        # Embedded Build/Rebuild Project
 │   │   │   ├── XtcRunConfiguration.kt         # Run configuration
@@ -923,7 +923,7 @@ No additional compiler process or compilation is needed for save formatting.
 Press **Ctrl+Alt+X, then B** (**Control+Option+X, then B** on macOS), or use **Tools → Select Ecstasy
 Build Mode**, to choose whether Build, Rebuild and Run use the embedded compiler, Gradle, or Gradle only
 when the project has a Gradle build; it is the same choice as **Build and run using** in **Settings →
-Build, Execution, Deployment → Ecstasy**. The next build or run uses it: nothing restarts, syncs or
+Languages & Frameworks → Ecstasy → Build and Run**. The next build or run uses it: nothing restarts, syncs or
 reindexes. Build in Gradle mode goes through IntelliJ's Gradle integration, so the project's Gradle build
 must be linked. VS Code has the same shortcut for **Ecstasy: Select Build Mode**.
 
@@ -942,8 +942,8 @@ The view retains its history while hidden. Change the shortcut in the editor's n
 See the [manual playbook](../doc/manual-test-plan.md#server-log-shortcut-acceptance) for acceptance
 steps and the distinction between server logs and protocol tracing.
 
-Language-service preferences are under **Settings → Languages & Frameworks → Ecstasy Language
-Service**; **Ecstasy Language Service Defaults** supplies application defaults. Project overrides
+Language-service preferences are under **Settings → Languages & Frameworks → Ecstasy → Language
+Service**; **Ecstasy → Language Service Defaults** supplies application defaults. Project overrides
 share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing the language adapter,
 Full/Incremental text transport or the save formatting owner restarts the service and restores
 unsaved buffers. Inlay changes and Code Style settings apply live. The read-only effective view
@@ -980,7 +980,7 @@ record automated coverage and the remaining acceptance boundaries.
 
 ### Machine-local JVM tuning and log support
 
-Open **Settings → Ecstasy Server Runtime and Logs**. Enter one supported JVM option per line
+Open **Settings → Languages & Frameworks → Ecstasy → Server Runtime and Logs**. Enter one supported JVM option per line
 (e.g. `-Xmx2G`). Apply saves locally, outside project files and Settings Sync; the explicit Restart
 button restarts running Ecstasy servers in this IDE using the saved settings.
 
@@ -1018,5 +1018,5 @@ source graph, including unopened consumers. Counts exclude declarations and are 
 graph cannot be resolved. Clicking a count opens the editor's native references view. External
 consumers outside the configured graph are not counted. Run lenses remain independent.
 
-Use **Ecstasy Language Service → Show Ecstasy reference counts** to toggle counts live. The
+Use **Ecstasy → Language Service → Show Ecstasy reference counts** to toggle counts live. The
 project can inherit the application preference. IntelliJ Code Vision settings still control rendering.

@@ -420,7 +420,7 @@ Each module may supply ordered `resourceRoots` using the same URI rules. Explici
 conventions; an empty array disables resource lookup, and omitted/null uses compiler layout
 deduction (including conventional `src/main/resources`). The evaluated Gradle model
 can supply custom source sets and processed resource roots. IntelliJ exposes these
-paths in **Languages & Frameworks > Ecstasy Compiler**, and VS Code uses the workspace schema.
+paths in **Languages & Frameworks > Ecstasy > Compiler**, and VS Code uses the workspace schema.
 Resource contents and root changes invalidate the owning module and its consumers, including
 closed-file diagnostic pulls. Resource watchers cover external roots when the client supports
 dynamic registration. The [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook)
