@@ -250,6 +250,11 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     node (`NamedTypeExpression.getDynamicExpression`). 84 (124) unbound before, 0 after. Find
     References, highlighting, hover and the rename of the local or parameter cover it
     (`XdkOccurrenceBindingTest`).
+  - The `_` placeholder is no occurrence. 75 (145) before, 0 after. Found on the way: every proof but a
+    rename's refuses an occurrence without a symbol in the modules it compiles, so each of these
+    constructs refused a safe delete, an inline, a removal, an extraction or a member's addition
+    anywhere in its module; a safe delete in a module with a `_` is proven now
+    (`XdkOccurrenceBindingTest`).
 - [x] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
   (`XdkLibrarySources`) still read the bundle, and may offer its older names. Done 2026-11-23/24
   (decided: index the workspace's): a source artifact of a library's name records its importable

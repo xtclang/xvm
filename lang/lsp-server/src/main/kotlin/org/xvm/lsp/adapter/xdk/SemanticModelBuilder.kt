@@ -35,6 +35,7 @@ import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.ComponentStatement
 import org.xvm.compiler.ast.CompositionNode
 import org.xvm.compiler.ast.Expression
+import org.xvm.compiler.ast.IgnoredNameExpression
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LabeledExpression
 import org.xvm.compiler.ast.LambdaExpression
@@ -684,6 +685,9 @@ private class SemanticModelBuilder(
                     bindings[node]?.let { copyCall(node, it) }
                     functions[node]?.let { copyFunctionCall(node, it) }
                 }
+
+                // The _ placeholder, as in (_, String label) = pair(), names nothing: it is no occurrence.
+                is IgnoredNameExpression -> {}
 
                 is NameExpression -> {
                     val at =
