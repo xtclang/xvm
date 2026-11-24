@@ -693,6 +693,16 @@ build, and uses the XDK it comes with.
 The language adapter and the server's runtime settings restart the server, which reopens your
 unsaved files; the others apply at once.
 
+![IntelliJ Languages & Frameworks, Ecstasy, Language Service settings page](user-guide/intellij-language-service.png)
+*IntelliJ: **Settings | Languages & Frameworks | Ecstasy | Language Service**: the language adapter, text
+synchronization, who formats on save, inlay hints and reference counts, then the running server's effective
+configuration.*
+
+![IntelliJ Languages & Frameworks, Ecstasy, Server Runtime and Logs settings page with the memory policy](user-guide/intellij-server-runtime.png)
+*IntelliJ: **Settings | Languages & Frameworks | Ecstasy | Server Runtime and Logs**: the server's JVM options, its
+memory policy and maximum heap, and how long its logs are kept, with a button that restarts running servers with
+the saved settings.*
+
 ![VS Code Settings editor filtered to the Ecstasy extension's settings](user-guide/vscode-settings.png)
 *VS Code: **Ecstasy: Open Language Service Settings** shows the extension's settings, in four groups.*
 

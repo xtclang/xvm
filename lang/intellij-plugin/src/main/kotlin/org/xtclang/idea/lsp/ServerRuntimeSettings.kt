@@ -12,8 +12,8 @@ import com.intellij.util.xmlb.annotations.OptionTag
 enum class MemoryPolicy(
     private val label: String,
 ) {
-    DEFAULT("Default: the maximum heap below, or the JVM's own, a quarter of this machine's memory"),
-    ADAPTIVE("Adaptive: starts small, grows as the work needs and gives memory back, using at most 3/4 of this machine's"),
+    DEFAULT("Default"),
+    ADAPTIVE("Adaptive"),
     ;
 
     override fun toString() = label
