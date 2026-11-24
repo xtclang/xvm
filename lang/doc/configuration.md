@@ -50,7 +50,7 @@ entries start at lines 292 to 556. The six machine-scoped ones, `xtc.java.vmOpti
 | `xtc.sourceRoots` | string array, `[]` | Extra directories of `.x` sources outside the workspace for the server to index. Machine-overridable; a change restarts the server. | `xtcSourceRoots` initialization option | `vsc/lsp-client.ts:165`, restart key `vsc/lsp-client.ts:37` |
 | `xtc.compiler.libraries` | object, `{"modulePath": null, "sourceAttachments": []}` | Binary libraries (`modulePath`; `null` inherits the Gradle model) and read-only source attachments (`[{module, roots}]`). The bundled XDK is always included. Window scope; applies without a restart. | `xtcCompiler.libraries` initialization option and the `xtc.compiler` section | `vsc/library-settings.ts:6`, `vsc/lsp-client.ts:83` |
 | `xtc.languageService.adapter` | `default`, `compiler` or `treesitter`; `default` | The server's backend. `default` keeps the one built into the server jar. A change restarts the server. | `-Dxtc.lsp.adapter=<value>`, left out for `default` | `vsc/editor-settings.ts:7`, `vsc/lsp-client.ts:133` |
-| `xtc.build.mode` | `auto`, `embedded` or `gradle`; `embedded` | How Build, Run and Rebuild work: the server's embedded compiler, Gradle, or Gradle when the folder has a Gradle build. Resource scope. | Not sent; a debug launch in Gradle mode carries `buildMode: "gradle"` (section 3.1) | `vsc/embedded-execution.ts:30`, `vsc/build-mode-selection.ts:40` |
+| `xtc.build.mode` | `auto`, `embedded` or `gradle`; `embedded` | How Build, Run and Rebuild work: the server's embedded compiler, Gradle, or Gradle when the folder has a Gradle build. In a folder whose modules are built against libraries the workspace's own modules replace, it is Gradle whatever the setting: the picker says the embedded compiler is not available there, and a choice of it, by the picker or the settings, warns. Resource scope. | Not sent; a debug launch in Gradle mode carries `buildMode: "gradle"` (section 3.1) | `vsc/embedded-execution.ts:92`, `vsc/build-mode-selection.ts:42`, `:76` |
 | `xtc.trace.server` | `off`, `messages` or `verbose`; `off` | Protocol tracing in the output channel. Read by `vscode-languageclient` for the client ID `xtc`. | `trace` in `initialize`, then `$/setTrace` | `vsc/lsp-client.ts:300`, `vsc/lsp-client.ts:400` |
 | `xtc.codeLens.references` | boolean, `true` | Reference-count lenses on declarations. Resource scope; applies immediately. | `xtc.codeLens` section, field `references` | `vsc/lsp-client.ts:228` |
 | `xtc.inlayHints.enabled` | boolean, `true` | Inlay hints. The client drops the request when off; the server is not told. | Not sent | `vsc/lsp-client.ts:204` |
@@ -77,7 +77,7 @@ entries start at lines 292 to 556. The six machine-scoped ones, `xtc.java.vmOpti
 The plugin registers five settings pages (`lang/intellij-plugin/src/main/resources/META-INF/plugin.xml:84`
 to `:88`) and a code style. LSP4IJ's own Language Servers page holds the rest.
 
-**Languages & Frameworks | Ecstasy Server Runtime and Logs** (`ServerRuntimeConfigurable`). Stored per
+**Languages & Frameworks | Ecstasy | Server Runtime and Logs** (`ServerRuntimeConfigurable`). Stored per
 machine in `ecstasy-server-runtime.xml`, excluded from Settings Sync
 (`idea/lsp/ServerRuntimeSettings.kt:13`). Apply saves for the next start; the page's button restarts
 running servers. The server runs on IntelliJ's bundled Java runtime.
@@ -96,7 +96,7 @@ running servers. The server runs on IntelliJ's bundled Java runtime.
 
 The arguments are inserted before `-jar` at `idea/lsp/XtcLspServerSupportProvider.kt:155`.
 
-**Languages & Frameworks | Ecstasy Language Service Defaults** (application) and **Ecstasy Language
+**Languages & Frameworks | Ecstasy | Language Service Defaults** (application) and **Ecstasy | Language
 Service** (project) (`LanguageServiceConfigurable`). Stored as JSON under `xtc.languageService` in
 LSP4IJ's settings for the server `xtcLanguageServer`, global or per project
 (`idea/lsp/LanguageServiceSettings.kt:12`); a project value overrides the application default key by key
@@ -111,7 +111,7 @@ LSP4IJ's settings for the server `xtcLanguageServer`, global or per project
 | Show Ecstasy inlay hints (`inlayHints`) | boolean, `true` | Not sent; the client skips the request | `idea/lsp/XtcClientFeatures.kt:131` |
 | Show Ecstasy reference counts (`referenceCodeLens`) | boolean, `true` | `xtc.codeLens` section, field `references` | `idea/lsp/XtcLanguageClient.kt:384` |
 
-**Languages & Frameworks | Ecstasy Compiler** (`CompilerProjectConfigurable`). Stored as JSON under
+**Languages & Frameworks | Ecstasy | Compiler** (`CompilerProjectConfigurable`). Stored as JSON under
 `xtc.compiler` in LSP4IJ's project settings for `xtcLanguageServer`
 (`idea/lsp/CompilerProjectConfigurable.kt:503`). The plugin answers the `xtc.compiler` section from
 this JSON and adds `buildModels` from the Gradle model file (section 4)
@@ -125,12 +125,14 @@ this JSON and adds `buildModels` from the Gradle model file (section 4)
 | Binary libraries | ordered paths, none | `libraries.modulePath` | `idea/lsp/CompilerLibrariesPanel.kt:94` |
 | Source attachments (module, roots) | rows, none | `libraries.sourceAttachments: [{module, roots}]` | `idea/lsp/CompilerLibrariesPanel.kt:95` |
 
-**Build, Execution, Deployment | Ecstasy** (`XtcBuildConfigurable`). Stored in the project's
-`ecstasy-build.xml` (`idea/run/XtcBuildSettings.kt:29`).
+**Languages & Frameworks | Ecstasy | Build and Run** (`XtcBuildConfigurable`), also linked from **Build, Execution,
+Deployment | Ecstasy** (`XtcBuildPointerConfigurable`). Stored in the project's `ecstasy-build.xml`
+(`idea/run/XtcBuildSettings.kt:56`). Every page of the plugin stands under **Languages & Frameworks | Ecstasy**
+(`idea/lsp/EcstasyConfigurable.kt`), which links each of them.
 
 | Field | Type, default | Reaches the server as | Read at |
 |-------|---------------|-----------------------|---------|
-| Build and run using | Embedded compiler, Automatic (Gradle when the project has a Gradle build), Gradle; Embedded | Not sent; a debug launch in Gradle or command-line mode carries `buildMode` (section 3.1) | `idea/run/XtcBuildSettings.kt:39`, `:51` |
+| Build and run using | Embedded compiler, Automatic (Gradle when the project has a Gradle build), Gradle; Embedded. While the project's own modules replace bundled libraries, Embedded is shown not available, here and in Ctrl+Alt+X, B; a choice of it is kept | Not sent; a debug launch in Gradle or command-line mode carries `buildMode` (section 3.1) | `idea/run/XtcBuildSettings.kt:58`, `:194` |
 
 **Editor | Code Style | Ecstasy**. IntelliJ's code style, answered as the `xtc.formatting` section
 (`idea/lsp/XtcLanguageClient.kt:388`); defaults from

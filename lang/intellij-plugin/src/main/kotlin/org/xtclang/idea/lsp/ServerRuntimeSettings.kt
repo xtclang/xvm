@@ -8,7 +8,7 @@ import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.annotations.OptionTag
 
-/** How the language server's JVM uses memory, chosen on the Ecstasy Server Runtime and Logs page. */
+/** How the language server's JVM uses memory, chosen on the Ecstasy › Server Runtime and Logs page. */
 enum class MemoryPolicy(
     private val label: String,
 ) {
