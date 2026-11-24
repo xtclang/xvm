@@ -2117,7 +2117,7 @@ change shows in them. In the order worth doing:
   one after another in one session, keeping its breakpoints (2–3 days), or xunit runs every test module
   in one program, which needs a look at whether xunit and the runtime can load several test modules into
   one container first. Debugging one module's tests works today, from the gutter or its configuration.
-- [x] K5a: evaluation limits as settings (2026-11-24). `XtcDebugServer.CONSOLE_LIMIT` (2 s, decided 2026-10-23)
+- [x] K5a: evaluation limits as settings (2026-11-24, `a7b0dc26fd`). `XtcDebugServer.CONSOLE_LIMIT` (2 s, decided 2026-10-23)
   bounds code run from the Debug Console and Evaluate Expression, and `SessionDebugger.ON_DEMAND` (1 s) a lazy
   value; both stay the defaults. A launch or an attach now sets either, in milliseconds: `evaluationTimeLimit`,
   100 to 60000, which `XtcDebugServer.Limits.console` carries, and `lazyValueTimeLimit`, 100 to 30000, which goes
