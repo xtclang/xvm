@@ -62,10 +62,21 @@ internal data class TourStep(
     val card: TourCard? = null,
     val error: String? = null,
     val check: String? = null,
+    /** The user guide's image that the step's frame makes. */
+    val guide: GuideImage? = null,
     /** When the step began, its screen was captured, and it ended, in epoch milliseconds, the screen recording's clock. */
     val start: Long? = null,
     val shot: Long? = null,
     val end: Long? = null,
+)
+
+/**
+ * A screenshot of the user guide, lang/doc/user-guide/[name].png, that a step's frame makes: lang/intellij-plugin/tour/
+ * guide.py crops the frame to [crop], ImageMagick geometry on the tour's 1920x936 frame, or keeps all of it.
+ */
+internal data class GuideImage(
+    val name: String,
+    val crop: String? = null,
 )
 
 /** A check between the steps, [verify]'s, with when it began and ended, in epoch milliseconds. */
@@ -244,7 +255,8 @@ internal class Tour(
      * A step on the screen, which exercises [feature]: [act] does what the step shows; then, once [until] holds and the
      * subject [focus] names (see [TourProbe.capture]) shows, for at most [wait], a bound against a hang only, and after
      * [settle] for the screen to draw, the screen is captured with that subject as the step's highlight; [check] then
-     * checks what the step shows, and [after] undoes what the step must not leave behind.
+     * checks what the step shows, and [after] undoes what the step must not leave behind. A step whose frame makes a
+     * screenshot of the user guide names it as its [guide].
      */
     fun shot(
         title: String,
@@ -256,6 +268,7 @@ internal class Tour(
         until: TourProbe.() -> Boolean = { true },
         after: TourProbe.() -> Unit = {},
         needs: Set<Need> = emptySet(),
+        guide: GuideImage? = null,
         check: TourProbe.() -> Unit = {},
         act: TourProbe.() -> Unit = {},
     ) {
@@ -292,7 +305,7 @@ internal class Tour(
         }
         step.error?.let { failures += "$section: $number $title: $it" }
         step.check?.let { failures += "$section: $number $title: check: $it" }
-        step = step.copy(start = started, shot = shot)
+        step = step.copy(guide = guide, start = started, shot = shot)
         if (step.error != null || step.check != null) {
             Quiescence.stuck?.let { stuck ->
                 step = step.copy(error = step.error?.let { "$it; $stuck" }, check = step.check?.let { "$it; $stuck" })

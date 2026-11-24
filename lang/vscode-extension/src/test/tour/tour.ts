@@ -43,6 +43,8 @@ export interface TourStep {
     card?: TourCard;
     error?: string;
     check?: string;
+    /** The user guide's image that the step's frame makes. */
+    guide?: GuideImage;
     /**
      * When the step started to act, when its screen was captured, and when its check ended, in milliseconds since the
      * epoch, the clock of the screen's recording, which the composer cuts the step's clip from; and what it did by
@@ -80,6 +82,17 @@ export interface Shot {
     after?: () => Promise<void>;
     /** What the step needs that an earlier one makes; without it, it is skipped. */
     needs?: readonly Need[];
+    /** The user guide's image that the step's frame makes; see [GuideImage]. */
+    guide?: GuideImage;
+}
+
+/**
+ * A screenshot of the user guide, lang/doc/user-guide/<name>.png, that a step's frame makes: lang/intellij-plugin/tour/
+ * guide.py crops the frame to [crop], ImageMagick geometry on the tour's 1920x936 frame, or keeps all of it.
+ */
+export interface GuideImage {
+    name: string;
+    crop?: string;
 }
 
 /**
@@ -302,10 +315,13 @@ export class Tour implements vscode.Disposable {
             shot = Date.now();
             record = {
                 number, section: this.sectionName, title: step.title, caption: step.caption, feature: step.feature, image, focus: box,
-                cursor, error: waited,
+                cursor, error: waited, guide: step.guide,
             };
         } catch (failure) {
-            record = { number, section: this.sectionName, title: step.title, caption: step.caption, feature: step.feature, error: describe(failure) };
+            record = {
+                number, section: this.sectionName, title: step.title, caption: step.caption, feature: step.feature, error: describe(failure),
+                guide: step.guide,
+            };
             // what the screen showed, for the report; the tour's frames do not have it
             await fs.mkdir(path.join(this.run, 'failures'), { recursive: true });
             await this.ui.capture(path.join(this.run, 'failures', `${String(number).padStart(3, '0')}.png`)).catch(() => undefined);
