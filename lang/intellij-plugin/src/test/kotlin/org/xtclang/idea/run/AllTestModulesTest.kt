@@ -7,15 +7,28 @@ import com.intellij.execution.actions.ConfigurationFromContext
 import com.intellij.execution.actions.LazyRunConfigurationProducer
 import com.intellij.execution.actions.RunConfigurationProducer
 import com.intellij.execution.configurations.ConfigurationFactory
+import com.intellij.execution.executors.DefaultRunExecutor
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
+import com.intellij.execution.testframework.sm.runner.GeneralTestEventsProcessor
+import com.intellij.execution.testframework.sm.runner.SMTestProxy
+import com.intellij.execution.testframework.sm.runner.TestProxyPrinterProvider
+import com.intellij.execution.testframework.sm.runner.events.TestFailedEvent
+import com.intellij.execution.testframework.sm.runner.events.TestFinishedEvent
+import com.intellij.execution.testframework.sm.runner.events.TestIgnoredEvent
+import com.intellij.execution.testframework.sm.runner.events.TestOutputEvent
+import com.intellij.execution.testframework.sm.runner.events.TestStartedEvent
+import com.intellij.execution.testframework.sm.runner.events.TestSuiteFinishedEvent
+import com.intellij.execution.testframework.sm.runner.events.TestSuiteStartedEvent
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.vfs.VirtualFile
@@ -29,6 +42,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.xtclang.idea.LightEditor
+import org.xtclang.idea.lsp.TestEvent
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
@@ -36,7 +50,7 @@ import kotlin.time.Duration.Companion.hours
 
 /**
  * Run All Ecstasy Tests: the test modules' runs, one after another, as one process, which Stop ends without starting
- * another; and the Project window's folders it is offered on.
+ * another, whose tests' locations name their modules; and the Project window's folders it is offered on.
  */
 class AllTestModulesTest {
     @JvmField
@@ -46,15 +60,71 @@ class AllTestModulesTest {
     private val started = CopyOnWriteArrayList<String>()
 
     @Test
-    fun `the runs go one after another, each one's output in turn, and the process ends with the last`() {
-        val all = SequentialProcessHandler(CompletableFuture.completedFuture(listOf(run("one\n", 0), run("two\n", 0))))
+    fun `the runs go one after another, each one's output in turn after its header, and the process ends with the last`() {
+        val all =
+            SequentialProcessHandler(CompletableFuture.completedFuture(listOf(run("one\n", 0, "[1] "), run("two\n", 0, "[2] "))))
         val output = listen(all)
         all.startNotify()
 
         assertThat(all.waitFor(BOUND)).isTrue()
         assertThat(started).containsExactly("one\n", "two\n")
-        assertThat(output.joinToString("")).isEqualTo("one\ntwo\n")
+        assertThat(output.joinToString("")).isEqualTo("[1] one\n[2] two\n")
         assertThat(all.exitCode).isEqualTo(0)
+    }
+
+    @Test
+    fun `each module's tests have locations that name the module, though two modules have a test of the same selector`() {
+        val project = editor.fixture.project
+        val configuration = XtcRunConfiguration(project, XtcRunConfigurationType().configurationFactories.first(), "")
+        XtcAllTestsConfigurationProducer.runAll(configuration)
+        val converter =
+            XtcTestEventsConverter(TEST_FRAMEWORK, XtcTestConsoleProperties(configuration, DefaultRunExecutor.getRunExecutorInstance()))
+        val located = Located(project)
+        Disposer.register(editor.fixture.testRootDisposable, converter)
+        Disposer.register(editor.fixture.testRootDisposable, located)
+        converter.setProcessor(located)
+        // each module's output, as Run All Ecstasy Tests runs it, its module's line ahead of it; the first ends partway
+        // through a line, which the second's module line ends
+        val all =
+            SequentialProcessHandler(
+                CompletableFuture.completedFuture(
+                    listOf("FirstSuite", "SecondSuite").map { module ->
+                        run(events(module, "three") + "printed without a line end", 0, XtcTestEventsConverter.moduleLine(module))
+                    },
+                ),
+            )
+        all.addProcessListener(
+            object : ProcessListener {
+                override fun onTextAvailable(
+                    event: ProcessEvent,
+                    outputType: Key<*>,
+                ) = converter.process(event.text, outputType)
+            },
+        )
+        all.startNotify()
+
+        assertThat(all.waitFor(BOUND)).isTrue()
+        assertThat(located.locations).containsExactly(
+            "xunit://FirstSuite/",
+            "xunit://FirstSuite/three",
+            "xunit://SecondSuite/",
+            "xunit://SecondSuite/three",
+        )
+    }
+
+    @Test
+    fun `a run of one module's tests names no module in its locations`() {
+        val project = editor.fixture.project
+        val configuration = XtcRunConfiguration(project, XtcRunConfigurationType().configurationFactories.first(), "")
+        val converter =
+            XtcTestEventsConverter(TEST_FRAMEWORK, XtcTestConsoleProperties(configuration, DefaultRunExecutor.getRunExecutorInstance()))
+        val located = Located(project)
+        Disposer.register(editor.fixture.testRootDisposable, converter)
+        Disposer.register(editor.fixture.testRootDisposable, located)
+        converter.setProcessor(located)
+
+        converter.process(events("DeckTest", "three"), ProcessOutputTypes.STDOUT)
+        assertThat(located.locations).containsExactly("xunit://", "xunit://three")
     }
 
     @Test
@@ -255,34 +325,96 @@ class AllTestModulesTest {
         ): Boolean = true
     }
 
-    /** A run that prints [text] as it starts, and ends with [exitCode] then, or, for none, only when stopped. */
+    /**
+     * A run, after [header], that prints [text] as it starts, and ends with [exitCode] then, or, for none, only when
+     * stopped.
+     */
     private fun run(
         text: String,
         exitCode: Int?,
-    ): () -> ProcessHandler =
-        {
-            object : ProcessHandler() {
-                init {
-                    addProcessListener(
-                        object : ProcessListener {
-                            override fun startNotified(event: ProcessEvent) {
-                                started += text
-                                notifyTextAvailable(text, ProcessOutputTypes.STDOUT)
-                                exitCode?.let(::notifyProcessTerminated)
-                            }
-                        },
-                    )
-                }
-
-                override fun destroyProcessImpl() = notifyProcessTerminated(143)
-
-                override fun detachProcessImpl() = notifyProcessDetached()
-
-                override fun detachIsDefault() = false
-
-                override fun getProcessInput(): OutputStream? = null
+        header: String = "",
+    ) = SequentialProcessHandler.Run(header) {
+        object : ProcessHandler() {
+            init {
+                addProcessListener(
+                    object : ProcessListener {
+                        override fun startNotified(event: ProcessEvent) {
+                            started += text
+                            notifyTextAvailable(text, ProcessOutputTypes.STDOUT)
+                            exitCode?.let(::notifyProcessTerminated)
+                        }
+                    },
+                )
             }
+
+            override fun destroyProcessImpl() = notifyProcessTerminated(143)
+
+            override fun detachProcessImpl() = notifyProcessDetached()
+
+            override fun detachIsDefault() = false
+
+            override fun getProcessInput(): OutputStream? = null
         }
+    }
+
+    /**
+     * xunit's events of a run of [module]'s tests, each its line of the output: the module's container starts, then its
+     * test [test], which passes, and both finish.
+     */
+    private fun events(
+        module: String,
+        test: String,
+    ): String =
+        listOf(
+            TestEvent(TestEvent.STARTED, id = "$module:", name = module, selector = "", container = true),
+            TestEvent(TestEvent.STARTED, id = "$module:void $test()", parent = "$module:", name = test, selector = test, container = false),
+            TestEvent(TestEvent.FINISHED, id = "$module:void $test()", status = "passed", durationMillis = 1),
+            TestEvent(TestEvent.FINISHED, id = "$module:", status = "passed", durationMillis = 1),
+        ).joinToString("") { it.line() }
+
+    /** The test console's tree as the converter builds it: the location of each container and test that starts, in turn. */
+    private class Located(
+        project: Project,
+    ) : GeneralTestEventsProcessor(project, TEST_FRAMEWORK, SMTestProxy.SMRootTestProxy()) {
+        val locations = CopyOnWriteArrayList<String?>()
+
+        override fun onSuiteStarted(suiteStartedEvent: TestSuiteStartedEvent) {
+            locations += suiteStartedEvent.locationUrl
+        }
+
+        override fun onTestStarted(testStartedEvent: TestStartedEvent) {
+            locations += testStartedEvent.locationUrl
+        }
+
+        override fun onStartTesting() {}
+
+        override fun onTestsCountInSuite(count: Int) {}
+
+        override fun onTestFinished(testFinishedEvent: TestFinishedEvent) {}
+
+        override fun onTestFailure(testFailedEvent: TestFailedEvent) {}
+
+        override fun onTestIgnored(testIgnoredEvent: TestIgnoredEvent) {}
+
+        override fun onTestOutput(testOutputEvent: TestOutputEvent) {}
+
+        override fun onSuiteFinished(suiteFinishedEvent: TestSuiteFinishedEvent) {}
+
+        override fun onUncapturedOutput(
+            text: String,
+            outputType: Key<*>,
+        ) {}
+
+        override fun onError(
+            localizedMessage: String,
+            stackTrace: String?,
+            isCritical: Boolean,
+        ) {}
+
+        override fun onTestsReporterAttached() {}
+
+        override fun setPrinterProvider(printerProvider: TestProxyPrinterProvider) {}
+    }
 
     private fun listen(handler: ProcessHandler): List<String> =
         CopyOnWriteArrayList<String>().also { output ->
