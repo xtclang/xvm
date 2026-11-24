@@ -1,13 +1,17 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.xvm.asm.ClassStructure
 import org.xvm.asm.Component
 import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.DeclarationDigests
 import org.xvm.asm.FileStructure
 import org.xvm.asm.ModuleStructure
+import org.xvm.asm.TypedefStructure
+import org.xvm.asm.constants.AnnotatedTypeConstant
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.TerminalTypeConstant
+import org.xvm.asm.constants.TypeConstant
 import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 import java.util.HexFormat
@@ -49,7 +53,9 @@ internal class XdkModuleApi private constructor(
      * its own API, and [order] that of the order of its members, which a const's fields and a class's overloads are in,
      * for any declaration but a method, whose members are its body's; [publicOrder] is that of its members that are not
      * private, which another module than its own sees. [types] are the paths of the types that its own API names, its
-     * own and those holding it among them, and of the namespaces it names as types.
+     * own and those holding it among them, and of the namespaces it names as types; [supers], of a type, those of the
+     * classes it extends, implements, incorporates, delegates to or is annotated with, without their type parameters, and
+     * of a typedef, of the class it names.
      */
     class Declaration(
         val key: String,
@@ -60,6 +66,7 @@ internal class XdkModuleApi private constructor(
         val order: String?,
         val publicOrder: String?,
         val types: Set<String>,
+        val supers: Set<String>,
         /** What holds it, skipping the method family of a method; null for a module. */
         val parent: Declaration?,
         /** Private, which only its own class sees: a method family is when each of its methods is. */
@@ -198,6 +205,7 @@ internal class XdkModuleApi private constructor(
                         order(children),
                         order(children.filterNot(::isPrivate)),
                         types(digests.references(component), ::intern),
+                        supers(component).mapTo(hashSetOf(), ::intern),
                         parent,
                         isPrivate(component),
                         nested,
@@ -243,6 +251,45 @@ internal fun path(identity: IdentityConstant): String =
             .toList()
             .asReversed()
             .joinToString("/") { it.name.orEmpty() }
+
+/**
+ * The paths of the classes that [component], a class or a typedef, takes members from: those it extends, implements,
+ * incorporates, delegates to or is annotated with, and the one a typedef names ([heads]); none for another component.
+ */
+internal fun supers(component: Component): Set<String> =
+    when (component) {
+        is ClassStructure ->
+            component.contributionsAsList
+                .filter { it.composition != Component.Composition.Import }
+                .flatMapTo(hashSetOf()) { contribution ->
+                    heads(contribution.typeConstant) + listOfNotNull(contribution.annotation).flatMap { types(listOf(it.annotationClass)) }
+                }
+
+        is TypedefStructure -> heads(component.type)
+
+        else -> emptySet()
+    }
+
+/**
+ * The paths of the classes that [type] is of, as a contribution names them: the class that defines it, without the types
+ * of its parameters, and each annotation's; every type it names when no single class defines it, or that cannot be told
+ * from an artifact read alone.
+ */
+internal fun heads(type: TypeConstant?): Set<String> {
+    if (type == null) return emptySet()
+    if (type is AnnotatedTypeConstant) return types(listOf(type.annotation.annotationClass)) + heads(type.underlyingType)
+    return try {
+        val defining = type.takeIf { it.isSingleDefiningConstant }?.definingConstant
+        if (defining is IdentityConstant && (defining.format == Constant.Format.Class || defining.format == Constant.Format.Typedef)) {
+            setOf(path(defining))
+        } else {
+            types(listOf(type))
+        }
+    } catch (_: RuntimeException) {
+        // a typedef of another module, which only its own artifact holds
+        types(listOf(type))
+    }
+}
 
 /**
  * The paths of the types that [constants] name, those that they refer to and so on: each class and typedef, and each

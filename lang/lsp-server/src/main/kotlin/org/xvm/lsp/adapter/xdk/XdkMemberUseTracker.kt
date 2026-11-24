@@ -180,11 +180,15 @@ internal class XdkMemberUseTracker(
         declarations.firstOrNull { it.named && names.spells(it.declaration.name) }?.let {
             return Decision(false, "it uses the name ${it.declaration.name}, which ${it.module} changes")
         }
-        declarations.firstOrNull { it.module in IMPLICIT && !it.declaration.fingerprint && it.declaration.seenThroughType() }?.let {
-            return Decision(false, "every module uses ${it.module} as a whole, whose ${it.declaration} changes")
-        }
+        // a change that only its own class sees, such as the order of a type's private members, is seen through no type
+        declarations
+            .firstOrNull {
+                it.module in IMPLICIT && !it.declaration.fingerprint && it.visible.isNotEmpty() && it.declaration.seenThroughType()
+            }?.let {
+                return Decision(false, "every module uses ${it.module} as a whole, whose ${it.declaration} changes")
+            }
         val world = World(artifacts, changed)
-        val extended = world.close(uses.extended, null, emptySet())
+        val extended = world.supers(uses.extended)
         val observed = world.close(uses.types + uses.extended, names, uses.scopes)
         world.unknown.firstOrNull()?.let { return Decision(false, it) }
         // a namespace that it uses as a type is matched with an interface, as a value, by the names of its members
@@ -312,6 +316,26 @@ internal class XdkMemberUseTracker(
                     ?.mapTo(hashSetOf()) { it.name }
                     .orEmpty()
             }
+        }
+
+        /**
+         * The classes reached from [roots] through the classes each extends, implements, incorporates and so on, and
+         * through its child classes, which a subclass takes as virtual children.
+         */
+        fun supers(roots: Set<String>): Set<String> {
+            val seen = hashSetOf<String>()
+            val work = ArrayDeque(roots)
+            while (work.isNotEmpty()) {
+                val type = work.removeFirst()
+                if (!seen.add(type)) continue
+                apis(type.substringBefore(':')).orEmpty().forEach { api ->
+                    api.byPath[type].orEmpty().forEach { work += it.supers }
+                    api.members[type].orEmpty().values.forEach { members ->
+                        members.filter { it.kind == XdkModuleApi.Kind.TYPE }.forEach { work += it.path }
+                    }
+                }
+            }
+            return seen
         }
 
         /**
