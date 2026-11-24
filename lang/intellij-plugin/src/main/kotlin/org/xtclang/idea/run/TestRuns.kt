@@ -101,7 +101,8 @@ internal class TestCommandLineState(
 /**
  * A test run's result: the test console, attached to [handler], and its Rerun Failed Tests, which the run's toolbar
  * shows beside Rerun only as a restart action that the result gives it, reading the failed tests from the console's
- * tree; none under Debug ([XtcTestConsoleProperties.createRerunFailedTestsAction]).
+ * tree; none under Debug, nor for Gradle's run of every test module
+ * ([XtcTestConsoleProperties.createRerunFailedTestsAction]).
  */
 internal fun testResult(
     handler: ProcessHandler,
@@ -118,7 +119,8 @@ internal fun testResult(
 
 /**
  * The test console's properties: it reads xunit's events from the output ([XtcTestEventsConverter]), builds its tree
- * from their IDs, and finds a test's `xunit://` location, its declaration in the configuration's module.
+ * from their IDs, and finds a test's `xunit://` location, its declaration in the module that the location names, or
+ * else in the configuration's module.
  */
 internal class XtcTestConsoleProperties(
     configuration: XtcRunConfiguration,
@@ -139,18 +141,21 @@ internal class XtcTestConsoleProperties(
     ): OutputToGeneralTestEventsConverter = XtcTestEventsConverter(testFrameworkName, consoleProperties)
 
     // under Debug, the rerun would be LSP4IJ's DAP launch, which takes the configuration itself and no rerun's profile;
-    // a rerun of all the test modules' failed tests would need each module's own, which its selectors do not name
-    override fun createRerunFailedTestsAction(consoleView: ConsoleView): AbstractRerunFailedTestsAction? =
-        if (executor.id == DefaultDebugExecutor.EXECUTOR_ID || (configuration as? XtcRunConfiguration)?.allTestModules == true) {
+    // Gradle's testXtc runs every test module's tests in one build, whose events do not say which module each test is of
+    override fun createRerunFailedTestsAction(consoleView: ConsoleView): AbstractRerunFailedTestsAction? {
+        val all = (configuration as? XtcRunConfiguration)?.takeIf { it.allTestModules }
+        return if (executor.id == DefaultDebugExecutor.EXECUTOR_ID || all?.effectiveRunMode() == XtcRunMode.GRADLE) {
             null
         } else {
             XtcRerunFailedTestsAction(consoleView).also { it.init(this) }
         }
+    }
 }
 
 /**
  * The test console's Rerun Failed Tests: runs its configuration again, as it ran, with only the tests that failed,
- * each by the selector that its `xunit://` location names.
+ * each by the selector that its `xunit://` location names. After Run 'All Ecstasy Tests', whose locations name each
+ * test's module too, it runs each module that has failed tests, in turn, with only those ([AllTestModulesState]).
  */
 internal class XtcRerunFailedTestsAction(
     console: ComponentContainer,
@@ -158,29 +163,67 @@ internal class XtcRerunFailedTestsAction(
     override fun getRunProfile(environment: ExecutionEnvironment): MyRunProfile? {
         val configuration = myConsoleProperties.configuration as? XtcRunConfiguration ?: return null
         val failed = failedTests(getFailedTests(configuration.project).map { it.locationUrl })
-        if (failed.isEmpty()) return null
+        if (configuration.allTestModules) {
+            // a run of every test module's tests names each test's module, and a location without one has none to run in
+            val modules = (failed - "").takeIf { it.isNotEmpty() } ?: return null
+            return object : MyRunProfile(configuration) {
+                override fun getState(
+                    executor: Executor,
+                    environment: ExecutionEnvironment,
+                ): RunProfileState = AllTestModulesState(configuration, environment, modules)
+            }
+        }
+        val own = failed[""] ?: return null
         return object : MyRunProfile(configuration) {
             override fun getState(
                 executor: Executor,
                 environment: ExecutionEnvironment,
-            ): RunProfileState? = (configuration.clone() as XtcRunConfiguration).apply { tests = failed }.getState(executor, environment)
+            ): RunProfileState? = (configuration.clone() as XtcRunConfiguration).apply { tests = own }.getState(executor, environment)
         }
     }
 
     companion object {
-        /** The tests that the failed tests' [locations] name, each once, as test selectors; none for another protocol's. */
-        fun failedTests(locations: List<String?>): List<TestSelector> =
+        /**
+         * The tests that the failed tests' [locations] name, each once, as test selectors by the module that the location
+         * names, empty where it names none, as in a run of one module's tests; none for another protocol's.
+         */
+        fun failedTests(locations: List<String?>): Map<String, List<TestSelector>> =
             locations
-                .mapNotNull { location ->
-                    location?.takeIf { it.startsWith(LOCATION) }?.removePrefix(LOCATION)?.takeIf { it.isNotEmpty() }
-                }.distinct()
-                .map { TestSelector(it, ServerTest.TEST) }
-
-        private const val LOCATION = "${XtcTestLocator.PROTOCOL}://"
+                .mapNotNull(XtcTestLocation::parse)
+                .filter { it.selector.isNotEmpty() }
+                .distinct()
+                .groupBy(XtcTestLocation::module) { TestSelector(it.selector, ServerTest.TEST) }
     }
 }
 
-/** Finds a test of [module] by the selector its `xunit://` location names, among the tests the server last listed. */
+/**
+ * A test's location in the test console: its xunit [selector], and the [module] whose test it is, empty in a run of one
+ * module's tests, whose configuration names the module. Its [url] is `xunit://<selector>`, or with a module, as a run of
+ * every test module's tests gives it, `xunit://<module>/<selector>`; neither a module's name nor a selector holds a `/`.
+ */
+internal data class XtcTestLocation(
+    val module: String,
+    val selector: String,
+) {
+    /** The location as the test console keeps it, a test's location hint. */
+    val url: String
+        get() = if (module.isEmpty()) "$PREFIX$selector" else "$PREFIX$module/$selector"
+
+    companion object {
+        private const val PREFIX = "${XtcTestLocator.PROTOCOL}://"
+
+        /** The location whose URL's path, what follows `xunit://`, is [path]. */
+        fun of(path: String) = XtcTestLocation(path.substringBefore('/', ""), path.substringAfter('/'))
+
+        /** The location at [url], or null for another protocol's, or none. */
+        fun parse(url: String?): XtcTestLocation? = url?.takeIf { it.startsWith(PREFIX) }?.let { of(it.removePrefix(PREFIX)) }
+    }
+}
+
+/**
+ * Finds a test by the module and selector that its `xunit://` location names ([XtcTestLocation]), among the tests the
+ * server last listed; a location that names no module is of [module], the configuration's.
+ */
 internal class XtcTestLocator(
     private val module: String,
 ) : SMTestLocator {
@@ -191,7 +234,8 @@ internal class XtcTestLocator(
         scope: GlobalSearchScope,
     ): List<Location<*>> {
         if (protocol != PROTOCOL) return emptyList()
-        val at = XtcTestCatalog.location(project, module, path) ?: return emptyList()
+        val test = XtcTestLocation.of(path)
+        val at = XtcTestCatalog.location(project, test.module.ifEmpty { module }, test.selector) ?: return emptyList()
         val file = LSPIJUtils.findResourceFor(at.uri) ?: return emptyList()
         val psi = PsiManager.getInstance(project).findFile(file) ?: return emptyList()
         val offset =
@@ -210,7 +254,7 @@ internal class XtcTestLocator(
     }
 
     companion object {
-        /** The protocol of xunit's location hints, `xunit://<selector>`. */
+        /** The protocol of xunit's location hints, `xunit://<selector>` or `xunit://<module>/<selector>`. */
         const val PROTOCOL = "xunit"
     }
 }

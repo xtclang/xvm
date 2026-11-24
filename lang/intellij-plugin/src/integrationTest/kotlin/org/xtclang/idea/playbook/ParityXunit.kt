@@ -9,16 +9,18 @@ import java.nio.file.Files
 
 /**
  * The test console of a case's module: its test icons and results, as IntelliJ's console has them by each test's
- * `xunit://<selector>` location, from the IDE-side [TestRunProbe].
+ * `xunit://<selector>` location, or, in a run of every test module's tests ([allModules]),
+ * `xunit://<module>/<selector>`, from the IDE-side [TestRunProbe].
  */
 private class TestConsole(
     private val workspace: ParityWorkspace,
+    private val allModules: Boolean = false,
 ) {
     val project = with(workspace.driver) { singleProject() }
     val tests = with(workspace.driver) { utility(TestRunProbe::class) }
 
     /** A test item's location, by its ID as VS Code's has it, the module and the selector. */
-    fun location(id: String) = "xunit://${id.substringAfter('/')}"
+    fun location(id: String) = if (allModules) "xunit://$id" else "xunit://${id.substringAfter('/')}"
 
     fun results(): JsonObject = JsonParser.parseString(tests.results()).asJsonObject
 
@@ -36,6 +38,12 @@ private class TestConsole(
         }
         with(workspace.driver) { withContext(OnDispatcher.EDT) { tests.start(editor, tooltip, false) } }
     }
+
+    /** Waits until every test run has ended, its process and its console's tree of tests. */
+    fun runsEnded(what: String) =
+        awaitUi(what, HANG_LIMIT, errorMessage = { results().toString() }) {
+            with(workspace.driver) { withContext(OnDispatcher.EDT) { tests.testRunsEnded(project) } }
+        }
 
     /** Waits until each of [ids] has a result other than running, and answers them. */
     fun ended(
@@ -68,7 +76,8 @@ private fun JsonObject.shown() = "${string("state")}: ${get("message")?.asString
 
 /**
  * X342-X349: xunit tests stopped partway, added while the project is open, thrown, skipped, rerun when they failed, at
- * their sources, in several modules, and run by the xtc command line, in IntelliJ's test console.
+ * their sources, in several modules, run with Run 'All Ecstasy Tests' and rerun when they failed, and run by the xtc
+ * command line, in IntelliJ's test console.
  */
 internal fun ParityScenarios.xunitCases() {
     case("X342") { data ->
@@ -187,15 +196,37 @@ internal fun ParityScenarios.xunitCases() {
         val documents = modules.map { open(it.string("file"), it.string("source")) }
         configure(modules.map { SharedScenarios.SourceModule(it.string("module"), uri(it.string("file")), emptyList()) })
         documents.forEach(::clean)
-        val console = TestConsole(this)
-        console.tests.reset(console.project)
-        // IntelliJ runs a module's tests from its module's icon, a module at a time
-        modules.zip(documents).forEach { (module, document) -> console.run(document, module.string("runAll")) }
+        // Run 'All Ecstasy Tests' runs each module's tests in turn into one console, whose locations name each test's module
+        val console = TestConsole(this, allModules = true)
         val passed = data.strings("passed")
-        val reports = console.ended(passed + data.string("failed"), "every module's tests run")
+        val failed = data.string("failed")
+        console.tests.reset(console.project)
+        console.tests.runAllTests(console.project)
+        val reports = console.ended(passed + failed, "every module's tests run")
         check(reports.dropLast(1).all { it.string("state") == "passed" }) { "The runs: ${console.results()}" }
         check(reports.last().string("state") == "failed" && data.string("failure") in reports.last().string("message")) {
             "three: ${reports.last().shown()}"
+        }
+        // each test goes to its own module's source, though both modules have a three
+        (passed + failed).zip(reports).forEach { (id, report) ->
+            val file = modules.single { it.string("module") == id.substringBefore('/') }.string("file")
+            check(
+                report
+                    .get("file")
+                    ?.asString
+                    .orEmpty()
+                    .endsWith("/$file"),
+            ) { "$id goes to $report" }
+        }
+        console.runsEnded("Run 'All Ecstasy Tests' ends")
+        // its Rerun Failed Tests runs only the failed test, in its own module, and not the other module's of its name
+        console.tests.reset(console.project)
+        console.tests.rerunFailed(console.project, data.string("runAll"))
+        val (rerun) = console.ended(listOf(failed), "Rerun Failed Tests reports the failed test")
+        console.runsEnded("Rerun Failed Tests ends")
+        check(rerun.string("state") == "failed" && data.string("failure") in rerun.string("message")) { "The rerun: ${rerun.shown()}" }
+        check(console.results().keySet() == setOf(console.location(failed))) {
+            "The rerun runs only the failed test, of its module: ${console.results()}"
         }
         documents.forEach(::closeEditor)
     }

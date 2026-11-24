@@ -246,8 +246,11 @@ test console is a **Tests** tab of the debug session.
 **Run 'All Ecstasy Tests'**, in the Project window's context menu of the project's folder, `src`,
 `src/test` or `src/test/x`, runs every test module's tests into one test console: embedded and with
 `xtc test` each module in turn, and in Gradle mode one `testXtc` for all of them. **Stop** stops the
-module that runs and starts no other. It has no **Rerun Failed Tests** and no Debug yet, as both go by
-one module's tests.
+module that runs and starts no other. Embedded and with `xtc test`, each test's location names its module,
+`xunit://<module>/<selector>`, so that **Jump to Source** goes to that module's test, and **Rerun Failed
+Tests** runs each module that has failed tests, in turn, with only those. Gradle's one `testXtc` does not
+say which module each test is of, so in Gradle mode it has no **Rerun Failed Tests**. It has no Debug yet,
+as LSP4IJ's debug launch runs one configuration's one program.
 
 Gradle mode needs a Gradle plugin and XDK with
 `testXtc`'s test options and the JSON report, and command-line mode the `xtc` on the `PATH`, whose
