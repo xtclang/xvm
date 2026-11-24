@@ -23,6 +23,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiElement
 import org.xtclang.idea.lsp.ModuleTests
+import org.xtclang.idea.lsp.TestSelector
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
@@ -32,11 +33,15 @@ import kotlin.io.path.Path
 /**
  * Runs every test module's tests, each module in turn, into one test console, as Run All Ecstasy Tests does: embedded,
  * each module's run in the language server, or with `xtc test`, each module's command; Gradle's `testXtc` runs them all
- * itself. The modules are those the language server lists tests of (`xtc/tests`), by name.
+ * itself. The modules are those the language server lists tests of (`xtc/tests`), by name. With [tests], as Rerun
+ * Failed Tests gives them, it runs only those, each module's in turn. Each module's output follows a line that names the
+ * module ([XtcTestEventsConverter.moduleLine]), so that the location of each of its tests names it too.
  */
 internal class AllTestModulesState(
     private val configuration: XtcRunConfiguration,
     private val environment: ExecutionEnvironment,
+    /** The tests to run, by the name of the module they are of; empty for all of every test module's. */
+    private val tests: Map<String, List<TestSelector>> = emptyMap(),
 ) : RunProfileState {
     override fun execute(
         executor: Executor,
@@ -45,8 +50,12 @@ internal class AllTestModulesState(
         val project = environment.project
         val mode = configuration.effectiveRunMode()
         val runs =
-            XtcTestCatalog.refresh(project).thenApply { modules ->
-                modules.filter { it.tests.children.isNotEmpty() }.sortedBy { it.module }.map { module -> { run(project, mode, module) } }
+            XtcTestCatalog.refresh(project).thenApply { listed ->
+                selection(listed, tests).map { (module, selected) ->
+                    SequentialProcessHandler.Run(XtcTestEventsConverter.moduleLine(module.module)) {
+                        run(project, mode, module, selected)
+                    }
+                }
             }
         val handler = SequentialProcessHandler(runs)
         ProcessTerminatedListener.attach(handler)
@@ -57,29 +66,47 @@ internal class AllTestModulesState(
         project: Project,
         mode: XtcRunMode,
         module: ModuleTests,
+        selected: List<TestSelector>,
     ): ProcessHandler =
         if (mode == XtcRunMode.COMMAND_LINE) {
             OSProcessHandler(
-                XtcRunConfiguration.xtcTestCommandLine(module.module, emptyList()).apply {
+                XtcRunConfiguration.xtcTestCommandLine(module.module, selected).apply {
                     workDirectory = project.basePath?.let { Path(it).toFile() }
                 },
             )
         } else {
             EmbeddedExecution.runHandler(
                 project,
-                XtcRunConfiguration.embeddedRequest(module.module, module.uri, "", "", emptyList()),
+                XtcRunConfiguration.embeddedRequest(module.module, module.uri, "", "", selected),
                 module.module,
             )
         }
+
+    companion object {
+        /**
+         * The modules to run, by name, each with the tests to run of it, all of them for none: each module of [listed]
+         * that has tests, or, with [tests], each module that [tests] names, with those; one that [listed] lacks by its
+         * name alone.
+         */
+        fun selection(
+            listed: List<ModuleTests>,
+            tests: Map<String, List<TestSelector>>,
+        ): List<Pair<ModuleTests, List<TestSelector>>> =
+            if (tests.isEmpty()) {
+                listed.filter { it.tests.children.isNotEmpty() }.map { it to emptyList<TestSelector>() }
+            } else {
+                tests.map { (name, selected) -> (listed.firstOrNull { it.module == name } ?: ModuleTests(name)) to selected }
+            }.sortedBy { it.first.module }
+    }
 }
 
 /**
  * A process made of [runs], run one after another once it starts: each run's output is its own, xunit's events among
- * it, and it ends when the last run ends, with 1 if a run failed, else 0. Stop stops the run that runs and starts no
- * other; the runs come once they are known, as the test modules come from the language server.
+ * it, after its [Run.header], and it ends when the last run ends, with 1 if a run failed, else 0. Stop stops the run
+ * that runs and starts no other; the runs come once they are known, as the test modules come from the language server.
  */
 internal class SequentialProcessHandler(
-    private val runs: CompletableFuture<List<() -> ProcessHandler>>,
+    private val runs: CompletableFuture<List<Run>>,
 ) : ProcessHandler() {
     private val stopped = AtomicBoolean()
     private val failed = AtomicBoolean()
@@ -112,14 +139,15 @@ internal class SequentialProcessHandler(
     }
 
     private fun next(
-        list: List<() -> ProcessHandler>,
+        list: List<Run>,
         index: Int,
     ) {
         if (stopped.get() || index == list.size) {
             end(if (failed.get()) 1 else 0)
             return
         }
-        val run = list[index]()
+        val planned = list[index]
+        val run = planned.start()
         run.addProcessListener(
             object : ProcessListener {
                 override fun onTextAvailable(
@@ -141,6 +169,7 @@ internal class SequentialProcessHandler(
             end(if (failed.get()) 1 else 0)
             return
         }
+        notifyTextAvailable(planned.header, ProcessOutputTypes.STDOUT)
         run.startNotify()
     }
 
@@ -170,6 +199,12 @@ internal class SequentialProcessHandler(
     override fun detachIsDefault(): Boolean = false
 
     override fun getProcessInput(): OutputStream? = null
+
+    /** One of the runs: [header], the output that goes ahead of the run's own, and [start], which makes its process. */
+    class Run(
+        val header: String,
+        val start: () -> ProcessHandler,
+    )
 }
 
 /**

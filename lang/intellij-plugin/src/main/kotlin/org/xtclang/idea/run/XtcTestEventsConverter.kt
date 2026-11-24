@@ -16,8 +16,9 @@ import org.xtclang.idea.lsp.TestEvent
 /**
  * Reads a test run's output for IntelliJ's test console: each line of its standard output that is one of xunit's
  * events ([TestEvent]) is an event of the console's tree, built from the events' IDs, and the rest is output, of the
- * test that runs. A test's location is `xunit://<selector>`, which [XtcTestLocator] finds. The standard output is read
- * in whole lines, as an event's may come in pieces.
+ * test that runs. A test's location is `xunit://<selector>`, which [XtcTestLocator] finds; in a run of several modules'
+ * tests, whose output names the module before each module's events ([moduleLine]), it is `xunit://<module>/<selector>`
+ * ([XtcTestLocation]). The standard output is read in whole lines, as an event's may come in pieces.
  */
 internal class XtcTestEventsConverter(
     testFrameworkName: String,
@@ -28,6 +29,9 @@ internal class XtcTestEventsConverter(
 
     /** The standard output after its last line end, which waits for the rest of its line. */
     private val partial = StringBuilder()
+
+    /** The module whose events follow, as the output's last [moduleLine] names it; empty in a run of one module's tests. */
+    private var module = ""
 
     private class Node(
         val name: String,
@@ -56,11 +60,15 @@ internal class XtcTestEventsConverter(
         super.flushBufferOnProcessTermination(code)
     }
 
-    /** A whole line of the standard output, without its line end: an event, or output. */
+    /** A whole line of the standard output, without its line end: the module whose events follow, an event, or output. */
     private fun line(
         text: String,
         outputType: Key<*>,
     ) {
+        if (text.startsWith(MODULE)) {
+            module = text.removePrefix(MODULE)
+            return
+        }
         val event = TestEvent.parse(text)
         if (event == null) {
             super.process("$text\n", outputType)
@@ -96,7 +104,7 @@ internal class XtcTestEventsConverter(
         val node = Node(event.name ?: id, event.container == true)
         running[id] = node
         val parent = event.parent ?: ROOT
-        val location = "${XtcTestLocator.PROTOCOL}://${event.selector.orEmpty()}"
+        val location = XtcTestLocation(module, event.selector.orEmpty()).url
         if (node.container) {
             processor.onSuiteStarted(TestSuiteStartedEvent(node.name, id, parent, location, null, null, null, true))
         } else {
@@ -138,13 +146,23 @@ internal class XtcTestEventsConverter(
         processor.onTestFinished(TestFinishedEvent(node.name, id, event.durationMillis))
     }
 
-    private companion object {
+    companion object {
         /** The ID of the console tree's root, the parent of the run's root. */
-        const val ROOT = "0"
+        private const val ROOT = "0"
 
-        const val FAILED = "failed"
+        private const val FAILED = "failed"
 
         /** A test that ended in an exception other than a failed assertion, an error in IntelliJ's console. */
-        const val ABORTED = "aborted"
+        private const val ABORTED = "aborted"
+
+        /** How the line that names the module whose events follow starts, ahead of the module's name. */
+        private const val MODULE = "##xtc-module "
+
+        /**
+         * The line of a run's output that names [module] as the module whose events follow, as a run of several modules'
+         * tests gives it before each module's output ([AllTestModulesState]). It starts a line of its own, ending the
+         * output's line before it.
+         */
+        fun moduleLine(module: String) = "\n$MODULE$module\n"
     }
 }
