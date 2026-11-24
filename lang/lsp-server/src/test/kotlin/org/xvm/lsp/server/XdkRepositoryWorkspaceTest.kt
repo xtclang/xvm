@@ -45,9 +45,10 @@ import java.util.concurrent.CopyOnWriteArrayList
  * against the workspace's ecstasy, unsaved edits included, its definitions go to the workspace's sources rather than
  * the bundled copies, the status names the libraries the workspace replaces, and embedded builds are refused; and a
  * rename of a method of the workspace's ecstasy is proven over both and a module that depends on json, edits json's
- * call too, one of json's compiles only what depends on json, and an edit that leaves json's API as it was compiles
- * json alone. Heavy: each case compiles ecstasy from source, and a rename's proof compiles it again after the edit,
- * which needs a 2 GB heap (XdkLibrarySources.PROOF_HEAP_BYTES).
+ * call too, one of json's compiles json alone, as what depends on json writes neither name nor uses a type whose
+ * members change, and an edit that leaves json's API as it was compiles json alone. Heavy: each case compiles ecstasy
+ * from source, and a rename's proof compiles it again after the edit, which needs a 2 GB heap
+ * (XdkLibrarySources.PROOF_HEAP_BYTES).
  */
 @Heavy
 class XdkRepositoryWorkspaceTest {
@@ -116,7 +117,7 @@ class XdkRepositoryWorkspaceTest {
     }
 
     @Test
-    fun `a rename of a method of the workspace's ecstasy edits json's call of it, and json's API decides what depends on it compiles`() {
+    fun `a rename of a method of the workspace's ecstasy edits json's call of it, and one of json's compiles json alone`() {
         val root = File(requireNotNull(System.getProperty("xtc.composite.root")) { "xtc.composite.root is not set" })
         val workspace = directory.toRealPath().toFile()
         listOf("lib_ecstasy", "lib_json").forEach { library ->
@@ -215,14 +216,18 @@ class XdkRepositoryWorkspaceTest {
         val queries = lines.filter { it.startsWith("project query: kind=") }
         queries.forEach(::println)
         // prepareRename's compile of ecstasy, json and jsonUse; the proof of the rename in ecstasy compiles them all
-        // again, as they depend on it; the proof of the one in json compiles json and, as json's API changes, jsonUse,
-        // and not ecstasy
+        // again, as each uses String, whose members it renames; the proof of the one in json compiles json alone:
+        // jsonUse writes neither name and uses no type whose members the rename changes, though json's API changes
         assertThat(queries.map { "${it.substringBefore(" in ")} ${Regex("compiles=[0-9]+").find(it)?.value}" })
             .containsExactly(
                 "project query: kind=prepare_rename uri=String.x outcome=completed compiles=3",
                 "project query: kind=rename uri=String.x outcome=completed compiles=3",
-                "project query: kind=rename uri=DocInput.x outcome=completed compiles=2",
+                "project query: kind=rename uri=DocInput.x outcome=completed compiles=1",
             )
+        assertThat(lines).contains(
+            "rename: of the 1 modules that depend on the edited ones, the proof compiles 0 after the edit; the others write " +
+                "neither probe nor probed nor use a type whose members it renames",
+        )
         // the body edit's revision compiles json alone: jsonUse compiles against json's API as it did
         assertThat(lines.filter { it.startsWith("code actions: uri=DocInput.x") })
             .singleElement()
