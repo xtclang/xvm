@@ -15,7 +15,7 @@ import impl.ElementNode;
  * (within the document prolog, within the DTD, within any element, and after the root element).
  * They can even appear in the middle of an element's value.
  */
-class Instruction(String target, String? text = Null)
+class Instruction(String target, String? text)
         implements Part {
     /**
      * This constructor allows a new orphan Processing `Instruction` (PI) to be created, which can

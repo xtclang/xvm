@@ -1412,6 +1412,11 @@ public class Compiler {
      */
     public static final String INVALID_CONSTRUCT_CALL              = "COMPILER-209";
     /**
+     * The default value of the constructor parameter "{0}" is unused because an explicit
+     * constructor replaces the shorthand one, and the class declares the property itself.
+     */
+    public static final String CONSTRUCTOR_PARAM_DEFAULT_UNUSED    = "COMPILER-210";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
