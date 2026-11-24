@@ -258,6 +258,17 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 
 ### Test harness stability
 
+- [ ] Found 2026-11-24: after a restart of the server, IntelliJ's tour now and then misses the error of an edit.
+  In the Settings and the server section, a check restarts the server (from LSP4IJ's Language Servers window, or by
+  killing its process), hovers in Eights.x, which answers, then types `popCard` → `popCrd` and waits for the error,
+  which never comes while the server is idle ("No error with popCrd in Eights.x … idle"); the checks after it then
+  find the file still edited. Seen in `run-tour-9835569065365967505`, the full tour, and before in
+  `run-tour-7164529137914405705`, that section alone; the section's other recorded runs of 2026-11-23 and
+  2026-11-24, about a dozen, did not show it. The restart checks' other intermittent failure, a first hover that
+  answered with an error, was UP82's. To find out: whether the server published or answered the error (its log), and whether
+  LSP4IJ asked for the file's diagnostics after the restart, or cleared them after the server reported them, as
+  UP81's clear of a stopping server's marks could. Images of tour runs that fail it are good: every step was
+  captured.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
@@ -858,6 +869,14 @@ breakpoint list, which the editors replace.
   rebased onto master `ddaa3d0a4`, pass CI on their own heads. #730's fix is now part of #724,
   and #730 is closed.
 - Known limit kept: JIT runs are unsupported.
+
+### Debug adapter: failures that reach the editor as "Internal error."
+
+- [ ] Found 2026-11-24 while making the evaluation limits settings (K5a): `XtcDebugServer`'s `stackTrace`,
+  `scopes` and `exceptionInfo` pass a failure on as it is, so the editor shows only "Internal error."
+  instead of why. `evaluate` maps its failures to their reason, and since K5a so does `variables`, whose
+  lazy value that timed out or threw did the same. Map these three's failures the same way, with a test
+  each that a failing request answers with its reason. Small, under half a day.
 
 ## 4. Upstream fixes
 
