@@ -272,6 +272,9 @@ internal class XdkMemberUseTracker(
         private val before = changed.associate { it.name to it.before }
         private val replaced = changed.map { it.name }.filter { it in XdkLibraries.moduleNames }
 
+        /** The modules whose declarations the module can see: those it depends on, and the host's binaries. */
+        private val visibleModules = artifacts.keys.filter { it in upstream || artifacts[it]?.fromSource == false }
+
         /** Why a module's artifact cannot be read alone, by module name. */
         private val unreadable = linkedMapOf<String, String>()
 
@@ -303,8 +306,7 @@ internal class XdkMemberUseTracker(
             val visible = sources.flatMapTo(hashSetOf()) { it.visibleTypes }
             val enclosing = sources.flatMapTo(hashSetOf()) { it.enclosingTypes }.apply { addAll(visible) }
             val candidates =
-                artifacts.keys
-                    .filter { it in upstream || artifacts[it]?.fromSource == false }
+                visibleModules
                     .flatMap { module -> apis(module).orEmpty() }
                     .flatMap { api -> api.declarations }
                     .filter { !it.nested && !it.fingerprint }
@@ -343,7 +345,7 @@ internal class XdkMemberUseTracker(
          * not read, when another bundled library is replaced and may change what it holds.
          */
         fun unknown(paths: Set<String>): String? {
-            artifacts.keys.forEach(::apis)
+            visibleModules.forEach(::apis)
             unreadable.values.firstOrNull()?.let { return it }
             return paths
                 .map { it.substringBefore(':') }
