@@ -339,6 +339,34 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `this Outer in a virtual child is an occurrence of ecstasy's Outer, which a rename of the outer class keeps`() {
+        val source =
+            """
+            module Outers {
+                class /*declared*/Host {
+                    class Inner {
+                        Host up() = this.Outer;
+                        Host host() = this.Host;
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource("Outers", source) { adapter, uri ->
+            fun named(written: String): Range =
+                source.positionOf(written, written.substringAfter('.')).let { Range(it, Position(it.line, it.column + written.length - 5)) }
+            val outer = named("this.Outer").start
+            assertThat(adapter.getDocumentHighlights(uri, outer.line, outer.column).map { it.range }).containsExactly(named("this.Outer"))
+            assertThat(adapter.getHoverInfo(uri, outer.line, outer.column)).contains("Outer")
+            val declared = position(source, "declared")
+            assertThat(adapter.findReferences(uri, declared.line, declared.column, true).map(::range))
+                .contains(named("this.Host"))
+                .doesNotContain(named("this.Outer"))
+            val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "Hub")) { "No rename of Host" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Host", "Hub"))
+        }
+    }
+
     private fun snapshot(
         name: String,
         text: String,
