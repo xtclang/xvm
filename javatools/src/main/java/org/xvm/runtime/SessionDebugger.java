@@ -2246,17 +2246,46 @@ public final class SessionDebugger implements Debugger {
     }
 
     /**
-     * @return true if the stack's entry runs the host's own code: by its frame, or, for a caller
-     *         whose fiber has moved on so that only its method is known, by that method's module
+     * @return the stack where the frame is, of its fiber and the fibers that called it, as
+     *         {@link Frame#getStackFrameArray} gives it, without the host's own code, where the host
+     *         calls the program: an entry is the host's when its fiber runs in the host's container,
+     *         also when that fiber has moved on from its call, so that the entry knows only the
+     *         method that called, such as the runner's {@code Container.invoke}
      */
-    private boolean isHost(Frame.StackFrame stackFrame) {
-        Container host = hostContainer;
-        if (host == null) {
-            return false;
+    private List<Frame.StackFrame> programStack(Frame frame) {
+        // each fiber holds the fiber that called it only weakly: holding the chain here keeps the
+        // stack's callers the ones whose containers are read
+        var callers = new ArrayList<Fiber>();
+        for (Fiber fiber = frame.getFiber(); fiber != null; fiber = fiber.traceCaller()) {
+            callers.add(fiber);
         }
-        return stackFrame.frame != null
-                ? isHost(stackFrame.frame)
-                : stackFrame.function != null && stackFrame.function.getIdentityConstant().getModuleConstant().equals(host.getModule());
+        Container host = hostContainer;
+        return beforeHost(frame.getStackFrameArray(),
+                callers.stream().map(fiber -> host != null && fiber.f_context.f_container == host).toList());
+    }
+
+    /**
+     * @param stack  a stack, as {@link Frame#getStackFrameArray} gives it: the entries of a fiber
+     *               end with one that is a {@code boundary}, and those after it are of the fiber
+     *               that called it
+     * @param hosts  for the stack's fiber and then each fiber that called it, in turn, whether it
+     *               runs in the host's container
+     *
+     * @return the stack's entries before the first of a fiber of the host's
+     */
+    static List<Frame.StackFrame> beforeHost(Frame.StackFrame[] stack, List<Boolean> hosts) {
+        var program = new ArrayList<Frame.StackFrame>();
+        int fiber   = 0;
+        for (Frame.StackFrame stackFrame : stack) {
+            if (fiber < hosts.size() && hosts.get(fiber)) {
+                break;
+            }
+            program.add(stackFrame);
+            if (stackFrame.boundary) {
+                ++fiber;
+            }
+        }
+        return program;
     }
 
     /**
@@ -2397,9 +2426,9 @@ public final class SessionDebugger implements Debugger {
     private String stackTraceOf(Frame frame) {
         var     trace     = new StringBuilder();
         boolean fiberEnds = false;
-        for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
+        for (Frame.StackFrame stackFrame : programStack(frame)) {
             Frame at = stackFrame.frame;
-            if (isHost(stackFrame) || at == null && stackFrame.function == null) {
+            if (at == null && stackFrame.function == null) {
                 break;
             }
             if (fiberEnds) {
@@ -2471,10 +2500,7 @@ public final class SessionDebugger implements Debugger {
      *         starting it, does not catch it for the program
      */
     private boolean isCaught(Frame frame, ExceptionHandle exception) {
-        for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
-            if (isHost(stackFrame)) {
-                return false;
-            }
+        for (Frame.StackFrame stackFrame : programStack(frame)) {
             Frame caller = stackFrame.frame;
             if (caller != null && !caller.isNative() && caller.catches(exception)) {
                 return true;
@@ -2784,13 +2810,9 @@ public final class SessionDebugger implements Debugger {
         // a frame restarts only if neither it nor a frame above it is native or goes on with a
         // continuation once it returns, which leaving them would skip; not at an exception
         boolean leavable = current != null && (current.exception == null || current.threadId != threadId);
-        for (Frame.StackFrame stackFrame : frame.getStackFrameArray()) {
+        for (Frame.StackFrame stackFrame : programStack(frame)) {
             MethodStructure function = stackFrame.function;
             Frame           at       = stackFrame.frame;
-            if (isHost(stackFrame)) {
-                // the host calls the program, so the rest of the stack is the host's own code
-                break;
-            }
             leavable = leavable && isLeavable(at, frame.getFiber());
             if (function == null || at != null && at.isNative()) {
                 continue;
