@@ -477,7 +477,8 @@ class XtcLanguageServer internal constructor(
             xdk.onReplacedLibraries {
                 CompletableFuture.runAsync {
                     synchronized(connectedClient) {
-                        (this.client as? XtcLanguageClient)?.replacedLibraries(ReplacedLibrariesParams(xdk.replacedLibraries().sorted()))
+                        val params = ReplacedLibrariesParams(xdk.replacedLibraries().sorted(), xdk.replacedFolders())
+                        (this.client as? XtcLanguageClient)?.replacedLibraries(params)
                     }
                 }
             }
@@ -1442,6 +1443,7 @@ class XtcLanguageServer internal constructor(
                 "compilerLibraries" to (adapter as? XdkAdapter)?.libraryConfiguration(),
                 // the bundled libraries that the workspace's own modules replace, as the XVM repository's replace them all
                 "replacedLibraries" to (adapter as? XdkAdapter)?.replacedLibraries().orEmpty().sorted(),
+                "replacedFolders" to (adapter as? XdkAdapter)?.replacedFolders().orEmpty(),
                 // the Gradle project of each source module, which the client runs its tasks in, from the build model
                 "gradleProjects" to gradleProjects.get().toSortedMap(),
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),

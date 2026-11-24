@@ -34,7 +34,7 @@ internal object XdkConsumerDiscovery {
         val inGraph = graph.mapTo(mutableSetOf()) { it.root.canonicalFile }
         val found =
             catalog
-                .modules(graph)
+                .modules(graph, folders)
                 .filter { module -> module.root !in inGraph && folders.any { module.root.toPath().startsWith(it.toPath()) } }
         val repeated =
             found

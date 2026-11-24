@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
@@ -9,11 +10,13 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.CompilerRenameFacts
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkAutoImports
+import org.xvm.lsp.adapter.xdk.XdkLibraryReplacement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
 import java.nio.file.Path
+import java.util.concurrent.ExecutionException
 
 /**
  * A workspace whose own module has a bundled XDK library's name, which then replaces the bundled one, as the XVM
@@ -82,12 +85,62 @@ class XdkReplacedLibraryTest {
         }
     }
 
+    @Test
+    fun `a replaced library reaches only the modules of its own workspace folder`() {
+        // the XVM repository's json, with a class the bundled one lacks, beside a project that uses the bundled json
+        source("xdk/json", "module json.xtclang.org { class WorkspaceOnly {} }")
+        source("xdk/App", "module App { package json import json.xtclang.org; json.WorkspaceOnly? find() = Null; }")
+        source("other/Tool", "module Tool { package json import json.xtclang.org; json.Parser? find() = Null; }")
+        val xdk = folder("xdk")
+        val other = folder("other")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(xdk, other).map { directory.resolve(it).toString() })
+            val errors =
+                adapter
+                    .workspaceDiagnosticsAsync()
+                    .awaited()
+                    .flatMap { it.diagnostics }
+                    .filter { it.severity == Diagnostic.Severity.ERROR }
+            assertThat(errors).isEmpty()
+            assertThat(adapter.replacedLibraries()).containsExactly(JSON)
+            assertThat(adapter.replacedFolders()).containsExactly(uri(xdk))
+            // the other folder builds with the embedded compiler, by module or as a folder; the XVM repository's does not
+            assertThat(adapter.buildAsync("Tool", rebuild = false).awaited().succeeded).isTrue()
+            assertThat(
+                adapter
+                    .buildAsync(null, rebuild = false, folder = uri(other))
+                    .awaited()
+                    .modules
+                    .map { it.name },
+            ).containsExactly("Tool")
+            for (refused in listOf(
+                { adapter.buildAsync("App", rebuild = false) },
+                { adapter.buildAsync(null, false, folder = uri(xdk)) },
+            )) {
+                assertThatThrownBy { refused().get() }
+                    .isInstanceOf(ExecutionException::class.java)
+                    .hasMessageContaining(XdkLibraryReplacement.NO_EMBEDDED_RUNS)
+            }
+        }
+    }
+
+    private fun folder(name: String): String = name.also { directory.resolve(it).toFile().mkdirs() }
+
+    private fun uri(folder: String): String =
+        directory
+            .resolve(folder)
+            .toFile()
+            .canonicalFile
+            .toURI()
+            .toString()
+
     private fun source(
         name: String,
         text: String,
     ): String =
         directory
             .resolve("$name.x")
+            .also { it.parent.toFile().mkdirs() }
             .toFile()
             .apply { writeText(text) }
             .canonicalFile
