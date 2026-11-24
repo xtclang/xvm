@@ -597,7 +597,7 @@ class XtcDebugServer(
      */
     override fun exceptionInfo(args: ExceptionInfoArguments): CompletableFuture<ExceptionInfoResponse> {
         if (!debuggedRunning()) return failed(NOT_STOPPED)
-        return runs.exceptionInfo(runId, args.threadId).thenApply { info ->
+        return runs.exceptionInfo(runId, args.threadId).answered { info ->
             info ?: throw error(NO_EXCEPTION)
             ExceptionInfoResponse().apply {
                 exceptionId = info.type
@@ -830,7 +830,7 @@ class XtcDebugServer(
                 },
             )
         }
-        return runs.stackTrace(runId, args.threadId).thenApply { frames ->
+        return runs.stackTrace(runId, args.threadId).answered { frames ->
             val first = args.startFrame ?: 0
             val levels = args.levels?.takeIf { it > 0 } ?: frames.size
             StackTraceResponse().apply {
@@ -908,7 +908,7 @@ class XtcDebugServer(
         if (!debuggedRunning()) {
             return CompletableFuture.completedFuture(ScopesResponse().apply { scopes = emptyArray() })
         }
-        return runs.scopes(runId, args.frameId).thenApply { states ->
+        return runs.scopes(runId, args.frameId).answered { states ->
             ScopesResponse().apply {
                 scopes =
                     states
@@ -940,11 +940,7 @@ class XtcDebugServer(
                 else -> ChildFilter.ALL
             }
         val hex = args.format?.hex ?: hexValues
-        return runs.variables(runId, args.variablesReference, hex, filter, args.start ?: 0, args.count ?: 0).handle { states, failure ->
-            if (failure != null) {
-                val cause = (failure as? CompletionException)?.cause ?: failure
-                throw error(cause.message ?: cause.toString())
-            }
+        return runs.variables(runId, args.variablesReference, hex, filter, args.start ?: 0, args.count ?: 0).answered { states ->
             VariablesResponse().apply {
                 variables =
                     states
@@ -1617,6 +1613,20 @@ class XtcDebugServer(
         }
 
     private fun error(message: String) = ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, message, null))
+
+    /**
+     * [answer] of this future's value; its failure answers the request with its reason, as LSP4J would otherwise answer
+     * an exception with "Internal error.", while a cancellation stays one, and an error response stays as it is.
+     */
+    private fun <T, R> CompletableFuture<T>.answered(answer: (T) -> R): CompletableFuture<R> =
+        handle { value, failure ->
+            if (failure == null) return@handle answer(value)
+            val cause = (failure as? CompletionException)?.cause ?: failure
+            throw when (cause) {
+                is CancellationException, is ResponseErrorException -> cause
+                else -> error(cause.message ?: cause.toString())
+            }
+        }
 
     /**
      * A console evaluation in progress, which `cancel` ends: before its code starts to run, it then never does, and
