@@ -1465,33 +1465,36 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.rename
      */
-    override fun rename(params: RenameParams): CompletableFuture<WorkspaceEdit?> =
-        queryAsync(
+    override fun rename(params: RenameParams): CompletableFuture<WorkspaceEdit?> {
+        val uri = params.textDocument.uri
+        val line = params.position.line
+        val column = params.position.character
+        // the compiler's rename says what modules outside the workspace may use, as xtc/rename does
+        val compiler = adapter as? XdkAdapter
+        return queryAsync(
             "textDocument/rename",
-            params.textDocument.uri,
+            uri,
             {
-                adapter
-                    .renameAsync(
-                        params.textDocument.uri,
-                        params.position.line,
-                        params.position.character,
-                        params.newName,
-                    ).mapFailureCancellable { failure ->
-                        // a refusal the client shows, instead of an edit-less answer after prepareRename accepted it; a
-                        // client's cancellation still reaches the adapter's future, and stops the proof's compiles
-                        val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.last()
-                        if (cause is RenameRefused) {
-                            ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, cause.message, null))
-                        } else {
-                            failure
-                        }
+                (
+                    compiler?.plainRenameAsync(uri, line, column, params.newName)
+                        ?: adapter.renameAsync(uri, line, column, params.newName).mapCancellable { it?.let(::XdkRenameProposal) }
+                ).mapFailureCancellable { failure ->
+                    // a refusal the client shows, instead of an edit-less answer after prepareRename accepted it; a
+                    // client's cancellation still reaches the adapter's future, and stops the proof's compiles
+                    val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.last()
+                    if (cause is RenameRefused) {
+                        ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, cause.message, null))
+                    } else {
+                        failure
                     }
+                }
             },
             workspace = true,
             progress = params,
-        ) { edit ->
-            edit?.let(::protocolEdit)
-        }
+        ) { proposal ->
+            proposal?.let { protocolEdit(it.edit)?.to(it.outsideUses) }
+        }.mapCancellable { answer -> answer?.let { (edit, names) -> outsideUses("rename", names, edit) } }
+    }
 
     /**
      * Same lifecycle/version checks as standard Rename; settings are never installed by a proposal. A rename of what
@@ -1513,9 +1516,21 @@ class XtcTextDocumentService(
             },
             workspace = true,
         ) { proposal -> proposal?.let { protocolProposal(it)?.to(it.outsideUses) } }.mapCancellable { answer ->
-            answer?.second?.let { server.showInfo(server.presentation.outsideUses("rename", it)) }
-            answer?.first
+            answer?.let { (protocol, names) -> outsideUses("rename", names, protocol) }
         }
+    }
+
+    /**
+     * [answer], once the client is shown that the edit leaves modules outside the workspace as they are when it changes
+     * [names], which they may use: as the server answers, before the client applies the edit.
+     */
+    private fun <T> outsideUses(
+        operation: String,
+        names: List<String>,
+        answer: T,
+    ): T {
+        if (names.isNotEmpty()) server.showInfo(server.presentation.outsideUses(operation, names))
+        return answer
     }
 
     private fun protocolProposal(proposal: XdkRenameProposal): RenameProposal? =
@@ -1551,8 +1566,14 @@ class XtcTextDocumentService(
             first.oldUri,
             { compiler.renameFilesProposalAsync(params.files.associate { it.oldUri to it.newUri }) },
             workspace = true,
-        ) { proposal -> proposal?.let(::protocolProposal) }
+        ) { proposal -> proposal?.let { protocolProposal(it)?.to(it.outsideUses) } }.mapCancellable { answer ->
+            answer?.let { (protocol, names) -> outsideUses(fileOperation(params), names, protocol) }
+        }
     }
+
+    /** A rename when every file of [params] stays in its folder, as a type or module renamed with its file; else a move. */
+    private fun fileOperation(params: RenameFilesParams): String =
+        if (params.files.all { XdkSources.file(it.oldUri)?.parentFile == XdkSources.file(it.newUri)?.parentFile }) "rename" else "move"
 
     internal fun renameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> {
         val compiler = adapter as? XdkAdapter ?: return CompletableFuture.completedFuture(null)
@@ -1569,11 +1590,11 @@ class XtcTextDocumentService(
         return queryAsync(
             "workspace/willRenameFiles",
             first.oldUri,
-            { compiler.renameFilesAsync(params.files.associate { it.oldUri to it.newUri }) },
+            { compiler.plainRenameFilesAsync(params.files.associate { it.oldUri to it.newUri }) },
             workspace = true,
-        ) {
-            it?.let(::protocolEdit)
-        }
+        ) { proposal ->
+            proposal?.let { protocolEdit(it.edit)?.to(it.outsideUses) }
+        }.mapCancellable { answer -> answer?.let { (edit, names) -> outsideUses(fileOperation(params), names, edit) } }
     }
 
     private fun canConvertEdit(edit: AdapterWorkspaceEdit): Boolean =
@@ -1700,7 +1721,7 @@ class XtcTextDocumentService(
                                 Command(
                                     action.title,
                                     ClientPresentation.OUTSIDE_USES,
-                                    listOf(server.presentation.outsideUses("safe delete", it)),
+                                    listOf(server.presentation.outsideUses("safe delete", listOf(it))),
                                 )
                             }
                     },
