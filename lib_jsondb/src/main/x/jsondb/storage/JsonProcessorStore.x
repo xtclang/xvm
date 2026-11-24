@@ -34,7 +34,7 @@ import TxManager.NO_TX;
  */
 @Concurrent
 service JsonProcessorStore<Message extends immutable Const>
-        extends ObjectStore(catalog, info)
+        extends ObjectStore
         implements ProcessorStore<Message>
         incorporates KeyBasedStore<Message> {
     // ----- constructors --------------------------------------------------------------------------

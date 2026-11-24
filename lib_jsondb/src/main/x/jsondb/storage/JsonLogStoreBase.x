@@ -8,7 +8,7 @@ import json.Mapping;
 @Abstract
 @Concurrent
 service JsonLogStoreBase<Element extends immutable Const>
-        extends ObjectStore(catalog, info)
+        extends ObjectStore
         implements LogStore<Element> {
     // ----- constructors --------------------------------------------------------------------------
 
