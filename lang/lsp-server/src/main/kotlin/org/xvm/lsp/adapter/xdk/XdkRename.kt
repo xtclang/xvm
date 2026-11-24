@@ -1393,10 +1393,9 @@ internal object XdkRename {
                                 composedTarget(callable, texts, moved, translate, lines) ?: return null
                             } else {
                                 target(model, occurrence.symbol)
-                                    // a register the model cannot place, such as a primary constructor's parameter
-                                    // passed in its own extends clause, is left out on both sides, as an unresolved
-                                    // name is: the edited source must still compile, and a new binding of the name
-                                    // is still a difference
+                                    // a register the model cannot place, which no source declares, is left out on
+                                    // both sides, as an unresolved name is: the edited source must still compile, and
+                                    // a new binding of the name is still a difference
                                     ?: when {
                                         unplaced(facts, model, occurrence.symbol) -> return@occurrences
 
