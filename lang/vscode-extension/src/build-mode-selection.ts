@@ -80,7 +80,7 @@ export function createBuildModeStatus(): vscode.Disposable {
         const mode = buildMode(folder);
         item.text = buildModeStatusText(mode);
         shown = item.text;
-        const replaced = replacedLibraries();
+        const replaced = replacedLibraries(folder);
         item.tooltip = replaced.length > 0
             ? `Ecstasy builds and runs ${folder.name} through its Gradle build while its own modules replace the bundled `
                 + `libraries ${replaced.join(', ')}.`

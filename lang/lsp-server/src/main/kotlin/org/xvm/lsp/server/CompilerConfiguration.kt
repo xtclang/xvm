@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkLibraryReplacement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.XdkSources
 import java.net.URI
 
 /**
@@ -99,7 +100,7 @@ internal object CompilerConfiguration {
                             values.asJsonArray.map { string(it, "dependency") }.toSet()
                         }.orEmpty()
                 XdkSourceModule(name, uri, dependencies, resources)
-            }.let(XdkLibraryReplacement::apply)
+            }.let { XdkLibraryReplacement.apply(it, workspaceUris.mapNotNull(XdkSources::file)) }
     }
 
     private fun objectValue(raw: Any?) =

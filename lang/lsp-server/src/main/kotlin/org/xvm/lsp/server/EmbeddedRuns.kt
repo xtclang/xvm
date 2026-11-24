@@ -56,10 +56,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-/** `xtc/build` parameters: a module name or root URI, or every source module when [module] is absent. */
+/**
+ * `xtc/build` parameters: a module name or root URI; or when [module] is absent, the source modules of the workspace
+ * folder [folder], a URI, or every source module without one.
+ */
 data class BuildParams(
     val module: String? = null,
     val rebuild: Boolean? = null,
+    val folder: String? = null,
 )
 
 /** `xtc/build` result. Diagnostics are grouped by document, in the shape of `publishDiagnostics`. */
@@ -115,9 +119,13 @@ data class RunInputParams(
     val end: Boolean? = null,
 )
 
-/** `xtc/replacedLibraries` parameters: the bundled libraries that the workspace's own modules replace, by name. */
+/**
+ * `xtc/replacedLibraries` parameters: the bundled libraries that the workspace's own modules replace, by name, and the
+ * workspace folders, as URIs, whose modules are built against them, which then build and run with Gradle.
+ */
 data class ReplacedLibrariesParams(
     val libraries: List<String> = emptyList(),
+    val folders: List<String> = emptyList(),
 )
 
 /** `xtc/gradleProjects` parameters: the Gradle project that owns each source module, by module name, as its path in the build tree. */
@@ -269,7 +277,7 @@ internal class EmbeddedRuns(
     }
 
     fun build(params: BuildParams): CompletableFuture<BuildResponse> =
-        compiler()?.buildAsync(params.module, params.rebuild == true)?.thenApply(::response) ?: unsupported()
+        compiler()?.buildAsync(params.module, params.rebuild == true, folder = params.folder)?.thenApply(::response) ?: unsupported()
 
     fun run(params: RunParams): CompletableFuture<RunResponse> {
         val runId = params.runId ?: UUID.randomUUID().toString()
