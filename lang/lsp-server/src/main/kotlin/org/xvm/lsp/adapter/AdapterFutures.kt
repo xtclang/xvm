@@ -2,11 +2,24 @@ package org.xvm.lsp.adapter
 
 import java.util.concurrent.CompletableFuture
 
-/** Keep ownership of query cancellation when converting an asynchronous adapter result. */
-internal fun <T, R> CompletableFuture<T>.mapCancellable(transform: (T) -> R): CompletableFuture<R> =
-    thenApply(transform).also { mapped ->
-        mapped.whenComplete { _, _ -> if (mapped.isCancelled) cancel(false) }
+/**
+ * Keep ownership of query cancellation when converting an asynchronous adapter result: each cancellation asked of the
+ * returned future, also once it is done, is asked of this one, as it would be of this one returned itself. The server
+ * asks a query's work to stop when an edit makes the query stale, which can come just after the work answered.
+ */
+internal fun <T, R> CompletableFuture<T>.mapCancellable(transform: (T) -> R): CompletableFuture<R> {
+    val source = this
+    val mapped =
+        object : CompletableFuture<R>() {
+            // this one first: the source's cancellation completes it otherwise, with the failure it makes of that
+            override fun cancel(mayInterruptIfRunning: Boolean): Boolean =
+                super.cancel(mayInterruptIfRunning).also { source.cancel(mayInterruptIfRunning) }
+        }
+    thenApply(transform).whenComplete { value, failure ->
+        if (failure == null) mapped.complete(value) else mapped.completeExceptionally(failure)
     }
+    return mapped
+}
 
 /**
  * This future's answer, with a failure answered by the failure that [transform] makes of it, keeping ownership of query
@@ -18,10 +31,9 @@ internal fun <T> CompletableFuture<T>.mapFailureCancellable(transform: (Throwabl
     val source = this
     val mapped =
         object : CompletableFuture<T>() {
-            override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
-                source.cancel(mayInterruptIfRunning)
-                return super.cancel(mayInterruptIfRunning)
-            }
+            // this one first: the source's cancellation completes it otherwise, with the failure it makes of that
+            override fun cancel(mayInterruptIfRunning: Boolean): Boolean =
+                super.cancel(mayInterruptIfRunning).also { source.cancel(mayInterruptIfRunning) }
         }
     whenComplete { value, failure ->
         if (failure == null) mapped.complete(value) else mapped.completeExceptionally(runCatching { transform(failure) }.getOrElse { it })
