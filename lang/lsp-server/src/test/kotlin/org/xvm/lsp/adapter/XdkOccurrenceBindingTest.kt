@@ -107,6 +107,83 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `this in a lazy property's calc is the instance that holds the property, as in a method of its class`() {
+        val source =
+            """
+            module Receivers {
+                class Holder {
+                    @Lazy Holder self.calc() = /*first*/this;
+                    @Lazy Holder[] pair.calc() = [/*second*/this, /*third*/this];
+                    Holder me() = /*method*/this;
+                }
+            }
+            """.trimIndent()
+        withSource("Receivers", source) { adapter, uri ->
+            // Find References takes every this of the class, as the workspace's navigation joins them by their proof
+            // identity, and highlighting those of the method
+            val second = position(source, "second")
+            val holder = listOf("first", "second", "third", "method").map { range(source, it, "this") }
+            assertThat(adapter.findReferences(uri, second.line, second.column, true).map(::range)).containsExactlyElementsOf(holder)
+            assertThat(adapter.getDocumentHighlights(uri, second.line, second.column).map { it.range })
+                .containsExactlyInAnyOrder(range(source, "second", "this"), range(source, "third", "this"))
+            assertThat(adapter.getHoverInfo(uri, second.line, second.column)).contains("Holder")
+            val method = position(source, "method")
+            assertThat(adapter.findReferences(uri, method.line, method.column, true).map(::range)).containsExactlyElementsOf(holder)
+        }
+    }
+
+    @Test
+    fun `super in a method reference is the method it dispatches to, or the super of a mixin's method, as in a call`() {
+        val source =
+            """
+            module References {
+                class Base {
+                    Int /*declaration*/value(Int n) = n;
+                }
+                class Derived extends Base {
+                    @Override Int value(Int n) {
+                        function Int(Int) f = &/*bound*/super(_);
+                        return f(n);
+                    }
+                }
+                mixin Doubling into Base {
+                    @Override Int value(Int n) {
+                        function Int(Int) f = &/*mixed*/super(_);
+                        return f(n) + /*called*/super(n);
+                    }
+                }
+                Int run(Int n) {
+                    function Int(Int, Int) /*sum*/add = (a, b) -> a + b;
+                    function Int(Int) inc = &/*local*/add(_, 1);
+                    return inc(n);
+                }
+            }
+            """.trimIndent()
+        withSource("References", source) { adapter, uri ->
+            val bound = position(source, "bound")
+            val value = listOf(range(source, "declaration", "value"), range(source, "bound", "super"))
+            assertThat(adapter.findReferences(uri, bound.line, bound.column, true).map(::range)).containsExactlyElementsOf(value)
+            assertThat(adapter.getHoverInfo(uri, bound.line, bound.column)).contains("value(Int n)")
+            val declaration = position(source, "declaration")
+            val renamed = requireNotNull(adapter.rename(uri, declaration.line, declaration.column, "amount")) { "No rename of value" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("value(", "amount("))
+
+            // a mixin's super dispatches to whatever its host has, which a call of it names as the method's super too
+            val mixed = position(source, "mixed")
+            val supers = listOf(range(source, "mixed", "super"), range(source, "called", "super"))
+            assertThat(adapter.findReferences(uri, mixed.line, mixed.column, true).map(::range)).containsExactlyElementsOf(supers)
+            assertThat(adapter.getHoverInfo(uri, mixed.line, mixed.column)).contains("super")
+
+            // a local function's, too
+            val local = position(source, "local")
+            val add = listOf(range(source, "sum", "add"), range(source, "local", "add"))
+            assertThat(adapter.findReferences(uri, local.line, local.column, true).map(::range)).containsExactlyElementsOf(add)
+            val plus = requireNotNull(adapter.rename(uri, local.line, local.column, "plus")) { "No rename of add" }
+            assertThat(apply(source, plus.changes.getValue(uri))).isEqualTo(source.replace("add", "plus"))
+        }
+    }
+
     private fun snapshot(
         name: String,
         text: String,
