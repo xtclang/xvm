@@ -43,6 +43,31 @@ class AdapterFuturesTest {
     }
 
     @Test
+    fun `a converted result asks its work to stop, also after the work answered`() {
+        // work that records each cancellation it is asked, as a backend that ignores it does
+        val asked = mutableListOf<Boolean>()
+
+        fun work() =
+            object : CompletableFuture<Int>() {
+                override fun cancel(mayInterruptIfRunning: Boolean): Boolean = super.cancel(mayInterruptIfRunning).also { asked += it }
+            }
+        val running = work()
+        val converted = running.mapCancellable { it + 1 }
+        assertThat(converted.cancel(false)).isTrue()
+        assertThat(running).isCancelled()
+
+        // an edit can make the request stale just after its work answered: the work is asked all the same
+        val answered = work()
+        val mapped = answered.mapCancellable { it + 1 }
+        val failed = work().mapFailureCancellable { it }
+        answered.complete(1)
+        assertThat(mapped.join()).isEqualTo(2)
+        mapped.cancel(false)
+        failed.cancel(false)
+        assertThat(asked).containsExactly(true, false, true)
+    }
+
+    @Test
     fun `proof values and construction failures complete the outer request`() {
         val value =
             CompletableFuture.completedFuture("analysis").composeCancellable {
