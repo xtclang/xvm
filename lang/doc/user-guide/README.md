@@ -1088,6 +1088,11 @@ Some common problems:
   **Add consumers from folders** (IntelliJ's **Ecstasy | Compiler** page, VS Code's **Ecstasy:
   Configure Compiler Paths**); a project whose Gradle model is imported has all of its build's modules
   already.
+- A rename checks that every name in the compiled code still means the same declaration. It doesn't
+  change, or check, what no name in the code carries: a name in a string or a comment, or one built
+  at run time to look a member up by reflection; an `is` check against an interface, which matches a
+  class by its members' names; and the keys a renamed property's value gets in JSON or other data
+  that the program writes and reads back.
 - The formatter doesn't reflow comments or split string literals.
 - The Tree-sitter adapter knows only syntax: no type errors, no type-aware completion or checked
   refactorings, and no embedded builds or runs.
