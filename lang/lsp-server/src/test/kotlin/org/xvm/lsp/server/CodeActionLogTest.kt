@@ -69,7 +69,8 @@ class CodeActionLogTest {
                             ).awaited()
                     }
                     // a workspace's symbols, which the open file's compile has, so a query that compiles nothing logs
-                    // nothing, then a rename of run, which compiles the project as it is and as renamed
+                    // nothing, then a rename of run, which starts from the revision's compile that the code actions
+                    // made, and compiles the project as renamed
                     val symbols = server.workspaceService.symbol(WorkspaceSymbolParams("run")).awaited()
                     assertThat(symbols.left.map { it.name }).containsExactly("run")
                     service.rename(RenameParams(TextDocumentIdentifier(uri), Position(7, 9), "go")).awaited()
@@ -80,12 +81,12 @@ class CodeActionLogTest {
             "code actions: uri=App.x range=9:15-9:24 trigger=invoked only=[] outcome=answered actions=6 compiles=base 1 + proofs 6 cached-base=false",
             "code actions: uri=App.x range=9:15-9:24 trigger=invoked only=[] outcome=answered actions=6 compiles=base 0 + proofs 0 cached-base=true",
         )
-        // the rename's two compiles of App, with the query's time, its compiles' time by module and the heap it saw
+        // the rename's compile of App as renamed, with the query's time, its compiles' time by module and the heap it saw
         assertThat(lines.filter { it.startsWith("project query:") })
             .singleElement()
             .asString()
             .matches(
-                "project query: kind=rename uri=App\\.x outcome=completed in [0-9.]+ s: compiles=2 in [0-9.]+ s " +
+                "project query: kind=rename uri=App\\.x outcome=completed in [0-9.]+ s: compiles=1 in [0-9.]+ s " +
                     "\\(App [0-9.]+ s\\), heap [0-9]+ MB -> [0-9]+ MB of [0-9]+ MB",
             )
     }
