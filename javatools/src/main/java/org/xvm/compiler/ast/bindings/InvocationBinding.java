@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -293,6 +294,14 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
             Map<InvocationExpression, FunctionCall> survivingFunctions = new IdentityHashMap<>();
             Map<NewExpression, InvocationBinding> survivingConstructors = new IdentityHashMap<>();
             Map<PropertyDeclarationStatement, InitializerBinding> survivingInitializers = new IdentityHashMap<>();
+            // a loop validates a clone of its body and keeps it (WhileStatement), so a property declared there, such as
+            // a static local, survives as a copy of the statement that recorded its facts; both declare one property
+            Map<Component, InitializerBinding> initializersByProperty = new IdentityHashMap<>();
+            initializers.forEach((property, binding) -> {
+                if (property.getComponent() != null) {
+                    initializersByProperty.putIfAbsent(property.getComponent(), binding);
+                }
+            });
             List<AstNode> nodes = new ArrayList<>(roots);
             for (int i = 0; i < nodes.size(); ++i) {
                 AstNode node = nodes.get(i);
@@ -316,6 +325,9 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
                 }
                 if (node instanceof PropertyDeclarationStatement property) {
                     InitializerBinding binding = initializers.get(property);
+                    if (binding == null && property.getComponent() != null) {
+                        binding = initializersByProperty.get(property.getComponent());
+                    }
                     if (binding != null) {
                         survivingInitializers.put(property, binding);
                     }
