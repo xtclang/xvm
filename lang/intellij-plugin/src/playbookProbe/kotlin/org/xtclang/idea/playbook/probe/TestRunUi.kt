@@ -40,6 +40,7 @@ import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
 import com.intellij.xdebugger.XDebuggerUtil
+import org.xtclang.idea.run.XtcBuildSettings
 import org.xtclang.idea.run.XtcRunAllTestsAction
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
@@ -198,6 +199,20 @@ object TestRunUi {
             )
         }
     }
+
+    /** Whether the run named [name] has Rerun Failed Tests, a restart action that the run's result gives it; on the EDT. */
+    @JvmStatic
+    fun rerunFailedOffered(
+        project: Project,
+        name: String,
+    ): Boolean = descriptor(project, name).restartActions.any { it is AbstractRerunFailedTestsAction }
+
+    /** The Gradle project of each source module, by its name, as the language server last said them, a JSON object. */
+    @JvmStatic
+    fun gradleProjects(project: Project): String =
+        JsonObject()
+            .apply { XtcBuildSettings.getInstance(project).gradleProjects.forEach { (module, path) -> addProperty(module, path) } }
+            .toString()
 
     /**
      * Runs Run 'All Ecstasy Tests', every test module's tests, each module in turn, as its action in the Project window's

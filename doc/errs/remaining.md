@@ -2075,8 +2075,8 @@ change shows in them. In the order worth doing:
 
 | ID | Limitation | Estimate | Worth it |
 |----|------------|----------|----------|
-| K2a | IntelliJ's Run 'All Ecstasy Tests' has no Rerun Failed Tests | 1 day | Done 2026-11-24, embedded and with `xtc test`; Gradle mode's one `testXtc` still has none |
-| K2c | ... and in Gradle mode none yet | 0.5–1 day | Yes, next: the XVM repository runs its tests in Gradle mode |
+| K2a | IntelliJ's Run 'All Ecstasy Tests' has no Rerun Failed Tests | 1 day | Done 2026-11-24, embedded and with `xtc test`; Gradle mode in K2c |
+| K2c | ... and in Gradle mode none yet | 0.5–1 day | Done 2026-11-24, where the Gradle model is imported |
 | K5a | Evaluations stop after 2 s, lazy values after 1 s, by default | done | Done: a launch and attach attribute each, and options of both IntelliJ configurations |
 | K6b | Rename and safe delete miss consumers the server does not know of | 0.5–1 day | Yes, as a prompt; automatic discovery is not |
 | K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Yes, after the release: arguments and JVM options, not the XDK version |
@@ -2095,10 +2095,9 @@ change shows in them. In the order worth doing:
   `xunit://<module>/<selector>` (`XtcTestLocation`), which `XtcTestLocator` finds in that module; Rerun
   Failed Tests groups the failed tests by module and runs each module with only its failed tests, in
   turn, into one console, as `AllTestModulesState` with tests. A run of one module's tests keeps
-  `xunit://<selector>`. None under Debug, as before, and none in Gradle mode, whose one `testXtc` for
-  every module does not say which module an event is of: that needs xunit's events to name their module,
-  or a `testXtc` per module. X348 checks it in IntelliJ.
-- [ ] K2c: Rerun Failed Tests after Run 'All Ecstasy Tests' in Gradle mode, which K2a leaves without one.
+  `xunit://<selector>`. None under Debug, as before. Gradle mode's came with K2c, which also takes each
+  test's module from its event's ID instead of the module line. X348 checks it in IntelliJ.
+- [x] K2c: Rerun Failed Tests after Run 'All Ecstasy Tests' in Gradle mode, which K2a leaves without one.
   Gradle mode runs every project's `testXtc` in one Gradle build, so IntelliJ cannot write the line that
   names each module before its events, as K2a's embedded and `xtc test` runs do. K2a's report took this
   to need xunit's events to name their module, but they already do: each event's `id` is the test's
@@ -2112,6 +2111,17 @@ change shows in them. In the order worth doing:
   name the model uses. A converter test on Gradle-mode output, a test of the rerun's command, and a
   playbook case with X288's recording Gradle wrapper. 0.5–1 day; worth it, as the XVM repository, whose
   own modules replace the bundled libraries, can run its tests only in Gradle mode.
+  Done 2026-11-24 (`lagergren/k2c-gradle-rerun`): in a run of every test module, in every mode,
+  `XtcTestEventsConverter` takes each test's module from its event's ID (`TestEvent.module`), and K2a's
+  module line is gone; a run of one module's tests keeps `xunit://<selector>`. In Gradle mode Rerun
+  Failed Tests runs one build of `XtcRunConfiguration.gradleRerunTasks`: the failed tests grouped by module,
+  each module's project from `xtc/gradleProjects`, `:a:testXtc --module=a --test-method=… :b:testXtc …`,
+  and where one project has several failed modules its `testXtc` without `--module`, which takes one. No
+  rerun without an imported model, or where the model names no project of a failed test's module. The
+  ID's module is the declared name that the model gives each project by, a qualified one included: a real
+  run of `qualified.example.org` in `EmbeddedTestRunsTest`. X348 checks Gradle mode with a recording
+  wrapper: without the model the bare `testXtc` and no rerun, with it each project's `testXtc` and a
+  rerun of only the failed test's module's project.
 - [ ] K2b: Debug for Run 'All Ecstasy Tests'. LSP4IJ's DAP launch debugs one configuration, one program,
   and an all-modules run is one program per module, in turn. Either the debug server runs the modules
   one after another in one session, keeping its breakpoints (2–3 days), or xunit runs every test module
