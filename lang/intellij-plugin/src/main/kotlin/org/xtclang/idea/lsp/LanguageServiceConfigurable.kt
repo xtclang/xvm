@@ -7,16 +7,14 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.dsl.builder.Align
+import com.intellij.ui.dsl.builder.MAX_LINE_LENGTH_WORD_WRAP
+import com.intellij.ui.dsl.builder.panel
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
-import java.awt.BorderLayout
-import java.awt.GridLayout
 import java.util.concurrent.atomic.AtomicLong
-import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JComponent
-import javax.swing.JPanel
 import javax.swing.JTextArea
 
 /** Edits application defaults for new projects and projects that inherit language-service settings. */
@@ -59,47 +57,42 @@ open class LanguageServiceConfigurable(
     override fun createComponent(): JComponent {
         inherit.addItemListener { updateEnabled() }
         reset()
-        return JPanel(BorderLayout(0, 12)).apply {
-            add(
-                JPanel(GridLayout(0, 2, 8, 8)).apply {
-                    if (project != null) {
-                        add(inherit)
-                        add(JBLabel("Project overrides are stored with LSP4IJ."))
-                    }
-                    add(JBLabel("Language adapter (restarts automatically)"))
-                    add(adapter)
-                    add(JBLabel("Text synchronization (restarts automatically)"))
-                    add(synchronization)
-                    add(JBLabel("Save formatting owner (restarts automatically)"))
-                    add(saving)
-                    add(hints)
-                    add(JBLabel("Native IDE inlay controls still apply."))
-                    add(references)
-                    add(JBLabel("Applies immediately; Run lenses remain available."))
-                },
-                BorderLayout.NORTH,
+        return panel {
+            if (project != null) {
+                row { cell(inherit).comment("Project overrides are stored with LSP4IJ.", MAX_LINE_LENGTH_WORD_WRAP) }
+            }
+            row("Language adapter:") {
+                cell(adapter)
+            }.rowComment(
+                "Restarts the server automatically.",
+                MAX_LINE_LENGTH_WORD_WRAP,
             )
-            add(
-                JBLabel(
-                    "<html>Full is the default. Incremental sends changed text; it does not enable incremental compilation.<br>" +
-                        "The server formats on save while Tools → Actions on Save doesn't reformat Ecstasy files.<br>" +
-                        "Indentation and the compiler wrapping margin are configured under Editor → Code Style → Ecstasy.<br>" +
-                        "Compiler paths are on Ecstasy › Compiler. Trace controls remain in Language Servers; JVM and log limits are on Ecstasy › Server Runtime and Logs.</html>",
-                ),
-                BorderLayout.CENTER,
+            row("Text synchronization:") {
+                cell(synchronization)
+            }.rowComment(
+                "Restarts automatically. Full is the default. Incremental sends changed text; it does not enable " +
+                    "incremental compilation.",
+                MAX_LINE_LENGTH_WORD_WRAP,
             )
-            add(
-                JPanel(BorderLayout()).apply {
-                    add(JBScrollPane(report), BorderLayout.CENTER)
-                    add(
-                        JButton("Refresh effective configuration").apply {
-                            addActionListener { refreshReport() }
-                        },
-                        BorderLayout.SOUTH,
-                    )
-                },
-                BorderLayout.SOUTH,
+            row("Save formatting owner:") {
+                cell(saving)
+            }.rowComment(
+                "Restarts automatically. The server formats on save while Tools → Actions on Save doesn't reformat " +
+                    "Ecstasy files.",
+                MAX_LINE_LENGTH_WORD_WRAP,
             )
+            row { cell(hints).comment("Native IDE inlay controls still apply.", MAX_LINE_LENGTH_WORD_WRAP) }
+            row { cell(references).comment("Applies immediately; Run lenses remain available.", MAX_LINE_LENGTH_WORD_WRAP) }
+            row {
+                comment(
+                    "Indentation and the compiler wrapping margin are configured under Editor → Code Style → Ecstasy. " +
+                        "Compiler paths are on Ecstasy › Compiler. Trace controls remain in Language Servers; JVM and log " +
+                        "limits are on Ecstasy › Server Runtime and Logs.",
+                    MAX_LINE_LENGTH_WORD_WRAP,
+                )
+            }
+            row { cell(JBScrollPane(report)).align(Align.FILL) }.resizableRow()
+            row { button("Refresh effective configuration") { refreshReport() } }
         }
     }
 
