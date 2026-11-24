@@ -213,6 +213,41 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a name in a static local's initializer in a loop is an occurrence of what it names`() {
+        val source =
+            """
+            module Statics {
+                class Lexer {
+                    static Int /*declared*/Base = 10;
+                    Int scan(Iterator<Int> digits) {
+                        Int total = 0;
+                        while (Int digit := digits.next()) {
+                            static Int Limit = /*used*/Base * 2 - 1;
+                            static UInt Max = /*inferred*/MaxValue / 10 - 1;
+                            if (total < Limit && total.toUInt() < Max) {
+                                total += digit;
+                            }
+                        }
+                        return total;
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource("Statics", source) { adapter, uri ->
+            // the loop validates a clone of its body, whose static locals the compiler folds to constants
+            val base = listOf(range(source, "declared", "Base"), range(source, "used", "Base"))
+            val declared = position(source, "declared")
+            assertThat(adapter.findReferences(uri, declared.line, declared.column, true).map(::range)).containsExactlyElementsOf(base)
+            val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "Origin")) { "No rename of Base" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Base", "Origin"))
+
+            // MaxValue resolves through the static local's type, UInt
+            val inferred = position(source, "inferred")
+            assertThat(adapter.getHoverInfo(uri, inferred.line, inferred.column)).contains("MaxValue")
+        }
+    }
+
     private fun snapshot(
         name: String,
         text: String,
