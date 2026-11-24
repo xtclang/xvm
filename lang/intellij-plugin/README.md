@@ -147,6 +147,10 @@ An Ecstasy Application configuration has:
   code runs.
 - **Let the program run while Evaluate Expression runs code** — under Debug, the rest of the
   program runs too while Evaluate Expression runs code.
+- **Evaluation time limit (ms)** and **Lazy value time limit (ms)** — under Debug, how long code
+  that Evaluate Expression runs, and a lazy value's getter or `toString()`, may take before it is
+  ended: 2000 and 1000 by default, at most 30000. IntelliJ cannot cancel an evaluation, so Evaluate
+  Expression waits out the whole limit for code that never ends.
 
 Embedded runs use a normal Run console with **Stop** and **Rerun**. Each run gets a fresh
 application container. Each running program has an execution worker JVM of its own, so up to four
@@ -190,7 +194,7 @@ LSP4IJ too (LSP4IJ pull requests [#1760](https://github.com/redhat-developer/lsp
 Watches view shows expressions such as `point.x + 1` or `ints[i] > 0` in the selected frame, without
 running the program's code, and what is not evaluated shows why; LSP4IJ's debugger hover evaluates
 the name under the mouse. **Evaluate Expression** evaluates them so too, and runs what that refuses,
-such as a call, as code on the stopped fiber, for at most two seconds, and what the code changed
+such as a call, as code on the stopped fiber, for at most two seconds by default, and what the code changed
 stays changed; the Variables view shows it the next time it reads the variables, since LSP4IJ does
 not handle the `invalidated` event yet (LSP4IJ pull request [#1766](https://github.com/redhat-developer/lsp4ij/pull/1766)). Only that code, and the services it calls, run
 meanwhile; the configuration's **Let the program run while Evaluate Expression runs code** lets the
@@ -268,6 +272,8 @@ for the debugger before its first line. The configuration has:
 - **Token** — the token the program's `--debug` option gives, if it gives one.
 - **Stop at the program's first line** — for a program that waits for the debugger, as the option's
   `suspend` has it.
+- **Evaluation time limit (ms)** and **Lazy value time limit (ms)** — as an Ecstasy Application
+  configuration's.
 
 **Debug** attaches; the configuration has no Run. Breakpoints, stepping, variables and evaluation work
 as in a launched session, and stopping the session detaches, so the program runs on without the

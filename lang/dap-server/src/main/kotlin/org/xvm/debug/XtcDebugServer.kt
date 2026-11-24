@@ -92,6 +92,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -123,7 +124,9 @@ import kotlin.time.Duration.Companion.seconds
  * sooner, and once code has run, `invalidated` tells a client that takes it to read the variables again. A launch
  * with `evaluationRunsProgram` lets the whole program run while such code does, for a program whose code waits on
  * work that its other fibers do; they then wait at their next line once it ends, and `invalidated` asks for everything
- * again, since the stop's threads and stacks may have moved.
+ * again, since the stop's threads and stacks may have moved. A launch or an attach may set its own limits, in
+ * milliseconds: [EVALUATION_TIME_LIMIT] for such code, and [LAZY_VALUE_TIME_LIMIT] for the code that computes a lazy
+ * variable's value.
  *
  * The session owns the program it launches. Terminating or disconnecting stops it, also while it still builds or
  * is stopped; its exit ends the session with `exited` and `terminated`; and the language server stops it when the
@@ -133,16 +136,21 @@ import kotlin.time.Duration.Companion.seconds
  * breakpoints, and the session ends with `terminated`; the program's own exit ends it as a launched one's does.
  *
  * [afterResponse] runs a task after the message being handled has been answered, which is when the `initialized`
- * event may be sent. [limits] bound what the session runs for the client, its defaults unless a test lifts them.
+ * event may be sent. [limits] bound what the session runs for the client, its defaults unless a test lifts them, where
+ * the launch or the attach sets none of its own.
  */
 class XtcDebugServer(
     private val runs: DebugRuns,
     private val afterResponse: Executor,
     private val limits: Limits = Limits(),
 ) : IDebugProtocolServer {
-    /** How long code typed in the console may run on the stopped fiber, [console]: [CONSOLE_LIMIT] by default. */
+    /**
+     * How long code typed in the console may run on the stopped fiber, [console]: [CONSOLE_LIMIT] by default; and how
+     * long the code that computes a lazy variable's value may run, [onDemand]: the debugger's own limit when null.
+     */
     data class Limits(
         val console: Duration = CONSOLE_LIMIT,
+        val onDemand: Duration? = null,
     )
 
     @Volatile
@@ -216,6 +224,10 @@ class XtcDebugServer(
     /** True for a launch that lets the whole program run while code from the console does. */
     @Volatile
     private var evaluationRunsProgram = false
+
+    /** The limits of the launch or the attach: its own, where it sets them, else [limits]. */
+    @Volatile
+    private var launchLimits = limits
 
     /**
      * True to show integers in hexadecimal for a `variables` or `evaluate` request that names no `format`: the session's
@@ -306,6 +318,24 @@ class XtcDebugServer(
          * expression needs, short enough that a loop does not leave the console waiting.
          */
         val CONSOLE_LIMIT = 2.seconds
+
+        /** The launch and attach argument that sets [Limits.console], in milliseconds. */
+        const val EVALUATION_TIME_LIMIT = "evaluationTimeLimit"
+
+        /** The launch and attach argument that sets [Limits.onDemand], in milliseconds. */
+        const val LAZY_VALUE_TIME_LIMIT = "lazyValueTimeLimit"
+
+        /** The shortest time limit a launch or an attach may set. */
+        val MIN_TIME_LIMIT = 100.milliseconds
+
+        /**
+         * The longest [EVALUATION_TIME_LIMIT]: a bound against code that never ends, which a client that sends `cancel`
+         * may end sooner.
+         */
+        val MAX_EVALUATION_TIME_LIMIT = 60.seconds
+
+        /** The longest [LAZY_VALUE_TIME_LIMIT]: nothing cancels a lazy variable's read, so a client waits that long. */
+        val MAX_LAZY_VALUE_TIME_LIMIT = 30.seconds
 
         /** The answer to an evaluation that `cancel` ended, as DAP names it. */
         const val CANCELLED = "cancelled"
@@ -602,18 +632,18 @@ class XtcDebugServer(
      * build answers with an error after reporting the build's diagnostics as output. Arguments: `module` (a module
      * name), `moduleUri` (a source URI of the module, used in place of the name when given), `method`, `args` (an
      * array, or a comma-separated string), `cwd` or `workingDirectory`, `noDebug`, `stopOnEntry`, which stops the
-     * program at its first line, and `evaluationRunsProgram`, which lets the whole program run while code from the
-     * console does. With `buildMode` `gradle` or `commandLine`, the client builds and runs the module instead, with
-     * its Gradle task or the xtc command, and the session attaches to the program once it connects, answering then
-     * ([DebugRuns.launchWithTask]); such a run without the debugger is the task itself, so `noDebug` is refused. With
-     * `tests`, an array of `{selector, kind}`, xunit runs those tests of the module instead, embedded or with the
-     * client's task.
+     * program at its first line, `evaluationRunsProgram`, which lets the whole program run while code from the
+     * console does, and the time limits [EVALUATION_TIME_LIMIT] and [LAZY_VALUE_TIME_LIMIT]. With `buildMode`
+     * `gradle` or `commandLine`, the client builds and runs the module instead, with its Gradle task or the xtc
+     * command, and the session attaches to the program once it connects, answering then ([DebugRuns.launchWithTask]);
+     * such a run without the debugger is the task itself, so `noDebug` is refused. With `tests`, an array of
+     * `{selector, kind}`, xunit runs those tests of the module instead, embedded or with the client's task.
      */
     override fun launch(args: Map<String, Any>?): CompletableFuture<Void?> {
         logger.info("launch: args={}", args)
-        val target =
+        val (target, given) =
             try {
-                target(args.orEmpty())
+                target(args.orEmpty()) to givenLimits(args.orEmpty())
             } catch (e: IllegalArgumentException) {
                 return failed(e.message ?: "Invalid launch arguments")
             }
@@ -626,6 +656,7 @@ class XtcDebugServer(
         }
         debugging = args?.get("noDebug") != true
         evaluationRunsProgram = args?.get("evaluationRunsProgram") == true
+        launchLimits = given
         programName = target.moduleName ?: target.module.substringAfterLast('/').substringBefore('.')
         val stopOnEntry = args?.get("stopOnEntry") == true
         if (task != null) {
@@ -646,7 +677,7 @@ class XtcDebugServer(
                     installed = breakpoints.toMap()
                     installedExceptions = exceptionStops
                     installedFunctions = functionBreakpoints
-                    DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry, installedFunctions)
+                    DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry, installedFunctions, launchLimits.onDemand)
                 } else {
                     null
                 }
@@ -685,21 +716,23 @@ class XtcDebugServer(
      *
      * Attaches to a program that the launcher runs with `--debug listen:<host>:<port>`, with the breakpoints set by
      * then, answering once the program has taken them. Arguments: `port`, `host` (this machine's, `localhost` when
-     * not given), `token`, the one the program was given, and `stopOnEntry`, which stops a program that waits for the
-     * debugger (`suspend`) at its first line. Terminate and disconnect detach: the program runs on without the
-     * session's breakpoints. The program's console is its own, so the debug console only evaluates.
+     * not given), `token`, the one the program was given, `stopOnEntry`, which stops a program that waits for the
+     * debugger (`suspend`) at its first line, and the time limits [EVALUATION_TIME_LIMIT] and [LAZY_VALUE_TIME_LIMIT].
+     * Terminate and disconnect detach: the program runs on without the session's breakpoints. The program's console
+     * is its own, so the debug console only evaluates.
      */
     override fun attach(args: Map<String, Any>?): CompletableFuture<Void> {
         logger.info("attach: args={}", args)
-        val target =
+        val (target, given) =
             try {
-                attachTarget(args.orEmpty())
+                attachTarget(args.orEmpty()) to givenLimits(args.orEmpty())
             } catch (e: IllegalArgumentException) {
                 return failed(e.message ?: "Invalid attach arguments")
             }
         if (!launched.compareAndSet(false, true)) {
             return failed("This debug session has already launched a program.")
         }
+        launchLimits = given
         val stopOnEntry = args?.get("stopOnEntry") == true
         console("Attaching to the program at ${target.host}:${target.port}...")
         return runs
@@ -744,7 +777,7 @@ class XtcDebugServer(
             installed = breakpoints.toMap()
             installedExceptions = exceptionStops
             installedFunctions = functionBreakpoints
-            DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry, installedFunctions)
+            DebugSetup(installed.values.toList(), installedExceptions, stopOnEntry, installedFunctions, launchLimits.onDemand)
         }
 
     /** A program the session attached to, or that the client's task runs for it, has taken the debugger's setup and runs. */
@@ -893,7 +926,8 @@ class XtcDebugServer(
 
     /**
      * DAP: variables. A scope's variables, or a variable's fields or elements, with `start` and `count` taking a part
-     * of them; none for a reference from before the program last resumed.
+     * of them; none for a reference from before the program last resumed. A lazy variable's read whose code throws,
+     * or runs past its limit, fails with the reason.
      */
     override fun variables(args: VariablesArguments): CompletableFuture<VariablesResponse> {
         if (!debuggedRunning()) {
@@ -906,7 +940,11 @@ class XtcDebugServer(
                 else -> ChildFilter.ALL
             }
         val hex = args.format?.hex ?: hexValues
-        return runs.variables(runId, args.variablesReference, hex, filter, args.start ?: 0, args.count ?: 0).thenApply { states ->
+        return runs.variables(runId, args.variablesReference, hex, filter, args.start ?: 0, args.count ?: 0).handle { states, failure ->
+            if (failure != null) {
+                val cause = (failure as? CompletionException)?.cause ?: failure
+                throw error(cause.message ?: cause.toString())
+            }
             VariablesResponse().apply {
                 variables =
                     states
@@ -1022,8 +1060,9 @@ class XtcDebugServer(
      * In a stopped frame, a watch, a hover or a line typed in the debug console evaluates an expression, such as
      * `point.x + 1` or `ints[i] > 0`, without running the program's code; what cannot be evaluated fails with the
      * reason. What that refuses in a console line, such as a call, runs as code on the stopped fiber, for at most
-     * [Limits.console], and answers with its value's `toString()`; `cancel` ends it sooner, with [CANCELLED]. Once
-     * code has run, `invalidated` tells a client that takes it that the variables may have changed.
+     * [Limits.console], the launch's own or the session's, and answers with its value's `toString()`; `cancel` ends it
+     * sooner, with [CANCELLED]. Once code has run, `invalidated` tells a client that takes it that the variables may
+     * have changed.
      * Without a frame, as while the program runs, a line typed in the debug console is the program's console input.
      */
     override fun evaluate(args: EvaluateArguments): CompletableFuture<EvaluateResponse> {
@@ -1041,7 +1080,7 @@ class XtcDebugServer(
                         .exceptionallyCompose {
                             evaluation.start {
                                 val program = evaluationRunsProgram
-                                runs.run(runId, frameId, args.expression, limits.console, program, hex).also { run ->
+                                runs.run(runId, frameId, args.expression, launchLimits.console, program, hex).also { run ->
                                     run.whenComplete { _, _ -> ran(program) }
                                 }
                             }
@@ -1496,6 +1535,36 @@ class XtcDebugServer(
         if (condition.isNullOrBlank()) return emptyList()
         val names = condition.split(',').map { it.trim() }
         return names.takeIf { it.all(EXCEPTION_TYPE::matches) }
+    }
+
+    /** The limits that a launch's or an attach's arguments set, each in place of [limits]' own. */
+    private fun givenLimits(args: Map<String, Any>) =
+        Limits(
+            console = timeLimit(args, EVALUATION_TIME_LIMIT, MAX_EVALUATION_TIME_LIMIT) ?: limits.console,
+            onDemand = timeLimit(args, LAZY_VALUE_TIME_LIMIT, MAX_LAZY_VALUE_TIME_LIMIT) ?: limits.onDemand,
+        )
+
+    /**
+     * The time limit that the argument [name] gives, in milliseconds, or null when not given; one shorter than
+     * [MIN_TIME_LIMIT] or longer than [maximum] is refused.
+     */
+    private fun timeLimit(
+        args: Map<String, Any>,
+        name: String,
+        maximum: Duration,
+    ): Duration? {
+        val given = args[name] ?: return null
+        // a client's JSON numbers arrive as doubles
+        val millis =
+            when (given) {
+                is Number -> given.toDouble()
+                is String -> given.trim().toDoubleOrNull()
+                else -> null
+            }?.takeIf { it.isFinite() }
+        return millis?.toLong()?.milliseconds?.takeIf { it in MIN_TIME_LIMIT..maximum }
+            ?: throw IllegalArgumentException(
+                "$name is a number of milliseconds from ${MIN_TIME_LIMIT.inWholeMilliseconds} to ${maximum.inWholeMilliseconds}",
+            )
     }
 
     private fun attachTarget(args: Map<String, Any>): AttachTarget {
