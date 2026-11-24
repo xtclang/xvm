@@ -2592,6 +2592,7 @@ private fun Tour.settings() {
         "The language server",
         "Settings | Languages & Frameworks | Ecstasy: the language service's features can each be turned off, per project.",
         feature = "Settings | Ecstasy | Language Service",
+        guide = GuideImage("intellij-language-service", "900x700+510+118"),
         focus = "popup",
         until = { "Show Ecstasy inlay hints" in popupText() },
         check = {
@@ -2672,6 +2673,7 @@ private fun Tour.settings() {
         "The server's runtime",
         "The server's runtime: the Java it runs on, its memory, and its logs, for when something goes wrong.",
         feature = "Settings | Ecstasy | Server Runtime and Logs",
+        guide = GuideImage("intellij-server-runtime", "900x700+510+118"),
         focus = "popup",
         settle = 3.seconds,
         until = { "Log history (days)" in popupText() },
