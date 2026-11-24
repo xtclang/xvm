@@ -2270,7 +2270,7 @@ change shows in them. In the order worth doing:
   consumes, and for a Gradle model's graph, which holds every module of its composite build. A change
   annotation was not used: VS Code shows one only in its refactor preview, which a `needsConfirmation`
   forces open on every rename, and LSP4IJ 0.30.1 shows none. Moves and plain renames came after, below.
-- [ ] K6b's gaps, found 2026-11-24 with it.
+- [x] K6b's gaps, found 2026-11-24 with it.
   - [x] Moves and plain renames, done on `lagergren/k6b-gaps`: a file move or rename through `xtc/renameFiles`,
     which both editors send, or `workspace/willRenameFiles` names what it changes that other modules name by
     its place, with the same rules for staying quiet: a moved file's type, which gets another qualified name, a
@@ -2280,9 +2280,15 @@ change shows in them. In the order worth doing:
     participant, and as a balloon in IntelliJ, whose Move dialog asks for the proposal. A root moved under its own
     name says nothing, as other modules name it by its name. `textDocument/rename`, which neither editor sends,
     says so as `xtc/rename` does.
-  - [ ] The tours' rename frames: the workspace graph is discovered, so the notification shows in the frames
-    after a rename or move (IntelliJ's Renamed everywhere and Rename a class, VS Code's Renamed everywhere):
-    look at them, and keep it out of the guide's images where it hides the code.
+  - [x] The tours' rename frames, done on `lagergren/k6b-gaps`: the tour's workspace graph is discovered, so the
+    message shows in the frame of each rename and move, as it should: IntelliJ's Renamed everywhere and Rename a
+    class, VS Code's Renamed everywhere, Rename a class, Rename a file and Move a file. VS Code's tour clears its
+    toasts as it restores the project, and its guide crops leave out the corner they show in. IntelliJ's balloons
+    stayed: the checks' renames and move left three, and "1 more notification", over the lower right of Extract and
+    inline, the frame of intellij-extract.png. The IntelliJ tour's dismiss, which its restore runs, now closes the
+    language server's messages too, and the frame is clean. guide.py on the section runs makes the six refactoring
+    images with no message in any; they differ from the guide's only as a run of one section leaves the tabs and
+    scroll, so the guide keeps its images from the full runs.
 - [ ] K3: Gradle's settings in embedded runs. Embedded builds and runs use the server's compiler and
   runtime, and run in an execution worker JVM (`RunWorkerProcess`); `xtcRun`'s module arguments, method
   and `jvmArgs` are never read. The XTC plugin's model export (`compiler-model.init.gradle`,

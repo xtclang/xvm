@@ -36,6 +36,8 @@ import com.intellij.ide.ui.MainMenuDisplayMode
 import com.intellij.ide.ui.UISettings
 import com.intellij.ide.ui.customization.CustomActionsSchema
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.notification.Notification
+import com.intellij.notification.NotificationsManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -1471,13 +1473,21 @@ object TourUi {
     @JvmStatic
     fun problemFile(path: String): Boolean = onEdt { WolfTheProblemSolver.getInstance(project()).isProblemFile(file(path)) }
 
-    /** Closes popups, hints and the completion lookup. */
+    /**
+     * Closes popups, hints, the completion lookup and the language server's messages, such as a rename's on modules
+     * outside the workspace, whose balloons would otherwise stay in the frames of the steps after theirs.
+     */
     @JvmStatic
     fun dismiss(): Unit =
         anyEdt {
             FileEditorManager.getInstance(project()).selectedTextEditor?.let { LookupManager.getActiveLookup(it)?.hideLookup(true) }
             JBPopupFactory.getInstance().getChildPopups(frame()).forEach { it.cancel() }
             HintManager.getInstance().hideAllHints()
+            NotificationsManager
+                .getNotificationsManager()
+                .getNotificationsOfType(Notification::class.java, project())
+                .filter { it.groupId == "LSP/window/showMessage" }
+                .forEach(Notification::expire)
         }
 
     /**
