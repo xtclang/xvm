@@ -640,7 +640,7 @@ recorded partial coverage.
 - [x] R9: the call stack and `exceptionInfo`'s stack trace without the embedding runner's frames
   (`TaskRegistry`, `runner.x`), seen in IntelliJ's hint with #1761; the call stack had them too, in both
   editors, under the program's (`ad8268260`, `48dabb5a5`; X304 and X307 check the whole stack).
-- [ ] R9 gap, a flake (found 2026-11-24 in K5a's validation): rarely, the call stack still ends
+- [x] R9 gap, a flake (found 2026-11-24 in K5a's validation, fixed the same day): rarely, the call stack still ended
   with the runner's `Container.invoke` at line 0, below the program's root frame.
   `EmbeddedExecutionTest`'s "a breakpoint stops a debugged program…" failed so once in three full
   runs, as `[(Stops.twice, 11), (Stops.run, 5), (Container.invoke, 0)]`. Cause: when the program
@@ -657,6 +657,15 @@ recorded partial coverage.
   container, not the method's module. Hold the chain of calling fibers (`traceCaller`) before
   `getStackFrameArray`, since the calls hold them only weakly, and end the program's stack at the
   first fiber of the host's container; `frames`, `stackTraceOf` and `isCaught` all need it.
+  It failed #693's CI too (run 45409340006 at `bdde618797`), as the runner's frame in
+  `SessionDebuggerTest`'s exception stack trace. Fixed so: `SessionDebugger.programStack` holds the
+  calling fibers, and `beforeHost` ends the stack at the first entry of a fiber in the host's
+  container, whatever the entry knows of its frame; `frames`, `stackTraceOf` and `isCaught` read
+  it, and `isHost(StackFrame)`, the module test, is gone. `Frame.getStackFrameArray` is unchanged.
+  `ProgramStackTest` checks the decision on a stack whose caller entry is the frameless
+  `Container.invoke`, as no hook holds the runner's fiber `Running` at the stop. The probe with all
+  cores busy, 400 stops each: 2 ended with the runner's frame before the fix, on `5fb46b1697`, and 0
+  after.
 - [x] R9: function breakpoints, which stop when a method is entered (2026-10-27; shared X328). One
   names a method, alone or after its class's or module's, as the call stack names it, such as
   `twice` or `Point.move`, and stops at the first line of each of the program's methods of that
