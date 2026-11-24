@@ -84,6 +84,7 @@ internal fun ParityScenarios.typeMoveCases() {
             val target = directory.resolve(data.string("destination"))
             refresh(target)
             with(driver) {
+                if (data.has("outsideUses")) dismissServerMessages()
                 withContext(OnDispatcher.EDT) {
                     utility(FileTreeOperations::class).move(
                         singleProject(),
@@ -166,6 +167,14 @@ internal fun ParityScenarios.typeMoveCases() {
                     }
                 }
                 verify(true)
+                // the server's message on modules outside the workspace, which it shows as it answers the move, and
+                // LSP4IJ as a notification
+                data["outsideUses"]?.let { value ->
+                    val message =
+                        "Ecstasy: ${value.asString}. To include them, use Add consumers from folders in " +
+                            "Settings | Languages & Frameworks | Ecstasy | Compiler."
+                    awaitUi("the message on modules outside the workspace", HANG_LIMIT) { message in serverMessages() }
+                }
                 listOf("\$Undo" to false, "\$Redo" to true).forEach { (action, moved) ->
                     awaitUi("project $action is available") {
                         withContext(OnDispatcher.EDT) {

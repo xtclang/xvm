@@ -5309,7 +5309,7 @@
       }
     },
     "X161": {
-      "title": "cross-package type Move rewrites aliases and closed consumers with companion resources and Undo/Redo",
+      "title": "cross-package type Move rewrites aliases and closed consumers with companion resources and Undo/Redo, and says that modules outside the workspace are not changed",
       "manual": [],
       "values": {
         "root": "App.x",
@@ -5373,7 +5373,8 @@
             "destination": "Consumer.x",
             "expected": "module Consumer { package app import App; app.util.Box make() = new app.util.Box(); Int read() = app.util.Box.number(); }"
           }
-        ]
+        ],
+        "outsideUses": "modules outside the workspace that use 'Box' are not changed by this move"
       },
       "intellij": {
         "coverage": "full",

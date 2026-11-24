@@ -2762,6 +2762,24 @@ class XdkAdapter
                 renameAsync(uri, line, column, newName).thenApply { it?.let(::XdkRenameProposal) }
             }
 
+        /**
+         * [renameAsync]'s proposal, which textDocument/rename answers with, and which also names what modules outside the
+         * workspace may use; as there, a rename that changes the configured source modules is refused.
+         */
+        fun plainRenameAsync(
+            uri: String,
+            line: Int,
+            column: Int,
+            newName: String,
+        ): CompletableFuture<XdkRenameProposal?> =
+            if (isProjectRename(uri, line, column)) {
+                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME), null) {
+                    it.plainRename(uri, line, column, newName)
+                }
+            } else {
+                renameAsync(uri, line, column, newName).mapCancellable { it?.let(::XdkRenameProposal) }
+            }
+
         /** Preserve automatic resource roots when replacing only the graph's binary inputs. */
         internal fun sourceModuleInputs(): List<XdkSourceModule> = synchronized(lifecycle) { project.buildOrder() }
 
@@ -2790,10 +2808,21 @@ class XdkAdapter
          * Compiler-proven edits for IDE file-tree operations; no filesystem or configuration writes.
          */
         fun renameFilesAsync(files: Map<String, String>): CompletableFuture<WorkspaceEdit?> =
+            plainRenameFilesAsync(files).mapCancellable { it?.edit }
+
+        /**
+         * workspace/willRenameFiles' proposal: the edit without the requested moves, which the client makes itself, and
+         * what the moves change that modules outside the workspace may use; none for moves that change the configured
+         * source modules, which the request can't carry.
+         */
+        fun plainRenameFilesAsync(files: Map<String, String>): CompletableFuture<XdkRenameProposal?> =
             renameFilesProposalAsync(files).mapCancellable { proposal ->
-                proposal?.takeIf { it.sourceModules == null }?.edit?.let { edit ->
+                proposal?.takeIf { it.sourceModules == null }?.let {
                     val originals = files.keys.mapNotNull(XdkSources::file).toSet()
-                    edit.copy(renames = edit.renames.filterKeys { XdkSources.file(it) !in originals })
+                    XdkRenameProposal(
+                        it.edit.copy(renames = it.edit.renames.filterKeys { from -> XdkSources.file(from) !in originals }),
+                        outsideUses = it.outsideUses,
+                    )
                 }
             }
 
