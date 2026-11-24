@@ -619,6 +619,25 @@
                         "default": true,
                         "description": "Compile an XDK library's sources as a whole when one of them is opened, so that Go to Definition, hover and references work for every name in it, also in method bodies. The compile takes about 10 seconds when a library's first source opens, and some hundred MB while one stays open; it needs a server heap of at least 1 GB (-Xmx1G). Off: an opened XDK source resolves only its own declarations, imports and type names. Restart to apply."
                     },
+                    "xtc.server.memoryPolicy": {
+                        "type": "string",
+                        "scope": "machine",
+                        "enum": ["default", "adaptive"],
+                        "enumDescriptions": [
+                            "The maximum heap of xtc.server.maxHeap, or the JVM's own: a quarter of this machine's memory.",
+                            "ZGC that starts small, grows as the work needs and gives memory back, using at most three quarters of this machine's memory."
+                        ],
+                        "default": "default",
+                        "description": "How the language server's JVM uses memory. An -Xmx or a collector in xtc.java.vmOptions overrides it. Restart to apply."
+                    },
+                    "xtc.server.maxHeap": {
+                        "type": "string",
+                        "scope": "machine",
+                        "default": "",
+                        "pattern": "^$|^[1-9][0-9]*[kKmMgG]$",
+                        "patternErrorMessage": "A size such as 4G or 512M, or empty for the JVM's own.",
+                        "description": "With the default memory policy: the language server's maximum heap, such as 4G. Empty: the JVM's own, a quarter of this machine's memory. Restart to apply."
+                    },
                     "xtc.server.replaceLibraries": {
                         "type": "boolean",
                         "scope": "machine",
