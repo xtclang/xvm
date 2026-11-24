@@ -599,6 +599,23 @@ recorded partial coverage.
 - [x] R9: the call stack and `exceptionInfo`'s stack trace without the embedding runner's frames
   (`TaskRegistry`, `runner.x`), seen in IntelliJ's hint with #1761; the call stack had them too, in both
   editors, under the program's (`ad8268260`, `48dabb5a5`; X304 and X307 check the whole stack).
+- [ ] R9 gap, a flake (found 2026-11-24 in K5a's validation): rarely, the call stack still ends
+  with the runner's `Container.invoke` at line 0, below the program's root frame.
+  `EmbeddedExecutionTest`'s "a breakpoint stops a debugged program…" failed so once in three full
+  runs, as `[(Stops.twice, 11), (Stops.run, 5), (Container.invoke, 0)]`. Cause: when the program
+  stops, `Frame.getStackFrameArray` crosses to the fiber that called the program, the runner's, and
+  finds the calling frame only if that fiber is `Waiting`. If it is `Running` at that instant, the
+  calling frame is not found, and the entry has only the calling method, `Container.invoke`, with no
+  frame. `SessionDebugger.isHost(StackFrame)` then judges the entry by its method's module, which is
+  `ecstasy.xtclang.org`, not the runner's, so the host's frame shows. A temporary probe, 200 debug
+  launches of `Stops` on one worker with the machine's ten cores kept busy, reproduced it 2 of 200
+  times, and its diagnostic showed the runner's fiber `Running` each time. It predates K5a: the same
+  probe on `origin/lagergren/errs` (`fac195cb82`, without K5a) also gave 2 of 200, with no
+  evaluation or time limit involved. Without the load it gave 0 of 60, and 0 of 12 right after a
+  console run that its time limit ended. Fix to make: judge a fiber boundary by the calling fiber's
+  container, not the method's module. Hold the chain of calling fibers (`traceCaller`) before
+  `getStackFrameArray`, since the calls hold them only weakly, and end the program's stack at the
+  first fiber of the host's container; `frames`, `stackTraceOf` and `isCaught` all need it.
 - [x] R9: function breakpoints, which stop when a method is entered (2026-10-27; shared X328). One
   names a method, alone or after its class's or module's, as the call stack names it, such as
   `twice` or `Point.move`, and stops at the first line of each of the program's methods of that
