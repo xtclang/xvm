@@ -330,7 +330,7 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   now bind through their validated expressions; their hover, definition and references are the same.
   The largest unproven groups left are `Element` (23), `this` in anonymous classes (17),
   generated methods such as `appendTo` (15), and `Key` and `Value`.
-- [ ] The 8 unbound occurrences left are code the compiler never compiles, found 2026-11-24:
+- [x] The 8 unbound occurrences left are code the compiler never compiles, found 2026-11-24:
   - 6 extends arguments, in `OrderedMapSet`, `JsonLogStoreBase`, `JsonProcessorStore` and
     `KeyCredential`. Each class's explicit constructors call the super constructor themselves, so no
     synthetic constructor uses the arguments, and the compiler never checks them:
@@ -341,9 +341,13 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     explicit constructor of the same signature overrides with its own.
 
   A rename of a declaration that such a name spells is refused, for example renaming
-  `OrderedMapSet.contents`. Fixing this means a compiler change on master: report every unused
-  contribution argument, and maybe an overridden header default, then drop the dead code from those
-  five library classes. Open: the user's decision.
+  `OrderedMapSet.contents`. Done 2026-11-24 as a compiler change on master, xvm #802: COMPILER-188
+  now reports every contribution argument that no synthetic constructor passes, and the new
+  COMPILER-210 reports a shorthand default that an explicit constructor replaces when the class
+  declares the property itself. The checks found two more dead sites, `PseudoRandom`'s `= 0` and the
+  native `OSFileChannel`'s `(rawChannel)`; all ten are removed. Mirrored to errs and #693.
+  XdkRenameUnprovableTest now proves its refusal on `CompileType.Element`, a binding the proof cannot
+  prove, since no compiling construct is known to leave a name unbound.
 - [x] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
   (`XdkLibrarySources`) still read the bundle, and may offer its older names. Done 2026-11-23/24
   (decided: index the workspace's): a source artifact of a library's name records its importable
