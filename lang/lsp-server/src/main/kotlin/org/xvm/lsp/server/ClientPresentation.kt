@@ -46,15 +46,18 @@ internal data class ClientPresentation(
         get() = actionLiterals || applyEdit
 
     /**
-     * What the client shows when an [operation], such as a rename, changes [name], which modules outside the workspace
+     * What the client shows when an [operation], such as a rename, changes [names], which modules outside the workspace
      * may use: they are left as they are, and the way to add them, so that the next one changes them too.
      */
     fun outsideUses(
         operation: String,
-        name: String,
-    ): String =
-        "Ecstasy: modules outside the workspace that use '$name' are not changed by this $operation. To include them, " +
+        names: List<String>,
+    ): String {
+        val quoted = names.map { "'$it'" }
+        val used = if (quoted.size > 1) "${quoted.dropLast(1).joinToString(", ")} and ${quoted.last()}" else quoted.single()
+        return "Ecstasy: modules outside the workspace that use $used are not changed by this $operation. To include them, " +
             "${addConsumers ?: "add them to ${CompilerConfiguration.SECTION}.sourceModules"}."
+    }
 
     fun hover(markdown: String): MarkupContent =
         if (markdownHover) {

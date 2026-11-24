@@ -1013,6 +1013,64 @@ class XdkRenameServerTest {
     }
 
     @Test
+    fun `a plain rename, a move and a file rename say modules outside the workspace are not changed`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("App.x").toFile().apply { writeText("module App { tools.Box make() = new tools.Box(); }") }
+        val box = directory.resolve("App/tools/Box.x").toFile().apply { parentFile.mkdirs() }
+        val text = "class Box { Int pick(Int value) = value; private Int hidden() = 1; }"
+        box.writeText(text)
+        directory.resolve("App/util/Marker.x").toFile().apply {
+            parentFile.mkdirs()
+            writeText("class Marker {}")
+        }
+        val uri = box.toURI().toString()
+        val client = mock(LanguageClient::class.java)
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(client)
+        try {
+            server
+                .initialize(
+                    workspace(directory.toFile()).apply {
+                        capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
+                        capabilities.workspace.fileOperations = FileOperationsWorkspaceCapabilities().apply { willRename = true }
+                    },
+                ).awaited()
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+
+            fun message(
+                operation: String,
+                name: String,
+            ) = MessageParams(
+                MessageType.Info,
+                "Ecstasy: modules outside the workspace that use '$name' are not changed by this $operation. To include them, " +
+                    "$ADD_CONSUMERS.",
+            )
+
+            // what each answer sent before it: the client has it as it applies the edit
+            fun notes(request: () -> Any?): List<MessageParams> {
+                val before = messages(client).size
+                requireNotNull(request())
+                return messages(client).drop(before)
+            }
+
+            fun renamed(anchor: String) = RenameParams(TextDocumentIdentifier(uri), Position(0, text.indexOf(anchor)), "chosen")
+            // textDocument/rename, which neither editor sends, says so as xtc/rename does
+            assertThat(notes { server.textDocumentService.rename(renamed("pick")).awaited() }).containsExactly(message("rename", "pick"))
+            assertThat(notes { server.textDocumentService.rename(renamed("hidden")).awaited() }).isEmpty()
+            val moved = directory.resolve("App/util/Box.x").toFile()
+            val move = RenameFilesParams(listOf(FileRename(uri, moved.toURI().toString())))
+            assertThat(notes { server.renameFilesProposal(move).awaited() }).containsExactly(message("move", "Box"))
+            assertThat(notes { server.willRenameFiles(move).awaited() }).containsExactly(message("move", "Box"))
+            val rename = RenameFilesParams(listOf(FileRename(uri, directory.resolve("App/tools/Crate.x").toUri().toString())))
+            assertThat(notes { server.renameFilesProposal(rename).awaited() }).containsExactly(message("rename", "Box"))
+            assertThat(root.readText()).contains("tools.Box")
+            assertThat(moved).doesNotExist()
+        } finally {
+            server.shutdown().awaited()
+        }
+    }
+
+    @Test
     fun `a public safe delete runs the command that says modules outside the workspace are not changed`() {
         directory = directory.toRealPath()
         val text = "module Delete { class Box { Int unused() { return 1; } private Int hidden() { return 2; } } }"

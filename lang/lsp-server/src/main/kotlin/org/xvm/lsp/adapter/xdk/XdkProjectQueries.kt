@@ -394,10 +394,17 @@ internal class XdkProjectQueries(
         line: Int,
         column: Int,
         name: String,
-    ): WorkspaceEdit? =
-        renameProposal(uri, line, column, name)?.let { proposal ->
+    ): WorkspaceEdit? = plainRename(uri, line, column, name)?.edit
+
+    /** [rename]'s proposal, which `textDocument/rename` answers with, and which also names its [XdkRenameProposal.outsideUses]. */
+    fun plainRename(
+        uri: String,
+        line: Int,
+        column: Int,
+        name: String,
+    ): XdkRenameProposal? =
+        renameProposal(uri, line, column, name)?.also { proposal ->
             if (proposal.sourceModules != null) throw RenameRefused(SOURCE_MODULES_RENAME)
-            proposal.edit
         }
 
     fun renameProposal(
@@ -615,7 +622,7 @@ internal class XdkProjectQueries(
                 renamedModule != null && !discoverImports && !project.sameConfiguration(graph)
             },
             renameScope(),
-            outsideUses(before, symbol.name, targets),
+            listOfNotNull(outsideUses(before, symbol.name, targets)),
         )
     }
 
@@ -967,6 +974,15 @@ internal class XdkProjectQueries(
             return null
         }
         val replacement = !discoverImports && !project.sameConfiguration(graph)
+        // a moved type, or a module root renamed as it moves, has another qualified name; a file renamed where it is
+        // renames its type, module or package, as its proposal says
+        val moved =
+            typeOperations.keys + rootOperations.filter { (from, to) -> from.nameWithoutExtension != to.nameWithoutExtension }.keys
+        val outside =
+            proposals.flatMap { it.outsideUses } +
+                moved.mapNotNull { file ->
+                    declaredIn(before, file)?.let { (name, identity) -> outsideUses(before, name, listOf(identity)) }
+                }
         return XdkRenameProposal(
             WorkspaceEdit(
                 edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
@@ -983,8 +999,24 @@ internal class XdkProjectQueries(
                 .toList()
                 .takeIf { replacement },
             renameScope(),
+            outside.distinct(),
         )
     }
+
+    /** The type, package or module that [file] declares under its own name, and its identity, as [facts] have it. */
+    private fun declaredIn(
+        facts: CompilerRenameFacts,
+        file: File,
+    ): Pair<String, ProofIdentity>? =
+        facts.models
+            .asSequence()
+            .flatMap { it.symbols.asSequence() }
+            .firstOrNull { symbol ->
+                symbol.declarationSource == file.path &&
+                    symbol.declaration != null &&
+                    symbol.name == file.nameWithoutExtension &&
+                    symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.MODULE)
+            }?.let { symbol -> facts.constants[symbol.id]?.let { symbol.name to it } }
 
     private fun renameScope(): XdkRenameScope =
         XdkRenameScope(

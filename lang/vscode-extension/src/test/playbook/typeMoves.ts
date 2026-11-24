@@ -53,7 +53,20 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
         await withPlaybookCleanup(async () => {
             const move = new vscode.WorkspaceEdit();
             for (const item of moves) move.renameFile(workspace.uri(item.from), workspace.uri(item.to), { overwrite: false });
-            assert.ok(await vscode.workspace.applyEdit(move, explorer ? undefined : { isRefactoring: true }));
+            // the server's message on modules outside the workspace, which it shows as it answers the move's participant,
+            // before VS Code applies the edit
+            const shown: string[] = [];
+            const observer = 'outsideUses' in data
+                ? client().onNotification('window/showMessage', (params: { message: string }) => { shown.push(params.message); })
+                : undefined;
+            try { assert.ok(await vscode.workspace.applyEdit(move, explorer ? undefined : { isRefactoring: true })); }
+            finally { observer?.dispose(); }
+            if ('outsideUses' in data) {
+                const message = `Ecstasy: ${data.outsideUses}. To include them, run Ecstasy: Configure Compiler Paths and choose Add consumers from folders.`;
+                const notes = shown.filter(note => note.includes('modules outside the workspace'));
+                // a proof that a change of the project overtook and that ran again says it again
+                assert.ok(notes.length > 0 && notes.every(note => note === message), JSON.stringify(notes));
+            }
 
             const verify = async (moved: boolean) => {
                 await eventually(async () => Promise.all(data.files.map(async file => {
@@ -96,6 +109,8 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
             }
         }, async () => {
             if (explorer) await refactoring.update('autoSave', undefined, vscode.ConfigurationTarget.Global);
+            // gives back the language client's own handler of the messages, which observing them took
+            if ('outsideUses' in data) await vscode.commands.executeCommand('xtc.restartServer');
         });
     }));
 }

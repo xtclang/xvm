@@ -15,15 +15,17 @@ class XdkRenameProposal
         sourceModules: List<XdkSourceModule>? = null,
         previousSourceModules: List<XdkSourceModule>? = null,
         val scope: XdkRenameScope? = null,
-        /**
-         * The renamed declaration's name when modules outside the workspace may use it and the rename leaves them as
-         * they are: other modules can name it, and the graph holds no consumer of its module from outside the
-         * workspace.
-         */
-        val outsideUses: String? = null,
+        outsideUses: List<String> = emptyList(),
     ) {
         val sourceModules: List<XdkSourceModule>? = sourceModules?.let(::immutableList)
         val previousSourceModules: List<XdkSourceModule>? = previousSourceModules?.let(::immutableList)
+
+        /**
+         * The names of the renamed or moved declarations that modules outside the workspace may use, which the edit
+         * leaves as they are: other modules can name them, and the graph holds no consumer of their module from
+         * outside the workspace. Empty when it changes nothing such.
+         */
+        val outsideUses: List<String> = immutableList(outsideUses)
     }
 
 /**

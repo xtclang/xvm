@@ -78,6 +78,56 @@ class XdkTypeMoveTest {
     }
 
     @Test
+    fun `a moved or renamed public type names what modules outside the workspace may use`() {
+        write("App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("App/tools/Box.x", "class Box {}")
+        write("App/util/Marker.x", "class Marker {}")
+        session { adapter ->
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
+            // a move gives the type another qualified name, and renaming its file renames it
+            assertThat(requireNotNull(adapter.renameFilesProposalAsync(request()).awaited()).outsideUses).containsExactly("Box")
+            val renamed = mapOf(uri("App/tools/Box.x") to uri("App/tools/Crate.x"))
+            assertThat(requireNotNull(adapter.renameFilesProposalAsync(renamed).awaited()).outsideUses).containsExactly("Box")
+            assertThat(read("App.x")).contains("tools.Box")
+        }
+    }
+
+    @Test
+    fun `a moved type whose module a configured module outside the workspace uses says nothing more`() {
+        write("lib/App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("lib/App/tools/Box.x", "class Box {}")
+        write("lib/App/util/Marker.x", "class Marker {}")
+        write("other/Consumer.x", "module Consumer { package app import App; app.tools.Box make() = new app.tools.Box(); }")
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.resolve("lib").toString()))
+            val app = XdkSourceModule("App", uri("lib/App.x"))
+            val consumer = XdkSourceModule("Consumer", uri("other/Consumer.x"), setOf("App"))
+            val requested = mapOf(uri("lib/App/tools/Box.x") to uri("lib/App/util/Box.x"))
+            adapter.replaceSourceModules(listOf(app))
+            assertThat(requireNotNull(adapter.renameFilesProposalAsync(requested).awaited()).outsideUses).containsExactly("Box")
+            adapter.replaceSourceModules(listOf(app, consumer))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).awaited())
+            assertThat(proposal.edit.changes.keys).contains(uri("other/Consumer.x"))
+            assertThat(proposal.outsideUses).isEmpty()
+        }
+    }
+
+    @Test
+    fun `a module root moved under its own name changes nothing that other modules name`() {
+        write("App.x", "module App { Int value() = 1; }")
+        write("Use.x", "module Use { package app import App; Int read() = app.value(); }")
+        directory.resolve("moved").toFile().mkdirs()
+        session { adapter ->
+            assertThat(adapter.workspaceDiagnosticsAsync().awaited()).allMatch { it.success }
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(mapOf(uri("App.x") to uri("moved/App.x"))).awaited())
+            assertThat(proposal.edit.renames).containsEntry(uri("App.x"), uri("moved/App.x"))
+            assertThat(proposal.outsideUses).isEmpty()
+        }
+    }
+
+    @Test
     fun `target collisions refuse the entire move`() {
         write("App.x", "module App { tools.Box make() = new tools.Box(); }")
         write("App/tools/Box.x", "class Box {}")
