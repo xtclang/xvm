@@ -78,6 +78,35 @@ class XdkOccurrenceBindingTest {
         assertThat(snapshot("Placeholders", source).occurrences).noneMatch { it.name == "_" }
     }
 
+    @Test
+    fun `a name of a method's return values declares the value, which hover shows and a rename changes`() {
+        val source =
+            """
+            module Returns {
+                (Int /*count*/count, String /*label*/label) pair() = (1, "one");
+                conditional (Int /*index*/index, String /*text*/text) find() {
+                    return True, 0, "zero";
+                }
+                Int use() {
+                    (Int number, String name) = pair();
+                    return number + name.size;
+                }
+            }
+            """.trimIndent()
+        withSource("Returns", source) { adapter, uri ->
+            val label = range(source, "label", "label")
+            val at = position(source, "label")
+            assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactly(label)
+            assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactly(label)
+            assertThat(adapter.getHoverInfo(uri, at.line, at.column)).contains("String label")
+            // a conditional method's structure holds its Boolean before the written values
+            val text = position(source, "text")
+            assertThat(adapter.getHoverInfo(uri, text.line, text.column)).contains("String text")
+            val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "title")) { "No rename of label" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("/*label*/label", "/*label*/title"))
+        }
+    }
+
     private fun snapshot(
         name: String,
         text: String,

@@ -232,6 +232,17 @@ public class MethodDeclarationStatement
         return name;
     }
 
+    /**
+     * The written return values, each with its type and its name, if it has one. The method's
+     * structure holds them in the same order, after the Boolean of a conditional return.
+     *
+     * @return the written return values, or null when the declaration writes none, as for a
+     *         constructor or a property's shorthand method
+     */
+    public List<Parameter> getReturns() {
+        return returns;
+    }
+
     @Override
     public Access getDefaultAccess() {
         // methods are *not* taking the parent's access by default
