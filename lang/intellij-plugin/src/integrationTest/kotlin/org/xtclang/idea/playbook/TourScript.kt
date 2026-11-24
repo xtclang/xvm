@@ -45,7 +45,10 @@
  *                                                   a new without arguments in the module
  *   codeAction/resolve                              steps Create a method, Extracted to a local, Extract a method, Generate a doc
  *                                                   comment (through xtc.resolveCodeAction, below)
- *   executeCommandProvider: xtc.applyCodeAction     not offered to IntelliJ, whose code actions are literals
+ *   executeCommandProvider: xtc.outsideUses         not by the tour, whose safe delete is a private member's: a public member's
+ *                                                   runs it after its edit to show the message on modules outside the
+ *                                                   workspace (playbook X334); xtc.applyCodeAction is not offered to
+ *                                                   IntelliJ, whose code actions are literals
  *   documentFormattingProvider                      step Reformat code; check Actions on Save reformat a file as it is saved
  *   documentRangeFormattingProvider                 check Reformat Code on a selection formats only the selection; several ranges:
  *                                                   playbook X132
@@ -230,7 +233,7 @@
  *     Errors
  *   Neither: didChangeWorkspaceFolders, which both playbooks cover (WorkspaceFolders, --multi-root); the debug adapter's
  *     cancel, which LSP4IJ never sends and VS Code only for a request it abandons (playbook X314); executeCommand,
- *     advertised to neither, whose code actions are literals
+ *     which both send only for a public member's safe delete (playbook X334)
  */
 
 package org.xtclang.idea.playbook

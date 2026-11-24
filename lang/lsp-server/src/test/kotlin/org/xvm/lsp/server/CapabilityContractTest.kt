@@ -47,11 +47,13 @@ class CapabilityContractTest {
         val adapter = XdkAdapter()
         XtcLanguageServer(adapter).use { server ->
             val capabilities = server.initialize(editorInitializeParams()).join().capabilities
-            // This client has not negotiated versioned edits or pull diagnostics.
+            // This client has not negotiated versioned edits or pull diagnostics. It takes code actions as literals,
+            // and runs the command of a safe delete's message on modules outside the workspace after its edit.
             assertThat(providers(capabilities))
                 .containsExactlyInAnyOrderElementsOf(
-                    (adapter.capabilities - AdapterCapability.RENAME).map(::provider),
+                    (adapter.capabilities - AdapterCapability.RENAME).map(::provider) + "executeCommandProvider",
                 )
+            assertThat(capabilities.executeCommandProvider.commands).containsExactly(ClientPresentation.OUTSIDE_USES)
             assertThat(capabilities.experimental).isEqualTo(mapOf("xtcRenameProposal" to 1, "xtcFileMoveProposal" to 1))
             assertThat(capabilities.workspace.workspaceFolders.supported).isTrue()
             assertThat(capabilities.workspace.fileOperations).hasAllNullFieldsOrProperties()

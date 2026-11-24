@@ -48,6 +48,8 @@ internal class XdkProjectQueries(
     private val actionCache: XdkCodeActionCache = XdkCodeActionCache(),
     // The folders discovery walks; a root moved outside them would leave the discovered graph.
     private val discoveryFolders: List<File> = emptyList(),
+    // Whether the graph is a Gradle model's own, which holds every module of its composite build.
+    private val composite: Boolean = false,
 ) {
     private val captured =
         project.buildOrder().associateWith { module ->
@@ -576,8 +578,49 @@ internal class XdkProjectQueries(
                 renamedModule != null && !discoverImports && !project.sameConfiguration(graph)
             },
             renameScope(),
+            outsideUses(before, symbol.name, targets),
         )
     }
+
+    /**
+     * [name], when modules outside the workspace may use one of the [changed] declarations without the server knowing
+     * of them: other modules can name it, and no module outside the workspace folders consumes its module, directly or
+     * through others, in a graph that is not a Gradle model's, which holds every module of its composite build. Null
+     * when every module that can use them is in the graph, as a rename or safe delete then covers them all.
+     */
+    private fun outsideUses(
+        facts: CompilerRenameFacts,
+        name: String,
+        changed: Collection<ProofIdentity>,
+    ): String? {
+        if (composite) return null
+        val folders = discoveryFolders.map { it.toPath() }
+        val outside =
+            project.modules.values
+                .filter { module -> folders.none(module.root.canonicalFile.toPath()::startsWith) }
+                .mapTo(hashSetOf()) { it.uri }
+
+        // whether no module outside the workspace consumes the module of [source]
+        fun unconsumed(source: String) =
+            project.scope(File(source))?.let { scope -> project.affected(scope).none { it != scope && it in outside } } == true
+        return name.takeIf { changed.mapNotNull { exposedSource(facts, it) }.any(::unconsumed) }
+    }
+
+    /** The source of [identity]'s declaration, when modules other than its own can name it. */
+    private fun exposedSource(
+        facts: CompilerRenameFacts,
+        identity: ProofIdentity,
+    ): String? =
+        when (identity) {
+            is ProofIdentity.Source -> identity.location.sourceName?.takeIf { identity.location in facts.exposed }
+
+            is ProofIdentity.Parameter -> exposedSource(facts, identity.method)
+
+            // an implicit package, which no file declares, has no modifier to hide it
+            is ProofIdentity.Directory -> identity.path
+
+            else -> null
+        }
 
     /** Complete transaction for hosts that persist the graph with the requested resource moves. */
     fun renameFilesProposal(requested: Map<String, String>): XdkRenameProposal? {
@@ -1249,6 +1292,7 @@ internal class XdkProjectQueries(
                             },
                             CodeAction.CodeActionKind.REFACTOR_REWRITE,
                             edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            outsideUses = outsideUses(before, candidate.name, listOf(candidate.identity)),
                         )
                     }
                 }

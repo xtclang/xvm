@@ -36,9 +36,25 @@ internal data class ClientPresentation(
      * requests without only fill, as its initialization option `xtcCodeActions.quickFixesPerDiagnostic` says.
      */
     val quickFixesPerDiagnostic: Boolean = false,
+    /**
+     * How the client's user adds the modules of other folders that use the workspace's, as its initialization option
+     * `xtcAddConsumers` says, such as "use Add consumers from folders in ..."; null when it says nothing.
+     */
+    val addConsumers: String? = null,
 ) {
     val codeActions: Boolean
         get() = actionLiterals || applyEdit
+
+    /**
+     * What the client shows when an [operation], such as a rename, changes [name], which modules outside the workspace
+     * may use: they are left as they are, and the way to add them, so that the next one changes them too.
+     */
+    fun outsideUses(
+        operation: String,
+        name: String,
+    ): String =
+        "Ecstasy: modules outside the workspace that use '$name' are not changed by this $operation. To include them, " +
+            "${addConsumers ?: "add them to ${CompilerConfiguration.SECTION}.sourceModules"}."
 
     fun hover(markdown: String): MarkupContent =
         if (markdownHover) {
@@ -76,6 +92,9 @@ internal data class ClientPresentation(
 
     companion object {
         const val APPLY_CODE_ACTION = "xtc.applyCodeAction"
+
+        /** The command a code action runs after its edit, to show its [outsideUses] message, its one argument. */
+        const val OUTSIDE_USES = "xtc.outsideUses"
         private val lineBreaks = Regex("\\r\\n|\\r|\\n")
         private val legacyCompletionKinds =
             CompletionItemKind.entries
@@ -153,6 +172,7 @@ internal data class ClientPresentation(
                         LspJsonOptions.lookup(params.initializationOptions, "xtcCodeActions"),
                         "quickFixesPerDiagnostic",
                     ) == true,
+                addConsumers = LspJsonOptions.string(params.initializationOptions, "xtcAddConsumers"),
             )
         }
 

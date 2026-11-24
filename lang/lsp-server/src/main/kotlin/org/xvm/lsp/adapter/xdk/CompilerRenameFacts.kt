@@ -1,10 +1,14 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ClassStructure
+import org.xvm.asm.Component
+import org.xvm.asm.Component.Format
 import org.xvm.asm.Constant
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
+import org.xvm.asm.ModuleStructure
+import org.xvm.asm.MultiMethodStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PackageConstant
@@ -182,6 +186,11 @@ internal class CompilerRenameFacts(
      * name none of a module's are as true against another artifact of it with the same [XdkDependency.api].
      */
     val binaryModules: Set<String> = emptySet(),
+    /**
+     * The source declarations that modules other than their own can name: those that the compiler makes public, or
+     * protected in a class that another module can extend, held by public classes and packages, not by a method.
+     */
+    val exposed: Set<SemanticModel.SourceLocation> = emptySet(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -227,6 +236,7 @@ internal class CompilerRenameFacts(
                 attempts.flatMapTo(linkedSetOf()) { it.constantProperties },
                 attempts.flatMap { it.packageImports.entries }.associate { it.toPair() },
                 attempts.flatMapTo(sortedSetOf()) { it.binaryModules },
+                attempts.flatMapTo(linkedSetOf()) { it.exposed },
             )
         }
     }
@@ -614,7 +624,38 @@ internal fun captureRenameFacts(
                     )
                 },
             ),
+        exposed = declarations.filterKeys { it is IdentityConstant && exposed(it) }.values.toSet(),
         // last, once every identity above is made
         binaryModules = binaryModules.toSortedSet(),
     )
+}
+
+/**
+ * The formats that a class of another module can extend or implement, and so name the protected members of: a module, a
+ * package or an enum has no subclass in another module.
+ */
+private val extendable =
+    setOf(Format.INTERFACE, Format.CLASS, Format.CONST, Format.ANNOTATION, Format.MIXIN, Format.SERVICE)
+
+/**
+ * Whether modules other than its own can name [identity], as the compiler's access says: it and each class or package
+ * that holds it up to its module is public, or protected in a class that another module can extend, and no method
+ * holds it, as one holds its lambdas and local classes.
+ */
+private fun exposed(identity: IdentityConstant): Boolean {
+    val declared = identity.component ?: return false
+
+    // the class, package or module that holds [component], past the multimethod that groups a class's methods
+    fun holder(component: Component) = generateSequence(component.parent) { it.parent }.firstOrNull { it !is MultiMethodStructure }
+    return generateSequence(declared) { it.parent }
+        .takeWhile { it !is ModuleStructure }
+        .filterNot { it is MultiMethodStructure }
+        .all { component ->
+            (component === declared || component !is MethodStructure) &&
+                when (component.access) {
+                    Access.PUBLIC -> true
+                    Access.PROTECTED -> holder(component)?.format in extendable
+                    else -> false
+                }
+        }
 }

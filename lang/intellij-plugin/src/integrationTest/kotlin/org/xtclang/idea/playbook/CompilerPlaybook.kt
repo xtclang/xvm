@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.JsonObject
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.impl.DriverCallException
 import com.intellij.driver.client.service
@@ -1758,28 +1759,51 @@ class CompilerPlaybook(
                     val initiallyBroken = data.values["initiallyValid"]?.asBoolean == false
                     callerDiagnostics(initiallyBroken)
                     val at = data.values["selectionOffset"]?.asInt ?: original.indexOf(data.text("selected"))
-                    if (data.values["refused"]?.asBoolean == true) {
+
+                    fun actions(): List<JsonObject> {
                         fun position(offset: Int): Map<String, Int> {
                             val prefix = original.take(offset)
                             return mapOf("line" to prefix.count { it == '\n' }, "character" to (offset - prefix.lastIndexOf('\n') - 1))
                         }
-                        val actions =
-                            ClientProtocol(this)
-                                .query(
-                                    "textDocument/codeAction",
-                                    mapOf(
-                                        "textDocument" to
-                                            mapOf(
-                                                "uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString(),
-                                            ),
-                                        "range" to mapOf("start" to position(at), "end" to position(at + data.text("selected").length)),
-                                        "context" to mapOf("diagnostics" to emptyList<Any>()),
-                                    ),
-                                ).asJsonArray
-                        check(actions.none { it.asJsonObject["title"].asString == data.text("title") })
+                        return ClientProtocol(this)
+                            .query(
+                                "textDocument/codeAction",
+                                mapOf(
+                                    "textDocument" to
+                                        mapOf(
+                                            "uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString(),
+                                        ),
+                                    "range" to mapOf("start" to position(at), "end" to position(at + data.text("selected").length)),
+                                    "context" to mapOf("diagnostics" to emptyList<Any>()),
+                                ),
+                            ).asJsonArray
+                            .map { it.asJsonObject }
+                    }
+                    if (data.values["refused"]?.asBoolean == true) {
+                        check(actions().none { it["title"].asString == data.text("title") })
                         check(editor.text == original)
                         return@discovered
                     }
+                    // the server's message on modules outside the workspace, which the action's command shows after its
+                    // edit: for a public member, how to add them as this editor does; for a private one, no command
+                    val outsideUses =
+                        data.values["outsideUses"]?.let { value ->
+                            val command = actions().single { it["title"].asString == data.text("title") }["command"]
+                            if (value.isJsonNull) {
+                                check(command == null || command.isJsonNull) { "A private member's safe delete has no message: $command" }
+                                null
+                            } else {
+                                val message =
+                                    "Ecstasy: ${value.asString}. To include them, use Add consumers from folders in " +
+                                        "Settings | Languages & Frameworks | Ecstasy | Compiler."
+                                check(command.asJsonObject.string("command") == "xtc.outsideUses") { "The message's command: $command" }
+                                check(command.asJsonObject["arguments"].asJsonArray.map { it.asString } == listOf(message)) {
+                                    "The message: $command"
+                                }
+                                message
+                            }
+                        }
+                    if (outsideUses != null) dismissServerMessages()
                     // Diagnostic quick fixes use a caret at the error; expression refactorings
                     // use the complete selection specified by the shared scenario.
                     val selectionEnd = if (data.values["initiallyValid"]?.asBoolean == false) at else at + data.text("selected").length
@@ -1787,6 +1811,10 @@ class CompilerPlaybook(
                     val destination = if (companion) open(data.text("destinationFile")) else editor
                     val destinationOriginal = if (companion) data.text("destinationSource") else original
                     awaitUi("local refactoring matches shared source", HANG_LIMIT) { destination.text == data.text("expected") }
+                    outsideUses?.let { message ->
+                        // LSP4IJ runs the command after the edit, and shows the server's message as a notification
+                        awaitUi("the message on modules outside the workspace", HANG_LIMIT) { message in serverMessages() }
+                    }
                     additionalFiles(true)
                     callerDiagnostics(false)
                     val history =

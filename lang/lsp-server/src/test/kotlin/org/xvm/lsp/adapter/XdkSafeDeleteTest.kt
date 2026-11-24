@@ -7,7 +7,9 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkRename
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaited
 import java.io.File
 import java.nio.file.Path
@@ -29,7 +31,8 @@ class XdkSafeDeleteTest {
         ],
     )
     fun `unused private methods and constants leave every surviving binding intact`(member: String) {
-        query(member, "", expected = true)
+        // nothing outside its class can use it, so nothing says modules outside the workspace may
+        query(member, "", expected = true, outsideUses = null)
     }
 
     @ParameterizedTest
@@ -59,7 +62,54 @@ class XdkSafeDeleteTest {
         ],
     )
     fun `unused public and protected members are removed, naming the modules that were checked`(member: String) {
-        query(member, "", expected = true, title = "Safely delete member 'unused', unused in Delete")
+        // a module outside the workspace may use it, and the graph has none of them
+        query(member, "", expected = true, title = "Safely delete member 'unused', unused in Delete", outsideUses = "unused")
+    }
+
+    @Test
+    fun `a public member's module with a consumer configured from outside the workspace says nothing more`() {
+        CompilerTestSupport.configure()
+        val text = "module Delete { class Box { Int unused() { return 1; } Int kept() { return 2; } } }"
+        val library = directory.resolve("library/Delete.x").toFile().apply { parentFile.mkdirs() }
+        val consumer = directory.resolve("app/App.x").toFile().apply { parentFile.mkdirs() }
+        library.writeText(text)
+        consumer.writeText("module App { package lib import Delete; Int run(lib.Box box) = box.kept(); }")
+        val uri = library.canonicalFile.toURI().toString()
+
+        fun deletion(modules: List<XdkSourceModule>): CodeAction =
+            XdkAdapter().use { adapter ->
+                adapter.initializeWorkspace(listOf(library.parent))
+                adapter.replaceSourceModules(modules)
+                assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+                val at = XdkRename.position(text, text.indexOf("unused"))
+                adapter.getCodeActions(uri, Range(at, at), emptyList()).single { it.title.startsWith("Safely delete") }
+            }
+        val delete = XdkSourceModule("Delete", uri)
+        assertThat(deletion(listOf(delete)).outsideUses).isEqualTo("unused")
+        val app = XdkSourceModule("App", consumer.canonicalFile.toURI().toString(), setOf("Delete"))
+        assertThat(deletion(listOf(delete, app)).outsideUses).isNull()
+    }
+
+    @Test
+    fun `a public member of a Gradle model's graph, which holds its whole composite build, says nothing more`() {
+        CompilerTestSupport.configure()
+        val text = "module Delete { class Box { Int unused() { return 1; } } }"
+        val file =
+            directory
+                .resolve("Delete.x")
+                .toFile()
+                .canonicalFile
+                .apply { writeText(text) }
+        val uri = file.toURI().toString()
+        val action =
+            XdkAdapter().use { adapter ->
+                adapter.initializeWorkspace(listOf(directory.toString()))
+                adapter.replaceBuildInputs(XdkBuildModel.Inputs(listOf(XdkSourceModule("Delete", uri)), emptyList(), composite = true))
+                assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+                val at = XdkRename.position(text, text.indexOf("unused"))
+                adapter.getCodeActions(uri, Range(at, at), emptyList()).single { it.title.startsWith("Safely delete") }
+            }
+        assertThat(action.outsideUses).isNull()
     }
 
     @ParameterizedTest
@@ -108,6 +158,8 @@ class XdkSafeDeleteTest {
         assertThat(compiled).isEqualTo(CodeActionCompiles(CARD_GAME, CARD_GAME, cachedBase = false))
         assertThat(actions).hasSize(1)
         assertThat(actions.single().title).startsWith("Safely delete member 'display', unused in ")
+        // the workspace's modules are all that it checked; others elsewhere may call it
+        assertThat(actions.single().outsideUses).isEqualTo("display")
         val edit = requireNotNull(actions.single().edit)
         val change = edit.changes.getValue(hand.toURI().toString()).single()
 
@@ -181,6 +233,7 @@ class XdkSafeDeleteTest {
         consumer: String,
         expected: Boolean,
         title: String? = null,
+        outsideUses: String? = null,
     ) {
         CompilerTestSupport.configure()
         val marked =
@@ -210,6 +263,7 @@ class XdkSafeDeleteTest {
             } else {
                 assertThat(actions).hasSize(1)
                 title?.let { assertThat(actions.single().title).isEqualTo(it) }
+                assertThat(actions.single().outsideUses).isEqualTo(outsideUses)
                 val edit = requireNotNull(actions.single().edit)
                 assertThat(edit.versioned).isTrue()
                 val change = edit.changes.getValue(uri).single()
