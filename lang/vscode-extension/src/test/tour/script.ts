@@ -347,6 +347,7 @@ async function editingCode(tour: Tour): Promise<void> {
     const deal = await lineOf(eights, 'deck.deal(one.hand');
     await tour.shot({
         title: 'Inlay hints',
+        guide: { name: 'vscode-inlay-hints', crop: '1140x720+360+180' },
         caption: "Hints name a call's parameters where its arguments don't say what they are: deal's that and numCards.",
         feature: 'textDocument/inlayHint',
         focus: `line:${deal}`,
@@ -416,6 +417,7 @@ async function editingCode(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Member completion',
+        guide: { name: 'vscode-completion', crop: '1140x720+360+180' },
         caption: "After a dot, completion lists the members of the expression's type, as the compiler resolves it, with their types.",
         feature: 'textDocument/completion',
         focus: 'suggest',
@@ -867,6 +869,7 @@ async function navigation(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Call hierarchy',
+        guide: { name: 'vscode-call-hierarchy', crop: '1555x860+0+40' },
         caption: 'Show Call Hierarchy lists who calls a method, and who calls them: cardMatches is called by the player, both strategies and a test.',
         feature: 'callHierarchy/incomingCalls',
         focus: 'sidebar',
@@ -1006,6 +1009,7 @@ async function diagnostics(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: "The error's message",
+        guide: { name: 'vscode-error-message', crop: '1140x720+360+180' },
         caption: "F8 goes to the next problem and shows the compiler's message and its code under the line.",
         feature: 'editor.action.marker.next',
         focus: 'css:.marker-widget',
@@ -1053,6 +1057,7 @@ async function diagnostics(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Quick fixes',
+        guide: { name: 'vscode-quick-fix', crop: '1140x720+360+180' },
         caption: "Ctrl+. on an error offers its fixes: announce doesn't exist yet, so the server offers to create it.",
         feature: 'textDocument/codeAction',
         focus: 'menu',
@@ -1577,6 +1582,7 @@ async function commands(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Configure compiler paths',
+        guide: { name: 'vscode-configure-compiler-paths', crop: '1080x240+620+0' },
         caption: 'Ecstasy: Configure Compiler Paths edits what the compiler builds: explicit modules, consumers from other folders, or the Gradle model.',
         feature: 'xtc.configureCompilerPaths',
         focus: 'quickInput',
@@ -1616,6 +1622,7 @@ async function commands(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Switch the language adapter',
+        guide: { name: 'vscode-switch-adapter', crop: '1080x240+620+0' },
         caption: "Ctrl+Alt+X A, or a click on Ecstasy in the status bar, switches the server's adapter: the compiler's, or Tree-sitter's syntax only.",
         feature: 'xtc.selectLanguageAdapter',
         focus: 'quickInput',
@@ -1671,6 +1678,7 @@ async function commands(tour: Tour): Promise<void> {
     const created = path.join(path.dirname(tour.project), 'hello');
     await tour.shot({
         title: 'Create a project',
+        guide: { name: 'vscode-create-project', crop: '1555x860+355+40' },
         caption: 'Ecstasy: Create New Project asks for a name, a kind and a folder, and runs xtc init in the terminal: a Gradle project, ready to build.',
         feature: 'xtc.createProject',
         focus: 'panel',
@@ -1747,6 +1755,7 @@ async function building(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'A failed build',
+        guide: { name: 'vscode-build-failed', crop: '1555x860+355+40' },
         caption: "A build's errors are listed with their files and lines, each a click away from its code.",
         feature: 'xtc/build',
         focus: 'panel',
@@ -2033,6 +2042,7 @@ async function debugging(tour: Tour): Promise<void> {
     const adding = await lineOf(deck, 'addCard(new Card(suit, rank));');
     await tour.shot({
         title: 'A conditional breakpoint',
+        guide: { name: 'vscode-conditional-breakpoint', crop: '1440x860+0+40' },
         caption: "A breakpoint can have a condition: this one, in Deck's constructor, stops only when the deck adds the Queen of Spades.",
         feature: 'setBreakpoints',
         focus: 'css:.breakpoint-widget',
@@ -2204,6 +2214,7 @@ async function debugging(tour: Tour): Promise<void> {
     });
     await tour.shot({
         title: 'Step into a target',
+        guide: { name: 'vscode-step-into-target', crop: '1440x900+0+0' },
         caption: 'Step Into Target, on a line with several calls, asks which one to step into: deal, or size.',
         feature: 'stepInTargets',
         needs: [NEEDS.paused],
