@@ -24,44 +24,73 @@ export function hasGradleBuild(folder: vscode.WorkspaceFolder | undefined): bool
 
 /**
  * The bundled libraries that the language server says the workspace's own modules replace, as the XVM repository's
- * replace them all. While there are any, builds and runs use Gradle: the server builds and runs only with the bundled
- * XDK. Each server says it again.
+ * replace them all, and the workspace folders whose modules are built against them, as file URIs; none means every
+ * folder. In those folders builds and runs use Gradle: the server builds and runs only with the bundled XDK. A
+ * replacement does not reach the other folders of the window. Each server says it again.
  */
-let replaced: readonly string[] = [];
+export interface ReplacedLibraries {
+    readonly libraries: readonly string[];
+    readonly folders: readonly string[];
+}
+
+let replaced: ReplacedLibraries = { libraries: [], folders: [] };
 /** Whether the user was told that the replaced libraries make builds use Gradle, once per session. */
 let told = false;
-const replacedChanges = new vscode.EventEmitter<readonly string[]>();
+const replacedChanges = new vscode.EventEmitter<ReplacedLibraries>();
 
-/** Fires when the libraries that the workspace's own modules replace change. */
+/** Fires when the libraries that the workspace's own modules replace, or the folders they reach, change. */
 export const onDidChangeReplacedLibraries = replacedChanges.event;
 
-export function replacedLibraries(): readonly string[] {
-    return replaced;
+/** The libraries replaced for [folder]'s modules: none when the replacing modules are in other folders. */
+export function replacedLibraries(folder: vscode.WorkspaceFolder | undefined): readonly string[] {
+    return replacedIn(folder?.uri.fsPath, replaced);
+}
+
+/**
+ * The libraries of [scope] replaced for the folder at [folder], a file system path: all of them when [scope] names
+ * no folders or [folder] is unknown, else those only when one of its folders is [folder].
+ */
+export function replacedIn(folder: string | undefined, scope: ReplacedLibraries): readonly string[] {
+    if (scope.folders.length === 0 || folder === undefined) return scope.libraries;
+    const own = realPath(folder);
+    return scope.folders.some(uri => realPath(vscode.Uri.parse(uri).fsPath) === own) ? scope.libraries : [];
+}
+
+// the server's folders are canonical, as /private/tmp for macOS's /tmp
+function realPath(file: string): string {
+    const trimmed = file.replace(/[\\/]+$/, '');
+    try {
+        return fs.realpathSync.native(trimmed);
+    } catch {
+        return trimmed;
+    }
 }
 
 /** A stopped language server's libraries are no longer replaced; the next server says again what it replaces. */
 export function forgetReplacedLibraries(): void {
-    replace([]);
+    replace({ libraries: [], folders: [] });
 }
 
-function replace(libraries: readonly string[]): void {
-    replaced = libraries;
-    replacedChanges.fire(libraries);
-    if (libraries.length > 0 && !told) {
+function replace(scope: ReplacedLibraries): void {
+    replaced = scope;
+    replacedChanges.fire(scope);
+    if (scope.libraries.length > 0 && !told) {
         told = true;
+        const where = scope.folders.length === 0 ? 'This workspace\'s own modules'
+            : `The modules of ${scope.folders.map(uri => path.basename(vscode.Uri.parse(uri).fsPath)).join(', ')}`;
         void vscode.window.showInformationMessage(
-            `This workspace's own modules replace the bundled libraries ${libraries.join(', ')}, and the language `
-            + 'server builds and runs only with the bundled XDK, so Ecstasy builds, runs and debug sessions use Gradle.');
+            `${where} replace the bundled libraries ${scope.libraries.join(', ')}, and the language server builds and `
+            + 'runs only with the bundled XDK, so Ecstasy builds, runs and debug sessions there use Gradle.');
     }
 }
 
 /**
- * The effective mode for a folder: Gradle while the workspace's own modules replace bundled libraries; else the
- * setting, embedded by default even with a Gradle build, or with `auto`, Gradle exactly when the folder has a
- * Gradle build.
+ * The effective mode for a folder: Gradle while its modules are built against libraries that the workspace's own
+ * modules replace; else the setting, embedded by default even with a Gradle build, or with `auto`, Gradle exactly
+ * when the folder has a Gradle build.
  */
 export function buildMode(folder: vscode.WorkspaceFolder | undefined): BuildMode {
-    if (replaced.length > 0) {
+    if (replacedLibraries(folder).length > 0) {
         return 'gradle';
     }
     const setting = vscode.workspace.getConfiguration('xtc', folder).get<string>('build.mode', 'embedded');
@@ -148,8 +177,8 @@ export function attachEmbeddedExecution(client: LanguageClient): vscode.Disposab
         'xtc/runExited',
         (params: { runId: string; exitCode?: number | null; error?: string | null }) =>
             sessions.get(params.runId)?.exited(params.exitCode ?? undefined, params.error ?? undefined));
-    const libraries = client.onNotification('xtc/replacedLibraries', (params: { libraries?: string[] }) =>
-        replace(params.libraries ?? []));
+    const libraries = client.onNotification('xtc/replacedLibraries', (params: { libraries?: string[]; folders?: string[] }) =>
+        replace({ libraries: params.libraries ?? [], folders: params.folders ?? [] }));
     return vscode.Disposable.from(output, tested, exited, libraries);
 }
 
@@ -296,8 +325,10 @@ class BuildTerminal extends ExecutionTerminal {
             this.line(GRADLE_NOT_USED);
         }
         try {
+            // without a module, the folder's modules: a window's other folders may build only with Gradle
+            const folder = this.module === undefined ? this.folder?.uri.toString() : undefined;
             const build = await client.sendRequest<BuildResponse>(
-                'xtc/build', { module: this.module, rebuild: this.rebuild }, this.cancellation.token);
+                'xtc/build', { module: this.module, rebuild: this.rebuild, folder }, this.cancellation.token);
             this.line(describeBuild(build));
             this.line(build.succeeded ? 'Build succeeded.' : 'Build failed.');
             this.finish(build.succeeded ? 0 : 1);

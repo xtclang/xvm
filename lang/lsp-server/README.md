@@ -520,7 +520,7 @@ other adapters fail these requests. `xtc/languageServiceStatus` reports `embedde
 
 | Message | Direction | Purpose |
 |---------|-----------|---------|
-| `xtc/build` `{module?, rebuild?}` | request | Builds the module (a name or any member URI) and its dependencies, or every source module, and returns per-module outcomes and diagnostics grouped by document |
+| `xtc/build` `{module?, rebuild?, folder?}` | request | Builds the module (a name or any member URI) and its dependencies; without one, the modules of the workspace folder `folder` (a URI) and their dependencies, or every source module; and returns per-module outcomes and diagnostics grouped by document |
 | `xtc/run` `{module, moduleName?, method?, args?, workingDirectory?, runId?, tests?}` | request | Builds as above, then starts the entry method, or with `tests` runs those tests; returns the build and the run ID, which is null when the build failed |
 | `xtc/tests` | request | Each source module's xunit tests from its latest compilation, as a tree of its packages, classes and tests, each with its `selector`, `kind` and location |
 | `xtc/testEvent` `{runId, event}` | notification | An event of the tests a run with `tests` runs, as xunit's `json` report gives it, apart from the output |

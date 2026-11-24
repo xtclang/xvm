@@ -136,6 +136,9 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   server tells the editors which libraries the workspace replaces (`xtc/replacedLibraries`); while
   there are any, both editors build, run and debug with Gradle whatever the chosen mode, and say so
   once, as the server builds and runs only with the bundled XDK and refuses embedded builds there.
+  Since 2026-11-24 a replacement reaches only its own workspace folder: in a VS Code window with the
+  XVM repository and another project, the other project imports the bundled libraries and keeps the
+  embedded mode (`xtc/replacedLibraries` names the folders; `xtc/build` takes a folder).
   The debug agent's handshake already carries the protocol version, and a session refuses an agent
   of another (`AttachedProgram.kt:185`). `XdkRepositoryWorkspaceTest` (heavy),
   `XdkWorkspaceDiscoveryTest`, `XdkBuildModelTest`, `CompilerConfigurationTest`,
