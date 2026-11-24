@@ -180,6 +180,18 @@ public class NamedTypeExpression
         }).toList();
     }
 
+    /**
+     * A dynamic type, such as {@code t1.DataType}, names the formal type of a value: its names are
+     * validated as a chain of name expressions, the first of which refers to the variable. That
+     * chain is not a child of this node, so a host reads its bindings through this.
+     *
+     * @return the name expression of this dynamic type's last name, whose left expressions hold
+     *         the others, or null if this type is not dynamic
+     */
+    public NameExpression getDynamicExpression() {
+        return m_exprDynamic;
+    }
+
     private void collectNameTokens(List<Token> tokens) {
         if (left instanceof NamedTypeExpression expression) {
             expression.collectNameTokens(tokens);
