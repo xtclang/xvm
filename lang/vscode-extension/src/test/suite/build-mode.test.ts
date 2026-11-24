@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { buildModeStatusText } from '../../build-mode-selection';
-import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from '../../embedded-execution';
+import { buildMode, GRADLE_NOT_USED, hasGradleBuild, replacedIn } from '../../embedded-execution';
 
 suite('Build mode', () => {
     test('embedded is the default, also for a folder with a Gradle build', () => {
@@ -20,6 +20,22 @@ suite('Build mode', () => {
             assert.ok(GRADLE_NOT_USED.includes('Ecstasy: Select Build Mode'), GRADLE_NOT_USED);
         } finally {
             fs.rmSync(directory, { recursive: true, force: true });
+        }
+    });
+    test('a replaced library reaches only the folders the server names', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'xtc-replaced-'));
+        try {
+            const xdk = path.join(root, 'xdk');
+            const other = path.join(root, 'other');
+            [xdk, other].forEach(folder => fs.mkdirSync(folder));
+            // the server names its folders canonically, as file URIs with a trailing slash
+            const scope = { libraries: ['json.xtclang.org'], folders: [`${vscode.Uri.file(fs.realpathSync.native(xdk)).toString()}/`] };
+            assert.deepStrictEqual(replacedIn(xdk, scope), ['json.xtclang.org']);
+            assert.deepStrictEqual(replacedIn(other, scope), []);
+            // no folders: every folder, as from a server that names none
+            assert.deepStrictEqual(replacedIn(other, { libraries: ['json.xtclang.org'], folders: [] }), ['json.xtclang.org']);
+        } finally {
+            fs.rmSync(root, { recursive: true, force: true });
         }
     });
     test('the status bar names the effective mode', () => {
