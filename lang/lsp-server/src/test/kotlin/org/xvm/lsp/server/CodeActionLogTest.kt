@@ -80,9 +80,14 @@ class CodeActionLogTest {
             "code actions: uri=App.x range=9:15-9:24 trigger=invoked only=[] outcome=answered actions=6 compiles=base 1 + proofs 6 cached-base=false",
             "code actions: uri=App.x range=9:15-9:24 trigger=invoked only=[] outcome=answered actions=6 compiles=base 0 + proofs 0 cached-base=true",
         )
-        assertThat(lines.filter { it.startsWith("project query:") }).containsExactly(
-            "project query: kind=rename uri=App.x outcome=completed compiles=2",
-        )
+        // the rename's two compiles of App, with the query's time, its compiles' time by module and the heap it saw
+        assertThat(lines.filter { it.startsWith("project query:") })
+            .singleElement()
+            .asString()
+            .matches(
+                "project query: kind=rename uri=App\\.x outcome=completed in [0-9.]+ s: compiles=2 in [0-9.]+ s " +
+                    "\\(App [0-9.]+ s\\), heap [0-9]+ MB -> [0-9]+ MB of [0-9]+ MB",
+            )
     }
 
     /** The lines that the server's loggers log at INFO while [body] runs. */

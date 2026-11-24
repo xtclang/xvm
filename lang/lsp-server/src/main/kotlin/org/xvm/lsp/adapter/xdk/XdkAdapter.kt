@@ -1151,6 +1151,8 @@ class XdkAdapter
                         ProjectRequest(key, project, dependencies, overlays.toMap(), queueTrace) { work: ProjectRequest<T> ->
                             fun stale(): Boolean = projectQueries[key] !== work || work.result.isCancelled
                             var queries: XdkProjectQueries? = null
+                            val started = System.nanoTime()
+                            val heapBefore = heapInUse()
                             try {
                                 if (stale()) throw CancellationException()
                                 val result =
@@ -1186,8 +1188,9 @@ class XdkAdapter
                                 // a code action request's line is the server's, which knows how the request ended
                                 val compiles = queries?.compiles ?: 0
                                 if (compiles > 0 && key.kind != ProjectQueryKind.CODE_ACTIONS) {
+                                    // the time and heap of a query, whose compiles of a whole graph can take a minute
                                     logger.info(
-                                        "project query: kind={} uri={} outcome={} compiles={}",
+                                        "project query: kind={} uri={} outcome={} in {}: compiles={} in {}, heap {} -> {} of {}",
                                         key.kind.name.lowercase(),
                                         key.uri.substringAfterLast('/'),
                                         when {
@@ -1195,7 +1198,12 @@ class XdkAdapter
                                             work.result.isCompletedExceptionally -> "failed"
                                             else -> "completed"
                                         },
+                                        seconds(System.nanoTime() - started),
                                         compiles,
+                                        queries?.compileTimes(),
+                                        megabytes(heapBefore),
+                                        megabytes(heapInUse()),
+                                        megabytes(Runtime.getRuntime().maxMemory()),
                                     )
                                 }
                             }
@@ -2026,6 +2034,8 @@ class XdkAdapter
             val errs = ErrorListener.cancellable(heard) { isStale(request) }
             val source = Source(request.overlays[uri].orEmpty(), uri)
             val dependencies = inputs.open()
+            val started = System.nanoTime()
+            val heapBefore = heapInUse()
             val compilation =
                 if (sources == null) {
                     compiler.compileSource(source, dependencies.repository, errs)
@@ -2040,7 +2050,14 @@ class XdkAdapter
                 ExecutionTrace.api("EmbeddingSupport.footprint", request.uri) {
                     EmbeddingSupport.instance().footprint(compilation)
                 }
-            logger.info("compile: scope={} [{}]", request.scope, footprint)
+            logger.info(
+                "compile: scope={} in {}, heap {} -> {} [{}]",
+                request.scope,
+                seconds(System.nanoTime() - started),
+                megabytes(heapBefore),
+                megabytes(heapInUse()),
+                footprint,
+            )
             val roots =
                 buildMap {
                     compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
