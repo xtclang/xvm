@@ -81,6 +81,16 @@ internal object XdkLibrarySources {
     /** Whether a JVM whose maximum heap is [maxHeap] can compile a library as a whole; see [LIBRARY_HEAP_BYTES]. */
     fun fitsLibraries(maxHeap: Long = Runtime.getRuntime().maxMemory()): Boolean = maxHeap >= LIBRARY_HEAP_BYTES
 
+    /**
+     * The least maximum heap with which a rename is proven in a workspace that compiles ecstasy from its sources, as the
+     * XVM repository's does: the proof holds the workspace's compile before the edit and the one after. A rename in
+     * copies of the repository's lib_ecstasy and lib_json runs out of 1 GB and is proven in 2 GB.
+     */
+    const val PROOF_HEAP_BYTES = 2 * LIBRARY_HEAP_BYTES
+
+    /** Whether a JVM whose maximum heap is [maxHeap] can prove a rename over ecstasy's sources; see [PROOF_HEAP_BYTES]. */
+    fun fitsProofs(maxHeap: Long = Runtime.getRuntime().maxMemory()): Boolean = maxHeap >= PROOF_HEAP_BYTES
+
     /** The module files of the libraries whose sources have all been written, by their source paths. */
     private val libraries = ConcurrentHashMap<String, Path>()
 
