@@ -77,12 +77,16 @@ Run icon in the gutter of that line. Click either to run it. Other ways:
 
 </td></tr></table>
 
+![IntelliJ Run Configuration dialog for an Ecstasy Application](images/intellij-run-configuration.png)
+*IntelliJ: an Ecstasy Application configuration, with its arguments and what it runs with.*
+
+### Program input
+
 The program reads its input from the Run window (IntelliJ) or its terminal (VS Code): type a line and
 press <kbd>Enter</kbd>. IntelliJ's **Send EOF**, or <kbd>Ctrl+D</kbd> on an empty line in VS Code, ends the input. Stop ends
 the program; IntelliJ's **Rerun** runs it again.
 
-![IntelliJ Run Configuration dialog for an Ecstasy Application](images/intellij-run-configuration.png)
-*IntelliJ: an Ecstasy Application configuration, with its arguments and what it runs with.*
+### Embedded and Gradle runs
 
 In embedded mode, each run gets a fresh program, in an execution worker beside the language server.
 Up to four programs run at once. In Gradle mode, the same Run runs the XTC Gradle plugin's `runXtc`

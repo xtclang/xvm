@@ -50,6 +50,8 @@ An Ecstasy project is a folder of `.x` files. Open any folder that has them: the
 the modules in it, and the modules they import, without any configuration. A project made by
 `xtc init` also has a Gradle build, which Gradle mode uses.
 
+### Create a project
+
 To make a new one:
 
 - **IntelliJ:** **File | New | Project**, then **Ecstasy**. Choose the project type (application,
@@ -70,6 +72,8 @@ To make a new one:
 *VS Code: **Ecstasy: Create New Project** asks for a name, a kind and a folder, and runs `xtc init` in the terminal.*
 
 </td></tr></table>
+
+### The card game in the screenshots
 
 To follow the screenshots, use the card game that the tours use, a two-player game of Crazy Eights
 with tests. It is a project that `xtc init` makes, with the card game's sources in place of its own.
