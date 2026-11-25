@@ -9,9 +9,9 @@ For each such step of the given runs that captured its frame, this crops the fra
 size, scales the result to at most 1280 px wide and writes it as a 256-color PNG, <out>/<name>.png. The images of
 steps that failed, and of sections a run did not record, are left as they were.
 
-It then compares the images the tours name with those that the guide, README.md beside <out>, shows: an image the guide
-shows that no step of these runs names is listed, as it was not refreshed; with runs of both tours that record every
-section, that means no step makes it any more.
+It then compares the images the tours name with those that the guide's pages, the markdown files beside <out>, show:
+an image the guide shows that no step of these runs names is listed, as it was not refreshed; with runs of both tours
+that record every section, that means no step makes it any more.
 
 Usage: guide.py [--out <directory>] <run directory>...
 
@@ -72,9 +72,10 @@ def write(tool: str, frame: Path, geometry: str | None, out: Path) -> None:
 
 
 def shown(guide: Path) -> set[str]:
-    """The images that the guide's markdown shows, by name."""
-    text = guide.read_text(encoding="utf-8") if guide.is_file() else ""
-    return set(re.findall(r"images/([A-Za-z0-9_.-]+)\.png", text))
+    """The images that the guide's pages, the markdown files in the directory guide, show, by name."""
+    pages = sorted(guide.glob("*.md")) if guide.is_dir() else []
+    return {name for page in pages
+            for name in re.findall(r"images/([A-Za-z0-9_.-]+)\.png", page.read_text(encoding="utf-8"))}
 
 
 def main() -> int:
@@ -105,7 +106,7 @@ def main() -> int:
             write(tool, frame, guide.get("crop"), out)
             width, height = size(out)
             print(f"{out.name}: {width}x{height}, {out.stat().st_size // 1024} KB, from {where}")
-    stale = sorted(shown(options.out.parent / "README.md") - set(named))
+    stale = sorted(shown(options.out.parent) - set(named))
     if stale:
         print(f"not refreshed, no step of these runs names them: {', '.join(stale)}")
     for problem in problems:
