@@ -17,18 +17,16 @@ Both editors use the same two servers, which ship with the plugin and the extens
 So the features below behave the same in both editors. Where they differ, it is in the editor's own
 interface, and this guide says where.
 
-The screenshots come from the editors' scripted tours, which play the card game in
-[`lang/test-fixtures/tour/cardGame`](../../test-fixtures/tour/cardGame) in a Linux container. The
-shortcuts are the editors' default Windows keymaps, as the tours give them, and IntelliJ's Linux
-keymap is the same. On macOS, most shortcuts use Cmd in place of Ctrl; each editor's keymap
-reference lists the rest. The Ecstasy chord **Ctrl+Alt+X, then a letter** is **Control+Option+X,
-then the letter** on macOS.
+The screenshots use the card game in [`lang/test-fixtures/tour/cardGame`](../../test-fixtures/tour/cardGame).
+The shortcuts are those of the editors' default Windows keymaps, which IntelliJ's Linux keymap shares.
+On macOS, most shortcuts use Cmd in place of Ctrl; each editor's keymap reference lists the rest. The
+Ecstasy chord **Ctrl+Alt+X, then a letter** is **Control+Option+X, then the letter** on macOS.
 
-For the details behind each feature, see the reference documents:
+New to the language itself? The [Ecstasy wiki](https://github.com/xtclang/xvm/wiki) introduces it. For
+the details behind each feature, see the reference documents:
 [IntelliJ plugin](../../intellij-plugin/README.md), [VS Code extension](../../vscode-extension/README.md),
 [language server](../../lsp-server/README.md), [configuration reference](../configuration.md) and the
-[manual test plan](../manual-test-plan.md), whose numbered cases (X1, X2 and so on) are copyable examples
-with their expected results.
+[manual test plan](../manual-test-plan.md), with examples to try and their expected results.
 
 ## Contents
 
@@ -43,8 +41,8 @@ with their expected results.
 
 ## 1. What you get
 
-Each table lists what you can do and how you start it in each editor. "Yes" means the feature works
-in that editor, with the editor's usual action for it.
+Each table lists what you can do in each editor; the chapters after it say how, with the shortcuts.
+"Yes" means the feature works in that editor, through the editor's usual action for it.
 
 ### Editing
 
@@ -55,44 +53,36 @@ in that editor, with the editor's usual action for it.
 | Semantic highlighting | Yes | Yes | Colors from the compiler, on top of the grammar's |
 | Completion | Yes | Yes | Members, names in scope and argument values, with types |
 | Inline completion | Yes | Yes | A name in scope, suggested as you type |
-| Quick documentation | Ctrl+Q, or hover | Hover, or Ctrl+K Ctrl+I | Also for the XDK's types |
-| Parameter info | Ctrl+P | Ctrl+Shift+Space | |
+| Quick documentation | Yes | Yes | On hover too, and for the XDK's types |
+| Parameter info | Yes | Yes | |
 | Inlay hints | Yes | Yes | Parameter names and inferred types |
 | Reference counts above declarations | Yes | Yes | A click lists the references |
-| Templates | Live templates, Ctrl+J | Snippets | |
-| Formatting | Ctrl+Alt+L, on type, on save | Shift+Alt+F, on type, on save | Through the server's formatter |
-| Comment out lines | Ctrl+/, Ctrl+Shift+/ | Ctrl+/ | |
+| Templates | Live templates | Snippets | |
+| Formatting | Yes, also on type and on save | Yes, also on type and on save | Through the server's formatter |
+| Comment out lines | Line and block comments | Line comments | |
 | Folding, extend selection | Yes | Yes | |
 | Linked editing | Settings \| Editor \| General \| Smart Keys | The `editor.linkedEditing` setting | A local's occurrences change together as you type |
 
 ### Navigation
 
-| Feature | IntelliJ | VS Code |
-|---------|----------|---------|
-| Go to definition | Ctrl+B or Ctrl+click | F12 or Ctrl+click |
-| Go to type definition | Ctrl+Shift+B | Go to Type Definition |
-| Go to implementations | Ctrl+Alt+B | Ctrl+F12 |
-| Find references | Alt+F7 | Shift+Alt+F12 |
-| Highlight a name's uses in the file | Yes | Yes |
-| Call hierarchy | Ctrl+Alt+H | Show Call Hierarchy |
-| Type hierarchy | Ctrl+H | Show Type Hierarchy |
-| Go to symbol, the XDK's included | Ctrl+Alt+Shift+N | Ctrl+T |
-| File outline | Ctrl+F12, Structure window | Outline view, breadcrumbs |
-| The XDK's sources, read-only | Yes | Yes |
+Both editors go to a definition, a type definition and implementations, find references, highlight a
+name's uses in the file, show call and type hierarchies, find a symbol by name, including the XDK's,
+show the file's outline, and open the XDK's sources read-only. [Navigating](#navigating) has the
+shortcuts.
 
 ### Refactoring
 
 | Feature | IntelliJ | VS Code | Notes |
 |---------|----------|---------|-------|
-| Rename methods, properties, locals, parameters and types | Shift+F6 | F2 | Checked by recompiling everything it touches |
+| Rename methods, properties, locals, parameters and types | Yes | Yes | Checked by recompiling everything it touches |
 | Rename a class with its file | Yes | Yes | |
 | Rename or move a file, move a type to another package | Yes | Yes, in the Explorer | Uses follow |
-| Extract to a local or a private method | Alt+Enter | Ctrl+Shift+R | |
-| Inline a local, a private method or a constant | Alt+Enter | Ctrl+. | |
-| Safe delete of an unused member | Alt+Enter | Ctrl+. | |
-| Quick fixes: create a method or class, add an import, remove what's unused | Alt+Enter | Ctrl+. | |
-| Organize imports | Ctrl+Alt+O | Shift+Alt+O | |
-| Generate a doc comment | Alt+Enter | Ctrl+. | |
+| Extract to a local or a private method | Yes | Yes | |
+| Inline a local, a private method or a constant | Yes | Yes | |
+| Safe delete of an unused member | Yes | Yes | |
+| Quick fixes: create a method or class, add an import, remove what's unused | Yes | Yes | |
+| Organize imports | Yes | Yes | |
+| Generate a doc comment | Yes | Yes | |
 | Undo a refactoring across files | Asks first, then one step | One step, without asking | |
 
 ### Build and run
@@ -102,9 +92,9 @@ in that editor, with the editor's usual action for it.
 | Embedded build mode | Yes, the default | Yes, the default | The language server's compiler; no Gradle |
 | Gradle build mode | Yes | Yes | The project's own Gradle build |
 | `xtc` command-line mode | Yes | No | |
-| Choose the mode | Ctrl+Alt+X, then B | Ctrl+Alt+X, then B, or the status bar | |
-| Build | Ctrl+F9, Build window | Ctrl+F9, terminal | |
-| Run a module | Gutter Run icon, Run lens, run configurations | Run lens, editor Run button, Ctrl+Shift+F10, tasks | |
+| Choose the mode | Yes | Yes, also from the status bar | |
+| Build | Yes, in the Build window | Yes, in a terminal | |
+| Run a module | Gutter Run icon, Run lens, run configurations | Run lens, editor Run button, tasks | |
 | Program input | Run window | Terminal | |
 | Stop and rerun | Yes | Yes | |
 
@@ -116,7 +106,7 @@ in that editor, with the editor's usual action for it.
 | Run or debug a test, class, package or module | Gutter icons | Testing view, gutter, Run Test at Cursor | |
 | Results, messages and the failing line | Test runner | Testing view, Test Results | |
 | Rerun failed tests | Yes | Yes | |
-| Run every test module's tests | Run 'All Ecstasy Tests' | Run All Tests | IntelliJ's has no Debug yet; in Gradle mode, Rerun Failed needs the Gradle model |
+| Run every test module's tests | Run 'All Ecstasy Tests' | Run All Tests | IntelliJ's has no Debug yet |
 | Tests with Gradle's `testXtc` | Yes | Yes | In Gradle mode |
 | Tests with `xtc test` | Yes | No | In command-line mode |
 
@@ -130,19 +120,19 @@ in that editor, with the editor's usual action for it.
 | Line breakpoints with conditions | Yes | Yes | |
 | Hit counts and logpoints | Yes | Yes | |
 | Function, data and exception breakpoints | Yes | Yes | |
-| Step over, into, out | F8, F7, Shift+F8 | F10, F11, Shift+F11 | |
-| Step into a chosen call | Smart Step Into, Shift+F7 | Step Into Target | |
+| Step over, into, out | Yes | Yes | |
+| Step into a chosen call | Smart Step Into | Step Into Target | |
 | Run to cursor, restart frame, pause | Yes | Yes | IntelliJ calls it Reset Frame |
 | Variables, watches, hovers, inline values | Yes | Yes | |
 | Hexadecimal display, Set Value | Yes | Yes | |
-| Evaluate, and run code, in the paused frame | Evaluate Expression, Debug console | Debug Console | With completion of names |
+| Evaluate expressions and run code in the paused frame | Evaluate Expression, Debug console | Debug Console | With completion of names |
 | Loaded sources and modules | Yes | Loaded Scripts; no Modules view | |
 
 ## 2. Getting started
 
 ### Requirements
 
-- **IntelliJ IDEA 2026.2 or later**, the free edition included. The plugin needs Red Hat's **LSP4IJ**
+- **IntelliJ IDEA 2026.2 or later**, including the free edition. The plugin needs Red Hat's **LSP4IJ**
   plugin, which provides IntelliJ's language server and debug adapter client, and IntelliJ's bundled
   Gradle and TextMate plugins. The language server runs on IntelliJ's own Java runtime, so you don't
   need to install Java for it.
@@ -153,8 +143,8 @@ in that editor, with the editor's usual action for it.
   Project**, `xtc init` and `xtc run` in a terminal, and IntelliJ's command-line build mode. Editing,
   embedded builds, runs, tests and debugging use the XDK that comes with the plugin or extension.
   Snapshot XDKs are on the [XDK snapshot release](https://github.com/xtclang/xvm/releases/tag/xdk-snapshots).
-- **Gradle mode** runs your project's own Gradle build through its wrapper, with the XTC Gradle plugin
-  and the XDK that the build names.
+- **For Gradle mode**, a Gradle build with its wrapper and the XTC Gradle plugin. It runs with the XDK
+  that the build names.
 
 ### Install the IntelliJ plugin
 
@@ -212,7 +202,9 @@ To make a new one:
 </td></tr></table>
 
 To follow the screenshots, use the card game that the tours use, a two-player game of Crazy Eights
-with tests. It is a project that `xtc init` makes, with the card game's sources in place of its own:
+with tests. It is a project that `xtc init` makes, with the card game's sources in place of its own.
+You need `xtc` on your `PATH` and a checkout of the [xvm repository](https://github.com/xtclang/xvm);
+run this from the checkout's root:
 
 ```bash
 xtc init cardGame --dir ~/projects
@@ -299,12 +291,12 @@ comment, as the compiler sees it. This works for the XDK's own types too.
 <table><tr><td width="50%">
 
 ![IntelliJ quick documentation for INITIAL_HAND_SIZE, its type and doc comment](images/intellij-hover.png)
-*IntelliJ: Ctrl+Q, or hovering, on `INITIAL_HAND_SIZE` shows its declaration and doc comment.*
+*IntelliJ: quick documentation for `INITIAL_HAND_SIZE`.*
 
 </td><td width="50%">
 
 ![VS Code hover over INITIAL_HAND_SIZE showing its type and doc comment, with reference counts and parameter hints in the code](images/vscode-hover.png)
-*VS Code: hovering `INITIAL_HAND_SIZE` shows its declaration and doc comment.*
+*VS Code: the hover of `INITIAL_HAND_SIZE`.*
 
 </td></tr></table>
 
@@ -325,12 +317,12 @@ module adds its import.
 <table><tr><td width="50%">
 
 ![IntelliJ completion list after hand., listing Hand's members with their types](images/intellij-completion.png)
-*IntelliJ: after `hand.`, completion lists the members of `Hand`, with their types.*
+*IntelliJ: completion after `hand.`.*
 
 </td><td width="50%">
 
 ![VS Code completion list after hand., listing Hand's members](images/vscode-completion.png)
-*VS Code: after `hand.`, completion lists the members of `Hand`.*
+*VS Code: completion after `hand.`.*
 
 </td></tr></table>
 
@@ -340,12 +332,12 @@ calls, with the one at the cursor in bold. It also opens by itself as you type t
 <table><tr><td width="50%">
 
 ![IntelliJ parameter info for deal, with the current parameter in bold](images/intellij-parameter-info.png)
-*IntelliJ: Ctrl+P inside a call of `deal` shows its parameters, with `numCards` in bold.*
+*IntelliJ: parameter info in a call of `deal`.*
 
 </td><td width="50%">
 
 ![VS Code parameter hints inside a call, with the current parameter in bold](images/vscode-parameter-hints.png)
-*VS Code: inside a call of `deal`, the parameter hints show its signature, with `numCards` in bold, and its doc comment.*
+*VS Code: parameter hints in a call of `deal`, with its doc comment.*
 
 </td></tr></table>
 
@@ -423,18 +415,18 @@ until you fix them. IntelliJ also draws such files red in the Project view.
 <table><tr><td width="50%">
 
 ![IntelliJ Find usages of cardMatches in the Find window](images/intellij-find-usages.png)
-*IntelliJ: Alt+F7 on `cardMatches` finds its uses, the tests' included, in the Find window.*
+*IntelliJ: Alt+F7 on `cardMatches` finds its uses, including those in the tests, in the Find window.*
 
 </td><td width="50%">
 
 ![VS Code References view: 9 results for cardMatches in 4 files](images/vscode-find-references.png)
-*VS Code: Find All References on `cardMatches` finds 9 uses in 4 files, the tests' included.*
+*VS Code: Find All References on `cardMatches` finds 9 uses in 4 files, including the tests.*
 
 </td></tr></table>
 
 Navigation reaches into the XDK as well: going to `HashMap`'s declaration opens the `ecstasy`
 module's source, read-only. Its names are links too, as the language server compiles the library's
-sources when the first one opens ([X350](../manual-test-plan.md#navigation-inside-an-xdk-librarys-source-x350)).
+sources when the first one opens.
 
 <table><tr><td width="50%">
 
@@ -495,8 +487,9 @@ Ctrl+. (VS Code); VS Code also lists the refactorings of a selection with Ctrl+S
 - **Extract expression to local variable** or **to private method**, for a whole returned expression
   or a typed local's initializer. The new local has the type the compiler gives the expression.
 - **Extract statements to private method**, for consecutive statements.
-- **Inline** a local that a return reads, a private method's call (**Inline private method call**, or
-  **Inline and remove private method**), or a constant (**Inline constant property**).
+- **Inline** a local that is used once, in the statement after it, or whose value the compiler proves
+  constant; a private method's call (**Inline private method call**, or **Inline and remove private
+  method**); or a constant (**Inline constant property**).
 - **Safely delete private member**, for one that nothing uses; a public member that no module of the
   project uses can be deleted too.
 
@@ -557,7 +550,7 @@ choose it in either editor, or:
 
 | Mode | What it does |
 |------|--------------|
-| Embedded compiler (the default) | The language server's compiler builds every module, and its execution worker runs them. Nothing to sync or install, and the fastest round trip. Of a Gradle build beside it, only the run settings apply, once its Gradle model is imported: `xtcRun`'s method, arguments and JVM options, and `xtcTest`'s JVM options (see [Run](#run)). Its XDK version and other settings don't, and the build output says so. |
+| Embedded compiler (the default) | The language server's compiler builds every module, and its execution worker runs them. Nothing to sync or install, and the fastest round trip. If the project also has a Gradle build, only its run settings apply (see [Gradle settings in embedded runs](#gradle-settings-in-embedded-runs)). |
 | Gradle | The project's Gradle build runs `compileXtc`, `runXtc` and `testXtc`, with all of its settings and its XDK. |
 | Automatic | Gradle when the project has a Gradle build, embedded otherwise. |
 | `xtc` command line (IntelliJ only, per run configuration) | `xtc run` and `xtc test` from the XDK on your `PATH`. |
@@ -631,25 +624,18 @@ In embedded mode, each run gets a fresh program, in an execution worker beside t
 Up to four programs run at once. In Gradle mode, the same Run runs the XTC Gradle plugin's `runXtc`
 task; IntelliJ's Gradle window also lists the plugin's tasks.
 
-Where the project's Gradle model is imported (IntelliJ's **Refresh Gradle model** on the **Ecstasy |
-Compiler** page, VS Code's **Ecstasy: Refresh Gradle Compiler Model**), an embedded run, a debug session
-too, takes what the module's Gradle project's `xtcRun` runs it with: the method and arguments of its
-`module { ... }` for the module, where the run configuration leaves them empty, and its `jvmArgs`, for
-the execution worker that runs the program. A run of tests takes `xtcTest`'s `jvmArgs`. Settings made
-only on a task, as in `tasks.runXtc { ... }`, are not seen: the model's export reads the project's
-`xtcRun` and `xtcTest`, which the tasks take their defaults from, without configuring the tasks. The
-run's output says, ahead of the program's, which it took, as in `From Gradle project :app's xtcRun:
-method greet, arguments [hello], JVM options [-Xss4m].`, leaving out the method `run` and an empty
-argument list, which are the defaults anyway. It leaves out JVM options that the worker can't run with,
-a class path or main class of their own, a Java debugger's agent, options that print and exit, and
-argument and option files, and says which. It also names the options that hold a relative path, such
-as `-javaagent:libs/agent.jar`: they resolve against the language server's working directory, not the
-project's, as Gradle's runs resolve them; give such paths in full. What the JVM itself prints to its
-standard output or error for an option, as `-Xlog:gc` or `--show-version` do, reaches the run's output,
-between the program's lines. A value of `xtcRun` that the export can't read, as a `moduleArg` from a Gradle
-property that isn't set, is left out, and the run's output says so. A refresh of the model takes a
-changed build's settings to the next run.
+### Gradle settings in embedded runs
 
+Where the project's Gradle model is imported (IntelliJ's **Refresh Gradle model** on the **Ecstasy |
+Compiler** page, VS Code's **Ecstasy: Refresh Gradle Compiler Model**), embedded runs and debug
+sessions take the module's run settings from its Gradle project's `xtcRun`: the method and arguments
+of its `module { ... }`, where the run configuration leaves them empty, and its `jvmArgs`. Tests take
+`xtcTest`'s `jvmArgs`. The run's output says which settings it took, before the program's own output.
+
+Settings made only on a task, as in `tasks.runXtc { ... }`, are not seen, nor are the build's XDK
+version, its compile settings and its other run settings, such as `xtcRun`'s module path. After you
+change the build, refresh the model for the next run. Which JVM options a run leaves out, and how their
+relative paths resolve, is in the [configuration reference](../configuration.md#33-child-processes).
 
 ## 6. Testing with xunit
 
@@ -737,7 +723,9 @@ tests' output is with the results.
 ### Rerun and debug tests
 
 - **Rerun the failed tests**: IntelliJ's **Rerun Failed Tests**, VS Code's **Test: Rerun Failed Tests**.
-  After Run 'All Ecstasy Tests', IntelliJ reruns each module's failed tests in that module.
+  After Run 'All Ecstasy Tests', IntelliJ reruns each module's failed tests in that module; in Gradle
+  mode, that needs the imported Gradle model, which names each module's project (**Refresh Gradle
+  model** on the **Ecstasy | Compiler** page).
 - **Debug a test**: Debug on its icon, or **Test: Debug Test at Cursor**, runs it under the debugger,
   which stops at the test's breakpoints as at a program's; everything in [the debugger](#7-the-debugger)
   works there.
@@ -761,7 +749,7 @@ The build mode applies to tests as to runs:
 | Build mode | How tests run |
 |------------|---------------|
 | Embedded | With xunit in a process of the language server's own, against the XDK and xunit that the server comes with, not a version that the project's Gradle build may choose. Its compiled test modules are under `build/xtc/embedded/xunit`. |
-| Gradle | The XTC plugin's `testXtc` for the chosen tests, with the build's own XDK and xunit; xunit's results come back to the same views. IntelliJ's Rerun Failed Tests after Run 'All Ecstasy Tests' needs the imported Gradle model, to know each module's project (**Refresh Gradle model**). |
+| Gradle | The XTC plugin's `testXtc` for the chosen tests, with the build's own XDK and xunit; xunit's results come back to the same views. |
 | Command line (IntelliJ) | `xtc test`, for the module's tests. |
 
 <table><tr><td width="50%">
@@ -787,7 +775,8 @@ The build mode applies to tests as to runs:
 
 ## 7. The debugger
 
-The debugger works the same in both editors: IntelliJ's debugger through LSP4IJ, and VS Code's own.
+The debugger works the same in both editors: IntelliJ connects to it through LSP4IJ, VS Code through
+its own debugging support.
 A debug session builds and runs the program as Run does, under the debugger.
 
 ### Start debugging
@@ -823,8 +812,8 @@ You can debug a program that you run in a terminal, with the launcher's `--debug
    from the **Ecstasy: Attach to Program** snippet (VS Code), with the same port.
 
 Breakpoints, stepping and evaluation work as in a launched session. Stopping the session detaches,
-and the program runs on. The program's XDK must be one with the same tools as your plugin or
-extension, and one debugger at a time can attach.
+and the program runs on. The program must run with an XDK of the same version as your plugin or
+extension; with another, the attach says so. One debugger at a time can attach.
 
 ![VS Code attached to the card game that xtc run started in a terminal, stopped at a breakpoint](images/vscode-attach.png)
 *VS Code: `xtc run` with the copied `--debug` option waits in the terminal; the attach configuration connects, and the program stops at its breakpoint.*
@@ -870,12 +859,12 @@ attached sessions alike.
 <table><tr><td width="50%">
 
 ![IntelliJ stopped at the OutOfBounds exception, with its message and stack](images/intellij-exception.png)
-*IntelliJ: an uncaught `OutOfBounds` stops the program where it is thrown, with its message and stack.*
+*IntelliJ: stopped at an uncaught `OutOfBounds`.*
 
 </td><td width="50%">
 
 ![VS Code stopped at an uncaught OutOfBounds exception, showing its message and stack](images/vscode-exception.png)
-*VS Code: an uncaught `OutOfBounds` stops the program where it is thrown, with its message and stack; it is also the frame's first variable.*
+*VS Code: stopped at an uncaught `OutOfBounds`, which is also the frame's first variable.*
 
 </td></tr></table>
 
@@ -900,8 +889,8 @@ unverified, saying why: debug again to stop there.
 | Stop a running program where it is | Pause Program | Pause, F6 |
 | End the program | Stop | Stop |
 
-Stepping into an XDK method opens its source, read-only, and its frames show like your own; in
-IntelliJ, use Force Step Into (Alt+Shift+F7) to go into the XDK's code.
+Stepping into an XDK method opens its source, read-only, and its frames show like your own. In
+IntelliJ, that takes Force Step Into (Alt+Shift+F7); its Step Into stays in your own code.
 
 <table><tr><td width="50%">
 
@@ -961,8 +950,9 @@ the Debug window's console, type an expression to evaluate it in the paused fram
 the frame's names, and after a dot the members of the value before it; in Evaluate Expression, press
 Ctrl+Space.
 
-What a watch can't evaluate, such as the call `size()`, runs as code on the paused fiber, for at most
-two seconds by default, and answers with the result's `toString()`. What it changes stays changed. Meanwhile the rest of the program stays stopped, so code that waits for the program's
+There, an expression that a watch can't evaluate, such as the call `size()`, runs as code on the
+paused fiber, for at most two seconds by default, and answers with the result's `toString()`. What it
+changes stays changed. The rest of the program stays stopped meanwhile, so code that waits for its
 other fibers runs out of time; to let them run too, check **Let the program run while Evaluate
 Expression runs code** (IntelliJ) or set `"evaluationRunsProgram": true` (VS Code).
 
@@ -1061,7 +1051,8 @@ When something doesn't work as you expect, look at the language server first.
   dies, IntelliJ starts it again; in VS Code, a click on the status bar item does.
 - **Export its logs.** IntelliJ's **Tools | Export Ecstasy Server Logs** and VS Code's **Ecstasy:
   Export Server Logs** save the server's recent logs, timing traces and status as one ZIP file, to
-  attach to an issue. It holds no source files, but it may hold local paths and error messages.
+  attach to an [issue](https://github.com/xtclang/xvm/issues). It holds no source files, but it may
+  hold local paths and error messages.
 
 <table><tr><td width="50%">
 
@@ -1081,7 +1072,7 @@ Some common problems:
 |---------|------------|
 | No errors, completion or navigation | Check the server's state and log. Make sure the adapter is the compiler (Ctrl+Alt+X, then A). |
 | VS Code: wrong Java, or none | Set `xtc.java.home` to a Java 25 or later installation. |
-| A Gradle build's settings don't apply to a run | The project builds embedded, where only `xtcRun`'s method, arguments and JVM options and `xtcTest`'s JVM options apply, from the imported Gradle model; settings made only on a task, as `tasks.runXtc { ... }`, are not seen. Refresh the model, move such settings to `xtcRun`, or choose Gradle with Ctrl+Alt+X, then B. |
+| A Gradle build's settings don't apply to a run | The project builds embedded, which takes only some run settings from Gradle; see [Gradle settings in embedded runs](#gradle-settings-in-embedded-runs). Refresh the model, move task-only settings to `xtcRun`, or choose Gradle with Ctrl+Alt+X, then B. |
 | Gradle mode can't find `runXtc` or `testXtc` | The project's Gradle build needs the XTC Gradle plugin; IntelliJ also needs the Gradle build linked. |
 | A breakpoint is unverified | The line changed since the program was built, or has no code; debug again. |
 | **Ecstasy: Create New Project** fails | Install an XDK and put its `xtc` on your `PATH`. |
@@ -1090,14 +1081,9 @@ Some common problems:
 ### Known limitations
 
 - VS Code has no `xtc` command-line build mode; use embedded or Gradle.
-- IntelliJ's **Run 'All Ecstasy Tests'** has no Debug yet. In Gradle mode its **Rerun Failed Tests** needs
-  the project's Gradle model, which names each module's Gradle project: import it with **Refresh Gradle
-  model** on IntelliJ's **Ecstasy | Compiler** page.
-- In embedded mode, only the project's Gradle run settings apply, `xtcRun`'s method, arguments and JVM
-  options and `xtcTest`'s JVM options, and only once its Gradle model is imported. Settings made only on
-  the `runXtc` or `testXtc` task, the build's XDK version, compile settings and other run settings, such
-  as `xtcRun`'s module path, don't. A JVM option's relative path resolves against the language server's
-  working directory, not the project's.
+- IntelliJ's **Run 'All Ecstasy Tests'** has no Debug yet.
+- In embedded mode, a Gradle build applies only through its run settings; see
+  [Gradle settings in embedded runs](#gradle-settings-in-embedded-runs).
 - A program being debugged keeps the code it was built from: edits apply the next time you run it.
 - Code run from the Debug Console or Evaluate Expression stops after two seconds, and a lazy value
   after one, by default. To give them longer, set `evaluationTimeLimit` and `lazyValueTimeLimit`, in
@@ -1105,9 +1091,9 @@ Some common problems:
   time limit (ms)** in IntelliJ's Ecstasy Application or Ecstasy Attach configuration. IntelliJ can't
   cancel an evaluation sooner, so Evaluate Expression waits out the whole limit for code that never
   ends.
-- Rename, move and safe delete cover the modules the language server knows of. When one changes a
-  public declaration, which modules in other folders may use, a notification says that those modules
-  are not changed; a moved file's type has another qualified name. To include them, add them with
+- Rename, move and safe delete cover the modules the language server knows of. When one of them
+  changes a public declaration, which modules in other folders may use (a move changes its type's
+  qualified name), a notification says that those modules are not changed. To include them, add them with
   **Add consumers from folders** (IntelliJ's **Ecstasy | Compiler** page, VS Code's **Ecstasy:
   Configure Compiler Paths**); a project whose Gradle model is imported has all of its build's modules
   already.
