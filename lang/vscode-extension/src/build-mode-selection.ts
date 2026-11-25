@@ -121,7 +121,8 @@ export function createBuildModeStatus(): vscode.Disposable {
                 + `libraries ${replaced.join(', ')}.`
             : mode === 'gradle'
             ? `Ecstasy builds and runs ${folder.name} through its Gradle build. Click to choose the embedded compiler.`
-            : `Ecstasy builds and runs ${folder.name} with the embedded compiler; its Gradle build's settings do not apply. Click to choose Gradle.`;
+            : `Ecstasy builds and runs ${folder.name} with the embedded compiler; of its Gradle build's settings, only the run `
+                + 'settings of xtcRun and xtcTest apply, once the Gradle model is imported. Click to choose Gradle.';
         item.show();
     };
     update();

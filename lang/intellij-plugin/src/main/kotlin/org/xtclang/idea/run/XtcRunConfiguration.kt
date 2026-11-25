@@ -473,12 +473,15 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
             row("Method name:") {
                 textField()
                     .bindText(::methodName)
-                    .comment("Method to invoke (leave empty for default 'run')")
+                    .comment("Method to invoke; empty for 'run', or for xtcRun's in an embedded run where the Gradle model is imported")
             }
             row("Module arguments:") {
                 textField()
                     .bindText(::moduleArguments)
-                    .comment("Comma-separated arguments passed to the module")
+                    .comment(
+                        "Comma-separated arguments passed to the module; empty for none, or for xtcRun's in an embedded run where the " +
+                            "Gradle model is imported",
+                    )
             }
             row("Tests:") {
                 textField()

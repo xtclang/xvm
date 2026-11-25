@@ -16,7 +16,7 @@ suite('Build mode', () => {
             fs.writeFileSync(path.join(directory, 'settings.gradle.kts'), '');
             assert.strictEqual(hasGradleBuild(folder), true);
             assert.strictEqual(buildMode(folder), 'embedded');
-            assert.ok(GRADLE_NOT_USED.includes('do not apply'), GRADLE_NOT_USED);
+            assert.ok(GRADLE_NOT_USED.includes('only xtcRun\'s method, arguments and JVM options'), GRADLE_NOT_USED);
             assert.ok(GRADLE_NOT_USED.includes('Ecstasy: Select Build Mode'), GRADLE_NOT_USED);
         } finally {
             fs.rmSync(directory, { recursive: true, force: true });

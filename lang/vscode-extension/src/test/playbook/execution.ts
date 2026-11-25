@@ -1920,7 +1920,7 @@ export function buildModeCases(): void {
             await configureModules(workspace, [{ name: data.module, file: data.file }]);
             await noErrors(document.uri);
 
-            // the default is embedded, also beside a Gradle build, and says the build's settings do not apply
+            // the default is embedded, also beside a Gradle build, and says which of the build's settings apply
             assert.strictEqual(buildMode(folder), 'embedded');
             await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'Status bar shows the embedded build');
             const built = await executions.start('build', 'all Ecstasy modules', () => vscode.commands.executeCommand('xtc.build'), finished, 'Embedded build finishes');
