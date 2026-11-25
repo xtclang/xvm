@@ -1,0 +1,11 @@
+position	commit_693	kind	errs_commits	not_from_errs	subject
+462	7dafa8ae24	copied	bedb090054	-	Digest the API of each declaration of a module apart (DeclarationDigests)
+463	49e62deb8a	adapted	59d548d80e,69f78b22d9,586434855a,b37cb1cd2c,daa880cf1b,925734a130	-	Compile again, after an edit, only the modules that use what it changed (member-use tracker)
+464	d52113e5ca	adapted	a82d1d3d7a,2ac401bc88,bc743fa7f4,8387712ac9	-	Keep diagnostics working when a restart opens another server's library copy again
+465	4383885f8f	adapted	b0bd272093	-	Take the execution worker's events off its standard output, onto a loopback socket of their own
+466	b0f2285e7d	copied	e4aa0f281d	-	Export each project's xtcRun and xtcTest settings in the language server's Gradle model
+467	f5ed4f6a7a	adapted	86821b32ea,8e5df73dae,26eb896949,9d0ea091e1	-	Run embedded programs with their Gradle project's xtcRun and xtcTest settings, and say so in both editors
+468	49b5f8aca6	copied	2d66521545	-	Keep xtcRun's settings in runXtc: the default JVM options beside jvmArgs, and a module's method and arguments with --module
+-	-	errs-only	93c065e2b5	-	Record the member-use tracker in remaining.md, and the reach rule it replaces
+-	-	errs-only	db87170eac	-	Record that CI now keeps the evidence of the hang in closing a run, which has not come back
+-	-	errs-only	60c4dccbec	-	Record master PR #804, which fixes the two runXtc findings of the Gradle run settings work
