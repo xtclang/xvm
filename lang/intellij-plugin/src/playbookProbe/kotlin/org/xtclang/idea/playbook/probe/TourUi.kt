@@ -1808,6 +1808,29 @@ object TourUi {
         }
 
     /**
+     * The selected editor's code lenses by the identity of each: each computation of them puts new ones in place, of
+     * the same text or not, so a change of these says that one has come.
+     */
+    @JvmStatic
+    fun lensIdentities(): String =
+        onEdt {
+            editor()
+                .lensContextIfCreated
+                ?.getValidPairResult()
+                .orEmpty()
+                .map { (_, entry) -> System.identityHashCode(entry) }
+                .sorted()
+                .joinToString(",")
+        }
+
+    /**
+     * Whether the selected editor's code lenses are being computed, as after an edit, until the new ones are in place,
+     * which can scroll the editor.
+     */
+    @JvmStatic
+    fun lensesPending(): Boolean = onEdt { editor().lensContextIfCreated?.hasAnyPendingLenses == true }
+
+    /**
      * Clicks the selected editor's code lens whose text starts with [title] on its zero-based [line], or on any line
      * when that is negative, as the mouse does, which runs its command.
      */

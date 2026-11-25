@@ -1024,12 +1024,25 @@ private fun Tour.diagnostics() {
         after = { dismiss() },
     ) {
         open(source("Player.x"), 0)
+        // the file's code lenses as they are before the edit, once in place
+        expect(within(HANG) { lensIdentities().isNotEmpty() && !lensesPending() }) {
+            "Player.x's code lenses did not settle before the edit: ${lensIdentities().ifEmpty { "none" }}, pending ${lensesPending()}"
+        }
+        val lenses = lensIdentities()
         replace("                hand.addCard(card);", 0, "                assert card.is(Card);\n                hand.addCard(card);")
         within(HANG) { "always matches" in diagnostics(source("Player.x")) }
         at("card.is(Card)", delta = 7)
         // Ctrl+F1 shows the highlight that holds the caret, once the editor's analysis of this text has ended, in the
         //  focused editor: run 16 pressed it with the warning in the file's highlights, and its popup never showed
         within(HANG) { analyzed(source("Player.x")) && "always matches" in highlightsAtCaret() }
+        // and once the edit's code lenses are in place, with nothing else in progress: they come with a compile of the
+        //  whole project, and as they arrive above the caret the editor scrolls, which closes the popup; in each run
+        //  whose popup never showed they came 1.6 to 3.4 s after the press, in most others 0.4 to 0.6 s
+        //  (run-tour-11649425361568010670 and the runs of 2026-11-25 in doc/errs/remaining.md)
+        expect(within(HANG) { lensIdentities().let { it.isNotEmpty() && it != lenses } && !lensesPending() && activity().isEmpty() }) {
+            "The edit's code lenses did not come: before the edit $lenses, now ${lensIdentities().ifEmpty { "none" }}, " +
+                "pending ${lensesPending()}, in progress ${activity().ifEmpty { "nothing" }}"
+        }
         focusedEditor()
         action("ShowErrorDescription")
     }
