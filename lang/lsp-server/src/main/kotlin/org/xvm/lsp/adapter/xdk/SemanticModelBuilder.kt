@@ -142,6 +142,7 @@ internal fun EmbeddingSupport.Compilation.renameFacts(
                     },
                 packageImports = packageImports(),
                 module = file()?.moduleId?.name,
+                anonymousClasses = builder.anonymousClasses(),
             )
         }
     }
@@ -183,6 +184,7 @@ internal fun EmbeddingSupport.Compilation.compiledSemantics(
                         supers = builder.superBindings(),
                         receivers = builder.receiverBindings(),
                         module = file()?.moduleId?.name,
+                        anonymousClasses = builder.anonymousClasses(),
                     )
                 } else {
                     null
@@ -232,6 +234,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 constantProperties = if (includeMembers) builder.constantProperties(this) else emptySet(),
                 packageImports = packageImports(),
                 module = file()?.moduleId?.name,
+                anonymousClasses = builder.anonymousClasses(),
             )
         }
     }
@@ -330,6 +333,9 @@ private class SemanticModelBuilder(
     private val outerReceivers = linkedMapOf<Pair<IdentityConstant?, IdentityConstant>, SymbolId>()
     private val outerReserved = linkedMapOf<Triple<IdentityConstant?, IdentityConstant, String>, SymbolId>()
 
+    // The span of the type that each anonymous class constructs, which the compiler gives it for a name ([anonymousClasses]).
+    private val anonymousClasses = linkedMapOf<IdentityConstant, SourceLocation>()
+
     fun declarationFacts(
         analysis: EmbeddingSupport.DeclarationAnalysis,
         dependencies: XdkDependencies.Open,
@@ -355,12 +361,19 @@ private class SemanticModelBuilder(
                     dependencies.missingMethodDestinations(missingDestinations),
                 ),
             module = analysis.file().moduleId.name,
+            anonymousClasses = anonymousClasses(),
         )
     }
 
     fun constantBindings(): Map<SymbolId, Constant> = constants.entries.associate { (constant, id) -> id to constant }
 
     fun superBindings(): Map<SymbolId, MethodConstant> = supers.toMap()
+
+    /**
+     * Each anonymous class, by the span of the type it constructs, as in `new Iterator<Int>() {...}`, which the compiler
+     * gives it for a name. It is no declaration, but no other class has it, and a proof places the class there.
+     */
+    fun anonymousClasses(): Map<IdentityConstant, SourceLocation> = anonymousClasses.toMap()
 
     fun receiverBindings(): Map<SymbolId, CompilerReceiver> =
         registers.entries
@@ -667,6 +680,9 @@ private class SemanticModelBuilder(
                     // Packet<String> already contains the written Packet and String references.
                     if (node.parent is NewExpression) {
                         symbol(identity(node), node.name, SymbolKind.TYPE)
+                        identity(node)?.let {
+                            anonymousClasses[it] = location(node.source, node.nameToken.startPosition, node.nameToken.endPosition)
+                        }
                     } else {
                         declare(node.nameToken, identity(node), kind(identity(node)), node.source)
                     }

@@ -6,8 +6,12 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
+import org.xvm.lsp.adapter.xdk.CompilerRenameFacts
+import org.xvm.lsp.adapter.xdk.ProofIdentity
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkDependencies
+import org.xvm.lsp.adapter.xdk.projectRenameFacts
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.lsp.model.Location
 import java.nio.file.Path
@@ -365,6 +369,136 @@ class XdkOccurrenceBindingTest {
             val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "Hub")) { "No rename of Host" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Host", "Hub"))
         }
+    }
+
+    @Test
+    fun `an anonymous class's this and construction are proven, so a rename of its type and a safe delete beside it are`() {
+        val source =
+            """
+            module Anonymous {
+                interface /*declared*/Walker {
+                    Int step();
+                }
+                class Box(Int size) {
+                    Walker walker() {
+                        return new Walker() {
+                            Int count = 0;
+                            @Override
+                            Int step() = this.Box.size + this.count;
+                        };
+                    }
+                    Int unused() {
+                        return 1;
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource("Anonymous", source) { adapter, uri ->
+            // the class's construction calls the constructor that the compiler writes for it, a call that spells the
+            // type it implements, so its rename was refused
+            val declared = position(source, "declared")
+            val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "Stepper")) { "No rename of Walker" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Walker", "Stepper"))
+            // the proofs of code actions other than a rename compare every binding of the module exactly
+            val at = source.positionOf("unused()")
+            assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
+                .contains("Safely delete member 'unused', unused in Anonymous")
+        }
+    }
+
+    @Test
+    fun `a named argument of an anonymous class's construction binds to the constructor it passes the arguments to`() {
+        val source =
+            """
+            module Overloads {
+                class Base {
+                    construct(Int /*int*/size) {}
+                    construct(Number size) {}
+                    Int step() = 1;
+                }
+                Base small() = new Base(size=5) {
+                    @Override
+                    Int step() = 2;
+                };
+                Base any(Number number) = new Base(size=number) {
+                    @Override
+                    Int step() = 3;
+                };
+            }
+            """.trimIndent()
+        // the compiler writes each class a constructor that passes size on to the one of Base that it selected: the
+        // name binds to that one's parameter, not to one that any of the class's constructors would share
+        val facts = facts("Overloads", source)
+        val constructors =
+            facts.models
+                .flatMap { model ->
+                    model.occurrences.filter { it.name == "construct" && it.role == SemanticModel.Role.DECLARATION }
+                }.map { facts.constants.getValue(requireNotNull(it.symbol)) }
+        val labels =
+            facts.models
+                .flatMap { model ->
+                    model.occurrences.filter { it.name == "size" && it.role == SemanticModel.Role.REFERENCE }
+                }.map { facts.constants[requireNotNull(it.symbol)] as ProofIdentity.Parameter }
+        assertThat(constructors).hasSize(2)
+        assertThat(labels.map { (it.method as ProofIdentity.Composed).members }).containsExactly(
+            listOf(constructors[0]),
+            listOf(constructors[1]),
+        )
+        withSource("Overloads", source) { adapter, uri ->
+            // a rename of construct(Int)'s size renames the name that binds to it, as for a named class, and not the one
+            // that binds to construct(Number)'s
+            val at = position(source, "int")
+            val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "n")) { "No rename of size" }
+            assertThat(apply(source, renamed.changes.getValue(uri)))
+                .isEqualTo(source.replace("/*int*/size", "/*int*/n").replace("Base(size=5)", "Base(n=5)"))
+        }
+    }
+
+    @Test
+    fun `two anonymous classes of one method are distinct identities, as is each one's this`() {
+        val source =
+            """
+            module Twins {
+                interface Walker {
+                    Int step();
+                    Int base() = 0;
+                }
+                class Pair {
+                    Walker[] walkers() = [
+                        new Walker() {
+                            @Override
+                            Int step() = this.base();
+                        },
+                        new Walker() {
+                            @Override
+                            Int step() = this.base() + 1;
+                        }
+                    ];
+                }
+            }
+            """.trimIndent()
+        val facts = facts("Twins", source)
+        val receivers =
+            facts.models.flatMap { model ->
+                model.occurrences.filter { it.name == "this" }.map { facts.constants[requireNotNull(it.symbol)] }
+            }
+        // each this is the receiver of its own class, which the span of the type it constructs places
+        assertThat(receivers).hasSize(2).doesNotHaveDuplicates().allMatch { it is ProofIdentity.Receiver }
+        assertThat(receivers.map { (it as ProofIdentity.Receiver).owner }).doesNotHaveDuplicates().allMatch {
+            it is ProofIdentity.Source
+        }
+    }
+
+    /** The rename facts of [text], a module compiled alone, as a proof over its module takes them. */
+    private fun facts(
+        name: String,
+        text: String,
+    ): CompilerRenameFacts {
+        CompilerTestSupport.configure()
+        val errors = ErrorList()
+        val compilation = EmbeddingSupport.instance().compileModule(Source(text, "$name.x"), null, errors)
+        assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        return compilation.projectRenameFacts(XdkDependencies(emptyList()).open(), errors)
     }
 
     private fun snapshot(
