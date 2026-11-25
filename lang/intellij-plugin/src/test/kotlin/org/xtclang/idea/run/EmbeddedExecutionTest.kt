@@ -63,14 +63,14 @@ class EmbeddedExecutionTest {
     }
 
     @Test
-    fun `embedded is the default, also in a project with a Gradle build, and its runs say Gradle settings do not apply`(
+    fun `embedded is the default, also in a project with a Gradle build, and its runs say which Gradle settings apply`(
         @TempDir root: Path,
     ) {
         Files.writeString(root.resolve("build.gradle.kts"), "")
         val default = XtcBuildSettings.Options().mode
         assertThat(default).isEqualTo(XtcBuildMode.EMBEDDED)
         assertThat(XtcBuildSettings.resolve(default, root)).isEqualTo(XtcBuildMode.EMBEDDED)
-        assertThat(XtcBuildSettings.gradleNotUsed(root)).contains("Gradle settings", "do not apply")
+        assertThat(XtcBuildSettings.gradleNotUsed(root)).contains("not the build's", "only xtcRun's method, arguments and JVM options")
         assertThat(XtcBuildSettings.gradleNotUsed(root.resolve("plain"))).isNull()
 
         val sessions = EmbeddedRunSessions()
@@ -78,7 +78,7 @@ class EmbeddedExecutionTest {
         val handler = handler(sessions, server, XtcBuildSettings.gradleNotUsed(root))
         handler.startNotify()
         server.requests.awaited()
-        assertThat(handler.text()).contains("with the embedded compiler...\n", "Gradle settings")
+        assertThat(handler.text()).contains("with the embedded compiler...\n", "Of the build's settings")
     }
 
     @Test
