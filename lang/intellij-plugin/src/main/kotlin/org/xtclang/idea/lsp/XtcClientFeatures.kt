@@ -1,11 +1,14 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
+import com.redhat.devtools.lsp4ij.OpenedDocument
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.client.features.LSPDiagnosticFeature
 import com.redhat.devtools.lsp4ij.client.features.LSPInlayHintFeature
 import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
+import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticsApplier
 import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.jsonrpc.Launcher
@@ -20,6 +23,8 @@ import org.xtclang.idea.dap.DebugSessions
 import org.xtclang.idea.run.EmbeddedRunSessions
 import java.io.InputStream
 import java.net.URI
+import java.util.Collections
+import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 /** Client features, and the rename and request ownership and the diagnostic reports of the current transport. */
@@ -28,6 +33,9 @@ class XtcClientFeatures : LSPClientFeatures() {
 
     /** The current connection's pull-diagnostic results, which say what each document's latest report was asked for. */
     internal val diagnosticResults = AtomicReference<DiagnosticResultMessages?>()
+
+    /** The connected documents whose marks [markConnected] has refreshed, each once. */
+    private val marked = Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<OpenedDocument, Boolean>()))
 
     /**
      * The number of items of the latest diagnostics report of the open document at [path], if that report was asked
@@ -65,7 +73,9 @@ class XtcClientFeatures : LSPClientFeatures() {
                     file: VirtualFile,
                     diagnostics: List<Diagnostic>,
                 ) {
-                    if (!project.isDisposed) ProjectErrors.getInstance(project).reported(file, diagnostics, ::getMessage)
+                    if (project.isDisposed) return
+                    ProjectErrors.getInstance(project).reported(file, diagnostics, ::getMessage)
+                    markConnected(file)
                 }
             },
         )
@@ -131,4 +141,43 @@ class XtcClientFeatures : LSPClientFeatures() {
                 return if (consumer is RemoteEndpoint) diagnostics.incoming(wrapped) else diagnostics.outgoing(wrapped)
             }
         }
+
+    /**
+     * Marks in the editor of [file] what LSP4IJ holds of its connected document, once, in place of what the editor marked
+     * before, at the first update of any document of [file] after which the connected document holds exactly the items
+     * of its own pull's latest report for its text as it is ([DiagnosticResultMessages.currentReport]): the marks then
+     * show that report, as LSP4IJ applies it, whichever update brought its items. LSP4IJ calls
+     * [LSPDiagnosticFeature.diagnosticsUpdated] after each update, changed or not, also one that it rejects for its
+     * version or that goes into a document without a connection, and a new connection's first pull names no result ID,
+     * so its report is full. Before that report comes, no update marks anything, a related or workspace report or a
+     * rejected one, so the marks of an error still there stay. A refresh that fails is tried again at the next update;
+     * none fails the update that it follows.
+     *
+     * TODO LSP4IJ: UP86 — LSP4IJ 0.30.1 keeps a report that reaches a file whose editor is open before it connects the
+     *  file's document, a workspace report or a related document's, in a document without a connection, and the editor
+     *  marks its errors. The connection replaces that document with an empty one, and LSP4IJ marks an editor again as
+     *  its document's diagnostics change, or as a server stops or refreshes all its features, not as reports come: when
+     *  the connected document's reports have none, as once the error is fixed, nothing takes the marks back. Filed as
+     *  redhat-developer/lsp4ij#2231, for 0.30.2; our fix is redhat-developer/lsp4ij#2232, open. Not as the document
+     *  connects, nor at its first update: its diagnostics are none until its own report, so the marks of an error
+     *  still there would go until that report comes.
+     */
+    private fun markConnected(file: VirtualFile) {
+        try {
+            val document = getFileUri(file)?.let { serverWrapper.getOpenedDocument(it) }?.takeIf { it.synchronizer != null } ?: return
+            if (project.isDisposed || document in marked) return
+            val results = diagnosticResults.get() ?: return
+            val own =
+                results.reported().firstNotNullOfOrNull { uri ->
+                    if (serverWrapper.getOpenedDocument(URI(uri)) === document) results.currentReport(uri) else null
+                } ?: return
+            if (document.diagnostics.toSet() != own.toSet()) return
+            LSPDiagnosticsApplier.getInstance(project).scheduleRefresh(file, null)
+            marked.add(document)
+        } catch (failure: Exception) {
+            logger<XtcClientFeatures>().warn("Could not mark the diagnostics of ${file.path} in its editor (UP86)", failure)
+        } catch (failure: LinkageError) {
+            logger<XtcClientFeatures>().warn("Could not mark the diagnostics of ${file.path} in its editor (UP86)", failure)
+        }
+    }
 }

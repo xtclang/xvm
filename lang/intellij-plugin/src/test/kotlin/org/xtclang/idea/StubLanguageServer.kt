@@ -121,6 +121,13 @@ class StubLanguageServer(
     @Volatile
     var resolve: (CodeAction) -> CodeAction = { it }
 
+    /**
+     * When the server answers a pull of the document at the URI it is given, which a test can hold: by default, at once.
+     * The answer reports the document's [pulled] diagnostics as they are then.
+     */
+    @Volatile
+    var pulls: (String) -> CompletableFuture<*> = { CompletableFuture.completedFuture(null) }
+
     /** How the server answers textDocument/hover, which a test can answer when it chooses: by default, with none. */
     @Volatile
     var hovers: (HoverParams) -> CompletableFuture<Hover?> = { CompletableFuture.completedFuture(null) }
@@ -208,8 +215,8 @@ class StubLanguageServer(
 
     override fun diagnostic(params: DocumentDiagnosticParams): CompletableFuture<DocumentDiagnosticReport> {
         requests += "textDocument/diagnostic"
-        val items = pulled[params.textDocument.uri].orEmpty()
-        return CompletableFuture.completedFuture(DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(items)))
+        val uri = params.textDocument.uri
+        return pulls(uri).thenApply { DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(pulled[uri].orEmpty())) }
     }
 
     override fun diagnostic(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> {
