@@ -241,8 +241,8 @@ internal class DiagnosticReports {
 
 /**
  * What a document pull that named [previous] answered, for the execution trace: its report's kind and result ID, its
- * items, and those of each related document, which the client takes as that document's own. An item is its severity
- * and code, never its message, which can quote the source.
+ * items, and each related document's report, which the client takes as that document's own, by its result ID and
+ * number of items. An item is its severity and code, never its message, which can quote the source.
  */
 internal fun DocumentDiagnosticReport.traced(previous: String?): Map<String, Any?> {
     val full = left
@@ -253,7 +253,7 @@ internal fun DocumentDiagnosticReport.traced(previous: String?): Map<String, Any
         "items" to full?.items?.let(::traced),
         "related" to
             (full?.relatedDocuments ?: right?.relatedDocuments)?.mapValues { (_, report) ->
-                report.left?.let { "${it.resultId} ${traced(it.items)}" } ?: "unchanged ${report.right?.resultId}"
+                report.left?.let { "${it.resultId}, ${it.items.orEmpty().size} items" } ?: "unchanged ${report.right?.resultId}"
             },
     )
 }

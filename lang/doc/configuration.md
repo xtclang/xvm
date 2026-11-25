@@ -198,7 +198,7 @@ sessions are pruned at startup (`:161`).
 | `xtc.logs.totalSizeMb` | integer, from `maxFileMb` to 1000, `50` | Cap on each stream's rolled archives. | `lsp/util/ServerLogs.kt:46`, `logback.xml:32` |
 | `xtc.logs.retainedSessions` | integer 1 to 20, `5` | Closed sessions kept by pruning. | `lsp/util/ServerLogs.kt:46` |
 | `xtc.trace.directory` | path, else `XTC_LSP_TRACE_DIR`, else the session directory | Where the execution trace (`lsp-trace-*.jsonl`) is written. | `lsp/util/ServerLogs.kt:206`, `logback.xml:48` |
-| `xtc.trace.level` | logback level, else `XTC_LSP_TRACE_LEVEL`, else `INFO` | Level of the execution trace; `OFF` turns it off. `DEBUG`, which the IntelliJ playbook sets, adds each query's phases as events. | `logback.xml:62` |
+| `xtc.trace.level` | logback level, else `XTC_LSP_TRACE_LEVEL`, else `INFO` | Level of the execution trace; `OFF` turns it off. `DEBUG`, which the IntelliJ playbook sets, adds each query's phases as events, and what each query answered, once while a document's answer repeats. | `logback.xml:62` |
 | `xtc.lsp.test.holdReferences` | file name, unset | Test seam: reference searches in the file of that name wait until canceled. The IntelliJ playbook's X145 sets it. | `lsp/server/XtcTextDocumentService.kt:172`, `:1193` |
 
 Non-integer `xtc.logs.*` values fall back to the default (`lsp/util/ServerLogs.kt:45`); values out of
