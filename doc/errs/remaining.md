@@ -636,6 +636,20 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   they are in place again. Fixed (2026-11-25): the step presses once the file's lenses are in place, some, none
   pending, and nothing else in progress, through the helper the Warnings step's two waits use too, `lensesInPlace`,
   which fails the step when they do not come.
+- [x] Found 2026-11-25 in `run-tour-9510825781413485262`, the tour's sections through Diagnostics in the container:
+  The error's message (Ctrl+F1 on `popCrd` in `Eights.x`) did not show its popup within 3 minutes; its closers show
+  ShowErrorDescription followed by a scroll. The edit of the step before, Errors as you type, starts a compile of the
+  whole project, and the file's code lenses change with it, after the press: the race of the Warnings and Parameter
+  info steps in a third step. With the error, the file has no lenses: its three go. The step now presses once the
+  lenses differ from those before the edit, none pending and nothing in progress, possibly none (`lensesInPlace`'s
+  `some = false`); a first version that required some failed all three of its runs, each with "now none".
+- [ ] Found 2026-11-25 in `run-tour-14199203050296383832`, the tour's sections through Diagnostics in the container,
+  not in the 8 other runs of that day's series: Navigation's Call hierarchy showed `cardMatches` with no callers and
+  failed its wait and check after 3 minutes. The server's trace shows IntelliJ's `callHierarchy/incomingCalls`
+  request at 18:48:48.578 and LSP4IJ's `$/cancelRequest` for it 4 ms later; the server stopped the query as asked
+  (outcome canceled, the request answered with an error), and IntelliJ asked no more, so the Hierarchy window kept
+  no callers. Not the server's fault: the cancel is the client's. To find: what cancels the request in IntelliJ's
+  hierarchy browser or LSP4IJ, and whether the step should refresh the hierarchy when it shows no callers.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
