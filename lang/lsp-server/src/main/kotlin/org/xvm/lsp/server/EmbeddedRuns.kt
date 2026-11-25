@@ -34,10 +34,12 @@ import org.xvm.lsp.adapter.mapCancellable
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildResult
 import org.xvm.lsp.adapter.xdk.XdkBuiltModule
+import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.run.AttachedProgram
+import org.xvm.lsp.run.JvmOptions
 import org.xvm.lsp.run.RunDebugClient
 import org.xvm.lsp.run.RunWorkerProcess
 import org.xvm.lsp.run.TestProcess
@@ -80,9 +82,12 @@ data class BuildResponse(
  * `xtc/run` parameters. [module] is a module name or root URI; a client that sends a root URI also sends the
  * module's name as [moduleName], which identifies the module when the URI no longer does, as after its root file
  * was renamed or moved. The client chooses [runId] so it can attach its console before any output arrives;
- * [args] are passed to the entry method as given, never shell-parsed. With [tests], xunit runs the module's tests that
- * they select instead, all of them for an empty list, as `xtc test` does, and the server reports their execution as
- * `xtc/testEvent` notifications, which are not in the output; the entry method and its arguments are not used.
+ * [args] are passed to the entry method as given, never shell-parsed. Without a [method], or with no [args], the run
+ * takes those that the module's Gradle project's `xtcRun` runs it with, where the imported build model has them, and
+ * `run` and none otherwise; it runs with `xtcRun`'s JVM options ([EmbeddedRuns]). With [tests], xunit runs the module's
+ * tests that they select instead, all of them for an empty list, as `xtc test` does, and the server reports their
+ * execution as `xtc/testEvent` notifications, which are not in the output; the entry method and its arguments are not
+ * used, and the tests run with the JVM options of the project's `xtcTest`.
  */
 data class RunParams(
     val module: String? = null,
@@ -221,6 +226,12 @@ interface XtcLanguageClient : LanguageClient {
  * Embedded build and run for IDE clients: builds through the compiler adapter's serialized queue, then runs
  * the built module in the execution worker JVM. Clients that do not implement [XtcLanguageClient] can still
  * build; runs then have nowhere to report.
+ *
+ * Where the imported Gradle build model says what the module's Gradle project runs it with ([runSettings]), a run
+ * takes the method and arguments of its `xtcRun` where the run gives none, and runs with the JVM options of `xtcRun`,
+ * or of `xtcTest` for a run of tests, but for those that [JvmOptions] leaves out; the run's output says, ahead of the
+ * program's, which it took and which it left out, which options hold a relative path, and what the model's export
+ * could not read. The build's XDK version never applies: the server builds and runs with its own.
  */
 internal class EmbeddedRuns(
     private val adapter: Adapter,
@@ -228,6 +239,8 @@ internal class EmbeddedRuns(
     private val worker: RunWorkerProcess = RunWorkerProcess(),
     /** How long attaching to a program waits for it to answer, [AttachedProgram.CONNECT_LIMIT] unless a test lifts it. */
     private val attachLimit: Duration = AttachedProgram.CONNECT_LIMIT,
+    /** What each source module's Gradle project runs it with, by module name, from the build model that the server applied. */
+    private val runSettings: () -> Map<String, XdkRunSettings> = { emptyMap() },
     /** The workspace's folders, where the debugger finds the sources of a module that no source graph names. */
     private val folders: () -> List<File> = { emptyList() },
 ) : Closeable {
@@ -528,6 +541,13 @@ internal class EmbeddedRuns(
         val artifact = target.artifact ?: return CompletableFuture.failedFuture(IllegalStateException("${target.name} was not written"))
         val token = UUID.randomUUID().toString()
         val server = setup?.let { ServerSocket(0, 1, InetAddress.getByName(LOOPBACK)) }
+        // the tests run with the JVM options of the module's Gradle project's xtcTest, as their output says
+        val gradle = runSettings()[target.name]
+        val options = JvmOptions.of(gradle?.testJvmArgs.orEmpty())
+        gradle
+            ?.let { fromGradle(it.source("xtcTest"), null, null, options, it.testProblems) }
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { events.output(it) }
         val command =
             TestProcess.command(
                 artifact,
@@ -535,6 +555,7 @@ internal class EmbeddedRuns(
                 tests,
                 File(File(result.workingDirectory), XUNIT_OUTPUT).path,
                 server?.let { "connect:$LOOPBACK:${it.localPort},suspend,token=$token" },
+                options.accepted,
             )
         // a run stopped while its module built never starts; one stopped from here on stops its process
         val process =
@@ -654,12 +675,30 @@ internal class EmbeddedRuns(
                         placed(file, lines)
                     },
             )
+        // the run's own method and arguments, where it gives them, else those of the module's Gradle project's xtcRun, whose
+        // JVM options the run's worker has, as its output says, which leaves out what is the default anyway
+        val gradle = runSettings()[module]
+        val method = params.method ?: gradle?.method ?: "run"
+        val args = params.args?.takeIf { it.isNotEmpty() } ?: gradle?.args.orEmpty()
+        val options = JvmOptions.of(gradle?.jvmArgs.orEmpty())
+        gradle?.let { settings ->
+            val taken =
+                fromGradle(
+                    settings.source("xtcRun"),
+                    settings.method.takeIf { params.method == null && it != "run" },
+                    settings.args.takeIf { params.args.isNullOrEmpty() && !it.isNullOrEmpty() },
+                    options,
+                    settings.problems,
+                )
+            if (taken.isNotEmpty()) events.output(taken)
+        }
         logger.info(
-            "run starting: run={} build={} artifact={} debug={}",
+            "run starting: run={} build={} artifact={} debug={}{}",
             runId,
             result.id,
             result.modules.lastOrNull { it.name == module }?.logged ?: module,
             setup != null,
+            gradle?.let { " gradle=${it.project ?: "model"}" }.orEmpty(),
         )
         // a run can end before start returns, e.g. while another program still runs
         val ended = AtomicBoolean()
@@ -668,12 +707,13 @@ internal class EmbeddedRuns(
                 RunWorkerProcess.Request(
                     result.modulePath,
                     module,
-                    params.method ?: "run",
-                    params.args.orEmpty(),
+                    method,
+                    args,
                     params.workingDirectory ?: result.workingDirectory,
                     placed,
                     runId,
                     if (placed == null) emptyMap() else sourceDirs(),
+                    options.accepted,
                 ),
                 object : ProgramEvents {
                     override fun output(text: String) = events.output(text)
@@ -993,6 +1033,9 @@ internal class EmbeddedRuns(
     /** Process IDs of the live execution workers, for tests. */
     internal fun workerPids(): List<Long> = worker.workerPids()
 
+    /** The command line of each live worker, by process ID; for tests. */
+    internal fun workerCommands(): Map<Long, List<String>> = worker.workerCommands()
+
     /**
      * Ends the runs: the programs in the execution workers and the client's tasks stop, and those a debugger attached
      * to run on.
@@ -1075,6 +1118,42 @@ internal class EmbeddedRuns(
 
         /** Why a client that cannot run [task] cannot debug a run of it. */
         fun noTasks(task: DebugTask) = "This client does not run ${task.task}s"
+
+        /**
+         * What a run takes from its Gradle project's [source], its `xtcRun` or `xtcTest`, as its output says ahead of the
+         * program's: the [method] and the [args] that it takes from there, where it does, and the JVM options of
+         * [options] that it runs with; then the options that it leaves out, each with why, those that hold a relative
+         * path, and the [problems], what the model's export could not read. Empty when there is none of these.
+         */
+        fun fromGradle(
+            source: String,
+            method: String?,
+            args: List<String>?,
+            options: JvmOptions,
+            problems: List<String>,
+        ): String =
+            buildString {
+                val named = source.replaceFirstChar(Char::uppercase)
+                val taken =
+                    listOfNotNull(
+                        method?.let { "method $it" },
+                        args?.let { "arguments $it" },
+                        options.accepted.takeIf { it.isNotEmpty() }?.let { "JVM options $it" },
+                    )
+                if (taken.isNotEmpty()) append("From $source: ${taken.joinToString(", ")}.\n")
+                if (options.refused.isNotEmpty()) {
+                    append("Left out of $source JVM options: ")
+                    append(options.refused.joinToString("; ") { "${it.option} (${it.why})" })
+                    append(".\n")
+                }
+                if (options.relative.isNotEmpty()) {
+                    append("$named JVM options with a relative path, which resolves against the language server's working directory, ")
+                    append("not the project's: ${options.relative}.\n")
+                }
+                if (problems.isNotEmpty()) {
+                    append("Left out of $source, as the Gradle model's export could not read them: ${problems.joinToString("; ")}.\n")
+                }
+            }
 
         /** Why a breakpoint on a line changed since the program was built is not installed. */
         const val CHANGED_SINCE_BUILD =

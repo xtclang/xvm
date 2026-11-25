@@ -35,7 +35,9 @@ import kotlin.time.Duration.Companion.seconds
  * of its own, so programs run side by side and a stuck one can be ended without touching the others. A worker
  * starts when no idle one is left and is reused for later runs; a worker that dies ends its run with an error.
  * Programs never execute in the language server process, so a hung or crashing program cannot take editor
- * features down with it.
+ * features down with it. A worker runs with the JVM options of the run it was started for, its Gradle project's
+ * ([Request.jvmOptions]), and serves only runs with the same options: a run with others gets a worker of its own,
+ * and an idle worker with other options is retired as it starts, so that one idle worker is kept, as before.
  *
  * The workers are supervised: one that does not report ready within [Limits.startup] is ended and its run
  * fails; a program still running [Limits.stop] after Stop has its worker ended; one idle worker is kept for
@@ -55,7 +57,8 @@ import kotlin.time.Duration.Companion.seconds
  * ([stray]).
  */
 internal class RunWorkerProcess(
-    private val command: () -> List<String> = ::defaultCommand,
+    /** The command that starts a worker with the given JVM options. */
+    private val command: (List<String>) -> List<String> = ::defaultCommand,
     private val limits: Limits = Limits(),
     expected: () -> RunWorkerIdentity = RunWorkerIdentity::current,
 ) : RunDebugClient(),
@@ -76,6 +79,8 @@ internal class RunWorkerProcess(
         val runId: String? = null,
         /** For a run under the debugger, the directory of each module's sources, by module name. */
         val sourceDirs: Map<String, String> = emptyMap(),
+        /** The JVM options of the worker that runs it, which [JvmOptions] has checked; none for the worker's own. */
+        val jvmOptions: List<String> = emptyList(),
     )
 
     /**
@@ -111,12 +116,14 @@ internal class RunWorkerProcess(
     )
 
     /**
-     * One worker JVM and the run it hosts, if any; [generation] counts the workers this server started, from 1. Guarded by
-     * [lock], apart from its reader thread.
+     * One worker JVM and the run it hosts, if any; [generation] counts the workers this server started, from 1, and
+     * [options] are the JVM options it runs with, on its [command] line. Guarded by [lock], apart from its reader thread.
      */
     private inner class Worker(
         val process: Process,
         val generation: Int,
+        val options: List<String>,
+        val command: List<String>,
     ) {
         val input = PrintStream(process.outputStream, true, Charsets.UTF_8)
         val ready = CompletableFuture<Unit>()
@@ -138,6 +145,9 @@ internal class RunWorkerProcess(
 
         /** Why the server ended this worker, reported to its run instead of an unexpected stop. */
         @Volatile var ended: String? = null
+
+        /** Whether the worker hosts no run and is not being ended or retired. */
+        fun idle() = run == null && ended == null
 
         /** Completes once its JVM's standard output and error have both ended, which they do as the process ends. */
         val drained = CompletableFuture<Unit>()
@@ -224,13 +234,16 @@ internal class RunWorkerProcess(
         val refused =
             synchronized(lock) {
                 check(!closed) { "The execution worker is closed" }
-                // a worker that is being ended or retired, or holds too much, is never reused
+                // a worker that is being ended or retired, or holds too much, is never reused, nor one with other JVM options
                 val worker =
-                    workers.firstOrNull { it.run == null && it.ended == null && it.worn == null && it.process.isAlive }
+                    workers.firstOrNull { it.idle() && it.worn == null && it.process.isAlive && it.options == request.jvmOptions }
                         ?: if (workers.count { it.run != null } >= limits.running) {
                             return@synchronized "${limits.running} programs are already running; stop one to run another"
                         } else {
-                            launch() ?: return@synchronized "The execution worker could not be started"
+                            val launched = launch(request.jvmOptions) ?: return@synchronized "The execution worker could not be started"
+                            // an idle worker with other options serves none of these runs; the new one is kept idle after its run
+                            workers.filter { it !== launched && it.idle() && it.options != launched.options }.forEach(::retire)
+                            launched
                         }
                 worker.timer?.cancel(false)
                 worker.timer = null
@@ -238,7 +251,14 @@ internal class RunWorkerProcess(
                 worker.printed = false
                 worker.runId = request.runId
                 hosts[id] = worker
-                logger.info("run assigned: {} {} module={} method={}", runFields(id, request.runId), worker, request.module, request.method)
+                logger.info(
+                    "run assigned: {} {} module={} method={}{}",
+                    runFields(id, request.runId),
+                    worker,
+                    request.module,
+                    request.method,
+                    logged(request.jvmOptions),
+                )
                 // commands are held until the worker reports the expected identity, so they keep their order
                 val sent =
                     worker.send(
@@ -292,6 +312,10 @@ internal class RunWorkerProcess(
     /** Process IDs of the live workers, for tests. */
     internal fun workerPids(): List<Long> = synchronized(lock) { workers.filter { it.process.isAlive }.map { it.process.pid() } }
 
+    /** The command line that started each live worker, by process ID, as [launch] built it; for tests. */
+    internal fun workerCommands(): Map<Long, List<String>> =
+        synchronized(lock) { workers.filter { it.process.isAlive }.associate { it.process.pid() to it.command } }
+
     /** Runs the server still tracks, which is none once every run has ended; for tests. */
     internal fun tracked(): Int = listeners.size + hosts.size
 
@@ -322,8 +346,9 @@ internal class RunWorkerProcess(
         endRuns(listeners.keys.snapshot(), "The execution worker was shut down")
     }
 
-    /** Starts a worker JVM, or returns null when it cannot be started. Called under [lock]. */
-    private fun launch(): Worker? {
+    /** Starts a worker JVM with the JVM options [options], or returns null when it cannot be started. Called under [lock]. */
+    private fun launch(options: List<String>): Worker? {
+        val line = command(options)
         val token = UUID.randomUUID().toString()
         val server =
             try {
@@ -334,7 +359,7 @@ internal class RunWorkerProcess(
             }
         val process =
             try {
-                ProcessBuilder(command())
+                ProcessBuilder(line)
                     .apply {
                         environment()[RunWorker.PORT] = server.localPort.toString()
                         environment()[RunWorker.TOKEN] = token
@@ -344,7 +369,7 @@ internal class RunWorkerProcess(
                 logger.error("execution worker could not be started", failure)
                 return null
             }
-        val worker = Worker(process, ++generations)
+        val worker = Worker(process, ++generations, options, line)
         workers += worker
         // a worker that ends before it connects ends the wait for its connection
         process.onExit().thenRun { runCatching { server.close() } }
@@ -374,7 +399,7 @@ internal class RunWorkerProcess(
                 worker.end("The execution worker did not start within ${limits.startup}")
             }
         }
-        logger.info("execution worker started: {}", worker)
+        logger.info("execution worker started: {}{}", worker, logged(options))
         return worker
     }
 
@@ -627,10 +652,16 @@ internal class RunWorkerProcess(
         while (worker.waiting.isNotEmpty()) listener.output("${worker.waiting.removeFirst()}\n")
     }
 
-    /** Why [worker] stopped, which it did on its own: as it started, before it was ready, or later. */
+    /**
+     * Why [worker] stopped, which it did on its own: as it started, before it was ready, where the JVM options it was
+     * given may be why, or later.
+     */
     private fun unexpectedly(worker: Worker): String =
-        (if (worker.ready.isDone) "The execution worker stopped unexpectedly" else "The execution worker stopped as it started") +
-            if (worker.printed) "; what its JVM printed, in the output above, says why" else ""
+        when {
+            worker.ready.isDone -> "The execution worker stopped unexpectedly"
+            worker.options.isEmpty() -> "The execution worker stopped as it started"
+            else -> "The execution worker stopped as it started, with the JVM options ${worker.options}"
+        } + if (worker.printed) "; what its JVM printed, in the output above, says why" else ""
 
     /** One of the worker's own events of a run, its output or its memory once it has ended, which [line] carries. */
     private fun workerEvent(
@@ -786,6 +817,9 @@ internal class RunWorkerProcess(
 
         private const val MB = 1024L * 1024
 
+        /** JVM options as the logs give them, after the rest of a line: nothing for none. */
+        fun logged(options: List<String>) = if (options.isEmpty()) "" else " options=$options"
+
         /** How many of a worker's lines outside a run the log has; see [stray]. */
         private const val STRAYS_LOGGED = 20
 
@@ -801,8 +835,11 @@ internal class RunWorkerProcess(
         /** How many connections to a worker's port may wait to be taken, the worker's own among strays. */
         private const val BACKLOG = 8
 
-        /** The worker runs from the language server's own classpath, on the same Java runtime. */
-        fun defaultCommand(): List<String> =
+        /**
+         * The worker runs from the language server's own classpath, on the same Java runtime, with the JVM options
+         * [options] after the server's own `-Dfile.encoding`, which one of theirs replaces, as the JVM takes the last.
+         */
+        fun defaultCommand(options: List<String>): List<String> =
             listOf(
                 ProcessHandle
                     .current()
@@ -810,9 +847,11 @@ internal class RunWorkerProcess(
                     .command()
                     .orElse("java"),
                 "-Dfile.encoding=UTF-8",
-                "-cp",
-                System.getProperty("java.class.path"),
-                RunWorker::class.java.name,
-            )
+            ) + options +
+                listOf(
+                    "-cp",
+                    System.getProperty("java.class.path"),
+                    RunWorker::class.java.name,
+                )
     }
 }
