@@ -7,6 +7,7 @@ module TestGenerics {
         testArrayType();
         testVirtualChild();
         testTypeParams();
+        testGenericPropertyVariance();
         testTurtleType();
         testConditionalMixins();
     }
@@ -101,6 +102,19 @@ module TestGenerics {
     <CompileType1 extends Base, CompileType2 extends CompileType1, CompileType3 extends CompileType2>
             void foo(CompileType1 c1, CompileType2 c2, CompileType3 c3) {
         assert c2.as(CompileType1) != c1;
+    }
+
+    void testGenericPropertyVariance() {
+        // Slot class is a consumer for Value due to the "put" method and a producer due to
+        // generic Value property - hence the widening should be allowed
+        Slot<Stringable> slot = new Slot<String>("value");
+        assert slot.value == "value";
+
+        class Slot<Value>(Value value) {
+            void put(Value value) {
+                this.value = value;
+            }
+        }
     }
 
     void testTurtleType() {
