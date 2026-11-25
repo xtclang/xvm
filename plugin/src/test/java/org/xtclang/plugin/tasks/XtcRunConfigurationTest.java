@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -175,6 +176,76 @@ class XtcRunConfigurationTest {
 
         assertFalse(run.getCliModuleArgs().isPresent());
         assertEquals(List.of("original"), run.resolveModulesToRunFromModulePath(List.of()).getFirst().getModuleArgs().get());
+    }
+
+    @Test
+    void jvmArgsAddToTheDefaultJvmArguments() {
+        final var project = newProject();
+        final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+        final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
+        final var defaults = extension.getJvmArgs().get();
+        assertTrue(defaults.contains("-ea"));
+
+        extension.jvmArgs("-Xss4m");
+        run.jvmArgs("-Dorigin=task");
+
+        assertEquals(concat(defaults, "-Xss4m"), extension.getJvmArgs().get());
+        assertEquals(concat(defaults, "-Xss4m", "-Dorigin=task"), run.getJvmArgs().get());
+    }
+
+    @Test
+    void cliModuleRunsTheConfiguredModuleAloneWithItsMethodAndArguments() {
+        final var run = newProject().getTasks().named("runXtc", XtcRunTask.class).get();
+        run.module(module -> module.getModuleName().set("Other"));
+        run.module(module -> {
+            module.getModuleName().set("Example");
+            module.getMethodName().set("greet");
+            module.moduleArgs("hello", "world");
+        });
+        run.setCliModuleName("Example");
+
+        final var modules = run.resolveModulesToRunFromModulePath(List.of());
+        assertEquals(1, modules.size());
+        final var selected = modules.getFirst();
+        assertEquals("Example", selected.getModuleName().get());
+        assertEquals("greet", selected.getMethodName().get());
+        assertEquals(List.of("hello", "world"), selected.getModuleArgs().get());
+    }
+
+    @Test
+    void cliMethodAndArgumentsOverrideTheCliModulesConfiguredOnes() {
+        final var run = newProject().getTasks().named("runXtc", XtcRunTask.class).get();
+        final var configured = run.module(module -> {
+            module.getModuleName().set("Example");
+            module.getMethodName().set("greet");
+            module.moduleArgs("hello");
+        });
+        run.setCliModuleName("Example");
+        run.setCliModuleArgs("own");
+
+        final var selected = run.resolveModulesToRunFromModulePath(List.of()).getFirst();
+        assertEquals("greet", selected.getMethodName().get());
+        assertEquals(List.of("own"), selected.getModuleArgs().get());
+        assertEquals(List.of("hello"), configured.getModuleArgs().get());
+    }
+
+    @Test
+    void cliModuleThatNoModuleConfiguresRunsWithTheDefaults() {
+        final var run = newProject().getTasks().named("runXtc", XtcRunTask.class).get();
+        run.module(module -> {
+            module.getModuleName().set("Example");
+            module.getMethodName().set("greet");
+        });
+        run.setCliModuleName("Elsewhere");
+
+        final var selected = run.resolveModulesToRunFromModulePath(List.of()).getFirst();
+        assertEquals("Elsewhere", selected.getModuleName().get());
+        assertEquals("run", selected.getMethodName().get());
+        assertEquals(List.of(), selected.getModuleArgs().get());
+    }
+
+    private static List<String> concat(final List<String> first, final String... rest) {
+        return Stream.concat(first.stream(), Stream.of(rest)).toList();
     }
 
     private static Project newProject() {
