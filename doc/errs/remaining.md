@@ -621,6 +621,12 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   between, and a process's threads take a kind's guard one at a time, by a monitor: a second thread's attempt at the
   guard failed, as the first's lock was the process's, and closing its channel released that lock, after which it made
   its directory unguarded.
+- [x] Found 2026-11-25 in a full run of the plugin's unit tests, not when the class runs alone (8 of 8 passed):
+  `XtcCompletionTest`'s "a typed prefix that the server completes with nothing lists the file's words" got ScoreCard,
+  Scoreboard and size from the server, which completed the line without the typed "Tal". The test typed as soon as
+  the file was open, and LSP4IJ 0.30.1 loses an edit typed while it connects a file (UP83), which the product's
+  `OpenedTextRepair` mends but the tests' stub server does not start. Fixed (2026-11-25): both typed prefix cases wait
+  until LSP4IJ has connected the file before they type.
 - [x] Found 2026-11-25 in `run-tour-1548907980096693794`, the tour's sections through Diagnostics in the container,
   not in the tour runs kept before: Reading code's Parameter info popup (Ctrl+P) did not show within its 3-minute
   bound. The step's closers, now in order, say what came after its press: "ParameterInfo, scroll", one scroll of the
@@ -1516,8 +1522,9 @@ product itself, not only in the playbook, or the gap is recorded here; each work
   have: the plugin then logs a warning naming UP83, and the server's text stays wrong until the file is
   opened again. Accepted as good enough until 0.30.2, rather than switching such users to full
   synchronization. The tour's kill step no longer waits for the restarted server before its edit, so the
-  edit falls in the window. To do after 0.30.2: remove `OpenedTextRepair` and its registration in
-  `XtcLanguageServerFactory`.
+  edit falls in the window. The plugin's unit tests' stub server does not start the bridge, so
+  `XtcCompletionTest`'s typed prefix cases wait until LSP4IJ has connected the file before they type. To do
+  after 0.30.2: remove `OpenedTextRepair` and its registration in `XtcLanguageServerFactory`, and those waits.
 - [ ] UP81 ([#2097](https://github.com/redhat-developer/lsp4ij/issues/2097), fixed upstream): when the server
   stops with 100 or more closed documents, LSP4IJ 0.30.1 submits a read action per file at once to clear their
   Project view marks, and IntelliJ logs "Too many non-blocking read actions submitted at once" as an IDE error.
