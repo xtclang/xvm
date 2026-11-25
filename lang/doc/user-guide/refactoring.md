@@ -34,8 +34,13 @@ Moving a file to another package's folder moves its type, and every use follows:
 qualified names and imports, also in files that aren't open. In IntelliJ, use **Refactor | Move** (<kbd>F6</kbd>) or
 drag the file in the Project view; in VS Code, cut and paste or drag it in the Explorer.
 
+<table><tr><td>
+
 ![VS Code Explorer with Suit.x moved into a cards folder, and the files that use it open with unsaved edits](images/vscode-move-file.png)
+
 *VS Code: `Suit` moved to the `cards` package in the Explorer; the files that use it are rewritten, as their tabs show.*
+
+</td></tr></table>
 
 ## Extract, inline and safe delete
 
@@ -63,8 +68,13 @@ These are code actions: select the code, or put the cursor on it, then press <kb
 
 </td></tr></table>
 
+<table><tr><td>
+
 ![IntelliJ offering Safely delete private member 'heading'](images/intellij-safe-delete.png)
+
 *IntelliJ: <kbd>Alt+Enter</kbd> on `heading`, a private method that nothing uses, offers to delete it safely.*
+
+</td></tr></table>
 
 ## Quick fixes and imports
 

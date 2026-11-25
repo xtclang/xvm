@@ -57,8 +57,13 @@ the server has read it, with no restart.
 - **Run every test module's tests**: **Run 'All Ecstasy Tests'** in IntelliJ's Project window, on
   the project folder or its test sources; **Run All Tests** in VS Code's Testing view.
 
+<table><tr><td>
+
 ![VS Code Testing view and editor with a test just written, run and passed](images/vscode-new-test.png)
+
 *VS Code: `testANewDeckIsFull`, written while the project is open, is in the Testing view with its gutter icon, and runs.*
+
+</td></tr></table>
 
 ## Read the results
 
@@ -78,8 +83,13 @@ tests' output is with the results.
 
 </td></tr></table>
 
+<table><tr><td>
+
 ![VS Code Testing view with 64 of 64 tests passed, gutter icons, and the Test Results view](images/vscode-run-all-tests.png)
+
 *VS Code: Run All Tests runs every module's tests; the Testing view and the gutter show each result, and Test Results what they printed.*
+
+</td></tr></table>
 
 ## Rerun and debug tests
 
