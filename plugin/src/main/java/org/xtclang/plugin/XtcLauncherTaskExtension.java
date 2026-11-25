@@ -129,6 +129,10 @@ public interface XtcLauncherTaskExtension extends Named {
 
     void jvmArg(Provider<? extends @NotNull String> arg);
 
+    /**
+     * Adds JVM arguments after those already given, the plugin's defaults (-ea among them) included; a task's
+     * jvmArgs add to its extension's.
+     */
     void jvmArgs(String... args);
 
     void jvmArgs(Iterable<? extends String> args);

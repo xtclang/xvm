@@ -145,10 +145,11 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     // =========================================================================
 
     /**
-     * Override the module to run from command line.
+     * Override the module to run from command line: only that module runs, with the method and arguments that the
+     * task's configuration gives it where it names the module, and the defaults where it does not.
      * Example: ./gradlew runXtc --module=MyModule
      */
-    @Option(option = "module", description = "Module name to run (overrides xtcRun configuration)")
+    @Option(option = "module", description = "Module name to run, alone, with its configured method and arguments if any")
     public void setCliModuleName(final String moduleName) {
         this.cliModuleName.set(moduleName);
     }
@@ -349,7 +350,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // Check for command-line override: --module=MyModule takes precedence over all configuration
         if (cliModuleName.isPresent()) {
             final String moduleName = cliModuleName.get();
-            logger.info("[plugin] Command-line override: running module '{}' (ignoring xtcRun configuration)", moduleName);
+            logger.info("[plugin] Command-line override: running module '{}' alone, with its configured method and arguments if any", moduleName);
             final XtcRunModule cliModule = createCliOverrideModule(moduleName);
             return List.of(validatedModule(cliModule));
         }
@@ -375,9 +376,17 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     /**
-     * Create an XtcRunModule from command-line options.
+     * The module that --module runs: the configured module of that name, the first where the configuration names it more
+     * than once, with its method and arguments, or else a module of that name with the defaults; the command line's
+     * method and arguments apply to either.
      */
     private XtcRunModule createCliOverrideModule(final String moduleName) {
+        final var configured = getModules().get().stream()
+            .filter(module -> moduleName.equals(module.getModuleName().getOrNull()))
+            .findFirst();
+        if (configured.isPresent()) {
+            return applyCliOverrides(configured.get());
+        }
         final var module = objects.newInstance(DefaultXtcRunModule.class);
         module.getModuleName().set(moduleName);
         return applyCliOverrides(module);
