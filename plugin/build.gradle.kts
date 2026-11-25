@@ -4,8 +4,10 @@ import com.vanniktech.maven.publish.GradlePlugin
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.SourcesJar
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.plugin.compatibility.compatibility
+import org.gradle.process.CommandLineArgumentProvider
 
 plugins {
     alias(libs.plugins.xdk.build.java)
@@ -147,6 +149,18 @@ tasks.withType<Javadoc>().configureEach {
 
 tasks.named<ProcessResources>("processTestResources") {
     from(layout.projectDirectory.file("../lang/gradle/compiler-model.init.gradle"))
+}
+
+// ProjectVersionWarningTest's nested build applies kotlin-dsl, which it downloads from the Gradle plugin portal and
+// Maven Central into its TestKit home. That home is under the Gradle user home's caches, so it outlives checkouts
+// and test runs, and CI's setup-gradle saves it with them from master, for every other run to restore.
+tasks.withType<Test>().configureEach {
+    jvmArgumentProviders.add(TestKitDirectory(gradle.gradleUserHomeDir.resolve("caches/xtc-testkit")))
+}
+
+/** The TestKit home of the tests' nested builds, an internal input: where it is changes no test's result. */
+class TestKitDirectory(@get:Internal val directory: File) : CommandLineArgumentProvider {
+    override fun asArguments() = listOf("-Dxtc.testkit.dir=${directory.absolutePath}")
 }
 
 tasks.withType<JavaCompile>().configureEach {

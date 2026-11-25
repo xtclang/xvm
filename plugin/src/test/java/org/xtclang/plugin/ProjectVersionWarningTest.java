@@ -115,6 +115,11 @@ class ProjectVersionWarningTest {
         final GradleRunner runner = GradleRunner.create()
             .withProjectDir(testProjectDir.toFile())
             .withArguments("help", "--stacktrace");
+        // the build gives the nested build a TestKit home that outlives the test, so its kotlin-dsl is downloaded once
+        final String testKitDir = System.getProperty("xtc.testkit.dir");
+        if (testKitDir != null) {
+            runner.withTestKitDir(new File(testKitDir));
+        }
         return (withPluginClasspath ? runner.withPluginClasspath() : runner).build();
     }
 }
