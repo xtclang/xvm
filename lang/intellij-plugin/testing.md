@@ -56,8 +56,15 @@ a green task summary is insufficient. Partial and unselected cases do not count 
 acceptance. Test history from older builds does not substitute for running the current artifact.
 
 The compiler is the default adapter. Native tests reuse the cached signed IntelliJ distribution
-and JBR, with isolated configuration, plugins and indices. Report cleanup retains five completed
-payloads; `-PplaybookRetainedRuns=N` changes that count, and a `.keep-artifacts` marker preserves a run.
+and JBR, with isolated configuration, plugins and indices. Report cleanup retains the payloads of
+the five newest completed runs, and of the ten newest failed runs with their traces, however many
+runs passed after them; `-PplaybookRetainedRuns=N` and `-PplaybookRetainedFailedRuns=N` change those
+counts, older runs, passed or failed, keep their results, and a `.keep-artifacts` marker preserves a
+run. A run is complete once its IDE has closed, whether it passed or failed; a run still in progress
+is left alone. Cleanup compresses a completed run's server traces (`server-trace/lsp-trace-*.jsonl.gz`)
+and its client traces of 1 MiB or more; of the passing runs that keep their payloads, the newest of
+each mode (features, tour, ...) keeps its traces, and the others keep their results, screenshots and
+logs without them. Pass and fail are read from `results.json`.
 
 ## Testing Approaches Overview
 
@@ -292,7 +299,8 @@ lang/intellij-plugin/container/playbook.sh gradle :lang:vscode-extension:testVsc
 ```
 
 Each run exports the checkout as it is, uncommitted changes included, and copies its run
-directories to `build/reports/compiler-playbook`, as a native run does. The container is
+directories to `build/reports/compiler-playbook`, as a native run does, where the same cleanup
+prunes them. The container is
 aarch64 Linux on an Apple machine, with its own fonts and timing; every case IntelliJ implements
 has passed there (2026-10-29). Pin an LSP4IJ nightly's version: the latest may not compile against
 the plugin.
