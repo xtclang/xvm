@@ -26,7 +26,7 @@ internal fun callableIdentity(
     val selected =
         info.getMethodById(method) ?: info.getMethodBySignature(method.signature)
             ?: return if (union) ProofIdentity.Unproven() else null
-    val dispatch = info.dispatch(selected, errors)
+    val dispatch = info.dispatch(selected, errors, natives = true)
     if (union) {
         if (!dispatch.supported) return ProofIdentity.Unproven()
         return dispatch.alternatives.singleOrNull()?.proof(identity) ?: ProofIdentity.Unproven()
