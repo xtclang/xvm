@@ -1,0 +1,469 @@
+position	commit	subject	layers	proposed_pr	notes
+1	d4ec7e0057	Preserve module repository read failures without blocking usable candidates	javatools-tests,javatools-compiler	diagnostics-embedding	with 2-5 the successor of closed #683/#685; breaking API (0.5.0)
+2	7393a74612	Separate diagnostic reporting from listener abort policy	javatools-compiler,javatools-tests,docs,javatools-runtime/debugger	diagnostics-embedding	-
+3	29029a823c	Require explicit compiler listeners and reasons for silence	javatools-compiler,docs,javatools-tests,javatools-embedding-api,javatools-runtime/debugger	diagnostics-embedding	-
+4	80abb85c86	Scope parser diagnostics and restore validation listeners on every exit	javatools-compiler,javatools-tests,docs	diagnostics-embedding	-
+5	ff6912f8ed	Expose host compilation outcomes, snapshots, cancellation and cached diagnostics	lsp-server,javatools-embedding-api,javatools-compiler,javatools-tests,docs,javatools-runtime/debugger	diagnostics-embedding	lang part: compiler-consumer tests in lsp-server's adapter tests, kept with this unit
+6	97d447aa5d	Expose compilation-owned syntax and resolved semantic facts	javatools-compiler,javatools-tests,lsp-server,javatools-embedding-api	semantic-facts	lang part: compiler-consumer tests, kept with this unit; old branch errs/compiler-semantic-facts-20261009 is a stale snapshot of this
+7	6ea329f445	Expose recovery, cursor fitting and declaration analysis to compiler hosts	javatools-compiler,javatools-tests,javatools-embedding-api,lsp-server	partial-analysis	lang part: compiler-consumer tests, kept with this unit; old branch errs/compiler-partial-analysis-20261009 is a stale snapshot of this; its CursorScope/PartialArgument/PartialCallResolver are deleted again by 10
+8	256fe39288	Integrate compiler-backed language support with IntelliJ and VS Code	lsp-server,playbook/tour/harness,intellij-plugin,vscode-extension,docs,dsl/grammar,build/CI,xdk-libraries	lsp-server-core	spans units: split, to lang-build 10 files +908/-115, playbook-harness 118 files +30323/-101, intellij-client 83 files +6824/-293, refactoring 74 files +14917/-53, vscode-client 55 files +3505/-481; the base product (+109k lines): split by component (server, IntelliJ, VS Code, playbook harness and catalog, refactoring files); leave out what later commits remove: the color prototype (36), monikers (387), lang-on default (317), LSP4IJ workarounds (326-346)
+9	f75726bc8c	Report repository read attempts without inferring dependency failures	javatools-compiler,lsp-server,javatools-tests,javatools-embedding-api	diagnostics-embedding	RepositoryReportingTest added here is deleted by 19: squash
+10	e7b637eb0f	Clarify tooling contracts and isolate partial AST helpers	lsp-server,javatools-compiler,docs,javatools-embedding-api,intellij-plugin,playbook/tour/harness,build/CI,javatools-tests	lsp-server-core	spans units: split, to partial-analysis 39 files +1734/-394; compiler half to partial-analysis; server half (338 files) is renames for the tooling contracts
+11	57d5985d1d	Keep unchanged repository read failures cached until file metadata changes	javatools-tests,javatools-compiler,lsp-server,docs	diagnostics-embedding	-
+12	c4c05d82bd	Verify compiler output without binary AST dependencies	docs,javatools-compiler	diagnostics-embedding	tiny (10 lines)
+13	25e4c4c2e7	Isolate parallel LSP test workers and keep CI and lint checks clean	playbook/tour/harness,lsp-server,build/CI,docs,vscode-extension	lang-build	-
+14	23f90f8128	Verify the LSP4IJ APIs the plugin uses, and prepare the runIde sandbox	build/CI,intellij-plugin,docs	intellij-client	-
+15	bbfba51ac9	Document compiler support for the language server	docs	tooling-docs	spans units: split, to partial-analysis 2 files +1253/-471; javatools/lsp-compiler.md documents units 2-4: ships with them; renamed by 21: squash
+16	162eb1a04e	Guard code actions and renames at synthetic bodies and locked library sources	lsp-server,intellij-plugin	refactoring	-
+17	6f6d854012	Restart editor-owned language servers from a project-scoped CLI	intellij-plugin,vscode-extension,build/CI,docs,playbook/tour/harness	server-operations	-
+18	f05a7e8889	Group source bindings, clean up the compiler AST and share duplicated code	javatools-compiler,intellij-plugin,lsp-server,xdk-libraries,docs,javatools-embedding-api,javatools-tests,javatools-runtime/debugger	semantic-facts	spans units: split, to intellij-client 4 files +122/-107, lsp-server-core 4 files +48/-67; broad ast-package cleanup (82 javatools files) on top of 6 and 7; deletes their InitializerBinding, InvocationBinding and CursorBinding: squash, or offer as its own PR
+19	3067e59b71	Route repository and runtime reports through error listeners	javatools-tests,lsp-server,javatools-compiler,docs,javatools-runtime/debugger	diagnostics-embedding	deletes 1's, 9's and 11's repository failure tests: squash
+20	f2414e294c	Build and run with the embedded compiler in the server and both editors	intellij-plugin,lsp-server,vscode-extension,docs	build-run	-
+21	45f3676225	Rename the compiler guide and testing documents, and correct stale documentation	docs	tooling-docs	spans units: split, to partial-analysis 2 files +9/-9; renames 15's LSP-COMPILER.md: squash
+22	0f99dfb570	Cover embedded build, run, debug launches and the adapter chooser in the shared playbook	playbook/tour/harness,docs,intellij-plugin	build-run	playbook cases of the embedded build
+23	16b4d1aeeb	Keep documents current and the server responsive, and name its own diagnostics	lsp-server,docs,playbook/tour/harness,intellij-plugin,vscode-extension	lsp-server-core	-
+24	0120b86ffb	Stop advertising features that do not work, and warn when Tree-sitter falls back to the Mock adapter	dap-server,lsp-server,docs	lsp-server-core	-
+25	6ff02a679c	Let embedded runs read console input in both editors	lsp-server,vscode-extension,intellij-plugin,playbook/tour/harness,docs	build-run	-
+26	e870e85b22	Build the editor's snapshot and reuse unchanged modules in embedded builds	lsp-server,docs	build-run	-
+27	fe14c826de	Make embedded the default build mode, chosen per editor	playbook/tour/harness,vscode-extension,intellij-plugin,docs,build/CI	build-run	-
+28	353cac1739	Judge file events against a running analysis and apply them in order	lsp-server,docs	lsp-server-core	-
+29	c037a38fcd	Run programs side by side in supervised execution workers	lsp-server,vscode-extension,docs	build-run	-
+30	f2ee1ef867	Find entry methods through the module's type and pass them with their arguments	javatools-tests,lsp-server,javatools-embedding-api,docs	build-run	spans units: split, to runtime-embedded-execution 2 files +369/-11; its EmbeddingRunMethodTest is deleted again by 33: squash
+31	d0c5091a51	Keep indentation while typing, and lay out switches as the XDK does	lsp-server,playbook/tour/harness,intellij-plugin,docs	editing-navigation	-
+32	5c43a60581	Read in cancellable read actions where a long read could freeze IntelliJ	intellij-plugin	intellij-client	-
+33	04fc4f6f4e	Fix two close races in embedded runs and cover the embedding API's runs	javatools-tests,lsp-server	build-run	spans units: split, to runtime-embedded-execution 1 file +0/-361; deletes 30's EmbeddingRunMethodTest: squash
+34	1ce1ecf2ff	Build and run the editor's text unsaved, and report why a run cannot start	playbook/tour/harness,lsp-server,intellij-plugin,docs,vscode-extension,javatools-embedding-api	build-run	spans units: split, to runtime-embedded-execution 1 file +3/-1
+35	094fe30eba	Declare fields first and use plain names in the new classes	lsp-server,javatools-compiler,intellij-plugin,playbook/tour/harness,javatools-tests,build/CI,javatools-runtime/debugger	lsp-server-core	spans units: split, to semantic-facts 26 files +258/-263, playbook-harness 3 files +66/-66, intellij-client 14 files +87/-87; style pass over classes of several units: fold each part into the unit that adds the class
+36	e21527131e	Remove the document-color prototype	lsp-server,playbook/tour/harness,docs,vscode-extension,intellij-plugin	lsp-server-core	removes 8's document-color prototype: leave both out
+37	a9f1afa3b7	Rename adopted properties, widen extraction, and move and rename discovered roots	lsp-server,playbook/tour/harness,intellij-plugin,docs,vscode-extension	refactoring	-
+38	2ca966bb8b	Show a Run icon in IntelliJ's gutter, and build a generated project with real Gradle	playbook/tour/harness,intellij-plugin,lsp-server,docs	build-run	-
+39	27835ef2a1	End runs and workers cleanly, and measure them without waiting for the collector	lsp-server,javatools-tests,docs,javatools-embedding-api	build-run	spans units: split, to runtime-embedded-execution 2 files +40/-3
+40	544d029721	Cancel IntelliJ requests whose connection ends	intellij-plugin,playbook/tour/harness	intellij-client	-
+41	2140538277	Stop the lexer at a source's end and keep diagnostics that only look like duplicates	javatools-tests,javatools-compiler	off-master	lexer half on master as #717; the duplicate-diagnostic half (errs 814153a42) was dropped from #717 by decision: keep off master unless argued again
+42	3bae33f9a2	Keep the build's jars whole and its test runs focused	build/CI,vscode-extension,lsp-server,docs,intellij-plugin	lang-build	AGENTS.md's inline-comment rule (3 lines) is repo policy: can go alone
+43	88fb8ad536	Take LSP4IJ from a Marketplace channel, and keep the playbooks' checks and roots clean	playbook/tour/harness,build/CI,intellij-plugin,docs	intellij-client	spans units: split, to playbook-harness 14 files +166/-33
+44	54491b353f	Synchronize the semantic token history that concurrent queries share	lsp-server	lsp-server-core	-
+45	930d1cdb22	Keep moved module containers as missing inputs, and stop refetching library documents	lsp-server,docs	workspace-modules	-
+46	1215e5c3dd	Debug programs from VS Code and IntelliJ through the language server	dap-server,lsp-server,javatools-runtime/debugger,intellij-plugin,playbook/tour/harness,javatools-tests,vscode-extension,javatools-embedding-api,docs	debugger-editors	spans units: split, to runtime-debugger 8 files +1067/-8; agent classes moved into javatools by 105: write them there once
+47	e48a4797f0	Show a stopped frame's variables, and step over, into and out of calls	playbook/tour/harness,javatools-runtime/debugger,lsp-server,javatools-tests,dap-server,docs	debugger-editors	spans units: split, to runtime-debugger 3 files +736/-32
+48	0543e52229	Stop at exceptions, pause a running program, and stop on entry	javatools-runtime/debugger,javatools-tests,playbook/tour/harness,lsp-server,dap-server,vscode-extension,docs	debugger-editors	spans units: split, to runtime-debugger 3 files +945/-552
+49	8a478d8338	Evaluate watches and hovers on paths in a stopped frame	javatools-runtime/debugger,playbook/tour/harness,lsp-server,javatools-tests,dap-server,docs	debugger-editors	spans units: split, to runtime-debugger 2 files +328/-23
+50	7f993f1dff	Conditional breakpoints, hit counts, logpoints and exception classes	javatools-runtime/debugger,dap-server,playbook/tour/harness,lsp-server,javatools-tests,docs	debugger-editors	spans units: split, to runtime-debugger 2 files +547/-43
+51	32867d6570	Evaluate expressions with operators without running the program's code	javatools-runtime/debugger,playbook/tour/harness,javatools-tests,dap-server,lsp-server,docs	debugger-editors	spans units: split, to runtime-debugger 3 files +1084/-216
+52	9e310d2ab4	Leave the runner's frames out of the debugger's stacks and traces	javatools-runtime/debugger,playbook/tour/harness,javatools-tests,lsp-server	debugger-editors	spans units: split, to runtime-debugger 2 files +57/-12
+53	7190e6fc80	Run code typed in the Debug Console on the stopped fiber	javatools-runtime/debugger,javatools-tests,playbook/tour/harness,dap-server,lsp-server,intellij-plugin,vscode-extension,docs	debugger-editors	spans units: split, to runtime-debugger 3 files +1805/-142
+54	89d91c32a1	Stop at the program's first line from IntelliJ's configuration	playbook/tour/harness,intellij-plugin,docs	debugger-editors	-
+55	af275489a5	Lazy properties, hexadecimal values, paged arrays, Set Value, completions	playbook/tour/harness,javatools-runtime/debugger,dap-server,javatools-tests,lsp-server,vscode-extension,docs	debugger-editors	spans units: split, to runtime-debugger 4 files +1250/-91
+56	b4c8acfb6e	Place breakpoints on the lines a debugged program was built from	lsp-server,playbook/tour/harness,docs	debugger-editors	-
+57	ba91f32e99	Soak runs and debug sessions on one worker, and let finished runtimes go	lsp-server,javatools-runtime/debugger,javatools-tests,playbook/tour/harness,javatools-embedding-api,docs	build-run	spans units: split, to runtime-embedded-execution 20 files +338/-110
+58	324b9427d4	Check Run to Cursor in both editors	playbook/tour/harness,lsp-server,docs	debugger-editors	-
+59	ca6c88726e	Show library frames in their bundled source, every fiber, and modules	playbook/tour/harness,lsp-server,javatools-runtime/debugger,javatools-tests,dap-server,docs	debugger-editors	spans units: split, to runtime-debugger 5 files +429/-71
+60	75ba33ed3c	Step into a chosen call of the stopped line	playbook/tour/harness,javatools-runtime/debugger,lsp-server,dap-server,javatools-tests,javatools-compiler,docs	debugger-editors	spans units: split, to runtime-debugger 5 files +251/-8
+61	a2943aa2b8	Stop where a method of a name is entered	javatools-runtime/debugger,lsp-server,dap-server,playbook/tour/harness,javatools-tests,docs	debugger-editors	spans units: split, to runtime-debugger 2 files +224/-38
+62	9635078fdb	Restart a stopped frame, which its caller then calls again	javatools-runtime/debugger,lsp-server,playbook/tour/harness,javatools-tests,dap-server,docs	debugger-editors	spans units: split, to runtime-debugger 3 files +211/-16
+63	d2405bae67	Stop once a watched field of an object has changed	javatools-runtime/debugger,dap-server,lsp-server,playbook/tour/harness,javatools-tests,docs	debugger-editors	spans units: split, to runtime-debugger 2 files +349/-18
+64	17b21761cc	Check Reset Frame and function breakpoints in IntelliJ, for LSP4IJ's fixes	playbook/tour/harness,lsp-server	debugger-editors	-
+65	a8a0010f34	Answer inline values with the stopped method's variables	lsp-server,playbook/tour/harness,docs	debugger-editors	-
+66	517c2a43bf	Check data breakpoints, Pause, exception filters and loaded sources in IntelliJ	playbook/tour/harness	debugger-editors	-
+67	5191f05192	Check a document link's Ctrl+Click in IntelliJ's X131	playbook/tour/harness	editing-navigation	-
+68	72870eaf11	Drop the references to documents and plans this branch does not carry	dap-server,playbook/tour/harness,docs	off-master	#693-only: drops references to plans #693 does not carry
+69	e792222ab9	Describe debugging, and the run changes, in the server and editor READMEs	docs	tooling-docs	-
+70	8615f8c873	Prove a rename past a register the semantic model cannot place	lsp-server	refactoring	-
+71	d1b7a4b5b6	Drop the startup workarounds that vscode-languageclient 11.0.0 makes unneeded	vscode-extension	vscode-client	-
+72	144670ce25	Send a step's response before the stop where the step ends	dap-server	debugger-editors	-
+73	61360d40c7	Inline every use of a private member and remove it	lsp-server,playbook/tour/harness,docs	refactoring	-
+74	cb3cf245d1	Apply X103's rename as a refactoring and check the member after Undo	playbook/tour/harness	refactoring	-
+75	9f11d2007a	Stop at an uncaught exception that only the runner would catch	javatools-runtime/debugger	runtime-debugger	-
+76	a052d28933	Safely delete an unused public or protected member	lsp-server,playbook/tour/harness,docs	refactoring	-
+77	d4425f34c8	Apply the Ecstasy edits of an Explorer move with refactoring auto-save off	playbook/tour/harness,docs,vscode-extension	refactoring	-
+78	375bfb71f8	Let a host give lazy variables' code longer than ON_DEMAND	javatools-runtime/debugger,javatools-tests	runtime-debugger	-
+79	cd39d0a0bd	Attach the debugger to a program run with --debug	lsp-server,javatools-tests,playbook/tour/harness,intellij-plugin,dap-server,javatools-runtime/debugger,vscode-extension,javatools-embedding-api,docs	debugger-editors	spans units: split, to runtime-debugger 6 files +496/-6; agent classes moved into javatools by 105: write them there once
+80	72fe46205d	Let SessionDebuggerTest's runs show they started before it ends them	javatools-tests	runtime-debugger	-
+81	11ebb326b9	Let XdkLanguageServerTest's pending analyses publish before finish() returns	lsp-server	lsp-server-core	-
+82	9069200386	Drop the sleeps FormattingConfigRoundTripTest takes before reading a stored reply	lsp-server	lsp-server-core	-
+83	35c4418edd	Let two run tests check what they claim instead of how long they wait	lsp-server	lsp-server-core	-
+84	0874a872ca	Drop the change a restart's retired document synchronizer still sends	intellij-plugin	intellij-client	-
+85	876c613d1c	Wait for LSP4IJ to reopen X259's consumer after the restart	playbook/tour/harness	playbook-harness	-
+86	fe397dfba8	Send X259's library edit to the old server before the restart	playbook/tour/harness	playbook-harness	-
+87	bb7fd090f7	Wait for X257's Invoked request to reach the LSP console	playbook/tour/harness	playbook-harness	-
+88	cde9ae64d2	Reopen a popup under inspection after the IDE was deactivated	playbook/tour/harness	playbook-harness	-
+89	bb6bf70bf8	Let the VFS find a library frame's source before LSP4IJ reads the frames	intellij-plugin	debugger-editors	superseded by 366 (UP65): leave out
+90	9fb9b92ad5	Run the IntelliJ playbook in a Linux container on a virtual display	playbook/tour/harness,docs	playbook-harness	-
+91	3186fc2d37	Let two SessionDebuggerTest cases check what their sleeps waited for	javatools-tests	runtime-debugger	-
+92	745e6fb834	Analyze again an open document whose analysis was retired without a replacement	lsp-server	lsp-server-core	-
+93	96bacb4085	Let the playbooks' diagnostics waits accept only a report for the current text	playbook/tour/harness,intellij-plugin,vscode-extension	playbook-harness	-
+94	8220300ad0	Fix the container's IntelliJ playbook runs: a user, an init process, JDK 25 and mavenLocal	playbook/tour/harness,docs	playbook-harness	-
+95	9119d3804a	Spell XtcTextDocumentService's analyze and analyzeOne the American way	lsp-server	lsp-server-core	-
+96	cc73d85007	Debug Gradle-mode runs in VS Code and IntelliJ	lsp-server,playbook/tour/harness,plugin,intellij-plugin,dap-server,vscode-extension,docs	debugger-editors	spans units: split, to plugin-debug-options 11 files +204/-2; depends on runtime-debugger (the agent); plugin half is plugin-debug-options
+97	1ee0813a8b	Fail the lang build on compiler warnings, and fix the ten it had	lsp-server,build/CI,playbook/tour/harness,intellij-plugin,dap-server	lang-build	-
+98	1b1d6e05ab	Don't reuse a module compiled in another copy of the project	plugin	plugin-tooling-fixes	independent of the product
+99	170e6fb655	Keep the language server running while a run or debug session uses it	playbook/tour/harness,intellij-plugin,docs	debugger-editors	-
+100	64d3e9dc22	Run the editor playbooks in the container from Gradle, with any engine	playbook/tour/harness,build/CI,docs,vscode-extension	playbook-harness	-
+101	a4fc35f6ce	Continue, step or pause one fiber while the others stay stopped	javatools-runtime/debugger,lsp-server,javatools-tests,dap-server	debugger-editors	spans units: split, to runtime-debugger 2 files +410/-20
+102	39d6ec7938	Link a local's ranges when the caret is just after its name	lsp-server	editing-navigation	-
+103	7392cc56b8	Test that a part of a value's variables from past its end is empty	javatools-tests	runtime-debugger	-
+104	b533429dab	Debug a command-line run: xtc run runs the program, which connects	lsp-server,playbook/tour/harness,intellij-plugin,dap-server,docs,vscode-extension	debugger-editors	-
+105	ceaffc8c32	Move the debugger agent into javatools, with the protocol as records	lsp-server,javatools-runtime/debugger,intellij-plugin,javatools-tests,vscode-extension,playbook/tour/harness,docs,javatools-embedding-api	debugger-editors	spans units: split, to runtime-debugger 9 files +1217/-10, plugin-debug-options 1 file +4/-3; moves 46's and 79's agent into javatools with the protocol as records: squash
+106	34888e5113	Keep a debugged task's last output, and X325's queued fiber	playbook/tour/harness,lsp-server,docs	debugger-editors	-
+107	890126579b	Let deduction find a named module in src/main/x beside other sources	javatools-compiler,javatools-tests,docs	compiler-tool-fixes	-
+108	d3d3769258	Run and debug a module's xunit tests from the editors, embedded	lsp-server,vscode-extension,playbook/tour/harness,dap-server,docs	test-running	its test-messages files are replaced by 112: squash
+109	caf428a9d6	Compile a closure as a fold, without mutable accumulators	lsp-server	lsp-server-core	-
+110	84ce211b78	Run and debug Ecstasy tests from IntelliJ, in its test console	intellij-plugin,playbook/tour/harness,docs	test-running	-
+111	681a2573b7	Run and debug tests in Gradle and command-line mode, from both editors	playbook/tour/harness,intellij-plugin,vscode-extension,lsp-server,dap-server,docs	test-running	-
+112	84d5116beb	Report tests as xunit's own JSON events, which the language server reads once	intellij-plugin,vscode-extension,dap-server,lsp-server,docs,playbook/tour/harness	test-running	replaces 108's test-messages: squash
+113	1746d4b6eb	Lift the lazy-value time limit for the embedded execution tests' worker	lsp-server	build-run	-
+114	f5ca1ce74f	Debug with the agent jar's provider by its name, and javatools' own without one	javatools-runtime/debugger,javatools-tests	runtime-debugger	-
+115	25eb9e757f	Keep the doc comments of properties and methods on their structures	lsp-server,javatools-compiler	editing-navigation	spans units: split, to semantic-facts 2 files +10/-0
+116	f91dfab3cc	Describe the debugger's attach and R9-R12 features in the READMEs	docs	tooling-docs	-
+117	3b30b2db54	Describe running and debugging tests from both editors in the READMEs	docs	tooling-docs	includes lib_xunit/README.md and plugin/README.md lines
+118	e630225664	Give the playbook catalog's size as its 342 cases everywhere	docs	off-master	catalog-size counts in docs: restate at submission, not a commit
+119	b7d0aae602	List every VS Code command in the extension README, by its own title	docs	tooling-docs	-
+120	8767daa0b4	Fix lang/README's task paths, versions and feature summary	docs	tooling-docs	-
+121	65530e7c38	List the editors' test, attach and debug-task sources, and when xtc is needed	docs	tooling-docs	-
+122	385b96f67b	Point the playbook instructions at the playbook container	docs	tooling-docs	-
+123	6b38aac19b	Use American spelling in the shippable docs	docs	tooling-docs	-
+124	40220b18a0	Name testing in the embedded build and run index entry	docs	tooling-docs	-
+125	b491342e0d	Name the editors' UI as it reads, Ecstasy, where the docs said XTC	docs	tooling-docs	-
+126	7bdeef20e4	Call the server and the IntelliJ plugin by their names in the lang docs	docs	tooling-docs	-
+127	d5cde6069e	List the test and debug-task messages and a test row in the playbook's 18a	docs	tooling-docs	-
+128	f317c0dcfe	Say that every adapter needs Java 25 in editor-setup.md	docs	tooling-docs	-
+129	f0234cb8b9	Name javatools' debugger, agent and provider in its README	docs	tooling-docs	-
+130	20d9286666	Give IntelliJ's missing breakpoint pass count its own LSP4IJ fix	docs	tooling-docs	-
+131	e9e27195f1	Complete a member access typed at the end of a line	javatools-compiler,javatools-tests,lsp-server	editing-navigation	spans units: split, to partial-analysis 2 files +80/-3
+132	f1a0470f7f	Name a type by what it is when hovering its name	lsp-server	editing-navigation	-
+133	b8950f86e8	Deliver a run's events to dap-server's ProgramEvents, not a copy of it	lsp-server	debugger-editors	-
+134	5ba9d58b8b	Complete with the language model's keywords and built-in types	lsp-server,dsl/grammar	editing-navigation	-
+135	968d6fbd4e	Share the formatter's empty-block skeleton and whitespace edits	lsp-server	editing-navigation	-
+136	4f6dcfe161	Build an embedded run's process handler in one place	intellij-plugin	build-run	-
+137	e030c86751	Name the properties that hold behavior or mutable state in camel case	lsp-server,intellij-plugin	lsp-server-core	-
+138	df3288c6e5	Split the LSP tests into a fast default tier and complete runs	lsp-server,docs,build/CI	lang-build	-
+139	58b2b34c6e	Give Ecstasy its Code Style settings page	intellij-plugin	intellij-client	-
+140	b4ccbe3b60	Load the Ecstasy live templates, and offer them in Ecstasy files only	intellij-plugin,docs	intellij-client	-
+141	20e00aee5e	Debug a program that has an interface	javatools-tests,javatools-runtime/debugger	runtime-debugger	-
+142	af6c8d07d6	Lift SessionDebuggerTest's time limit to an hour	javatools-tests	runtime-debugger	-
+143	d9c8b6eba5	Let the compiler-consumer gate accept the default tier's later cases	build/CI	lang-build	-
+144	0812577ca8	Complete a member with the cursor right after its dot	lsp-server,javatools-compiler	editing-navigation	spans units: split, to partial-analysis 1 file +4/-2
+145	b364eb6b03	Offer code actions in a module that has a const with a toString	lsp-server	refactoring	-
+146	89bdf8edbb	Queue playbook container runs on one machine lock, each with its own export	playbook/tour/harness,build/CI,vscode-extension	playbook-harness	-
+147	e124eb0130	Start the playbook's IDE from one place, without the plugins it does not use	playbook/tour/harness	playbook-harness	-
+148	f4b1cdb60a	Let tests wait for a hang only, not for a fast machine	lsp-server,playbook/tour/harness,dap-server,intellij-plugin,javatools-tests	lsp-server-core	spans units: split, to test-watchdog 7 files +56/-19; HangLimit replaced by 194's watchdog: squash; javatools tests' waits ride with their tests' units
+149	b3ab8c0383	Wait for configurationDone before a debug session starts its program	dap-server,lsp-server,docs	debugger-editors	-
+150	03e1fcb8c7	Record a tour of the IntelliJ plugin on a card game, checking what it shows	playbook/tour/harness,intellij-plugin	tours	-
+151	38bfaa62ba	Show a library declaration's doc comment in hover, from its source	lsp-server,javatools-compiler	editing-navigation	spans units: split, to semantic-facts 2 files +10/-0
+152	c2879ce062	Give Ecstasy files a PSI of the Ecstasy language	intellij-plugin,docs	intellij-client	-
+153	5aee38c247	Close a block that Enter opens after a { in an Ecstasy file	intellij-plugin	intellij-client	-
+154	11cfb7899f	Remove unused imports with Organize imports, run from IntelliJ's Optimize Imports	intellij-plugin,lsp-server,docs	refactoring	-
+155	65d29390db	Keep an Ecstasy file's brackets and words as plain text had them	intellij-plugin	intellij-client	-
+156	66d691461a	Give a constructor's finally block no references lens of its own	lsp-server	editing-navigation	-
+157	8ba5d254aa	Name an inferred local's type in its hint as the source names it	lsp-server	editing-navigation	-
+158	8f3d3b48b9	Rerun only the failed Ecstasy tests from the test console	intellij-plugin	test-running	-
+159	734eb3ee9c	Take a line typed in IntelliJ's Debug console to the debug session	intellij-plugin	debugger-editors	superseded by 362 (UP71): leave out
+160	1ef9f8733d	Report every class's errors from an embedded compile, not only the first's	lsp-server,javatools-tests,javatools-embedding-api	diagnostics-embedding	lang part: compiler-consumer test, kept with this unit
+161	2873a7cdaf	Complete names and show a call's signature where they are typed at a line's end	lsp-server,javatools-tests,javatools-compiler	editing-navigation	spans units: split, to partial-analysis 2 files +111/-16
+162	451a636a3d	Complete a type of another module where a statement starts, with its import	lsp-server	editing-navigation	-
+163	718b292eb7	Copy a concurrent map's entries without failing when one goes meanwhile	lsp-server,intellij-plugin	lsp-server-core	-
+164	3bd621b42b	Name a server's log session by the server alone, and tell a live one by its lock	lsp-server,intellij-plugin,docs	server-operations	-
+165	63f0a2f7f8	Undo a server's edit of one file without asking, as IntelliJ's quick fixes are	intellij-plugin	refactoring	-
+166	0e7f1e2174	Make SessionDebuggerTest independent of how its threads are scheduled	javatools-tests	runtime-debugger	-
+167	bdaf58732e	Import a moved type where its new package's name is a property	lsp-server	refactoring	-
+168	96d0c84668	Extract statements that use an injected local, passing its value	lsp-server	refactoring	-
+169	475161b764	Keep earlier debugger stops out of a clock alarm set for a given time	javatools-runtime/debugger,javatools-tests	runtime-debugger	-
+170	b3b6397e75	Report a Future callback that throws or that a terminated service drops	javatools-runtime/debugger,javatools-tests	runtime-embedded-execution	-
+171	6b2d9506e2	Prove only the code actions a request asks for, and share a revision's proofs	lsp-server,intellij-plugin	refactoring	-
+172	03e21e7805	Keep the execution trace's events out of stderr and server.log	lsp-server	server-operations	-
+173	477fed24ca	Let one source that discovery cannot read cost only itself	lsp-server	workspace-modules	-
+174	e4eb7e0865	Let a debugger condition name an enum value by its enumeration	javatools-runtime/debugger,javatools-tests	runtime-debugger	-
+175	90e5b24873	Give X145 a reference search that waits until it is canceled	playbook/tour/harness,lsp-server,intellij-plugin	playbook-harness	-
+176	a30fe975a9	Offer Create class for the diagnostic of a statement that constructs it	lsp-server	refactoring	-
+177	b72fe7b7ee	Extract statements from a selection of whole lines	lsp-server	refactoring	-
+178	1e01a96137	Let xtc test, run and build take a project's test module with its modules	javatools-compiler,lsp-server,javatools-tests,javatools-runtime/debugger,docs,intellij-plugin	compiler-tool-fixes	spans units: split, to test-running 2 files +98/-1; lang half (server and IntelliJ) goes with test-running
+179	e389e21c60	Build a Gradle-imported project embedded in embedded mode	intellij-plugin	build-run	-
+180	56c7d2b6ea	Keep a project's module, source and library order the same in every JVM	lsp-server	workspace-modules	-
+181	c1f61280c8	Send LSP4IJ's held edits before it asks for completions or a call's signature	intellij-plugin	editing-navigation	superseded by 363 (UP73): leave out
+182	11d20d23a3	Indent the rest of a line that Enter moves into the block it opens	intellij-plugin	intellij-client	-
+183	8375550653	Say on the debug console why a breakpoint's condition cannot be evaluated	dap-server	debugger-editors	-
+184	394131ffa9	Answer requests that a restarted client sends while it opens its files again	lsp-server	lsp-server-core	-
+185	bb718c7051	Insert a method's call when its completion is chosen	lsp-server	editing-navigation	-
+186	3a341cc5fb	Answer on-type formatting without waiting for the change to compile	lsp-server	editing-navigation	-
+187	648415f642	Check that Debug of Current File launches an Ecstasy configuration	intellij-plugin	debugger-editors	-
+188	07e384877c	Report a stopped run's end without the failure its stop causes	lsp-server	build-run	-
+189	2b6489592c	Check 7a.9 against the compiler's error budget, which the server keeps	playbook/tour/harness,lsp-server,docs	playbook-harness	-
+190	19594c96a8	Run the VS Code playbook after the extension suite, not with it	vscode-extension	vscode-client	-
+191	84a97f2e29	Get a closed file's errors to IntelliJ from the server's workspace report	intellij-plugin,playbook/tour/harness,docs	diagnostics	superseded by 373 (UP69): leave out
+192	b2b7f9849e	Prove a code action by compiling only the modules its edit reaches	lsp-server	refactoring	-
+193	3a7bc6f890	Start a revision's code action compile from the previous one's, and log its cost	lsp-server	refactoring	-
+194	6ce15630f2	Find a test's hang by the CPU it stops using, not by an hour on the clock	lsp-server,javatools-tests,dap-server,intellij-plugin,build/CI,javatools-runtime/debugger	lsp-server-core	spans units: split, to test-watchdog 13 files +1048/-221; replaces 148's HangLimit: squash
+195	bb3e798d35	Show a stopped run as stopped, without what its stop made it print	lsp-server,dap-server,vscode-extension	build-run	-
+196	fadafbedee	Give each thread its own spare key for a hasher map's lookups	javatools-tests,javatools-runtime/debugger	runtime-embedded-execution	-
+197	60c46a5e85	Make the debugger's expression fragment physical, which ends a paused session's daemon loop	intellij-plugin,playbook/tour/harness	debugger-editors	superseded by 360 (UP37): leave out
+198	2a68626523	Complete a service's shutdown however it goes, and report its failure	javatools-runtime/debugger,javatools-tests,lsp-server	runtime-embedded-execution	spans units: split, to build-run 1 file +4/-0
+199	e9dc031e8e	Report a test that throws other than by failing an assertion as aborted, keep its later exceptions, and count skipped tests	lsp-server,xdk-libraries	test-running	spans units: split, to compiler-tool-fixes 4 files +75/-33; xunit engine half (lib_xunit_engine) goes with compiler-tool-fixes
+200	677a13443c	Count the code actions at the tour's unused import and unused local	lsp-server	refactoring	-
+201	931068aba4	Answer an idle client's workspace pull of an unchanged graph without a job	lsp-server	diagnostics	-
+202	ed475c4a72	Show Rerun Failed Tests on an IntelliJ test run	intellij-plugin	test-running	-
+203	6e77209ffc	Wait for LSP4IJ's automatic code action answers only a budget	lsp-server,intellij-plugin	refactoring	superseded by 374 (UP74): leave out
+204	131ec4488a	Run testXtc whenever a tool reads its test report, never from the cache	plugin	plugin-tooling-fixes	consumer: test-running
+205	5660172534	Keep the compiles of the modules that depend on an edited one whose API stayed	lsp-server	workspace-modules	-
+206	c8688ad073	Run every test module's tests at once in IntelliJ: Run 'All Ecstasy Tests'	intellij-plugin,docs	test-running	-
+207	4d2b421ea6	Keep each light test's stub server and wrappers to that test	intellij-plugin	intellij-client	-
+208	f5d5c0297c	Say which requests the language server is still answering, and which diagnostics it has still to report	lsp-server	server-operations	-
+209	7860336c70	Tag the light tests' workarounds of two LSP4IJ gaps	intellij-plugin	intellij-client	-
+210	f8b44de8d2	List a closed test module's tests from the workspace pull's compile	lsp-server	test-running	-
+211	ae958b2b77	Declare the code action kinds the language server's actions have	lsp-server	refactoring	-
+212	d3d9efd0e5	Ask the server for no edit of a rename that Undo makes, and report a stale refactoring without a dialog	intellij-plugin	refactoring	-
+213	a435b9fe37	Test that Undo takes a resolved code action's edit of one file back without asking	intellij-plugin	refactoring	-
+214	09e7020a1c	Safely delete a member whose body has an annotation, as an injected local	lsp-server	refactoring	-
+215	2ff64040fe	Restart a frame whose fiber ran code in its stop	lsp-server,javatools-tests,javatools-runtime/debugger	debugger-editors	spans units: split, to runtime-debugger 2 files +39/-0
+216	6842bc8626	End the tests of the modules a stopped VS Code test run did not reach	vscode-extension	test-running	-
+217	b06bb67490	Compile the VS Code extension's TypeScript into an empty out/	vscode-extension	vscode-client	-
+218	23851623e5	Report no diagnostics for a library source's read-only copy	lsp-server	diagnostics	-
+219	306b775d91	Offer Run 'All Ecstasy Tests' before Gradle's Tests in on Ecstasy-only test sources	intellij-plugin	test-running	-
+220	3944e513a3	Ask the language server for full code action answers again, not ones within a budget, in IntelliJ	intellij-plugin	refactoring	superseded by 374 (UP74): leave out
+221	5ad8a1ee03	Put the embedded build's errors in the Problems window's Project Errors	intellij-plugin	diagnostics	EmbeddedBuildProblems deleted by 292, Project Errors reworked by 295: squash
+222	fbe1afe542	Show a completion item's documentation on Ctrl+Q in IntelliJ, from its resolve	intellij-plugin	editing-navigation	superseded by 369 (UP78): leave out
+223	9825257dda	Check that Ctrl+Z's Undo action takes a resolved code action's edit back	intellij-plugin	refactoring	-
+224	53da75c39b	Find Run All Ecstasy Tests' existing configuration, not make "(1)" of it	intellij-plugin	test-running	-
+225	a615a98252	Keep Run to Cursor's temporary breakpoint until the program stops, in IntelliJ	intellij-plugin,playbook/tour/harness,docs	debugger-editors	superseded by 367 (UP44): leave out
+226	0a2e02533d	Answer xtc/busy with the server's open requests and its compiler's jobs	lsp-server,intellij-plugin	server-operations	-
+227	6410ad081e	Record a playbook run's screen as video in the container	playbook/tour/harness	playbook-harness	-
+228	7b0eff298e	Delete a playbook run's IDE folder once its logs are copied, in the container	playbook/tour/harness	playbook-harness	-
+229	5e76ecd58b	Check the plugin's features through the IntelliJ tour, and detect its hangs from the IDE's state	playbook/tour/harness,intellij-plugin	tours	-
+230	62a86abdc9	Compose the tours' video from their recorded clips, each step from a run where it passed	playbook/tour/harness	tours	-
+231	886b4b98f2	Let VS Code set breakpoints in Ecstasy files	vscode-extension	debugger-editors	-
+232	7f4ef8fe2f	Debug the module of a class's file with F5	vscode-extension	debugger-editors	-
+233	7daa8dd2fd	Pass a run task's args in Gradle and command-line mode	vscode-extension	build-run	-
+234	6f5a5fec6a	Trace the language server's messages when xtc.trace.server says so	vscode-extension	vscode-client	-
+235	eaeb0f7b6b	Fold comments and runs of imports with the compiler adapter	lsp-server	editing-navigation	-
+236	d4accb5f8d	Run the editor's module from its Run button and context menu	vscode-extension	build-run	-
+237	122cbf6bb9	Clear a deleted file's diagnostics in the next workspace pull	lsp-server	diagnostics	-
+238	27e62f12a6	Say when a move leaves the uses of its sources as they were	vscode-extension	refactoring	-
+239	d072c85019	Say how many embedded runs the server tracks, and where a test is	vscode-extension,lsp-server	build-run	-
+240	b87acea62f	Fail the playbooks' diagnostics waits once their reports are final	playbook/tour/harness,vscode-extension	playbook-harness	-
+241	b8f02027ea	Add playbook cases X342-X349 for xunit tests, in both editors	playbook/tour/harness,docs	test-running	-
+242	f5da229d0b	Give a VS Code tour's run its screen recording, and every run only its own, in the container	playbook/tour/harness	tours	-
+243	0b1a5938c7	Record a tour of the VS Code extension that checks what it shows	playbook/tour/harness,vscode-extension	tours	-
+244	813764b83c	Drop XtcRunConfigurationTest's redundant casts to TaskOutputsInternal	plugin	plugin-tooling-fixes	-
+245	f153c373b1	Give a completion item's resolved documentation to Ctrl+Q through public API only, in IntelliJ	intellij-plugin	editing-navigation	superseded by 369 (UP78): leave out
+246	b8cb84021b	Keep the compiles of modules that compiled when only private declarations move	lsp-server	workspace-modules	-
+247	4b1a82d2ed	Expect the card game's Hand to keep heading when Safe delete removes display	lsp-server	refactoring	-
+248	e02a4358d8	Clear a removed file's report once in workspace pulls that name its result ID	lsp-server	diagnostics	-
+249	e8f552c76a	Compile a library source's copy on its own even once a compile has named it	lsp-server	editing-navigation	-
+250	d1d334130b	Ask the server again for a move's edits when a change overtook its answer	vscode-extension	refactoring	-
+251	aec9f611c9	Make the VS Code tour pass as one whole run, unrecorded	playbook/tour/harness,vscode-extension	tours	-
+252	2cd03528b2	Press the keymap's own Undo key in the IntelliJ tour	playbook/tour/harness	tours	-
+253	53ba35fa38	Undo in the IntelliJ tour from the editor as the change left it	intellij-plugin,playbook/tour/harness	tours	-
+254	f6f03e65f9	Ask before Undo takes back a rename or move that changed several files	intellij-plugin	refactoring	-
+255	691d0ee437	Answer Undo's question in the IntelliJ tour and playbook as it offers	playbook/tour/harness	tours	-
+256	b70e3fa5a6	Rename a method of four files in the IntelliJ tour, and show Undo's question	playbook/tour/harness	tours	-
+257	f7a8b299a6	Rename cardMatches across four files in the VS Code tour, undone by Ctrl+Z	playbook/tour/harness	tours	-
+258	03a6d40fd2	Check in the VS Code tour that Ctrl+Z takes a quick fix back whole	playbook/tour/harness	tours	-
+259	4cbb52e882	Show the VS Code tour's Undo of the four-file rename as steps	playbook/tour/harness	tours	-
+260	e441e45ab6	Wait in the IntelliJ tour for Go to symbol's popup to close, and never fill a file's editor	playbook/tour/harness	tours	-
+261	647a711c3f	Keep prepareLibraryPlaybook's JVM to SLF4J's warnings	lsp-server	playbook-harness	-
+262	603b5d9123	Print the IntelliJ tour's progress in the build's output, step by step	playbook/tour/harness,intellij-plugin	tours	-
+263	ec387444af	Print both compiler playbooks' progress per case in the build's output	playbook/tour/harness	playbook-harness	-
+264	afed4dd398	Report the written video's real length from the tour composer	playbook/tour/harness	tours	-
+265	d042bd9165	Fail the debugger probe's waits when nothing is in progress for a minute	playbook/tour/harness	playbook-harness	-
+266	760c0f6448	Remove the unused xtc/runnableTargets request	lsp-server,intellij-plugin,playbook/tour/harness,docs	build-run	also commits a stray tour .pyc that 279 deletes: leave it out
+267	52e9e94d6d	Answer hover and Go to Definition in a library copy that the debugger opens	lsp-server	editing-navigation	-
+268	0934854bbe	Offer Run All Ecstasy Tests beside Gradle's Tests in on mixed test folders	intellij-plugin	test-running	-
+269	168af5a922	Compile a run's embedded build again when its files change on disk as it compiles	lsp-server	build-run	-
+270	074ae2c834	Wait in the IntelliJ tour for the new server's didOpen before File Structure	playbook/tour/harness	tours	-
+271	c30f815dc7	Wait in the VS Code tour for the $xtc problem matcher's error after a failed build	playbook/tour/harness	tours	-
+272	b21dc88587	Upgrade the VS Code extension's npm dev tools past the MSAL, glob and minimatch advisories	vscode-extension	vscode-client	-
+273	721a52f369	Add IDE plugin packaging and install tasks, and quiet vsce's file tree	build/CI,vscode-extension,intellij-plugin	lang-build	-
+274	1f22ff11a5	Navigate the XDK's library sources: definitions from their names, frames at their methods	lsp-server,dap-server	editing-navigation	spans units: split, to debugger-editors 3 files +54/-3
+275	85684e8dea	Delete the language server's temporary directories once no server needs them	lsp-server	server-operations	-
+276	f56545210a	Name the tours' video and deck after their editor, tour-intellij and tour-vscode	playbook/tour/harness	tours	-
+277	4596142553	Keep a server directory's lock beside it, where reading the directory cannot release it	lsp-server	server-operations	-
+278	1c8b2234d4	Compile an opened XDK source with its whole library, for navigation in all of it	lsp-server,intellij-plugin,vscode-extension	editing-navigation	-
+279	48f3f5c56c	Keep Python bytecode out of the repository	build/CI,playbook/tour/harness	lang-build	deletes 266's stray .pyc: keep only the ignore lines
+280	0c687fc809	Compile a library source's ecstasy-library content with its library, as its copy is	lsp-server,playbook/tour/harness	editing-navigation	-
+281	d0918229ab	Add playbook case X350 for navigation inside an XDK library's source, in both editors	playbook/tour/harness,docs	editing-navigation	-
+282	9e720f4bba	Wait for a fully decorated editor before the UP17 probe's decorated replacement	playbook/tour/harness	playbook-harness	-
+283	235767533a	Add lang/doc/configuration.md, one reference for the lang tooling's configuration	docs	tooling-docs	-
+284	cb693d3fc3	Say in AGENTS.md that gradle.properties turns the lang build flags on	docs	lang-build	superseded by 433: squash
+285	0934f7a1fa	Give a document gone from the stub server's workspace report an empty report, as the real server does	intellij-plugin	diagnostics	-
+286	74fe23944e	Compose recorded tours again, and write the deck to its own file, in the tour composer	playbook/tour/harness	tours	-
+287	94bcff80b4	Wait for the run widget's Debug of Current File before clicking it, in the IntelliJ tour	playbook/tour/harness	tours	-
+288	05e7eba7ff	Make .vscode before writing launch.json in the VS Code tour's Debugging, recorded or not	playbook/tour/harness	tours	-
+289	7b2dfc1c44	Make a test added to an open test module a new report of its own diagnostic pull	lsp-server	test-running	-
+290	489a4207d5	Correct six statements in the lang docs that the configuration reference found out of date	docs,dap-server,lsp-server	tooling-docs	-
+291	ae01b8bf92	Make the UP17 probe's decorated replacement start past the highlighter tree's root	playbook/tour/harness	playbook-harness	-
+292	638ce76d26	List a closed file's errors in IntelliJ's Project Errors without a Build, and once after one	intellij-plugin	diagnostics	deletes 221's EmbeddedBuildProblems: squash
+293	b76dffd367	Check IntelliJ's Project Errors in X341: a closed member's errors without a Build, once after one	playbook/tour/harness,docs	diagnostics	-
+294	e7280a98ac	Depend optionally on IntelliJ 2026.3's Problems view plugin, whose classes Project Errors needs	intellij-plugin	diagnostics	-
+295	d399acc2d5	Report the embedded build's errors to the Build window as messages to their file and line	intellij-plugin	diagnostics	-
+296	ba4c4ec124	Check in X341 that only the provider lists a Build's errors, and read the Build window's messages by their target	playbook/tour/harness	diagnostics	-
+297	eb8c73759f	Keep the stale instrumented classes of an older build off the plugin's unit tests	intellij-plugin	intellij-client	-
+298	0b629a7aed	Report the server's heap after collections and its compile queue's waits in xtc/languageServiceStatus	lsp-server	server-operations	-
+299	10f998125f	Run the language server on ZGC with a 1 GB soft heap limit unless its JVM options choose otherwise	intellij-plugin,vscode-extension,docs	server-operations	-
+300	50ac848f9a	Tell IntelliJ of the playbook's disk changes at once, and wait for finished test results in X339 and X340	playbook/tour/harness	playbook-harness	-
+301	2ac725ba5b	Make the retention test's cancellations and the library content test's refresh check independent of timing	lsp-server	lsp-server-core	-
+302	3ee13c9e90	Restart the Ecstasy language server with Ctrl+Alt+X, then R	intellij-plugin,docs	server-operations	-
+303	3e22c83170	Treat the driver's own Structure tree expansion timeout as not yet expanded	playbook/tour/harness	playbook-harness	-
+304	f694f85ff9	Give VS Code's Restart Language Server the same shortcut, Ctrl+Alt+X, then R	docs,vscode-extension	server-operations	-
+305	f2362a1251	Point the docs' line citations at the lines today's changes moved	docs	tooling-docs	line-citation refresh: redo at submission
+306	d165ce3347	Move and rename through the playbook's probes only once IntelliJ has finished indexing	playbook/tour/harness	playbook-harness	-
+307	00700cc1c0	Choose the Ecstasy build mode with Ctrl+Alt+X, then B, in both editors	intellij-plugin,docs,vscode-extension	build-run	-
+308	5f8bb69caf	Refresh files IntelliJ has only after a case changes them on disk, not when a case reads them	playbook/tour/harness	playbook-harness	-
+309	2b3886f8b1	Drive IntelliJ 2026.3 from the playbook, while the plugin still builds against 2026.2.3	playbook/tour/harness,intellij-plugin,docs,build/CI	playbook-harness	-
+310	cb7ac2c27e	Let a playbook run shorten its hang bound with -PintellijPlaybookHang	playbook/tour/harness,docs,intellij-plugin	playbook-harness	-
+311	39719018ba	Keep discovered modules that share a name out of the graph, instead of failing every file	lsp-server,docs	workspace-modules	-
+312	bb6ae0da6a	Analyze the XDK's own libraries from their sources in the XVM repository, instead of the bundled XDK	lsp-server,docs	workspace-modules	XdkWorkspaceMode deleted by 314: squash
+313	fbc11c9593	Warn of duplicate discovered module names only while the discovered graph is in use	lsp-server	workspace-modules	-
+314	67c3d385a2	Replace a bundled library with any workspace module of its name, however the project is configured	lsp-server,docs	workspace-modules	deletes 312's XdkWorkspaceMode: squash
+315	d0e6b770f3	Publish previews of the IntelliJ plugin and VS Code extension from a pull request	build/CI	lang-build	-
+316	77ce233d8d	Name the previews "Ecstasy Language Support (bleeding edge)", and warn of a trailing space in the repository URL	build/CI	lang-build	-
+317	227bab050c	Leave the lang build out of the root build by default again	build/CI	lang-build	reverts 8's lang-on gradle.properties default: leave both halves out
+318	c67e8d9376	Let the debugger find a module's sources where the language server says	javatools-runtime/debugger,javatools-tests,lsp-server	debugger-editors	spans units: split, to runtime-debugger 4 files +137/-16
+319	6e12e080e7	Wait in the VS Code playbook until the server has heard of a case's changes on disk	playbook/tour/harness,lsp-server	playbook-harness	-
+320	2c0f8a301d	Ask the Structure view again when LSP4IJ before 0.30.0 keeps an edit's empty symbols	playbook/tour/harness	playbook-harness	-
+321	1e9d3ae16e	Count an IntelliJ playbook case as hung after ten minutes, not an hour	playbook/tour/harness,docs,intellij-plugin	playbook-harness	-
+322	5287ad53c6	Tell IntelliJ at once of the Gradle files the compiler-import playbook cases change	playbook/tour/harness	playbook-harness	-
+323	7ec2b06c93	Wait in the IntelliJ playbook's source Move check while IntelliJ has no document of a moved file yet	playbook/tour/harness	playbook-harness	-
+324	575a8dad72	Wait in the IntelliJ playbook until the server has heard of a change on disk, by its own record	playbook/tour/harness	playbook-harness	-
+325	a8108fce10	Build against LSP4IJ 0.30.0, and format every range IntelliJ asks for	intellij-plugin,build/CI	intellij-client	-
+326	8a5c002049	Decode related diagnostic reports with LSP4IJ's adapter (UP06)	intellij-plugin	intellij-client	retires commit 8's UP06 workaround: write 8 against LSP4IJ 0.30.1 instead
+327	4f8ce716d9	Keep explicit null settings with LSP4IJ's adapter (UP08)	intellij-plugin	intellij-client	retires commit 8's UP08 workaround: write 8 against LSP4IJ 0.30.1 instead
+328	fabafc0c19	Let snippet completions insert as they are (UP18)	intellij-plugin	intellij-client	-
+329	dcbd0b0153	Offer server save formatting in IntelliJ (UP02)	playbook/tour/harness,intellij-plugin,docs	intellij-client	-
+330	cb2afd2303	Open bundled library sources as the server's virtual documents (UP25)	playbook/tour/harness,docs,intellij-plugin	editing-navigation	-
+331	79821fc329	Check inline completion's invocation and selection natively (UP26)	playbook/tour/harness,docs	editing-navigation	-
+332	d85c456e3e	Open a document link from Ctrl+Click, and retire the replacement gates (UP52)	playbook/tour/harness,docs,intellij-plugin	intellij-client	retires commit 8's replacement gates (UP52)
+333	c4a186c843	Run the debugger cases 0.30.0 implements in IntelliJ (UP30, UP33-UP34, UP45-UP48, UP50)	playbook/tour/harness,docs	debugger-editors	-
+334	77c924149d	Check the exception hint, logpoints and hit conditions in IntelliJ (UP31-UP33, UP55)	playbook/tour/harness,docs	debugger-editors	-
+335	4ffe88936e	Call LSP4IJ 0.30.0's APIs directly in the playbook's probe (UP34, UP45, UP46)	playbook/tour/harness	playbook-harness	-
+336	ae1b5a32ef	Check lazy variables, hexadecimal values and paged variables in IntelliJ (UP35, UP36, UP42)	playbook/tour/harness,docs	debugger-editors	-
+337	6756b2a801	Check that IntelliJ rebuilds its debugger views on invalidated (UP40)	playbook/tour/harness,docs	debugger-editors	-
+338	928e6e543c	Check what a chosen completion inserts in Evaluate Expression (UP37)	playbook/tour/harness	debugger-editors	-
+339	c59c55bed7	Use LSP4IJ's own Parameter Info for Ecstasy (UP10)	intellij-plugin	intellij-client	retires commit 8's UP10 workaround
+340	ea19ad3d98	Let LSP4IJ reconnect documents below a moved directory (UP19)	intellij-plugin	intellij-client	retires commit 8's UP19 workaround
+341	7782e17c51	Let LSP4IJ batch the editor refreshes (UP27)	intellij-plugin	intellij-client	retires commit 8's UP27 workaround
+342	116213bd06	Let LSP4IJ watch the compiler roots outside the project (UP05)	intellij-plugin	intellij-client	retires commit 8's UP05 workaround
+343	c47240c531	Let LSP4IJ resolve and apply lazy code actions (UP11)	intellij-plugin	refactoring	retires commit 8's UP11 workaround
+344	e6c46239ec	Let LSP4IJ keep pull results and quick fixes (UP07)	intellij-plugin	intellij-client	retires commit 8's UP07 workaround
+345	546b4ca5fa	Let LSP4IJ order document notifications and check server edits (UP09, UP04)	intellij-plugin,playbook/tour/harness	intellij-client	retires commit 8's UP09/UP04 workarounds
+346	af87762fcf	Let LSP4IJ's process provider own its start and stop (UP01)	intellij-plugin	intellij-client	retires commit 8's UP01 workaround
+347	3924f1c673	Send no signature parameters without their metadata	lsp-server	editing-navigation	-
+348	5c8d80d6f8	Let LSP4IJ save the documents a rename changes without an editor (UP21)	intellij-plugin	refactoring	retires commit 8's ClosedRefactoringDocuments (UP21); 377 brings part back
+349	ad7d1633aa	Check two-range formatting, Go to Symbol and inlay tooltips natively (UP54, UP59, UP60)	playbook/tour/harness	editing-navigation	-
+350	c1f1fdae09	Read a signature without parameters in the playbook	playbook/tour/harness	playbook-harness	-
+351	0d4a8448d9	Fix the native run's X132, X146 and X254 for LSP4IJ 0.30.0	playbook/tour/harness	playbook-harness	-
+352	78d43de1ea	Fix the native run's X254 for LSP4IJ 0.30.0	playbook/tour/harness	playbook-harness	-
+353	24ecfffc28	Check X254's library view through the server	playbook/tour/harness	playbook-harness	-
+354	f23ebc0d09	Read X5's library target from the server until LSP4IJ connects it	playbook/tour/harness	playbook-harness	-
+355	fcddef2f39	Wait for X131's Ctrl+Click resolve in the console's trace	playbook/tour/harness	playbook-harness	-
+356	c7731b619e	Review the internal LSP4IJ APIs for 0.30.0	intellij-plugin,docs	intellij-client	-
+357	81daacd909	Describe both save formatting owners in IntelliJ (UP02)	docs,intellij-plugin,playbook/tour/harness	intellij-client	-
+358	c9c4c452ab	Expect X20's signature without parameters in VS Code	playbook/tour/harness	playbook-harness	-
+359	b399c27144	Let LSP4IJ keep a disposed language server stopped (UP76)	intellij-plugin	intellij-client	-
+360	c26cfecade	Let LSP4IJ make the debugger's expression fragments physical (UP37)	intellij-plugin	debugger-editors	removes 197's workaround: squash
+361	a83cf44017	Let LSP4IJ keep the problem mark of a file that opens or closes (UP70)	intellij-plugin	diagnostics	-
+362	33e30be135	Let LSP4IJ evaluate a line typed in the Debug console (UP71)	intellij-plugin	debugger-editors	removes 159's workaround: squash
+363	b536b0fbc7	Let LSP4IJ send the edits it holds before a request (UP73)	intellij-plugin	editing-navigation	removes 181's workaround and 8's parameter info handler: squash
+364	f3d3473303	Build against LSP4IJ 0.30.1, which is 0.30.0's code	build/CI,intellij-plugin	intellij-client	-
+365	17d7288d6e	Expect an expression editor's fragment as an Ecstasy file, as LSP4IJ 0.30.0 makes it	intellij-plugin	intellij-client	-
+366	7d18ee82a1	Let LSP4IJ find a stack frame's source in a folder the VFS has not seen (UP65)	intellij-plugin	debugger-editors	removes 89's workaround: squash
+367	1dc59f2665	Let LSP4IJ keep Run to Cursor's breakpoint until the program stops (UP44)	intellij-plugin,playbook/tour/harness	debugger-editors	removes 225's workaround: squash
+368	a5c23f3b80	Attach in LSP4IJ's attach mode, with the session's own process (UP64)	intellij-plugin	debugger-editors	-
+369	7a7b2c369f	Let LSP4IJ document a completion item from its resolve (UP78)	intellij-plugin	editing-navigation	removes 222's and 245's workaround: squash
+370	7f52767408	Ask LSP4IJ whether a file's diagnostics are still to be painted (UP75)	playbook/tour/harness	playbook-harness	-
+371	7efe534263	Restart with X259's change still pending, as LSP4IJ closes it cleanly (UP09)	playbook/tour/harness	playbook-harness	-
+372	3bb70bd09f	Keep the stub server's stop from throwing as a plain rule, not for LSP4IJ (UP77)	intellij-plugin	intellij-client	-
+373	3c60646591	Let LSP4IJ pull the workspace's diagnostics for closed documents (UP69)	intellij-plugin	diagnostics	removes 191's workaround: squash
+374	930c6dd069	Drop the server's code action budget, which no client asks for since LSP4IJ 0.30.0 (UP74)	lsp-server,docs,intellij-plugin	refactoring	removes 203's and 220's code action budget: squash
+375	cb1e6c6959	Ask X254's definition again when the restarted server retires its analysis	playbook/tour/harness	playbook-harness	-
+376	10476099bd	Check X350 in IntelliJ through the server's library documents (UP25)	playbook/tour/harness	editing-navigation	-
+377	fc265b60ef	Keep ClosedRefactoringDocuments for a rename that also moves its directory (UP21, X116)	intellij-plugin	refactoring	-
+378	b4e3ff1131	Mark IntelliJ's X350 partial: Go to Definition doesn't navigate inside a library view	playbook/tour/harness	editing-navigation	-
+379	594914f790	Suppress UnstableApiUsage where the build still calls incubating Gradle API unsuppressed	xdk-libraries,intellij-plugin,build/CI,vscode-extension,plugin	lang-build	spans units: split, to plugin-tooling-fixes 1 file +1/-0
+380	772eaa8b88	Show Ecstasy tips in IntelliJ's Tip of the Day, the tips of features not yet used first	intellij-plugin	intellij-client	-
+381	6e0155abfd	Add a Get Started walkthrough to the VS Code extension	vscode-extension,docs	vscode-client	-
+382	8bfae7c3eb	Wait in the IntelliJ playbook until LSP4IJ's Go to request ends, and close a modal dialog a case leaves open	playbook/tour/harness	playbook-harness	-
+383	8f6b1a9a59	Find a module's sources only where the debugger's host names them, as modules no longer record where they were compiled	javatools-tests,javatools-runtime/debugger,lsp-server	runtime-debugger	spans units: split, to debugger-editors 1 file +2/-1
+384	9f72e44270	Add errs' regression tests for compiler diagnostics, embedding, cancellation and duplicate types	javatools-tests,xdk-libraries	diagnostics-embedding	regression tests for this unit; its duplicate-types part as in closed #795
+385	be61812b3c	Ask testFit's TypeInfo of a conversion as a probe, not with the runtime's silent form	javatools-compiler	partial-analysis	-
+386	dec506c512	Check duplicate source types through the command line, and implicitly abstract classes, in manualTests	xdk-libraries	compiler-tool-fixes	the tests of closed #795 (duplicate source types through xcc)
+387	70cfe3589b	Remove monikers from the language server, as neither editor uses them	lsp-server,playbook/tour/harness,docs	lsp-server-core	removes 8's monikers: leave them out of 8
+388	c9c5293a20	Show Got It tooltips in IntelliJ when the server starts with Tree-sitter and when it stops unexpectedly	playbook/tour/harness,intellij-plugin,docs	intellij-client	-
+389	f6cdaed3e3	Step X306 only once VS Code shows the stop, and read each step's stack from after its stop	playbook/tour/harness	debugger-editors	-
+390	a1a28082cd	Show the tour's first documentation after a restart at the next Ctrl+Q when the hover is late (UP82)	playbook/tour/harness	tours	-
+391	5d04b02ea9	Edit in the tour's kill step only once the restarted server has the file open (UP83)	playbook/tour/harness	tours	-
+392	b8049a57ca	Name LSP4IJ 0.30.1 in the plugin's README and two test comments	intellij-plugin,docs	intellij-client	-
+393	d9c8e2f981	Let LSP4IJ 0.30.1 outdate its cached answers, without UP14's semantic-result retirement	intellij-plugin,docs	intellij-client	retires commit 8's UP14 workaround
+394	470ec4e3d4	Refuse a plain rename that also changes the configured source modules, and say why	lsp-server	refactoring	-
+395	485db593aa	Say why XtcRenameHandler stays, instead of tagging it as an LSP4IJ workaround (UP04)	intellij-plugin	intellij-client	-
+396	44cf8cb2e0	Name a launched module's source directory from the file the launch names it by, when the source graph lacks it	lsp-server	debugger-editors	-
+397	3dda3d7d17	Send the language server a file's current text when its didOpen was older, on LSP4IJ 0.30.1 (UP83)	intellij-plugin,playbook/tour/harness	intellij-client	-
+398	99618e5e8e	Accept the lifecycle listener that OpenedTextRepair implements among the reviewed LSP4IJ internal APIs (UP83)	intellij-plugin	intellij-client	-
+399	55f625a7c7	Record LSP4IJ 0.30.1's IDE error for a stopped server's closed documents as known in the playbook (UP81)	playbook/tour/harness	playbook-harness	-
+400	89870a4272	Show an Ecstasy hover that takes LSP4IJ 0.30.1 longer than 500 ms in Quick Documentation (UP82)	intellij-plugin,playbook/tour/harness	editing-navigation	-
+401	9f988c82b8	End a debug run with the exit code LSP4IJ 0.30.1 keeps from the exited event (UP56)	intellij-plugin	debugger-editors	-
+402	d6c759718a	Type with linked editing on in IntelliJ's X133, now that LSP4IJ 0.30.1 has it (UP53)	playbook/tour/harness	editing-navigation	-
+403	e05de939bd	Check that one server comes back when the tour kills the server's process (UP72)	playbook/tour/harness	tours	-
+404	5ea28fb303	Show the tour's LSP4IJ card as what 0.30.1 brings to the IDE, not what 0.30.0 will	playbook/tour/harness	tours	-
+405	09e61bd83e	Keep javatools' test results in CI's failure diagnostics	build/CI	off-master	already on master as #800 (b51fd02510): drops on the next rebase
+406	3ad43c71bb	Find a debugged module's sources in the workspace when no source graph names it	lsp-server	debugger-editors	-
+407	ec20420046	Build, run and debug with Gradle while the workspace's own modules replace bundled libraries	intellij-plugin,lsp-server,vscode-extension,docs	workspace-modules	-
+408	33ab19eec6	Name each source set's project by its path in the build tree in the IDE's Gradle model (#774)	plugin	plugin-model-project-path	issue #774; consumers 409-411
+409	e6c62e9e09	Tell the client each module's Gradle project from the imported build model (#774)	lsp-server	build-run	depends on plugin-model-project-path (408)
+410	28bfbaf5b2	Run a module's Gradle tasks in its own project in IntelliJ, which reaches a composite's included builds (#774)	intellij-plugin	build-run	depends on plugin-model-project-path (408)
+411	c56c411812	Run a module's Gradle tasks in its own project in VS Code, which reaches a composite's included builds (#774)	vscode-extension	build-run	depends on plugin-model-project-path (408)
+412	be07248135	Expect the XVM repository's Gradle-mode Run, Debug and tests to reach its included builds in manual check 18a.20 (#774)	docs	build-run	-
+413	bdaf9f8900	Prove a rename in a workspace module that replaces a bundled library as the workspace's sources	lsp-server	refactoring	-
+414	839039990a	Offer a replaced library's import candidates from the workspace's compiled library, not the bundle's	lsp-server	workspace-modules	-
+415	f5d6b9b15a	Say on a replaced library with errors that the server's own compiler may be older than the repository's	lsp-server	workspace-modules	-
+416	8e612e1076	Add an editor setting for whether the workspace's own modules replace bundled XDK libraries	intellij-plugin,vscode-extension,docs	workspace-modules	-
+417	602c2057d9	Find a text's line breaks once per comparison in a rename's proof, not once per position	lsp-server	refactoring	-
+418	2f3ebe7c33	Prove a rename where the facts cannot prove every binding, unless one spells a name the rename changes	lsp-server	refactoring	-
+419	eedea673d2	Refuse a rename over ecstasy's sources below a 2 GB heap, and test a rename of the workspace's ecstasy	lsp-server	refactoring	-
+420	7292653a50	Log each project query's and each compile's time and heap	lsp-server	server-operations	-
+421	26547d7a99	Log what the server did in each minute in which it worked, and over its session	lsp-server	server-operations	-
+422	29f8f1fc45	Choose how the language server's JVM uses memory: the JVM's default or a set maximum, or adaptive	intellij-plugin,vscode-extension,docs,lsp-server	server-operations	-
+423	c45b13e7e5	Keep a replaced library to the workspace folder that replaces it, so a window's other projects build embedded	lsp-server,vscode-extension,docs	workspace-modules	-
+424	ca8e9c9d3d	Show the embedded compiler as not available where the project's own modules replace bundled libraries	intellij-plugin,vscode-extension	workspace-modules	-
+425	29dcb55c05	Add a user guide for the Ecstasy language tooling, with screenshots from both editor tours	docs	tooling-docs	-
+426	c9d544a875	Put every Ecstasy settings page of the IntelliJ plugin under Languages & Frameworks | Ecstasy	intellij-plugin,docs,playbook/tour/harness	intellij-client	-
+427	97670ffc30	Make the user guide's screenshots from tagged tour steps, rebuilt by guide.py from any tour run	playbook/tour/harness,docs	tooling-docs	-
+428	5e85f18ab3	Fit IntelliJ's Language Service and Server Runtime pages to the Settings dialog, and show both in the user guide	intellij-plugin,docs,playbook/tour/harness	intellij-client	-
+429	425ed28084	Rerun the failed tests of Run 'All Ecstasy Tests' in IntelliJ, each module's in turn with only its own	intellij-plugin,playbook/tour/harness,docs	test-running	-
+430	466305567e	Show IntelliJ and VS Code side by side in the user guide wherever both tours show the feature	docs,playbook/tour/harness	tooling-docs	-
+431	53ad520cfc	Move the user guide into lang/doc/user-guide, with its screenshots in images	docs,playbook/tour/harness	tooling-docs	moves 425's, 428's and 430's user guide and images: squash
+432	09068ac943	Let a debug launch or attach set how long evaluations and lazy values may run	intellij-plugin,dap-server,lsp-server,docs,vscode-extension,javatools-runtime/debugger	debugger-editors	spans units: split, to runtime-debugger 2 files +12/-7
+433	352f98225a	Say that gradle.properties leaves the lang build flags off, and pass them in the playbook container's gradle mode	docs,playbook/tour/harness	playbook-harness	spans units: split, to lang-build 1 file +3/-3; AGENTS.md half (include-lang input) goes with lang-build
+434	5c5b7a6a74	Rerun the failed tests of Run 'All Ecstasy Tests' in Gradle mode, each module's in its own project's testXtc	intellij-plugin,playbook/tour/harness,lsp-server,docs	test-running	-
+435	d5de76f3ac	Say in the user guide that embedded tests run with the server's XDK and xunit, not the build's	docs	tooling-docs	-
+436	801e3f5018	Give testing its own chapter in the user guide: write, find, run, read, rerun, debug, build modes, troubleshooting	docs,playbook/tour/harness	tooling-docs	-
+437	bdde618797	Say, when a rename or safe delete changes a public declaration, that modules outside the workspace are not changed	lsp-server,playbook/tour/harness,intellij-plugin,docs,vscode-extension	refactoring	-
+438	abd0d92cbb	Start a rename's proof from the revision's compile, and compile after the edit only what it reaches	lsp-server,docs	refactoring	-
+439	1968711215	Let a client's cancellation of a rename, or of xtc/build, reach the adapter's work	lsp-server	refactoring	-
+440	22d10690e1	End a debugged program's stack at the host's fiber, also when it has moved on from its call	javatools-runtime/debugger,javatools-tests	runtime-debugger	-
+441	44c0d123ed	Answer a failed stack trace, scopes or exception request with its reason, not "Internal error."	dap-server	debugger-editors	-
+442	6082470c06	Bind a local or parameter used for its formal type, as in t1.DataType, to its declaration	lsp-server,javatools-compiler	editing-navigation	spans units: split, to semantic-facts 1 file +12/-0
+443	075c456910	Make the _ placeholder no occurrence in the semantic model	lsp-server	editing-navigation	-
+444	adaf1aed73	Bind the names of a method's multiple return values to the values they declare	lsp-server,javatools-compiler	editing-navigation	spans units: split, to semantic-facts 1 file +11/-0
+445	421692c29e	Bind this in a lazy property's calc() and super in a method reference to what they name	lsp-server,javatools-compiler	editing-navigation	spans units: split, to semantic-facts 1 file +26/-2
+446	201cc3c131	Say, when a file move or rename or a plain rename changes a public declaration, that modules outside the workspace are not changed	lsp-server,playbook/tour/harness,docs	refactoring	-
+447	8f13a3f39d	Give the VS Code client its own handler of the server's messages back after the playbook's CFG2	playbook/tour/harness	playbook-harness	-
+448	8aa2a3b06a	Close the language server's messages as the IntelliJ tour restores the project, so a rename's note stays in its own frames	playbook/tour/harness	tours	-
+449	954cdfb2ee	Name the constants of an artifact's API by their index in its stripped pool, which needs none of its dependencies	lsp-server	workspace-modules	-
+450	23d477af27	Take an artifact's API fingerprint from javatools' FileStructure.writeApiTo, as Gradle's builds do	lsp-server	workspace-modules	-
+451	f193b5a20a	After a rename's edit, compile only the modules depending on the edited ones that it can reach	lsp-server,docs	refactoring	XdkRenameReach replaced by 463's member-use tracker: squash
+452	3dbdfeb352	Ask an adapter's work to stop on every cancellation of a converted result, also once the result is done	lsp-server	refactoring	-
+453	cbc8d7372b	Say in the user guide what a rename doesn't change or check	docs	tooling-docs	-
+454	97a74a8362	Bind a primary constructor's parameter passed in an extends or incorporates clause to the property it declares	lsp-server	editing-navigation	-
+455	fd84d084f5	Keep the initializer facts of a property declared in a loop's body, such as a static local	lsp-server,javatools-compiler	editing-navigation	spans units: split, to semantic-facts 1 file +12/-0
+456	5dedd656fa	Bind a local or parameter used as a type, as in new Pair<String, type>(), to its declaration	lsp-server	editing-navigation	-
+457	e738003101	Declare the names of a function type's values in the semantic model, as of its return values in a typedef	lsp-server	editing-navigation	-
+458	e4ea964558	Bind a reserved name such as this:class in a property's accessor, as in a method of the class	lsp-server	editing-navigation	-
+459	b3e2120d0e	Bind this.Outer in a virtual child to ecstasy's Outer interface, the class its name spells	lsp-server	editing-navigation	-
+460	7603821e5b	Report constructor arguments and default values that no constructor uses	javatools-tests,javatools-compiler,xdk-libraries,javatools-runtime/debugger	unused-constructor-args	open PR #802 (24d639c396), review required
+461	f349d6368a	Prove XdkRenameUnprovableTest's refusal on a binding that stays unprovable, CompileType.Element	lsp-server	refactoring	-
+462	7dafa8ae24	Digest the API of each declaration of a module apart (DeclarationDigests)	javatools-compiler,javatools-tests	declaration-digests	consumer: 463 (member-use tracker)
+463	49e62deb8a	Compile again, after an edit, only the modules that use what it changed (member-use tracker)	lsp-server	workspace-modules	depends on declaration-digests (462); replaces 451's reach rule
+464	d52113e5ca	Keep diagnostics working when a restart opens another server's library copy again	lsp-server,playbook/tour/harness	diagnostics	-
+465	4383885f8f	Take the execution worker's events off its standard output, onto a loopback socket of their own	lsp-server,docs	build-run	-
+466	b0f2285e7d	Export each project's xtcRun and xtcTest settings in the language server's Gradle model	plugin	plugin-model-run-settings	consumer: 467
+467	f5ed4f6a7a	Run embedded programs with their Gradle project's xtcRun and xtcTest settings, and say so in both editors	lsp-server,playbook/tour/harness,docs,intellij-plugin,vscode-extension	build-run	depends on plugin-model-run-settings (466)
+468	49b5f8aca6	Keep xtcRun's settings in runXtc: the default JVM options beside jvmArgs, and a module's method and arguments with --module	plugin	runxtc-keeps-settings	open master PR #804 (7ecdbae427, the same patch), copied from errs 2d66521545
