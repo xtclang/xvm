@@ -14,12 +14,12 @@ import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * After a rename's edit, its proof compiles only the modules that depend on the edited ones that the edit can reach
- * ([org.xvm.lsp.adapter.xdk.XdkRenameReach]): those that write the old or the new name, use a type whose members the
- * rename changes, or name a declaration on an edited line. Each case is a module that writes neither name, and must
- * either be compiled, as its bindings can change, or keep its compile. Each checks the rename's outcome, which is the
- * one that compiling every dependent module gives, and the modules compiled after the edit, counted by name, never
- * timed.
+ * After a rename's edit, its proof compiles only the modules that depend on the edited ones that use what the edit
+ * changes ([org.xvm.lsp.adapter.xdk.XdkMemberUseTracker]): those that write a name of a declaration whose API it
+ * changes, use a type whose members it changes as a whole, or name a declaration whose place it moves. Each case is a
+ * module that writes neither name, and must either be compiled, as its bindings can change, or keep its compile. Each
+ * checks the rename's outcome, which is the one that compiling every dependent module gives, and the modules compiled
+ * after the edit, counted by name, never timed.
  */
 class XdkRenameReachTest {
     @TempDir lateinit var directory: Path
@@ -172,7 +172,22 @@ class XdkRenameReachTest {
     }
 
     @Test
-    fun `a rename to a name that is not a plain identifier compiles every module that depends on the edited one, and says so`() {
+    fun `a module that matches a virtual child of the renamed method's class with an interface is compiled, and the rename refused`() {
+        // the rename's own foo is the first: the method of Base's virtual Child, which make returns and Duck matches with
+        // HasFoo; Duck names Base and make, and the child only by Base's name and its own
+        val lib =
+            "module Lib {\n    class Base {\n        class Child {\n            Int foo() = 1;\n        }\n\n" +
+                "        Child make() = new Child();\n    }\n}\n"
+        val duck =
+            "module Duck {\n    package lib import Lib;\n    package iface import Iface;\n\n" +
+                "    Int run() {\n        iface.HasFoo h = new lib.Base().make();\n        return 0;\n    }\n}\n"
+        val rename = rename(mapOf("Lib" to lib, "Iface" to HAS_FOO, "Duck" to duck), mapOf("Duck" to setOf("Lib", "Iface")))
+        assertThat(rename.edited).isNull()
+        assertThat(rename.compiled).containsExactly("Lib", "Duck")
+    }
+
+    @Test
+    fun `a rename to a name that is not a plain identifier keeps the compile of the modules it does not reach, and says why`() {
         val lines = CopyOnWriteArrayList<String>()
         val rename =
             logged(lines) {
@@ -182,12 +197,12 @@ class XdkRenameReachTest {
                     "föo",
                 )
             }
+        // Far and Top keep their compile, as for any other name: the tracker reads names of any letters
         assertThat(rename.edited).containsExactlyInAnyOrder("Lib", "Uses")
-        assertThat(rename.compiled).containsExactlyInAnyOrder("Lib", "Uses", "Far", "Top")
-        assertThat(lines).contains(
-            "rename: the proof compiles every module that depends on the edited ones after the edit, as a name it replaces " +
-                "or writes is not a plain identifier",
-        )
+        assertThat(rename.compiled).containsExactly("Lib", "Uses")
+        assertThat(
+            lines,
+        ).contains("compile: of the 2 modules that depend on those compiled again, 2 keep their compile (Far, Top) and 0 compile again")
     }
 
     /** What a rename did: the modules it edits, or null when refused, and those its proof compiled after the edit. */
