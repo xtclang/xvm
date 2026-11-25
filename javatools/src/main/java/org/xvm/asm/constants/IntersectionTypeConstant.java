@@ -25,6 +25,9 @@ import org.xvm.runtime.Utils;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * Represent a constant that specifies the intersection ("+") of two types.
  */
@@ -721,7 +724,7 @@ public class IntersectionTypeConstant
     @Override
     protected JitInfo buildJitInfo(ModuleLoader loader) {
         TypeConstant type = combineJitType(loader.typeSystem, m_constType1, m_constType2);
-        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false));
+        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false, silent(PROBE)));
     }
 
     private static TypeConstant combineJitType(TypeSystem ts, TypeConstant type1, TypeConstant type2) {
