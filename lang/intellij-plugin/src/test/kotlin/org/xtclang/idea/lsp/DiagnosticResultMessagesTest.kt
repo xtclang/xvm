@@ -30,7 +30,8 @@ class DiagnosticResultMessagesTest {
     private val initial = DiagnosticResultMessages.Snapshot(Any(), 1, "module Diagnostics {}")
     private val buffers = mutableMapOf(uri to initial)
     private val received = mutableListOf<Message>()
-    private val guard = DiagnosticResultMessages(buffers::get)
+    private val recorded = mutableListOf<String>()
+    private val guard = DiagnosticResultMessages(buffers::get) { recorded += it }
     private val outgoing = guard.outgoing(MessageConsumer {})
     private val incoming = guard.incoming(MessageConsumer { received.add(it) })
 
@@ -39,10 +40,12 @@ class DiagnosticResultMessagesTest {
         listOf(false, true).forEach { cancel ->
             val duringSnapshot = AtomicReference<(() -> Unit)?>(null)
             val guard =
-                DiagnosticResultMessages {
-                    duringSnapshot.getAndSet(null)?.invoke()
-                    initial
-                }
+                DiagnosticResultMessages(
+                    snapshot = {
+                        duringSnapshot.getAndSet(null)?.invoke()
+                        initial
+                    },
+                )
             val outgoing = guard.outgoing(MessageConsumer {})
             val incoming = guard.incoming(MessageConsumer {})
             outgoing.consume(
@@ -134,6 +137,33 @@ class DiagnosticResultMessagesTest {
     }
 
     @Test
+    fun `an unchanged report counts the items of the report it names, also one for a text that changed while it came`() {
+        request("1")
+        reply("1", "first", items = 1)
+        assertThat(guard.currentItems(uri)).isEqualTo(1)
+        // the text changes while the next report comes, which LSP4IJ can apply all the same, before it sends the change
+        request("2", previous = "first")
+        buffers[uri] = initial.copy(stamp = 2, text = "module Diagnostics { }")
+        reply("2", "second", items = 0)
+        assertThat(guard.currentItems(uri)).isNull()
+        // and its next pull names that report, as X71's did (run-4165373714699057152)
+        request("3", previous = "second")
+        unchanged("3", "second")
+        assertThat(guard.currentItems(uri)).isEqualTo(0)
+        assertThat(recorded).containsExactly(uri, uri)
+    }
+
+    @Test
+    fun `an unchanged report that names no report it knows records nothing`() {
+        request("1")
+        reply("1", "first", items = 1)
+        buffers[uri] = initial.copy(stamp = 2, text = "module Diagnostics { }")
+        request("2", previous = "unknown")
+        unchanged("2", "unknown")
+        assertThat(guard.currentItems(uri)).isNull()
+    }
+
+    @Test
     fun `a late report for an earlier state does not replace the current one, and a close forgets it`() {
         request("old")
         buffers[uri] = initial.copy(stamp = 2, text = "module Diagnostics { }")
@@ -168,6 +198,16 @@ class DiagnosticResultMessagesTest {
             },
         )
     }
+
+    private fun unchanged(
+        id: String,
+        resultId: String,
+    ) = incoming.consume(
+        ResponseMessage().apply {
+            this.id = id
+            result = DocumentDiagnosticReport(RelatedUnchangedDocumentDiagnosticReport(resultId))
+        },
+    )
 
     private fun reply(
         id: String,

@@ -8,6 +8,8 @@ import com.intellij.codeInsight.daemon.impl.MockWolfTheProblemSolver
 import com.intellij.codeInsight.daemon.impl.WolfTheProblemSolverImpl
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.editor.ex.DocumentEx
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -222,6 +224,53 @@ class ClosedFileProblemsTest {
         server.pulled[uri(child)] = emptyList()
         openMarkedBeforeConnection(child, "unknown-type")
         await("Child.x's editor no longer marks the error") { "unknown-type" !in marks(child) }
+    }
+
+    @Test
+    fun `an error that reaches a file's editor before LSP4IJ connects it goes with an unchanged report of the connected document`() {
+        val root = file("Root.x", "module Root {}\n")
+        val child = file("Root/Child.x", "class Child extends Base {}\n")
+        open(root)
+        // the error is fixed by the time LSP4IJ has connected the file; the document's report has a result ID, and a pull
+        //  that names it is answered as unchanged
+        server.pulled[uri(child)] = emptyList()
+        server.pullResults[uri(child)] = "fixed"
+        val asked = CompletableFuture<Unit>()
+        val answer = CompletableFuture<Unit>()
+        server.pulls = {
+            if (it == uri(child) && asked.complete(Unit)) answer else CompletableFuture.completedFuture(null)
+        }
+        openMarkedBeforeConnection(child, "unknown-type")
+        await("LSP4IJ pulls Child.x") { asked.isDone }
+        // the document changes for the plugin's record of reports while its first report comes, and not for LSP4IJ, which
+        //  applies that report: as with an edit that LSP4IJ sends once the document is committed (X71,
+        //  run-4165373714699057152), which here changes no text
+        runInEdtAndWait {
+            WriteAction.run<RuntimeException> {
+                val document = checkNotNull(FileDocumentManager.getInstance().getDocument(child)) as DocumentEx
+                document.setModificationStamp(document.modificationStamp + 1)
+            }
+        }
+        answer.complete(Unit)
+        await("LSP4IJ applies Child.x's first report") { pullResultId(child) == "fixed" }
+        // its next pull names that report, and the server answers it as unchanged
+        refresh()
+        await("Child.x's editor no longer marks the error") { "unknown-type" !in marks(child) }
+        assertThat(server.unchangedPulls).contains(uri(child))
+    }
+
+    /**
+     * The result ID that LSP4IJ's connected document of [file] names in its next pull, from the report it applied last.
+     *
+     * TODO LSP4IJ: UP86 — read at LSP4IJ's own seam, `DocumentContentSynchronizer.getPullResultId`, for a test only, as
+     *  nothing else tells that LSP4IJ has applied a report that changed nothing
+     */
+    private fun pullResultId(file: VirtualFile): String? {
+        val synchronizer = connection().getOpenedDocument(connection().clientFeatures.getFileUri(file))?.synchronizer ?: return null
+        return synchronizer.javaClass
+            .getDeclaredMethod("getPullResultId")
+            .apply { isAccessible = true }
+            .invoke(synchronizer) as String?
     }
 
     @Test
