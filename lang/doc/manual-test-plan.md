@@ -1256,8 +1256,9 @@ Mode**. **Ctrl+Alt+X, then B** (macOS: **Control+Option+X, then B**) chooses it 
 IntelliJ a notification says what Build and Run now use. The next build or run uses the mode, with no restart, Gradle
 sync or reindexing; Build in Gradle mode needs the Gradle project linked in IntelliJ.
 
-Embedded is the default mode, also in a folder with a Gradle build; there, embedded builds and runs print a line saying the
-Gradle build's own settings do not apply.
+Embedded is the default mode, also in a folder with a Gradle build; there, embedded builds and runs print a line saying
+that, of the Gradle build's own settings, only `xtcRun`'s method, arguments and JVM options and `xtcTest`'s JVM options
+apply, once its Gradle model is imported (X351).
 Fixture: `Hello.x` containing
 
 ```ecstasy
@@ -4024,6 +4025,20 @@ type names go anywhere, and the server logs why, once.
 | ID | Actions | Expected result |
 |---|---|---|
 | X350 | Write `LibraryNavigation.x`, a module with `String echo(String text) = text;`. Go to Definition on its first `String`. In `ecstasy/text/String.x`, which opens, Go to Definition on `add` in `buffer.add(transform(ch));`, in the body of `map`, and hover it. | `String.x` opens read-only at `const String`. Go to Definition on `add` opens `ecstasy/text/StringBuffer.x` at `add` in `StringBuffer add(Char v)`, the method another source of the library declares, and the hover shows `StringBuffer add(Char v)`. |
+
+### Gradle's run settings in embedded runs (X351)
+
+Where a project's Gradle model is imported, an embedded run takes what the module's Gradle project's `xtcRun` runs it
+with: the method and the arguments of its `module { ... }` for the module, where the run configuration gives none, and
+its JVM options, for the execution worker that runs it; a run of tests takes `xtcTest`'s JVM options. The run's output
+says, ahead of the program's, what it took, but for the defaults, and which JVM options it left out: a class path or
+main class of their own, a Java debugger's agent, options that print and exit, and argument and option files. No
+program that the runner runs sees a system property, so the case reads the output; the language server's tests read
+the worker's command line as the server builds it.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X351 | Write `GradleRuns.x`, a module whose `run` and `greet` print their name, the number of their arguments and the first. Write the Gradle model of a project `:app` whose `xtcRun` runs `GradleRuns` with `greet` and `hello world`, with the JVM options `-Dxtc.gradle.origin=playbook` and `-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005`, as `.gradle/xtc/lsp-model.json`, and use it, with no explicit modules. Run `GradleRuns` embedded without arguments (IntelliJ: an Ecstasy Application configuration with no method or arguments; VS Code: an `xtc` task), then with the argument `own`. | The client hears that `GradleRuns` is in `:app`. The first run prints `From Gradle project :app's xtcRun: method greet, arguments [hello world], JVM options [-Dxtc.gradle.origin=playbook].`, then `Left out of Gradle project :app's xtcRun JVM options: -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005 (a Java debugger's agent would hold the run's JVM; Debug debugs the program).`, then `greet 1:hello world`, and ends with exit code 0: the worker did not wait for a Java debugger. The second prints `From Gradle project :app's xtcRun: method greet, JVM options [-Dxtc.gradle.origin=playbook].` and `greet 1:own`: its own argument wins, and the method is still Gradle's. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
