@@ -13,8 +13,10 @@ import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
+import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PreviousResultId
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ServerCapabilities
@@ -39,11 +41,15 @@ import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
+import org.xvm.lsp.util.ProcessDirectories
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -241,6 +247,95 @@ class XdkPullDiagnosticsTest {
                     .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
                     .awaited(),
             ).isNotEmpty()
+        }
+    }
+
+    @Test
+    fun `another server's copy of a library source, opened again after a restart, is this server's copy as its folder goes`() {
+        CompilerTestSupport.configure()
+        // this server's copies first: the folder that its first copy makes deletes the folders that no server holds
+        val own = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", ARRAY)))
+        // the copies of the server before a restart, which holds their folder until its exit deletes it, while the client
+        // opens them again here; as the library compiles as a whole, that folder has the module file too
+        val other = ProcessDirectories.create("xtc-library-sources-")
+        val copy = other.resolve(ARRAY)
+        Files.createDirectories(copy.parent)
+        Files.copy(own, copy)
+        Files.writeString(other.resolve("ecstasy.x"), "module ecstasy.xtclang.org {}\n")
+        val copyUri =
+            copy
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
+        // a file of that folder whose source this server does not have, as a server of another build may have written
+        val unknownUri =
+            other
+                .resolve("ecstasy/Unknown.x")
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
+        val text = own.toFile().readText()
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        val uri = file.canonicalFile.toURI().toString()
+        // the compiles wait until the folder is gone, as the server before deletes it while this one starts
+        val debounces = Executors.newSingleThreadExecutor()
+        val held = mutableListOf<FutureTask<Unit>>()
+        var holding = true
+        val support = EmbeddingSupport.instance()
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors -> support.compileModule(sources, repository, errors) },
+                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+                { work ->
+                    FutureTask(work, Unit).also { task -> synchronized(held) { if (holding) held += task else debounces.execute(task) } }
+                },
+            )
+        try {
+            Session(adapter = adapter).use { session ->
+                session.open(uri, BROKEN, 1)
+                session.open(copyUri, text, 1)
+                session.open(unknownUri, "class Unknown {}", 1)
+                assertThat(ProcessDirectories.delete(other)).isTrue()
+                synchronized(held) {
+                    holding = false
+                    held.forEach(debounces::execute)
+                }
+
+                // the module's error is pulled, and the copy's library reports none: compiled as a module of its own, the
+                // copy's root was the other folder's ecstasy.x, which its compile did not find, and each pull failed
+                assertThat(
+                    session
+                        .pull(uri)
+                        .left.items
+                        .map { it.message.left },
+                ).anyMatch { "missing" in it }
+                assertThat(session.pull(copyUri).left.items).isEmpty()
+                assertThat(
+                    session
+                        .workspace()
+                        .items
+                        .mapNotNull { it.left }
+                        .filter { it.uri == copyUri }
+                        .flatMap { it.items },
+                ).isEmpty()
+                // the copy is this server's copy of the source, compiled with this server's library, and answers as it
+                assertThat(XdkLibrarySources.isCopy(copyUri)).isTrue()
+                assertThat(adapter.analysisScope(copyUri)).isEqualTo(adapter.analysisScope(own.toUri().toString()))
+                val row = text.lines().indexOfFirst { it.startsWith("class Array<") }
+                val hover =
+                    session.server.textDocumentService
+                        .hover(HoverParams(TextDocumentIdentifier(copyUri), Position(row, "class ".length)))
+                        .awaited()
+                assertThat(hover?.contents?.right?.value).contains("Array")
+                // and the file without a source is a library document too, which no compile takes as a module's
+                assertThat(session.pull(unknownUri).left.items).isEmpty()
+            }
+        } finally {
+            debounces.shutdownNow()
+            if (Files.exists(other)) ProcessDirectories.delete(other)
         }
     }
 
@@ -781,5 +876,6 @@ class XdkPullDiagnosticsTest {
         const val URI = "file:///Pull.x"
         const val VALID = "module Pull { Int run() = 1; }"
         const val BROKEN = "module Pull { Int run() = missing; }"
+        const val ARRAY = "ecstasy/collections/Array.x"
     }
 }
