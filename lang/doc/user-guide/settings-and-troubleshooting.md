@@ -37,10 +37,15 @@ configuration.*
 
 </td></tr></table>
 
+<table><tr><td>
+
 ![IntelliJ Languages & Frameworks, Ecstasy, Server Runtime and Logs settings page with the memory policy](images/intellij-server-runtime.png)
+
 *IntelliJ: **Settings | Languages & Frameworks | Ecstasy | Server Runtime and Logs**: the server's JVM options, its
 memory policy and maximum heap, and how long its logs are kept, with a button that restarts running servers with
 the saved settings.*
+
+</td></tr></table>
 
 <table><tr><td width="50%">
 
@@ -56,9 +61,14 @@ Compiler page.*
 
 </td></tr></table>
 
+<table><tr><td>
+
 ![VS Code Switch Language Adapter picker: Ecstasy Compiler, Tree-sitter or the bundled default](images/vscode-switch-adapter.png)
+
 *VS Code: <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd>, or a click on Ecstasy in the status bar, switches the server's adapter. IntelliJ's
 **Tools | Switch Ecstasy Language Adapter**, or the same keys, opens the same choice in a popup.*
+
+</td></tr></table>
 
 ## Troubleshooting
 

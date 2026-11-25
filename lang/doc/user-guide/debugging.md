@@ -40,8 +40,13 @@ Breakpoints, stepping and evaluation work as in a launched session. Stopping the
 and the program runs on. The program must run with an XDK of the same version as your plugin or
 extension; with another, the attach says so. One debugger at a time can attach.
 
+<table><tr><td>
+
 ![VS Code attached to the card game that xtc run started in a terminal, stopped at a breakpoint](images/vscode-attach.png)
+
 *VS Code: `xtc run` with the copied `--debug` option waits in the terminal; the attach configuration connects, and the program stops at its breakpoint.*
+
+</td></tr></table>
 
 ## Breakpoints
 
@@ -97,8 +102,13 @@ attached sessions alike.
 
 </td></tr></table>
 
+<table><tr><td>
+
 ![VS Code stopped after two.strategy changed, with Player.strategy Write listed in the Breakpoints view](images/vscode-data-breakpoint.png)
+
 *VS Code: **Break on Value Change** on `two`'s `strategy` stops right after the line that changes it.*
+
+</td></tr></table>
 
 ### Breakpoints while you edit
 
@@ -152,8 +162,13 @@ When the program stops, the debugger shows:
 - **Watches and hovers.** Expressions such as `point.x + 1` or `ints[i] > 0`, evaluated again at every
   stop, without running the program's code. One that would run code, such as a call, says so.
 
+<table><tr><td>
+
 ![IntelliJ Debug window stopped while dealing: frames, variables with identity codes, and inline values beside the code](images/intellij-debug-frames.png)
+
 *IntelliJ: stopped while dealing: the frames, the variables with their identity codes, and inline values beside the code.*
+
+</td></tr></table>
 
 <table><tr><td width="50%">
 
