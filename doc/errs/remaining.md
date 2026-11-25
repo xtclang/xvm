@@ -487,13 +487,66 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     passed in all 7, and the section alone once; 5 of the 7 passed every check. The first failed 5 Debugging checks,
     as the container's `xdk/build/install/xdk/lib` was empty and xtc did not run (`playbook.sh build` filled it); the
     second 2 Diagnostics checks (the item below).
-- [ ] Found 2026-11-25 in `run-tour-11649425361568010670`, the whole tour in the container, not seen in the runs
+- [x] Found 2026-11-25 in `run-tour-11649425361568010670`, the whole tour in the container, not seen in the runs
   kept before: two Diagnostics checks waited out their 10 minutes. Warnings' Ctrl+F1 popup never showed; and after
   the changed-signature check put the signature back, PlayerTest.x kept "Dependencies unavailable: cardGame",
   although the server compiled it clean a second later (00:12:33.325 local, no diagnostics) and LSP4IJ pulled it
-  twice after that (00:12:34.212 and 00:12:38.512). The server logged no error and no library copy was open. To find
-  out: what those pulls answered, which the trace had rotated out, and whether the mark came from another document's
-  related report.
+  twice after that (00:12:34.212 and 00:12:38.512). The server logged no error and no library copy was open. Two
+  causes, neither the server's (2026-11-25, `ca776cfa2d`, `0968b2a404`, `3278a17df5`, `82c4105da5`):
+  - The mark was LSP4IJ's (UP86, filed as redhat-developer/lsp4ij#2231). The editor marked the error within 95 ms of
+    PlayerTest.x opening, before any pull of it was answered: the workspace reports asked while the file was closed
+    and the signature broken reached LSP4IJ as the editor opened and before it connected the document, so LSP4IJ kept
+    the error in a document without a connection and marked it. The connection replaced that document with an empty
+    one; the signature's fix came 150 ms later and rejected the 11 pulls in flight, so no report gave the connected
+    document the error, and its reports, all empty, changed nothing. LSP4IJ marks an editor again as its document's
+    diagnostics change, or as a server stops or refreshes all its features, and makes no diagnostics pass in an
+    editor. In the runs that passed, cardGame's pulls gave the connected document the error first, as related
+    reports, and took it back after the fix (the trace of `run-tour-11590639236857448344`). The fix does not race the
+    dependent's compile in the server: PlayerTest.x's analysis after it was clean, and in that trace every report
+    after the fix, the file's own and the related ones, was clean. The bridge refreshes the editor's marks from the
+    connected document once it holds the items of its own pull's report for its text: a first version refreshed
+    them as the document connected, when it has none yet, and a second at its first update, which can be another
+    document's report or one that LSP4IJ rejects; each took the marks of an error still there away until the
+    document's own report. `ClosedFileProblemsTest` makes the order certain at LSP4IJ's registration seam: with the
+    error fixed, the mark goes with the connected document's report, and without the bridge it stays; with the error
+    still there, the mark stays all the while, also when a rejected update or another document's report comes first,
+    and a refresh as the document connects, or at its first update, takes it away.
+  - The popup closed. The edit's code lenses come with a compile of the whole project: in each of the 9 kept runs
+    whose popup never showed they came 1.6 to 3.4 s after the press, in 18 of the 20 that passed 0.4 to 0.6 s (2.2 s
+    in the other two). As they arrive above the caret the editor scrolls, and IntelliJ closes an editor's hover
+    popup when its visible area moves: in `run-tour-15291386358089028646`, between the end of the step's act and the
+    end of its wait, the selected editor scrolled once and the press itself was the only action, with no switch to
+    another application; those counts did not say which came first, which the step now lists in order. The step
+    now presses once the edit's lenses are in place, none is pending, and nothing else is in progress.
+  - For the next failure: each server's whole trace is kept in playbook runs (about 42 MB for the sections through
+    Diagnostics, 264 MB for the IntelliJ playbook's features session), with what each pull answered at DEBUG, by
+    result IDs and item codes, related documents too; a failing diagnostics wait says what LSP4IJ holds for the file
+    and what its own pull last reported, and a popup that does not show says what could have closed it, in order.
+  - Container runs of the sections through Diagnostics (`XTC_CONTAINER_MEMORY=14g`, a 3-minute bound): without the
+    fixes the popup failed in 1 of 4, with the UP86 bridge alone in 3 of 4, with the first versions of both fixes in
+    none of 7, with the second in none of 7, whose 39 steps and 27 checks all passed, and with both as they are in
+    none of 3, whose Diagnostics sections passed; one of the 3 failed Reading code's Parameter info popup (an item
+    below). The stale mark came back in none of them, with the bridge or without; `ClosedFileProblemsTest` is its
+    reproduction. The IntelliJ playbook's features session, all cases: with the second versions 342 passed, 8 partial
+    and 2 not implemented as listed, no IDE error (`run-6036632534047447082`), after a run whose X71 hung (an item
+    below); with both as they are the same (`run-13646449048832034797`).
+- [ ] Found 2026-11-25 in `run-4165373714699057152`, the IntelliJ playbook's features session in the container, not
+  in the run of the same cases two hours before: X71 waited out its 10 minutes for Advanced.x's diagnostics after its
+  last variant ("Expected []; editor diagnostics: []"), with no mark in the editor and no pull after the last ones,
+  which the server answered as unchanged. The playbook's record of each document's latest own report
+  (`DiagnosticResultMessages`) took the full report of the last variant's text, with no items, as stale, as the text
+  changed again while it came, while LSP4IJ applied it: the next pulls named its result ID. The record then counted
+  the items of those unchanged reports from the report it had kept, of an earlier variant with a parser error, so
+  the wait never saw none. Not a product fault, and not the UP86 bridge's, which reads the record and changes
+  nothing in it or in the pulls. The tour's `heldDiagnostics` takes its count of the own pull's items from the same
+  record (`currentDiagnosticItems`), so it can show the same miscount. To fix: count an unchanged report's items from
+  the report of the result ID it names.
+- [ ] Found 2026-11-25 in `run-tour-1548907980096693794`, the tour's sections through Diagnostics in the container,
+  not in the tour runs kept before: Reading code's Parameter info popup (Ctrl+P) did not show within its 3-minute
+  bound. The step's closers, now in order, say what came after its press: "ParameterInfo, scroll", one scroll of the
+  selected editor and nothing else; the server answered Eights.x's code lenses 10 ms after the press (15:38:58.432,
+  asked at .419 as the step selected the file), as in the Warnings step before its fix. To fix as there: press once
+  the file's code lenses are in place and none is pending.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
