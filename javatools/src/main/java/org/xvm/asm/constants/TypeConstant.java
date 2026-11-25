@@ -93,7 +93,6 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 
 import static org.xvm.asm.ErrorListener.Silence.CASCADE;
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.asm.ErrorListener.tee;
 
