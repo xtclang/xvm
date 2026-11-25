@@ -631,6 +631,44 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a formal type of the class an annotation is into, named in its method, is an occurrence of that formal type`() {
+        val source =
+            """
+            module Implicit {
+                class Holder</*declared*/Inner> {
+                    Inner get(Inner i) = i;
+                }
+                annotation Cap into Holder {
+                    @Override
+                    Inner get(Inner i) {
+                        /*local*/Inner held = super(i);
+                        return held;
+                    }
+                }
+                interface Processor<Message> {
+                    static annotation Dedup into Processor {}
+                }
+                class Spare {
+                    Int unused() {
+                        return 1;
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource("Implicit", source) { adapter, uri ->
+            // the compiler adds Inner to Cap, and Message to Dedup, as a formal type of its own, which no source declares
+            val local = position(source, "local")
+            val declared = range(source, "declared", "Inner")
+            assertThat(adapter.findDefinition(uri, local.line, local.column)?.let(::range)).isEqualTo(declared)
+            assertThat(adapter.findReferences(uri, declared.start.line, declared.start.column, true).map(::range))
+                .contains(range(source, "local", "Inner"))
+            val at = source.positionOf("unused()")
+            assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
+                .contains("Safely delete member 'unused', unused in Implicit")
+        }
+    }
+
     /** The rename facts of [text], a module compiled alone, as a proof over its module takes them. */
     private fun facts(
         name: String,
