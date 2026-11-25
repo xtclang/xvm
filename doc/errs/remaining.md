@@ -589,21 +589,25 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     reproduction. The IntelliJ playbook's features session, all cases: with the second versions 342 passed, 8 partial
     and 2 not implemented as listed, no IDE error (`run-6036632534047447082`), after a run whose X71 hung (an item
     below); with both as they are the same (`run-13646449048832034797`).
-- [ ] Found 2026-11-25 in `run-4165373714699057152`, the IntelliJ playbook's features session in the container, not
+- [x] Found 2026-11-25 in `run-4165373714699057152`, the IntelliJ playbook's features session in the container, not
   in the run of the same cases two hours before: X71 waited out its 10 minutes for Advanced.x's diagnostics after its
   last variant ("Expected []; editor diagnostics: []"), with no mark in the editor and no pull after the last ones,
   which the server answered as unchanged. The playbook's record of each document's latest own report
   (`DiagnosticResultMessages`) took the full report of the last variant's text, with no items, as stale, as the text
   changed again while it came, while LSP4IJ applied it: the next pulls named its result ID. The record then counted
   the items of those unchanged reports from the report it had kept, of an earlier variant with a parser error, so
-  the wait never saw none. The UP86 bridge changes nothing in the record or in the pulls, but since its review fixes
-  it decides from the record when the connected document holds its own report (`currentReport`), so the same case
-  stops it: when LSP4IJ applies a report for the old text that the record drops, and the pulls after it are
-  unchanged, the bridge never fires, and a stale UP86 mark stays until the file's diagnostics change, as it does
-  without the bridge (found in the bridge's re-review, 2026-11-25; it needs an edit of a newly opened file as its
-  first report arrives, which the tour never makes). The tour's `heldDiagnostics` takes its count of the own pull's
-  items from the same record (`currentDiagnosticItems`), so it can show the same miscount. To fix: count an
-  unchanged report's items from the report of the result ID it names, which closes the bridge's gap too.
+  the wait never saw none. The UP86 bridge, which decides from the record when the connected document holds its own
+  report (`currentReport`), had the same gap: when LSP4IJ applied a report for the old text that the record dropped,
+  and the pulls after it were unchanged, it never fired, and a stale UP86 mark stayed until the file's diagnostics
+  changed (found in the bridge's re-review; it needs an edit of a newly opened file as its first report arrives,
+  which the tour never makes). The tour's `heldDiagnostics` took its count from the same record
+  (`currentDiagnosticItems`). Fixed (2026-11-25): the record keeps each full report's items by its result
+  ID, for the document's connection, also when the text changed while it came, and an unchanged report counts the
+  items of the report it names; one that names none it knows records nothing. The bridge now also looks at each own
+  report recorded for the document's text as it is, as an unchanged report updates nothing in LSP4IJ.
+  `DiagnosticResultMessagesTest` has X71's sequence, and `ClosedFileProblemsTest` the bridge's, with the record's
+  snapshot changed while the first report comes, as an edit that LSP4IJ sends only once the document is committed
+  changes it; both fail without the fix.
 - [ ] Found 2026-11-25 in `run-tour-1548907980096693794`, the tour's sections through Diagnostics in the container,
   not in the tour runs kept before: Reading code's Parameter info popup (Ctrl+P) did not show within its 3-minute
   bound. The step's closers, now in order, say what came after its press: "ParameterInfo, scroll", one scroll of the

@@ -99,7 +99,7 @@ class XtcClientFeatures : LSPClientFeatures() {
     override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
         object : DefaultLauncherBuilder<S>(this) {
             private val diagnostics =
-                DiagnosticResultMessages(::snapshot).also {
+                DiagnosticResultMessages(::snapshot, ::markConnected).also {
                     this@XtcClientFeatures.diagnosticResults.set(it)
                 }
             private val pending = PendingRequests()
@@ -144,14 +144,15 @@ class XtcClientFeatures : LSPClientFeatures() {
 
     /**
      * Marks in the editor of [file] what LSP4IJ holds of its connected document, once, in place of what the editor marked
-     * before, at the first update of any document of [file] after which the connected document holds exactly the items
-     * of its own pull's latest report for its text as it is ([DiagnosticResultMessages.currentReport]): the marks then
-     * show that report, as LSP4IJ applies it, whichever update brought its items. LSP4IJ calls
-     * [LSPDiagnosticFeature.diagnosticsUpdated] after each update, changed or not, also one that it rejects for its
-     * version or that goes into a document without a connection, and a new connection's first pull names no result ID,
-     * so its report is full. Before that report comes, no update marks anything, a related or workspace report or a
-     * rejected one, so the marks of an error still there stay. A refresh that fails is tried again at the next update;
-     * none fails the update that it follows.
+     * before, at the first moment the connected document holds exactly the items of its own pull's latest report for its
+     * text as it is ([DiagnosticResultMessages.currentReport]): the marks then show that report, as LSP4IJ applies it,
+     * whichever update brought its items. It looks at each update, as LSP4IJ calls
+     * [LSPDiagnosticFeature.diagnosticsUpdated] after each, changed or not, also one that it rejects for its version or
+     * that goes into a document without a connection, and at each own report recorded for the document's text as it is:
+     * an unchanged report updates nothing in LSP4IJ, and it can name a full report for an earlier text, which LSP4IJ
+     * applied as the text changed while it came. Before such a report comes, nothing marks anything, a related or
+     * workspace report or a rejected update, so the marks of an error still there stay. A refresh that fails is tried
+     * again at the next update or report; none fails what it follows.
      *
      * TODO LSP4IJ: UP86 — LSP4IJ 0.30.1 keeps a report that reaches a file whose editor is open before it connects the
      *  file's document, a workspace report or a related document's, in a document without a connection, and the editor
@@ -178,6 +179,17 @@ class XtcClientFeatures : LSPClientFeatures() {
             logger<XtcClientFeatures>().warn("Could not mark the diagnostics of ${file.path} in its editor (UP86)", failure)
         } catch (failure: LinkageError) {
             logger<XtcClientFeatures>().warn("Could not mark the diagnostics of ${file.path} in its editor (UP86)", failure)
+        }
+    }
+
+    /** [markConnected] for the file of the document at [uri], of which [DiagnosticResultMessages] recorded a report. */
+    private fun markConnected(uri: String) {
+        try {
+            findFileByUri(uri)?.let(::markConnected)
+        } catch (failure: Exception) {
+            logger<XtcClientFeatures>().warn("Could not mark the diagnostics of $uri in its editor (UP86)", failure)
+        } catch (failure: LinkageError) {
+            logger<XtcClientFeatures>().warn("Could not mark the diagnostics of $uri in its editor (UP86)", failure)
         }
     }
 }
