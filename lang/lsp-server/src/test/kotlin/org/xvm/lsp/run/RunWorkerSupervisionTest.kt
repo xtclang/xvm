@@ -45,21 +45,21 @@ class RunWorkerSupervisionTest {
     private fun workers(
         limits: RunWorkerProcess.Limits,
         mode: String = "",
-        jvm: List<String> = emptyList(),
     ) = RunWorkerProcess(
-        {
+        { options ->
             listOfNotNull(
                 ProcessHandle
                     .current()
                     .info()
                     .command()
                     .orElse("java"),
-                *jvm.toTypedArray(),
-                "-cp",
-                System.getProperty("java.class.path"),
-                FakeRunWorker::class.java.name,
-                mode.ifEmpty { null },
-            )
+            ) + options +
+                listOfNotNull(
+                    "-cp",
+                    System.getProperty("java.class.path"),
+                    FakeRunWorker::class.java.name,
+                    mode.ifEmpty { null },
+                )
         },
         limits,
         { FakeRunWorker.IDENTITY },
@@ -68,7 +68,8 @@ class RunWorkerSupervisionTest {
     private fun RunWorkerProcess.run(
         module: String,
         run: Run = Run(),
-    ): Pair<Long, Run> = start(RunWorkerProcess.Request(emptyList(), module, "run", emptyList(), null), run) to run
+        options: List<String> = emptyList(),
+    ): Pair<Long, Run> = start(RunWorkerProcess.Request(emptyList(), module, "run", emptyList(), null, jvmOptions = options), run) to run
 
     /** Runs [body] while recording the worker process's log, debug included, which it is given, and returns what was logged. */
     private fun logged(body: (List<ILoggingEvent>) -> Unit): List<ILoggingEvent> {
@@ -188,8 +189,8 @@ class RunWorkerSupervisionTest {
 
     @Test
     fun `a worker whose JVM prefers IPv6 connects to its server's IPv4 loopback port`() {
-        workers(LIVELOCK_LIMITS, jvm = listOf("-Djava.net.preferIPv6Addresses=true")).use { workers ->
-            val (_, quick) = workers.run("Quick")
+        workers(LIVELOCK_LIMITS).use { workers ->
+            val (_, quick) = workers.run("Quick", options = listOf("-Djava.net.preferIPv6Addresses=true"))
             assertThat(quick.exit()).isEqualTo(0L to null)
         }
     }
@@ -336,6 +337,46 @@ class RunWorkerSupervisionTest {
             val (_, quick) = workers.run("Quick")
             assertThat(quick.exit()).isEqualTo(0L to null)
             assertThat(workers.workerPids()).containsExactly(kept)
+        }
+    }
+
+    @Test
+    fun `a run's worker has its JVM options, runs with the same share it, and one with others retires it when idle`() {
+        workers(LIVELOCK_LIMITS).use { workers ->
+            val gradle = listOf("-D${FakeRunWorker.OPTION}=gradle")
+            val (_, first) = workers.run("Options", options = gradle)
+            assertThat(first.exit()).isEqualTo(0L to null)
+            assertThat(first.output.toString()).contains("option=gradle")
+            val kept = workers.workerPids().single()
+            val (_, again) = workers.run("Options", options = gradle)
+            assertThat(again.exit()).isEqualTo(0L to null)
+            assertThat(again.output.toString()).contains("option=gradle")
+            assertThat(workers.workerPids()).containsExactly(kept)
+
+            // a run with the worker's own options, none, gets a new worker, and the idle one with others goes
+            val (_, plain) = workers.run("Options")
+            assertThat(plain.exit()).isEqualTo(0L to null)
+            assertThat(plain.output.toString()).contains("option=null")
+            awaitUntil { workers.workerPids().size == 1 }
+            assertThat(workers.workerPids()).doesNotContain(kept)
+        }
+    }
+
+    @Test
+    fun `a worker that stops as it starts, with JVM options its JVM refuses, ends its run, which names them`() {
+        workers(LIVELOCK_LIMITS).use { workers ->
+            val (_, refused) = workers.run("Quick", options = listOf("-XX:+NoSuchOptionOfTheWorkersJvm"))
+            val (code, error) = refused.exit()
+            assertThat(code).isNull()
+            assertThat(error).isEqualTo(
+                "The execution worker stopped as it started, with the JVM options [-XX:+NoSuchOptionOfTheWorkersJvm]; " +
+                    "what its JVM printed, in the output above, says why",
+            )
+            // the JVM's own message, which says which option it refuses
+            assertThat(refused.output.toString()).contains("NoSuchOptionOfTheWorkersJvm")
+            awaitUntil { workers.workerPids().isEmpty() }
+            val (_, next) = workers.run("Quick")
+            assertThat(next.exit()).isEqualTo(0L to null)
         }
     }
 
