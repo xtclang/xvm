@@ -28,9 +28,10 @@ import java.util.IdentityHashMap
  * The semantic model's census over the XDK's own libraries, the 22 modules of all 21 compiled from the repository's
  * sources in build order, each against the ones before it, as a workspace that holds the repository compiles them: every
  * binding of their rename facts that a proof cannot prove, an occurrence without a symbol (unbound) or one bound
- * through an identity that no declaration or artifact proves (unproven), sorted by the construct that wrote it. A rename
- * is refused where such a binding spells the old or new name, and every other proof (a safe delete, an inline, an
- * extraction, a member's addition) anywhere in its module; Find References and highlighting miss what is unbound.
+ * through an identity that no declaration or artifact proves (unproven), and every dispatch chain of a method or property
+ * of their classes that holds such an identity, sorted by the construct that wrote it. A rename is refused where such a
+ * binding spells the old or new name, and every other proof (a safe delete, an inline, an extraction, a member's
+ * addition) anywhere in its module; Find References and highlighting miss what is unbound.
  *
  * No construct that compiles is known to leave a name unbound, so an unbound occurrence fails the test, with its
  * examples. The unproven bindings are counted only: the report, by construct and by library with examples, goes to
@@ -80,7 +81,7 @@ class SemanticModelCensusTest {
         val column: Int,
         val name: String,
         val unbound: Boolean,
-        val call: Boolean,
+        val kind: Kind,
         val construct: String,
         val text: String,
     ) {
@@ -88,6 +89,9 @@ class SemanticModelCensusTest {
 
         override fun toString() = "${if (unbound) "unbound" else "unproven"} $construct $module $where $name | $text"
     }
+
+    /** What a gap is: an occurrence of a name, a call's method, or a dispatch chain of a method or property. */
+    private enum class Kind { OCCURRENCE, CALL, CHAIN }
 
     /** One module's census, over its rename [facts] and its [ast], which tells the construct of each gap. */
     private class Census(
@@ -107,40 +111,75 @@ class SemanticModelCensusTest {
                     val callable = facts.callables[location]
                     val symbol = occurrence.symbol?.let(model::symbol)
                     when {
-                        callable == null && symbol == null -> gap(location, occurrence.name, true, false, "unbound ${node(location)}")
-                        else -> unproven(callable, symbol)?.let { gap(location, occurrence.name, false, false, it) }
+                        callable == null && symbol == null ->
+                            gap(
+                                location,
+                                occurrence.name,
+                                true,
+                                Kind.OCCURRENCE,
+                                "unbound ${node(location)}",
+                            )
+
+                        else -> unproven(callable, symbol)?.let { gap(location, occurrence.name, false, Kind.OCCURRENCE, it) }
                     }
                 } +
                     model.calls.mapNotNull { call ->
                         val location = SemanticModel.SourceLocation(source, call.callee)
                         val callable = facts.callables[location]
                         unproven(callable, model.symbol(call.method))?.let {
-                            gap(location, model.symbol(call.method)?.name ?: "?", false, true, "call $it")
+                            gap(location, model.symbol(call.method)?.name ?: "?", false, Kind.CALL, "call $it")
                         }
                     }
-            }
+            } + chains()
+
+        /**
+         * The dispatch chains, of each method and property of the module's classes, that hold an unproven identity: a
+         * proof other than a rename's compares them exactly, and a rename's by their spelling, as it does a binding.
+         */
+        private fun chains(): List<Gap> =
+            (facts.methods.chains.map { "method" to it } + facts.properties.chains.map { "property" to it })
+                .mapNotNull { (kind, chain) ->
+                    val parts = listOf(chain.owner) + chain.members + chain.cycles + chain.alternatives
+                    val shape = parts.firstNotNullOfOrNull(::shape) ?: return@mapNotNull null
+                    val owner = chain.owner as? ProofIdentity.Source
+                    val members = chain.members.joinToString(",", "[", "]") { (it as? ProofIdentity.Source)?.name ?: label(it) }
+                    gap(owner?.location, "${owner?.name ?: label(chain.owner)}.$members", false, Kind.CHAIN, "$kind chain $shape")
+                }
+
+        private fun label(identity: ProofIdentity) = if (identity is ProofIdentity.Unproven) "?" else identity.javaClass.simpleName
 
         private fun gap(
-            location: SemanticModel.SourceLocation,
+            location: SemanticModel.SourceLocation?,
             name: String,
             unbound: Boolean,
-            call: Boolean,
+            kind: Kind,
             construct: String,
-        ) = Gap(
-            module,
-            requireNotNull(location.sourceName),
-            location.range.start.line + 1,
-            location.range.start.column + 1,
-            name,
-            unbound,
-            call,
-            construct,
-            lines
-                .getOrPut(requireNotNull(location.sourceName)) { File(location.sourceName).readLines() }
-                .getOrNull(location.range.start.line)
-                ?.trim()
-                .orEmpty(),
-        )
+        ): Gap {
+            val file = location?.sourceName
+            return Gap(
+                module,
+                file ?: "?",
+                location
+                    ?.range
+                    ?.start
+                    ?.line
+                    ?.plus(1) ?: 0,
+                location
+                    ?.range
+                    ?.start
+                    ?.column
+                    ?.plus(1) ?: 0,
+                name,
+                unbound,
+                kind,
+                construct,
+                file
+                    ?.let { lines.getOrPut(it) { File(it).readLines() } }
+                    ?.getOrNull(requireNotNull(location).range.start.line)
+                    ?.trim()
+                    .orEmpty(),
+            )
+        }
 
         /** The construct of a binding the proof cannot prove, or null for one it proves, as XdkRename's comparison does. */
         private fun unproven(
@@ -249,7 +288,8 @@ class SemanticModelCensusTest {
         val unproven = gaps.filterNot { it.unbound }
         val head =
             "census total unbound=${unbound.size} unproven=${unproven.size} " +
-                "(occurrences=${unproven.count { !it.call }}, calls=${unproven.count { it.call }})"
+                "(occurrences=${unproven.count { it.kind == Kind.OCCURRENCE }}, calls=${unproven.count { it.kind == Kind.CALL }}, " +
+                "chains=${unproven.count { it.kind == Kind.CHAIN }})"
         val constructs =
             gaps.groupBy { it.construct }.entries.sortedByDescending { it.value.size }.flatMap { (construct, each) ->
                 val names =
