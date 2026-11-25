@@ -988,6 +988,8 @@ private fun Tour.writing() {
 
 private fun Tour.diagnostics() {
     section("Diagnostics")
+    // Eights.x's code lenses as they are before the step's edit, for The error's message to wait for the edit's
+    var eightsLenses: String? = null
     shot(
         "Errors as you type",
         "A misspelled method is an error as soon as it is typed: the compiler checks the editor's text, not the saved file.",
@@ -998,6 +1000,7 @@ private fun Tour.diagnostics() {
         settle = 3.seconds,
     ) {
         open(source("Eights.x"), 0)
+        eightsLenses = lensesInPlace(source("Eights.x"))
         replace("return drawPile.popCard();", 0, "return drawPile.popCrd();")
         at("popCrd", delta = 2)
     }
@@ -1015,6 +1018,13 @@ private fun Tour.diagnostics() {
             restore()
         },
     ) {
+        // as in Warnings: once the editor has analyzed the edited text and marks the error at the caret, and once the
+        //  edit's code lenses, which come with a compile of the whole project, are in place, as their change moves the
+        //  editor and closes its popup: in run-tour-9510825781413485262 a scroll came right after the press; with the
+        //  error the file has no lenses, so the three it had go
+        within(HANG) { analyzed(source("Eights.x")) && "popCrd" in highlightsAtCaret() }
+        lensesInPlace(source("Eights.x"), before = eightsLenses, some = false)
+        focusedEditor()
         action("ShowErrorDescription")
     }
     shot(
