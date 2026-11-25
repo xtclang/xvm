@@ -38,10 +38,13 @@ internal data class CompilerDispatch(
 }
 
 /**
- * Follow existing dispatch metadata without generating optimized or forwarding method bodies. For a call site's route,
- * [natives] takes a body that the runtime implements, as it does a const's appendTo, as the written contract it
- * implements: the site binds to that contract alike in every compile. A method family's route does not, as the runtime
- * knows such a method by its name, which a rename would change.
+ * Follow existing dispatch metadata without generating optimized or forwarding method bodies. With [natives], a body that
+ * the runtime implements, as it does a const's appendTo, is the written contract it implements, which is the same in
+ * every compile: callableIdentity asks for that, for the route of a call on a union receiver and of a method that the
+ * compiler merges over a union, a dispatch chain's member, each of which it proves by the contracts the route passes
+ * through. A method's own route, which compilerMethodRelations takes for each method of the module's classes, keeps
+ * such a body unsupported, so XdkRename.methodFamily refuses a rename of a family whose chain holds one, as
+ * Stringable.appendTo's does, since the runtime knows such a method by its name.
  */
 internal fun TypeInfo.dispatch(
     method: MethodInfo,
