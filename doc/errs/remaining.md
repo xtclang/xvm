@@ -454,17 +454,46 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   client's own handler back. Done on `lagergren/k6b-gaps`: CFG2 puts the shared graph back, as the server would
   refuse to start with its cyclic one, and restarts the server, whose new client has its own handler again;
   CFG1–CFG3, 7a.8 and 7a.9 pass in the container (run-s7sjBd).
-- [ ] Found 2026-11-24: after a restart of the server, IntelliJ's tour now and then misses the error of an edit.
+- [x] Found 2026-11-24: after a restart of the server, IntelliJ's tour now and then misses the error of an edit.
   In the Settings and the server section, a check restarts the server (from LSP4IJ's Language Servers window, or by
   killing its process), hovers in Eights.x, which answers, then types `popCard` → `popCrd` and waits for the error,
   which never comes while the server is idle ("No error with popCrd in Eights.x … idle"); the checks after it then
   find the file still edited. Seen in `run-tour-9835569065365967505`, the full tour, and before in
   `run-tour-7164529137914405705`, that section alone; the section's other recorded runs of 2026-11-23 and
   2026-11-24, about a dozen, did not show it. The restart checks' other intermittent failure, a first hover that
-  answered with an error, was UP82's. To find out: whether the server published or answered the error (its log), and whether
-  LSP4IJ asked for the file's diagnostics after the restart, or cleared them after the server reported them, as
-  UP81's clear of a stopping server's marks could. Images of tour runs that fail it are good: every step was
-  captured.
+  answered with an error, was UP82's. Two causes, one in each run (2026-11-25, `lagergren/tour-restart-flake`):
+  - `run-tour-7164529137914405705` (2026-11-22) was UP83's, before its bridge: the tour edited Eights.x 114 ms after
+    LSP4IJ started the server that replaced the killed one (idea.log 23:20:13.927 local, the process at 23:20:13.813),
+    the server opened the file with the text from before the edit (didOpen v1 at 22:20:14.620Z, compiled with no
+    error) and got no change of it until the check had given up. OpenedTextRepair, since 2026-11-23, sends the text
+    again: the tour runs since log it doing so up to three times a run, and none of them lost the edit.
+  - `run-tour-9835569065365967505` was the server's. The Debugging section's Force Step Into had left Array.x open,
+    the server's read-only copy in its folder of copies, `/tmp/xtc-library-sources-<n>`, which LSP4IJ opened again at
+    the restarted server while the first server's exit deleted that folder. The new server took the copy for a file of
+    a module of its own, rooted at the folder's `ecstasy.x`, whose compile read the folder as it went and did not find
+    `ecstasy.x`; and since a pull joins the analysis of each open document, every diagnostics pull of the server failed
+    with it, 43 in its log, Eights.x's among them. It showed only when the folder was still there as the server opened
+    the copy and gone once the compile read it; the servers after it, with the folder gone, compiled the copy alone and
+    marked an error in it. Fixed in `a82d1d3d7a`: a file in another server process's folder of copies is this server's
+    copy of the same bundled source, or, when this server has no such source, an uncompiled library document; and in
+    `2ac401bc88`: a pull reports a failed analysis as the error that its publication gives, and fails no other
+    document's pull. `XdkPullDiagnosticsTest` has both, each failing without its fix.
+  - The section alone opens no file copy on LSP4IJ 0.30.1, whose Go to declaration opens ecstasy-library content,
+    which the restarts did not open again at the new servers (`run-tour-8880248059079362867`): only the debugger
+    opens a copy, so only a run with the Debugging section before it meets the second cause. In the container the
+    whole tour ran 7 times with both fixes: in each, LSP4IJ opened the first server's Array.x again at the server
+    after the first restart, in two runs at the next two as well, one of them tree-sitter's; each compiler server of
+    them compiled its own copy of ecstasy for it, and no server logged an error. The Settings and the server section
+    passed in all 7, and the section alone once; 5 of the 7 passed every check. The first failed 5 Debugging checks,
+    as the container's `xdk/build/install/xdk/lib` was empty and xtc did not run (`playbook.sh build` filled it); the
+    second 2 Diagnostics checks (the item below).
+- [ ] Found 2026-11-25 in `run-tour-11649425361568010670`, the whole tour in the container, not seen in the runs
+  kept before: two Diagnostics checks waited out their 10 minutes. Warnings' Ctrl+F1 popup never showed; and after
+  the changed-signature check put the signature back, PlayerTest.x kept "Dependencies unavailable: cardGame",
+  although the server compiled it clean a second later (00:12:33.325 local, no diagnostics) and LSP4IJ pulled it
+  twice after that (00:12:34.212 and 00:12:38.512). The server logged no error and no library copy was open. To find
+  out: what those pulls answered, which the trace had rotated out, and whether the mark came from another document's
+  related report.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the

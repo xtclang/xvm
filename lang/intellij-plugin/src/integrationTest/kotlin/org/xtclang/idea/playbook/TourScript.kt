@@ -2075,6 +2075,10 @@ private fun Tour.debugging() {
         expect(within(HANG) { editor().let { it["file"].asString == debug()["file"]?.asString && !it["writable"].asBoolean } }) {
             "The XDK's source: ${editor()}, paused at ${position()}"
         }
+        // its editor stays open: the server's file copy of Array.x, which Settings and the server's restarts open again at
+        //  the next server, and at times at the ones after it, while the server before deletes its copies, as in
+        //  run-tour-9835569065365967505; Go to declaration, on LSP4IJ 0.30.1, opens ecstasy-library content instead,
+        //  which those restarts did not open again at the new servers in run-tour-8880248059079362867
         stopAll()
     }
     verify("Stop at the program's first line stops before it prints, and Set Value changes what it prints", setOf(Need.RUN_CONFIGURATION)) {
