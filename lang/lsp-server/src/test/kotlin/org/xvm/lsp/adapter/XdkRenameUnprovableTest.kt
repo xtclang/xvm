@@ -7,9 +7,9 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
 /**
- * A rename's proof where the semantic model cannot prove every binding, such as Element in CompileType.Element, a formal
- * type of a method's type parameter: the rename is proven, unless such a site spells the name it changes. An occurrence
- * that the model leaves unbound is compared the same way.
+ * A rename's proof where the semantic model cannot prove every binding, such as OuterType in Public.OuterType, a formal
+ * type's child that no constraint declares, which the compiler knows by its name alone: the rename is proven, unless
+ * such a site spells the name it changes. An occurrence that the model leaves unbound is compared the same way.
  */
 class XdkRenameUnprovableTest {
     @TempDir lateinit var directory: Path
@@ -33,7 +33,7 @@ class XdkRenameUnprovableTest {
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, PAIRS).diagnostics).isEmpty()
             val at = PAIRS.positionOf("Int total", "total")
-            assertThat(adapter.rename(uri, at.line, at.column, "Element")).isNull()
+            assertThat(adapter.rename(uri, at.line, at.column, "OuterType")).isNull()
         }
     }
 
@@ -61,9 +61,9 @@ class XdkRenameUnprovableTest {
             }
 
     private companion object {
-        // the names of Pairing's return values are occurrences that the model leaves without a symbol
+        // OuterType in Public.OuterType names no declaration, as Public's constraint is Object
         const val PAIRS =
-            "module Pairs { <CompileType extends List> Int count(CompileType list) { " +
-                "CompileType.Element[] items = list.toArray(); return items.size; } Int total() = 2; Int use() = total(); }"
+            "module Pairs { class Allocator<Public> { Int allocate(Public.OuterType? outer) = 0; } " +
+                "Int total() = 2; Int use() = total(); }"
     }
 }

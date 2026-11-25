@@ -489,6 +489,78 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a formal type's child, as Item in Boxed Item, is an occurrence of the formal type its constraint declares`() {
+        val source =
+            """
+            module Children {
+                interface Box</*declared*/Item> {
+                    Item first();
+                }
+                <Boxed extends Box> Int count(Boxed box) {
+                    Boxed.Item[] items = [box.first()];
+                    return items.size;
+                }
+                class Spare {
+                    Int unused() {
+                        return 1;
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource("Children", source) { adapter, uri ->
+            val child = source.positionOf("Boxed.Item", "Item")
+            val declared = range(source, "declared", "Item")
+            assertThat(adapter.findDefinition(uri, child.line, child.column)?.let(::range)).isEqualTo(declared)
+            assertThat(adapter.findReferences(uri, declared.start.line, declared.start.column, true).map(::range))
+                .contains(Range(child, Position(child.line, child.column + "Item".length)))
+            // hover shows the child's type, which the compiler gives the occurrence whatever it binds to
+            assertThat(adapter.getHoverInfo(uri, child.line, child.column)).isEqualTo("```xtc\nType<Boxed.Item, Object> Item\n```")
+            // the proofs of code actions other than a rename compare every binding of the module exactly
+            val at = source.positionOf("unused()")
+            assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
+                .contains("Safely delete member 'unused', unused in Children")
+        }
+    }
+
+    @Test
+    fun `a formal type's child binds to the formal type of its name, not to one that a contribution maps it to`() {
+        val source =
+            """
+            module Mapped {
+                interface Box</*item*/Item> {
+                    Item first();
+                }
+                interface Crate</*e*/E>
+                        extends Box<E> {}
+                <T extends Crate> Int count(T crate) {
+                    T.Item[] items = [];
+                    return items.size;
+                }
+                <B extends Box> Int other(B box) {
+                    B.Item[] items = [];
+                    return items.size;
+                }
+            }
+            """.trimIndent()
+        withSource("Mapped", source) { adapter, uri ->
+            // Crate maps Box's Item to its own E, which the compiler resolves T.Item to; the name is Box's Item, which a
+            // rename of E does not change
+            fun item(written: String) = source.positionOf(written, "Item").let { Range(it, Position(it.line, it.column + 4)) }
+            val mapped = item("T.Item")
+            assertThat(adapter.findDefinition(uri, mapped.start.line, mapped.start.column)?.let(::range))
+                .isEqualTo(range(source, "item", "Item"))
+            val e = position(source, "e")
+            assertThat(adapter.findReferences(uri, e.line, e.column, true).map(::range)).doesNotContain(mapped)
+            val boxed = item("B.Item")
+            assertThat(adapter.findReferences(uri, boxed.start.line, boxed.start.column, true).map(::range))
+                .contains(mapped, boxed)
+            adapter.rename(uri, e.line, e.column, "F")?.let { edit ->
+                assertThat(apply(source, edit.changes.getValue(uri))).contains("T.Item")
+            }
+        }
+    }
+
     /** The rename facts of [text], a module compiled alone, as a proof over its module takes them. */
     private fun facts(
         name: String,
