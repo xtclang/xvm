@@ -74,6 +74,7 @@ import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkModuleTests
+import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.Diagnostic
@@ -146,6 +147,9 @@ class XtcLanguageServer internal constructor(
 
     /** The Gradle project of each source module that the applied build model names, as the client last heard them. */
     private val gradleProjects = AtomicReference<Map<String, String>>(emptyMap())
+
+    /** What the Gradle project of each source module that the applied build model names runs it with. */
+    private val runSettings = AtomicReference<Map<String, XdkRunSettings>>(emptyMap())
     private val client: LanguageClient?
         get() = connectedClient.get()
 
@@ -157,7 +161,7 @@ class XtcLanguageServer internal constructor(
     internal val openRequests = ConcurrentHashMap<Any, String>()
     internal val partialResults = PartialResults(client = { client })
     private val embeddedRuns =
-        EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = workerLimits)) {
+        EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = workerLimits), runSettings = { runSettings.get() }) {
             compilerSettings.get().folders.mapNotNull { XdkSources.file(it) }
         }
     private val debugSessions = DebugSessions(embeddedRuns, { client })
@@ -487,6 +491,15 @@ class XtcLanguageServer internal constructor(
         logger.info("connect: connected to language client")
     }
 
+    /**
+     * Keeps what the applied build model [inputs] says of its modules, nothing without a model: what their Gradle projects
+     * run them with, which embedded runs take, and the projects, which the client hears of when they change.
+     */
+    private fun gradleModel(inputs: XdkBuildModel.Inputs?) {
+        runSettings.set(inputs?.runs.orEmpty())
+        gradleProjects(inputs?.projects.orEmpty())
+    }
+
     /** Tells the client the Gradle projects of the build model's modules, none without a model, when they change. */
     private fun gradleProjects(projects: Map<String, String>) {
         if (gradleProjects.getAndSet(projects) == projects) return
@@ -519,7 +532,7 @@ class XtcLanguageServer internal constructor(
                         // All source and binary inputs were validated and installed together.
                     } else if (model != null) {
                         val inputs = model.resolve()
-                        gradleProjects(inputs.projects)
+                        gradleModel(inputs)
                         textDocumentService.refreshDependencies {
                             adapter.replaceBuildInputs(inputs)
                         }
@@ -807,19 +820,19 @@ class XtcLanguageServer internal constructor(
                     updateResourceWatchers()
                 } else if (model != null) {
                     val inputs = model.resolve()
-                    gradleProjects(inputs.projects)
+                    gradleModel(inputs)
                     textDocumentService.refreshDependencies {
                         (adapter as XdkAdapter).replaceBuildInputs(inputs)
                     }
                     updateResourceWatchers()
                 } else if (CompilerConfiguration.automatic(raw)) {
-                    gradleProjects(emptyMap())
+                    gradleModel(null)
                     textDocumentService.refreshDependencies {
                         (adapter as XdkAdapter).discoverSourceModules()
                     }
                     updateResourceWatchers()
                 } else {
-                    gradleProjects(emptyMap())
+                    gradleModel(null)
                     CompilerConfiguration
                         .modules(raw, settings.folders)
                         ?.let(::replaceCompilerSourceModules)
@@ -841,7 +854,7 @@ class XtcLanguageServer internal constructor(
         val evaluated =
             model?.resolve()
                 ?: if (libraries.modulePath == null) CompilerConfiguration.buildModel(raw, includeExplicit = true)?.resolve() else null
-        gradleProjects(evaluated?.projects.orEmpty())
+        gradleModel(evaluated)
         val inputs =
             XdkBuildModel.Inputs(
                 explicit ?: if (model !=
@@ -1396,6 +1409,9 @@ class XtcLanguageServer internal constructor(
 
     /** Process IDs of the live execution workers, for tests. */
     internal fun runWorkerPids(): List<Long> = embeddedRuns.workerPids()
+
+    /** The command line of each live execution worker, by process ID, for tests. */
+    internal fun runWorkerCommands(): Map<Long, List<String>> = embeddedRuns.workerCommands()
 
     /** Console input for a run, or its end. False when no such run is building or running. */
     @JsonRequest("xtc/runInput")

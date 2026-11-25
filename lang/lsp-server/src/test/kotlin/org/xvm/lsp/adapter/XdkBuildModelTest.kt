@@ -1,5 +1,8 @@
 package org.xvm.lsp.adapter
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.AppenderBase
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import org.assertj.core.api.Assertions.assertThat
@@ -7,16 +10,19 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.slf4j.LoggerFactory
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
+import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.lsp.awaited
 import java.net.URI
 import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Compiles evaluated build-model inputs across source sets and projects. Checks dependency visibility,
@@ -125,6 +131,106 @@ class XdkBuildModelTest {
                 entry("old", "main", listOf(old)),
             ).resolve()
         assertThat(inputs.projects).containsExactlyInAnyOrderEntriesOf(mapOf("Json" to ":xdk:lib-json", "JsonTest" to ":xdk:lib-json"))
+    }
+
+    @Test
+    fun `each module's run settings are its project's, by the name runXtc gives it, and a model without them has none`() {
+        val app = source("app/App.x", "module App.example.org {}")
+        val tests = source("app/test/AppTest.x", "module AppTest {}")
+        val other = source("other/Other.x", "module Other {}")
+        val old = source("old/Old.x", "module Old {}")
+        val runs =
+            mapOf(
+                "run" to
+                    mapOf(
+                        "jvmArgs" to listOf("-ea", "-Dxvm.origin=gradle"),
+                        // runXtc may name a qualified module by its first part, as the runner finds it
+                        "modules" to mapOf("App" to mapOf("methodName" to "greet", "moduleArgs" to listOf("hello world", "ü"))),
+                    ),
+                "test" to mapOf("jvmArgs" to listOf("-Dxvm.origin=test")),
+            )
+        val inputs =
+            model(
+                entry("app", "main", listOf(app)).with(runs + ("buildTreePath" to ":app")),
+                entry("app", "test", listOf(tests)).with(runs + ("buildTreePath" to ":app")),
+                // a project whose runXtc names none of its modules, at the root of its build
+                entry("other", "main", listOf(other)).with(
+                    mapOf("run" to mapOf("jvmArgs" to listOf("-ea"), "modules" to emptyMap<String, Any>()), "buildTreePath" to ":"),
+                ),
+                // a model from a plugin that does not write them
+                entry("old", "main", listOf(old)),
+            ).resolve()
+        val gradle = listOf("-ea", "-Dxvm.origin=gradle")
+        val test = listOf("-Dxvm.origin=test")
+        assertThat(inputs.runs).containsExactlyInAnyOrderEntriesOf(
+            mapOf(
+                "App.example.org" to XdkRunSettings(":app", "greet", listOf("hello world", "ü"), gradle, test),
+                "AppTest" to XdkRunSettings(":app", null, null, gradle, test),
+                "Other" to XdkRunSettings(":", null, null, listOf("-ea"), emptyList()),
+            ),
+        )
+        assertThat(inputs.runs.getValue("App.example.org").source("xtcRun")).isEqualTo("Gradle project :app's xtcRun")
+        assertThat(inputs.runs.getValue("Other").source("xtcTest")).isEqualTo("the Gradle root project's xtcTest")
+        assertThat(XdkRunSettings(null, null, null, emptyList(), emptyList()).source("xtcRun")).isEqualTo("Gradle's xtcRun")
+    }
+
+    @Test
+    fun `malformed run settings are left out, and never make the model refused`() {
+        val root = source("Bad.x", "module Bad {}")
+        val good = mapOf("Good" to mapOf("methodName" to "greet", "moduleArgs" to listOf("a")))
+        val none = XdkRunSettings("app", null, null, emptyList(), emptyList())
+        listOf(
+            mapOf("run" to "not an object") to null,
+            mapOf("run" to mapOf("jvmArgs" to listOf(1), "problems" to "not a list")) to none,
+            mapOf("run" to mapOf("modules" to listOf("Bad"))) to none,
+            mapOf("run" to mapOf("modules" to good + mapOf("Bad" to mapOf("moduleArgs" to emptyList<String>())))) to none,
+            mapOf("run" to mapOf("modules" to good + mapOf("Bad" to mapOf("methodName" to "", "moduleArgs" to listOf<String>())))) to none,
+            mapOf("run" to mapOf("modules" to good + mapOf("Bad" to mapOf("methodName" to "run", "moduleArgs" to "a,b")))) to none,
+            mapOf("run" to mapOf("modules" to good + mapOf("" to mapOf("methodName" to "run")))) to none,
+            mapOf("run" to mapOf("jvmArgs" to listOf("-ea")), "test" to mapOf("jvmArgs" to "-ea")) to none.copy(jvmArgs = listOf("-ea")),
+        ).forEach { (bad, expected) ->
+            val inputs = model(entry("app", "main", listOf(root)).apply { addProperty("buildTreePath", "app") }.with(bad)).resolve()
+            assertThat(inputs.modules.map { it.name }).describedAs(bad.toString()).containsExactly("Bad")
+            assertThat(inputs.runs["Bad"]).describedAs(bad.toString()).isEqualTo(expected)
+        }
+        // what the export could not read reaches each module's settings
+        val read =
+            model(
+                entry("app", "main", listOf(root)).with(
+                    mapOf(
+                        "run" to mapOf("problems" to listOf("module Other's moduleArgs: it has no value")),
+                        "test" to mapOf("problems" to listOf("jvmArgs: no test options")),
+                    ),
+                ),
+            ).resolve()
+        assertThat(read.runs.getValue("Bad").problems).containsExactly("module Other's moduleArgs: it has no value")
+        assertThat(read.runs.getValue("Bad").testProblems).containsExactly("jvmArgs: no test options")
+    }
+
+    @Test
+    fun `what the export could not read, and what is malformed, is logged once a read, though each source set has it`() {
+        val main = source("one/Main.x", "module Main {}")
+        val tests = source("one/test/Tests.x", "module Tests {}")
+        val runs = mapOf("run" to mapOf("problems" to listOf("module Other's moduleArgs: it has no value")), "test" to "not an object")
+        val logger = LoggerFactory.getLogger(XdkBuildModel::class.java) as Logger
+        val events = CopyOnWriteArrayList<ILoggingEvent>()
+        val appender =
+            object : AppenderBase<ILoggingEvent>() {
+                override fun append(event: ILoggingEvent) {
+                    events += event
+                }
+            }.apply { start() }
+        logger.addAppender(appender)
+        try {
+            model(entry("one", "main", listOf(main)).with(runs), entry("one", "test", listOf(tests)).with(runs)).resolve()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+        assertThat(events.map { it.formattedMessage }).containsExactly(
+            "build model: test of one is malformed, and left out",
+            "build model: the export of one could not read module Other's moduleArgs: it has no value",
+        )
     }
 
     @Test
@@ -238,6 +344,16 @@ class XdkBuildModelTest {
                     "modulePath" to emptyList<String>(),
                 ),
             ).asJsonObject
+
+    /** The entry with [fields] added, as JSON. */
+    private fun JsonObject.with(fields: Map<String, Any>): JsonObject =
+        apply {
+            Gson()
+                .toJsonTree(fields)
+                .asJsonObject
+                .entrySet()
+                .forEach { (key, value) -> add(key, value) }
+        }
 
     private fun model(vararg entries: JsonObject): XdkBuildModel =
         XdkBuildModel.read(
