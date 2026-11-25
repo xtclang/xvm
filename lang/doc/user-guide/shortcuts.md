@@ -8,6 +8,7 @@ On macOS, most shortcuts use Cmd in place of Ctrl; each editor's keymap referenc
 Ecstasy chord <kbd>Ctrl+Alt+X</kbd>, then a letter is <kbd>Control+Option+X</kbd>, then the letter, Build is <kbd>Cmd+F9</kbd>, and
 running the module at the cursor is <kbd>Ctrl+Shift+R</kbd>.
 
+<a name="ecstasy-commands"></a>
 <details>
 <summary><b>Ecstasy commands</b></summary>
 
@@ -21,6 +22,7 @@ running the module at the cursor is <kbd>Ctrl+Shift+R</kbd>.
 
 </details>
 
+<a name="editing"></a>
 <details>
 <summary><b>Editing</b></summary>
 
@@ -41,6 +43,7 @@ running the module at the cursor is <kbd>Ctrl+Shift+R</kbd>.
 
 </details>
 
+<a name="navigation"></a>
 <details>
 <summary><b>Navigation</b></summary>
 
@@ -57,6 +60,7 @@ running the module at the cursor is <kbd>Ctrl+Shift+R</kbd>.
 
 </details>
 
+<a name="refactoring"></a>
 <details>
 <summary><b>Refactoring</b></summary>
 
@@ -70,6 +74,7 @@ running the module at the cursor is <kbd>Ctrl+Shift+R</kbd>.
 
 </details>
 
+<a name="building-and-running"></a>
 <details>
 <summary><b>Building and running</b></summary>
 
@@ -82,6 +87,7 @@ running the module at the cursor is <kbd>Ctrl+Shift+R</kbd>.
 
 </details>
 
+<a name="debugging"></a>
 <details>
 <summary><b>Debugging</b></summary>
 

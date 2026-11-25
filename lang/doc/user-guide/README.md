@@ -37,6 +37,67 @@ project and walks through your first five minutes.
 7. [Settings, troubleshooting and limitations](settings-and-troubleshooting.md): the settings that
    matter, what to do when something doesn't work, and the known limitations.
 
+## Index
+
+Every page of the guide with its sections, and the areas of the lookup pages:
+
+<!-- Made from the pages' headings and areas: keep it in step when one changes. -->
+
+- [Getting started](getting-started.md)
+  - [Requirements](getting-started.md#requirements)
+  - [Install the IntelliJ plugin](getting-started.md#install-the-intellij-plugin)
+  - [Install the VS Code extension](getting-started.md#install-the-vs-code-extension)
+  - [Open or create a project](getting-started.md#open-or-create-a-project)
+  - [Your first five minutes](getting-started.md#your-first-five-minutes)
+- [Editing and navigation](editing-and-navigation.md)
+  - [The language server](editing-and-navigation.md#the-language-server)
+  - [Reading code](editing-and-navigation.md#reading-code)
+  - [Writing code](editing-and-navigation.md#writing-code)
+  - [Errors and warnings](editing-and-navigation.md#errors-and-warnings)
+  - [Navigating](editing-and-navigation.md#navigating)
+- [Refactoring](refactoring.md)
+  - [Rename](refactoring.md#rename)
+  - [Move](refactoring.md#move)
+  - [Extract, inline and safe delete](refactoring.md#extract-inline-and-safe-delete)
+  - [Quick fixes and imports](refactoring.md#quick-fixes-and-imports)
+- [Building and running](building-and-running.md)
+  - [Build modes](building-and-running.md#build-modes)
+  - [Build](building-and-running.md#build)
+  - [Run](building-and-running.md#run)
+  - [Gradle settings in embedded runs](building-and-running.md#gradle-settings-in-embedded-runs)
+- [Testing with xunit](testing.md)
+  - [Write a test](testing.md#write-a-test)
+  - [Find and run tests](testing.md#find-and-run-tests)
+  - [Read the results](testing.md#read-the-results)
+  - [Rerun and debug tests](testing.md#rerun-and-debug-tests)
+  - [Tests and the build mode](testing.md#tests-and-the-build-mode)
+  - [When tests don't show or don't run](testing.md#when-tests-dont-show-or-dont-run)
+- [The debugger](debugging.md)
+  - [Start debugging](debugging.md#start-debugging)
+  - [Attach to a program run outside the editor](debugging.md#attach-to-a-program-run-outside-the-editor)
+  - [Breakpoints](debugging.md#breakpoints)
+  - [Step through the program](debugging.md#step-through-the-program)
+  - [Look at the program's state](debugging.md#look-at-the-programs-state)
+  - [Evaluate expressions and run code](debugging.md#evaluate-expressions-and-run-code)
+- [Settings, troubleshooting and limitations](settings-and-troubleshooting.md)
+  - [Settings that matter](settings-and-troubleshooting.md#settings-that-matter)
+  - [Troubleshooting](settings-and-troubleshooting.md#troubleshooting)
+  - [Known limitations](settings-and-troubleshooting.md#known-limitations)
+- [Features](features.md)
+  - [Editing](features.md#editing)
+  - [Navigation](features.md#navigation)
+  - [Refactoring](features.md#refactoring)
+  - [Build and run](features.md#build-and-run)
+  - [Tests](features.md#tests)
+  - [Debugging](features.md#debugging)
+- [Shortcuts](shortcuts.md)
+  - [Ecstasy commands](shortcuts.md#ecstasy-commands)
+  - [Editing](shortcuts.md#editing)
+  - [Navigation](shortcuts.md#navigation)
+  - [Refactoring](shortcuts.md#refactoring)
+  - [Building and running](shortcuts.md#building-and-running)
+  - [Debugging](shortcuts.md#debugging)
+
 ## Look things up
 
 - [Features](features.md): what each editor supports, area by area.
