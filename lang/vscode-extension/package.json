@@ -178,7 +178,7 @@
                     {
                         "id": "buildMode",
                         "title": "Build with the embedded compiler or with Gradle",
-                        "description": "The embedded compiler, the default, builds and runs with the language server's compiler and bundled XDK, with nothing to sync; a folder's Gradle build and its settings do not apply. Gradle mode runs the folder's Gradle build, with all of its settings. Automatic uses Gradle when the folder has a Gradle build. Ctrl+Alt+X, then B chooses; in a folder with a Gradle build, so does the status bar.\n[Select Build Mode](command:xtc.selectBuildMode)",
+                        "description": "The embedded compiler, the default, builds and runs with the language server's compiler and bundled XDK, with nothing to sync; of a folder's Gradle build, only the run settings of xtcRun and xtcTest apply, once its Gradle model is imported. Gradle mode runs the folder's Gradle build, with all of its settings. Automatic uses Gradle when the folder has a Gradle build. Ctrl+Alt+X, then B chooses; in a folder with a Gradle build, so does the status bar.\n[Select Build Mode](command:xtc.selectBuildMode)",
                         "media": { "markdown": "walkthrough/build-modes.md" },
                         "completionEvents": ["onCommand:xtc.selectBuildMode", "onSettingChanged:xtc.build.mode"]
                     },
@@ -494,7 +494,7 @@
                         ],
                         "default": "embedded",
                         "scope": "resource",
-                        "description": "How Ecstasy Build, Run and Rebuild work, like IntelliJ's 'Build and run using'. Embedded mode, the default, needs the compiler language service; in a folder with a Gradle build it does not apply the build's own settings. Also available through Ecstasy: Select Build Mode and, in a folder with a Gradle build, the status bar."
+                        "description": "How Ecstasy Build, Run and Rebuild work, like IntelliJ's 'Build and run using'. Embedded mode, the default, needs the compiler language service; in a folder with a Gradle build it applies, of the build's own settings, only xtcRun's method, arguments and JVM options and xtcTest's JVM options, once the Gradle model is imported. Also available through Ecstasy: Select Build Mode and, in a folder with a Gradle build, the status bar."
                     },
                     "xtc.trace.server": {
                         "type": "string",
@@ -721,12 +721,12 @@
                             },
                             "method": {
                                 "type": "string",
-                                "description": "Method to invoke (defaults to 'run')",
+                                "description": "Method to invoke. Without one, 'run', or in embedded mode the method that the Gradle project's xtcRun runs the module with, once the Gradle model is imported",
                                 "default": "run"
                             },
                             "args": {
                                 "type": "string",
-                                "description": "Comma-separated arguments passed to the module"
+                                "description": "Comma-separated arguments passed to the module. Without any, none, or in embedded mode those that the Gradle project's xtcRun runs the module with, once the Gradle model is imported"
                             },
                             "cwd": {
                                 "type": "string",

@@ -100,10 +100,14 @@ export function buildMode(folder: vscode.WorkspaceFolder | undefined): BuildMode
     return hasGradleBuild(folder) ? 'gradle' : 'embedded';
 }
 
-/** Shown by embedded builds and runs in a folder with a Gradle build, whose own settings do not apply. */
+/**
+ * Shown by embedded builds and runs in a folder with a Gradle build, of whose own settings only the run settings that
+ * the imported Gradle model carries apply; the run's output says which it took.
+ */
 export const GRADLE_NOT_USED =
-    'This folder has a Gradle build, but embedded mode builds and runs with the language server\'s compiler and XDK; ' +
-    'Gradle settings such as runXtc arguments, JVM options and the build\'s XDK version do not apply. ' +
+    'This folder has a Gradle build, but embedded mode builds and runs with the language server\'s compiler and XDK, ' +
+    'not the build\'s. Of the build\'s settings, only xtcRun\'s method, arguments and JVM options and xtcTest\'s JVM ' +
+    'options apply, once its Gradle model is imported. ' +
     'Choose Gradle with "Ecstasy: Select Build Mode" or the build mode in the status bar to use Gradle.';
 
 interface LspDiagnostic {

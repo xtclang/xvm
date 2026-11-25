@@ -1256,8 +1256,9 @@ Mode**. **Ctrl+Alt+X, then B** (macOS: **Control+Option+X, then B**) chooses it 
 IntelliJ a notification says what Build and Run now use. The next build or run uses the mode, with no restart, Gradle
 sync or reindexing; Build in Gradle mode needs the Gradle project linked in IntelliJ.
 
-Embedded is the default mode, also in a folder with a Gradle build; there, embedded builds and runs print a line saying the
-Gradle build's own settings do not apply.
+Embedded is the default mode, also in a folder with a Gradle build; there, embedded builds and runs print a line saying
+that, of the Gradle build's own settings, only `xtcRun`'s method, arguments and JVM options and `xtcTest`'s JVM options
+apply, once its Gradle model is imported (X351).
 Fixture: `Hello.x` containing
 
 ```ecstasy
@@ -1283,7 +1284,7 @@ module Hello {
 | 18a.10 | F5 (VS Code) | Press `F5` in `Hello.x` | A debug session starts; its Debug Console shows the build, the program's output and exit code, and the session ends with the program (automated in X285). A breakpoint stops the program (X304). In Gradle mode, the Gradle run task runs in the terminal and the session debugs the program it starts: a breakpoint stops it, Continue runs it to its exit, and Stop ends the task and the program. IntelliJ's Debug of an Ecstasy Application configuration in Gradle mode does the same, with the task's output in the Debug console, and in command-line mode with `xtc run` (X338) |
 | 18a.11 | Migrated configuration (IntelliJ) | Open a project with a configuration saved with *Use Gradle* | It shows *Run with: Project default* (or *xtc command line* if the box was cleared) |
 | 18a.12 | Console input | Run a module whose `run` calls `console.readLine("Name? ")`; type a name while it still builds, or after the prompt, and press Enter; then end the input (VS Code `Ctrl+D` on an empty line, IntelliJ **Send EOF**) | The program reads the line; after the end of input `readLine` returns an empty line. Backspace edits the line in VS Code; `Ctrl+C` in VS Code stops the program (automated in X287) |
-| 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that the Gradle build's own settings do not apply; in IntelliJ the line's settings path opens Settings › Languages & Frameworks › Ecstasy › Build and Run; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
+| 18a.13 | Default in a Gradle project | Open a folder (VS Code) or project (IntelliJ) with a Gradle build and no build mode chosen; Build, then Run `Hello.x` | Both use the embedded compiler and print that, of the Gradle build's own settings, only the run settings that its imported model carries apply; in IntelliJ the line's settings path opens Settings › Languages & Frameworks › Ecstasy › Build and Run; VS Code still lists the folder's Gradle **Test** and **Clean** tasks |
 | 18a.14 | Switching modes (VS Code) | In that folder, click **Embedded build** in the status bar and choose **Gradle**; Build; then choose **Ecstasy compiler (embedded)** with **Ecstasy: Select Build Mode** and Build again | The status bar shows **Gradle build**, and Build runs `./gradlew build`; after switching back it shows **Embedded build** and builds with the embedded compiler. The choice is stored in the folder's `xtc.build.mode`. A folder without a Gradle build shows no build mode in the status bar. X288 automates the switch through the command and checks the status bar text; the quick pick and the click are manual |
 | 18a.15 | Fresh program state | Run a module twice whose static service counts the calls made to it in a run | Each run counts from the start; nothing carries over from the run before (automated in X292) |
 | 18a.16 | No callable entry method | Run a module without a `run` method, or one whose `run` requires two parameters, from a run configuration or task | The build succeeds, the run is refused with the reason and exit code 1, and no user code runs (automated in X293) |
@@ -3830,7 +3831,7 @@ Gradle build runs. All three files are removed afterwards. Manual mode switching
 
 | ID | Actions | Expected result |
 |---|---|---|
-| X288 | With no build mode chosen, Build, then Run BuildModes. Choose **Gradle** (VS Code **Ecstasy: Select Build Mode**; IntelliJ Settings › Languages & Frameworks › Ecstasy › Build and Run), Build, then Run it. Choose the embedded compiler again and Run it. | First both use the embedded compiler: the build output says the Gradle build's settings do not apply (in IntelliJ with a link to the settings page), the program prints `built and run embedded`, and the wrapper records nothing. In Gradle mode VS Code's Build calls `./gradlew build` and Run calls `./gradlew -q runXtc --module=BuildModes`; IntelliJ's Build Project is not taken by the embedded compiler and Run calls the wrapper the same way. After switching back, Run is embedded again and the wrapper records nothing more. VS Code's status bar shows **Embedded build**, then **Gradle build**, then **Embedded build**. The IntelliJ driver sets the mode through the project's build settings rather than the Settings page. |
+| X288 | With no build mode chosen, Build, then Run BuildModes. Choose **Gradle** (VS Code **Ecstasy: Select Build Mode**; IntelliJ Settings › Languages & Frameworks › Ecstasy › Build and Run), Build, then Run it. Choose the embedded compiler again and Run it. | First both use the embedded compiler: the build output says which of the Gradle build's settings apply (in IntelliJ with a link to the settings page), the program prints `built and run embedded`, and the wrapper records nothing. In Gradle mode VS Code's Build calls `./gradlew build` and Run calls `./gradlew -q runXtc --module=BuildModes`; IntelliJ's Build Project is not taken by the embedded compiler and Run calls the wrapper the same way. After switching back, Run is embedded again and the wrapper records nothing more. VS Code's status bar shows **Embedded build**, then **Gradle build**, then **Embedded build**. The IntelliJ driver sets the mode through the project's build settings rather than the Settings page. |
 
 ### Running a module again (X289)
 
@@ -4023,6 +4024,20 @@ type names go anywhere, and the server logs why, once.
 | ID | Actions | Expected result |
 |---|---|---|
 | X350 | Write `LibraryNavigation.x`, a module with `String echo(String text) = text;`. Go to Definition on its first `String`. In `ecstasy/text/String.x`, which opens, Go to Definition on `add` in `buffer.add(transform(ch));`, in the body of `map`, and hover it. | `String.x` opens read-only at `const String`. Go to Definition on `add` opens `ecstasy/text/StringBuffer.x` at `add` in `StringBuffer add(Char v)`, the method another source of the library declares, and the hover shows `StringBuffer add(Char v)`. |
+
+### Gradle's run settings in embedded runs (X351)
+
+Where a project's Gradle model is imported, an embedded run takes what the module's Gradle project's `xtcRun` runs it
+with: the method and the arguments of its `module { ... }` for the module, where the run configuration gives none, and
+its JVM options, for the execution worker that runs it; a run of tests takes `xtcTest`'s JVM options. The run's output
+says, ahead of the program's, what it took, but for the defaults, and which JVM options it left out: a class path or
+main class of their own, a Java debugger's agent, options that print and exit, and argument and option files. No
+program that the runner runs sees a system property, so the case reads the output; the language server's tests read
+the worker's command line as the server builds it.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X351 | Write `GradleRuns.x`, a module whose `run` and `greet` print their name, the number of their arguments and the first. Write the Gradle model of a project `:app` whose `xtcRun` runs `GradleRuns` with `greet` and `hello world`, with the JVM options `-Dxtc.gradle.origin=playbook` and `-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005`, as `.gradle/xtc/lsp-model.json`, and use it, with no explicit modules. Run `GradleRuns` embedded without arguments (IntelliJ: an Ecstasy Application configuration with no method or arguments; VS Code: an `xtc` task), then with the argument `own`. | The client hears that `GradleRuns` is in `:app`. The first run prints `From Gradle project :app's xtcRun: method greet, arguments [hello world], JVM options [-Dxtc.gradle.origin=playbook].`, then `Left out of Gradle project :app's xtcRun JVM options: -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005 (a Java debugger's agent would hold the run's JVM; Debug debugs the program).`, then `greet 1:hello world`, and ends with exit code 0: the worker did not wait for a Java debugger. The second prints `From Gradle project :app's xtcRun: method greet, JVM options [-Dxtc.gradle.origin=playbook].` and `greet 1:own`: its own argument wins, and the method is still Gradle's. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 

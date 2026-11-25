@@ -246,7 +246,7 @@ The server asks only when the client declares `workspace.configuration`.
 | Section and field | Type, default | What it does | Requested at, parsed at |
 |-------------------|---------------|--------------|-------------------------|
 | `xtc.compiler` `sourceModules` | null or array, `null` | `null` discovers modules (from `buildModels` when present), `[]` none; each entry is `{name, uri, dependencies, resourceRoots}`. Relative URIs need exactly one workspace folder. | `lsp/server/XtcLanguageServer.kt:752`, `lsp/server/CompilerConfiguration.kt:55` |
-| `xtc.compiler` `buildModels` | array, absent | Gradle source sets from `.gradle/xtc/lsp-model.json`; used when `sourceModules` is `null`. | `lsp/server/CompilerConfiguration.kt:36` |
+| `xtc.compiler` `buildModels` | array, absent | Gradle source sets from `.gradle/xtc/lsp-model.json`; used when `sourceModules` is `null`. Each source set's `run` has its project's `xtcRun` `jvmArgs`, by module name the `methodName` and `moduleArgs` it runs each module with, and `problems`, what the export could not read and left out; its `test` has `xtcTest`'s `jvmArgs` and `problems`. Settings made only on the `runXtc` or `testXtc` task are not in it: the export reads the extensions, without configuring the tasks. Embedded runs take them (section 3.3); a model without them, from an older plugin, gives none, and a malformed one of them is left out with a warning in the log, never making the model refused. | `lsp/server/CompilerConfiguration.kt:36`, `lsp/adapter/xdk/XdkBuildModel.kt:251` |
 | `xtc.compiler` `libraries.modulePath` | null or path array, `null` | Binary libraries; `null` inherits the build model's. | `lsp/server/CompilerLibraries.kt:109` |
 | `xtc.compiler` `libraries.sourceAttachments` | array, `[]` | `[{module, roots}]`: read-only sources for binary modules. | `lsp/server/CompilerLibraries.kt:111` |
 | `xtc.formatting` `indentSize` | integer 1 to 32, `4` | Formatter indent. | `lsp/server/XtcLanguageServer.kt:849`, `lsp/server/EditorFormattingState.kt:72` |
@@ -277,8 +277,8 @@ send the same request.
 |----------|---------|---------------|--------------|---------|
 | `module` | launch | string | The module to run; required unless `moduleUri` is given. | `dap/XtcDebugServer.kt:1585` |
 | `moduleUri` | launch | URI | The module's source; wins over `module`. | `dap/XtcDebugServer.kt:1586` |
-| `method` | launch | string, the module's `run` | Method to invoke. | `dap/XtcDebugServer.kt:1598` |
-| `args` | launch | array, or comma-separated string; none | Program arguments. | `dap/XtcDebugServer.kt:1589` |
+| `method` | launch | string; the method that the module's Gradle `xtcRun` runs it with, where the imported model has one, else `run` | Method to invoke. | `dap/XtcDebugServer.kt:1598`, `lsp/server/EmbeddedRuns.kt:681` |
+| `args` | launch | array, or comma-separated string; those that the module's Gradle `xtcRun` runs it with, where the imported model has them, else none | Program arguments; an empty list takes Gradle's too. | `dap/XtcDebugServer.kt:1589`, `lsp/server/EmbeddedRuns.kt:682` |
 | `workingDirectory`, else `cwd` | launch | path; the build's workspace folder | Working directory. VS Code's default is `${workspaceFolder}`. | `dap/XtcDebugServer.kt:1600` |
 | `tests` | launch | array of `{selector, kind}`; absent | Run tests instead of `run`; `kind` is `module`, `package`, `class` or `test`. | `dap/XtcDebugServer.kt:1601`, `:1613` |
 | `stopOnEntry` | launch, attach | boolean, `false` | Stop at the program's first line. | `dap/XtcDebugServer.kt:661`, `:736` |
@@ -298,27 +298,27 @@ attach may set (section 3.1).
 
 | Limit | Value | Read at |
 |-------|-------|---------|
-| Programs running at once in the worker | 4 | `lsp/run/RunWorkerProcess.kt:88` |
-| Worker startup | 60 seconds | `lsp/run/RunWorkerProcess.kt:89` |
-| Worker stop | 10 seconds | `lsp/run/RunWorkerProcess.kt:90` |
-| Idle worker kept | 10 minutes | `lsp/run/RunWorkerProcess.kt:91` |
-| Heap in use after a run, above which the worker serves no further run | 512 MB | `lsp/run/RunWorkerProcess.kt:92` |
-| Threads after a run, above which the worker serves no further run | 200 | `lsp/run/RunWorkerProcess.kt:93` |
-| Lazy-value computation in a debugged program | the debugger's own `ON_DEMAND`, 1 second, unless the launch's `lazyValueTimeLimit` sets another | `lsp/run/RunWorkerProcess.kt:94`, `javatools/src/main/java/org/xvm/runtime/SessionDebugger.java:308` |
-| A connection to a worker's port showing its token | 5 seconds for each connection, while others are taken, under the worker startup limit | `lsp/run/RunWorkerProcess.kt:799` |
+| Programs running at once in the worker | 4 | `lsp/run/RunWorkerProcess.kt:93` |
+| Worker startup | 60 seconds | `lsp/run/RunWorkerProcess.kt:94` |
+| Worker stop | 10 seconds | `lsp/run/RunWorkerProcess.kt:95` |
+| Idle worker kept | 10 minutes | `lsp/run/RunWorkerProcess.kt:96` |
+| Heap in use after a run, above which the worker serves no further run | 512 MB | `lsp/run/RunWorkerProcess.kt:97` |
+| Threads after a run, above which the worker serves no further run | 200 | `lsp/run/RunWorkerProcess.kt:98` |
+| Lazy-value computation in a debugged program | the debugger's own `ON_DEMAND`, 1 second, unless the launch's `lazyValueTimeLimit` sets another | `lsp/run/RunWorkerProcess.kt:99`, `javatools/src/main/java/org/xvm/runtime/SessionDebugger.java:308` |
+| A connection to a worker's port showing its token | 5 seconds for each connection, while others are taken, under the worker startup limit | `lsp/run/RunWorkerProcess.kt:833` |
 | Stop of a run inside the worker | 5 seconds | `lsp/run/RunWorker.kt:60` |
 | Program output per event, and held while waiting | 16,384 characters, sent after 20 ms | `lsp/run/RunWorker.kt:452`, `:455` |
 | Debug console code on a stopped fiber | 2 seconds, unless the launch's `evaluationTimeLimit` sets another | `dap/XtcDebugServer.kt:320` |
 | Connecting to an attached program | 10 seconds | `lsp/run/AttachedProgram.kt:128` |
 
-The server's own instance uses the defaults (`lsp/server/XtcLanguageServer.kt:142`).
+The server's own instance uses the defaults (`lsp/server/XtcLanguageServer.kt:144`).
 
 ### 3.3 Child processes
 
 | Process | Command | Read at |
 |---------|---------|---------|
-| Run worker | The server's own `java` executable, `-Dfile.encoding=UTF-8 -cp <server class path> org.xvm.lsp.run.RunWorker`; no JVM options of its own. Its commands go to its standard input; its events come over a connection to a loopback port, 127.0.0.1 and an ephemeral port, that the server listens at for it alone, given in its environment as `XTC_RUN_WORKER_PORT`, with a random token, `XTC_RUN_WORKER_TOKEN`, which the connection's first line must show, within 5 seconds of its own while the server takes others, so that one that sends nothing holds up none; the server takes one such connection, under the startup limit, and none once the worker has ended. The address is the literal 127.0.0.1 on both sides, whatever the worker's JVM options prefer. What the worker's JVM itself writes to its standard output and error goes to the output of the run it hosts, between the program's lines. Outside a run, the log has the first 20 lines of its standard output at debug, and the first 20 of its standard error as warnings, with the last 20 of the rest once the worker exits, as an idle worker's crash says why there. | `lsp/run/RunWorkerProcess.kt:805`, `:326`, `:482`, `:573`, `lsp/run/RunWorker.kt:82` |
-| Test run | `xtc test` through the server's class path: `-L` the bundled libraries' directory (section 4) and the build's module path, `--no-recompile`, `-x <workspace>/build/xtc/embedded/xunit`, `-I xvm.xunit.report=<json>`, then `-p`, `-c` or `-t` per selected test, and `--debug` when debugged; run in the workspace folder | `lsp/run/TestProcess.kt:57`, `lsp/server/EmbeddedRuns.kt:491`, `:998` |
+| Run worker | The server's own `java` executable, `-Dfile.encoding=UTF-8 [JVM options] -cp <server class path> org.xvm.lsp.run.RunWorker`, in the server's working directory. The JVM options are those of the run's module's Gradle `xtcRun`, from the imported model, none without one, but those that the worker cannot run with: a class path or main class of their own, a Java debugger's agent, options that print and exit, argument and option files and empty items, which the run's output names. A relative path in an option resolves against the server's working directory, not the project's as Gradle's runs resolve it; the run's output names the options that hold one. Its commands go to its standard input; its events come over a connection to a loopback port, 127.0.0.1 and an ephemeral port, that the server listens at for it alone, given in its environment as `XTC_RUN_WORKER_PORT`, with a random token, `XTC_RUN_WORKER_TOKEN`, which the connection's first line must show, within 5 seconds of its own while the server takes others, so that one that sends nothing holds up none; the server takes one such connection, under the startup limit, and none once the worker has ended. The address is the literal 127.0.0.1 on both sides, whatever the worker's JVM options prefer. What the worker's JVM itself writes to its standard output and error, for an option such as `-Xlog` or `-XX:+PrintCompilation` too, goes to the output of the run it hosts, between the program's lines; it cannot break the worker's events. Outside a run, the log has the first 20 lines of its standard output at debug, and the first 20 of its standard error as warnings, with the last 20 of the rest once the worker exits, as an idle worker's crash says why there. A worker serves only runs with its own options; one idle worker is kept, so a run with other options retires an idle one with others. | `lsp/run/RunWorkerProcess.kt:842`, `:350`, `:507`, `:598`, `:239`, `lsp/run/RunWorker.kt:82`, `lsp/run/JvmOptions.kt:62` |
+| Test run | `xtc test` through the server's class path, with the JVM options of the module's Gradle `xtcTest` as the run worker has `xtcRun`'s: `-L` the bundled libraries' directory (section 4) and the build's module path, `--no-recompile`, `-x <workspace>/build/xtc/embedded/xunit`, `-I xvm.xunit.report=<json>`, then `-p`, `-c` or `-t` per selected test, and `--debug` when debugged; run in the workspace folder | `lsp/run/TestProcess.kt:58`, `lsp/server/EmbeddedRuns.kt:552`, `:1108` |
 
 ## 4. Files and directories
 
@@ -338,7 +338,7 @@ The server's own instance uses the defaults (`lsp/server/XtcLanguageServer.kt:14
 | Its locks | `xtc-lsp-xdk-<hash>.lock` (shared lock) and `.xtc-lsp-xdk-lock` in the temporary directory | Kept | `java.io.tmpdir` | `lsp/adapter/xdk/XdkLibraries.kt:90`, `:99` |
 | Tree-sitter native libraries | `<java.io.tmpdir>/libtree-sitter<random>.<ext>` and `tree-sitter-xtc<random>.<ext>` | Deleted when the JVM exits | `java.io.tmpdir` | `lsp/treesitter/TreeSitterLibraryLookup.kt:30`, `lsp/treesitter/XtcParser.kt:149` |
 | Embedded build output | `<workspace folder>/build/xtc/embedded/lib/<module>.xtc`, `dependencies/` and `manifest.json` | Rewritten by each build; a module that failed has no file | Nothing; the folder that owns the module | `lsp/adapter/xdk/XdkBuild.kt:75` |
-| Embedded test results | `<workspace folder>/build/xtc/embedded/xunit` | Rewritten by each test run | Nothing | `lsp/server/EmbeddedRuns.kt:998` |
+| Embedded test results | `<workspace folder>/build/xtc/embedded/xunit` | Rewritten by each test run | Nothing | `lsp/server/EmbeddedRuns.kt:1108` |
 | Gradle model | `<Gradle root>/.gradle/xtc/lsp-model.json` and `lsp-workspace.json`, written by the init script `lang/gradle/compiler-model.init.gradle` when an editor imports | Rewritten by each import | Nothing | `lang/gradle/compiler-model.init.gradle:68`, read at `vsc/build-model.ts:21`, `idea/lsp/CompilerBuildModel.kt:26`, `idea/lsp/CompilerWorkspaceModels.kt:15` |
 | Editor control | `~/.xtc/editor-control/<id>.json`, owner-only, one per editor session, for the `xtc-lsp` restart command | Removed when the session ends | Nothing for the editors; `XTC_EDITOR_CONTROL_DIR` for `xtc-lsp` | `idea/lsp/ServerControlStartup.kt:18`, `idea/lsp/ServerControlEndpoint.kt:34`, `vsc/extension.ts:138`, `lang/scripts/xtc-lsp:87` |
 | Downloaded Java runtime | `<VS Code global storage>/jre` | Kept | Nothing; `xtc.java.home` makes it unused | `vsc/java.ts:68` |

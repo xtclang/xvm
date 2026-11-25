@@ -29,7 +29,8 @@ import kotlin.system.exitProcess
  * connection to its server's port, prints whether it was refused, and exits with 0. `Raw` writes [RAW] to its standard
  * output, as its JVM's own logging would, prints `ok`, and exits with 0 once it is sent input; the worker then writes
  * [RAW_AFTER] lines more to its standard output and [ERRORS_AFTER] to its standard error as it shuts down, outside any
- * run, the last of which is [LAST_ERROR].
+ * run, the last of which is [LAST_ERROR]. `Options` prints the system
+ * property [OPTION] of the worker's JVM, as `option=<value>`, and exits with 0.
  */
 object FakeRunWorker {
     internal val IDENTITY = RunWorkerIdentity(RunWorkerIdentity.PROTOCOL, "fake-xdk")
@@ -64,6 +65,9 @@ object FakeRunWorker {
 
     /** The connection of the `idleFirst` mode that sends nothing, kept open while the worker runs. */
     private var idle: Socket? = null
+
+    /** The system property that an `Options` run prints, which a JVM option of the worker sets. */
+    internal const val OPTION = "xtc.fake.option"
 
     /** Whether a `Raw` run ran, so that the worker writes its lines as it shuts down. */
     private var raw = false
@@ -123,6 +127,12 @@ object FakeRunWorker {
                             }
 
                             "Garbage" -> garbage(id)
+
+                            "Options" -> {
+                                output(id, "option=${System.getProperty(OPTION)}\n")
+                                send(DebugProtocol.Exit(id, 0L, null))
+                                usage(id, heap = 1L shl 20, threads = 10)
+                            }
 
                             "Raw" -> {
                                 println(RAW)

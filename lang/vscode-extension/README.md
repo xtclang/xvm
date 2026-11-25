@@ -166,8 +166,10 @@ active folder; in a folder with a Gradle build, the status bar shows the mode (*
 | Stop | Close the run's terminal, or terminate its task |
 
 Embedded is the default also in a folder with a Gradle build. It builds with the language server's
-compiler and bundled XDK, so the Gradle build's own settings, such as `runXtc` arguments, JVM options
-or its XDK version, do not apply; embedded builds and runs in such a folder say so in their terminal.
+compiler and bundled XDK, so of the Gradle build's own settings only `xtcRun`'s method, arguments
+and JVM options and `xtcTest`'s JVM options apply, once the Gradle model is imported, and not its XDK
+version; embedded builds and runs in such a folder say so in their terminal, and a run's terminal
+says which of Gradle's settings it took.
 Choose **Gradle** with **Ecstasy: Select Build Mode** or the status bar, or set `xtc.build.mode` to
 `gradle`, to use Gradle. The folder's Gradle **Test** and **Clean** tasks stay
 available in embedded mode, since it has no counterpart for them.

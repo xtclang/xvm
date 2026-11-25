@@ -52,7 +52,8 @@ internal class TestProcess private constructor(
          * The `xtc test` command for the tests that [tests] select of the module [artifact], all of them when it is
          * empty: it runs from this server's own class path, with the bundled XDK's libraries and [modulePath], and
          * xunit writes to [outputDirectory]. With [debug], the launcher's `--debug` options, it runs under the
-         * debugger.
+         * debugger. Its JVM has the options [jvmOptions], which [JvmOptions] has checked, after the server's own
+         * `-Dfile.encoding`, which one of theirs replaces, as the JVM takes the last.
          */
         fun command(
             artifact: String,
@@ -60,6 +61,7 @@ internal class TestProcess private constructor(
             tests: List<TestSelector>,
             outputDirectory: String,
             debug: String?,
+            jvmOptions: List<String> = emptyList(),
         ): List<String> =
             buildList {
                 add(
@@ -70,6 +72,7 @@ internal class TestProcess private constructor(
                         .orElse("java"),
                 )
                 add("-Dfile.encoding=UTF-8")
+                addAll(jvmOptions)
                 add("-cp")
                 add(System.getProperty("java.class.path"))
                 add(Launcher::class.java.name)

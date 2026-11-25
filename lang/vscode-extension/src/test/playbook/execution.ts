@@ -6,8 +6,10 @@ import * as path from 'node:path';
 import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import { buildModeStatus } from '../../build-mode-selection';
+import { modelPath } from '../../build-model';
 import { buildMode, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
-import { getClient } from '../../lsp-client';
+import { gradleProjects } from '../../gradle-projects';
+import { getClient, updateCompilerConfiguration } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
 import { onDidRefreshTests, onDidReportTest, type TestReport } from '../../test-explorer';
 import { discovered } from './liveWorkspace';
@@ -1920,7 +1922,7 @@ export function buildModeCases(): void {
             await configureModules(workspace, [{ name: data.module, file: data.file }]);
             await noErrors(document.uri);
 
-            // the default is embedded, also beside a Gradle build, and says the build's settings do not apply
+            // the default is embedded, also beside a Gradle build, and says which of the build's settings apply
             assert.strictEqual(buildMode(folder), 'embedded');
             await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'Status bar shows the embedded build');
             const built = await executions.start('build', 'all Ecstasy modules', () => vscode.commands.executeCommand('xtc.build'), finished, 'Embedded build finishes');
@@ -2503,5 +2505,53 @@ export function runEntryCases(): void {
             assert.ok(run.text.includes(data.output), run.text);
             assert.ok(run.text.indexOf(data.warning) < run.text.indexOf(data.output), `The warning comes before the program's output: ${run.text}`);
         });
+    });
+}
+
+/**
+ * X351, registered after X350 in catalog order: an embedded run in a folder whose Gradle model is imported takes the
+ * method, arguments and JVM options of the module's xtcRun from the model, says so in its output and leaves out a Java
+ * debugger's agent; the run's own arguments win.
+ */
+export function gradleRunCases(): void {
+    playbook('X351', async (workspace, data) => {
+        const folder = vscode.workspace.workspaceFolders![0];
+        const report = vscode.Uri.joinPath(folder.uri, modelPath);
+        // Gradle's project cache, which holds the report, as X129's
+        const cache = path.join(folder.uri.fsPath, '.gradle');
+        const made = !await fs.stat(cache).then(() => true, () => false);
+        const model = JSON.stringify(data.model).split('${workspace}').join(vscode.Uri.file(workspace.directory).toString());
+        const settings = vscode.workspace.getConfiguration('xtc.compiler');
+        const previous = settings.get('sourceModules');
+        try {
+            const document = await workspace.open(data.file, data.source);
+            // the model that an import writes, which the extension gives the language server without explicit modules
+            await fs.mkdir(path.dirname(report.fsPath), { recursive: true });
+            await fs.writeFile(report.fsPath, model);
+            await settings.update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
+            await updateCompilerConfiguration();
+            await eventually(async () => gradleProjects()[data.module], project => project === data.project, 'The model\'s Gradle projects');
+            await noErrors(document.uri);
+            await embedded(async executions => {
+                const run = async (args: string[] | undefined, message: string) => {
+                    const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), args, mode: 'embedded' }, getClient);
+                    const update = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
+                    assert.strictEqual(update.exitCode, 0, update.text);
+                    return update.text;
+                };
+                // no method or arguments of its own: Gradle's, its JVM options but the debugger's agent, as it says
+                const taken = await run(undefined, 'The embedded run with Gradle\'s settings finishes');
+                for (const expected of [data.fromGradle, data.leftOut, data.output]) assert.ok(taken.includes(expected), taken);
+                // its own arguments win, with Gradle's method
+                const own = await run(data.args, 'The embedded run with its own arguments finishes');
+                for (const expected of [data.ownFromGradle, data.ownOutput]) assert.ok(own.includes(expected), own);
+                assert.ok(!own.includes(data.output), own);
+            });
+        } finally {
+            await fs.rm(report.fsPath, { force: true });
+            if (made) await fs.rm(cache, { recursive: true, force: true });
+            await settings.update('sourceModules', previous, vscode.ConfigurationTarget.Workspace);
+            await updateCompilerConfiguration();
+        }
     });
 }

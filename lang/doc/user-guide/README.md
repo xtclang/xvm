@@ -557,7 +557,7 @@ choose it in either editor, or:
 
 | Mode | What it does |
 |------|--------------|
-| Embedded compiler (the default) | The language server's compiler builds every module, and its execution worker runs them. Nothing to sync or install, and the fastest round trip. A Gradle build beside it doesn't apply: its settings, such as `runXtc` arguments, JVM options or XDK version, are ignored, and the build output says so. |
+| Embedded compiler (the default) | The language server's compiler builds every module, and its execution worker runs them. Nothing to sync or install, and the fastest round trip. Of a Gradle build beside it, only the run settings apply, once its Gradle model is imported: `xtcRun`'s method, arguments and JVM options, and `xtcTest`'s JVM options (see [Run](#run)). Its XDK version and other settings don't, and the build output says so. |
 | Gradle | The project's Gradle build runs `compileXtc`, `runXtc` and `testXtc`, with all of its settings and its XDK. |
 | Automatic | Gradle when the project has a Gradle build, embedded otherwise. |
 | `xtc` command line (IntelliJ only, per run configuration) | `xtc run` and `xtc test` from the XDK on your `PATH`. |
@@ -630,6 +630,25 @@ the program; IntelliJ's **Rerun** runs it again.
 In embedded mode, each run gets a fresh program, in an execution worker beside the language server.
 Up to four programs run at once. In Gradle mode, the same Run runs the XTC Gradle plugin's `runXtc`
 task; IntelliJ's Gradle window also lists the plugin's tasks.
+
+Where the project's Gradle model is imported (IntelliJ's **Refresh Gradle model** on the **Ecstasy |
+Compiler** page, VS Code's **Ecstasy: Refresh Gradle Compiler Model**), an embedded run, a debug session
+too, takes what the module's Gradle project's `xtcRun` runs it with: the method and arguments of its
+`module { ... }` for the module, where the run configuration leaves them empty, and its `jvmArgs`, for
+the execution worker that runs the program. A run of tests takes `xtcTest`'s `jvmArgs`. Settings made
+only on a task, as in `tasks.runXtc { ... }`, are not seen: the model's export reads the project's
+`xtcRun` and `xtcTest`, which the tasks take their defaults from, without configuring the tasks. The
+run's output says, ahead of the program's, which it took, as in `From Gradle project :app's xtcRun:
+method greet, arguments [hello], JVM options [-Xss4m].`, leaving out the method `run` and an empty
+argument list, which are the defaults anyway. It leaves out JVM options that the worker can't run with,
+a class path or main class of their own, a Java debugger's agent, options that print and exit, and
+argument and option files, and says which. It also names the options that hold a relative path, such
+as `-javaagent:libs/agent.jar`: they resolve against the language server's working directory, not the
+project's, as Gradle's runs resolve them; give such paths in full. What the JVM itself prints to its
+standard output or error for an option, as `-Xlog:gc` or `--show-version` do, reaches the run's output,
+between the program's lines. A value of `xtcRun` that the export can't read, as a `moduleArg` from a Gradle
+property that isn't set, is left out, and the run's output says so. A refresh of the model takes a
+changed build's settings to the next run.
 
 
 ## 6. Testing with xunit
@@ -1062,7 +1081,7 @@ Some common problems:
 |---------|------------|
 | No errors, completion or navigation | Check the server's state and log. Make sure the adapter is the compiler (Ctrl+Alt+X, then A). |
 | VS Code: wrong Java, or none | Set `xtc.java.home` to a Java 25 or later installation. |
-| A Gradle build's settings don't apply to a run | The project builds embedded; choose Gradle with Ctrl+Alt+X, then B. |
+| A Gradle build's settings don't apply to a run | The project builds embedded, where only `xtcRun`'s method, arguments and JVM options and `xtcTest`'s JVM options apply, from the imported Gradle model; settings made only on a task, as `tasks.runXtc { ... }`, are not seen. Refresh the model, move such settings to `xtcRun`, or choose Gradle with Ctrl+Alt+X, then B. |
 | Gradle mode can't find `runXtc` or `testXtc` | The project's Gradle build needs the XTC Gradle plugin; IntelliJ also needs the Gradle build linked. |
 | A breakpoint is unverified | The line changed since the program was built, or has no code; debug again. |
 | **Ecstasy: Create New Project** fails | Install an XDK and put its `xtc` on your `PATH`. |
@@ -1074,7 +1093,11 @@ Some common problems:
 - IntelliJ's **Run 'All Ecstasy Tests'** has no Debug yet. In Gradle mode its **Rerun Failed Tests** needs
   the project's Gradle model, which names each module's Gradle project: import it with **Refresh Gradle
   model** on IntelliJ's **Ecstasy | Compiler** page.
-- In embedded mode, the project's Gradle settings don't apply to builds and runs.
+- In embedded mode, only the project's Gradle run settings apply, `xtcRun`'s method, arguments and JVM
+  options and `xtcTest`'s JVM options, and only once its Gradle model is imported. Settings made only on
+  the `runXtc` or `testXtc` task, the build's XDK version, compile settings and other run settings, such
+  as `xtcRun`'s module path, don't. A JVM option's relative path resolves against the language server's
+  working directory, not the project's.
 - A program being debugged keeps the code it was built from: edits apply the next time you run it.
 - Code run from the Debug Console or Evaluate Expression stops after two seconds, and a lazy value
   after one, by default. To give them longer, set `evaluationTimeLimit` and `lazyValueTimeLimit`, in
