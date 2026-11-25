@@ -55,7 +55,8 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
                 .orElse(XtcPluginConstants.DEFAULT_EXECUTION_MODE)
         );
         this.defaultJvmArgs = loadDefaultJvmArgs();
-        this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
+        // the value, not a convention: jvmArgs(...) adds to a value, where it would replace a convention
+        this.jvmArgs = objects.listProperty(String.class).value(defaultJvmArgs);
         LOGGER.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
         if (executionModeProperty.isPresent()) {
             LOGGER.info("[plugin] Default execution mode overridden by Gradle property '{}={}'",

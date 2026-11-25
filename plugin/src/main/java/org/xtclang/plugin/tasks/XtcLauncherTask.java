@@ -114,7 +114,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         this.verbose = objects.property(Boolean.class).convention(ext.getVerbose());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
-        this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
+        // the extension's, as the value, not a convention, so that the task's jvmArgs(...) adds to them
+        this.jvmArgs = objects.listProperty(String.class).value(ext.getJvmArgs());
         this.executionMode = objects.property(ExecutionMode.class).convention(ext.getExecutionMode());
 
         // Assert that required configurations exist - they should always be created by this plugin
