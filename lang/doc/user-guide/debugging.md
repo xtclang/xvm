@@ -6,9 +6,9 @@ A debug session builds and runs the program as Run does, under the debugger.
 
 ## Start debugging
 
-- **IntelliJ:** Debug a run configuration with Shift+F9 or the toolbar's Debug button. Running a
-  module from its gutter icon makes its configuration, which Shift+F9 then debugs.
-- **VS Code:** F5 debugs the module of the active editor, with no configuration needed. To give
+- **IntelliJ:** Debug a run configuration with <kbd>Shift+F9</kbd> or the toolbar's Debug button. Running a
+  module from its gutter icon makes its configuration, which <kbd>Shift+F9</kbd> then debugs.
+- **VS Code:** <kbd>F5</kbd> debugs the module of the active editor, with no configuration needed. To give
   arguments, choose a method or stop at the first line, add a configuration to `.vscode/launch.json`
   (**Add Configuration**, then **Ecstasy: Launch Module**); see
   [Debugging](../../vscode-extension/README.md#debugging) for its fields.
@@ -53,7 +53,7 @@ attached sessions alike.
   breakpoint; in VS Code, choose **Add Conditional Breakpoint** in the gutter's context menu, or
   **Edit Breakpoint** on one you have. A condition that can't be evaluated stops anyway, and says why.
 - **Hit count**: stop at the Nth hit, or `>= N`, `> N` or `% N`. IntelliJ: the breakpoint's **Hit
-  condition**, in its right-click popup or the Breakpoints dialog (Ctrl+Shift+F8); VS Code: **Edit
+  condition**, in its right-click popup or the Breakpoints dialog (<kbd>Ctrl+Shift+F8</kbd>); VS Code: **Edit
   Breakpoint**, then **Hit Count**.
 - **Logpoint**: print a message instead of stopping, with `{expression}` replaced by its value, such as
   `sum={sum}`. IntelliJ: a breakpoint with **Suspend** unchecked and **Evaluate and log**; VS Code:
@@ -104,23 +104,23 @@ unverified, saying why: debug again to stop there.
 
 | Action | IntelliJ | VS Code |
 |--------|----------|---------|
-| Continue | Resume Program, F9 | Continue, F5 |
-| Step over | F8 | F10 |
-| Step into | F7 | F11 |
-| Step out | Shift+F8 | Shift+F11 |
-| Step into one of the line's calls | Smart Step Into, Shift+F7 | **Step Into Target**, in the editor's context menu |
-| Run to the cursor's line | Run to Cursor, Alt+F9 | **Run to Cursor**, in the editor's context menu |
+| Continue | Resume Program, <kbd>F9</kbd> | Continue, <kbd>F5</kbd> |
+| Step over | <kbd>F8</kbd> | <kbd>F10</kbd> |
+| Step into | <kbd>F7</kbd> | <kbd>F11</kbd> |
+| Step out | <kbd>Shift+F8</kbd> | <kbd>Shift+F11</kbd> |
+| Step into one of the line's calls | Smart Step Into, <kbd>Shift+F7</kbd> | **Step Into Target**, in the editor's context menu |
+| Run to the cursor's line | Run to Cursor, <kbd>Alt+F9</kbd> | **Run to Cursor**, in the editor's context menu |
 | Call a frame again from its first line | **Reset Frame**, in the Frames view | **Restart Frame**, in the Call Stack view |
-| Stop a running program where it is | Pause Program | Pause, F6 |
+| Stop a running program where it is | Pause Program | Pause, <kbd>F6</kbd> |
 | End the program | Stop | Stop |
 
 Stepping into an XDK method opens its source, read-only, and its frames show like your own. In
-IntelliJ, that takes Force Step Into (Alt+Shift+F7); its Step Into stays in your own code.
+IntelliJ, that takes Force Step Into (<kbd>Alt+Shift+F7</kbd>); its Step Into stays in your own code.
 
 <table><tr><td width="50%">
 
 ![IntelliJ Smart Step Into offering deal or size](images/intellij-smart-step-into.png)
-*IntelliJ: Shift+F7 on a line that calls `deal` and `size` asks which call to step into.*
+*IntelliJ: <kbd>Shift+F7</kbd> on a line that calls `deal` and `size` asks which call to step into.*
 
 </td><td width="50%">
 
@@ -170,10 +170,10 @@ Right-click in the Variables or Watch view:
 
 ## Evaluate expressions and run code
 
-In VS Code's **Debug Console** (Ctrl+Shift+Y), and in IntelliJ's **Evaluate Expression** (Alt+F8) and
+In VS Code's **Debug Console** (<kbd>Ctrl+Shift+Y</kbd>), and in IntelliJ's **Evaluate Expression** (<kbd>Alt+F8</kbd>) and
 the Debug window's console, type an expression to evaluate it in the paused frame. Completion offers
 the frame's names, and after a dot the members of the value before it; in Evaluate Expression, press
-Ctrl+Space.
+<kbd>Ctrl+Space</kbd>.
 
 There, an expression that a watch can't evaluate, such as the call `size()`, runs as code on the
 paused fiber, for at most two seconds by default, and answers with the result's `toString()`. What it
@@ -187,7 +187,7 @@ While the program runs, a line typed in the Debug Console (VS Code) or the Debug
 <table><tr><td width="50%">
 
 ![IntelliJ Evaluate Expression dialog evaluating size() in the paused frame](images/intellij-evaluate-expression.png)
-*IntelliJ: Alt+F8 evaluates `size()`, a call, in the paused frame: 42 cards are left.*
+*IntelliJ: <kbd>Alt+F8</kbd> evaluates `size()`, a call, in the paused frame: 42 cards are left.*
 
 </td><td width="50%">
 
