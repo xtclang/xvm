@@ -109,9 +109,11 @@ builds and runs, like IntelliJ's own setting for Gradle projects. It is stored w
 | Gradle | Left to Gradle or the IDE's builder | `./gradlew runXtc` |
 
 The embedded compiler is the default also in a project with a Gradle build. It builds with the
-language server's compiler and bundled XDK, so the Gradle build's own settings, such as `runXtc`
-arguments, JVM options or its XDK version, do not apply; embedded builds and runs in such a project
-say so in the Build tool window and Run console, with a link to the settings page. Choose **Gradle**
+language server's compiler and bundled XDK, so of the Gradle build's own settings only `xtcRun`'s
+method, arguments and JVM options and `xtcTest`'s JVM options apply, once the Gradle model is imported,
+and not its XDK version; embedded builds and runs in such a project say so in the Build tool window
+and Run console, with a link to the settings page, and a run's console says which of Gradle's
+settings it took. Choose **Gradle**
 to use Gradle. Modules without Ecstasy sources keep building with Gradle or the IDE's builder.
 
 Ways to run a module:
