@@ -7,8 +7,8 @@
 ## Cutting #693 into PRs
 
 The plan is [squash-693.md](../../squash-693.md) in the repository root: 15 PRs, X1–X5 outside `lang/` and L1–L10
-in it, built from 13 topics, with every #693 commit's topic, group and PRs in its appendix (483 commits at
-`00ea900ea9` on master `8b5257f10b`, 2026-11-25). It replaced the 29-unit map of 2026-11-25 and took over its
+in it, built from 13 topics, with every #693 commit's topic, group and PRs in its appendix (480 commits at
+`244f824635` on master `2e26663249`, 2026-11-25). It replaced the 29-unit map of 2026-11-25 and took over its
 review notes.
 
 ## Embedded build and run — 2026-10-15
@@ -291,7 +291,7 @@ GitHub state checked while preparing the comparison (2026-10-09): all six were o
 
 Later (GitHub, 2026-10-16): #686, #687 (`df291544a`, four files), #688 and #689 are merged. #685 was closed unmerged on 2026-10-12 in favor of [#693](https://github.com/xtclang/xvm/pull/693); #683 was closed unmerged on 2026-10-15. The table records the 2026-10-09 revisions.
 
-GitHub, 2026-11-25: open are [#693](https://github.com/xtclang/xvm/pull/693) (head `00ea900ea9`, 483 commits on master `8b5257f10b`), [#802](https://github.com/xtclang/xvm/pull/802) (unused constructor arguments, #693's commit 459, review required) and [#804](https://github.com/xtclang/xvm/pull/804) (`runXtc` keeps `xtcRun`'s settings, #693's commits 467, 471, 473 and 474, approved). Merged since 2026-10-16 with pieces of #693 or `lagergren/errs`, which #693's rebases then dropped: #703 and #709 (2026-10-20), #720 and #723 (10-26), #717, #718, #731, #734 and #735 (10-27), #716 (10-28), #724 and #742 (10-29), #755, #756 and #757 (11-04), #764 (11-10), #772 (11-16), #776 (11-17), and #800 (11-24; still #693's commit 405 until its next rebase). Closed unmerged: #719 (an alternative to #718), #721 (filed again as #735), #722 (declined), #730 (its fix is in #724) and #795, whose duplicate-type tests are #693's commit 386. The map's [status column](#pr-map-2026-11-25) gives each unit's state.
+GitHub, 2026-11-25: open are [#693](https://github.com/xtclang/xvm/pull/693) (head `244f824635`, 480 commits on master `2e26663249`), [#802](https://github.com/xtclang/xvm/pull/802) (unused constructor arguments, #693's commit 459, review required) and [#804](https://github.com/xtclang/xvm/pull/804) (`runXtc` keeps `xtcRun`'s settings), merged as `2e26663249`; #693 was rebased onto it without its four commits. Merged since 2026-10-16 with pieces of #693 or `lagergren/errs`, which #693's rebases then dropped: #703 and #709 (2026-10-20), #720 and #723 (10-26), #717, #718, #731, #734 and #735 (10-27), #716 (10-28), #724 and #742 (10-29), #755, #756 and #757 (11-04), #764 (11-10), #772 (11-16), #776 (11-17), and #800 (11-24; still #693's commit 405 until its next rebase). Closed unmerged: #719 (an alternative to #718), #721 (filed again as #735), #722 (declined), #730 (its fix is in #724) and #795, whose duplicate-type tests are #693's commit 386. The map's [status column](#pr-map-2026-11-25) gives each unit's state.
 
 | Existing PR | Purpose | Prerequisites and current revision |
 | --- | --- | --- |
