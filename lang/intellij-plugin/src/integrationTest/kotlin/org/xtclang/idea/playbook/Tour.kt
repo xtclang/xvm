@@ -741,6 +741,10 @@ internal interface TourProbe {
 
     fun lenses(): String
 
+    fun lensIdentities(): String
+
+    fun lensesPending(): Boolean
+
     fun clickLens(
         title: String,
         line: Int,
