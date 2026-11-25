@@ -13,6 +13,7 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PackageConstant
 import org.xvm.asm.constants.PropertyConstant
+import org.xvm.asm.constants.PureIdentityConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
 import org.xvm.asm.constants.UnionTypeConstant
@@ -323,6 +324,12 @@ internal fun captureRenameFacts(
                 constant is TypeParameterConstant -> ProofIdentity.MethodFormal(identity(constant.method), constant.register)
 
                 implicit != null -> identity(implicit)
+
+                // a method that the compiler merges over a union, as a mixin into Box | Bag takes size, is proven by the
+                // union's route through each leg, as a call on such a receiver is
+                constant is MethodConstant && constant.namespace is PureIdentityConstant && errors != null ->
+                    callableIdentity((constant.namespace as PureIdentityConstant).type, constant, errors, ::identity)
+                        ?: ProofIdentity.Unproven()
 
                 // Bundled source navigation must use the same artifact identity as binary-only
                 // views.
