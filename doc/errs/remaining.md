@@ -2319,7 +2319,7 @@ change shows in them. In the order worth doing:
 | K2c | ... and in Gradle mode none yet | 0.5–1 day | Done 2026-11-24, where the Gradle model is imported |
 | K5a | Evaluations stop after 2 s, lazy values after 1 s, by default | done | Done: a launch and attach attribute each, and options of both IntelliJ configurations |
 | K6b | Rename and safe delete miss consumers the server does not know of | Done | Yes, as a note: done 2026-11-24; automatic discovery is not |
-| K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Yes, after the release: arguments and JVM options, not the XDK version |
+| K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Done 2026-11-25: `xtcRun`'s method, arguments and JVM options, `xtcTest`'s JVM options; never the XDK version |
 | K1 | VS Code has no `xtc` command-line build mode | 1.5–2 days | When a VS Code user asks |
 | K7 | The formatter does not reflow comments or split strings | 1.5–2 days for comments | Comments later; strings never |
 | K2b | IntelliJ's Run 'All Ecstasy Tests' has no Debug | 2–3 days, after a check of xunit | Later: one module's tests already debug |
@@ -2421,13 +2421,97 @@ change shows in them. In the order worth doing:
     language server's messages too, and the frame is clean. guide.py on the section runs makes the six refactoring
     images with no message in any; they differ from the guide's only as a run of one section leaves the tabs and
     scroll, so the guide keeps its images from the full runs.
-- [ ] K3: Gradle's settings in embedded runs. Embedded builds and runs use the server's compiler and
+- [x] K3: Gradle's settings in embedded runs. Embedded builds and runs use the server's compiler and
   runtime, and run in an execution worker JVM (`RunWorkerProcess`); `xtcRun`'s module arguments, method
-  and `jvmArgs` are never read. The XTC plugin's model export (`compiler-model.init.gradle`,
-  `.gradle/xtc/lsp-model.json`) could carry each module's, for the server to apply the arguments and
-  method to its runs and the JVM options to their worker: the plugin's export with a manualTests check,
-  the server, both editors' run configurations, 2–3 days. The build's XDK version can never apply, as the
-  server runs its own runtime; the embedded notice keeps saying so.
+  and `jvmArgs` were never read. Done 2026-11-25 (`lagergren/k3-gradle-run-settings`):
+  - The plugin's model export (`XtcLspSourceSetTask`, `.gradle/xtc/lsp-model.json` and the init script's
+    `lsp-workspace.json`) carries each project's run settings in every one of its source sets' entries:
+    `run`, the `jvmArgs` of its `xtcRun`, by module name the `methodName` and `moduleArgs` that it runs
+    each module it names with, and `problems`; and `test`, the `jvmArgs` of its `xtcTest` and `problems`.
+    The export reads the extensions, which `runXtc` and `testXtc` take their defaults from, and neither
+    realizes nor runs the tasks, so that no task's configuration can fail an import. It never fails
+    because of these settings (`XtcLspRunSettings`): a value it cannot read, a provider without a value or
+    one that throws, is left out, a module with it, and `problems` names it; a blank module name is no
+    module, and a blank method the default.
+  - The server reads them with the model (`XdkBuildModel.Runs`; `Inputs.runs`, an `XdkRunSettings` by
+    module name, for the modules that the source set owns; a qualified module is also found by its first
+    part, as the runner finds it), leniently: a malformed section, module or field is left out with a
+    warning in the log and never makes the model refused, and the export's problems are logged. It keeps
+    them with the Gradle projects each time it applies a model, dropping both without one
+    (`XtcLanguageServer.gradleModel`): a refresh of the model, as the editors already do it, reaches the
+    next run.
+  - Embedded runs and debug sessions, from both editors' run configurations, IntelliJ's gutter and
+    the Run lenses, take `xtcRun`'s method and arguments where the run gives none: an empty method or
+    arguments field takes Gradle's, field by field, and any value the editor sends wins. Their worker JVM
+    has `xtcRun`'s JVM options; a run of tests, `xtcTest`'s, on its `xtc test` process (`TestProcess`),
+    where the method and arguments do not apply. The run's output says, ahead of the program's, what it
+    took but for the defaults, the method `run` and no arguments (`From Gradle project :app's xtcRun:
+    method greet, arguments [...], JVM options [...].`), what it left out (`Left out of Gradle project
+    :app's xtcRun JVM options: ... (why).`), which options hold a relative path, and what the export could
+    not read.
+  - `JvmOptions` leaves out what the worker or test process cannot run with: a class path, a main
+    class, jar, module or source file of their own, a Java debugger's agent (JDWP, by its library's name
+    for `-agentpath`, which would hold the worker before it is ready), options that print and exit
+    (`-version`, `-fullversion`, `-Xshare:dump`, ...), argument files and option files (`-XX:VMOptionsFile=`,
+    `-XX:Flags=`), whose options cannot be checked, and empty items; an option's value as the next item
+    goes with it. A Gradle build that debugs the launcher with `-agentlib:jdwp=...,suspend=y`, as
+    manualTests' comment shows, thus still runs embedded.
+  - Workers are kept by their JVM options (`RunWorkerProcess`): a run gets a worker with its options, and
+    one started for it retires an idle worker with other options, so one idle worker is kept, as before;
+    runs with the same options share one, as before. A worker that stops before it is ready, with options,
+    names its options, and what its JVM printed, as for an option it refuses, is in the run's output. What
+    a worker's JVM writes to standard output and error, as `-Xlog`, `-verbose` or `--show-version` have it
+    do, goes to the output of the run it hosts, as `runXtc` shows it, and cannot break the worker's
+    events, which come over a loopback socket of their own since the first commit of the series (below).
+    Each worker keeps the command line it was started with, which the tests read. Log lines add
+    `options=` and `gradle=` only where there are any.
+  - The editors' embedded notice says which of the build's settings apply, `xtcRun`'s and `xtcTest`'s,
+    and that its XDK version does not; IntelliJ's run configuration editor and VS Code's launch
+    attributes say that an empty method or arguments takes `xtcRun`'s. No other UI: the run's output
+    names what it took. X351 checks a run in both editors; X288's notice changed with the text.
+
+  Limits, as found: settings made only on a task, as `tasks.runXtc { jvmArgs(...) }`, are not seen, as the
+  export reads the extensions. A relative path in a JVM option resolves against the language server's
+  working directory, which the worker shares, not the project's, where Gradle's forked runs resolve it
+  (`ForkedStrategy`): `-javaagent:libs/a.jar` then fails to start the worker, which its run reports, and
+  `-Djava.library.path=native` or a log or dump file point elsewhere; the run's output names such
+  options, and the guide says to give the paths in full. No program that the runner runs sees a system
+  property, as its container forwards only the console, a UTC clock, a timer, randomness and named strings, and gives
+  each run its own directories; the tests read the worker's command line, as the server builds it,
+  instead. xunit's container forwards `properties`, which the test run's test reads. A module takes only
+  its own project's settings: another project's `xtcRun` that names it gives it none. With an explicit
+  module list the settings apply as the Gradle projects do, where the server still evaluates the model.
+  Ordering at a run's end is best-effort: the worker's JVM writes its own lines to pipes that the server
+  reads apart from the events, so a JVM line written just before the program's exit can reach the run's
+  output just after the exit, and a line still in the pipe once the run has ended goes to the log, or to
+  the worker's next run if that has begun; what the JVM writes as it starts, as `-showversion`'s lines,
+  shows only in the run that started the worker, not in later runs that reuse it.
+  Not exported nor applied: `xtcRun`'s `modulePath`, `jit`, `verbose`, `showVersion`, output paths,
+  execution mode and debug options, the compile settings and the build's XDK version, which can never
+  apply. The guide's screenshots of embedded runs show the earlier notice until the tours' next image run.
+  - [x] Found with K3's review, and fixed in the series' first commit, before K3's own: the worker sent its
+    events on its standard output, which its JVM writes to as well, HotSpot's tty output (such as
+    `-XX:+PrintCompilation`'s) and unified logging (whose default `all=warning:stdout` puts JVM warnings
+    there with no option), a line in several writes at any time. A JVM line within an event broke it and
+    lost it: a lost exit left its run running until Stop ended the worker after 10 s, a lost ready failed
+    the run at the 60 s startup limit, a lost debug reply left its request waiting. The events now come
+    over a loopback socket of each worker's own, with a token (`RunWorkerProcess.connect`,
+    `RunWorker.connect`); commands stay on its standard input, and its JVM's standard output and error
+    go to the run's output, between the program's lines. Its review then found four faults, which the
+    same commit fixes: a worker with `-Djava.net.preferIPv6Addresses=true` connected to `::1` while the server
+    listened at 127.0.0.1, so both now use the literal address; one local connection that sent nothing
+    held the wait for the token until the startup limit, so each now has 5 seconds of its own while
+    others are taken; an idle worker's crash output went only to the log at debug, so its standard error
+    outside a run is now a warning; and whether the JVM printed in a run carried over to the worker's
+    later runs.
+  - [ ] Found with K3, not changed: `jvmArgs("...")` in `xtcRun` or `xtcTest` replaces the plugin's
+    default JVM options (`-ea` and the build's others) instead of adding to them, as Gradle's `addAll`
+    does on a property with only a convention; `runXtc` runs without them, and manualTests' build script
+    says the call adds to the defaults.
+  - [ ] Found with K3, not changed: the editors' Gradle mode runs `runXtc --module=<module>`, which the
+    plugin runs without the method and arguments that `xtcRun` gives that module
+    (`XtcRunTask.createCliOverrideModule`), so an embedded run now takes them where the editor's Gradle run
+    does not. The plugin could keep a configured module's own method and arguments when `--module` names it.
 - [ ] K1: an `xtc` command-line mode in VS Code. IntelliJ's command-line mode runs `xtc run --deduce`,
   `xtc test` and `--debug` (`XtcRunConfiguration.xtcCommandLine`); VS Code's `xtc.build.mode` has
   embedded, Gradle and automatic, and its debug launch says it does not run `commandLine`
