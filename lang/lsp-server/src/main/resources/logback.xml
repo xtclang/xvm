@@ -43,7 +43,9 @@
     <variable name="LOG_LEVEL" value="${xtc.logLevel:-${XTC_LOG_LEVEL:-INFO}}"/>
     <logger name="org.xvm.lsp" level="${LOG_LEVEL}"/>
 
-    <!-- Per-process JSON lines retain ordering, queue contents and timing without source text. -->
+    <!-- Per-process JSON lines retain ordering, queue contents and timing without source text; at DEBUG, details such
+         as what each diagnostic pull answered. Their total size is the logs' unless xtc.trace.totalSizeMb sets it, as a
+         test run does to keep each server's whole trace -->
     <define name="TRACE_PROCESS" class="org.xvm.lsp.util.TraceProcessId"/>
     <variable name="TRACE_DIRECTORY" value="${xtc.trace.directory:-${XTC_LSP_TRACE_DIR:-${LOG_DIRECTORY}}}"/>
     <appender name="EXECUTION_TRACE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -53,7 +55,7 @@
             <maxFileSize>${xtc.logs.maxFileMb:-10}MB</maxFileSize>
             <maxHistory>${xtc.logs.historyDays:-7}</maxHistory>
             <cleanHistoryOnStart>true</cleanHistoryOnStart>
-            <totalSizeCap>${xtc.logs.totalSizeMb:-50}MB</totalSizeCap>
+            <totalSizeCap>${xtc.trace.totalSizeMb:-${xtc.logs.totalSizeMb:-50}}MB</totalSizeCap>
         </rollingPolicy>
         <encoder><pattern>%msg%n</pattern></encoder>
     </appender>

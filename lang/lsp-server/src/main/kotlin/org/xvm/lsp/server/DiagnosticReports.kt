@@ -19,6 +19,7 @@ import java.io.File
 import java.net.URI
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import org.eclipse.lsp4j.Diagnostic as LspDiagnostic
 
 /** Called under the document lifecycle lock. IDs belong to this server and one document's items. */
 internal class DiagnosticReports {
@@ -237,3 +238,35 @@ internal class DiagnosticReports {
         val REMOVED = Entry("removed", emptyList())
     }
 }
+
+/**
+ * What a document pull that named [previous] answered, for the execution trace: its report's kind and result ID, its
+ * items, and those of each related document, which the client takes as that document's own. An item is its severity
+ * and code, never its message, which can quote the source.
+ */
+internal fun DocumentDiagnosticReport.traced(previous: String?): Map<String, Any?> {
+    val full = left
+    return mapOf(
+        "previousResultId" to previous,
+        "report" to if (full != null) "full" else "unchanged",
+        "resultId" to (full?.resultId ?: right?.resultId),
+        "items" to full?.items?.let(::traced),
+        "related" to
+            (full?.relatedDocuments ?: right?.relatedDocuments)?.mapValues { (_, report) ->
+                report.left?.let { "${it.resultId} ${traced(it.items)}" } ?: "unchanged ${report.right?.resultId}"
+            },
+    )
+}
+
+/**
+ * What a workspace pull answered, for the execution trace: the documents whose report is full, by result ID and items as
+ * [traced] gives them, and how many are unchanged, which a pull every second has most of.
+ */
+internal fun WorkspaceDiagnosticReport.traced(): Map<String, Any?> =
+    mapOf(
+        "full" to items.mapNotNull { it.left }.associate { it.uri to "${it.resultId} ${traced(it.items)}" },
+        "unchanged" to items.count { it.isRight },
+    )
+
+private fun traced(items: List<LspDiagnostic>?): List<String> =
+    items.orEmpty().map { "${it.severity?.name ?: "-"}:${it.code?.get() ?: "-"}" }

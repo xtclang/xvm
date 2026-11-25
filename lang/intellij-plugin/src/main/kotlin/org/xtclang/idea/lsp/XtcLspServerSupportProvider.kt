@@ -175,7 +175,13 @@ class XtcLspConnectionProvider(
                 ) +
                 // the IDE's trace and log settings, and xtc.lsp.test.holdReferences, a test seam that only the IntelliJ
                 // playbook's X145 sets
-                listOf("xtc.trace.directory", "xtc.trace.level", "xtc.logs.directory", "xtc.lsp.test.holdReferences").mapNotNull { key ->
+                listOf(
+                    "xtc.trace.directory",
+                    "xtc.trace.level",
+                    "xtc.trace.totalSizeMb",
+                    "xtc.logs.directory",
+                    "xtc.lsp.test.holdReferences",
+                ).mapNotNull { key ->
                     System.getProperty(key)?.let { "-D$key=$it" }
                 },
         )

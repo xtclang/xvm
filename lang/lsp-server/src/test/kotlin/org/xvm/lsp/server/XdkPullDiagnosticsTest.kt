@@ -660,6 +660,58 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `the trace says what each pull answered, by result IDs and item codes, for the related documents too`() {
+        val lib =
+            directory.resolve("Library.x").toFile().apply {
+                writeText("module Library { MissingType value; }")
+            }
+        val app =
+            directory.resolve("Pull.x").toFile().apply {
+                writeText("module Pull { package lib import Library; }")
+            }
+        val uri = app.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", lib.toURI().toString()),
+                    XdkSourceModule("Pull", uri, setOf("Library")),
+                ),
+            )
+            session.open(uri, app.readText(), 1)
+            TraceRecording(details = true).use { trace ->
+                val full = session.pull(uri).left
+                session.pull(uri, full.resultId)
+                session.workspace()
+                val answers =
+                    trace.entries.filter {
+                        it["kind"].asString == "lsp-query" && it["event"].asString == "converted"
+                    }
+                val pulls = answers.filter { it["operation"].asString == "textDocument/diagnostic" }
+                assertThat(pulls).hasSize(2)
+                pulls[0].let {
+                    assertThat(it["report"].asString).isEqualTo("full")
+                    assertThat(it["resultId"].asString).isEqualTo(full.resultId)
+                    assertThat(it["items"].toString()).contains("Error:DEPENDENCY-FAILED")
+                    assertThat(it["related"].asJsonObject[lib.canonicalFile.toURI().toString()].asString)
+                        .startsWith(
+                            full.relatedDocuments
+                                .getValue(lib.canonicalFile.toURI().toString())
+                                .left.resultId,
+                        ).contains("Error:")
+                }
+                pulls[1].let {
+                    assertThat(it["previousResultId"].asString).isEqualTo(full.resultId)
+                    assertThat(it["report"].asString).isEqualTo("unchanged")
+                }
+                val workspace = answers.single { it["operation"].asString == "workspace/diagnostic" }
+                assertThat(workspace["full"].asJsonObject[uri].asString).contains("Error:DEPENDENCY-FAILED")
+                // the items' codes, never their messages, which can quote the source
+                assertThat(answers.toString()).doesNotContain("Dependencies unavailable", "MissingType")
+            }
+        }
+    }
+
+    @Test
     fun `closing an unsaved buffer restores disk diagnostics and removed roots clear old reports`() {
         val file = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
         val uri = file.toURI().toString()
