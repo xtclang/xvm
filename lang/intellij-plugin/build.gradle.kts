@@ -314,6 +314,13 @@ val lspServerJar =
         }
     }
 
+// IntelliJ Platform Gradle Plugin 2.20 adds Starter and Driver even when src/testUi
+// is empty. Revisit these exclusions when adding tests to that source set.
+configurations.named("testUiImplementation") {
+    exclude(group = "com.jetbrains.intellij.tools")
+    exclude(group = "com.jetbrains.intellij.driver")
+}
+
 // Configuration to consume LSP version properties for display in IDE
 val lspVersionProperties =
     configurations.create("lspVersionProperties") {
