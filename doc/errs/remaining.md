@@ -608,12 +608,15 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   `DiagnosticResultMessagesTest` has X71's sequence, and `ClosedFileProblemsTest` the bridge's, with the record's
   snapshot changed while the first report comes, as an edit that LSP4IJ sends only once the document is committed
   changes it; both fail without the fix.
-- [ ] Found 2026-11-25 in `run-tour-1548907980096693794`, the tour's sections through Diagnostics in the container,
+- [x] Found 2026-11-25 in `run-tour-1548907980096693794`, the tour's sections through Diagnostics in the container,
   not in the tour runs kept before: Reading code's Parameter info popup (Ctrl+P) did not show within its 3-minute
   bound. The step's closers, now in order, say what came after its press: "ParameterInfo, scroll", one scroll of the
   selected editor and nothing else; the server answered Eights.x's code lenses 10 ms after the press (15:38:58.432,
-  asked at .419 as the step selected the file), as in the Warnings step before its fix. To fix as there: press once
-  the file's code lenses are in place and none is pending.
+  asked at .419 as the step selected the file), as in the Warnings step before its fix. IntelliJ's code vision keeps
+  the lenses of an editor that a change or a refresh made pending while it did not show pending until it shows and
+  they are in place again. Fixed (2026-11-25): the step presses once the file's lenses are in place, some, none
+  pending, and nothing else in progress, through the helper the Warnings step's two waits use too, `lensesInPlace`,
+  which fails the step when they do not come.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
