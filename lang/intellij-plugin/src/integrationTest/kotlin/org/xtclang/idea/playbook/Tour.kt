@@ -1328,6 +1328,25 @@ internal fun expect(
 }
 
 /**
+ * Waits until the selected editor, of the file at [path], has its code lenses in place, and returns them as
+ * [TourProbe.lensIdentities] names them: some, none pending, nothing else in progress, and, after an edit, others than
+ * [before], those it had before it; fails the step otherwise. A step that opens a popup presses once they are: lenses
+ * that arrive above the caret move the editor, and IntelliJ closes an editor's popup when its visible area moves.
+ * IntelliJ's code vision has an editor's lenses pending from a change or a refresh until they are in place again, also
+ * while the editor does not show; it computes them anew as the editor shows.
+ */
+internal fun TourProbe.lensesInPlace(
+    path: String,
+    before: String? = null,
+): String {
+    expect(within(HANG) { lensIdentities().let { it.isNotEmpty() && it != before } && !lensesPending() && activity().isEmpty() }) {
+        "The code lenses of ${Path.of(path).fileName} did not come into place: ${before?.let { "before the edit $it, " }.orEmpty()}" +
+            "now ${lensIdentities().ifEmpty { "none" }}, pending ${lensesPending()}, in progress ${activity().ifEmpty { "nothing" }}"
+    }
+    return lensIdentities()
+}
+
+/**
  * Fails unless, within [timeout], the editor of the file at [path] has analyzed its text and marks no error, as a
  * refactoring or a fix must leave the code: it compiles. The bound is against a hang only.
  */
