@@ -111,6 +111,129 @@ class XtcLspModelTest {
         assertTrue(sourceSets().stream().allMatch(entry -> entry.get("projectPath").equals(":library")));
     }
 
+    @Test
+    void runSettingsAreTheExtensionsAndTheExportRealizesNeitherTask() throws IOException {
+        write("settings.gradle.kts", "rootProject.name = \"model-test\"\ninclude(\"app\", \"plain\")\n");
+        write("build.gradle.kts", "plugins { id(\"org.xtclang.xtc-plugin\") apply false }\n");
+        write("plain/build.gradle.kts", "plugins { id(\"org.xtclang.xtc-plugin\") }\nversion = \"1.0\"\n");
+        final var app = """
+            plugins { id("org.xtclang.xtc-plugin") }
+            version = "1.0"
+            xtcRun {
+                jvmArgs.set(listOf("-Dxvm.origin=extension", "%s"))
+                module {
+                    moduleName = "App"
+                    methodName = "greet"
+                    moduleArgs("hello world", "%s")
+                }
+                module {
+                    moduleName = "App"
+                    moduleArgs("second")
+                }
+                module { moduleArgs("nameless") }
+                module { moduleName = "" }
+                module {
+                    moduleName = "Blank"
+                    methodName = ""
+                }
+                moduleName("Other")
+            }
+            xtcTest {
+                jvmArgs.set(listOf("-Dxvm.origin=test"))
+            }
+            // a task's own configuration, which embedded runs do not see, must not even run for the export
+            tasks.named("runXtc") { throw GradleException("runXtc was configured") }
+            tasks.named("testXtc") { throw GradleException("testXtc was configured") }
+            """;
+        write("app/build.gradle.kts", app.formatted("-Xss4m", "ü"));
+        write("app/src/main/x/App.x", "module App {}");
+        write("app/src/test/x/AppTest.x", "module AppTest {}");
+
+        final var first = run("exportXtcLspModel");
+        assertTrue(first.getTasks().stream().noneMatch(task -> task.getPath().endsWith("runXtc") || task.getPath().endsWith("testXtc")));
+        assertFalse(first.getOutput().contains("was configured"), first.getOutput());
+        final var plain = entry(":plain", "main");
+        final var defaults = jvmArgs(plain, "test");
+        assertTrue(defaults.contains("-ea"), defaults.toString());
+        assertEquals(Map.of("jvmArgs", defaults, "modules", Map.of(), "problems", List.of()), plain.get("run"));
+
+        // the first of a module's runs is the one it has; a blank name is no module, and a blank method the default
+        final var main = entry(":app", "main");
+        final var run = (Map<?, ?>) main.get("run");
+        assertEquals(List.of("-Dxvm.origin=extension", "-Xss4m"), run.get("jvmArgs"));
+        assertEquals(Map.of(
+            "App", Map.of("methodName", "greet", "moduleArgs", List.of("hello world", "ü")),
+            "Blank", Map.of("methodName", "run", "moduleArgs", List.of()),
+            "Other", Map.of("methodName", "run", "moduleArgs", List.of())), run.get("modules"));
+        assertEquals(List.of("App", "Blank", "Other"), List.copyOf(((Map<?, ?>) run.get("modules")).keySet()));
+        assertEquals(List.of(), run.get("problems"));
+        assertEquals(Map.of("jvmArgs", List.of("-Dxvm.origin=test"), "problems", List.of()), main.get("test"));
+        // each source set of the project has the project's settings
+        final var tests = entry(":app", "test");
+        assertEquals(main.get("run"), tests.get("run"));
+        assertEquals(main.get("test"), tests.get("test"));
+
+        assertTrue(run("exportXtcLspModel").getOutput().contains("Configuration cache entry reused"));
+        write("app/build.gradle.kts", app.formatted("-Xss8m", "changed"));
+        final var changed = run("exportXtcLspModel");
+        assertTrue(changed.getOutput().contains("Configuration cache entry stored"));
+        final var rerun = (Map<?, ?>) entry(":app", "main").get("run");
+        assertEquals(List.of("-Dxvm.origin=extension", "-Xss8m"), rerun.get("jvmArgs"));
+        assertEquals(List.of("hello world", "changed"), ((Map<?, ?>) ((Map<?, ?>) rerun.get("modules")).get("App")).get("moduleArgs"));
+    }
+
+    @Test
+    void runSettingsThatCannotBeReadAreLeftOutAndNamedWithoutFailingTheExport() throws IOException {
+        write("settings.gradle.kts", "rootProject.name = \"model-test\"\n");
+        write("build.gradle.kts", """
+            plugins { id("org.xtclang.xtc-plugin") }
+            version = "1.0"
+            xtcRun {
+                module {
+                    moduleName = "App"
+                    moduleArg(providers.gradleProperty("greeting"))
+                }
+                module {
+                    moduleName = "Thrown"
+                    moduleArg(provider<String> { error("no greeting here") })
+                }
+                moduleName("Other")
+            }
+            xtcTest {
+                jvmArgs(provider<List<String>> { error("no test options here") })
+            }
+            """);
+        write("src/main/x/App.x", "module App {}");
+
+        run("exportXtcLspModel");
+        final var main = entry(":", "main");
+        final var run = (Map<?, ?>) main.get("run");
+        assertEquals(Map.of("Other", Map.of("methodName", "run", "moduleArgs", List.of())), run.get("modules"));
+        final var problems = (List<?>) run.get("problems");
+        assertEquals(2, problems.size(), problems.toString());
+        assertEquals("module App's moduleArgs: it has no value", problems.getFirst());
+        assertTrue(problems.getLast().toString().startsWith("module Thrown's moduleArgs: "), problems.toString());
+        final var test = (Map<?, ?>) main.get("test");
+        assertEquals(List.of(), test.get("jvmArgs"));
+        assertTrue(((List<?>) test.get("problems")).getFirst().toString().startsWith("jvmArgs: "), test.toString());
+
+        // once the build gives the value, the module has it
+        run("exportXtcLspModel", "-Pgreeting=hi");
+        final var given = (Map<?, ?>) entry(":", "main").get("run");
+        assertEquals(Map.of("methodName", "run", "moduleArgs", List.of("hi")), ((Map<?, ?>) given.get("modules")).get("App"));
+        assertEquals(1, ((List<?>) given.get("problems")).size(), given.toString());
+    }
+
+    private Map<String, Object> entry(final String project, final String sourceSet) {
+        return sourceSets().stream().filter(entry -> entry.get("projectPath").equals(project) && entry.get("sourceSet").equals(sourceSet))
+            .findFirst().orElseThrow();
+    }
+
+    /** The JVM options that {@code entry}'s {@code task}, {@code run} or {@code test}, has. */
+    private static List<?> jvmArgs(final Map<String, Object> entry, final String task) {
+        return (List<?>) ((Map<?, ?>) entry.get(task)).get("jvmArgs");
+    }
+
     private String uri(final String path) {
         return directory.resolve(path).toFile().toURI().toString();
     }
@@ -138,6 +261,12 @@ class XtcLspModelTest {
             group = "sample"
             version = "1.0"
             dependencies { add("xtcModule", "sample:library:1.0") }
+            xtcRun {
+                module {
+                    moduleName = "App"
+                    moduleArgs("from-gradle")
+                }
+            }
             """);
         try (var script = getClass().getResourceAsStream("/compiler-model.init.gradle")) {
             Files.copy(script, directory.resolve("compiler-model.init.gradle"));
@@ -155,6 +284,9 @@ class XtcLspModelTest {
         assertEquals(List.of(uri("library") + "#:"), application.get("projectDependencies"));
         // an included build's project is named from the composite's root, where a bare task name reaches no included build
         assertEquals(":application", application.get("buildTreePath"));
+        // and its run settings come through the workspace's model as the build's own model has them
+        assertEquals(Map.of("App", Map.of("methodName", "run", "moduleArgs", List.of("from-gradle"))),
+            ((Map<?, ?>) application.get("run")).get("modules"));
         final var library = ((List<?>) model.get("sourceSets")).stream().map(value -> (Map<?, ?>) value)
             .filter(entry -> entry.get("projectId").equals(uri("library") + "#:"))
             .filter(entry -> entry.get("sourceSet").equals("main")).findFirst().orElseThrow();
@@ -198,9 +330,9 @@ class XtcLspModelTest {
         return (List<Map<String, Object>>) model.get("sourceSets");
     }
 
-    private BuildResult run(final String task) {
-        return GradleRunner.create().withProjectDir(directory.toFile()).withPluginClasspath()
-            .withArguments(task, "--configuration-cache", "--configuration-cache-problems=fail", "--no-watch-fs", "--stacktrace")
-            .build();
+    private BuildResult run(final String task, final String... properties) {
+        final var arguments = Stream.concat(Stream.of(task, "--configuration-cache", "--configuration-cache-problems=fail",
+            "--no-watch-fs", "--stacktrace"), Stream.of(properties)).toList();
+        return GradleRunner.create().withProjectDir(directory.toFile()).withPluginClasspath().withArguments(arguments).build();
     }
 }
