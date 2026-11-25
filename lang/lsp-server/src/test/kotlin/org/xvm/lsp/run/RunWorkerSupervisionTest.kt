@@ -1,18 +1,25 @@
 package org.xvm.lsp.run
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.AppenderBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import org.xvm.debug.ProgramEvents
 import org.xvm.lsp.Slow
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * How the server supervises its execution workers, with a stand-in worker ([FakeRunWorker]) that can fail to
  * start, report another identity, ignore Stop, crash or keep too much: such workers are ended or retired,
- * their runs say why, and the next run gets a working worker. Idle workers are retired.
+ * their runs say why, and the next run gets a working worker. Idle workers are retired. A worker's events come
+ * over a connection of their own, which garbage on its JVM's streams cannot break, and which only it can make.
  */
 @Slow
 class RunWorkerSupervisionTest {
@@ -38,6 +45,7 @@ class RunWorkerSupervisionTest {
     private fun workers(
         limits: RunWorkerProcess.Limits,
         mode: String = "",
+        jvm: List<String> = emptyList(),
     ) = RunWorkerProcess(
         {
             listOfNotNull(
@@ -46,6 +54,7 @@ class RunWorkerSupervisionTest {
                     .info()
                     .command()
                     .orElse("java"),
+                *jvm.toTypedArray(),
                 "-cp",
                 System.getProperty("java.class.path"),
                 FakeRunWorker::class.java.name,
@@ -60,6 +69,153 @@ class RunWorkerSupervisionTest {
         module: String,
         run: Run = Run(),
     ): Pair<Long, Run> = start(RunWorkerProcess.Request(emptyList(), module, "run", emptyList(), null), run) to run
+
+    /** Runs [body] while recording the worker process's log, debug included, which it is given, and returns what was logged. */
+    private fun logged(body: (List<ILoggingEvent>) -> Unit): List<ILoggingEvent> {
+        val logger = LoggerFactory.getLogger(RunWorkerProcess::class.java) as Logger
+        val events = CopyOnWriteArrayList<ILoggingEvent>()
+        val appender =
+            object : AppenderBase<ILoggingEvent>() {
+                override fun append(event: ILoggingEvent) {
+                    events += event
+                }
+            }.apply { start() }
+        val level = logger.level
+        logger.level = Level.DEBUG
+        logger.addAppender(appender)
+        try {
+            body(events)
+        } finally {
+            logger.detachAppender(appender)
+            logger.level = level
+            appender.stop()
+        }
+        return events
+    }
+
+    @Test
+    fun `what a worker's JVM writes to its standard output and error, within its messages too, breaks none and goes to its run`() {
+        workers(LIVELOCK_LIMITS).use { workers ->
+            val (id, garbage) = workers.run("Garbage")
+            val line = FakeRunWorker.GARBAGE.joinToString("")
+            val message = Regex("""\d+:y+""")
+
+            fun lines() = garbage.output.lines().filter { it.isNotEmpty() }
+            // the fake writes its garbage byte by byte, while it sends its long messages: every one arrives whole, and the
+            // garbage of both streams as lines of their own, between the program's
+            awaitUntil {
+                val all = lines()
+                all.count { it == line } == 2 * FakeRunWorker.MESSAGES && all.count(message::matches) == FakeRunWorker.MESSAGES
+            }
+            workers.input(id, "done\n")
+            // the text of an exit with 7 among the garbage is no message
+            assertThat(garbage.exit()).isEqualTo(0L to null)
+            assertThat(lines().filter(message::matches))
+                .containsExactlyElementsOf((0 until FakeRunWorker.MESSAGES).map { FakeRunWorker.message(it).trimEnd() })
+            assertThat(lines()).allMatch { it == line || message.matches(it) }
+        }
+    }
+
+    @Test
+    fun `what a worker's JVM writes outside a run goes to the log, standard output at debug and standard error as warnings`() {
+        val events =
+            logged { events ->
+                workers(LIVELOCK_LIMITS).use { workers ->
+                    val (id, raw) = workers.run("Raw")
+                    // the run waits for input until its JVM's line has reached its output
+                    awaitUntil { FakeRunWorker.RAW in raw.output }
+                    workers.input(id, "done\n")
+                    assertThat(raw.exit()).isEqualTo(0L to null)
+                    assertThat(raw.output.toString()).contains("ok")
+                }
+                // closing has the idle worker exit, which writes its lines as it does, outside a run; how many there were
+                // is logged once both its streams have ended
+                awaitUntil { events.any { it.formattedMessage.startsWith("execution worker wrote ${FakeRunWorker.ERRORS_AFTER} lines") } }
+            }
+        // its standard output: the first 20 lines at debug, and how many there were
+        assertThat(events.filter { it.formattedMessage.startsWith("execution worker output outside a run:") })
+            .hasSize(20)
+            .allMatch { it.level == Level.DEBUG }
+        assertThat(events.map { it.formattedMessage })
+            .anyMatch { it.startsWith("execution worker wrote ${FakeRunWorker.RAW_AFTER} lines to its standard output outside a run") }
+        // its standard error, where a crash says why: the first 20 lines as warnings, and the last of the others
+        val warnings = events.filter { it.level.isGreaterOrEqual(Level.WARN) }.map { it.formattedMessage }
+        assertThat(warnings.filter { it.startsWith("execution worker errors outside a run:") }.map { it.substringAfter("text=") })
+            .containsExactlyElementsOf((0 until 20).map(FakeRunWorker::error))
+        assertThat(warnings.filterNot { it.startsWith("execution worker errors outside a run:") })
+            .singleElement()
+            .matches { it.startsWith("execution worker wrote ${FakeRunWorker.ERRORS_AFTER} lines to its standard error outside a run") }
+            .matches { FakeRunWorker.LAST_ERROR in it && FakeRunWorker.error(20) in it && FakeRunWorker.error(19) !in it }
+    }
+
+    @Test
+    fun `a worker that dies before it connects ends its run at once, with what its JVM printed`() {
+        // the startup limit is one that only a hang reaches: the worker's end, not the limit, ends the wait for it
+        workers(LIVELOCK_LIMITS, mode = "dies").use { workers ->
+            val (_, run) = workers.run("Quick")
+            val (code, error) = run.exit()
+            assertThat(code).isNull()
+            assertThat(error).isEqualTo("The execution worker stopped as it started; what its JVM printed, in the output above, says why")
+            assertThat(run.output.toString()).contains(FakeRunWorker.DIES)
+            awaitUntil { workers.workerPids().isEmpty() }
+        }
+    }
+
+    @Test
+    fun `a connection with another token is refused, and the worker's own then serves its run`() {
+        val events =
+            logged {
+                workers(LIVELOCK_LIMITS, mode = "wrongToken").use { workers ->
+                    val (_, quick) = workers.run("Quick")
+                    assertThat(quick.exit()).isEqualTo(0L to null)
+                    assertThat(quick.output.toString()).contains("ok")
+                }
+            }
+        assertThat(events.filter { it.formattedMessage.startsWith("execution worker connection refused:") }.map { it.formattedMessage })
+            .singleElement()
+            .matches { it.endsWith("reason=a wrong token") }
+    }
+
+    @Test
+    fun `a connection that sends nothing holds up no other, and the worker's own then serves its run`() {
+        // the startup limit is one that only a hang reaches: a wait for the idle connection's token would be one
+        workers(LIVELOCK_LIMITS, mode = "idleFirst").use { workers ->
+            val (_, quick) = workers.run("Quick")
+            assertThat(quick.exit()).isEqualTo(0L to null)
+            assertThat(quick.output.toString()).contains("ok")
+        }
+    }
+
+    @Test
+    fun `a worker whose JVM prefers IPv6 connects to its server's IPv4 loopback port`() {
+        workers(LIVELOCK_LIMITS, jvm = listOf("-Djava.net.preferIPv6Addresses=true")).use { workers ->
+            val (_, quick) = workers.run("Quick")
+            assertThat(quick.exit()).isEqualTo(0L to null)
+        }
+    }
+
+    @Test
+    fun `what the JVM printed in a run is that run's, and a later run on the same worker that crashes says nothing of it`() {
+        workers(LIVELOCK_LIMITS).use { workers ->
+            val (id, raw) = workers.run("Raw")
+            awaitUntil { FakeRunWorker.RAW in raw.output }
+            workers.input(id, "done\n")
+            assertThat(raw.exit()).isEqualTo(0L to null)
+            val worker = workers.workerPids().single()
+            val (_, crash) = workers.run("Crash")
+            assertThat(crash.exit()).isEqualTo(null to "The execution worker stopped unexpectedly")
+            assertThat(workers.workerPids()).doesNotContain(worker)
+        }
+    }
+
+    @Test
+    fun `a second connection to a worker's port is refused once the worker's own is taken`() {
+        workers(LIVELOCK_LIMITS).use { workers ->
+            val (_, second) = workers.run("Second")
+            assertThat(second.exit()).isEqualTo(0L to null)
+            assertThat(second.output.toString()).contains("second connection refused")
+        }
+    }
 
     @Test
     fun `a worker that does not report ready is ended and its run says so`() {

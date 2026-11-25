@@ -298,15 +298,16 @@ attach may set (section 3.1).
 
 | Limit | Value | Read at |
 |-------|-------|---------|
-| Programs running at once in the worker | 4 | `lsp/run/RunWorkerProcess.kt:72` |
-| Worker startup | 60 seconds | `lsp/run/RunWorkerProcess.kt:73` |
-| Worker stop | 10 seconds | `lsp/run/RunWorkerProcess.kt:74` |
-| Idle worker kept | 10 minutes | `lsp/run/RunWorkerProcess.kt:75` |
-| Heap in use after a run, above which the worker serves no further run | 512 MB | `lsp/run/RunWorkerProcess.kt:76` |
-| Threads after a run, above which the worker serves no further run | 200 | `lsp/run/RunWorkerProcess.kt:77` |
-| Lazy-value computation in a debugged program | the debugger's own `ON_DEMAND`, 1 second, unless the launch's `lazyValueTimeLimit` sets another | `lsp/run/RunWorkerProcess.kt:78`, `javatools/src/main/java/org/xvm/runtime/SessionDebugger.java:308` |
-| Stop of a run inside the worker | 5 seconds | `lsp/run/RunWorker.kt:57` |
-| Program output per event, and held while waiting | 16,384 characters, sent after 20 ms | `lsp/run/RunWorker.kt:421`, `:424` |
+| Programs running at once in the worker | 4 | `lsp/run/RunWorkerProcess.kt:88` |
+| Worker startup | 60 seconds | `lsp/run/RunWorkerProcess.kt:89` |
+| Worker stop | 10 seconds | `lsp/run/RunWorkerProcess.kt:90` |
+| Idle worker kept | 10 minutes | `lsp/run/RunWorkerProcess.kt:91` |
+| Heap in use after a run, above which the worker serves no further run | 512 MB | `lsp/run/RunWorkerProcess.kt:92` |
+| Threads after a run, above which the worker serves no further run | 200 | `lsp/run/RunWorkerProcess.kt:93` |
+| Lazy-value computation in a debugged program | the debugger's own `ON_DEMAND`, 1 second, unless the launch's `lazyValueTimeLimit` sets another | `lsp/run/RunWorkerProcess.kt:94`, `javatools/src/main/java/org/xvm/runtime/SessionDebugger.java:308` |
+| A connection to a worker's port showing its token | 5 seconds for each connection, while others are taken, under the worker startup limit | `lsp/run/RunWorkerProcess.kt:799` |
+| Stop of a run inside the worker | 5 seconds | `lsp/run/RunWorker.kt:60` |
+| Program output per event, and held while waiting | 16,384 characters, sent after 20 ms | `lsp/run/RunWorker.kt:452`, `:455` |
 | Debug console code on a stopped fiber | 2 seconds, unless the launch's `evaluationTimeLimit` sets another | `dap/XtcDebugServer.kt:320` |
 | Connecting to an attached program | 10 seconds | `lsp/run/AttachedProgram.kt:128` |
 
@@ -316,7 +317,7 @@ The server's own instance uses the defaults (`lsp/server/XtcLanguageServer.kt:14
 
 | Process | Command | Read at |
 |---------|---------|---------|
-| Run worker | The server's own `java` executable, `-Dfile.encoding=UTF-8 -cp <server class path> org.xvm.lsp.run.RunWorker`; no JVM options of its own | `lsp/run/RunWorkerProcess.kt:524` |
+| Run worker | The server's own `java` executable, `-Dfile.encoding=UTF-8 -cp <server class path> org.xvm.lsp.run.RunWorker`; no JVM options of its own. Its commands go to its standard input; its events come over a connection to a loopback port, 127.0.0.1 and an ephemeral port, that the server listens at for it alone, given in its environment as `XTC_RUN_WORKER_PORT`, with a random token, `XTC_RUN_WORKER_TOKEN`, which the connection's first line must show, within 5 seconds of its own while the server takes others, so that one that sends nothing holds up none; the server takes one such connection, under the startup limit, and none once the worker has ended. The address is the literal 127.0.0.1 on both sides, whatever the worker's JVM options prefer. What the worker's JVM itself writes to its standard output and error goes to the output of the run it hosts, between the program's lines. Outside a run, the log has the first 20 lines of its standard output at debug, and the first 20 of its standard error as warnings, with the last 20 of the rest once the worker exits, as an idle worker's crash says why there. | `lsp/run/RunWorkerProcess.kt:805`, `:326`, `:482`, `:573`, `lsp/run/RunWorker.kt:82` |
 | Test run | `xtc test` through the server's class path: `-L` the bundled libraries' directory (section 4) and the build's module path, `--no-recompile`, `-x <workspace>/build/xtc/embedded/xunit`, `-I xvm.xunit.report=<json>`, then `-p`, `-c` or `-t` per selected test, and `--debug` when debugged; run in the workspace folder | `lsp/run/TestProcess.kt:57`, `lsp/server/EmbeddedRuns.kt:491`, `:998` |
 
 ## 4. Files and directories
