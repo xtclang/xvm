@@ -27,6 +27,7 @@ import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuild
+import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
@@ -53,6 +54,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Embedded build to disk through the compiler queue, and runs in the execution worker JVM. The worker
@@ -229,7 +231,7 @@ class EmbeddedExecutionTest {
                 RunWorker::class.java.name,
             )
         val line = Regex("""\d+:x+""")
-        RunWorkerProcess({ command }, LIVELOCK_LIMITS).use { workers ->
+        RunWorkerProcess({ _ -> command }, LIVELOCK_LIMITS).use { workers ->
             repeat(3) {
                 val run = run("Noisy", workers = workers)
                 assertThat(run.error).describedAs(run.output).isNull()
@@ -685,6 +687,143 @@ class EmbeddedExecutionTest {
                 assertThat(exit.error).isEqualTo(EmbeddedRuns.STOPPED_BEFORE_START)
                 assertThat(client.output.toString()).doesNotContain("started")
                 assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
+    fun `a run without a method and arguments of its own takes Gradle's xtcRun's, and runs with its JVM options, as it says`() {
+        CompilerTestSupport.configure()
+        val gradled = source("Gradled.x", GRADLED.trimIndent())
+        val client = RunClient()
+        val settings = XdkRunSettings(":app", "greet", listOf("hello world", "ü"), listOf(ORIGIN, JDWP), emptyList())
+        // the build model that the server applied, as an editor's refresh replaces it
+        val applied = AtomicReference(mapOf("Gradled" to settings))
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Gradled", gradled)))
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS), runSettings = { applied.get() }).use { runs ->
+                fun run(params: RunParams): String {
+                    client.output.setLength(0)
+                    assertThat(runs.run(params).awaited().runId).isEqualTo(params.runId)
+                    val exit = client.exits.awaited()!!
+                    assertThat(exit.error).describedAs(client.output.toString()).isNull()
+                    assertThat(exit.exitCode).isZero()
+                    return client.output.toString()
+                }
+
+                // the debugger's agent, which would hold the worker before it starts, is left out
+                val taken = run(RunParams(module = "Gradled", runId = "gradle"))
+                assertThat(taken.lines()).startsWith(
+                    "From Gradle project :app's xtcRun: method greet, arguments [hello world, ü], JVM options [$ORIGIN].",
+                    "Left out of Gradle project :app's xtcRun JVM options: $JDWP (a Java debugger's agent would hold the run's JVM; " +
+                        "Debug debugs the program).",
+                )
+                assertThat(taken).contains("greet 2:hello world")
+                val worker = runs.workerPids().single()
+                // the worker's command line, as the server built it, has the option before its class path, and not the agent
+                val command = runs.workerCommands().getValue(worker)
+                assertThat(command).contains(ORIGIN).doesNotContain(JDWP)
+                assertThat(command.indexOf(ORIGIN)).isLessThan(command.indexOf("-cp"))
+
+                // the run's own method and arguments win; the JVM options, which no run gives, are Gradle's, on the same worker
+                val own = run(RunParams(module = "Gradled", method = "run", args = listOf("own"), runId = "own"))
+                // and each run says what it leaves out
+                assertThat(own.lines()).startsWith("From Gradle project :app's xtcRun: JVM options [$ORIGIN].", taken.lines()[1])
+                assertThat(own).contains("run 1:own")
+                assertThat(runs.workerPids()).containsExactly(worker)
+
+                // without the model, nothing comes from Gradle: the run's worker has the worker's own options
+                applied.set(emptyMap())
+                val plain = run(RunParams(module = "Gradled", args = listOf("own"), runId = "plain"))
+                assertThat(plain).doesNotContain("Gradle's").contains("run 1:own")
+                awaitUntil { runs.workerPids().size == 1 }
+                assertThat(runs.workerPids()).doesNotContain(worker)
+                assertThat(runs.workerCommands().getValue(runs.workerPids().single())).doesNotContain(ORIGIN)
+            }
+        }
+    }
+
+    @Test
+    fun `a run says which of Gradle's settings it takes, not its defaults, which options hold a relative path and what was not read`() {
+        CompilerTestSupport.configure()
+        val bare = source("Bare.x", "module Bare { void run() { @Inject Console console; console.print(\"bare\"); } }")
+        val client = RunClient()
+        // the default method, no arguments, a relative library path, and what the export could not read
+        val settings =
+            XdkRunSettings(
+                ":app",
+                "run",
+                emptyList(),
+                listOf(ORIGIN, "-Djava.library.path=native"),
+                emptyList(),
+                problems = listOf("module Other's moduleArgs: it has no value"),
+            )
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Bare", bare)))
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS), runSettings = { mapOf("Bare" to settings) }).use {
+                assertThat(it.run(RunParams(module = "Bare", runId = "bare")).awaited().runId).isEqualTo("bare")
+                assertThat(client.exits.awaited()!!.exitCode).describedAs(client.output.toString()).isZero()
+                assertThat(client.output.toString().lines()).startsWith(
+                    "From Gradle project :app's xtcRun: JVM options [$ORIGIN, -Djava.library.path=native].",
+                    "Gradle project :app's xtcRun JVM options with a relative path, which resolves against the language server's " +
+                        "working directory, not the project's: [-Djava.library.path=native].",
+                    "Left out of Gradle project :app's xtcRun, as the Gradle model's export could not read them: " +
+                        "module Other's moduleArgs: it has no value.",
+                )
+                assertThat(client.output.toString()).contains("bare")
+            }
+        }
+    }
+
+    @Test
+    fun `what the worker's JVM prints to standard output, as a JVM option asks, goes to the run's output`() {
+        CompilerTestSupport.configure()
+        val bare = source("Bare.x", "module Bare { void run() { @Inject Console console; console.print(\"bare\"); } }")
+        val client = RunClient()
+        // --show-version prints the JVM's version to standard output, the worker's protocol stream, before the worker starts
+        val settings = XdkRunSettings(":app", null, null, listOf("--show-version"), emptyList())
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Bare", bare)))
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS), runSettings = { mapOf("Bare" to settings) }).use {
+                assertThat(it.run(RunParams(module = "Bare", runId = "shown")).awaited().runId).isEqualTo("shown")
+                assertThat(client.exits.awaited()!!.exitCode).describedAs(client.output.toString()).isZero()
+                // the worker runs on the server's own Java, which this test's JVM is
+                assertThat(client.output.toString())
+                    .contains("(build ${System.getProperty("java.runtime.version")}")
+                    .contains("bare")
+            }
+        }
+    }
+
+    @Test
+    fun `a debug launch without a method and arguments of its own takes Gradle's xtcRun's, with its JVM options`() {
+        CompilerTestSupport.configure()
+        val gradled = source("Gradled.x", GRADLED.trimIndent())
+        val client = DebugClient()
+        val settings = XdkRunSettings(":app", "greet", listOf("hello world", "ü"), listOf(ORIGIN), emptyList())
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Gradled", gradled)))
+            RunWorkerProcess(limits = LIVELOCK_LIMITS).use { workers ->
+                val runs = EmbeddedRuns(adapter, { client }, workers, runSettings = { mapOf("Gradled" to settings) })
+                val sessions = DebugSessions(runs, { client })
+                val id = sessions.start().sessionId
+                sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+                sessions.request(id, 2, "launch", """{"module": "Gradled", "moduleUri": "$gradled"}""")
+                sessions.request(id, 3, "configurationDone")
+                val messages = client.until(id) { it.event == "terminated" }
+
+                val output = messages.filter { it.event == "output" }.joinToString("") { it["body"].asJsonObject["output"].asString }
+                assertThat(output)
+                    .contains("From Gradle project :app's xtcRun: method greet, arguments [hello world, ü], JVM options [$ORIGIN].")
+                    .contains("greet 2:hello world")
+                assertThat(messages.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isZero()
+                // the session's worker, which is kept idle for the next run
+                assertThat(workers.workerCommands().values.single()).contains(ORIGIN)
+                sessions.end(DebugSessionParams(id))
             }
         }
     }
@@ -2807,6 +2946,31 @@ class EmbeddedExecutionTest {
                 }
             }
             """.trimIndent()
+
+        /** A JVM option that a Gradle build gives `xtcRun`, which the worker's command line then has. */
+        const val ORIGIN = "-Dxtc.gradle.origin=gradle"
+
+        /** The JVM option that a Gradle build gives `xtcRun` to debug the launcher's JVM, which would hold a worker. */
+        const val JDWP = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+
+        /** Prints which of its entry methods runs and its arguments. */
+        const val GRADLED =
+            """
+            module Gradled {
+                void run(String[] args) {
+                    report("run", args);
+                }
+
+                void greet(String[] args) {
+                    report("greet", args);
+                }
+
+                void report(String method, String[] args) {
+                    @Inject Console console;
+                    console.print($"{method} {args.size}:{args[0]}");
+                }
+            }
+            """
 
         /** Prints 300 lines of 3,000 characters each, numbered, each a little over what one output event batches at once. */
         const val NOISY =

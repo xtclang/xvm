@@ -8847,7 +8847,7 @@
         "windowsWrapper": "gradlew.bat",
         "windowsWrapperSource": "@echo off\r\necho %*>> \"%~dp0gradle-invocations.txt\"\r\necho stub Gradle: %*\r\n",
         "invocations": "gradle-invocations.txt",
-        "notice": "Gradle settings such as runXtc arguments, JVM options and the build's XDK version do not apply",
+        "notice": "Of the build's settings, only xtcRun's method, arguments and JVM options and xtcTest's JVM options apply, once its Gradle model is imported",
         "output": "built and run embedded",
         "gradleBuild": "build",
         "gradleRun": "runXtc --module=BuildModes",
@@ -10839,6 +10839,74 @@
         "limitations": [
           "Go to Definition inside the library source, which LSP4IJ 0.30 opens from workspace/textDocumentContent as the server's ecstasy-library: document, does not navigate in IntelliJ, though the server answers textDocument/definition there; the case checks that answer and the hover through the server, and the native Go to Definition only into the library (xvm#741)."
         ]
+      }
+    },
+    "X351": {
+      "title": "an embedded run in a project whose Gradle model is imported takes the method, arguments and JVM options of the module's xtcRun from the model, says so in its output and leaves out a Java debugger's agent; the run's own arguments win",
+      "manual": [
+        "That the worker's JVM has the options is the language server's tests' (EmbeddedExecutionTest, XdkProjectServerTest), which read the worker's command line: a program that the runner runs sees no system property. The model's run settings from a real Gradle build are the XTC plugin's TestKit test's (XtcLspModelTest) and its export of manualTests'."
+      ],
+      "values": {
+        "file": "GradleRuns.x",
+        "module": "GradleRuns",
+        "source": "module GradleRuns {\n    void run(String[] args) {\n        report(\"run\", args);\n    }\n\n    void greet(String[] args) {\n        report(\"greet\", args);\n    }\n\n    void report(String method, String[] args) {\n        @Inject Console console;\n        console.print($\"{method} {args.size}:{args[0]}\");\n    }\n}\n",
+        "model": {
+          "schemaVersion": 1,
+          "sourceSets": [
+            {
+              "projectId": "${workspace}#:app",
+              "projectPath": ":app",
+              "projectDirectory": "${workspace}/",
+              "buildFile": "${workspace}/build.gradle.kts",
+              "sourceSet": "main",
+              "sourceRoots": [
+                "${workspace}/"
+              ],
+              "sourceFiles": [
+                "${workspace}/GradleRuns.x"
+              ],
+              "moduleRoots": [
+                "${workspace}/GradleRuns.x"
+              ],
+              "resourceSourceRoots": [],
+              "resourceRoots": [],
+              "resourceTask": ":app:processXtcResources",
+              "projectDependencies": [],
+              "modulePath": [],
+              "buildTreePath": ":app",
+              "run": {
+                "jvmArgs": [
+                  "-Dxtc.gradle.origin=playbook",
+                  "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+                ],
+                "modules": {
+                  "GradleRuns": {
+                    "methodName": "greet",
+                    "moduleArgs": [
+                      "hello world"
+                    ]
+                  }
+                }
+              },
+              "test": {
+                "jvmArgs": []
+              }
+            }
+          ]
+        },
+        "project": ":app",
+        "fromGradle": "From Gradle project :app's xtcRun: method greet, arguments [hello world], JVM options [-Dxtc.gradle.origin=playbook].",
+        "leftOut": "Left out of Gradle project :app's xtcRun JVM options: -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005 (a Java debugger's agent would hold the run's JVM; Debug debugs the program).",
+        "output": "greet 1:hello world",
+        "args": [
+          "own"
+        ],
+        "ownFromGradle": "From Gradle project :app's xtcRun: method greet, JVM options [-Dxtc.gradle.origin=playbook].",
+        "ownOutput": "greet 1:own"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
       }
     },
     "CFG1": {

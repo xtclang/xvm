@@ -205,12 +205,15 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
         /** Whether [root] has its own Gradle build. */
         internal fun hasGradleBuild(root: Path?): Boolean = root != null && GRADLE_BUILD_FILES.any { Files.isRegularFile(root.resolve(it)) }
 
-        /** Shown by embedded builds and runs in a project with a Gradle build, whose own settings do not apply. */
+        /**
+         * Shown by embedded builds and runs in a project with a Gradle build, of whose own settings only the run settings
+         * that the imported Gradle model carries apply; the run's output says which it took.
+         */
         internal fun gradleNotUsed(root: Path?): String? =
             if (hasGradleBuild(root)) {
                 "This project has a Gradle build, but embedded mode builds and runs with the language server's compiler " +
-                    "and XDK; Gradle settings such as runXtc arguments, JVM options and the build's XDK version do not " +
-                    "apply. Choose Gradle in $SETTINGS_PAGE to use Gradle."
+                    "and XDK, not the build's. Of the build's settings, only xtcRun's method, arguments and JVM options and " +
+                    "xtcTest's JVM options apply, once its Gradle model is imported. Choose Gradle in $SETTINGS_PAGE to use Gradle."
             } else {
                 null
             }

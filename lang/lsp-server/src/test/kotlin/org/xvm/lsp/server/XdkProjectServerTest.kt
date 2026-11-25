@@ -30,6 +30,7 @@ import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
+import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -38,11 +39,13 @@ import org.xvm.lsp.awaitAsserted
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
 import org.xvm.lsp.logged
+import org.xvm.lsp.run.LIVELOCK_LIMITS
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -397,6 +400,140 @@ class XdkProjectServerTest {
     }
 
     @Test
+    @Slow
+    fun `an embedded run takes xtcRun's settings from the imported build model, and none once there is no model`() {
+        CompilerTestSupport.configure()
+        val workspace =
+            directory
+                .toRealPath()
+                .resolve("gradled")
+                .toFile()
+                .also { it.mkdirs() }
+        val app = workspace.resolve("app/App.x").also { it.parentFile.mkdirs() }.also { it.writeText(GRADLED_APP) }
+        val run =
+            mapOf(
+                "jvmArgs" to listOf("-Dxtc.gradle.origin=model"),
+                "modules" to mapOf("App" to mapOf("methodName" to "greet", "moduleArgs" to listOf("from the model"))),
+            )
+        val entry =
+            mapOf(
+                "projectId" to "app",
+                "sourceSet" to "main",
+                "sourceFiles" to listOf(app.toURI().toString()),
+                "moduleRoots" to listOf(app.toURI().toString()),
+                "resourceRoots" to emptyList<String>(),
+                "projectDependencies" to emptyList<String>(),
+                "modulePath" to emptyList<String>(),
+                "buildTreePath" to ":app",
+                "run" to run,
+                "test" to mapOf("jvmArgs" to emptyList<String>()),
+            )
+        val heard = CopyOnWriteArrayList<Map<String, String>>()
+        val output = StringBuffer()
+        val exits = LinkedBlockingQueue<RunExitedParams>()
+        val client =
+            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+                override fun runOutput(params: RunOutputParams) {
+                    output.append(params.text)
+                }
+
+                override fun runExited(params: RunExitedParams) {
+                    exits.add(params)
+                }
+
+                override fun gradleProjects(params: GradleProjectsParams) {
+                    heard += params.projects
+                }
+            }
+        XtcLanguageServer(XdkAdapter(), workerLimits = LIVELOCK_LIMITS).use { server ->
+            server.connect(client)
+            server
+                .initialize(
+                    editorInitializeParams().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "gradled"))
+                        initializationOptions =
+                            mapOf(
+                                "xtcCompiler" to mapOf("buildModels" to listOf(mapOf("schemaVersion" to 1, "sourceSets" to listOf(entry)))),
+                            )
+                    },
+                ).awaited()
+            awaitAsserted { assertThat(heard.lastOrNull()).isEqualTo(mapOf("App" to ":app")) }
+            assertThat(server.run(RunParams(module = "App", runId = "model")).awaited().runId).isEqualTo("model")
+            assertThat(exits.awaited()!!.exitCode).describedAs(output.toString()).isZero()
+            assertThat(output.toString())
+                .contains(
+                    "From Gradle project :app's xtcRun: method greet, arguments [from the model], JVM options [-Dxtc.gradle.origin=model].",
+                ).contains("greet from the model")
+            val worker = server.runWorkerPids().single()
+            assertThat(server.runWorkerCommands().getValue(worker)).contains("-Dxtc.gradle.origin=model")
+
+            // the workspace's conventions, without a model, run the module as it is
+            server.changeCompilerConfig(JsonParser.parseString("""{"xtc": {"compiler": {"sourceModules": null}}}"""))
+            awaitAsserted { assertThat(heard.lastOrNull()).isEmpty() }
+            output.setLength(0)
+            assertThat(server.run(RunParams(module = "App", runId = "conventions")).awaited().runId).isEqualTo("conventions")
+            assertThat(exits.awaited()!!.exitCode).describedAs(output.toString()).isZero()
+            assertThat(output.toString()).doesNotContain("Gradle's").contains("run, as it is")
+            awaitUntil { server.runWorkerPids().size == 1 && worker !in server.runWorkerPids() }
+            assertThat(server.runWorkerCommands().getValue(server.runWorkerPids().single())).doesNotContain("-Dxtc.gradle.origin=model")
+        }
+    }
+
+    @Test
+    fun `a model whose run settings are malformed, as a blank method, is applied at initialize without them`() {
+        val workspace =
+            directory
+                .toRealPath()
+                .resolve("malformed")
+                .toFile()
+                .also { it.mkdirs() }
+        val app = workspace.resolve("App.x").also { it.writeText("module App { void run() {} }") }
+        val entry =
+            mapOf(
+                "projectId" to "app",
+                "sourceSet" to "main",
+                "sourceFiles" to listOf(app.toURI().toString()),
+                "moduleRoots" to listOf(app.toURI().toString()),
+                "resourceRoots" to emptyList<String>(),
+                "projectDependencies" to emptyList<String>(),
+                "modulePath" to emptyList<String>(),
+                "buildTreePath" to ":app",
+                "run" to
+                    mapOf(
+                        "jvmArgs" to listOf("-ea"),
+                        "modules" to mapOf("App" to mapOf("methodName" to "", "moduleArgs" to emptyList<String>())),
+                    ),
+                "test" to "not an object",
+            )
+        val heard = CopyOnWriteArrayList<Map<String, String>>()
+        val client =
+            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+                override fun runOutput(params: RunOutputParams) {}
+
+                override fun runExited(params: RunExitedParams) {}
+
+                override fun gradleProjects(params: GradleProjectsParams) {
+                    heard += params.projects
+                }
+            }
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(client)
+            // a VS Code client sends the model at initialize, which would fail, and the server with it, if it refused the model
+            server
+                .initialize(
+                    editorInitializeParams().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(workspace.toURI().toString(), "malformed"))
+                        initializationOptions =
+                            mapOf(
+                                "xtcCompiler" to mapOf("buildModels" to listOf(mapOf("schemaVersion" to 1, "sourceSets" to listOf(entry)))),
+                            )
+                    },
+                ).awaited()
+            awaitAsserted { assertThat(heard.lastOrNull()).isEqualTo(mapOf("App" to ":app")) }
+        }
+    }
+
+    @Test
     fun `a workspace's own json replaces the bundled one, the client hears so each time that changes, and builds refuse`() {
         val workspace =
             directory
@@ -715,5 +852,21 @@ class XdkProjectServerTest {
         const val INCOMPATIBLE = "module Library { static String value() = \"text\"; }"
         const val CONSUMER =
             "module Consumer { package lib import Library; Int run() = lib.value(); }"
+
+        /** Prints which entry method runs, and its argument. */
+        val GRADLED_APP =
+            """
+            module App {
+                void run() {
+                    @Inject Console console;
+                    console.print("run, as it is");
+                }
+
+                void greet(String[] args) {
+                    @Inject Console console;
+                    console.print($"greet {args[0]}");
+                }
+            }
+            """.trimIndent()
     }
 }

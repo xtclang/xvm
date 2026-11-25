@@ -15,6 +15,7 @@ import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
+import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkTest
 import org.xvm.lsp.awaitUntil
@@ -174,6 +175,36 @@ class EmbeddedTestRunsTest {
                 assertThat(exit.error).isNull()
                 assertThat(exit.exitCode).isNotZero()
                 assertThat(runs.tracked()).isZero()
+            }
+        }
+    }
+
+    @Test
+    @Slow
+    fun `a run of a module's tests has the JVM options of Gradle's xtcTest, not xtcRun's, as its output says`() {
+        val tested = source("GradleTested.x", GRADLE_TESTED)
+        val client = RunClient()
+        val settings =
+            XdkRunSettings(":app", null, null, listOf("-Dxvm.gradle.origin=run"), listOf("-Dxvm.gradle.origin=test", "-cp", "lib.jar"))
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule("GradleTested", tested)))
+            val gradle = mapOf("GradleTested" to settings)
+            EmbeddedRuns(adapter, { client }, RunWorkerProcess(limits = LIVELOCK_LIMITS), runSettings = { gradle }).use { runs ->
+                runs.run(RunParams(module = "GradleTested", moduleName = "GradleTested", runId = "gradle", tests = emptyList())).awaited()
+                val exit = client.exits.awaited()!!
+
+                assertThat(client.output.toString()).contains(
+                    "From Gradle project :app's xtcTest: JVM options [-Dxvm.gradle.origin=test].",
+                    "Left out of Gradle project :app's xtcTest JVM options: -cp lib.jar " +
+                        "(the run's JVM has the language server's class path).",
+                )
+                val finished = client.events("gradle").filter { it.event == TestEvent.FINISHED }.associateBy { it.id }
+                assertThat(finished.getValue("GradleTested:void origin()").status)
+                    .describedAs(client.output.toString())
+                    .isEqualTo("passed")
+                assertThat(exit.error).isNull()
+                assertThat(exit.exitCode).isZero()
             }
         }
     }
@@ -438,6 +469,18 @@ class EmbeddedTestRunsTest {
     }
 
     private companion object {
+        /** A test that passes when the JVM it runs in has the system property `xvm.gradle.origin=test`. */
+        val GRADLE_TESTED =
+            """
+            module GradleTested {
+                @Test
+                void origin() {
+                    @Inject Map<String, String> properties;
+                    assert properties.getOrDefault("gradle.origin", "none") == "test";
+                }
+            }
+            """.trimIndent() + "\n"
+
         /** Two tests of the module, one of which fails, and one of a class in it, which prints. */
         val MATHY =
             """
