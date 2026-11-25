@@ -51,7 +51,11 @@ internal sealed interface ProofIdentity {
         val index: Int,
     ) : ProofIdentity
 
-    /** The single compiler-generated shorthand constructor, with no invented declaration span. */
+    /**
+     * The single constructor that the compiler writes for a class, with no invented declaration span: the shorthand
+     * constructor of a class's primary parameters, or an anonymous class's when the class it extends has none of its
+     * signature to pass to, as for an interface (otherwise an [anonymousConstructor] identifies it).
+     */
     data class PrimaryConstructor(
         val owner: ProofIdentity,
     ) : ProofIdentity
@@ -265,6 +269,8 @@ internal fun captureRenameFacts(
     packageImports: Map<String, String> = emptyMap(),
     /** The compiled module's name, which is the workspace's own source even when it is a bundled library's. */
     module: String? = null,
+    /** Each anonymous class, which declares nothing, by the span of the type it constructs, where a proof places it. */
+    anonymousClasses: Map<IdentityConstant, SemanticModel.SourceLocation> = emptyMap(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -303,11 +309,12 @@ internal fun captureRenameFacts(
             val module = value?.moduleConstant?.name
             val location =
                 declarations[constant]
+                    ?: anonymousClasses[constant]
                     ?: value?.let { dependencies?.declarations?.get(it)?.location }
             val host = (constant as? MethodConstant)?.namespace
             val sourceHost =
                 host != null &&
-                    (host in declarations || dependencies?.declarations?.containsKey(host) == true)
+                    (host in declarations || host in anonymousClasses || dependencies?.declarations?.containsKey(host) == true)
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             when {
                 constant is TypeParameterConstant -> ProofIdentity.MethodFormal(identity(constant.method), constant.register)
@@ -346,6 +353,11 @@ internal fun captureRenameFacts(
                     (constant.component as? MethodStructure)?.let {
                         it.isSynthetic && it.isShorthandConstructor
                     } == true -> ProofIdentity.PrimaryConstructor(identity(host))
+
+                constant is MethodConstant &&
+                    sourceHost &&
+                    (constant.component as? MethodStructure)?.isAnonymousClassWrapperConstructor == true ->
+                    anonymousConstructor(constant.component as MethodStructure, identity(host), ::identity)
 
                 constant is MethodConstant &&
                     module !in bundled &&
@@ -629,6 +641,33 @@ internal fun captureRenameFacts(
         // last, once every identity above is made
         binaryModules = binaryModules.toSortedSet(),
     )
+}
+
+/**
+ * A constructor that the compiler writes for an anonymous class ([MethodStructure.isAnonymousClassWrapperConstructor]),
+ * of the class [owner] identifies, by the constructor it passes its arguments to, through which their names bind: one
+ * that adds the class's captures to another's parameters by that one (NewExpression.addCaptures); any other by the
+ * constructor of the class it extends that has its signature, which for a construction's arguments is the one that
+ * the compiler selected for them (NewExpression.createPassThroughConstructor); one with neither, as for an interface,
+ * is the class's single constructor.
+ */
+private fun anonymousConstructor(
+    constructor: MethodStructure,
+    owner: ProofIdentity,
+    identity: (Constant) -> ProofIdentity,
+): ProofIdentity {
+    val anonymous = constructor.containingClass
+    val types = constructor.params.map { it.type }
+    val wrapped =
+        (anonymous.getChild("construct") as? MultiMethodStructure)
+            ?.methods()
+            .orEmpty()
+            .filter { it !== constructor && it.isAnonymousClassWrapperConstructor && it.params.size < types.size }
+            .filter { inner -> inner.params.map { it.type } == types.take(inner.params.size) }
+            .maxByOrNull { it.params.size }
+    val passed = wrapped ?: anonymous.getSuper()?.findMethod(constructor.identityConstant.signature)
+    return passed?.let { ProofIdentity.Composed(owner, listOf(identity(it.identityConstant)), emptyList()) }
+        ?: ProofIdentity.PrimaryConstructor(owner)
 }
 
 /**
