@@ -958,8 +958,13 @@ work for a request (`lsp-query`, the request's child) writes `start` and `end` t
 `analysisReadyMs`, `startedMs`, `backendCompleteMs` and `convertedMs`, each absent when the query
 ended before it. At DEBUG (`xtc.trace.level`), as the IntelliJ playbook's runs have it, each phase
 is also an event when it is reached (`analysis-ready`, `started`, `backend-complete`, `converted`),
-so that a query that never ends shows how far it came. Notifications record document versions and
-diagnostic counts. Source buffers, protocol payloads and exception messages are excluded.
+so that a query that never ends shows how far it came, and a query's `end` also says what it
+answered: for a diagnostic pull, the report's kind, result ID and items by severity and code, and
+each related document's report by its result ID and number of items. An answer that repeats the
+document's previous one has only what was asked (`previousResultId`) and `"answer": "repeated"`, as
+a client that pulls every few seconds gets the same answer most times. Notifications record
+document versions and diagnostic counts. Source buffers, protocol payloads and exception messages
+are excluded.
 
 JVM test logs and traces share retained `build/reports/server-logs/server-<PID>-<start>/` directories; packaged-server tests use per-test
 subdirectories there so their traces survive temporary workspace cleanup. IntelliJ playbook runs
