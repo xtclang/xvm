@@ -20,9 +20,6 @@ import org.xvm.asm.constants.TypeConstant.Origin;
 
 import org.xvm.util.ListMap;
 
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
-
 /**
  * Represents the "flattened" information about a type.
  *
@@ -203,13 +200,6 @@ public abstract class TypeInfo {
      * @return true iff this is a type that can be instantiated
      */
     public abstract boolean isNewable(boolean fSingleton, ErrorListener errs);
-
-    /**
-     * Simple helper around the method above.
-     */
-    public boolean isNewable(boolean fSingleton) {
-        return isNewable(fSingleton, silent(PROBE));
-    }
 
     /**
      * Report one or more reasons why this type is "not newable".

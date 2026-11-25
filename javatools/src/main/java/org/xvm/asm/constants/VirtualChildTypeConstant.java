@@ -15,6 +15,9 @@ import org.xvm.javajit.ModuleLoader;
 
 import org.xvm.util.Hash;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
 
@@ -264,7 +267,7 @@ public class VirtualChildTypeConstant
     protected JitInfo buildJitInfo(ModuleLoader loader) {
         TypeConstant type = loader.module.getConstantPool().ensureVirtualChildTypeConstant(
                 getParentType().getJitType(loader.typeSystem), getChildName());
-        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false));
+        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false, silent(PROBE)));
     }
 
     // ----- type comparison support ---------------------------------------------------------------
