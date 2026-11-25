@@ -950,7 +950,15 @@ inside a copy phase are included in its duration rather than emitting a line for
 `activeApiThreads` counts threads inside instrumented API boundaries; nested calls on the same
 thread do not imply parallel compilation. A returned compilation can still contain diagnostics.
 Request spans run from server receipt through reply serialization/write; they include asynchronous
-queue waits, but not the editor's later rendering time. Notifications record document versions and
+queue waits, but not the editor's later rendering time. A request (`lsp-request`) writes two events:
+`start`, and `end` with its `outcome` and, for a reply the server wrote, `writeMs`, so that the reply
+was ready at `elapsedMs` less `writeMs`; a request with no `end` has not been answered. The server's
+work for a request (`lsp-query`, the request's child) writes `start` and `end` too, the end with its
+`outcome` and the time each phase was reached, in milliseconds from the query's start:
+`analysisReadyMs`, `startedMs`, `backendCompleteMs` and `convertedMs`, each absent when the query
+ended before it. At DEBUG (`xtc.trace.level`), as the IntelliJ playbook's runs have it, each phase
+is also an event when it is reached (`analysis-ready`, `started`, `backend-complete`, `converted`),
+so that a query that never ends shows how far it came. Notifications record document versions and
 diagnostic counts. Source buffers, protocol payloads and exception messages are excluded.
 
 JVM test logs and traces share retained `build/reports/server-logs/server-<PID>-<start>/` directories; packaged-server tests use per-test
