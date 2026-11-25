@@ -107,6 +107,7 @@ class EmbeddedExecutionTest {
             """,
             FOREVER,
             ASK,
+            NOISY,
             """
             module Breaker {
                 void run() {
@@ -208,6 +209,37 @@ class EmbeddedExecutionTest {
         assertThat(run.output.lines().filter { it.isNotEmpty() }).isEqualTo((0 until 5000).map { "line $it" })
         println("5000 prints arrived in ${events.get()} output events")
         assertThat(events.get()).isLessThan(1000)
+    }
+
+    @Test
+    fun `a run's output and exit arrive whole while the worker's JVM prints its compilations to its standard output`() {
+        // -XX:+PrintCompilation writes a line for each method the JIT compiles, at any time and in several writes, to the
+        // JVM's standard output, which the worker's events no longer share
+        val command =
+            listOf(
+                ProcessHandle
+                    .current()
+                    .info()
+                    .command()
+                    .orElse("java"),
+                "-XX:+PrintCompilation",
+                "-Dfile.encoding=UTF-8",
+                "-cp",
+                System.getProperty("java.class.path"),
+                RunWorker::class.java.name,
+            )
+        val line = Regex("""\d+:x+""")
+        RunWorkerProcess({ command }, LIVELOCK_LIMITS).use { workers ->
+            repeat(3) {
+                val run = run("Noisy", workers = workers)
+                assertThat(run.error).describedAs(run.output).isNull()
+                assertThat(run.code).isEqualTo(0)
+                val lines = run.output.lines()
+                assertThat(lines.filter(line::matches)).containsExactlyElementsOf((0 until 300).map { "$it:${"x".repeat(3000)}" })
+                // no piece of a message reaches the output as text
+                assertThat(lines).noneMatch { "\"event\"" in it }
+            }
+        }
     }
 
     @Test
@@ -2775,6 +2807,24 @@ class EmbeddedExecutionTest {
                 }
             }
             """.trimIndent()
+
+        /** Prints 300 lines of 3,000 characters each, numbered, each a little over what one output event batches at once. */
+        const val NOISY =
+            """
+            module Noisy {
+                void run() {
+                    @Inject Console console;
+                    StringBuffer buf = new StringBuffer();
+                    for (Int i : 0 ..< 3000) {
+                        buf.add('x');
+                    }
+                    String line = buf.toString();
+                    for (Int i : 0 ..< 300) {
+                        console.print($"{i}:{line}");
+                    }
+                }
+            }
+            """
 
         const val FOREVER =
             """
