@@ -4,6 +4,7 @@ What each editor supports, area by area; click an area to open it. "Yes" means t
 editor, through the editor's usual action for it, and each feature links to the section that says how.
 [Shortcuts](shortcuts.md) has the keys.
 
+<a name="editing"></a>
 <details>
 <summary><b>Editing</b></summary>
 
@@ -26,6 +27,7 @@ editor, through the editor's usual action for it, and each feature links to the 
 
 </details>
 
+<a name="navigation"></a>
 <details>
 <summary><b>Navigation</b></summary>
 
@@ -36,6 +38,7 @@ shortcuts.
 
 </details>
 
+<a name="refactoring"></a>
 <details>
 <summary><b>Refactoring</b></summary>
 
@@ -54,6 +57,7 @@ shortcuts.
 
 </details>
 
+<a name="build-and-run"></a>
 <details>
 <summary><b>Build and run</b></summary>
 
@@ -70,6 +74,7 @@ shortcuts.
 
 </details>
 
+<a name="tests"></a>
 <details>
 <summary><b>Tests</b></summary>
 
@@ -85,6 +90,7 @@ shortcuts.
 
 </details>
 
+<a name="debugging"></a>
 <details>
 <summary><b>Debugging</b></summary>
 
