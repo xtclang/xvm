@@ -30,8 +30,8 @@ The Ecstasy Gradle Plugin integrates the Ecstasy language into Gradle's build ec
 
 - **Source Set Integration**: XTC source directories alongside Java/Kotlin code
 - **Dependency Management**: Transitive dependencies between XTC modules
-- **Multiple Launchers**: Native binaries, forked JVMs, or in-process execution
-- **Programmatic API Access**: Direct method calls to compiler without reflection
+- **Execution Modes**: A forked JVM for each task (the default), the Gradle daemon, or a detached background JVM
+- **Programmatic API Access**: A runtime bridge compiled against javatools' own types, with typed requests
 - **Configuration Cache**: Full support for Gradle's configuration cache
 - **Incremental Compilation**: Smart up-to-date checking for fast rebuilds
 - **Flexible Module Path**: Custom module path resolution for complex project structures
@@ -50,7 +50,7 @@ The main plugin entry point that:
 
 #### 2. **Source Set Support**
 Each Gradle source set (`main`, `test`, etc.) gets:
-- An `xtc` source directory (e.g., `src/main/xtc`)
+- An `x` source directory (e.g., `src/main/x`)
 - A compilation task (`compileXtc`, `compileTestXtc`)
 - Output directories under `build/xtc/<sourceSet>/`
 - Dependency configurations for XTC modules
@@ -60,17 +60,13 @@ Key task types:
 - **XtcCompileTask**: Compiles XTC source files to `.xtc` modules
 - **XtcRunTask**: Executes XTC applications
 - **XtcTestTask**: Executes XUnit tests for a module
-- **XtcDisassembleTask**: Disassembles XTC modules for debugging
 - **XtcLauncherTask**: Abstract base for all launcher-based tasks
 
 ### Launcher System
 
-The plugin uses **JavaClasspathLauncher** for all XTC tool execution, providing optimal performance and flexibility.
-
-#### JavaClasspathLauncher
-**File**: `org.xtclang.plugin.launchers.JavaClasspathLauncher`
-
-Invokes javatools classes directly, either in-process or in a forked JVM based on the execution mode. Supports detached background processes for long-running applications.
+The plugin runs every XTC tool (the compiler, the runner and the test runner) through an execution strategy in
+`org.xtclang.plugin.launchers`, one for each execution mode: `AttachedStrategy`, `DirectStrategy` and
+`DetachedStrategy`.
 
 **Execution Modes** (`executionMode` on a task or extension, or the Gradle property `xtcDefaultExecutionMode`):
 
@@ -92,21 +88,15 @@ Invokes javatools classes directly, either in-process or in a forked JVM based o
    - Returns immediately without waiting
 
 **Implementation Details:**
-The plugin has compile-time access to javatools types through a `compileOnly` dependency:
+`ATTACHED` and `DETACHED` start `java -cp javatools.jar` with the tool's main class, such as `org.xvm.tool.Compiler`.
+`DIRECT` loads javatools.jar and the plugin's runtime bridge (`org.xtclang.plugin.runtime.impl`) into an isolated
+classloader, which `DirectRuntimeBuildService` keeps for the rest of the build. The bridge is compiled against
+javatools' types through a `compileOnly` dependency, see [Programmatic API Access](#programmatic-api-access):
 ```kotlin
 // plugin/build.gradle.kts
 dependencies {
     compileOnly(libs.javatools)  // Type information only, not bundled
 }
-```
-
-At runtime, the plugin loads javatools.jar dynamically:
-```java
-// Direct invocation with full type safety
-XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
-    Compiler.launch(args);  // No reflection!
-    return result;
-});
 ```
 
 **Configuration:**
@@ -157,18 +147,19 @@ the other: set a breakpoint where javatools starts, such as `Launcher.launch`.
 
 #### Debugging Tips
 
-- **In-Process (fork=false)**: Best for debugging plugin code and compiler internals
-- **Forked (fork=true)**: Best for debugging XTC application code in isolation
+- **`DIRECT`**: Best for debugging plugin code and compiler internals
+- **`ATTACHED`** (the default): Best for debugging XTC application code in isolation
 - **Detached Mode**: Not recommended for debugging (process runs in background)
 - **Multiple Modules**: When running multiple modules sequentially, debugger will attach to each execution
 
 ### Programmatic API Access
 
-The plugin can directly call javatools methods without reflection, providing significant benefits:
+In `DIRECT` mode the plugin calls javatools through its Java API rather than its command line, with typed requests
+(`DirectCompileRequest`, `DirectRunRequest`, `DirectTestRequest`) built from the task's settings.
 
 #### Architecture
 
-**Compile-Time Types**:
+**Compile-Time Types**: the runtime bridge, `org.xtclang.plugin.runtime.impl`, is compiled against javatools:
 ```kotlin
 // Plugin declares compile-only dependency
 dependencies {
@@ -176,38 +167,19 @@ dependencies {
 }
 ```
 
-**Runtime Loading**:
-```java
-// Plugin loads javatools.jar dynamically at runtime
-XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
-    projectVersion, javaToolsConfig, xdkFileTree, logger);
-```
+**Runtime Loading**: `DirectRuntimeBuildService` loads the resolved javatools.jar
+(`XtcJavaToolsRuntime.resolveRuntime`) and the bridge into an isolated classloader, once for each javatools runtime,
+and keeps it for the rest of the build.
 
-**Direct Invocation**:
-```java
-// Call compiler directly - no reflection!
-Compiler.launch(args);
-Runner.launch(args);
-Disassembler.launch(args);
-```
+**Invocation**: when it creates a runtime, the plugin looks up the bridge's `executeCompile`, `executeRun` and
+`executeTest` by reflection; the bridge then calls javatools' compiler, `Runner` and `TestRunner` directly.
 
 #### Benefits
 
-**Developer Experience**:
-- **IDE Integration**: Full autocomplete and type checking for javatools APIs
-- **Compile-Time Safety**: Catches API misuse at compile time
-- **Refactoring**: Safe renames across plugin and javatools
-- **Debugging**: Step through compiler code directly in IDE
-
-**Performance**:
-- **No Reflection Overhead**: Direct method calls
-- **JIT Optimization**: HotSpot can inline across plugin/javatools boundary
-- **In-Process Execution**: Zero overhead when fork=false
-
-**Maintainability**:
-- **Clear API Surface**: Explicit dependencies make architecture obvious
-- **Type Safety**: Compiler verifies all javatools calls
-- **Easy Testing**: Direct method calls simplify unit tests
+- **Compile-Time Safety**: The bridge's calls into javatools are type-checked when the plugin builds
+- **Debugging**: One debugger session steps from the plugin into the compiler, see [Debugging](#debugging)
+- **No JVM Startup**: The compiler stays loaded for the rest of the build
+- **Isolation**: Each javatools runtime has its own classloader, apart from the plugin's and Gradle's
 
 ## Configuration
 
@@ -223,7 +195,6 @@ plugins {
 // Optional: Configure compilation
 xtcCompile {
     verbose.set(true)
-    fork.set(false)  // In-process execution (default)
 }
 ```
 
@@ -234,6 +205,8 @@ xtcCompile {
 **Note**: Module path is automatically resolved from your `xtcModule(...)` dependencies. Manual configuration is rarely needed.
 
 ```kotlin
+import org.xtclang.plugin.launchers.ExecutionMode
+
 xtcCompile {
     // Compiler verbosity
     verbose.set(true)
@@ -241,10 +214,10 @@ xtcCompile {
     // Show XTC version during compilation
     showVersion.set(true)
 
-    // Launcher configuration
-    fork.set(false)  // In-process execution (default)
+    // Execution mode: ATTACHED (a forked JVM, the default), DIRECT (the Gradle daemon) or DETACHED
+    executionMode = ExecutionMode.ATTACHED
 
-    // JVM arguments (only used when fork=true)
+    // JVM arguments of the forked JVM (not used in DIRECT mode)
     jvmArgs("-Xmx2g", "-Xms512m")
 }
 ```
@@ -266,7 +239,7 @@ xtcCompile {
 
 ### Runtime Configuration
 
-**Extension**: `XtcRunExtension`
+**Extension**: `XtcRuntimeExtension`
 
 **Note**: In most cases, you don't need to configure the module path manually. The plugin automatically resolves:
 - All dependencies declared with `xtcModule(...)` in your build file
@@ -276,33 +249,29 @@ xtcCompile {
 **Minimal Configuration** (recommended for most projects):
 ```kotlin
 xtcRun {
-    // Main module and method - this is usually all you need!
-    module.set("myapp.xtc")
-    method.set("run")
-
-    // Optional: Program arguments
-    programArgs("arg1", "arg2")
+    // The module to run - this is usually all you need! Its method is run by default
+    moduleName("myapp")
 }
 ```
 
 **Full Configuration** (for advanced scenarios):
 ```kotlin
 xtcRun {
-    // Main module and method
-    module.set("myapp.xtc")
-    method.set("run")
-
-    // Program arguments
-    programArgs("arg1", "arg2")
+    // A module, its method and its arguments
+    module {
+        moduleName = "myapp"
+        methodName = "run"  // the default
+        moduleArgs("arg1", "arg2")
+    }
 
     // Custom module path (only if you need to override automatic resolution)
     modulePath.from(files("runtime/modules"))
 
-    // JVM arguments (only used when fork=true)
+    // JVM arguments of the forked JVM (not used in DIRECT mode)
     jvmArgs("-Xmx1g")
 
     // Execution mode
-    fork.set(false)  // In-process (default)
+    executionMode = ExecutionMode.ATTACHED  // A forked JVM (default)
 }
 ```
 
@@ -323,7 +292,7 @@ task, those calls add, and `setModuleNames(...)`/`setModules(...)` replace.
 ```kotlin
 xtcTest {
     // Test module - this is usually all you need!
-    module.set("myapp.xtc")
+    moduleName("myapp")
 }
 ```
 
@@ -359,19 +328,18 @@ The plugin supports standard Gradle/Maven conventions for skipping tests during 
 
 | Scenario | Configuration | Description |
 |----------|---------------|-------------|
-| Fast development builds | `fork=false` (default) | In-process, instant startup |
-| Debugging compiler/plugin | `fork=false` | Attach to Gradle daemon |
-| Debugging XTC code | `fork=true` + jvmArgs | JDWP remote debugging |
-| Memory isolation | `fork=true` | Separate JVM process |
-| Background services | `detach=true` | Runs after Gradle exits |
-| CI/CD builds | `fork=false` | Fastest for compilation |
+| Default, memory isolation | `ATTACHED` (default) | A forked JVM for each task, apart from the Gradle daemon |
+| Fast local iteration | `DIRECT` | In the Gradle daemon, no JVM startup |
+| Debugging compiler/plugin | `DIRECT` | Attach to the Gradle daemon |
+| Debugging XTC code | `ATTACHED` + jvmArgs | JDWP remote debugging |
+| Background services | `DETACHED` | Runs after Gradle exits |
 
 **Execution Flow**:
 ```
-JavaClasspathLauncher
-  ├─ if (fork=false) → In-process execution (DEFAULT)
-  ├─ if (fork=true, detach=false) → Forked process, wait for completion
-  └─ if (detach=true) → Forked process, background execution
+executionMode
+  ├─ ATTACHED (DEFAULT) → AttachedStrategy: forked JVM, wait for completion
+  ├─ DIRECT             → DirectStrategy: in the Gradle daemon, isolated classloader
+  └─ DETACHED           → DetachedStrategy: forked JVM, background execution
 ```
 
 ## Build Lifecycle
@@ -385,8 +353,8 @@ JavaClasspathLauncher
 
 2. **Compilation Phase** (`compileXtc`):
    - Resolves full module path (XDK + dependencies + source sets)
-   - Loads javatools.jar into plugin classloader
-   - Selects appropriate launcher
+   - Resolves javatools.jar
+   - Runs the compiler in the task's execution mode
    - Compiles XTC sources to `build/xtc/main/`
    - Validates module dependencies
 
@@ -568,18 +536,19 @@ org.gradle.parallel=true
 
 ### XTC-Specific Optimizations
 
-**Use In-Process Execution** (default):
+**Run in the Gradle Daemon** (`DIRECT`, opt-in): no JVM startup, and the compiler stays loaded for the build:
 ```kotlin
 xtcCompile {
-    fork.set(false)  // In-process execution - instant startup
+    executionMode = ExecutionMode.DIRECT
 }
 ```
 
+Or for every task of a build, `-PxtcDefaultExecutionMode=DIRECT`. A compiler crash or an out-of-memory error then
+takes the daemon down, see [Launcher System](#launcher-system).
+
 **Optimize for CI Builds**:
 ```kotlin
-// CI/CD builds work best with default settings (fork=false)
 xtcCompile {
-    fork.set(false)  // In-process, fastest compilation
     verbose.set(false)  // Reduce log noise
 }
 ```
@@ -594,7 +563,7 @@ org.gradle.jvmargs=-Xmx4g
 
 ### Compilation Failures
 
-**Error**: `XTC Compilation Failed (exit code 1)`
+**Error**: `Compilation failed with exit code: 1`
 
 **Solution**:
 1. Enable verbose logging:
@@ -617,7 +586,7 @@ org.gradle.jvmargs=-Xmx4g
 3. Capture configuration at task creation time
 4. Report issues to plugin maintainers
 
-### Fork Mode Issues
+### Forked JVM Issues
 
 **Error**: Forked process fails or hangs
 
@@ -625,20 +594,19 @@ org.gradle.jvmargs=-Xmx4g
 1. Check JVM arguments are valid:
    ```kotlin
    xtcRun {
-       fork.set(true)
        jvmArgs("-Xmx1g")  // Verify memory settings
    }
    ```
 2. Enable verbose logging to see process output
-3. Try in-process mode first to isolate the issue:
+3. Try `DIRECT` mode to isolate the issue:
    ```kotlin
-   fork.set(false)
+   executionMode = ExecutionMode.DIRECT
    ```
 4. For debugging, add JDWP args and attach debugger
 
 ### Module Path Conflicts
 
-**Error**: `Duplicate module on path`
+**Error**: `Duplicate module name: "..."`
 
 **Solution**:
 1. Check dependency tree: `./gradlew dependencies --configuration xtcModule`
@@ -661,7 +629,7 @@ When modifying the plugin, follow these guidelines:
 1. **Configuration Cache First**: Always design for configuration cache compatibility
 2. **Capture Early**: Capture all configuration state in task constructors, but it's better to find a way where this doesn't matter
 3. **No Project in Actions**: Never access `Project` in `@TaskAction` methods
-4. **Newlines**: Always add newline at end of files (enforced by `CLAUDE.md`)
+4. **Newlines**: Always add newline at end of files (required by `AGENTS.md`)
 5. **Final State**: Fields are final if they don't MUST be anything else. Try to create all state as final during construction
 
 ### Testing
