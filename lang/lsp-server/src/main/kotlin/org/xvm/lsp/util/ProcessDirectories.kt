@@ -39,8 +39,9 @@ internal object ProcessDirectories {
     }
 
     /**
-     * The directory of [prefix]'s kind in the temporary directory that holds [path], a canonical path, whichever process
-     * made it, or null when none does.
+     * The directory of [prefix]'s kind in the temporary directory that holds [path], a canonical path, whichever server
+     * process made it, or null when none does: one named as [create] names it, [prefix] and the digits that
+     * [Files.createTempDirectory] adds, and not a folder of a user's whose name only starts with [prefix].
      */
     fun holder(
         path: Path,
@@ -48,8 +49,14 @@ internal object ProcessDirectories {
     ): Path? {
         val temporary = canonicalTemporary
         if (!path.startsWith(temporary) || path.nameCount <= temporary.nameCount + 1) return null
-        return temporary.resolve(path.getName(temporary.nameCount)).takeIf { it.fileName.toString().startsWith(prefix) }
+        return temporary.resolve(path.getName(temporary.nameCount)).takeIf { made(it.fileName.toString(), prefix) }
     }
+
+    /** Whether [name] is one that [create] gives a directory of [prefix]'s kind: [prefix] and digits. */
+    private fun made(
+        name: String,
+        prefix: String,
+    ): Boolean = name.startsWith(prefix) && name.length > prefix.length && name.substring(prefix.length).all { it in '0'..'9' }
 
     /** Deletes the other directories beside [own] whose names start with [prefix] that [SessionLock.unheld] finds. */
     internal fun deleteAbandoned(

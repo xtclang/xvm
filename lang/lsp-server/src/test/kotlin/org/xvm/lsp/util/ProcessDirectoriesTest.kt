@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.awaited
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -20,6 +21,19 @@ class ProcessDirectoriesTest {
         val copies = copies("xtc-library-sources-1")
         assertThat(ProcessDirectories.delete(copies)).isTrue()
         assertThat(copies).doesNotExist()
+    }
+
+    @Test
+    fun `a path is held by a directory of a kind only where the directory is named as a server names it`() {
+        val temporary = File(System.getProperty("java.io.tmpdir")).canonicalFile.toPath()
+        val made = temporary.resolve("xtc-library-sources-5366563676160639398")
+        assertThat(ProcessDirectories.holder(made.resolve("ecstasy/collections/Array.x"), PREFIX)).isEqualTo(made)
+        // a user's folder whose name only starts with the prefix, or is the prefix alone, is not one
+        assertThat(ProcessDirectories.holder(temporary.resolve("xtc-library-sources-myapp/App.x"), PREFIX)).isNull()
+        assertThat(ProcessDirectories.holder(temporary.resolve("xtc-library-sources-/App.x"), PREFIX)).isNull()
+        // nor is the directory itself, or a folder of that name below another folder
+        assertThat(ProcessDirectories.holder(made, PREFIX)).isNull()
+        assertThat(ProcessDirectories.holder(directory.resolve("xtc-library-sources-1/App.x"), PREFIX)).isNull()
     }
 
     @Test
@@ -78,5 +92,6 @@ class ProcessDirectoriesTest {
 
     private companion object {
         const val COLLECTION = "ecstasy/collections/Collection.x"
+        const val PREFIX = "xtc-library-sources-"
     }
 }
