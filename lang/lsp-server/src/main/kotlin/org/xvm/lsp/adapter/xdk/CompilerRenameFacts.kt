@@ -12,6 +12,7 @@ import org.xvm.asm.MultiMethodStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PackageConstant
+import org.xvm.asm.constants.PropertyConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
 import org.xvm.asm.constants.UnionTypeConstant
@@ -316,8 +317,12 @@ internal fun captureRenameFacts(
                 host != null &&
                     (host in declarations || host in anonymousClasses || dependencies?.declarations?.containsKey(host) == true)
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
+            // a mixin's formal type that the compiler adds for its contribution's is that contribution's
+            val implicit = (constant as? PropertyConstant)?.implicitFormal()
             when {
                 constant is TypeParameterConstant -> ProofIdentity.MethodFormal(identity(constant.method), constant.register)
+
+                implicit != null -> identity(implicit)
 
                 // Bundled source navigation must use the same artifact identity as binary-only
                 // views.

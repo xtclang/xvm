@@ -1810,7 +1810,13 @@ private class SemanticModelBuilder(
         return (target as? IdentityConstant)
             ?.takeUnless {
                 it.containsUnresolved() || (it is MethodConstant && it.isNascent)
-            }?.let { if (it is FormalTypeChildConstant) constrained(it) ?: it else it }
+            }?.let {
+                when (it) {
+                    is FormalTypeChildConstant -> constrained(it) ?: it
+                    is PropertyConstant -> it.implicitFormal() ?: it
+                    else -> it
+                }
+            }
     }
 
     /**
@@ -2213,6 +2219,35 @@ private class SemanticModelBuilder(
                 Position(Source.calculateLine(end), Source.calculateOffset(end)),
             ),
         )
+}
+
+/**
+ * The formal type that this one stands for when the compiler adds it to a mixin or annotation, as Inner to
+ * `annotation Cap into Holder` for a Holder<Inner>, which then names its contribution as Holder<Cap.Inner>
+ * (ClassStructure.addImplicitTypeParameters): the contribution's formal type of its name, which the source declares;
+ * null for any other property. The compiler adds the formal types of a contribution written without its parameters
+ * only, and then names the contribution with those formal types themselves, Holder<Holder.Inner>, so a contribution
+ * whose parameters were written gives none. Where several give one of the same name, the compiler adds one, of their
+ * shared constraint, which this binds to the first's: a rename of that one's formal type, which would move the binding to
+ * the next one's, is refused, as a rename of a class's formal type is.
+ */
+internal fun PropertyConstant.implicitFormal(): PropertyConstant? {
+    val property = component as? PropertyStructure ?: return null
+    val mixin = property.parent as? ClassStructure ?: return null
+    if (!property.isSynthetic || !property.isGenericTypeParameter || mixin.format !in setOf(Format.MIXIN, Format.ANNOTATION)) {
+        return null
+    }
+    return mixin.contributionsAsList
+        .asSequence()
+        .filter { it.composition in formalContributions && it.typeConstant.isSingleUnderlyingClass(true) }
+        .mapNotNull { contribution ->
+            val type = contribution.typeConstant
+            val formal =
+                ((type.getSingleUnderlyingClass(true).component as? ClassStructure)?.getChild(name) as? PropertyStructure)
+                    ?.takeIf { it.isGenericTypeParameter }
+                    ?.identityConstant
+            formal?.takeIf { type.paramTypes.any { it.isGenericType && it.definingConstant == formal } }
+        }.firstOrNull()
 }
 
 /**
