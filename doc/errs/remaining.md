@@ -774,9 +774,13 @@ three commits are separate [integration bursts](errs-integration-plan.md#r6r7-in
   debugger's monitor and check `halt` again, so it is not a lost wakeup there. Not reproduced: alone 10
   times, with every core busy 20 times, and the javatools suite with the language server's in parallel,
   as CI runs them, 3 times, all passed. The CI run kept no javatools results, as its diagnostics step
-  copies none (nor on master), so the watchdog's verdict and thread dumps were lost. To do: have CI keep
-  javatools' test results, and read the dumps the next time it fails. Its other failure (2026-10-28,
-  `errs-integration-plan.md`) was a different line, a stop before `count` existed.
+  copies none (nor on master), so the watchdog's verdict and thread dumps were lost. Since 2026-11-23
+  CI keeps them (`a2e343cdc7`, on master as #800): the watchdog's failure message, in the test's JUnit
+  XML, holds every thread's dump, so the next failure shows where the close waits. Not seen again by
+  2026-11-25: #693's runs since have passed or were cancelled, and run 45409340006 (2026-11-24) failed
+  on another test, the runner's frame in an exception's stack, fixed (recorded below). To do:
+  read the dumps the next time it fails. Its other failure (2026-10-28, `errs-integration-plan.md`) was
+  a different line, a stop before `count` existed.
 
 ### R9–R13: debugger features beyond R7
 
