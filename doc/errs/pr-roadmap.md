@@ -507,6 +507,8 @@ The LSP needs more than the initial embedding API: #685 provides the host compil
 
 **State, 2026-11-25:** the merge order is now the [2026-11-25 map](#pr-map-2026-11-25)'s. The three review branches below that were never submitted are snapshots of 2026-10-09 on master `da07a0be8`, which #693 has moved far past: rebuild their units (2–4 in the map) from #693, not from these branches. #683 and #685 were closed, so #685's contracts reach master only with the map's unit 2, `diagnostics-embedding`, which semantic facts now needs first.
 
+**Branches deleted, 2026-11-25:** the eleven `errs/*` comparison and review branches of 2026-10-08 to 2026-10-13 (the three review units below among them) are deleted from the remote, as #693 holds all of their work, moved (the bindings classes to `compiler/ast/bindings/`, the live templates to `Ecstasy.xml`) or replaced (LSP4IJ 0.21 workarounds by the 0.30.x integration, #683's repository reporting by `EmbeddingRepositoryFailureTest`), but for prototypes removed by design (colors, monikers). Their "View diff" links in this file no longer resolve; [their heads](errs-old-branches-2026-11-25.tsv) are recorded, and the commits stay in GitHub's closed PRs and in a local backup (`refs/backup/old-errs-branches/*`).
+
 These are the five extracted review units; the Gradle exporter and Boolean correction are now published as #688 and #689, while the other three still await submission. Counts are incremental against each recorded comparison base, excluding inherited work. Each title links to its description, prerequisites, file summary, validation evidence and complete clickable file inventory below.
 
 | Review unit | Files | Must merge first | GitHub comparison |
