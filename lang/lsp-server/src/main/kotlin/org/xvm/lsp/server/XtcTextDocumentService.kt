@@ -707,22 +707,7 @@ class XtcTextDocumentService(
                         publish(scope, result)
                     } else if (failure !is CancellationException) {
                         logger.error("analysis failed: uri={}, version={}", uri, version, failure)
-                        publish(
-                            scope,
-                            CompilationResult.failure(
-                                uri,
-                                listOf(
-                                    Diagnostic(
-                                        location = DiagnosticLocation(uri, 0, 0, 0, 0),
-                                        severity = Diagnostic.Severity.ERROR,
-                                        message =
-                                            "Ecstasy analysis failed; see the language server log for details",
-                                        code = Diagnostic.Codes.ANALYSIS_FAILED,
-                                        source = Diagnostic.SOURCE,
-                                    ),
-                                ),
-                            ),
-                        )
+                        publish(scope, analysisFailure(uri))
                     }
                 }
             }
@@ -971,7 +956,7 @@ class XtcTextDocumentService(
             request = {
                 val open = openDocuments[uri]
                 if (!workspace && open != null) {
-                    CompletableFuture.completedFuture(listOf(open.analysis.join()))
+                    CompletableFuture.completedFuture(listOf(analyzed(uri, open.analysis)))
                 } else {
                     (adapter as XdkAdapter).workspaceDiagnosticsAsync()
                 }
@@ -988,8 +973,7 @@ class XtcTextDocumentService(
                     results +
                         openDocuments
                             .filterKeys { !diagnosticReports.includes(owned, it) }
-                            .values
-                            .map { it.analysis.join() }
+                            .map { (open, document) -> analyzed(open, document.analysis) }
                             .filter {
                                 workspace || diagnosticReports.includes(it.documentUris, uri)
                             }
@@ -998,6 +982,37 @@ class XtcTextDocumentService(
             workspace = true,
         )
     }
+
+    /**
+     * What [analysis] of the open document [uri] finds, once it ends, or, when it fails, the error that its publication
+     * reports ([analysisFailure]): a pull joins the analyses of every open document, so one that failed would fail each
+     * pull of the others, and the workspace's. A canceled analysis throws, as a later one replaces it.
+     */
+    private fun analyzed(
+        uri: String,
+        analysis: CompletableFuture<CompilationResult>,
+    ): CompilationResult =
+        try {
+            analysis.join()
+        } catch (failure: CompletionException) {
+            if (failure.cause is CancellationException) throw failure
+            analysisFailure(uri)
+        }
+
+    /** What a failed analysis of [uri] reports, pushed or pulled: an error at the document's start, whose cause the log has. */
+    private fun analysisFailure(uri: String): CompilationResult =
+        CompilationResult.failure(
+            uri,
+            listOf(
+                Diagnostic(
+                    location = DiagnosticLocation(uri, 0, 0, 0, 0),
+                    severity = Diagnostic.Severity.ERROR,
+                    message = "Ecstasy analysis failed; see the language server log for details",
+                    code = Diagnostic.Codes.ANALYSIS_FAILED,
+                    source = Diagnostic.SOURCE,
+                ),
+            ),
+        )
 
     /**
      * LSP: textDocument/hover
