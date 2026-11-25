@@ -48,6 +48,8 @@ extension; with another, the attach says so. One debugger at a time can attach.
 Click in the gutter beside a line to set a breakpoint. They work in embedded, Gradle, command-line and
 attached sessions alike.
 
+### Conditions, hit counts and logpoints
+
 - **Condition**: the breakpoint stops only when an expression is `True`, such as
   `rank == Rank.Queen && suit == Suit.Spades` or `i % 2 == 0`. In IntelliJ, right-click the
   breakpoint; in VS Code, choose **Add Conditional Breakpoint** in the gutter's context menu, or
@@ -58,17 +60,6 @@ attached sessions alike.
 - **Logpoint**: print a message instead of stopping, with `{expression}` replaced by its value, such as
   `sum={sum}`. IntelliJ: a breakpoint with **Suspend** unchecked and **Evaluate and log**; VS Code:
   **Add Logpoint**.
-- **Function breakpoint**: stop in every method of a name, such as `recordWin` or `Point.move`, with a
-  condition and hit count like a line's. IntelliJ: in the Breakpoints dialog; VS Code: the
-  Breakpoints view's **+**.
-- **Data breakpoint**: stop once a field of an object changes, saying from what to what, such as
-  `Counter.count changed from 0 to 2`. Right-click the field in the Variables view and choose
-  **Break on Value Change**.
-- **Exceptions**: an exception that nothing catches stops the program where it is thrown, by default.
-  Turn on **All Exceptions** to stop at caught ones too, and give a filter a condition that names
-  exception classes, such as `IllegalArgument, OutOfBounds`, to stop only at those. The exception is
-  the frame's first variable, and the editor shows its message and stack.
-
 <table><tr><td width="50%">
 
 ![IntelliJ conditional breakpoint in Deck's constructor](images/intellij-conditional-breakpoint.png)
@@ -80,6 +71,19 @@ attached sessions alike.
 *VS Code: right-click a breakpoint, **Edit Condition**, to give it a condition, or a hit count; this one stops only for the Queen of Spades.*
 
 </td></tr></table>
+
+### Function, data and exception breakpoints
+
+- **Function breakpoint**: stop in every method of a name, such as `recordWin` or `Point.move`, with a
+  condition and hit count like a line's. IntelliJ: in the Breakpoints dialog; VS Code: the
+  Breakpoints view's **+**.
+- **Data breakpoint**: stop once a field of an object changes, saying from what to what, such as
+  `Counter.count changed from 0 to 2`. Right-click the field in the Variables view and choose
+  **Break on Value Change**.
+- **Exceptions**: an exception that nothing catches stops the program where it is thrown, by default.
+  Turn on **All Exceptions** to stop at caught ones too, and give a filter a condition that names
+  exception classes, such as `IllegalArgument, OutOfBounds`, to stop only at those. The exception is
+  the frame's first variable, and the editor shows its message and stack.
 
 <table><tr><td width="50%">
 
@@ -95,6 +99,8 @@ attached sessions alike.
 
 ![VS Code stopped after two.strategy changed, with Player.strategy Write listed in the Breakpoints view](images/vscode-data-breakpoint.png)
 *VS Code: **Break on Value Change** on `two`'s `strategy` stops right after the line that changes it.*
+
+### Breakpoints while you edit
 
 The running program keeps the code it was built from. When you edit a file while debugging, a
 breakpoint follows its line to the code that was built, and one on a line you changed is marked
