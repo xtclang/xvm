@@ -1,5 +1,6 @@
 package org.xvm.lsp.util
 
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -9,6 +10,9 @@ import java.nio.file.Path
  * killed cannot delete its own, so making one deletes the others of its kind that no process holds.
  */
 internal object ProcessDirectories {
+    /** The temporary directory as canonical paths name it, which [holder] compares them with. */
+    private val canonicalTemporary by lazy { File(System.getProperty("java.io.tmpdir")).canonicalFile.toPath() }
+
     /**
      * A new directory whose name starts with [prefix], made under the [SessionLock.guard] of its kind, so that no
      * server sees it before this process holds it; and, under that guard, the others of its kind that no process
@@ -33,6 +37,26 @@ internal object ProcessDirectories {
             }
         }
     }
+
+    /**
+     * The directory of [prefix]'s kind in the temporary directory that holds [path], a canonical path, whichever server
+     * process made it, or null when none does: one named as [create] names it, [prefix] and the digits that
+     * [Files.createTempDirectory] adds, and not a folder of a user's whose name only starts with [prefix].
+     */
+    fun holder(
+        path: Path,
+        prefix: String,
+    ): Path? {
+        val temporary = canonicalTemporary
+        if (!path.startsWith(temporary) || path.nameCount <= temporary.nameCount + 1) return null
+        return temporary.resolve(path.getName(temporary.nameCount)).takeIf { made(it.fileName.toString(), prefix) }
+    }
+
+    /** Whether [name] is one that [create] gives a directory of [prefix]'s kind: [prefix] and digits. */
+    private fun made(
+        name: String,
+        prefix: String,
+    ): Boolean = name.startsWith(prefix) && name.length > prefix.length && name.substring(prefix.length).all { it in '0'..'9' }
 
     /** Deletes the other directories beside [own] whose names start with [prefix] that [SessionLock.unheld] finds. */
     internal fun deleteAbandoned(
