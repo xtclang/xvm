@@ -5,7 +5,7 @@
  * in the range, or _exclusive_, which means that the value at the bound is excluded from the range.
  */
 const Range<Element extends Orderable>
-        incorporates conditional Interval<Element extends Sequential> {
+        incorporates conditional Interval<Element extends immutable Sequential> {
     /**
      * Construct a Range.
      *

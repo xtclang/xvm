@@ -639,7 +639,8 @@ public class CommonBuilder
      * @return true iff this builder emits a Java interface for the Impl shape
      */
     protected boolean isInterface() {
-        return classStruct.getFormat() == Format.INTERFACE;
+        Format format = classStruct.getFormat();
+        return format == Format.INTERFACE || format == Format.MIXIN;
     }
 
     /**
