@@ -705,9 +705,12 @@ how these checks are recorded.
 ### Test artifact retention
 
 Gradle editor test tasks finish by pruning disposable report payloads. The five newest completed
-runs retain workspaces and diagnostic logs; older runs keep compact result files. Change the count
-with `-PplaybookRetainedRuns=N`, or pin a run with a `.keep-artifacts` file in its report directory.
-Unfinished runs are preserved for investigation. Cleanup never follows workspace symlinks or
+runs retain workspaces and diagnostic logs, and so do the ten newest failed runs, with their traces,
+however many runs passed after them; older runs, passed or failed, keep compact result files. Change
+the counts with `-PplaybookRetainedRuns=N` and `-PplaybookRetainedFailedRuns=N`, or pin a run with a
+`.keep-artifacts` file in its report directory. Unfinished runs are preserved for investigation.
+Cleanup compresses the server traces of completed runs (`server-logs/lsp-trace-*.jsonl.gz`); of the
+passing runs that retain their payloads, the newest keeps them, and the others drop them. Cleanup never follows workspace symlinks or
 removes Git worktrees. Direct npm runs record completion too; the next Gradle run performs pruning,
 or run `:lang:vscode-extension:pruneCompilerPlaybookReports` explicitly with both lang flags.
 The IDE download cache remains shared across runs and is not deleted by retention.

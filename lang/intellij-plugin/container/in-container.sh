@@ -83,6 +83,7 @@ find "$reports" -maxdepth 1 -name 'run-*' -exec basename {} \; > "$earlier" 2>/d
 copy_runs() {
     [ -d "$reports" ] || return 0
     mkdir -p /out/runs
+    local copied=false
     # copy each run directory of this container with a results.json (payload only, not the IDE cache)
     for dir in "$reports"/run-*; do
         [ -f "$dir/results.json" ] || continue
@@ -108,8 +109,15 @@ copy_runs() {
                 [ -d "$folder" ] && rm -rf "$folder"
             done
             echo "copied $name"
+            copied=true
         fi
     done
+    # the copies, in the checkout's reports, get the report retention of a native run (PruneTestReportsTask): their
+    # traces compressed, and those of older passing runs and the payloads of old runs dropped, but not the newest failures'
+    if [ "$copied" = true ]; then
+        ./gradlew -q :lang:intellij-plugin:pruneCompilerPlaybookReports -PincludeBuildLang=true \
+            -PincludeBuildAttachLang=true -PplaybookReports=/out/runs || echo "pruning the copied runs failed"
+    fi
 }
 
 case "$mode" in
