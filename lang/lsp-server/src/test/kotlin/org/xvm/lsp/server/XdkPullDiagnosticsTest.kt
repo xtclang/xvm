@@ -694,7 +694,7 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
-    fun `the trace says what each pull answered, by result IDs and item codes, for the related documents too`() {
+    fun `the trace says what each pull answered, by result IDs and item codes, once for answers that repeat`() {
         val lib =
             directory.resolve("Library.x").toFile().apply {
                 writeText("module Library { MissingType value; }")
@@ -715,6 +715,8 @@ class XdkPullDiagnosticsTest {
             TraceRecording(details = true).use { trace ->
                 val full = session.pull(uri).left
                 session.pull(uri, full.resultId)
+                session.pull(uri, full.resultId)
+                session.workspace()
                 session.workspace()
 
                 fun answers() =
@@ -723,27 +725,34 @@ class XdkPullDiagnosticsTest {
                     }
                 // a query's end, which has its answer, is written once its result is complete, which the pull's caller
                 //  can hear of first
-                awaitUntil("the pulls' queries have ended in the trace") { answers().size == 3 }
+                awaitUntil("the pulls' queries have ended in the trace") { answers().size == 5 }
                 val answers = answers()
                 val pulls = answers.filter { it["operation"].asString == "textDocument/diagnostic" }
-                assertThat(pulls).hasSize(2)
+                assertThat(pulls).hasSize(3)
                 pulls[0].let {
                     assertThat(it["report"].asString).isEqualTo("full")
                     assertThat(it["resultId"].asString).isEqualTo(full.resultId)
                     assertThat(it["items"].toString()).contains("Error:DEPENDENCY-FAILED")
+                    // a related document's report by its result ID and number of items
+                    val related = full.relatedDocuments.getValue(lib.canonicalFile.toURI().toString()).left
                     assertThat(it["related"].asJsonObject[lib.canonicalFile.toURI().toString()].asString)
-                        .startsWith(
-                            full.relatedDocuments
-                                .getValue(lib.canonicalFile.toURI().toString())
-                                .left.resultId,
-                        ).contains("Error:")
+                        .isEqualTo("${related.resultId}, ${related.items.size} items")
                 }
                 pulls[1].let {
                     assertThat(it["previousResultId"].asString).isEqualTo(full.resultId)
                     assertThat(it["report"].asString).isEqualTo("unchanged")
                 }
-                val workspace = answers.single { it["operation"].asString == "workspace/diagnostic" }
-                assertThat(workspace["full"].asJsonObject[uri].asString).contains("Error:DEPENDENCY-FAILED")
+                // an answer that repeats the document's previous one says only what it was asked
+                pulls[2].let {
+                    assertThat(it["previousResultId"].asString).isEqualTo(full.resultId)
+                    assertThat(it["answer"].asString).isEqualTo("repeated")
+                    assertThat(it.has("report")).isFalse()
+                }
+                val workspace = answers.filter { it["operation"].asString == "workspace/diagnostic" }
+                assertThat(workspace).hasSize(2)
+                assertThat(workspace[0]["full"].asJsonObject[uri].asString).contains("Error:DEPENDENCY-FAILED")
+                assertThat(workspace[1]["answer"].asString).isEqualTo("repeated")
+                assertThat(workspace[1].has("full")).isFalse()
                 // the items' codes, never their messages, which can quote the source
                 assertThat(answers.toString()).doesNotContain("Dependencies unavailable", "MissingType")
             }

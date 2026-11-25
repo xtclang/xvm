@@ -168,6 +168,9 @@ class XtcTextDocumentService(
          * a search before the case shows its progress and cancels it. Unset, as outside that case, every search runs.
          */
         private val heldReferences: String? = System.getProperty("xtc.lsp.test.holdReferences")
+
+        /** The fields of a query's traced answer that say what it was asked, which a repeated answer keeps. */
+        private val ASKED = setOf("previousResultId")
     }
 
     /** Open-buffer revision and the analysis future associated with that exact content and module scope. */
@@ -195,6 +198,9 @@ class XtcTextDocumentService(
     private val outOfSync = mutableSetOf<String>()
     private var closed = false
     private val diagnosticReports = DiagnosticReports()
+
+    /** The last answer the trace has of each document's queries, by method and URI, at DEBUG: see [repeated]. */
+    private val tracedAnswers = ConcurrentHashMap<String, Map<String, Any?>>()
     private val semanticTokenReports = SemanticTokenReports()
     private val completionReports = ResolveReports<String>()
     private val actionReports = ResolveReports<AdapterWorkspaceEdit>()
@@ -324,6 +330,25 @@ class XtcTextDocumentService(
         }
     }
 
+    /**
+     * [details], what a query of [method] for [uri] answered, at DEBUG; or, when they are what its previous answer's
+     * were, only what it was asked ([ASKED]) and that the answer is repeated: a client that pulls a document's
+     * diagnostics every few seconds gets the same answer most times, which the trace then names once.
+     */
+    private fun repeated(
+        method: String,
+        uri: String,
+        details: Map<String, Any?>,
+    ): Map<String, Any?> {
+        if (details.isEmpty()) return details
+        val answer = details - ASKED
+        return if (tracedAnswers.put("$method $uri", answer) == answer) {
+            details.filterKeys { it in ASKED } + ("answer" to "repeated")
+        } else {
+            details
+        }
+    }
+
     private fun <T, R> startQuery(
         method: String,
         uri: String,
@@ -436,7 +461,7 @@ class XtcTextDocumentService(
                                     try {
                                         val converted = convert(value)
                                         phases.reached("converted")
-                                        answer.set(ExecutionTrace.details { traced(converted) })
+                                        answer.set(repeated(method, uri, ExecutionTrace.details { traced(converted) }))
                                         result.complete(converted)
                                     } catch (e: Exception) {
                                         result.completeExceptionally(e)
