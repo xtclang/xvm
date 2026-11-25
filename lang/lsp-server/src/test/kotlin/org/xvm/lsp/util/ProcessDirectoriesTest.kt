@@ -3,10 +3,12 @@ package org.xvm.lsp.util
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Checks the cleanup of the directories a server process owns in the temporary directory, such as its read-only copies
@@ -34,6 +36,101 @@ class ProcessDirectoriesTest {
         // nor is the directory itself, or a folder of that name below another folder
         assertThat(ProcessDirectories.holder(made, PREFIX)).isNull()
         assertThat(ProcessDirectories.holder(directory.resolve("xtc-library-sources-1/App.x"), PREFIX)).isNull()
+    }
+
+    @Test
+    fun `a directory stays held for other processes when its process makes another of its kind`() {
+        // in the temporary directory, where a server makes its own, under a prefix of this test's
+        val first = ProcessDirectories.create(HELD)
+        try {
+            assertThat(lockable(first)).describedAs("Another process takes the first directory's lock").isFalse()
+            // the second's cleanup asks about the directories of its kind, the first among them: a look at the first's lock
+            //  that closed its channel to the lock file would release this process's lock on it, and a server that makes
+            //  a directory of the kind next would delete it, as test JVMs running beside each other did
+            val second = ProcessDirectories.create(HELD)
+            try {
+                assertThat(lockable(first)).describedAs("Another process takes the first directory's lock").isFalse()
+                assertThat(lockable(second)).describedAs("Another process takes the second directory's lock").isFalse()
+            } finally {
+                ProcessDirectories.delete(second)
+            }
+        } finally {
+            ProcessDirectories.delete(first)
+        }
+    }
+
+    @Test
+    fun `two threads making directories of a kind at once delete none of them, and every lock stays held`() {
+        // the first, alone, loads the code that the threads run, so that a thread that waits in it waits for the guard
+        val made = ConcurrentLinkedQueue(listOf(ProcessDirectories.create(CONCURRENT)))
+        val failures = ConcurrentLinkedQueue<Throwable>()
+        val makers =
+            List(2) {
+                Thread.ofPlatform().unstarted {
+                    runCatching { repeat(ROUNDS) { made.add(ProcessDirectories.create(CONCURRENT)) } }.onFailure(failures::add)
+                }
+            }
+        // another server holds the kind's guard, so that the two threads come to it at once
+        val guard = owner("guard")
+        try {
+            guard.outputWriter().apply {
+                write("${Path.of(System.getProperty("java.io.tmpdir")).resolve(".${CONCURRENT}lock")}\n")
+                flush()
+            }
+            assertThat(guard.inputReader().readLine()).describedAs("The other process holds the kind's guard").isEqualTo("true")
+            makers.forEach(Thread::start)
+            // the thread that takes the kind's monitor waits for the guard, and the other for the monitor; without the
+            //  monitor, the other's attempt at the guard failed, as the first's lock was this process's, and it made its
+            //  directories unguarded, which the closing of its channel to the guard file had released
+            awaitUntil("a thread waits at the kind's guard for the other, or ends") {
+                makers.any { !it.isAlive || (it.state == Thread.State.BLOCKED && it.stackTrace.firstOrNull()?.methodName == "guard") }
+            }
+            assertThat(made).describedAs("Directories made while another process holds the kind's guard").hasSize(1)
+            guard.outputStream.close()
+            makers.forEach { it.awaited() }
+            assertThat(failures).isEmpty()
+            assertThat(made).hasSize(1 + 2 * ROUNDS).allMatch { Files.isDirectory(it) && Files.isRegularFile(SessionLock.beside(it)) }
+            assertThat(lockable(made.toList())).describedAs("Another process takes a directory's lock").containsOnly(false)
+        } finally {
+            guard.outputStream.close()
+            if (!guard.awaited()) guard.destroyForcibly()
+            makers.filter { it.state != Thread.State.NEW }.forEach { it.awaited() }
+            made.forEach(ProcessDirectories::delete)
+        }
+    }
+
+    /** A [SessionOwner] in a process of its own, in [mode], until its input ends. */
+    private fun owner(mode: String): Process =
+        ProcessBuilder(
+            ProcessHandle
+                .current()
+                .info()
+                .command()
+                .orElseThrow(),
+            "-cp",
+            System.getProperty("java.class.path"),
+            SessionOwner::class.java.name,
+            mode,
+        ).redirectError(ProcessBuilder.Redirect.INHERIT)
+            .start()
+
+    /** Whether a [SessionOwner] in a process of its own can take [directory]'s lock beside it, as a server that deletes it does. */
+    private fun lockable(directory: Path): Boolean = lockable(listOf(directory)).single()
+
+    /** Whether a [SessionOwner] in a process of its own can take each of [directories]' locks beside them. */
+    private fun lockable(directories: List<Path>): List<Boolean> {
+        val owner = owner("processes")
+        try {
+            owner.outputWriter().apply {
+                directories.forEach { write("$it\n") }
+                write("\n")
+                flush()
+            }
+            return directories.map { owner.inputReader().readLine() == "true" }
+        } finally {
+            owner.outputStream.close()
+            if (!owner.awaited()) owner.destroyForcibly()
+        }
     }
 
     @Test
@@ -93,5 +190,14 @@ class ProcessDirectoriesTest {
     private companion object {
         const val COLLECTION = "ecstasy/collections/Collection.x"
         const val PREFIX = "xtc-library-sources-"
+
+        /** The kind of this test's own directories in the temporary directory, apart from the servers'. */
+        const val HELD = "xtc-held-test-"
+
+        /** The kind of the directories that two threads make at once, apart from [HELD]'s. */
+        const val CONCURRENT = "xtc-concurrent-test-"
+
+        /** How many directories each of the two threads makes. */
+        const val ROUNDS = 20
     }
 }

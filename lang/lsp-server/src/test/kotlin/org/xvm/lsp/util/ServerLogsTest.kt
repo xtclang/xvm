@@ -5,11 +5,19 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.Mockito.RETURNS_DEFAULTS
+import org.mockito.Mockito.mock
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
 import org.xvm.lsp.awaited
 import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.nio.channels.FileChannel
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
+import java.nio.file.spi.FileSystemProvider
 import java.time.Instant
 import java.util.Base64
 import java.util.zip.ZipInputStream
@@ -108,6 +116,30 @@ class ServerLogsTest {
         }
     }
 
+    @Test fun `a failed take of a lock that this process holds leaves it held for other processes`() {
+        val session = root.resolve("server-8-1")
+        val lock = checkNotNull(SessionLock.hold(session))
+        try {
+            // another call's take of the same lock file fails, as on a file system without locks: the lock stays this
+            //  process's, which held must answer for without a look, as the look's closing of its channel releases it
+            val unlockable = unlockable(session.resolve(SessionLock.NAME))
+            assertThat(SessionLock.hold(session, unlockable)).isNull()
+            assertThat(SessionLock.held(session)).isTrue()
+            Owner("hold").use { owner ->
+                val taken = owner.reply(session.toString())
+                assertThat(taken).describedAs("Another process takes the lock after a failed hold").isEqualTo("false")
+            }
+            assertThat(SessionLock.share(unlockable)).isNull()
+            assertThat(SessionLock.held(session)).isTrue()
+            Owner("hold").use { owner ->
+                val taken = owner.reply(session.toString())
+                assertThat(taken).describedAs("Another process takes the lock after a failed share").isEqualTo("false")
+            }
+        } finally {
+            lock.channel().close()
+        }
+    }
+
     @Test fun `exports bounded tails with a manifest and excludes symlinks`() {
         val log = root.resolve("server.log")
         Files.writeString(log, "a".repeat(600_000) + "END")
@@ -146,6 +178,27 @@ class ServerLogsTest {
         Files.list(session).use { files -> files.forEach { Files.setLastModifiedTime(it, FileTime.from(time)) } }
         Files.setLastModifiedTime(session, FileTime.from(time))
     }
+
+    /** A path to [lock], whose channels fail to take a lock, as on a file system without locks. */
+    private fun unlockable(lock: Path): Path {
+        val channel = mock(FileChannel::class.java, answer { if (it.method.name == "tryLock") throw IOException("No locks") else null })
+        val provider = mock(FileSystemProvider::class.java, answer { if (it.method.name == "newFileChannel") channel else null })
+        val fileSystem = mock(FileSystem::class.java, answer { if (it.method.name == "provider") provider else null })
+        val real = lock.toRealPath()
+        return mock(
+            Path::class.java,
+            answer {
+                when (it.method.name) {
+                    "getFileSystem" -> fileSystem
+                    "toRealPath" -> real
+                    else -> null
+                }
+            },
+        )
+    }
+
+    /** Answers by [answer], or as a mock does by default where it answers null. */
+    private fun answer(answer: (InvocationOnMock) -> Any?): Answer<Any?> = Answer { answer(it) ?: RETURNS_DEFAULTS.answer(it) }
 
     /** A [SessionOwner] in a process of its own, whose log root is [root], until its input ends. */
     private inner class Owner(

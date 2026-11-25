@@ -608,6 +608,19 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   `DiagnosticResultMessagesTest` has X71's sequence, and `ClosedFileProblemsTest` the bridge's, with the record's
   snapshot changed while the first report comes, as an edit that LSP4IJ sends only once the document is committed
   changes it; both fail without the fix.
+- [x] Found 2026-11-25 in a full run of the server's tests, whose classes run in several JVMs at once, not when
+  `XdkPullDiagnosticsTest` runs alone (2 of 2 passed): its two library source cases failed, one reading
+  `TypeTemplate.x` from its JVM's `xtc-library-sources-<n>` folder, which was gone (FileNotFoundException), the other
+  with a canceled pull. A case there makes a second folder of that kind in the same JVM, as another server's, and
+  making it asks about the other folders of the kind (`ProcessDirectories.deleteAbandoned`): its look at the first
+  folder's lock opened and closed a channel to the lock file, which on Linux and macOS releases the process's lock, and
+  another JVM making its folder then took the first for an ended server's and deleted it. A child process could take
+  the first folder's lock once the second was made. Fixed (2026-11-25): `SessionLock` keeps the lock files that its
+  process holds or shares, and `held` answers for them without opening them, as its documentation required of its
+  callers. It notes a lock file before it takes the lock, so that no look by another of the process's threads comes in
+  between, and a process's threads take a kind's guard one at a time, by a monitor: a second thread's attempt at the
+  guard failed, as the first's lock was the process's, and closing its channel released that lock, after which it made
+  its directory unguarded.
 - [x] Found 2026-11-25 in `run-tour-1548907980096693794`, the tour's sections through Diagnostics in the container,
   not in the tour runs kept before: Reading code's Parameter info popup (Ctrl+P) did not show within its 3-minute
   bound. The step's closers, now in order, say what came after its press: "ParameterInfo, scroll", one scroll of the
