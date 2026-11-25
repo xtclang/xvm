@@ -23,6 +23,62 @@ internal object XdkWorkspaceDiscovery {
     private val excluded =
         setOf(".git", ".gradle", ".idea", ".vscode-test", "build", "out", "node_modules")
 
+    /** How many of a discovery's slowest parses its trace event names. */
+    private const val SLOWEST = 3
+
+    /** The parses of the discovery that this thread runs; null outside one. */
+    private val discovery = ThreadLocal<Parses>()
+
+    /** How long each header that one discovery parsed took, on the thread that runs it. */
+    private class Parses {
+        private val parsed = mutableListOf<Pair<File, Double>>()
+
+        fun parsed(
+            file: File,
+            ms: Double,
+        ) {
+            parsed += file to ms
+        }
+
+        /** How many it parsed, in how long in all, the longest, and the slowest files with their times. */
+        fun fields(): Map<String, Any?> =
+            mapOf(
+                "parses" to parsed.size,
+                "parseMs" to parsed.sumOf { it.second },
+                "longestParseMs" to parsed.maxOfOrNull { it.second },
+                "slowest" to parsed.sortedByDescending { it.second }.take(SLOWEST).map { (file, ms) -> "${file.toURI()} $ms" },
+            )
+    }
+
+    /**
+     * Runs [discover], a discovery of [operation] (a walk, file events or a document's text, or a search that runs
+     * several), of the document at [uri] if it is one, which the trace has as its start and one event at its end: how
+     * many headers it parsed and how long they took, which a parse's own events say only at DEBUG. One that runs in
+     * another counts in the other's events.
+     */
+    internal fun <T> traced(
+        operation: String,
+        uri: String? = null,
+        discover: () -> T,
+    ): T {
+        if (discovery.get() != null) return discover()
+        val span = ExecutionTrace.span("discovery", operation, uri)
+        // one start for the discovery, however many files it parses, shows one that never ends
+        ExecutionTrace.event(span, "start")
+        val parses = Parses()
+        discovery.set(parses)
+        val result =
+            try {
+                runCatching(discover)
+            } finally {
+                discovery.remove()
+            }
+        val outcome =
+            result.exceptionOrNull()?.let { if (it is CancellationException) "cancelled" else "failed" } ?: "returned"
+        ExecutionTrace.event(span, "discovered", mapOf("outcome" to outcome) + parses.fields())
+        return result.getOrThrow()
+    }
+
     /** Source header and imports discovered without requiring a successful module compilation. */
     data class Header(
         val text: String,
@@ -45,10 +101,12 @@ internal object XdkWorkspaceDiscovery {
             text: String?,
             cancelled: () -> Boolean,
         ): Catalog =
-            if (text == null) {
-                Catalog(files - file)
-            } else {
-                Catalog(withoutLeftBuffers(files + (file to header(file, text, files[file], cancelled)), mapOf(file to text)))
+            traced("document", file.toURI().toString()) {
+                if (text == null) {
+                    Catalog(files - file)
+                } else {
+                    Catalog(withoutLeftBuffers(files + (file to header(file, text, files[file], cancelled)), mapOf(file to text)))
+                }
             }
 
         /** The catalog's modules, under the library replacement of the workspace [folders] ([XdkLibraryReplacement]). */
@@ -95,25 +153,26 @@ internal object XdkWorkspaceDiscovery {
             folders: List<File>,
             overlays: Map<String, String>,
             cancelled: () -> Boolean,
-        ): Catalog {
-            val buffers = buffers(overlays)
-            val sources =
-                folders
-                    .flatMap { folder ->
-                        checkCurrent(cancelled)
-                        if (!folder.isDirectory) emptyList() else walk(folder, cancelled)
-                    }.toSet() + buffers.keys.filter { includes(folders, it) }
-            return Catalog(
-                withoutLeftBuffers(
-                    sources
-                        .mapNotNull { file ->
+        ): Catalog =
+            traced("walk") {
+                val buffers = buffers(overlays)
+                val sources =
+                    folders
+                        .flatMap { folder ->
                             checkCurrent(cancelled)
-                            read(file, buffers, files[file], cancelled)?.let { file to it }
-                        }.toMap(),
-                    buffers,
-                ),
-            )
-        }
+                            if (!folder.isDirectory) emptyList() else walk(folder, cancelled)
+                        }.toSet() + buffers.keys.filter { includes(folders, it) }
+                Catalog(
+                    withoutLeftBuffers(
+                        sources
+                            .mapNotNull { file ->
+                                checkCurrent(cancelled)
+                                read(file, buffers, files[file], cancelled)?.let { file to it }
+                            }.toMap(),
+                        buffers,
+                    ),
+                )
+            }
 
         /**
          * This catalog after file events at [paths], reading only what they name: a source file is read again,
@@ -125,33 +184,34 @@ internal object XdkWorkspaceDiscovery {
             paths: Collection<File>,
             overlays: Map<String, String>,
             cancelled: () -> Boolean,
-        ): Catalog {
-            val buffers = buffers(overlays)
-            val sources = files.toMutableMap()
-            val before = files.toMap()
-            for (path in paths) {
-                checkCurrent(cancelled)
-                sources.keys.removeIf { (it == path || it.toPath().startsWith(path.toPath())) && it !in buffers }
-                val found =
-                    when {
-                        !reachable(folders, path) -> emptyList()
-                        Files.isDirectory(path.toPath()) -> walk(path, cancelled)
-                        path.isFile && path.extension == "x" && !Files.isSymbolicLink(path.toPath()) -> listOf(path)
-                        else -> emptyList()
-                    }
-                found.forEach { file ->
+        ): Catalog =
+            traced("file-events") {
+                val buffers = buffers(overlays)
+                val sources = files.toMutableMap()
+                val before = files.toMap()
+                for (path in paths) {
                     checkCurrent(cancelled)
-                    read(file, buffers, files[file], cancelled)?.let { sources[file] = it }
+                    sources.keys.removeIf { (it == path || it.toPath().startsWith(path.toPath())) && it !in buffers }
+                    val found =
+                        when {
+                            !reachable(folders, path) -> emptyList()
+                            Files.isDirectory(path.toPath()) -> walk(path, cancelled)
+                            path.isFile && path.extension == "x" && !Files.isSymbolicLink(path.toPath()) -> listOf(path)
+                            else -> emptyList()
+                        }
+                    found.forEach { file ->
+                        checkCurrent(cancelled)
+                        read(file, buffers, files[file], cancelled)?.let { sources[file] = it }
+                    }
                 }
+                val current = withoutLeftBuffers(sources, buffers)
+                val removed = (before.keys - current.keys).groupBy { before.getValue(it).text }
+                val moves =
+                    (current.keys - before.keys)
+                        .mapNotNull { file -> removed[current.getValue(file).text]?.singleOrNull()?.let { file to it } }
+                        .toMap()
+                Catalog(current, moves)
             }
-            val current = withoutLeftBuffers(sources, buffers)
-            val removed = (before.keys - current.keys).groupBy { before.getValue(it).text }
-            val moves =
-                (current.keys - before.keys)
-                    .mapNotNull { file -> removed[current.getValue(file).text]?.singleOrNull()?.let { file to it } }
-                    .toMap()
-            return Catalog(current, moves)
-        }
     }
 
     /**
@@ -273,13 +333,14 @@ internal object XdkWorkspaceDiscovery {
         text: String,
         cancelled: () -> Boolean,
     ): Header {
+        val start = System.nanoTime()
         val heard = ErrorList()
         val errors = ErrorListener.cancellable(heard, cancelled)
         // a source without a token, as a file that an editor has just created is, stops the parser as it starts, as
         // the snapshot's own read of a root's name knows: it names no module
         val name =
             try {
-                ExecutionTrace.api("Parser.parseModuleName", file.toURI().toString()) {
+                ExecutionTrace.api("Parser.parseModuleName", file.toURI().toString(), detail = true) {
                     Parser(Source(text, file.path), errors).parseModuleNameIgnoreEverythingElse()
                 }
             } catch (_: CompilerException) {
@@ -290,6 +351,7 @@ internal object XdkWorkspaceDiscovery {
                 ExecutionTrace.api(
                     "Parser.parseSource(partial-discovery)",
                     file.toURI().toString(),
+                    detail = true,
                 ) {
                     Parser.forPartialAnalysis(Source(text, file.path), errors).parseSource()
                 }
@@ -304,6 +366,7 @@ internal object XdkWorkspaceDiscovery {
                 .filterIsInstance<CompositionNode.Import>()
                 .mapNotNull { (it.type as? NamedTypeExpression)?.name }
                 .toSet()
+        discovery.get()?.parsed(file, ExecutionTrace.elapsed(start))
         return Header(text, name, imports, tree == null || heard.hasSeriousErrors())
     }
 
