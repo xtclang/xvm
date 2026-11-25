@@ -108,12 +108,17 @@ tukaani-xz = "1.12"
 lang-zig = "0.15.2"
 
 # =============================================================================
-# Lang tooling - Gradle plugin classpath floors
+# Lang tooling - Gradle plugin and IntelliJ test dependency floors
 # =============================================================================
 # Not a project dependency. The IntelliJ Platform and node-gradle Gradle plugins put
 # vulnerable Jackson versions on their build script classpaths, and both are already
 # at their latest release. The Jackson BOM raises that floor without pinning.
 lang-jackson = "2.23.0"
+lang-jsoup = "1.23.2"
+
+# Align the modules that JetBrains Starter and the IntelliJ test framework resolve.
+lang-intellij-netty = "4.2.21.Final"
+lang-intellij-opentelemetry = "1.68.0"
 
 [plugins]
 
@@ -239,9 +244,14 @@ lang-jtreesitter = { module = "io.github.tree-sitter:jtreesitter", version.ref =
 tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
 
 # =============================================================================
-# Lang tooling - Gradle plugin classpath floors (see version comment above)
+# Lang tooling - Gradle plugin and IntelliJ test dependency floors (see version comment above)
 # =============================================================================
 lang-jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "lang-jackson" }
+lang-jsoup = { module = "org.jsoup:jsoup", version.ref = "lang-jsoup" }
+
+lang-intellij-bouncycastle-bom = { module = "org.bouncycastle:bc-jdk18on-bom", version.ref = "bouncycastle" }
+lang-intellij-netty-bom = { module = "io.netty:netty-bom", version.ref = "lang-intellij-netty" }
+lang-intellij-opentelemetry-bom = { module = "io.opentelemetry:opentelemetry-bom", version.ref = "lang-intellij-opentelemetry" }
 
 [bundles]
 unicode = ["jakarta-activation-api", "jakarta-xml-bind-api", "jaxb-runtime"]
