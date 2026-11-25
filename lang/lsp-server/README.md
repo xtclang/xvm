@@ -970,14 +970,21 @@ run can be followed from its build to the worker that ran it:
   Each module is given with the start of its artifact's revision (SHA-256), and `(reused)` when an
   earlier compile supplied it.
 - `DebugSessions`: `debug session launches a run: session=... run=...`, for a debug session's run.
-- `EmbeddedRuns`: `run starting: run=correlated build=28 artifact=Logged@614fdb35d3c9 debug=false`;
-  instead `run not started` when the build failed, or `run stopped before it started`.
+- `EmbeddedRuns`: `run starting: run=correlated build=28 artifact=Logged@614fdb35d3c9 debug=false`,
+  with ` gradle=:app` after it where the run takes its Gradle project's run settings from the
+  imported model; instead `run not started` when the build failed, or `run stopped before it started`.
 - `RunWorkerProcess`: `run assigned: workerRun=1 run=correlated worker=87623 generation=1 module=Logged
   method=run`, then `run exited: ... code=7` (or `error=...`) and `execution worker after a run:` with
   what the worker kept. `worker` is the worker's process ID, `generation` counts the workers this
   server started, from 1, and `workerRun` is the worker's own number for the run. A worker's
   `started`, `ready`, `serves no further run` and `exited` lines give the same `worker` and
-  `generation`.
+  `generation`. A worker with JVM options from Gradle has ` options=[...]` at the end of its `started`
+  line and of its runs' `run assigned` lines. What a worker's JVM writes to its standard output and error
+  outside the protocol, as `-Xlog` does, goes to the output of the run it hosts. Outside a run, the first
+  20 lines of standard output are logged at debug, `execution worker output outside a run:`, and their
+  number when it exits; the first 20 of standard error are warnings, `execution worker errors outside a
+  run:`, as an idle worker's crash says why there, and when it exits a warning has their number and the
+  last 20 of the rest.
 
 ```bash
 grep -E 'run=correlated|build=28 |worker=87623 ' ~/.xtc/logs/lsp/server-*/server.log
