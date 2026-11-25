@@ -248,7 +248,7 @@ internal fun ParityScenarios.buildModeCases() {
                 return output
             }
 
-            // the default is embedded, also beside a Gradle build, and says the build's settings do not apply
+            // the default is embedded, also beside a Gradle build, and says which of the build's settings apply
             val built = JsonParser.parseString(execution.build(project, HANG_SECONDS.toInt())).asJsonObject
             val text = built.string("text")
             check(!built["errors"].asBoolean && !built["aborted"].asBoolean) { "Embedded build failed: $text" }

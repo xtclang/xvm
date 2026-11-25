@@ -8847,7 +8847,7 @@
         "windowsWrapper": "gradlew.bat",
         "windowsWrapperSource": "@echo off\r\necho %*>> \"%~dp0gradle-invocations.txt\"\r\necho stub Gradle: %*\r\n",
         "invocations": "gradle-invocations.txt",
-        "notice": "Gradle settings such as runXtc arguments, JVM options and the build's XDK version do not apply",
+        "notice": "Of the build's settings, only xtcRun's method, arguments and JVM options and xtcTest's JVM options apply, once its Gradle model is imported",
         "output": "built and run embedded",
         "gradleBuild": "build",
         "gradleRun": "runXtc --module=BuildModes",
