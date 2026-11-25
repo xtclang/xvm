@@ -1,6 +1,6 @@
 # Squashing #693 into reviewable pull requests
 
-A plan only: making it changed nothing in #693. It covers the 482 commits of `errs/full-testable-lsp-20261009` over `master` (tip `a10580fcaf`, master `8b5257f10b`, 2026-11-25), numbered 1 to 482 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-482 came after, and were placed by the same rules. Five of them are already open on master as their own PRs: 459 as #802, and 467, 471, 473 and 474 as #804; each drops out of #693 when its PR merges.
+A plan only: making it changed nothing in #693. It covers the 483 commits of `errs/full-testable-lsp-20261009` over `master` (tip `00ea900ea9`, master `8b5257f10b`, 2026-11-25), numbered 1 to 483 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-483 came after, and were placed by the same rules. Five of them are already open on master as their own PRs: 459 as #802, and 467, 471, 473 and 474 as #804; each drops out of #693 when its PR merges.
 
 It proposes 15 pull requests, each of which changes either only files outside lang/ (xvm only: X1-X5) or only files in lang/ (lang only: L1-L10), merged in one order. To get there, the commits are first sorted into 13 topics (P1-P13), the commits of a topic that implement or fix the same thing, however far apart, are grouped to be joined, and every commit is then divided at lang/: its other files go to its topic's xvm PR, its lang/ files to its topic's lang PR.
 
@@ -22,7 +22,7 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 12 | **L7** | lang/ | VS Code extension | L4, L5 | P8 | 11 | 2.7k / 341 |
 | 13 | **L8** | lang/ | Embedded build, run and tests in the language server and both editors | X4, L6, L7 | P9 | 49 | 9.6k / 8.8k |
 | 14 | **L9** | lang/ | Debugging: the DAP server, debug sessions, launch and attach, and both editors' debug UI | X4, L8 | P10 | 48 | 8.6k / 11.0k |
-| 15 | **L10** | lang/ | Test infrastructure: the playbooks, the scenario catalog, the manual test plan and the tours | L9, X5 | P12, P13 | 139 | 7.1k / 57.0k |
+| 15 | **L10** | lang/ | Test infrastructure: the playbooks, the scenario catalog, the manual test plan and the tours | L9, X5 | P12, P13 | 140 | 7.2k / 57.0k |
 
 Already open on master, apart from these: #802 (unused constructor arguments, commit 459) and #804 (runXtc keeps xtcRun's settings, commits 467, 471, 473 and 474). Their commits leave #693 when they merge.
 
@@ -54,8 +54,8 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 | P10 | Debugger: runtime debugger, DAP server and the editors' debugging | P9 | no | 60 | 36 | 17.2k / 15.2k |
 | P11 | The XDK's library sources and the XDK workspace | P5 | yes, once 1 commit's other files move | 22 | 9 | 3.3k / 3.2k |
 | P12 | Test infrastructure: playbooks, scenarios, tours and their container | P7-P11 | no | 112 | 20 | 3.0k / 57.3k |
-| P13 | Documentation, build and CI | the PRs it documents | no | 29 | 4 | 5.5k / 372 |
-| | **Total** | | | **482** | **165** | |
+| P13 | Documentation, build and CI | the PRs it documents | no | 30 | 4 | 5.6k / 372 |
+| | **Total** | | | **483** | **165** | |
 
 The topics group the commits; the PRs above divide them at lang/. Sizes count added lines, with commit 8 divided by package (below). They leave out only the two files that later commits delete whole (XdkColorPrototype, XdkMonikers); the rest of what the pairs in finding 2 take back is still counted, so squashed PRs come out somewhat smaller. Tests are most of every PR's size: reviewers read the main code and skim the tests.
 
@@ -227,6 +227,7 @@ These commits change files outside the components of the PR they are placed in, 
 - 470 `a2184011d3` Link DeclarationDigests' Javadoc to XvmStructure.registerConstants, which javadoc could not find as its own, in P11 (+1; also touches: javatools)
 - 476 `bbe845ba74` Split the user guide into a landing page, one page per chapter, and features and shortcuts pages, in P13 (+1,264; also touches: intellij)
 - 477 `5c75702791` Keep each language server's whole trace in playbook runs, with what each diagnostic pull answered, in P12 (+141; also touches: intellij, server)
+
 
 ## Splitting commit 8
 
@@ -551,14 +552,14 @@ Kept as they are:
 
 **Scope.** The lang docs and READMEs, the configuration reference, packaging and install tasks, the PR previews, and build hygiene. Fold feature documentation into the feature PRs where it describes them; keep the rest here.
 
-**Builds on** the PRs it documents. **Commits:** 29 now, about 4 after squashing. **Added lines:** 5,516 main, 372 tests.
+**Builds on** the PRs it documents. **Commits:** 30 now, about 4 after squashing. **Added lines:** 5,633 main, 372 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
 | The lang documentation | 21 `14ebae667c` Rename the compiler guide and testing documents, and correct stale documentation<br>68 `cd0826a511` Drop the references to documents and plans this branch does not carry<br>69 `b992d273af` Describe debugging, and the run changes, in the server and editor READMEs<br>120 `d8c2818706` Fix lang/README's task paths, versions and feature summary<br>123 `9878f1174c` Use American spelling in the shippable docs<br>124 `598efca5d2` Name testing in the embedded build and run index entry<br>125 `cddd9ba40a` Name the editors' UI as it reads, Ecstasy, where the docs said XTC<br>126 `9b6dc61542` Call the server and the IntelliJ plugin by their names in the lang docs<br>128 `714c15f290` Say that every adapter needs Java 25 in editor-setup.md<br>283 `e8c271d9da` Add lang/doc/configuration.md, one reference for the lang tooling's configuration<br>290 `502db6167a` Correct six statements in the lang docs that the configuration reference found out of date<br>305 `2a931e8277` Point the docs' line citations at the lines today's changes moved | Twelve documentation commits, most of a few lines (names, spelling, task paths, line citations): one or two commits, or each folded into the PR it documents. |
 | Publish previews of the editor plugins from a pull request | 315 `446140d22c` Publish previews of the IntelliJ plugin and VS Code extension from a pull request<br>316 `8168ca7dbc` Name the previews "Ecstasy Language Support (bleeding edge)", and warn of a trailing space in the repository URL | 316 names and checks 315's previews. |
 | Packaging tasks and build defaults | 273 `7a775fc8b7` Add IDE plugin packaging and install tasks, and quiet vsce's file tree<br>317 `0550f55747` Leave the lang build out of the root build by default again<br>379 `31bff41a58` Suppress UnstableApiUsage where the build still calls incubating Gradle API unsuppressed<br>284 `d9c471af7b` Say in AGENTS.md that gradle.properties turns the lang build flags on | Install tasks, the lang build left out of the root build by default, incubating API suppressions. Check 284 against 317: 284 says gradle.properties turns the lang flags on, 317 turns them off. |
-| The user guide, with screenshots from the tours | 424 `42737304d7` Add a user guide for the Ecstasy language tooling, with screenshots from both editor tours<br>426 `7b19169cb1` Make the user guide's screenshots from tagged tour steps, rebuilt by guide.py from any tour run<br>429 `4fb790479a` Show IntelliJ and VS Code side by side in the user guide wherever both tours show the feature<br>430 `3c0ca5612e` Move the user guide into lang/doc/user-guide, with its screenshots in images<br>434 `d9f42da19d` Say in the user guide that embedded tests run with the server's XDK and xunit, not the build's<br>435 `2083f1a99f` Give testing its own chapter in the user guide: write, find, run, read, rerun, debug, build modes, troubleshooting<br>452 `96da927596` Say in the user guide what a rename doesn't change or check<br>475 `8290e4ca82` Tighten the user guide: one place for each fact, plainer sentences, and what a newcomer needs<br>476 `bbe845ba74` Split the user guide into a landing page, one page per chapter, and features and shortcuts pages<br>481 `efc3648dc1` Mark the user guide's keys up as keys, and the names it left plain as code<br>482 `a10580fcaf` Add an index of every page and section of the user guide to its landing page | the guide, its testing chapter and its screenshots, made from tagged tour steps |
+| The user guide, with screenshots from the tours | 424 `42737304d7` Add a user guide for the Ecstasy language tooling, with screenshots from both editor tours<br>426 `7b19169cb1` Make the user guide's screenshots from tagged tour steps, rebuilt by guide.py from any tour run<br>429 `4fb790479a` Show IntelliJ and VS Code side by side in the user guide wherever both tours show the feature<br>430 `3c0ca5612e` Move the user guide into lang/doc/user-guide, with its screenshots in images<br>434 `d9f42da19d` Say in the user guide that embedded tests run with the server's XDK and xunit, not the build's<br>435 `2083f1a99f` Give testing its own chapter in the user guide: write, find, run, read, rerun, debug, build modes, troubleshooting<br>452 `96da927596` Say in the user guide what a rename doesn't change or check<br>475 `8290e4ca82` Tighten the user guide: one place for each fact, plainer sentences, and what a newcomer needs<br>476 `bbe845ba74` Split the user guide into a landing page, one page per chapter, and features and shortcuts pages<br>481 `efc3648dc1` Mark the user guide's keys up as keys, and the names it left plain as code<br>482 `a10580fcaf` Add an index of every page and section of the user guide to its landing page<br>483 `00ea900ea9` Give the user guide's long sections subsections, and its index the third level | the guide, its testing chapter and its screenshots, made from tagged tour steps |
 
 ## Notes for review
 
@@ -1077,3 +1078,4 @@ Kept as they are:
 | 480 | `dbd853e176` | P12 | — | L10 | IntelliJ tour step fixes | Press Ctrl+F1 in the tour's Warnings step once the edit's code lenses are in place |
 | 481 | `efc3648dc1` | P13 | — | L10 | The user guide, with screenshots from the tours | Mark the user guide's keys up as keys, and the names it left plain as code |
 | 482 | `a10580fcaf` | P13 | — | L10 | The user guide, with screenshots from the tours | Add an index of every page and section of the user guide to its landing page |
+| 483 | `00ea900ea9` | P13 | — | L10 | The user guide, with screenshots from the tours | Give the user guide's long sections subsections, and its index the third level |
