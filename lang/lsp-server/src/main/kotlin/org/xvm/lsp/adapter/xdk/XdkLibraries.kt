@@ -83,7 +83,7 @@ internal object XdkLibraries {
     private val shared by lazy {
         val temporary = Path.of(System.getProperty("java.io.tmpdir"))
         val dir = temporary.resolve("$PREFIX${fingerprint.take(16)}").toFile()
-        SessionLock.guard(temporary.resolve(".${PREFIX}lock")).use { guard ->
+        SessionLock.guard(temporary.resolve(".${PREFIX}lock")) { guarded ->
             if (!File(dir, COMPLETE).isFile) {
                 val staging = Files.createTempDirectory(temporary, "${dir.name}.").toFile()
                 packagedResources.forEach { name -> resource(name).use { input -> File(staging, name).outputStream().use(input::copyTo) } }
@@ -93,7 +93,7 @@ internal object XdkLibraries {
                 if (!staging.renameTo(dir)) staging.deleteRecursively()
             }
             val lock = SessionLock.share(SessionLock.beside(dir.toPath()))
-            if (guard != null) {
+            if (guarded) {
                 SessionLock.unheld(dir.toPath(), "$PREFIX*").forEach {
                     it.toFile().deleteRecursively()
                     Files.deleteIfExists(SessionLock.beside(it))
