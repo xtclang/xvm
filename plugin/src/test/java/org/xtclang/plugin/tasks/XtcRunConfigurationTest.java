@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import org.xtclang.plugin.XtcPlugin;
 import org.xtclang.plugin.XtcProjectDelegate;
+import org.xtclang.plugin.internal.XtcLauncherDefaults;
 import org.xtclang.plugin.launchers.ExecutionMode;
 
 class XtcRunConfigurationTest {
@@ -175,6 +177,105 @@ class XtcRunConfigurationTest {
 
         assertFalse(run.getCliModuleArgs().isPresent());
         assertEquals(List.of("original"), run.resolveModulesToRunFromModulePath(List.of()).getFirst().getModuleArgs().get());
+    }
+
+    @Test
+    void jvmArgsAddAndSetJvmArgsReplacesOnTheExtensionAndTheTaskAlike() {
+        final var project = newProject();
+        final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+        final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
+        assertEquals(List.of(), extension.getJvmArgs().get());
+
+        extension.jvmArgs("-Xss4m");
+        run.jvmArgs("-Dorigin=task");
+        assertEquals(List.of("-Xss4m"), extension.getJvmArgs().get());
+        assertEquals(List.of("-Xss4m", "-Dorigin=task"), run.getJvmArgs().get());
+
+        extension.setJvmArgs(List.of("-Xmx1g"));
+        assertEquals(List.of("-Xmx1g"), extension.getJvmArgs().get());
+        run.setJvmArgs(List.of("-Xmx2g"));
+        assertEquals(List.of("-Xmx2g"), run.getJvmArgs().get());
+    }
+
+    @Test
+    void theLaunchedJvmGetsAssertionsThenThePluginsOptionsThenTheJvmArgs() {
+        final var project = newProject();
+        final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+        final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
+        final var plugin = XtcLauncherDefaults.jvmOptions();
+        assertFalse(plugin.contains("-ea"));
+        assertTrue(XtcLauncherDefaults.enableAssertions());
+        assertTrue(run.getEnableAssertions().get());
+
+        run.jvmArgs("-Xss4m");
+        assertEquals(concat(withAssertions(plugin), "-Xss4m"), run.getAllJvmArgs().get());
+        // replacing the jvmArgs keeps the plugin's options and -ea, as Gradle's setJvmArgs keeps enableAssertions
+        run.setJvmArgs(List.of("-Xmx1g"));
+        assertEquals(concat(withAssertions(plugin), "-Xmx1g"), run.getAllJvmArgs().get());
+        // enableAssertions = false on the extension leaves -ea out of each of its tasks, unless a task sets its own
+        extension.getEnableAssertions().set(false);
+        assertEquals(concat(plugin, "-Xmx1g"), run.getAllJvmArgs().get());
+        run.getEnableAssertions().set(true);
+        assertEquals(concat(withAssertions(plugin), "-Xmx1g"), run.getAllJvmArgs().get());
+    }
+
+    @Test
+    void cliModuleRunsTheConfiguredModuleAloneWithItsMethodAndArguments() {
+        final var run = newProject().getTasks().named("runXtc", XtcRunTask.class).get();
+        run.module(module -> module.getModuleName().set("Other"));
+        run.module(module -> {
+            module.getModuleName().set("Example");
+            module.getMethodName().set("greet");
+            module.moduleArgs("hello", "world");
+        });
+        run.setCliModuleName("Example");
+
+        final var modules = run.resolveModulesToRunFromModulePath(List.of());
+        assertEquals(1, modules.size());
+        final var selected = modules.getFirst();
+        assertEquals("Example", selected.getModuleName().get());
+        assertEquals("greet", selected.getMethodName().get());
+        assertEquals(List.of("hello", "world"), selected.getModuleArgs().get());
+    }
+
+    @Test
+    void cliMethodAndArgumentsOverrideTheCliModulesConfiguredOnes() {
+        final var run = newProject().getTasks().named("runXtc", XtcRunTask.class).get();
+        final var configured = run.module(module -> {
+            module.getModuleName().set("Example");
+            module.getMethodName().set("greet");
+            module.moduleArgs("hello");
+        });
+        run.setCliModuleName("Example");
+        run.setCliModuleArgs("own");
+
+        final var selected = run.resolveModulesToRunFromModulePath(List.of()).getFirst();
+        assertEquals("greet", selected.getMethodName().get());
+        assertEquals(List.of("own"), selected.getModuleArgs().get());
+        assertEquals(List.of("hello"), configured.getModuleArgs().get());
+    }
+
+    @Test
+    void cliModuleThatNoModuleConfiguresRunsWithTheDefaults() {
+        final var run = newProject().getTasks().named("runXtc", XtcRunTask.class).get();
+        run.module(module -> {
+            module.getModuleName().set("Example");
+            module.getMethodName().set("greet");
+        });
+        run.setCliModuleName("Elsewhere");
+
+        final var selected = run.resolveModulesToRunFromModulePath(List.of()).getFirst();
+        assertEquals("Elsewhere", selected.getModuleName().get());
+        assertEquals("run", selected.getMethodName().get());
+        assertEquals(List.of(), selected.getModuleArgs().get());
+    }
+
+    private static List<String> withAssertions(final List<String> options) {
+        return Stream.concat(Stream.of("-ea"), options.stream()).toList();
+    }
+
+    private static List<String> concat(final List<String> first, final String... rest) {
+        return Stream.concat(first.stream(), Stream.of(rest)).toList();
     }
 
     private static Project newProject() {

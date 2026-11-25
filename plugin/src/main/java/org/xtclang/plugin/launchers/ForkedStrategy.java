@@ -136,7 +136,7 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         final var runtime = task.resolveLauncherRuntime();
         final List<String> command = new ArrayList<>();
         command.add(javaExecutable);
-        command.addAll(task.getJvmArgs().get());
+        command.addAll(task.getAllJvmArgs().get());
         command.add("-cp");
         command.add(runtime.asClasspathArgument());
         command.add(task.getJavaLauncherClassName());
