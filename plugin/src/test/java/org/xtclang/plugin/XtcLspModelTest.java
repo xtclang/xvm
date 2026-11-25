@@ -24,6 +24,8 @@ import org.gradle.testkit.runner.UnexpectedBuildFailure;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.xtclang.plugin.internal.XtcLauncherDefaults;
+
 /** Exercise the real plugin's evaluated model and producers without compiling XTC modules. */
 class XtcLspModelTest {
     @TempDir
@@ -160,14 +162,16 @@ class XtcLspModelTest {
         // the first of a module's runs is the one it has; a blank name is no module, and a blank method the default
         final var main = entry(":app", "main");
         final var run = (Map<?, ?>) main.get("run");
-        assertEquals(List.of("-Dxvm.origin=extension", "-Xss4m"), run.get("jvmArgs"));
+        // the JVM arguments that runXtc's JVM gets: the plugin's own options and -ea before the extension's jvmArgs
+        assertEquals(XtcLauncherDefaults.allJvmArgs(true, List.of("-Dxvm.origin=extension", "-Xss4m")), run.get("jvmArgs"));
         assertEquals(Map.of(
             "App", Map.of("methodName", "greet", "moduleArgs", List.of("hello world", "ü")),
             "Blank", Map.of("methodName", "run", "moduleArgs", List.of()),
             "Other", Map.of("methodName", "run", "moduleArgs", List.of())), run.get("modules"));
         assertEquals(List.of("App", "Blank", "Other"), List.copyOf(((Map<?, ?>) run.get("modules")).keySet()));
         assertEquals(List.of(), run.get("problems"));
-        assertEquals(Map.of("jvmArgs", List.of("-Dxvm.origin=test"), "problems", List.of()), main.get("test"));
+        assertEquals(Map.of("jvmArgs", XtcLauncherDefaults.allJvmArgs(true, List.of("-Dxvm.origin=test")), "problems", List.of()),
+            main.get("test"));
         // each source set of the project has the project's settings
         final var tests = entry(":app", "test");
         assertEquals(main.get("run"), tests.get("run"));
@@ -178,7 +182,7 @@ class XtcLspModelTest {
         final var changed = run("exportXtcLspModel");
         assertTrue(changed.getOutput().contains("Configuration cache entry stored"));
         final var rerun = (Map<?, ?>) entry(":app", "main").get("run");
-        assertEquals(List.of("-Dxvm.origin=extension", "-Xss8m"), rerun.get("jvmArgs"));
+        assertEquals(XtcLauncherDefaults.allJvmArgs(true, List.of("-Dxvm.origin=extension", "-Xss8m")), rerun.get("jvmArgs"));
         assertEquals(List.of("hello world", "changed"), ((Map<?, ?>) ((Map<?, ?>) rerun.get("modules")).get("App")).get("moduleArgs"));
     }
 
