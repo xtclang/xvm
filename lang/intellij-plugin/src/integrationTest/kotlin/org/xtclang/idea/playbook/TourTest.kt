@@ -34,6 +34,7 @@ class TourTest {
         var tour: Tour? = null
         var frame: String? = null
         var actionLog: String? = null
+        var escaped: Throwable? = null
         try {
             ide.run(options = TOUR_OPTIONS) {
                 tour =
@@ -50,6 +51,7 @@ class TourTest {
                     }
             }
         } catch (failure: Throwable) {
+            escaped = failure
             Files.writeString(run.resolve("failure.txt"), failure.stackTraceToString())
             throw failure
         } finally {
@@ -92,10 +94,16 @@ class TourTest {
                         "skippedCount" to (tour?.skipped?.size ?: 0),
                         "skipped" to tour?.skipped.orEmpty(),
                         "ideFailures" to ide.ideFailures.toList(),
+                        // what failed the run, when that was not a step or a check, as in failure.txt
+                        "failure" to escaped?.toString(),
                     ),
                 ) + "\n",
             )
             println("IntelliJ tour: ${run.resolve("tour.json")}")
+            // the IDE has closed, or never started, and with it its language server: the report retention
+            //  (PruneTestReportsTask) compresses a completed run, passed or failed, keeps a failed one whole while it is among
+            //  the newest failures, prunes it once it is neither among those nor among the newest runs, and leaves others alone
+            Files.writeString(run.resolve(".completed"), "IDE closed\n")
         }
         val failures = tour?.failures.orEmpty()
         check(failures.isEmpty()) { "${failures.size} of the tour's steps and checks failed:\n" + failures.joinToString("\n") }

@@ -224,10 +224,13 @@ class CompilerPlaybookTest {
                     APPEND,
                 )
             }
+        var failure: Throwable? = null
         try {
             ide.run(if (mode == PlaybookMode.SETTINGS_PERSISTENCE) 2 else 1) { phase -> cases.run(this, phase) }
-            Files.writeString(run.resolve(".completed"), "IDE closed\n")
             check(ide.unexpectedIdeFailures.isEmpty()) { ide.unexpectedIdeFailures.joinToString("\n\n") }
+        } catch (escaped: Throwable) {
+            failure = escaped
+            throw escaped
         } finally {
             val report =
                 mapOf(
@@ -259,12 +262,18 @@ class CompilerPlaybookTest {
                         "Native IntelliJ actions with Ultimate disabled. Partial and unimplemented cases are explicit; manual visual checks remain separate.",
                     "ideFailures" to ide.unexpectedIdeFailures,
                     "knownIdeFailures" to ide.knownIdeFailures,
+                    // what failed the run, when that was not a case
+                    "failure" to failure?.toString(),
                 )
             Files.writeString(
                 run.resolve("results.json"),
                 GsonBuilder().setPrettyPrinting().create().toJson(report) + "\n",
             )
             println("IntelliJ compiler playbook report: ${run.resolve("results.json")}")
+            // the IDE has closed, or never started, and with it its language server: the report retention
+            //  (PruneTestReportsTask) compresses a completed run, passed or failed, keeps a failed one whole while it is among
+            //  the newest failures, prunes it once it is neither among those nor among the newest runs, and leaves others alone
+            Files.writeString(run.resolve(".completed"), "IDE closed\n")
         }
     }
 }

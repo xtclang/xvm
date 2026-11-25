@@ -443,29 +443,31 @@ The test JVMs get a 1 GB heap, so that the library compile of `xtc.lsp.compileLi
 
 ### 6.2 IntelliJ playbook and tour
 
-`testCompilerPlaybook` (`lang/intellij-plugin/build.gradle.kts:1046`) turns Gradle properties into JVM
+`testCompilerPlaybook` (`lang/intellij-plugin/build.gradle.kts:1062`) turns Gradle properties into JVM
 properties of the Starter test JVM. All are `providers` properties.
 
 | Gradle property | System property | Default | What it does | Read at |
 |-----------------|-----------------|---------|--------------|---------|
 | `intellijPlaybookCases` | `xtc.playbook.cases` | all cases | Comma-separated case IDs. | `ideaIt/CompilerPlaybookTest.kt:210` |
 | `intellijPlaybookIde` | `xtc.playbook.ideVersion` | `2026.2.3`, the IDE the plugin builds against | The IntelliJ the playbook drives: the default, or `2026.3`, with IDE Starter and its driver for that IDE (the `lang-intellij-next-*` versions in `gradle/libs.versions.toml`). The plugin still builds against the default; only the playbook's IDE changes. | `lang/intellij-plugin/build.gradle.kts:259`, `ideaIt/PlaybookIde.kt:38` |
-| `intellijPlaybookHang` | `xtc.playbook.hang` | ten minutes | Seconds before a case counts as hung, in the playbook and in the IDE's probes; shorter only for a quicker look at a case that hangs. | `lang/intellij-plugin/build.gradle.kts:1067`, `lang/intellij-plugin/src/playbookProbe/kotlin/org/xtclang/idea/playbook/probe/HangLimit.kt:15` |
+| `intellijPlaybookHang` | `xtc.playbook.hang` | ten minutes | Seconds before a case counts as hung, in the playbook and in the IDE's probes; shorter only for a quicker look at a case that hangs. | `lang/intellij-plugin/build.gradle.kts:1083`, `lang/intellij-plugin/src/playbookProbe/kotlin/org/xtclang/idea/playbook/probe/HangLimit.kt:15` |
 | `intellijPlaybookReplacementGates` | `xtc.playbook.replacementGates` | none | Upstream replacement gates to run; needs `-Plsp4ijPlugin` or `-Plsp4ijChannel`. | `ideaIt/CompilerPlaybookTest.kt:201` |
 | `intellijLargeFileProbe` | `xtc.playbook.largeFileProbe` | `false` | Run the large-file editing probe. | `ideaIt/CompilerPlaybookTest.kt:25` |
 | `intellijTour` | `xtc.tour` | `false` | Run the tour, which records and checks the plugin's features. | `ideaIt/TourTest.kt:20` |
 | `intellijTourSections` | `xtc.tour.sections` | all sections | Sections of the tour to run. | `ideaIt/TourTest.kt:27` |
-| `intellijTourVisible` | `xtc.tour.visible` | `false` | Show the pointer, keys and typing without a recording. | `ideaIt/TourTest.kt:43` |
+| `intellijTourVisible` | `xtc.tour.visible` | `false` | Show the pointer, keys and typing without a recording. | `ideaIt/TourTest.kt:44` |
 | `intellijTourHang` | `xtc.tour.hang` | the playbook's, ten minutes | Seconds before a tour step counts as hung. | `ideaIt/Tour.kt:439` |
 | `lsp.adapter` | `xtc.playbook.adapter` | `compiler` | The adapter the playbook expects; `treesitter` only for the settings-persistence session. | `ideaIt/CompilerPlaybookTest.kt:29` |
 | `lsp4ijPlugin`, `lsp4ijVersion`, `lsp4ijChannel` | `xtc.playbook.lsp4ijPlugin`, `xtc.playbook.lsp4ijVersion`, `xtc.playbook.lsp4ijChannel` | the release | The LSP4IJ the test IDE installs. | `ideaIt/PlaybookIde.kt:39`, `:42`, `:43` |
 | none | `xtc.playbook.scenarios`, `xtc.playbook.manual`, `xtc.playbook.reports`, `allure.results.directory` | from the build | `lang/test-fixtures/compiler-playbook/scenarios.json`, `lang/doc/manual-test-plan.md`, and `build/reports/compiler-playbook` | `ideaIt/CompilerPlaybookTest.kt:33`, `:36`, `:39` |
-| `playbookRetainedRuns` | none | `5` | Completed run directories kept under `build/reports/compiler-playbook`; also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1041`, `lang/vscode-extension/build.gradle.kts:338` |
+| `playbookRetainedRuns` | none | `5` | Completed run directories kept under `build/reports/compiler-playbook`; also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1056`, `lang/vscode-extension/build.gradle.kts:339` |
+| `playbookRetainedFailedRuns` | none | `10` | The newest failed runs, which keep their payloads and traces also when they are not among the `playbookRetainedRuns` newest; older failed runs keep their results only. Also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1057`, `lang/vscode-extension/build.gradle.kts:340` |
+| `playbookReports` | none | `build/reports/compiler-playbook` | The directory of runs that `pruneCompilerPlaybookReports` prunes; the playbook container passes its copies'. | `lang/intellij-plugin/build.gradle.kts:1053`, `lang/intellij-plugin/container/in-container.sh:119` |
 
 | Name | Kind | What it does | Read at |
 |------|------|--------------|---------|
-| `XTC_RECORD_VIDEO` | environment | `1`: the tour shows its actions for the screen recording. | `ideaIt/TourTest.kt:43` |
-| `XTC_RECORDING_START_FILE` | environment, default `/out/screen.start` | The recording's start time, for the tour's clips. | `ideaIt/TourTest.kt:60` |
+| `XTC_RECORD_VIDEO` | environment | `1`: the tour shows its actions for the screen recording. | `ideaIt/TourTest.kt:44` |
+| `XTC_RECORDING_START_FILE` | environment, default `/out/screen.start` | The recording's start time, for the tour's clips. | `ideaIt/TourTest.kt:62` |
 | `xtc.test.textmate` | system property, set by `test` | The TextMate bundle for the light platform tests. | `lang/intellij-plugin/build.gradle.kts:1019`, `lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/LightEditor.kt:46` |
 
 ### 6.3 VS Code tests
@@ -517,10 +519,10 @@ The root build's `containerPlaybook`, `containerPlaybookImage`, `containerPlaybo
 |------|---------------|--------------|---------|
 | `playbookCases` | Gradle property (`providers`), `all` | Cases for the IntelliJ and VS Code container tasks. | `build.gradle.kts:233` |
 | `org.xtclang.docker.command` | `xdkProperties`, `docker` (`xdk.properties:17`) | The container engine, such as `podman`; passed as `XTC_CONTAINER_COMMAND`. | `build.gradle.kts:232`, `:240` |
-| `XTC_CONTAINER_COMMAND` | environment; else `docker`, or `podman` when `docker` is not installed | The engine `playbook.sh` runs. | `lang/intellij-plugin/container/playbook.sh:37` |
-| `XTC_CONTAINER_MEMORY` | environment, `7g` | The container's memory limit; the IntelliJ tour needs more, such as `14g`. | `lang/intellij-plugin/container/playbook.sh:140` |
-| `XTC_RECORD_VIDEO` | environment, empty | `1` records the virtual display to `/out/screen.mp4`; passed into the container. | `lang/intellij-plugin/container/playbook.sh:142`, `lang/intellij-plugin/container/in-container.sh:61` |
-| `XTC_COMMIT`, `XTC_BRANCH`, `XTC_PLAYBOOK_DIRTY` | set by `playbook.sh` from git, since the export has no `.git` | The commit, branch and uncommitted paths, for javatools' build information and the VS Code playbook. | `lang/intellij-plugin/container/playbook.sh:141`, `javatools/build.gradle.kts:172`, `:174` |
+| `XTC_CONTAINER_COMMAND` | environment; else `docker`, or `podman` when `docker` is not installed | The engine `playbook.sh` runs. | `lang/intellij-plugin/container/playbook.sh:38` |
+| `XTC_CONTAINER_MEMORY` | environment, `7g` | The container's memory limit; the IntelliJ tour needs more, such as `14g`. | `lang/intellij-plugin/container/playbook.sh:143` |
+| `XTC_RECORD_VIDEO` | environment, empty | `1` records the virtual display to `/out/screen.mp4`; passed into the container. | `lang/intellij-plugin/container/playbook.sh:145`, `lang/intellij-plugin/container/in-container.sh:61` |
+| `XTC_COMMIT`, `XTC_BRANCH`, `XTC_PLAYBOOK_DIRTY` | set by `playbook.sh` from git, since the export has no `.git` | The commit, branch and uncommitted paths, for javatools' build information and the VS Code playbook. | `lang/intellij-plugin/container/playbook.sh:144`, `javatools/build.gradle.kts:172`, `:174` |
 | `XTC_VSCODE_TEST_CACHE`, `XTC_RECORDING_START_FILE` | set inside the container | The VS Code download cache on the Gradle volume; the recording's start file. | `lang/intellij-plugin/container/in-container.sh:28`, `:66` |
 | `PLAYBOOK_WM` | environment inside the container, `openbox` | Window manager on Xvfb; `playbook.sh` does not pass it in, so it stays `openbox`. | `lang/intellij-plugin/container/in-container.sh:47` |
 
@@ -529,7 +531,7 @@ Inside the container, Gradle runs with `/gradle/gradle.properties`: `org.gradle.
 watching (`lang/intellij-plugin/container/in-container.sh:31`). The volumes `xvm-playbook-gradle`,
 `xvm-playbook-work` and `xvm-playbook-m2` keep caches between runs; one run at a time holds
 `xvm-playbook-container.lock` in the repository's common git directory
-(`lang/intellij-plugin/container/playbook.sh:97`). `playbook.sh playbook` and `playbook.sh vscode`
+(`lang/intellij-plugin/container/playbook.sh:100`). `playbook.sh playbook` and `playbook.sh vscode`
 take further Gradle arguments, such as `-Plsp4ijChannel`; the root tasks pass none.
 
 ## Stale in other docs

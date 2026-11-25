@@ -1071,9 +1071,15 @@ val test =
 val pruneCompilerPlaybookReports =
     tasks.register<PruneTestReportsTask>("pruneCompilerPlaybookReports") {
         group = "verification"
-        description = "Retain five completed playbook payloads and all compact results"
-        reportsDirectory.set(layout.buildDirectory.dir("reports/compiler-playbook"))
+        description = "Retain five completed playbook payloads, ten failed runs' and all compact results"
+        // -PplaybookReports=<dir> prunes another directory of runs, such as the copies the playbook container makes
+        reportsDirectory.set(
+            layout
+                .dir(providers.gradleProperty("playbookReports").map(::File))
+                .orElse(layout.buildDirectory.dir("reports/compiler-playbook")),
+        )
         retainedRuns.set(providers.gradleProperty("playbookRetainedRuns").map(String::toInt).orElse(5))
+        retainedFailedRuns.set(providers.gradleProperty("playbookRetainedFailedRuns").map(String::toInt).orElse(10))
     }
 
 // Launch the packaged plugin in an isolated IDE using JetBrains' Starter/Driver test task.

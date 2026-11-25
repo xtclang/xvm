@@ -334,9 +334,10 @@ val pruneTestReports =
     listOf("compiler-playbook", "extension-tests", "project-lifecycle", "explorer-probe").map { report ->
         tasks.register<PruneTestReportsTask>("prune${report.split('-').joinToString("") { it.replaceFirstChar(Char::uppercase) }}Reports") {
             group = "verification"
-            description = "Retain five completed $report payloads and all compact results"
+            description = "Retain five completed $report payloads, ten failed runs' and all compact results"
             reportsDirectory.set(layout.buildDirectory.dir("reports/$report"))
             retainedRuns.set(providers.gradleProperty("playbookRetainedRuns").map(String::toInt).orElse(5))
+            retainedFailedRuns.set(providers.gradleProperty("playbookRetainedFailedRuns").map(String::toInt).orElse(10))
         }
     }
 

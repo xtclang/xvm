@@ -18,7 +18,8 @@
 # docker is not installed. Podman on macOS needs its machine started (podman machine start).
 #
 # Each run exports this checkout as it is, uncommitted changes included, and copies the playbook's run
-# directories to lang/intellij-plugin/build/reports/compiler-playbook, where a native run puts them, and the
+# directories to lang/intellij-plugin/build/reports/compiler-playbook, where a native run puts them, which the
+# container mounts as /out/runs and prunes as a native run's report retention does, and the
 # VS Code extension's reports to lang/vscode-extension/build/reports. The
 # volumes xvm-playbook-gradle, xvm-playbook-work and xvm-playbook-m2 keep Gradle's caches, the build and
 # mavenLocal between runs.
@@ -75,7 +76,9 @@ cleanup() {
     if [ "$locked" = true ]; then rm -rf "$lock"; fi
 }
 trap cleanup EXIT
-mkdir -p "$source" "$container/out"
+# where a native run's reports are, so that the same tools read them, and the same retention prunes them
+reports="$root/lang/intellij-plugin/build/reports/compiler-playbook"
+mkdir -p "$source" "$container/out" "$reports"
 # the checkout's files, tracked or not, without what git ignores, such as build outputs, and without
 # tracked files deleted from the working tree
 (
@@ -145,16 +148,11 @@ status=0
     -v xvm-playbook-m2:/home/playbook/.m2 \
     -v "$source:/src:ro" \
     -v "$container/out:/out" \
+    -v "$reports:/out/runs" \
     -v "$here/in-container.sh:/in-container.sh:ro" \
     "$image" \
     bash /in-container.sh "${args[@]}" 2>&1 | tee "$container/out/$mode-$stamp.log" || status=$?
 
-# where a native run's reports are, so that the same tools read them
-reports="$root/lang/intellij-plugin/build/reports/compiler-playbook"
-if [ -d "$container/out/runs" ]; then
-    mkdir -p "$reports"
-    rsync -a "$container/out/runs/" "$reports/"
-fi
 if [ -d "$container/out/vscode-reports" ]; then
     mkdir -p "$root/lang/vscode-extension/build/reports"
     rsync -a "$container/out/vscode-reports/" "$root/lang/vscode-extension/build/reports/"
