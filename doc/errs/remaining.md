@@ -537,10 +537,14 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   (`DiagnosticResultMessages`) took the full report of the last variant's text, with no items, as stale, as the text
   changed again while it came, while LSP4IJ applied it: the next pulls named its result ID. The record then counted
   the items of those unchanged reports from the report it had kept, of an earlier variant with a parser error, so
-  the wait never saw none. Not a product fault, and not the UP86 bridge's, which reads the record and changes
-  nothing in it or in the pulls. The tour's `heldDiagnostics` takes its count of the own pull's items from the same
-  record (`currentDiagnosticItems`), so it can show the same miscount. To fix: count an unchanged report's items from
-  the report of the result ID it names.
+  the wait never saw none. The UP86 bridge changes nothing in the record or in the pulls, but since its review fixes
+  it decides from the record when the connected document holds its own report (`currentReport`), so the same case
+  stops it: when LSP4IJ applies a report for the old text that the record drops, and the pulls after it are
+  unchanged, the bridge never fires, and a stale UP86 mark stays until the file's diagnostics change, as it does
+  without the bridge (found in the bridge's re-review, 2026-11-25; it needs an edit of a newly opened file as its
+  first report arrives, which the tour never makes). The tour's `heldDiagnostics` takes its count of the own pull's
+  items from the same record (`currentDiagnosticItems`), so it can show the same miscount. To fix: count an
+  unchanged report's items from the report of the result ID it names, which closes the bridge's gap too.
 - [ ] Found 2026-11-25 in `run-tour-1548907980096693794`, the tour's sections through Diagnostics in the container,
   not in the tour runs kept before: Reading code's Parameter info popup (Ctrl+P) did not show within its 3-minute
   bound. The step's closers, now in order, say what came after its press: "ParameterInfo, scroll", one scroll of the
