@@ -6,7 +6,7 @@
 
 ## #693 commit -> PR map — 2026-11-25
 
-#693 (`errs/full-testable-lsp-20261009`) at `ef370304b5` has **468 commits** above master's `8b5257f10b`, after the [rebase of 2026-11-25](errs-693-rebase-2026-11-25.tsv). The map was built at `49b5f8aca6` (468 commits on `535e80fca6`); its table gives each commit's new position and hash beside the old ones: the rebase dropped old position 405, #800's copy, which master has, and added position 468, an import that #803 left unused.
+#693 (`errs/full-testable-lsp-20261009`) at `4149ac20f8` has **469 commits** above master's `8b5257f10b`, after the [rebase of 2026-11-25](errs-693-rebase-2026-11-25.tsv). The map was built at `49b5f8aca6` (468 commits on `535e80fca6`); its table gives each commit's new position and hash beside the old ones: the rebase dropped old position 405, #800's copy, which master has, and added position 468, an import that #803 left unused.
 Master is at `8b5257f10b`, nine commits on; one of them, #800, is #693's commit 405. Against that base #693
 changes 1,299 files, +219,514/−9,795 lines: `lang/` 998 files (+187,138), `javatools` and `javatools_utils`
 230 (+29,916), `plugin` 21 (+696). Nothing after 2026-10-16 had been mapped. Now every commit has a proposed
