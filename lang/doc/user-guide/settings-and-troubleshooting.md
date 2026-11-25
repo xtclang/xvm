@@ -64,6 +64,8 @@ Compiler page.*
 
 When something doesn't work as you expect, look at the language server first.
 
+### The language server
+
 - **Its state.** VS Code's status bar item, and **Ecstasy: Show Effective Language Service
   Configuration**, which reports the settings the server runs with and what it found. In IntelliJ,
   the **Ecstasy | Language Service** settings page shows the running server's configuration, and
@@ -93,7 +95,7 @@ When something doesn't work as you expect, look at the language server first.
 
 </td></tr></table>
 
-Some common problems:
+### Common problems
 
 | Symptom | What to do |
 |---------|------------|
@@ -107,17 +109,14 @@ Some common problems:
 
 ## Known limitations
 
-- VS Code has no `xtc` command-line build mode; use embedded or Gradle.
-- IntelliJ's **Run 'All Ecstasy Tests'** has no Debug yet.
-- In embedded mode, a Gradle build applies only through its run settings; see
-  [Gradle settings in embedded runs](building-and-running.md#gradle-settings-in-embedded-runs).
-- A program being debugged keeps the code it was built from: edits apply the next time you run it.
-- Code run from the Debug Console or Evaluate Expression stops after two seconds, and a lazy value
-  after one, by default. To give them longer, set `evaluationTimeLimit` and `lazyValueTimeLimit`, in
-  milliseconds, in VS Code's launch configuration, or **Evaluation time limit (ms)** and **Lazy value
-  time limit (ms)** in IntelliJ's Ecstasy Application or Ecstasy Attach configuration. IntelliJ can't
-  cancel an evaluation sooner, so Evaluate Expression waits out the whole limit for code that never
-  ends.
+### Editing
+
+- The formatter doesn't reflow comments or split string literals.
+- The Tree-sitter adapter knows only syntax: no type errors, no type-aware completion or checked
+  refactorings, and no embedded builds or runs.
+
+### Refactoring
+
 - Rename, move and safe delete cover the modules the language server knows of. When one of them
   changes a public declaration, which modules in other folders may use (a move changes its type's
   qualified name), a notification says that those modules are not changed. To include them, add them with
@@ -129,9 +128,23 @@ Some common problems:
   at run time to look a member up by reflection; an `is` check against an interface, which matches a
   class by its members' names; and the keys a renamed property's value gets in JSON or other data
   that the program writes and reads back.
-- The formatter doesn't reflow comments or split string literals.
-- The Tree-sitter adapter knows only syntax: no type errors, no type-aware completion or checked
-  refactorings, and no embedded builds or runs.
+
+### Building, running and testing
+
+- VS Code has no `xtc` command-line build mode; use embedded or Gradle.
+- IntelliJ's **Run 'All Ecstasy Tests'** has no Debug yet.
+- In embedded mode, a Gradle build applies only through its run settings; see
+  [Gradle settings in embedded runs](building-and-running.md#gradle-settings-in-embedded-runs).
+
+### Debugging
+
+- A program being debugged keeps the code it was built from: edits apply the next time you run it.
+- Code run from the Debug Console or Evaluate Expression stops after two seconds, and a lazy value
+  after one, by default. To give them longer, set `evaluationTimeLimit` and `lazyValueTimeLimit`, in
+  milliseconds, in VS Code's launch configuration, or **Evaluation time limit (ms)** and **Lazy value
+  time limit (ms)** in IntelliJ's Ecstasy Application or Ecstasy Attach configuration. IntelliJ can't
+  cancel an evaluation sooner, so Evaluate Expression waits out the whole limit for code that never
+  ends.
 
 The [manual test plan](../manual-test-plan.md#client-compatibility-limits) lists the remaining
 differences between the editors in detail.

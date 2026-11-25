@@ -17,6 +17,8 @@ with <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd>; see [Settings that matter](settin
 
 ## Reading code
 
+### Colors, hints and reference counts
+
 The compiler colors names by what they are: fields, parameters, locals, types and static members.
 Inlay hints show the parameter names of a call whose arguments don't say what they are, and the
 inferred types of locals. A line above each declaration counts its references in the project, tests
@@ -34,6 +36,8 @@ included, and a click lists them.
 
 </td></tr></table>
 
+### Documentation
+
 Hover a name, or press <kbd>Ctrl+Q</kbd> (IntelliJ) or <kbd>Ctrl+K</kbd> <kbd>Ctrl+I</kbd> (VS Code), for its declaration and doc
 comment, as the compiler sees it. This works for the XDK's own types too.
 
@@ -49,6 +53,8 @@ comment, as the compiler sees it. This works for the XDK's own types too.
 
 </td></tr></table>
 
+### Uses, folding, selection and outline
+
 With the cursor on a name, its uses in the file are highlighted. Methods and doc comments fold.
 Extend selection grows the selection by the syntax around it: <kbd>Ctrl+W</kbd> and <kbd>Ctrl+Shift+W</kbd> in IntelliJ,
 <kbd>Shift+Alt+Right</kbd> and <kbd>Shift+Alt+Left</kbd> in VS Code.
@@ -57,6 +63,8 @@ The file's outline is IntelliJ's **File Structure** popup (<kbd>Ctrl+F12</kbd>) 
 VS Code's **Outline** view and breadcrumbs.
 
 ## Writing code
+
+### Completion
 
 After a dot, completion lists the members of the expression's type as the compiler resolves it,
 with their types. As you type a name, it offers the types, variables and keywords in scope. In an
@@ -75,6 +83,8 @@ module adds its import.
 
 </td></tr></table>
 
+### Parameter info
+
 Inside a call, <kbd>Ctrl+P</kbd> (IntelliJ) or <kbd>Ctrl+Shift+Space</kbd> (VS Code) shows the parameters of the method it
 calls, with the one at the cursor in bold. It also opens by itself as you type the call's `(`.
 
@@ -90,11 +100,15 @@ calls, with the one at the cursor in bold. It also opens by itself as you type t
 
 </td></tr></table>
 
+### Templates
+
 Templates write common declarations. In IntelliJ, <kbd>Ctrl+J</kbd> lists the live templates, such as `cls`,
 `meth`, `fori` and `sout`; in VS Code, the snippets complete with the other suggestions, such as
 `meth` for a method. <kbd>Tab</kbd> moves through a template's placeholders.
 
-**Formatting** goes through the language server's formatter, with your indentation settings
+### Formatting and comments
+
+Formatting goes through the language server's formatter, with your indentation settings
 (IntelliJ's **Settings | Editor | Code Style | Ecstasy**, VS Code's `xtc.formatting.*` settings).
 Reformat a file or a selection with <kbd>Ctrl+Alt+L</kbd> (IntelliJ) or <kbd>Shift+Alt+F</kbd> (VS Code). <kbd>Enter</kbd> and `}`
 indent as you type, and typing `{` and <kbd>Enter</kbd> closes the block. To format on save, use IntelliJ's
@@ -104,6 +118,8 @@ indent as you type, and typing `{` and <kbd>Enter</kbd> closes the block. To for
 `/* */`.
 
 ## Errors and warnings
+
+### As you type
 
 The compiler checks the editor's text as you type, not the saved file, so an error shows as soon as
 you make it. Warnings show too, such as an assertion that can never fail.
@@ -116,9 +132,11 @@ you make it. Warnings show too, such as an assertion that can never fail.
 </td><td width="50%">
 
 ![VS Code: the COMPILER-56 message for popCrd, shown under the line](images/vscode-error-message.png)
-*VS Code: <kbd>F8</kbd> shows the compiler's message, COMPILER-56, under the line.*
+*VS Code: <kbd>F8</kbd> shows the compiler's message, `COMPILER-56`, under the line.*
 
 </td></tr></table>
+
+### In the whole project
 
 Every problem of the project is in IntelliJ's **Problems** window and VS Code's **Problems** view
 (<kbd>Ctrl+Shift+M</kbd>), each a click away from its code. That includes files you haven't opened: change a
@@ -172,6 +190,8 @@ until you fix them. IntelliJ also draws such files red in the Project view.
 *VS Code: Find All References on `cardMatches` finds 9 uses in 4 files, including the tests.*
 
 </td></tr></table>
+
+### The XDK's sources
 
 Navigation reaches into the XDK as well: going to `HashMap`'s declaration opens the `ecstasy`
 module's source, read-only. Its names are links too, as the language server compiles the library's
