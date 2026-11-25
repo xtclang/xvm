@@ -280,8 +280,13 @@ internal class Tour(
         val image = "frames/%03d.png".format(number)
         var step =
             try {
+                // what can close a popup, as a popup that did not show can have shown and closed: counted from the first
+                //  popup step on, and read as the act ends and as the wait does
+                if (focus == "popup") ui.popupClosers()
                 ui.act()
+                val acted = if (focus == "popup") ui.popupClosers() else null
                 val shown = within(wait) { ui.until() && ui.showing(focus) }
+                val waited = if (acted != null && !shown) ui.popupClosers() else null
                 Thread.sleep(settle.inWholeMilliseconds)
                 shot = System.currentTimeMillis()
                 val answer = JsonParser.parseString(ui.capture(frames.resolve("%03d.png".format(number)).toString(), focus)).asJsonObject
@@ -294,7 +299,16 @@ internal class Tour(
                     image,
                     answer["focus"]?.asJsonObject,
                     answer["cursor"]?.asJsonObject,
-                    error = if (shown) null else "the step's subject ($focus) did not show within $wait",
+                    error =
+                        when {
+                            shown -> null
+
+                            acted == null -> "the step's subject ($focus) did not show within $wait"
+
+                            else ->
+                                "the step's subject ($focus) did not show within $wait; what closes a popup, as its act " +
+                                    "ended: $acted; as the wait ended: $waited"
+                        },
                 )
             } catch (failure: Exception) {
                 TourStep(number, section, title, caption, feature, error = causes(failure))
@@ -686,6 +700,8 @@ internal interface TourProbe {
 
     fun popupText(): String
 
+    fun popupClosers(): String
+
     fun lookupItems(): String
 
     fun pickLookup(item: String): Boolean
@@ -709,6 +725,8 @@ internal interface TourProbe {
     ): Boolean
 
     fun diagnostics(path: String): String
+
+    fun heldDiagnostics(path: String): String
 
     fun analyzed(path: String): Boolean
 
@@ -1314,7 +1332,7 @@ internal fun TourProbe.compilesCleanly(
     timeout: Duration = HANG,
 ) {
     expect(within(timeout) { analyzed(path) && "ERROR" !in diagnostics(path) }) {
-        "Errors in ${Path.of(path).fileName}: ${diagnostics(path)}"
+        "Errors in ${Path.of(path).fileName}: ${diagnostics(path)}; LSP4IJ holds: ${heldDiagnostics(path)}"
     }
 }
 
@@ -1325,7 +1343,8 @@ internal fun TourProbe.hasError(
     timeout: Duration = HANG,
 ) {
     expect(within(timeout) { diagnostics(path).lines().any { it.startsWith("ERROR") && text in it } }) {
-        "No error${if (text.isEmpty()) "" else " with $text"} in ${Path.of(path).fileName}: ${diagnostics(path)}"
+        "No error${if (text.isEmpty()) "" else " with $text"} in ${Path.of(path).fileName}: ${diagnostics(path)}; " +
+            "LSP4IJ holds: ${heldDiagnostics(path)}"
     }
 }
 
