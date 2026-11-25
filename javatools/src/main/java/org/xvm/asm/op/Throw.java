@@ -82,6 +82,11 @@ public class Throw
     }
 
     @Override
+    public void registerConstants(ConstantRegistry registry) {
+        m_argValue = registerArgument(m_argValue, registry);
+    }
+
+    @Override
     public boolean advances() {
         return false;
     }
@@ -111,5 +116,5 @@ public class Throw
 
     private int m_nArgValue;
 
-    private Argument m_argValue; // never a Constant
+    private Argument m_argValue;
 }
