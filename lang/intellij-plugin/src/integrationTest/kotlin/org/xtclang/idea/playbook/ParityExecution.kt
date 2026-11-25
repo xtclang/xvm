@@ -1778,6 +1778,62 @@ internal fun ParityScenarios.commandLineDebugCases() {
 }
 
 /**
+ * X351, registered after X350 in catalog order: an embedded run in a project whose Gradle model is imported takes the
+ * method, arguments and JVM options of the module's xtcRun from the model, says so in its output and leaves out a Java
+ * debugger's agent; the run configuration's own arguments win.
+ */
+internal fun ParityScenarios.gradleRunCases() {
+    case("X351") { data ->
+        // Gradle's project cache, which holds the imported model, as X129's and X348's
+        val cache = projectRoot.resolve(".gradle")
+        val report = cache.resolve("xtc/lsp-model.json")
+        check(!Files.exists(report)) { "X351 needs a project root without $report" }
+        val made = !Files.exists(cache)
+        val module = data.string("module")
+        val file = data.string("file")
+        val document = open(file, data.string("source"))
+        val project = with(driver) { singleProject() }
+        val tests = with(driver) { utility(TestRunProbe::class) }
+
+        fun projects() = JsonParser.parseString(tests.gradleProjects(project)).asJsonObject
+        try {
+            // the model that an import writes, which the plugin gives the language server once no explicit modules replace it
+            Files.createDirectories(report.parent)
+            Files.writeString(report, data["model"].toString().replace("\${workspace}", directory.toUri().toString().trimEnd('/')))
+            configure(null)
+            awaitUi("the model's Gradle projects", HANG_LIMIT, errorMessage = { projects().toString() }) {
+                projects()[module]?.asString == data.string("project")
+            }
+            clean(document)
+            embedded { execution, _ ->
+                fun run(
+                    arguments: String,
+                    message: String,
+                ): String {
+                    execution.run(project, module, uri(file), arguments)
+                    awaitUi(message, HANG_LIMIT) { execution.exitCode(module) != Int.MIN_VALUE }
+                    val output = execution.output(module)
+                    check(execution.exitCode(module) == 0) { "Exit code ${execution.exitCode(module)}: $output" }
+                    return output
+                }
+
+                // no method or arguments of its own: Gradle's, its JVM options but the debugger's agent, as it says
+                val taken = run("", "the embedded run with Gradle's settings finishes")
+                listOf("fromGradle", "leftOut", "output").forEach { check(data.string(it) in taken) { taken } }
+                // its own arguments win, with Gradle's method
+                val own = run(data.strings("args").joinToString(","), "the embedded run with its own arguments finishes")
+                listOf("ownFromGradle", "ownOutput").forEach { check(data.string(it) in own) { own } }
+                check(data.string("output") !in own) { own }
+            }
+        } finally {
+            Files.deleteIfExists(report)
+            if (made) cache.toFile().deleteRecursively()
+            configure(emptyList())
+        }
+    }
+}
+
+/**
  * Makes a project with the plugin's project creator, as New Project does, at the project root, where Gradle mode runs
  * ./gradlew, with the project in Gradle mode, runs [body] with it, and removes it again, with the mode as it was. Its
  * build takes the XTC Gradle plugin and XDK last published to mavenLocal.
