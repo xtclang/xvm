@@ -33,10 +33,11 @@ import java.util.IdentityHashMap
  * binding spells the old or new name, and every other proof (a safe delete, an inline, an extraction, a member's
  * addition) anywhere in its module; Find References and highlighting miss what is unbound.
  *
- * No construct that compiles is known to leave a name unbound, so an unbound occurrence fails the test, with its
- * examples. The unproven bindings are counted only: the report, by construct and by library with examples, goes to
- * `lang/lsp-server/build/semantic-model-census.txt`, and its summary lines, which start with `census`, to the output.
- * Heavy: it compiles every library from source once.
+ * No construct that compiles is known to leave a name unbound, or a binding that no proof can place (a symbol with no
+ * identity and no declaration in the module's sources, which refuses every proof, a rename's too), so either fails the
+ * test, with its examples. The unproven bindings are counted only: the report, by construct and by library with
+ * examples, goes to `lang/lsp-server/build/semantic-model-census.txt`, and its summary lines, which start with
+ * `census`, to the output. Heavy: it compiles every library from source once.
  *
  * Run alone: `./gradlew :lang:lsp-server:test --tests '*SemanticModelCensusTest' -PlspTests=heavy
  * -PincludeBuildLang=true -PincludeBuildAttachLang=true`.
@@ -70,7 +71,7 @@ class SemanticModelCensusTest {
         File("build").mkdirs()
         File("build/semantic-model-census.txt").writeText(report.joinToString("\n", postfix = "\n"))
         report.filter { it.startsWith("census") }.forEach(::println)
-        assertThat(gaps.filter { it.unbound }.map(Gap::toString)).isEmpty()
+        assertThat(gaps.filter { it.refusing }.map(Gap::toString)).isEmpty()
     }
 
     /** A binding that a proof cannot prove: where it is, the name it spells, and the construct that wrote it. */
@@ -86,6 +87,9 @@ class SemanticModelCensusTest {
         val text: String,
     ) {
         val where get() = "${File(file).name}:$line:$column"
+
+        /** Whether every proof is refused on it, a rename's too: an unbound occurrence, or a binding no proof can place. */
+        val refusing get() = unbound || "unplaceable" in construct
 
         override fun toString() = "${if (unbound) "unbound" else "unproven"} $construct $module $where $name | $text"
     }
@@ -120,15 +124,21 @@ class SemanticModelCensusTest {
                                 "unbound ${node(location)}",
                             )
 
+                        // a variable that the model resolved but cannot place, which no source declares and no
+                        // identity proves, is left out on both sides of a proof (XdkRename.unplaced)
+                        callable == null && symbol?.kind == SemanticModel.SymbolKind.VARIABLE && symbol.declaration == null &&
+                            facts.constants[symbol.id] == null -> null
+
                         else -> unproven(callable, symbol)?.let { gap(location, occurrence.name, false, Kind.OCCURRENCE, it) }
                     }
                 } +
                     model.calls.mapNotNull { call ->
                         val location = SemanticModel.SourceLocation(source, call.callee)
                         val callable = facts.callables[location]
-                        unproven(callable, model.symbol(call.method))?.let {
-                            gap(location, model.symbol(call.method)?.name ?: "?", false, Kind.CALL, "call $it")
-                        }
+                        val symbol = model.symbol(call.method)
+                        // a call's method that has no symbol is one that no proof can place, as one without an identity
+                        val judged = if (callable == null && symbol == null) "unplaceable without a symbol" else unproven(callable, symbol)
+                        judged?.let { gap(location, symbol?.name ?: "?", false, Kind.CALL, "call $it") }
                     }
             } + chains()
 
@@ -181,22 +191,27 @@ class SemanticModelCensusTest {
             )
         }
 
-        /** The construct of a binding the proof cannot prove, or null for one it proves, as XdkRename's comparison does. */
+        /**
+         * The construct of a binding the proof cannot prove, or null for one it proves, as XdkRename's comparison does
+         * (XdkRename.edges): one through an unproven identity, which a rename compares by its spelling and every other
+         * proof refuses, or one that it cannot place at all, a symbol with no identity and no declaration in the
+         * module's sources, which refuses every proof, a rename's too.
+         */
         private fun unproven(
             callable: ProofIdentity?,
             symbol: SemanticModel.Symbol?,
         ): String? {
             if (callable != null) return shape(callable)?.let { "callable $it" }
             symbol ?: return null
-            val identity = facts.constants[symbol.id] ?: return null
+            val declared = symbol.declaration != null && symbol.declarationSource in texts
+            val identity = facts.constants[symbol.id] ?: return if (declared) null else "${symbol.kind} unplaceable"
             return when (identity) {
                 is ProofIdentity.Composed, is ProofIdentity.Alternatives, is ProofIdentity.Super, is ProofIdentity.Receiver,
                 is ProofIdentity.PrimaryConstructor, is ProofIdentity.Generated, is ProofIdentity.Parameter,
                 is ProofIdentity.MethodFormal,
                 -> shape(identity)
 
-                is ProofIdentity.Unproven ->
-                    if (symbol.declaration != null && symbol.declarationSource in texts) null else shape(identity)
+                is ProofIdentity.Unproven -> if (declared) null else shape(identity)
 
                 else -> null
             }?.let { "${symbol.kind} $it" }
@@ -285,9 +300,9 @@ class SemanticModelCensusTest {
     /** The census's report: totals, then by construct with examples, then by library. */
     private fun report(gaps: List<Gap>): List<String> {
         val unbound = gaps.filter { it.unbound }
-        val unproven = gaps.filterNot { it.unbound }
+        val unproven = gaps.filterNot { it.refusing }
         val head =
-            "census total unbound=${unbound.size} unproven=${unproven.size} " +
+            "census total unbound=${unbound.size} unplaceable=${gaps.count { it.refusing && !it.unbound }} unproven=${unproven.size} " +
                 "(occurrences=${unproven.count { it.kind == Kind.OCCURRENCE }}, calls=${unproven.count { it.kind == Kind.CALL }}, " +
                 "chains=${unproven.count { it.kind == Kind.CHAIN }})"
         val constructs =
