@@ -1044,7 +1044,13 @@ internal object XdkRename {
             if (constant is ProofIdentity.Composed || constant is ProofIdentity.Generated) {
                 return composedTarget(constant, texts, moved, translate, lines)
             }
-            val symbol = declarations[constant] ?: return Target.External(constant)
+            val symbol = declarations[constant]
+            // a source identity that no symbol declares, as an anonymous class's, the span of the type it constructs,
+            // is placed by its own location, through the edit
+            if (constant is ProofIdentity.Source && symbol?.declaration == null) {
+                return composedTarget(constant, texts, moved, translate, lines)
+            }
+            symbol ?: return Target.External(constant)
             val source = symbol.declarationSource ?: return Target.External(constant)
             val text = texts[source] ?: return Target.External(constant)
             val range = symbol.declaration ?: return null
@@ -1368,6 +1374,11 @@ internal object XdkRename {
                 identity is ProofIdentity.Parameter ||
                 identity is ProofIdentity.MethodFormal
             ) {
+                return composedTarget(identity, texts, moved, translate, lines)
+            }
+            // a source identity that no symbol declares, as an anonymous class's, the span of the type it constructs,
+            // is placed by its own location, through the edit
+            if (identity is ProofIdentity.Source && symbol.declaration == null) {
                 return composedTarget(identity, texts, moved, translate, lines)
             }
             val source = symbol.declarationSource
