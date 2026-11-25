@@ -14,6 +14,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFiles;
@@ -71,6 +72,33 @@ public abstract class XtcLspSourceSetTask extends DefaultTask {
     @PathSensitive(PathSensitivity.ABSOLUTE)
     public abstract ConfigurableFileCollection getModulePath();
 
+    /**
+     * The method that the project's {@code xtcRun} runs each module it names with, by the module's name; where it names
+     * a module more than once, the first time's.
+     */
+    @Input
+    public abstract MapProperty<String, String> getRunModuleMethods();
+
+    /** The arguments that the project's {@code xtcRun} runs each module it names with, by the module's name, as the methods are. */
+    @Input
+    public abstract MapProperty<String, List<String>> getRunModuleArgs();
+
+    /** The JVM options that the project's {@code xtcRun} runs its modules with. */
+    @Input
+    public abstract ListProperty<String> getRunJvmArgs();
+
+    /** What of the project's {@code xtcRun} could not be read, and is left out of the model, each with why. */
+    @Input
+    public abstract ListProperty<String> getRunProblems();
+
+    /** The JVM options that the project's {@code xtcTest} runs its tests with. */
+    @Input
+    public abstract ListProperty<String> getTestJvmArgs();
+
+    /** What of the project's {@code xtcTest} could not be read, and is left out of the model, each with why. */
+    @Input
+    public abstract ListProperty<String> getTestProblems();
+
     @OutputFile
     public abstract RegularFileProperty getReport();
 
@@ -93,6 +121,24 @@ public abstract class XtcLspSourceSetTask extends DefaultTask {
         model.put("resourceTask", getResourceTask().get());
         model.put("projectDependencies", getProjectDependencies().get());
         model.put("modulePath", uris(getModulePath().getFiles().stream().toList()));
+        // The project's run settings, which apply to the modules of each of its source sets alike.
+        final var arguments = getRunModuleArgs().get();
+        final var modules = new LinkedHashMap<String, Object>();
+        getRunModuleMethods().get().forEach((name, method) -> {
+            final var module = new LinkedHashMap<String, Object>();
+            module.put("methodName", method);
+            module.put("moduleArgs", arguments.getOrDefault(name, List.of()));
+            modules.put(name, module);
+        });
+        final var run = new LinkedHashMap<String, Object>();
+        run.put("jvmArgs", getRunJvmArgs().get());
+        run.put("modules", modules);
+        run.put("problems", getRunProblems().get());
+        model.put("run", run);
+        final var test = new LinkedHashMap<String, Object>();
+        test.put("jvmArgs", getTestJvmArgs().get());
+        test.put("problems", getTestProblems().get());
+        model.put("test", test);
         final var output = getReport().get().getAsFile().toPath();
         Files.createDirectories(output.getParent());
         Files.writeString(output, JsonOutput.prettyPrint(JsonOutput.toJson(model)) + '\n');
