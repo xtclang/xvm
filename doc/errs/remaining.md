@@ -2069,6 +2069,20 @@ editor, which its probe never measured (the probe item below).
   (its test only, since #693 stopped at an unterminated string already), `3ce7fc147` and `18a8d910e`,
   and #718's `getRuntime()` review changes `dc12e9390` and `db624ebbc` as `d7701ed06` and `5a68503df`;
   the other commits since are debugger work and its records).
+- [x] errs and #693 rebased onto master `8b5257f10b` (2026-11-25), past #792, #798, #797, #796, #799,
+  #800, #790, #793 and #803; before that onto `535e80fca6` on 2026-11-22 (`8ff1fe7d21`). Backups:
+  `backup/lagergren-errs-2026-11-25` (`c8c6d6f2f4`) and `backup/693-2026-11-25` (`49b5f8aca6`).
+  [errs' map](errs-rebase-2026-11-25.tsv) gives its 1746 commits on `60d36426eb`, `c8c6d6f2f4` with the
+  commit that aligns errs' code to #693's: 1739 replayed, 6 resolved and `a2e343cdc7` dropped, master's #800;
+  [#693's map](errs-693-rebase-2026-11-25.tsv) its 468, 466 replayed, `29029a823c` resolved and
+  `09e61bd83e` dropped, #800 as well. Every conflict was in `TypeConstant.java`, where #803 removed
+  `getJitCCType()`, `getJitICType()` and the `CD_Class` and `CD_Ctx` imports: edits to the removed
+  methods keep master's side, and the `ErrorListener` static imports keep their place without the two
+  removed ones. #803's three new newable checks said `ErrorListener.BLACKHOLE`, which errs no longer
+  has; they say `silent(PROBE)` from the commit that removes `BLACKHOLE` on (errs `e2e53f3fff`, #693
+  `1ddea3e0be`), so that every rebased commit compiles, and errs `4fbb4a7369`, #693 `ef370304b5` drop the
+  import that #803 left unused in `TypeConstant`. Outside master's files
+  both trees are the ones they were rebased from, and errs' code is #693's.
 - [ ] Reconcile the stacked branches with what actually merged: #685 and #683 were closed unmerged,
   and #685's contracts now live in #693.
 - [ ] Submit, when authorized: compilation-owned syntax and semantic facts
