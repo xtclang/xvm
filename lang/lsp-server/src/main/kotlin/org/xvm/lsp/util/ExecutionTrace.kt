@@ -7,7 +7,10 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
-/** Timing metadata only: never logs source buffers, protocol payloads or compiler objects. */
+/**
+ * Timing metadata, and at DEBUG [details], such as what a diagnostic report answered by result IDs and item codes:
+ * never logs source buffers, protocol payloads or compiler objects.
+ */
 internal object ExecutionTrace {
     private val logger = LoggerFactory.getLogger("org.xvm.lsp.trace")
     private val gson = Gson()
@@ -66,6 +69,22 @@ internal object ExecutionTrace {
             ),
         )
     }
+
+    /**
+     * What [fields] gives, when the trace is at DEBUG, as a test run's is (`xtc.trace.level`), and nothing otherwise, so
+     * that the trace that each user has keeps to timing; and when [fields] fails, only that it did: the trace never
+     * fails the work it describes.
+     */
+    fun details(fields: () -> Map<String, Any?>): Map<String, Any?> =
+        if (!logger.isDebugEnabled) {
+            emptyMap()
+        } else {
+            try {
+                fields()
+            } catch (failure: Exception) {
+                mapOf("detailsFailed" to failure.javaClass.name)
+            }
+        }
 
     fun elapsed(start: Long): Double = (System.nanoTime() - start) / 1_000_000.0
 

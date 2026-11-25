@@ -285,6 +285,7 @@ class XtcTextDocumentService(
         sourceOnly: Boolean = false,
         progress: WorkDoneProgressParams? = null,
         partial: ((R) -> PartialResults.Plan<R>)? = null,
+        traced: (R) -> Map<String, Any?> = { emptyMap() },
         convert: (T) -> R,
     ): CompletableFuture<R> {
         // File events are applied before the next message is read, but the folders a client adds are walked off
@@ -294,7 +295,7 @@ class XtcTextDocumentService(
             val deferred = CompletableFuture<R>()
             folders.whenComplete { _, _ ->
                 if (deferred.isDone) return@whenComplete
-                val query = startQuery(method, uri, request, true, reportsOutOfSync, sourceOnly, progress, partial, convert)
+                val query = startQuery(method, uri, request, true, reportsOutOfSync, sourceOnly, progress, partial, traced, convert)
                 // a client cancellation of the deferred request reaches the query
                 deferred.whenComplete { _, _ -> query.cancel(false) }
                 query.whenComplete { value, failure ->
@@ -303,7 +304,7 @@ class XtcTextDocumentService(
             }
             return deferred
         }
-        return startQuery(method, uri, request, workspace, reportsOutOfSync, sourceOnly, progress, partial, convert)
+        return startQuery(method, uri, request, workspace, reportsOutOfSync, sourceOnly, progress, partial, traced, convert)
     }
 
     /**
@@ -332,6 +333,7 @@ class XtcTextDocumentService(
         sourceOnly: Boolean,
         progress: WorkDoneProgressParams?,
         partial: ((R) -> PartialResults.Plan<R>)?,
+        traced: (R) -> Map<String, Any?>,
         convert: (T) -> R,
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
@@ -430,7 +432,7 @@ class XtcTextDocumentService(
                                 else -> {
                                     try {
                                         val converted = convert(value)
-                                        ExecutionTrace.event(trace, "converted")
+                                        ExecutionTrace.event(trace, "converted", ExecutionTrace.details { traced(converted) })
                                         result.complete(converted)
                                     } catch (e: Exception) {
                                         result.completeExceptionally(e)
@@ -879,6 +881,7 @@ class XtcTextDocumentService(
             params.identifier,
             workspace = false,
             progress = params,
+            traced = { it.traced(params.previousResultId) },
         ) { results ->
             // a module's tests are part of its root document's report here too: VS Code takes an open document's report
             // from its own pulls, not from the workspace's, so a test added to an open module, which leaves its
@@ -915,6 +918,7 @@ class XtcTextDocumentService(
                     WorkspaceDiagnosticReport(emptyList()),
                 )
             },
+            traced = { it.traced() },
         ) { results ->
             // a module's tests are part of its root document's report, so that a client that lists them again as its
             // diagnostics change, as VS Code's Testing view does, follows a change to them in closed files too
@@ -935,6 +939,7 @@ class XtcTextDocumentService(
         workspace: Boolean,
         progress: WorkDoneProgressParams,
         partial: ((T) -> PartialResults.Plan<T>)? = null,
+        traced: (T) -> Map<String, Any?>,
         convert: (List<CompilationResult>) -> T,
     ): CompletableFuture<T> {
         if (!server.usesPullDiagnostics || (identifier != null && identifier != XtcLanguageServer.PULL_DIAGNOSTICS_IDENTIFIER)) {
@@ -963,6 +968,7 @@ class XtcTextDocumentService(
             },
             progress = progress,
             partial = partial,
+            traced = traced,
             convert = { results ->
                 if (revision != diagnosticRevision) throw contentModified()
                 val owned = results.flatMap { it.documentUris }.toSet()
