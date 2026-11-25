@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import org.xtclang.plugin.XtcPlugin;
 import org.xtclang.plugin.XtcProjectDelegate;
+import org.xtclang.plugin.internal.XtcLauncherDefaults;
 import org.xtclang.plugin.launchers.ExecutionMode;
 
 class XtcRunConfigurationTest {
@@ -179,18 +180,43 @@ class XtcRunConfigurationTest {
     }
 
     @Test
-    void jvmArgsAddToTheDefaultJvmArguments() {
+    void jvmArgsAddAndSetJvmArgsReplacesOnTheExtensionAndTheTaskAlike() {
         final var project = newProject();
         final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
         final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
-        final var defaults = extension.getJvmArgs().get();
-        assertTrue(defaults.contains("-ea"));
+        assertEquals(List.of(), extension.getJvmArgs().get());
 
         extension.jvmArgs("-Xss4m");
         run.jvmArgs("-Dorigin=task");
+        assertEquals(List.of("-Xss4m"), extension.getJvmArgs().get());
+        assertEquals(List.of("-Xss4m", "-Dorigin=task"), run.getJvmArgs().get());
 
-        assertEquals(concat(defaults, "-Xss4m"), extension.getJvmArgs().get());
-        assertEquals(concat(defaults, "-Xss4m", "-Dorigin=task"), run.getJvmArgs().get());
+        extension.setJvmArgs(List.of("-Xmx1g"));
+        assertEquals(List.of("-Xmx1g"), extension.getJvmArgs().get());
+        run.setJvmArgs(List.of("-Xmx2g"));
+        assertEquals(List.of("-Xmx2g"), run.getJvmArgs().get());
+    }
+
+    @Test
+    void theLaunchedJvmGetsAssertionsThenThePluginsOptionsThenTheJvmArgs() {
+        final var project = newProject();
+        final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+        final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
+        final var plugin = XtcLauncherDefaults.jvmOptions();
+        assertFalse(plugin.contains("-ea"));
+        assertTrue(XtcLauncherDefaults.enableAssertions());
+        assertTrue(run.getEnableAssertions().get());
+
+        run.jvmArgs("-Xss4m");
+        assertEquals(concat(withAssertions(plugin), "-Xss4m"), run.getAllJvmArgs().get());
+        // replacing the jvmArgs keeps the plugin's options and -ea, as Gradle's setJvmArgs keeps enableAssertions
+        run.setJvmArgs(List.of("-Xmx1g"));
+        assertEquals(concat(withAssertions(plugin), "-Xmx1g"), run.getAllJvmArgs().get());
+        // enableAssertions = false on the extension leaves -ea out of each of its tasks, unless a task sets its own
+        extension.getEnableAssertions().set(false);
+        assertEquals(concat(plugin, "-Xmx1g"), run.getAllJvmArgs().get());
+        run.getEnableAssertions().set(true);
+        assertEquals(concat(withAssertions(plugin), "-Xmx1g"), run.getAllJvmArgs().get());
     }
 
     @Test
@@ -242,6 +268,10 @@ class XtcRunConfigurationTest {
         assertEquals("Elsewhere", selected.getModuleName().get());
         assertEquals("run", selected.getMethodName().get());
         assertEquals(List.of(), selected.getModuleArgs().get());
+    }
+
+    private static List<String> withAssertions(final List<String> options) {
+        return Stream.concat(Stream.of("-ea"), options.stream()).toList();
     }
 
     private static List<String> concat(final List<String> first, final String... rest) {

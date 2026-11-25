@@ -25,6 +25,7 @@ import org.xtclang.plugin.XtcJavaToolsRuntime;
 import org.xtclang.plugin.XtcLauncherRuntime;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
+import org.xtclang.plugin.internal.XtcLauncherDefaults;
 import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ModulePathResolver;
 import org.xtclang.plugin.runtime.DirectRuntimeBuildService;
@@ -58,6 +59,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     final Property<@NotNull String> stdoutPath;
     final Property<@NotNull String> stderrPath;
     final ListProperty<@NotNull String> jvmArgs;
+    final Property<@NotNull Boolean> enableAssertions;
     final Property<@NotNull Boolean> verbose;
     final Property<@NotNull Boolean> showVersion;
     final Property<@NotNull ExecutionMode> executionMode;
@@ -114,8 +116,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         this.verbose = objects.property(Boolean.class).convention(ext.getVerbose());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
-        // the extension's, as the value, not a convention, so that the task's jvmArgs(...) adds to them
+        // the extension's, as the value, so that the task's jvmArgs(...) adds to them and its setJvmArgs replaces them
         this.jvmArgs = objects.listProperty(String.class).value(ext.getJvmArgs());
+        this.enableAssertions = objects.property(Boolean.class).convention(ext.getEnableAssertions());
         this.executionMode = objects.property(ExecutionMode.class).convention(ext.getExecutionMode());
 
         // Assert that required configurations exist - they should always be created by this plugin
@@ -317,6 +320,22 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Input
     public ListProperty<@NotNull String> getJvmArgs() {
         return jvmArgs;
+    }
+
+    @Input
+    public Property<@NotNull Boolean> getEnableAssertions() {
+        return enableAssertions;
+    }
+
+    /**
+     * Every JVM argument of the launched JVM, as Gradle's {@code allJvmArgs}: {@code -ea} if
+     * {@link #getEnableAssertions}, the plugin's own options, then {@link #getJvmArgs}.
+     *
+     * @return the JVM arguments that the launched JVM gets
+     */
+    @Internal
+    public Provider<@NotNull List<String>> getAllJvmArgs() {
+        return enableAssertions.zip(jvmArgs, XtcLauncherDefaults::allJvmArgs);
     }
 
     /**

@@ -247,7 +247,16 @@ xtcCompile {
     // JVM arguments (only used when fork=true)
     jvmArgs("-Xmx2g", "-Xms512m")
 }
+```
 
+`jvmArgs(...)` and `jvmArg(...)` add JVM arguments, and `setJvmArgs(...)` (or `jvmArgs.set(...)`) replaces them, on an
+extension and on a task alike, as on Gradle's own `JavaExec` and `Test` tasks. A task starts from its extension's. The
+list holds only the build script's arguments: the launched JVM also gets, before them, `-ea` while `enableAssertions`
+is true, its default, and the plugin's own options, such as `--enable-native-access=ALL-UNNAMED`, which no
+`setJvmArgs` removes. Turn assertions off with `enableAssertions = false` (`enableAssertions.set(false)`), as Gradle's
+`enableAssertions` does.
+
+```kotlin
 // Advanced: Custom module path (overrides automatic resolution)
 // Only use if you need non-standard module locations
 xtcCompile {

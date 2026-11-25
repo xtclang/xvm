@@ -1,11 +1,7 @@
 package org.xtclang.plugin.internal;
 
-import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
-
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.logging.Logger;
@@ -25,14 +21,13 @@ import org.xtclang.plugin.launchers.ExecutionMode;
 
 public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTaskExtension {
     private static final Logger LOGGER = Logging.getLogger(DefaultXtcLauncherTaskExtension.class);
-    private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
 
     protected final ObjectFactory objects;
     protected final ProviderFactory providers;
-    protected final List<String> defaultJvmArgs;
     protected final ConfigurableFileCollection modulePath;
     protected final Property<@NotNull ExecutionMode> executionMode;
     protected final ListProperty<@NotNull String> jvmArgs;
+    protected final Property<@NotNull Boolean> enableAssertions;
     protected final Property<@NotNull Boolean> verbose;
     protected final Property<@NotNull Boolean> showVersion;
     protected final Property<@NotNull String> stdoutPath;
@@ -54,10 +49,11 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
                 .map(DefaultXtcLauncherTaskExtension::parseExecutionMode)
                 .orElse(XtcPluginConstants.DEFAULT_EXECUTION_MODE)
         );
-        this.defaultJvmArgs = loadDefaultJvmArgs();
-        // the value, not a convention: jvmArgs(...) adds to a value, where it would replace a convention
-        this.jvmArgs = objects.listProperty(String.class).value(defaultJvmArgs);
-        LOGGER.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
+        // only the build script's, empty until it gives some; the plugin's own options and -ea are not among them
+        this.jvmArgs = objects.listProperty(String.class);
+        this.enableAssertions = objects.property(Boolean.class).convention(XtcLauncherDefaults.enableAssertions());
+        LOGGER.info("[plugin] Launcher JVM options: {}, assertions enabled by default: {}",
+            XtcLauncherDefaults.jvmOptions(), XtcLauncherDefaults.enableAssertions());
         if (executionModeProperty.isPresent()) {
             LOGGER.info("[plugin] Default execution mode overridden by Gradle property '{}={}'",
                 XtcPluginConstants.PROPERTY_DEFAULT_EXECUTION_MODE, executionModeProperty.get());
@@ -100,6 +96,11 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     @Override
+    public Property<@NotNull Boolean> getEnableAssertions() {
+        return enableAssertions;
+    }
+
+    @Override
     public void jvmArg(final Provider<? extends @NotNull String> arg) {
         jvmArgs(objects.listProperty(String.class).value(arg.map(Collections::singletonList)));
     }
@@ -121,31 +122,12 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     @Override
     public void setJvmArgs(final Iterable<? extends String> elements) {
-        // Always preserve default JVM args and add user args
-        final var combinedArgs = new ArrayList<>(defaultJvmArgs);
-        elements.forEach(combinedArgs::add);
-        jvmArgs.set(combinedArgs);
+        jvmArgs.set(elements);
     }
 
     @Override
     public void setJvmArgs(final Provider<? extends @NotNull Iterable<? extends String>> provider) {
-        // Always preserve default JVM args and add user args
-        jvmArgs.set(provider.map(userArgs -> {
-            final var combinedArgs = new ArrayList<>(defaultJvmArgs);
-            userArgs.forEach(combinedArgs::add);
-            return combinedArgs;
-        }));
-    }
-
-    private static List<String> loadDefaultJvmArgs() {
-        try (final var inputStream = DefaultXtcLauncherTaskExtension.class.getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH)) {
-            final var props = new Properties();
-            props.load(inputStream);
-            return List.of(props.getProperty("defaultJvmArgs").split(","));
-        } catch (final Exception e) {
-            // Log warning and use fallback
-            return DEFAULT_JVM_ARGS;
-        }
+        jvmArgs.set(provider);
     }
 
     private static ExecutionMode parseExecutionMode(final String rawValue) {

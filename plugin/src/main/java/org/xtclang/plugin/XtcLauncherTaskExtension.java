@@ -35,6 +35,23 @@ public interface XtcLauncherTaskExtension extends Named {
 
     Property<@NotNull Boolean> getVerbose();
 
+    /**
+     * Whether the launched JVM runs with assertions enabled ({@code -ea}), as the {@code enableAssertions} of Gradle's
+     * {@code Test} and {@code JavaExec} tasks; by default the build's choice, which enables them. {@link #getJvmArgs}
+     * does not hold {@code -ea}, so replacing it never turns assertions off.
+     *
+     * @return the enable assertions property
+     */
+    Property<@NotNull Boolean> getEnableAssertions();
+
+    /**
+     * The JVM arguments that the build script gives, empty by default: {@link #jvmArgs} adds to them and
+     * {@link #setJvmArgs} replaces them, on this extension and on a task alike, as {@code jvmArgs} and
+     * {@code setJvmArgs} do on Gradle's own tasks. A task starts from its extension's. The launched JVM gets
+     * {@code -ea} if {@link #getEnableAssertions}, then the plugin's own options, then these.
+     *
+     * @return the JVM arguments property
+     */
     ListProperty<@NotNull String> getJvmArgs();
 
     /**
@@ -130,8 +147,7 @@ public interface XtcLauncherTaskExtension extends Named {
     void jvmArg(Provider<? extends @NotNull String> arg);
 
     /**
-     * Adds JVM arguments after those already given, the plugin's defaults (-ea among them) included; a task's
-     * jvmArgs add to its extension's.
+     * Adds JVM arguments to {@link #getJvmArgs}, after those it has.
      */
     void jvmArgs(String... args);
 
@@ -139,6 +155,9 @@ public interface XtcLauncherTaskExtension extends Named {
 
     void jvmArgs(Provider<? extends @NotNull Iterable<? extends String>> provider);
 
+    /**
+     * Replaces {@link #getJvmArgs}. The plugin's own options and {@link #getEnableAssertions} stay as they are.
+     */
     void setJvmArgs(Iterable<? extends String> elements);
 
     void setJvmArgs(Provider<? extends @NotNull Iterable<? extends String>> provider);

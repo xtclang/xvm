@@ -244,11 +244,11 @@ public class XdkPluginBuildInfoTest {
                 id("org.xtclang.xtc-plugin")
             }
 
-            // Capture the jvmArgs provider at configuration time
+            // Capture the JVM arguments that runXtc's JVM gets, at configuration time
             val runTaskProvider = tasks.named("runXtc", org.xtclang.plugin.tasks.XtcRunTask::class)
-            val jvmArgsProvider = runTaskProvider.flatMap { it.jvmArgs }
+            val jvmArgsProvider = runTaskProvider.flatMap { it.allJvmArgs }
 
-            // Print the jvmArgs that the plugin configured
+            // Print the JVM arguments that the plugin gives the launched JVM
             tasks.register("printJvmArgs") {
                 val args = jvmArgsProvider
                 doLast {
