@@ -47,7 +47,7 @@ project and walks through your first five minutes.
 The screenshots use the card game in [`lang/test-fixtures/tour/cardGame`](../../test-fixtures/tour/cardGame).
 The shortcuts are those of the editors' default Windows keymaps, which IntelliJ's Linux keymap shares.
 On macOS, most shortcuts use Cmd in place of Ctrl; each editor's keymap reference lists the rest. The
-Ecstasy chord **Ctrl+Alt+X, then a letter** is **Control+Option+X, then the letter** on macOS.
+Ecstasy chord <kbd>Ctrl+Alt+X</kbd>, then a letter is <kbd>Control+Option+X</kbd>, then the letter on macOS.
 
 ## More
 

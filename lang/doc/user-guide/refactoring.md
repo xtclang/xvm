@@ -7,19 +7,19 @@ leave your code broken.
 
 ## Rename
 
-Press Shift+F6 (IntelliJ) or F2 (VS Code) on a method, property, local, parameter or type, and type the
+Press <kbd>Shift+F6</kbd> (IntelliJ) or <kbd>F2</kbd> (VS Code) on a method, property, local, parameter or type, and type the
 new name. The rename changes the declaration and every use, in every module of the project, tests
 included.
 
 <table><tr><td width="50%">
 
 ![IntelliJ Rename dialog on cardMatches, with canFollow typed in](images/intellij-rename.png)
-*IntelliJ: Shift+F6 on `cardMatches` renames it, here to `canFollow`.*
+*IntelliJ: <kbd>Shift+F6</kbd> on `cardMatches` renames it, here to `canFollow`.*
 
 </td><td width="50%">
 
 ![VS Code rename box on cardMatches, with the new name canFollow typed in](images/vscode-rename.png)
-*VS Code: F2 on `cardMatches` renames it, here to `canFollow`; the server checks the new name before anything changes.*
+*VS Code: <kbd>F2</kbd> on `cardMatches` renames it, here to `canFollow`; the server checks the new name before anything changes.*
 
 </td></tr></table>
 
@@ -31,7 +31,7 @@ them unsaved.
 ## Move
 
 Moving a file to another package's folder moves its type, and every use follows: the server rewrites
-qualified names and imports, also in files that aren't open. In IntelliJ, use **Refactor | Move** (F6) or
+qualified names and imports, also in files that aren't open. In IntelliJ, use **Refactor | Move** (<kbd>F6</kbd>) or
 drag the file in the Project view; in VS Code, cut and paste or drag it in the Explorer.
 
 ![VS Code Explorer with Suit.x moved into a cards folder, and the files that use it open with unsaved edits](images/vscode-move-file.png)
@@ -39,8 +39,8 @@ drag the file in the Project view; in VS Code, cut and paste or drag it in the E
 
 ## Extract, inline and safe delete
 
-These are code actions: select the code, or put the cursor on it, then press Alt+Enter (IntelliJ) or
-Ctrl+. (VS Code); VS Code also lists the refactorings of a selection with Ctrl+Shift+R.
+These are code actions: select the code, or put the cursor on it, then press <kbd>Alt+Enter</kbd> (IntelliJ) or
+<kbd>Ctrl+.</kbd> (VS Code); VS Code also lists the refactorings of a selection with <kbd>Ctrl+Shift+R</kbd>.
 
 - **Extract expression to local variable** or **to private method**, for a whole returned expression
   or a typed local's initializer. The new local has the type the compiler gives the expression.
@@ -54,21 +54,21 @@ Ctrl+. (VS Code); VS Code also lists the refactorings of a selection with Ctrl+S
 <table><tr><td width="50%">
 
 ![IntelliJ refactoring menu on a selected expression](images/intellij-extract.png)
-*IntelliJ: Alt+Enter on a selected expression offers to extract it to a local or a private method.*
+*IntelliJ: <kbd>Alt+Enter</kbd> on a selected expression offers to extract it to a local or a private method.*
 
 </td><td width="50%">
 
 ![VS Code refactoring menu on a selected expression: Extract expression to local variable, Extract expression to private method](images/vscode-extract.png)
-*VS Code: Ctrl+Shift+R on a returned expression offers to extract it to a local or a private method.*
+*VS Code: <kbd>Ctrl+Shift+R</kbd> on a returned expression offers to extract it to a local or a private method.*
 
 </td></tr></table>
 
 ![IntelliJ offering Safely delete private member 'heading'](images/intellij-safe-delete.png)
-*IntelliJ: Alt+Enter on `heading`, a private method that nothing uses, offers to delete it safely.*
+*IntelliJ: <kbd>Alt+Enter</kbd> on `heading`, a private method that nothing uses, offers to delete it safely.*
 
 ## Quick fixes and imports
 
-On an error, Alt+Enter (IntelliJ) or Ctrl+. (VS Code) offers its fixes:
+On an error, <kbd>Alt+Enter</kbd> (IntelliJ) or <kbd>Ctrl+.</kbd> (VS Code) offers its fixes:
 
 - **Create private method** or **Create public method** for a call to a method that doesn't exist yet,
   with the parameter types the call implies.
@@ -79,16 +79,16 @@ On an error, Alt+Enter (IntelliJ) or Ctrl+. (VS Code) offers its fixes:
 <table><tr><td width="50%">
 
 ![IntelliJ quick fixes for a call to a method that does not exist yet](images/intellij-quick-fix.png)
-*IntelliJ: Alt+Enter on a call of `announce`, which doesn't exist yet, offers to create it.*
+*IntelliJ: <kbd>Alt+Enter</kbd> on a call of `announce`, which doesn't exist yet, offers to create it.*
 
 </td><td width="50%">
 
 ![VS Code quick fix: Create private method 'announce'](images/vscode-quick-fix.png)
-*VS Code: Ctrl+. on the call of `announce`, which doesn't exist yet, offers to create it.*
+*VS Code: <kbd>Ctrl+.</kbd> on the call of `announce`, which doesn't exist yet, offers to create it.*
 
 </td></tr></table>
 
-**Organize imports**, Ctrl+Alt+O (IntelliJ) or Shift+Alt+O (VS Code), removes unused imports and sorts
+**Organize imports**, <kbd>Ctrl+Alt+O</kbd> (IntelliJ) or <kbd>Shift+Alt+O</kbd> (VS Code), removes unused imports and sorts
 the rest. **Generate documentation comment**, on a declaration, writes a doc comment with its
 parameters and return value.
 

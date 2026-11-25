@@ -8,8 +8,8 @@ Frameworks | Ecstasy**, which links each of them.
 
 | What | IntelliJ | VS Code |
 |------|----------|---------|
-| Build mode | **Settings \| Languages & Frameworks \| Ecstasy \| Build and Run**, or Ctrl+Alt+X, then B | `xtc.build.mode`, or Ctrl+Alt+X, then B |
-| Language adapter: compiler or Tree-sitter | **Tools \| Switch Ecstasy Language Adapter**, or Ctrl+Alt+X, then A | **Ecstasy: Switch Language Adapter**, Ctrl+Alt+X, then A, or the status bar |
+| Build mode | **Settings \| Languages & Frameworks \| Ecstasy \| Build and Run**, or <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd> | `xtc.build.mode`, or <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd> |
+| Language adapter: compiler or Tree-sitter | **Tools \| Switch Ecstasy Language Adapter**, or <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd> | **Ecstasy: Switch Language Adapter**, <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd>, or the status bar |
 | Inlay hints, reference counts | **Settings \| Languages & Frameworks \| Ecstasy \| Language Service** | `xtc.inlayHints.enabled`, `xtc.codeLens.references` |
 | Indentation and line width | **Settings \| Editor \| Code Style \| Ecstasy** | `xtc.formatting.*` |
 | The server's memory and logs | **Settings \| Languages & Frameworks \| Ecstasy \| Server Runtime and Logs**: the memory policy, a maximum heap, JVM options, logs | `xtc.server.memoryPolicy`, `xtc.server.maxHeap`, `xtc.java.vmOptions`, `xtc.server.logs`, in user settings |
@@ -57,7 +57,7 @@ Compiler page.*
 </td></tr></table>
 
 ![VS Code Switch Language Adapter picker: Ecstasy Compiler, Tree-sitter or the bundled default](images/vscode-switch-adapter.png)
-*VS Code: Ctrl+Alt+X, then A, or a click on Ecstasy in the status bar, switches the server's adapter. IntelliJ's
+*VS Code: <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd>, or a click on Ecstasy in the status bar, switches the server's adapter. IntelliJ's
 **Tools | Switch Ecstasy Language Adapter**, or the same keys, opens the same choice in a popup.*
 
 ## Troubleshooting
@@ -68,12 +68,12 @@ When something doesn't work as you expect, look at the language server first.
   Configuration**, which reports the settings the server runs with and what it found. In IntelliJ,
   the **Ecstasy | Language Service** settings page shows the running server's configuration, and
   LSP4IJ's **Language Servers** window its state and traces.
-- **Its log.** **Ctrl+Alt+X, then L** shows the server's log, and again hides it: IntelliJ's **Tools |
+- **Its log.** <kbd>Ctrl+Alt+X</kbd>, then <kbd>L</kbd> shows the server's log, and again hides it: IntelliJ's **Tools |
   Toggle Ecstasy Language Server Log**, VS Code's **Ecstasy: Show Language Server Output**. Each
   server also writes its log to `~/.xtc/logs/lsp/server-<pid>-<start>/server.log`. VS Code marks
   every line of the server's log `[error]`, as the server writes it to its standard error; the level
   after the time, such as `INFO`, is the line's real one.
-- **Restart it.** **Ctrl+Alt+X, then R**: IntelliJ's **Tools | Restart Ecstasy Language Server**, VS
+- **Restart it.** <kbd>Ctrl+Alt+X</kbd>, then <kbd>R</kbd>: IntelliJ's **Tools | Restart Ecstasy Language Server**, VS
   Code's **Ecstasy: Restart Language Server**. Unsaved changes are kept. If the server's process
   dies, IntelliJ starts it again; in VS Code, a click on the status bar item does.
 - **Export its logs.** IntelliJ's **Tools | Export Ecstasy Server Logs** and VS Code's **Ecstasy:
@@ -89,7 +89,7 @@ When something doesn't work as you expect, look at the language server first.
 </td><td width="50%">
 
 ![VS Code Output panel showing the Ecstasy Language Server's log](images/vscode-server-log.png)
-*VS Code: Ctrl+Alt+X, then L shows the language server's log.*
+*VS Code: <kbd>Ctrl+Alt+X</kbd>, then <kbd>L</kbd> shows the language server's log.*
 
 </td></tr></table>
 
@@ -97,9 +97,9 @@ Some common problems:
 
 | Symptom | What to do |
 |---------|------------|
-| No errors, completion or navigation | Check the server's state and log. Make sure the adapter is the compiler (Ctrl+Alt+X, then A). |
+| No errors, completion or navigation | Check the server's state and log. Make sure the adapter is the compiler (<kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd>). |
 | VS Code: wrong Java, or none | Set `xtc.java.home` to a Java 25 or later installation. |
-| A Gradle build's settings don't apply to a run | The project builds embedded, which takes only some run settings from Gradle; see [Gradle settings in embedded runs](building-and-running.md#gradle-settings-in-embedded-runs). Refresh the model, move task-only settings to `xtcRun`, or choose Gradle with Ctrl+Alt+X, then B. |
+| A Gradle build's settings don't apply to a run | The project builds embedded, which takes only some run settings from Gradle; see [Gradle settings in embedded runs](building-and-running.md#gradle-settings-in-embedded-runs). Refresh the model, move task-only settings to `xtcRun`, or choose Gradle with <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd>. |
 | Gradle mode can't find `runXtc` or `testXtc` | The project's Gradle build needs the XTC Gradle plugin; IntelliJ also needs the Gradle build linked. |
 | A breakpoint is unverified | The line changed since the program was built, or has no code; debug again. |
 | **Ecstasy: Create New Project** fails | Install an XDK and put its `xtc` on your `PATH`. |

@@ -55,7 +55,7 @@ To make a new one:
 - **IntelliJ:** **File | New | Project**, then **Ecstasy**. Choose the project type (application,
   library or service) and whether it has several modules. The wizard makes the same project as
   `xtc init`, with the XTC Gradle plugin, and a run configuration for it. It doesn't need an XDK.
-- **VS Code:** **Ecstasy: Create New Project** in the Command Palette (Ctrl+Shift+P) asks for a name,
+- **VS Code:** **Ecstasy: Create New Project** in the Command Palette (<kbd>Ctrl+Shift+P</kbd>) asks for a name,
   a type and a folder, and runs `xtc init` in a terminal.
 - **A terminal:** `xtc init myApp --type application --dir ~/projects`.
 
@@ -101,20 +101,20 @@ Open `~/projects/cardGame` in either editor.
 Open `src/main/x/cardGame/Eights.x`, then try these in order.
 
 1. **See an error as you type.** Misspell a method name in a call. The compiler marks it at once,
-   before you save; hover it, or press Ctrl+F1 in IntelliJ, to read the message. Undo the change.
+   before you save; hover it, or press <kbd>Ctrl+F1</kbd> in IntelliJ, to read the message. Undo the change.
 2. **Complete a name.** Type a variable's name and a dot, such as `deck.`: completion lists the
-   members of its type, with their types. Ctrl+Space opens the list anywhere.
-3. **Read documentation.** Hover over a method name, or press Ctrl+Q (IntelliJ) or Ctrl+K Ctrl+I
+   members of its type, with their types. <kbd>Ctrl+Space</kbd> opens the list anywhere.
+3. **Read documentation.** Hover over a method name, or press <kbd>Ctrl+Q</kbd> (IntelliJ) or <kbd>Ctrl+K</kbd> <kbd>Ctrl+I</kbd>
    (VS Code), for its signature and doc comment.
-4. **Go to a definition.** Ctrl+click a call, or press Ctrl+B (IntelliJ) or F12 (VS Code), to open
+4. **Go to a definition.** <kbd>Ctrl</kbd>+click a call, or press <kbd>Ctrl+B</kbd> (IntelliJ) or <kbd>F12</kbd> (VS Code), to open
    the method it calls. It works for the XDK's types too, whose sources open read-only.
 5. **Run the program.** Open `src/main/x/cardGame.x` and click the Run icon in the gutter (IntelliJ)
    or the **▶ Run** lens above `module cardGame` (VS Code). The game runs in the Run window or a
-   terminal; press Enter to play each turn.
+   terminal; press <kbd>Enter</kbd> to play each turn.
 6. **Debug it.** Click in the gutter beside a line of `Deck.x` to set a breakpoint, then press
-   Shift+F9 (IntelliJ) or F5 (VS Code). The program stops at the breakpoint, and the debugger shows
-   its frames and variables. Step with F8 and F7 (IntelliJ) or F10 and F11 (VS Code), and continue
-   with F9 (IntelliJ) or F5 (VS Code).
+   <kbd>Shift+F9</kbd> (IntelliJ) or <kbd>F5</kbd> (VS Code). The program stops at the breakpoint, and the debugger shows
+   its frames and variables. Step with <kbd>F8</kbd> and <kbd>F7</kbd> (IntelliJ) or <kbd>F10</kbd> and <kbd>F11</kbd> (VS Code), and continue
+   with <kbd>F9</kbd> (IntelliJ) or <kbd>F5</kbd> (VS Code).
 7. **Run a test.** Open `src/test/x/DeckTest.x`. Click the test icon in the gutter beside
    `module DeckTest` and choose Run (IntelliJ), or click its run icon (VS Code). Each test's result
    shows in the test runner or the Testing view.

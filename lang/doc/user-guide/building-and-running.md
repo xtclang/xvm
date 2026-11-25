@@ -2,7 +2,7 @@
 
 ## Build modes
 
-The build mode decides how Build, Run, Debug and the tests work. Press **Ctrl+Alt+X, then B** to
+The build mode decides how Build, Run, Debug and the tests work. Press <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd> to
 choose it in either editor, or:
 
 - **IntelliJ:** **Tools | Select Ecstasy Build Mode**, or **Settings | Languages & Frameworks |
@@ -29,13 +29,13 @@ The next build or run uses the new mode; nothing restarts.
 </td><td width="50%">
 
 ![VS Code quick pick for the build mode: embedded compiler, Gradle or automatic](images/vscode-build-mode.png)
-*VS Code: **Ecstasy: Select Build Mode**, which Ctrl+Alt+X, then B, and a click on the status bar's build mode open too.*
+*VS Code: **Ecstasy: Select Build Mode**, which <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd>, and a click on the status bar's build mode open too.*
 
 </td></tr></table>
 
 ## Build
 
-Ctrl+F9 builds (Cmd+F9 on macOS): IntelliJ's **Build | Build Project**, VS Code's **Ecstasy: Build**.
+<kbd>Ctrl+F9</kbd> builds (<kbd>Cmd+F9</kbd> on macOS): IntelliJ's **Build | Build Project**, VS Code's **Ecstasy: Build**.
 In embedded mode, every module builds in dependency order, from the editors' text, saved or not, into
 `build/xtc/embedded`. **Rebuild** compiles everything again. A failed build lists each error with its
 file and line, a click away from its code: in IntelliJ's **Build** window, and in VS Code's terminal.
@@ -57,18 +57,18 @@ file and line, a click away from its code: in IntelliJ's **Build** window, and i
 A module with a `run()` method has a **▶ Run** lens above its `module` declaration, and in IntelliJ a
 Run icon in the gutter of that line. Click either to run it. Other ways:
 
-- **IntelliJ:** **Run Context Configuration** (Ctrl+Shift+F10; Ctrl+Shift+R on macOS) in the editor, or
+- **IntelliJ:** **Run Context Configuration** (<kbd>Ctrl+Shift+F10</kbd>; <kbd>Ctrl+Shift+R</kbd> on macOS) in the editor, or
   an **Ecstasy Application** run configuration (**Run | Edit Configurations | + | Ecstasy Application**)
-  run with Shift+F10. The configuration names the module, its method and arguments, and what it runs
+  run with <kbd>Shift+F10</kbd>. The configuration names the module, its method and arguments, and what it runs
   with: the project default, embedded, Gradle or `xtc` command line.
-- **VS Code:** the editor's Run button, Ctrl+Shift+F10 (Ctrl+Shift+R on macOS), **Ecstasy: Run Module**,
+- **VS Code:** the editor's Run button, <kbd>Ctrl+Shift+F10</kbd> (<kbd>Ctrl+Shift+R</kbd> on macOS), **Ecstasy: Run Module**,
   or an `xtc` task in `.vscode/tasks.json` with arguments (see
   [Tasks](../../vscode-extension/README.md#tasks)).
 
 <table><tr><td width="50%">
 
 ![IntelliJ: the Run cardGame lens and the gutter Run icon on module cardGame, and the game's output in the Run window](images/intellij-run.png)
-*IntelliJ: the Run lens and the gutter icon run the module; the game reads each Enter from the Run window.*
+*IntelliJ: the Run lens and the gutter icon run the module; the game reads each <kbd>Enter</kbd> from the Run window.*
 
 </td><td width="50%">
 
@@ -78,7 +78,7 @@ Run icon in the gutter of that line. Click either to run it. Other ways:
 </td></tr></table>
 
 The program reads its input from the Run window (IntelliJ) or its terminal (VS Code): type a line and
-press Enter. IntelliJ's **Send EOF**, or Ctrl+D on an empty line in VS Code, ends the input. Stop ends
+press <kbd>Enter</kbd>. IntelliJ's **Send EOF**, or <kbd>Ctrl+D</kbd> on an empty line in VS Code, ends the input. Stop ends
 the program; IntelliJ's **Rerun** runs it again.
 
 ![IntelliJ Run Configuration dialog for an Ecstasy Application](images/intellij-run-configuration.png)

@@ -13,7 +13,7 @@ of a project takes some seconds; after that, it rechecks what you change.
 
 The server's default *adapter* analyzes code with the compiler. The other adapter, Tree-sitter,
 understands only syntax: it is a fallback for a project that the compiler has trouble with. Switch
-with **Ctrl+Alt+X, then A**; see [Settings that matter](settings-and-troubleshooting.md#settings-that-matter).
+with <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd>; see [Settings that matter](settings-and-troubleshooting.md#settings-that-matter).
 
 ## Reading code
 
@@ -34,7 +34,7 @@ included, and a click lists them.
 
 </td></tr></table>
 
-Hover a name, or press Ctrl+Q (IntelliJ) or Ctrl+K Ctrl+I (VS Code), for its declaration and doc
+Hover a name, or press <kbd>Ctrl+Q</kbd> (IntelliJ) or <kbd>Ctrl+K</kbd> <kbd>Ctrl+I</kbd> (VS Code), for its declaration and doc
 comment, as the compiler sees it. This works for the XDK's own types too.
 
 <table><tr><td width="50%">
@@ -50,10 +50,10 @@ comment, as the compiler sees it. This works for the XDK's own types too.
 </td></tr></table>
 
 With the cursor on a name, its uses in the file are highlighted. Methods and doc comments fold.
-Extend selection grows the selection by the syntax around it: Ctrl+W and Ctrl+Shift+W in IntelliJ,
-Shift+Alt+Right and Shift+Alt+Left in VS Code.
+Extend selection grows the selection by the syntax around it: <kbd>Ctrl+W</kbd> and <kbd>Ctrl+Shift+W</kbd> in IntelliJ,
+<kbd>Shift+Alt+Right</kbd> and <kbd>Shift+Alt+Left</kbd> in VS Code.
 
-The file's outline is IntelliJ's **File Structure** popup (Ctrl+F12) and **Structure** window, and
+The file's outline is IntelliJ's **File Structure** popup (<kbd>Ctrl+F12</kbd>) and **Structure** window, and
 VS Code's **Outline** view and breadcrumbs.
 
 ## Writing code
@@ -75,7 +75,7 @@ module adds its import.
 
 </td></tr></table>
 
-Inside a call, Ctrl+P (IntelliJ) or Ctrl+Shift+Space (VS Code) shows the parameters of the method it
+Inside a call, <kbd>Ctrl+P</kbd> (IntelliJ) or <kbd>Ctrl+Shift+Space</kbd> (VS Code) shows the parameters of the method it
 calls, with the one at the cursor in bold. It also opens by itself as you type the call's `(`.
 
 <table><tr><td width="50%">
@@ -90,17 +90,17 @@ calls, with the one at the cursor in bold. It also opens by itself as you type t
 
 </td></tr></table>
 
-Templates write common declarations. In IntelliJ, Ctrl+J lists the live templates, such as `cls`,
+Templates write common declarations. In IntelliJ, <kbd>Ctrl+J</kbd> lists the live templates, such as `cls`,
 `meth`, `fori` and `sout`; in VS Code, the snippets complete with the other suggestions, such as
-`meth` for a method. Tab moves through a template's placeholders.
+`meth` for a method. <kbd>Tab</kbd> moves through a template's placeholders.
 
 **Formatting** goes through the language server's formatter, with your indentation settings
 (IntelliJ's **Settings | Editor | Code Style | Ecstasy**, VS Code's `xtc.formatting.*` settings).
-Reformat a file or a selection with Ctrl+Alt+L (IntelliJ) or Shift+Alt+F (VS Code). Enter and `}`
-indent as you type, and typing `{` and Enter closes the block. To format on save, use IntelliJ's
+Reformat a file or a selection with <kbd>Ctrl+Alt+L</kbd> (IntelliJ) or <kbd>Shift+Alt+F</kbd> (VS Code). <kbd>Enter</kbd> and `}`
+indent as you type, and typing `{` and <kbd>Enter</kbd> closes the block. To format on save, use IntelliJ's
 **Actions on Save | Reformat code**, or VS Code's `editor.formatOnSave`.
 
-Ctrl+/ comments out the selected lines with `//`; in IntelliJ, Ctrl+Shift+/ wraps a selection in
+<kbd>Ctrl+/</kbd> comments out the selected lines with `//`; in IntelliJ, <kbd>Ctrl+Shift+/</kbd> wraps a selection in
 `/* */`.
 
 ## Errors and warnings
@@ -111,17 +111,17 @@ you make it. Warnings show too, such as an assertion that can never fail.
 <table><tr><td width="50%">
 
 ![IntelliJ: popCrd underlined as an error, with the COMPILER-56 message and a fix that creates the method](images/intellij-error-message.png)
-*IntelliJ: a misspelled `popCard` is an error as soon as it is typed; Ctrl+F1 shows the compiler's message, with a fix.*
+*IntelliJ: a misspelled `popCard` is an error as soon as it is typed; <kbd>Ctrl+F1</kbd> shows the compiler's message, with a fix.*
 
 </td><td width="50%">
 
 ![VS Code: the COMPILER-56 message for popCrd, shown under the line](images/vscode-error-message.png)
-*VS Code: F8 shows the compiler's message, COMPILER-56, under the line.*
+*VS Code: <kbd>F8</kbd> shows the compiler's message, COMPILER-56, under the line.*
 
 </td></tr></table>
 
 Every problem of the project is in IntelliJ's **Problems** window and VS Code's **Problems** view
-(Ctrl+Shift+M), each a click away from its code. That includes files you haven't opened: change a
+(<kbd>Ctrl+Shift+M</kbd>), each a click away from its code. That includes files you haven't opened: change a
 method's signature, and its callers in other files and in the test modules are listed as errors
 until you fix them. IntelliJ also draws such files red in the Project view.
 
@@ -141,18 +141,18 @@ until you fix them. IntelliJ also draws such files red in the Project view.
 
 | To | IntelliJ | VS Code |
 |----|----------|---------|
-| Open the declaration of what's under the cursor | Ctrl+B or Ctrl+click | F12 or Ctrl+click |
-| Open the declaration of its type | Ctrl+Shift+B | **Go to Type Definition** |
-| List the implementations of an interface method | Ctrl+Alt+B | Ctrl+F12 |
-| Find every use, in all modules | Alt+F7 | Shift+Alt+F12 |
-| See who calls a method | Ctrl+Alt+H | **Show Call Hierarchy** |
-| See a class's supertypes and subtypes | Ctrl+H | **Show Type Hierarchy** |
-| Find a class, method or property by name | Ctrl+Alt+Shift+N | Ctrl+T |
+| Open the declaration of what's under the cursor | <kbd>Ctrl+B</kbd> or <kbd>Ctrl</kbd>+click | <kbd>F12</kbd> or <kbd>Ctrl</kbd>+click |
+| Open the declaration of its type | <kbd>Ctrl+Shift+B</kbd> | **Go to Type Definition** |
+| List the implementations of an interface method | <kbd>Ctrl+Alt+B</kbd> | <kbd>Ctrl+F12</kbd> |
+| Find every use, in all modules | <kbd>Alt+F7</kbd> | <kbd>Shift+Alt+F12</kbd> |
+| See who calls a method | <kbd>Ctrl+Alt+H</kbd> | **Show Call Hierarchy** |
+| See a class's supertypes and subtypes | <kbd>Ctrl+H</kbd> | **Show Type Hierarchy** |
+| Find a class, method or property by name | <kbd>Ctrl+Alt+Shift+N</kbd> | <kbd>Ctrl+T</kbd> |
 
 <table><tr><td width="50%">
 
 ![IntelliJ call hierarchy of cardMatches, called by the player and both strategies](images/intellij-call-hierarchy.png)
-*IntelliJ: Ctrl+Alt+H on `cardMatches` lists its callers: the player, both strategies' `choose` and the tests.*
+*IntelliJ: <kbd>Ctrl+Alt+H</kbd> on `cardMatches` lists its callers: the player, both strategies' `choose` and the tests.*
 
 </td><td width="50%">
 
@@ -164,7 +164,7 @@ until you fix them. IntelliJ also draws such files red in the Project view.
 <table><tr><td width="50%">
 
 ![IntelliJ Find usages of cardMatches in the Find window](images/intellij-find-usages.png)
-*IntelliJ: Alt+F7 on `cardMatches` finds its uses, including those in the tests, in the Find window.*
+*IntelliJ: <kbd>Alt+F7</kbd> on `cardMatches` finds its uses, including those in the tests, in the Find window.*
 
 </td><td width="50%">
 
