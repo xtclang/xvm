@@ -282,7 +282,7 @@ public class xModule
         TypeExpression expr   = null;
         try {
             expr = fClass ? parser.parseClassExpression() : parser.parseTypeExpression();
-        } catch (RuntimeException _) {}
+        } catch (RuntimeException ignore) {}
 
         if (expr != null && errs.getSeriousErrorCount() == 0) {
             // create a TypeCompositionStatement parent or "expr"
@@ -292,7 +292,7 @@ public class xModule
                 TypeConstant typeClz = null;
                 try {
                     typeClz = expr.ensureTypeConstant();
-                } catch (RuntimeException _) {}
+                } catch (RuntimeException ignore) {}
 
                 if (typeClz != null && !typeClz.containsUnresolved()) {
                     return typeClz;

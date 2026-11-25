@@ -574,7 +574,7 @@ public class RelOpExpression
             } catch (ArithmeticException e) {
                 log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeRequired, this);
                 return null;
-            } catch (RuntimeException _) {}
+            } catch (RuntimeException ignore) {}
         }
 
         return finishValidations(ctx, atypeRequired, atypeResults, TypeFit.Fit, aconstResult, errs);

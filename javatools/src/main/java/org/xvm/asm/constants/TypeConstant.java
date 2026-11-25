@@ -3946,7 +3946,9 @@ public abstract class TypeConstant
                     if (infoPrev != null) {
                         ChildInfo infoNew = infoPrev.layerOn(infoChild);
                         if (infoNew == null) {
-                            log(cascade(fIncomplete, errs), Severity.ERROR, VE_CHILD_COLLISION, constId, sName,
+                            log(cascade(fIncomplete, errs), Severity.ERROR, VE_CHILD_COLLISION,
+                                    constId,
+                                    sName,
                                     contrib.getTypeConstant(),
                                     infoPrev.getIdentity());
                         } else {
@@ -4648,7 +4650,7 @@ public abstract class TypeConstant
                         // and an attempt is made to put something (i.e. more than just the same or
                         // a narrower "into") on top of it; first, preview the "layer on" process to
                         // make sure that the contribution should not just be ignored
-                        ErrorList  errsPreview   = new ErrorList(ErrorList.FIRST_ERROR);
+                        ErrorList  errsPreview   = new ErrorList(1);
                         MethodInfo methodPreview = methodBase.layerOn(methodContrib, fSelf, errsPreview);
                         if (methodPreview == methodBase && !errsPreview.hasSeriousErrors()) {
                             continue;

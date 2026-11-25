@@ -151,7 +151,7 @@ public class JitConnector
                     // TODO: add the service info; see Utils.log()
                     System.out.println("\nUnhandled exception: " +
                         cause.getClass().getField("exception").get(cause));
-                } catch (Throwable _) {}
+                } catch (Throwable ignore) {}
             } else {
                 if (cause instanceof VerifyError) {
                     dumpNames.add(extractVerifyErrorClassName(cause.getMessage()));
@@ -187,7 +187,7 @@ public class JitConnector
     /**
      * Extract the class name from the VerifyError message that looks like:
      *
-     *      <p>VarifyError
+     *      VarifyError
      *      Location:
      *          org/xtclang/ecstasy/[ClassName].[MethodName]([MethodSignature])
      */

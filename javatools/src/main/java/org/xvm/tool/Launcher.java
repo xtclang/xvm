@@ -133,7 +133,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * The supplied listener receives diagnostics for external programmatic access. The command
      * line supplies an explicit discard listener because its Console already displays them.
      */
-    protected final ErrorListener f_errs;
+    protected final ErrorListener m_errors;
 
     /**
      * The worst severity issue encountered thus far.
@@ -156,7 +156,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     protected Launcher(T options, Console console, @NotNull ErrorListener errs) {
         m_console = console == null ? DEFAULT_CONSOLE : console;
-        f_errs = requireNonNull(errs, "errs");
+        m_errors = requireNonNull(errs, "errs");
         m_options = options;
         moduleCache = new HashMap<>();
     }
@@ -599,7 +599,7 @@ public abstract class Launcher<T extends LauncherOptions>
     public void log(ErrorInfo err) {
         m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
         // Console reporting may throw for FATAL; deliver the original diagnostic first.
-        f_errs.log(err);
+        m_errors.log(err);
         log(err.getSeverity(), err.toString());
     }
 

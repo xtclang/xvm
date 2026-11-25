@@ -1047,7 +1047,7 @@ public class EmbeddingSupport {
         public boolean isAbortDesired() {
             // Cancellation must also stop between phases; stopping only an individual compiler
             // loop would let the following phase run against an unfinished predecessor.
-            return super.isAbortDesired() || f_errs.isAbortDesired();
+            return super.isAbortDesired() || m_errors.isAbortDesired();
         }
 
         protected EmbeddingCompiler(Function<ErrorListener, ParsedSources> parse,
@@ -1075,7 +1075,7 @@ public class EmbeddingSupport {
             // all of them: a stage logging to the launcher directly would stop at its first error,
             // and a changed method would be an error in one of its callers instead of in each. A
             // partial analysis is the exception, which stops at its incomplete site's error.
-            var errs = ErrorListener.cancellable(ErrorListener.collecting(this::log), f_errs::isAbortDesired);
+            var errs = ErrorListener.cancellable(ErrorListener.collecting(this::log), m_errors::isAbortDesired);
             StatementBlock block;
             try {
                 var parsed = parse.apply(errs);

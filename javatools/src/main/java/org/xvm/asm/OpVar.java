@@ -105,7 +105,7 @@ public abstract class OpVar
                             localConstants()[convertId(nNameId)]).getValue();
                 }
             }
-        } catch (Throwable _) {}
+        } catch (Throwable ignore) {}
 
         return "?";
     }

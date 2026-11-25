@@ -140,7 +140,7 @@ class InterpreterControl
                 } else {
                     control.finish(-1, e.toString());
                 }
-            }).whenComplete((_, e) -> {
+            }).whenComplete((r, e) -> {
                 if (e == null) {
                     completion.complete(null);
                 } else {
