@@ -48,7 +48,7 @@ internal object ExecutionTrace {
         /** Notes that the span has reached [phase], and writes it at DEBUG; only the first time counts. */
         fun reached(phase: String) {
             if (reached.putIfAbsent(phase, elapsed(span.created)) == null && logger.isDebugEnabled) {
-                event(span, phase.replace(capital) { "-${it.value.lowercase()}" })
+                event(span, phase.replace(capital) { "-${it.value.lowercase()}" }, detail = true)
             }
         }
 
@@ -68,15 +68,16 @@ internal object ExecutionTrace {
         uri: String? = null,
     ): Span = Span(ids.incrementAndGet(), context.get()?.span?.id, kind, operation, uri)
 
+    /** Writes [event] of [span] with [fields]; a [detail] only when the trace is at DEBUG, as a test run's is. */
     fun event(
         span: Span,
         event: String,
         fields: Map<String, Any?> = emptyMap(),
+        detail: Boolean = false,
     ) {
-        if (!logger.isInfoEnabled) return
+        if (if (detail) !logger.isDebugEnabled else !logger.isInfoEnabled) return
         val thread = Thread.currentThread()
-        logger.info(
-            "{}",
+        val line =
             gson.toJson(
                 mapOf(
                     "sequence" to events.incrementAndGet(),
@@ -92,8 +93,8 @@ internal object ExecutionTrace {
                     "event" to event,
                     "elapsedMs" to elapsed(span.created),
                 ) + fields,
-            ),
-        )
+            )
+        if (detail) logger.debug("{}", line) else logger.info("{}", line)
     }
 
     /**
@@ -130,10 +131,14 @@ internal object ExecutionTrace {
         }
     }
 
-    /** Counts threads inside compiler APIs, rather than counting nested calls as parallelism. */
+    /**
+     * Counts threads inside compiler APIs, rather than counting nested calls as parallelism; a [detail], such as one
+     * file's parse of many that a summary times, writes its events only at DEBUG.
+     */
     fun <T> api(
         operation: String,
         uri: String? = null,
+        detail: Boolean = false,
         action: () -> T,
     ): T {
         val span = span("javatools", operation, uri)
@@ -141,13 +146,14 @@ internal object ExecutionTrace {
         val depth = previous?.apiDepth ?: 0
         context.set(Context(span, depth + 1))
         val active = if (depth == 0) apiThreads.incrementAndGet() else apiThreads.get()
-        event(span, "start", mapOf("activeApiThreads" to active, "depth" to depth))
+        event(span, "start", mapOf("activeApiThreads" to active, "depth" to depth), detail)
         return try {
             action().also {
                 event(
                     span,
                     "end",
                     mapOf("outcome" to "returned", "activeApiThreads" to apiThreads.get()),
+                    detail,
                 )
             }
         } catch (failure: Throwable) {
@@ -158,6 +164,7 @@ internal object ExecutionTrace {
                     "outcome" to if (failure is CancellationException) "cancelled" else "failed",
                     "failure" to failure.javaClass.name,
                 ),
+                detail,
             )
             throw failure
         } finally {

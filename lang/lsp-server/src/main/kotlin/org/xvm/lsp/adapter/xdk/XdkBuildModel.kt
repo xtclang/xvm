@@ -70,9 +70,12 @@ internal class XdkBuildModel private constructor(
 
     private fun resolveFiles(): Inputs {
         val sources = sourceSets.flatMap { it.sources }.distinct()
+        // the reads of the build's sources are one discovery for the trace
         val catalog =
-            sources.filter(File::isFile).fold(XdkWorkspaceDiscovery.Catalog()) { result, file ->
-                result.withSource(file, file.readText()) { false }
+            XdkWorkspaceDiscovery.traced("build-model") {
+                sources.filter(File::isFile).fold(XdkWorkspaceDiscovery.Catalog()) { result, file ->
+                    result.withSource(file, file.readText()) { false }
+                }
             }
         val roots = sourceSets.flatMap { it.roots }.toSet()
         val discovered = catalog.modules(emptyList()).filter { it.root in roots }

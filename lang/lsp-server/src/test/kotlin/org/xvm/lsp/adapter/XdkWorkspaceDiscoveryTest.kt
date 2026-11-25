@@ -5,9 +5,11 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkConsumerDiscovery
 import org.xvm.lsp.adapter.xdk.XdkLibraryReplacement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
+import org.xvm.lsp.server.TraceRecording
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 
@@ -43,6 +45,45 @@ class XdkWorkspaceDiscoveryTest {
         assertThatThrownBy {
             XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), modules) { true }
         }.isInstanceOf(CancellationException::class.java)
+    }
+
+    @Test
+    fun `a discovery traces its start and one end with its parses, which it traces one by one only at DEBUG`() {
+        val base = source("Base.x", "module Base { class Box {} }")
+        source("App.x", "module App { package lib import Base; }")
+        source("App/Member.x", "class Member {}")
+        val parses = setOf("Parser.parseModuleName", "Parser.parseSource(partial-discovery)")
+
+        fun scan() = XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }
+        TraceRecording().use { trace ->
+            scan()
+            val discovered = trace.entries.filter { it["kind"].asString == "discovery" }
+            // its start shows a walk that never ends
+            assertThat(discovered.map { it["event"].asString }).containsExactly("start", "discovered")
+            assertThat(discovered.map { it["id"].asLong }.distinct()).hasSize(1)
+            discovered.last().let { walk ->
+                assertThat(walk["operation"].asString).isEqualTo("walk")
+                assertThat(walk["event"].asString).isEqualTo("discovered")
+                assertThat(walk["outcome"].asString).isEqualTo("returned")
+                assertThat(walk["parses"].asInt).isEqualTo(3)
+                assertThat(walk["longestParseMs"].asDouble).isBetween(0.0, walk["parseMs"].asDouble)
+                assertThat(walk["slowest"].asJsonArray.map { it.asString })
+                    .hasSize(3)
+                    .allSatisfy { assertThat(it).startsWith("file:") }
+            }
+            assertThat(trace.entries.filter { it["operation"].asString in parses }).isEmpty()
+        }
+        // a search that runs several discoveries, a walk and the graph's roots, is one
+        TraceRecording().use { trace ->
+            XdkConsumerDiscovery.discover(listOf(directory.toFile()), listOf(XdkSourceModule("Base", base)), emptyMap()) { false }
+            assertThat(
+                trace.entries.filter { it["kind"].asString == "discovery" }.map { "${it["operation"].asString} ${it["event"].asString}" },
+            ).containsExactly("consumers start", "consumers discovered")
+        }
+        TraceRecording(details = true).use { trace ->
+            scan()
+            assertThat(trace.entries.filter { it["operation"].asString in parses && it["event"].asString == "start" }).hasSize(6)
+        }
     }
 
     @Test

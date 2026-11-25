@@ -213,6 +213,7 @@ QUERY_PHASES = (("analysisReadyMs", "analysis-ready"), ("startedMs", "started"),
 def trace_statistics(directory):
     timings = collections.defaultdict(list)
     phases = collections.defaultdict(list)
+    discoveries = collections.defaultdict(lambda: {"discoveries": 0, "parses": 0, "parseMs": 0.0, "longestParseMs": 0.0})
     max_active = 0
     largest_queue = []
     for file in sorted((directory / "trace").glob("*.jsonl")):
@@ -224,6 +225,14 @@ def trace_statistics(directory):
                 largest_queue = jobs
             if event.get("kind") == "javatools" and event.get("event") == "end":
                 timings[event["operation"]].append(event["elapsedMs"])
+            if event.get("kind") == "discovery" and event.get("event") == "discovered":
+                # a discovery's parses, which write javatools events of their own only at DEBUG
+                timings[f"discovery:{event['operation']}"].append(event["elapsedMs"])
+                parsed = discoveries[event["operation"]]
+                parsed["discoveries"] += 1
+                parsed["parses"] += event.get("parses", 0)
+                parsed["parseMs"] += event.get("parseMs", 0.0)
+                parsed["longestParseMs"] = max(parsed["longestParseMs"], event.get("longestParseMs") or 0.0)
             if event.get("kind") == "lsp-query" and event["event"] == "end":
                 # the end has the time each phase was reached, from the query's start; one not reached is absent
                 previous = 0.0
@@ -235,6 +244,8 @@ def trace_statistics(directory):
                 phases[f"{event['operation']}:write"].append(event["writeMs"])
     return {"apiTimings": {name: percentiles(values) for name, values in sorted(timings.items())},
             "queryPhaseTimings": {name: percentiles(values) for name, values in sorted(phases.items())},
+            "discoveryParses": {name: {**parsed, "parseMs": round(parsed["parseMs"], 3)}
+                                for name, parsed in sorted(discoveries.items())},
             "maxActiveApiThreads": max_active, "largestTracedQueue": largest_queue,
             "traceDirectory": str(directory / "trace")}
 
