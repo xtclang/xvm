@@ -362,6 +362,64 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   now bind through their validated expressions; their hover, definition and references are the same.
   The largest unproven groups left are `Element` (23), `this` in anonymous classes (17),
   generated methods such as `appendTo` (15), and `Key` and `Value`.
+
+  2026-11-25 (`lagergren/semantic-gaps-2`): the census is a heavy test now, `SemanticModelCensusTest`
+  (`./gradlew :lang:lsp-server:test --tests '*SemanticModelCensusTest' -PlspTests=heavy
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true`; it also runs with `-PlspTests=all`). It
+  compiles the 22 modules from source, fails on an unbound occurrence or on a binding that no proof
+  can place (a symbol with no identity and no declaration in the module's sources, or a call's method
+  with no symbol, which refuse every proof, a rename's too), and writes the unproven ones, by
+  construct and by library with examples, to `lang/lsp-server/build/semantic-model-census.txt`. It
+  also counts the dispatch chains of methods and properties that hold an unproven identity, which
+  the first census missed: every proof but a rename's compares them exactly, so one refuses a safe
+  delete, inline, removal, extraction or member addition anywhere in its module. At errs'
+  4f3b5222c2: 0 unbound,
+  0 unplaceable, 1864 unproven (80 occurrences, 58 calls, 1726 chains). Fixed, one commit each, each
+  with an `XdkOccurrenceBindingTest` case that fails without it, all in `lang/`, no compiler change:
+  - [x] an anonymous class is proven by the span of the type it constructs: its `this`, the call of
+    the constructor that the compiler writes for it (39), `this.Map` naming it, and most of the
+    chains, which an anonymous class owned; each such constructor is identified by the one it passes
+    its arguments to, so a named argument binds to the overload it reaches. A rename of a type that an
+    anonymous class implements was refused, and of a constructor's parameter that a named argument of
+    an anonymous construction names (01997d642c);
+  - [x] a formal type's child, `Element` in `CompileType.Element` (23, `Key` 8, `Value` 7), binds to
+    the formal type of its name that its constraint has, declared or from a contribution: definition
+    and references go to `List`'s `Element`, and `T.Item` for a `Crate<E> extends Box<E>` to `Box`'s
+    `Item`, not to `E` (b1ac10cad5);
+  - [x] a call on a union receiver through a method that the runtime implements, `appendTo` of a
+    const or a `String` (18 sites), takes the native body as the contract it implements in a call's
+    route, not in a method's own: a rename of `Stringable.appendTo`, or of an interface method that a
+    const takes from the runtime, stays refused (41c076bbe1);
+  - [x] a call on a union whose legs share one route, `toString` on a `Point?` (4b17328400);
+  - [x] the formal type that the compiler adds to a mixin or annotation whose contribution names a
+    generic class without its parameters, `Inner` in `annotation Cap into Holder`, binds to the
+    contribution's, in a binding and in the mixin's property chain (3acb3699c1);
+  - [x] the methods that the compiler merges over a union, of an annotation into `Class | Method`,
+    are proven by the union's route through each leg, and a proof places those routes where an edit
+    moves their legs' declarations; a rename that takes a method out of the union's stays refused
+    (aa64257383).
+
+  Left: 213 (4 occurrences, 0 calls, 209 chains), not worth it now or complex:
+  - 173 property chains in ecstasy alone, each of a `Referent` whose other members are `Ref`'s and
+    `Var`'s own, through one member that no source declares. A chain is recorded only where the
+    module declares one of its bodies, and only ecstasy declares `Ref`'s and `Var`'s `Referent` (a
+    property with its own accessors or annotations in user code records none), so they touch only a
+    workspace that holds the repository's ecstasy, and only its proofs other than a rename's. Medium:
+    that member would need the identity of the formal it stands for, as `implicitFormal` gives a
+    mixin's.
+  - 28 method and 8 property chains in json, of annotations into a union of generic virtual
+    children, `PointerAwareElementOutput into ElementOutputStream | ArrayOutputStream`, whose legs'
+    formal types the compiler adds to the annotation from each leg: `implicitFormal` would have to
+    follow a union contribution and the virtual children's parents. Medium, for one library's
+    construct.
+  - `OuterType` in `PublicType.OuterType` (3, ecstasy's `Class`): a formal type's child that no
+    constraint declares, which the compiler resolves by its name alone, so there is no declaration to
+    prove it by; a structural identity (its parent and name) would need a new proof identity in every
+    comparison. `XdkRenameUnprovableTest` takes it as its unprovable example.
+  - `httpMethod` of `method.is(Observe|Intercept)` (1, xenia): a property on a union, which the
+    compiler makes a property of a class named for the union, `Observe | Intercept`, that no source
+    declares; proving it needs the legs' properties, as a union's methods take their legs' routes,
+    which the facts keep for calls only. Medium, for a rare construct.
 - [x] The 8 unbound occurrences left are code the compiler never compiles, found 2026-11-24:
   - 6 extends arguments, in `OrderedMapSet`, `JsonLogStoreBase`, `JsonProcessorStore` and
     `KeyCredential`. Each class's explicit constructors call the super constructor themselves, so no
@@ -379,7 +437,8 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   declares the property itself. The checks found two more dead sites, `PseudoRandom`'s `= 0` and the
   native `OSFileChannel`'s `(rawChannel)`; all ten are removed. Mirrored to errs and #693.
   XdkRenameUnprovableTest now proves its refusal on `CompileType.Element`, a binding the proof cannot
-  prove, since no compiling construct is known to leave a name unbound.
+  prove, since no compiling construct is known to leave a name unbound (on `Public.OuterType` since
+  2026-11-25, as `Element` is proven).
 - [x] Import suggestions (`XdkAutoImports`) and the libraries' hover documentation
   (`XdkLibrarySources`) still read the bundle, and may offer its older names. Done 2026-11-23/24
   (decided: index the workspace's): a source artifact of a library's name records its importable
