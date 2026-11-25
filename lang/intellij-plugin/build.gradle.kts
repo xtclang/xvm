@@ -21,7 +21,7 @@ buildscript {
     }
     configurations.classpath {
         resolutionStrategy {
-            force("org.jsoup:jsoup:1.23.2")
+            force("org.jsoup:jsoup:${libs.versions.lang.jsoup.get()}")
         }
     }
 }
@@ -321,6 +321,17 @@ configurations.named("testUiImplementation") {
     exclude(group = "com.jetbrains.intellij.driver")
 }
 
+// Starter uses the Java test dependencies. IntelliJ light tests can also resolve
+// the Platform test framework through the Gradle plugin's separate classpaths.
+// Share the version floors so both paths select compatible, patched libraries.
+val intellijTestVersions = configurations.dependencyScope("intellijTestVersions")
+configurations.testImplementation {
+    extendsFrom(intellijTestVersions.get())
+}
+configurations.named("intellijPlatformTestDependencies") {
+    extendsFrom(intellijTestVersions.get())
+}
+
 // Configuration to consume LSP version properties for display in IDE
 val lspVersionProperties =
     configurations.create("lspVersionProperties") {
@@ -333,6 +344,15 @@ val lspVersionProperties =
     }
 
 dependencies {
+    intellijTestVersions(platform(libs.lang.jackson.bom))
+    intellijTestVersions(platform(libs.guava.bom))
+    intellijTestVersions(platform(libs.lang.intellij.bouncycastle.bom))
+    intellijTestVersions(platform(libs.lang.intellij.netty.bom))
+    intellijTestVersions(platform(libs.lang.intellij.opentelemetry.bom))
+    constraints {
+        intellijTestVersions(libs.lang.jsoup)
+    }
+
     // Test dependencies
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
