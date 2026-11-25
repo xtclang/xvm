@@ -3,9 +3,12 @@ package org.xtclang.idea.lsp
 import com.intellij.analysis.problemsView.FileProblem
 import com.intellij.analysis.problemsView.HighlightingDuplicateProblem
 import com.intellij.analysis.problemsView.ProblemsCollector
+import com.intellij.codeInsight.daemon.impl.DaemonCodeAnalyzerImpl
 import com.intellij.codeInsight.daemon.impl.MockWolfTheProblemSolver
 import com.intellij.codeInsight.daemon.impl.WolfTheProblemSolverImpl
+import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -18,6 +21,7 @@ import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticUtils
+import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticsApplier
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
@@ -33,6 +37,7 @@ import org.xtclang.idea.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 
 /**
  * The errors of an Ecstasy file that is not open, from the server's workspace report, make it one of IntelliJ's problem
@@ -208,6 +213,121 @@ class ClosedFileProblemsTest {
         await("Child.x is no problem file") { !problems.isProblemFile(child) }
     }
 
+    @Test
+    fun `an error that reaches a file's editor before LSP4IJ connects it goes with the connected document's report`() {
+        val root = file("Root.x", "module Root {}\n")
+        val child = file("Root/Child.x", "class Child extends Base {}\n")
+        open(root)
+        // fixed by the time LSP4IJ has connected the file, whose own pulls report none
+        server.pulled[uri(child)] = emptyList()
+        openMarkedBeforeConnection(child, "unknown-type")
+        await("Child.x's editor no longer marks the error") { "unknown-type" !in marks(child) }
+    }
+
+    @Test
+    fun `an error that reaches a file's editor before LSP4IJ connects it stays marked until the connected document's report`() {
+        staysMarkedUntilOwnReport { }
+    }
+
+    @Test
+    fun `an error that reaches a file's editor before LSP4IJ connects it stays marked through an update LSP4IJ rejects`() {
+        // as a report for another version of the document, which LSP4IJ rejects, and still tells the plugin of
+        staysMarkedUntilOwnReport { child ->
+            val document = checkNotNull(connection().getOpenedDocument(connection().clientFeatures.getFileUri(child)))
+            connection().updateDiagnostics(child, "stub", emptyList(), checkNotNull(document.synchronizer).version + 1)
+        }
+    }
+
+    @Test
+    fun `an error that reaches a file's editor before LSP4IJ connects it stays marked through another document's report`() {
+        // as a report of the document in another document's pull, or in the workspace's, which is not its own pull's
+        staysMarkedUntilOwnReport { child -> connection().updateDiagnostics(child, "stub", emptyList(), null) }
+    }
+
+    /**
+     * Gives a file the error unknown-type before LSP4IJ connects its document, as [openMarkedBeforeConnection] does, with
+     * the error still there: the connected document's own pull reports it, and comes once [beforeReport] has updated
+     * the file's diagnostics, as another report can. Until that report comes, the file's mark must stay; and with it.
+     */
+    private fun staysMarkedUntilOwnReport(beforeReport: (VirtualFile) -> Unit) {
+        val root = file("Root.x", "module Root {}\n")
+        val child = file("Root/Child.x", "class Child extends Base {}\n")
+        open(root)
+        server.pulled[uri(child)] = listOf(error("unknown-type"))
+        val asked = CompletableFuture<Unit>()
+        val answer = CompletableFuture<Unit>()
+        server.pulls = { if (it == uri(child)) answer.also { asked.complete(Unit) } else CompletableFuture.completedFuture(null) }
+        openMarkedBeforeConnection(child, "unknown-type")
+        await("LSP4IJ pulls Child.x") { asked.isDone }
+        val fileUri = checkNotNull(connection().clientFeatures.getFileUri(child))
+        val applier = LSPDiagnosticsApplier.getInstance(editor.fixture.project)
+        await("LSP4IJ has connected Child.x, whose report has not come") {
+            connection().getOpenedDocument(fileUri)?.synchronizer != null && !applier.isRefreshPending(child)
+        }
+        beforeReport(child)
+        await("LSP4IJ has nothing more to mark in Child.x's editor") { !applier.isRefreshPending(child) }
+        runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() }
+        assertThat(marks(child)).contains("unknown-type")
+
+        answer.complete(Unit)
+        await("LSP4IJ has Child.x's report, and nothing more to mark in its editor") {
+            "unknown-type" in openCodes(child) && !applier.isRefreshPending(child)
+        }
+        runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() }
+        assertThat(marks(child)).contains("unknown-type")
+    }
+
+    /**
+     * Opens the editor of [file] and gives the file the error [code] before LSP4IJ connects its document; returns once the
+     * editor marks it and LSP4IJ has opened the document at the server.
+     */
+    private fun openMarkedBeforeConnection(
+        file: VirtualFile,
+        code: String,
+    ) {
+        // LSP4IJ marks an editor's diagnostics once the daemon has its passes, which a light test's has after a first run
+        runInEdtAndWait { editor.fixture.doHighlighting() }
+        // TODO LSP4IJ: UP86 — the file's editor opens, and before LSP4IJ connects its document, a workspace report or a
+        //  related document's report gives the file an error: LSP4IJ keeps it in a document of the file without a
+        //  connection, and the editor marks it. The connection waits here for that, at LSP4IJ's own seam, to make
+        //  certain of the order that only sometimes comes otherwise
+        val connecting = CountDownLatch(1)
+        val marked = CountDownLatch(1)
+        setBeforeRegistration {
+            connecting.countDown()
+            marked.await()
+        }
+        try {
+            runInEdtAndWait { editor.fixture.openFileInEditor(file) }
+            // on a thread of its own, which the connection holds
+            CompletableFuture.runAsync { connect(file) }
+            await("LSP4IJ connects ${file.name}") { connecting.count == 0L }
+            connection().updateDiagnostics(file, "stub", listOf(error(code)), null)
+            await("${file.name}'s editor marks the error") { code in marks(file) }
+        } finally {
+            setBeforeRegistration(null)
+            marked.countDown()
+        }
+        await("LSP4IJ opens ${file.name}") { opened(file) }
+    }
+
+    /** Runs [hook] as LSP4IJ connects a document, before it registers the document's connection; null runs nothing. */
+    private fun setBeforeRegistration(hook: Runnable?) {
+        LanguageServerWrapper::class.java
+            .getDeclaredMethod("setBeforeRegistration", Runnable::class.java)
+            .apply { isAccessible = true }
+            .invoke(connection(), hook)
+    }
+
+    /** The descriptions of the errors and warnings that the editor of [file] marks. */
+    private fun marks(file: VirtualFile): List<String> =
+        ReadAction.computeBlocking<List<String>, RuntimeException> {
+            val document = checkNotNull(FileDocumentManager.getInstance().getDocument(file))
+            DaemonCodeAnalyzerImpl
+                .getHighlights(document, HighlightSeverity.WARNING, editor.fixture.project)
+                .mapNotNull { it.description }
+        }
+
     /** A build that reports the error [code] in [file], at the start of its first line, as [error] has it. */
     private fun build(
         file: VirtualFile,
@@ -251,6 +371,12 @@ class ClosedFileProblemsTest {
 
     private fun open(file: VirtualFile) {
         runInEdtAndWait { editor.fixture.openFileInEditor(file) }
+        connect(file)
+        await("LSP4IJ opens ${file.name}") { opened(file) }
+    }
+
+    /** Asks LSP4IJ to connect [file], whose editor is open, to the server. */
+    private fun connect(file: VirtualFile) {
         // LSP4IJ connects a file as its editor is selected only if none of its features has made the file's support yet,
         // and one can make it first: under load, a second file once never connected. Connect it as that path does
         // (ConnectDocumentToLanguageServerSetupParticipant), which does nothing for a connected file
@@ -258,7 +384,6 @@ class ClosedFileProblemsTest {
             val psi = checkNotNull(PsiManager.getInstance(editor.fixture.project).findFile(file))
             LanguageServiceAccessor.getInstance(editor.fixture.project).getLanguageServers(psi, null, null)
         }
-        await("LSP4IJ opens ${file.name}") { opened(file) }
     }
 
     private fun opened(file: VirtualFile): Boolean = server.texts.keys.any { it.endsWith("/${file.name}") }

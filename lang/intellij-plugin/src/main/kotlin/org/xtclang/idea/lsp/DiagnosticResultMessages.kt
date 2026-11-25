@@ -1,5 +1,6 @@
 package org.xtclang.idea.lsp
 
+import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentDiagnosticReport
@@ -11,8 +12,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 
 /**
  * Records the latest pull-diagnostic report of each open document and the editor snapshot it was asked for, as a test
- * waiting for the diagnostics of an edit needs to know. State belongs to one connection; a close forgets the
- * document's report.
+ * waiting for the diagnostics of an edit needs to know, and [XtcClientFeatures]' bridge of UP86. State belongs to one
+ * connection; a close forgets the document's report.
  */
 internal class DiagnosticResultMessages(
     private val snapshot: (String) -> Snapshot?,
@@ -36,10 +37,14 @@ internal class DiagnosticResultMessages(
         val snapshot: Snapshot,
     )
 
-    /** The number of items of a document's latest report, and the snapshot that report was asked for. */
+    /**
+     * The number of items of a document's latest report, and the snapshot that report was asked for; and its items, when
+     * it was full or the same snapshot's full report came before it.
+     */
     private data class Report(
         val snapshot: Snapshot,
         val items: Int,
+        val full: List<Diagnostic>?,
     )
 
     /** The URIs of the documents with a report. */
@@ -53,6 +58,16 @@ internal class DiagnosticResultMessages(
     fun currentItems(uri: String): Int? {
         val now = snapshot(uri) ?: return null
         return synchronized(lock) { reports[uri]?.takeIf { it.snapshot == now }?.items }
+    }
+
+    /**
+     * The items of the latest report of the document at [uri], if that report was asked for the document as it is now
+     * and was full, or followed a full one for it: its own pull's report, which LSP4IJ applies, or has, unless the
+     * document changed in between; null otherwise.
+     */
+    fun currentReport(uri: String): List<Diagnostic>? {
+        val now = snapshot(uri) ?: return null
+        return synchronized(lock) { reports[uri]?.takeIf { it.snapshot == now }?.full }
     }
 
     fun outgoing(next: MessageConsumer): MessageConsumer =
@@ -90,8 +105,10 @@ internal class DiagnosticResultMessages(
                     val owned = requests.remove(response.id, pending)
                     // a late reply for an earlier state never replaces the record of the current one
                     if (owned && current == pending.snapshot && response.error == null && report != null) {
-                        val items = report.left?.items?.size ?: reports[pending.uri]?.items ?: 0
-                        reports[pending.uri] = Report(pending.snapshot, items)
+                        val previous = reports[pending.uri]
+                        val items = report.left?.items?.size ?: previous?.items ?: 0
+                        val full = report.left?.items ?: previous?.takeIf { it.snapshot == pending.snapshot }?.full
+                        reports[pending.uri] = Report(pending.snapshot, items, full)
                     }
                 }
             }
