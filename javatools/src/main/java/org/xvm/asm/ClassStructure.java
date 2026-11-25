@@ -2488,10 +2488,6 @@ public class ClassStructure
                 }
 
                 TypeConstant constType = property.getType();
-                if (!listActual.isEmpty()) {
-                    constType = constType.resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
-                }
-
                 if (property.isRefAccessible(access)
                         && constType.producesFormalType(sName, Access.PUBLIC)) {
                     return true;
