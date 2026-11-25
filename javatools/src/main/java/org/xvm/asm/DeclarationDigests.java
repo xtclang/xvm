@@ -34,7 +34,7 @@ import org.xvm.asm.constants.VersionConstant;
  * the pool puts it. Two compiles of a module give a component the same digest when what the API
  * holds of it is the same, whatever else changed, and another digest when it is not.
  *
- * <p>What a body or a constant refers to is what it registers ({@link #registerConstants}), which
+ * <p>What a body or a constant refers to is what it registers ({@link XvmStructure#registerConstants}), which
  * is what writing it names by position. Each is written twice, with every constant that it does
  * not refer to at two different positions; one that writes the same bytes both times named no
  * other constant, and one that does not gets a digest of its own that no other compile gives it,
