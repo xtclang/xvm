@@ -24,10 +24,17 @@ import org.xvm.javajit.TypeSystem.ClassfileShape;
  * augment the interface hierarchy and instance contracts required by a particular representation.
  */
 public class PureBuilder extends CommonBuilder {
-    public PureBuilder(TypeSystem typeSystem, Artifact art) {
+    public PureBuilder(TypeSystem typeSystem, Artifact art, boolean assembleFunctions) {
         assert art.shape() == ClassfileShape.Pure || isEmbedded(art.clz().getFormat());
         super(typeSystem, art);
+
+        this.assembleFunctions = assembleFunctions;
     }
+
+    /**
+     * Indicates whether to assemble static function bodies for embedded types.
+     */
+    private final boolean assembleFunctions;
 
     @Override
     public void build(ClassBuilder classBuilder) {
@@ -65,7 +72,11 @@ public class PureBuilder extends CommonBuilder {
 
     @Override
     protected void assembleMethod(ClassBuilder classBuilder, MethodInfo method) {
-        if (!method.isCtorOrValidator() && !method.isFunction() &&
+        if (method.isFunction()) {
+            if (assembleFunctions && shouldGenerate(method.getIdentity())) {
+                super.assembleMethod(classBuilder, method);
+            }
+        } else if (!method.isCtorOrValidator() &&
                 method.isVirtual() && !method.isCapped()) {
             addAbstractMethod(classBuilder, method.ensureJitMethodName(typeSystem),
                     method.getJitDesc(this));

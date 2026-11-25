@@ -525,11 +525,11 @@ public class TypeSystem {
         if (art.shape() == ClassfileShape.Pure) {
             return type.isVirtualChildClass()
                     ? new PureVirtualChildBuilder(this, art)
-                    : new PureBuilder(this, art);
+                    : new PureBuilder(this, art, false);
         }
 
         if (Builder.isEmbedded(type.getExplicitClassFormat())) {
-            return new PureBuilder(this, art);
+            return new PureBuilder(this, art, true);
         }
 
         if (type.isJitAnnotatedRef(this)) {

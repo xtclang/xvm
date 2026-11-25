@@ -23,7 +23,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
  */
 public class PureVirtualChildBuilder extends PureBuilder {
     public PureVirtualChildBuilder(TypeSystem typeSystem, Artifact art) {
-        super(typeSystem, art);
+        super(typeSystem, art, false);
 
         assert thisType.isVirtualChild();
     }

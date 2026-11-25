@@ -10,6 +10,7 @@ package mixinTests {
         testPrivateCalls();
         testValidators();
         testInheritance();
+        testFunctions();
     }
 
     void testInit() {
@@ -100,6 +101,17 @@ package mixinTests {
         assert parent.value() == "parent";
 
         Mix0 asParent(Mix1 child) = child;
+    }
+
+    void testFunctions() {
+        class C incorporates M {}
+
+        mixin M {
+            static String message() = "hello";
+        }
+
+        assert C.message() == "hello";
+        assert M.message() == "hello";
     }
 
     package init {
