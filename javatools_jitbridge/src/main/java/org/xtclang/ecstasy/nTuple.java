@@ -214,7 +214,7 @@ public class nTuple
      *     Tuple!<> removeAll(Interval<Int> interval)
      * }</pre>
      */
-    public nTuple removeAll(Ctx ctx, IntervalᐸInt64ᐳ interval) {
+    public nTuple removeAll(Ctx ctx, RangeᐸInt64ᐳ interval) {
         throw Exception.$unsupported(ctx, "Tuple.removeAll()");
     }
 

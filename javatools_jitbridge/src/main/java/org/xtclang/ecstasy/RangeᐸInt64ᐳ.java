@@ -4,9 +4,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 
-public class RangeᐸInt64ᐳ
-        extends nLongRange
-        implements IntervalᐸInt64ᐳ {
+public class RangeᐸInt64ᐳ extends nLongRange {
 
     private RangeᐸInt64ᐳ(Ctx ctx, long first, long last, boolean firstExclusive, boolean lastExclusive) {
         super(ctx, first, last, firstExclusive, lastExclusive);
@@ -40,17 +38,14 @@ public class RangeᐸInt64ᐳ
         return $upperBound;
     }
 
-    @Override
     public long effectiveFirst$get$p(Ctx ctx) {
         return $descending ? effectiveUpperBound$get$p(ctx) : effectiveLowerBound$get$p(ctx);
     }
 
-    @Override
     public long effectiveLast$get$p(Ctx ctx) {
         return $descending ? effectiveLowerBound$get$p(ctx) : effectiveUpperBound$get$p(ctx);
     }
 
-    @Override
     public long effectiveLowerBound$get$p(Ctx ctx) {
         if ($lowerExclusive) {
             if ($lowerBound == Long.MAX_VALUE) {
@@ -61,7 +56,6 @@ public class RangeᐸInt64ᐳ
         return $lowerBound;
     }
 
-    @Override
     public long effectiveUpperBound$get$p(Ctx ctx) {
         if ($upperExclusive) {
             if ($upperBound == Long.MIN_VALUE) {
@@ -72,7 +66,6 @@ public class RangeᐸInt64ᐳ
         return $upperBound;
     }
 
-    @Override
     public boolean empty$get$p(Ctx ctx) {
         if ($upperBound - $lowerBound > 1) {
             return false;
@@ -86,12 +79,10 @@ public class RangeᐸInt64ᐳ
         return !$lowerExclusive | !$upperExclusive;
     }
 
-    @Override
     public long size$get$p(Ctx ctx) {
         return Math.max(0, $upperBound - $lowerBound + 1 - ($lowerExclusive ? 1 : 0) - ($upperExclusive ? 1 : 0));
     }
 
-    @Override
     public long getElement$p(Ctx ctx, long index) {
         long result;
         if ($descending) {

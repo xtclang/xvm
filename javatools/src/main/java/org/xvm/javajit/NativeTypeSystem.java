@@ -367,9 +367,6 @@ public class NativeTypeSystem
         TypeConstant rangeᐸIntᐳ = pool.ensureRangeType(pool.typeInt64());
         nativeByType.put(rangeᐸIntᐳ, Builder.N_RangeInt64);
 
-        TypeConstant intervalᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeInterval(), pool.typeInt64());
-        nativeByType.put(intervalᐸIntᐳ,  "org.xtclang.ecstasy.IntervalᐸInt64ᐳ");
-
         // prime the function name counter
         xvm.createUniqueSuffix("");
     }

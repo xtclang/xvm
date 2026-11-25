@@ -164,7 +164,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * constant value, then the compile-time type of the returned tuple is known; otherwise, an
      * explicit cast to a compile-time type is required to regain the compile-time type.
      */
-    Tuple!<> removeAll(Interval<Int> interval);
+    Tuple!<> removeAll(Range<Int> interval);
 
     /**
      * Return an `immutable` [Tuple] of the same element types and values as are present in this

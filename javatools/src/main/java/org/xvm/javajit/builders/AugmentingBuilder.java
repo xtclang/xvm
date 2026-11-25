@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -345,6 +346,11 @@ public class AugmentingBuilder extends CommonBuilder {
         if (!isNative) {
             super.assembleNew(classBuilder, constructor, jitName, jmd, annoConstructors);
         }
+    }
+
+    @Override
+    protected boolean isInterface() {
+        return super.isInterface() || classStruct.getFormat() == Component.Format.MIXIN;
     }
 
     /**
