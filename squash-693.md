@@ -1,6 +1,6 @@
 # Squashing #693 into reviewable pull requests
 
-A plan only: making it changed nothing in #693. It covers the 480 commits of `errs/full-testable-lsp-20261009` over `master` (tip `244f824635`, master `2e26663249`, 2026-11-25), numbered 1 to 480 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-480 came after, and were placed by the same rules. One of them is open on master as its own PR: 459 is #802, and leaves #693 when it merges. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467.
+A plan only: making it changed nothing in #693. It covers the 481 commits of `errs/full-testable-lsp-20261009` over `master` (tip `781666b4d2`, master `2e26663249`, 2026-11-25), numbered 1 to 481 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-481 came after, and were placed by the same rules. Two of them are open on master as their own PRs: 459 is #802 and 481 is #806; each leaves #693 when it merges. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467.
 
 It proposes 15 pull requests, each of which changes either only files outside lang/ (xvm only: X1-X5) or only files in lang/ (lang only: L1-L10), merged in one order. To get there, the commits are first sorted into 13 topics (P1-P13), the commits of a topic that implement or fix the same thing, however far apart, are grouped to be joined, and every commit is then divided at lang/: its other files go to its topic's xvm PR, its lang/ files to its topic's lang PR.
 
@@ -24,7 +24,7 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 14 | **L9** | lang/ | Debugging: the DAP server, debug sessions, launch and attach, and both editors' debug UI | X4, L8 | P10 | 48 | 8.6k / 11.0k |
 | 15 | **L10** | lang/ | Test infrastructure: the playbooks, the scenario catalog, the manual test plan and the tours | L9, X5 | P12, P13 | 141 | 7.2k / 57.0k |
 
-Already open on master, apart from these: #802 (unused constructor arguments, commit 459), which leaves #693 when it merges. #804 (runXtc keeps xtcRun's settings) is merged.
+Already open on master, apart from these: #802 (unused constructor arguments, commit 459) and #806 (the plugin tests' TestKit downloads in CI's Gradle cache, commit 481), which leave #693 when they merge. #804 (runXtc keeps xtcRun's settings) is merged.
 
 Prerequisites are the PRs that must be merged first; the order above satisfies all of them, so merging in it always works. Where a PR lists two, either can be merged first of the two, but both before it. Some can be reviewed side by side: L4 and L5 both need only L3, and L6 and L7 both need L4 and L5.
 
@@ -54,8 +54,8 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 | P10 | Debugger: runtime debugger, DAP server and the editors' debugging | P9 | no | 60 | 36 | 17.2k / 15.2k |
 | P11 | The XDK's library sources and the XDK workspace | P5 | yes, once 1 commit's other files move | 22 | 9 | 3.3k / 3.2k |
 | P12 | Test infrastructure: playbooks, scenarios, tours and their container | P7-P11 | no | 112 | 20 | 3.0k / 57.3k |
-| P13 | Documentation, build and CI | the PRs it documents | no | 31 | 4 | 5.7k / 372 |
-| | **Total** | | | **480** | **164** | |
+| P13 | Documentation, build and CI | the PRs it documents | no | 32 | 5 | 5.7k / 377 |
+| | **Total** | | | **481** | **165** | |
 
 The topics group the commits; the PRs above divide them at lang/. Sizes count added lines, with commit 8 divided by package (below). They leave out only the two files that later commits delete whole (XdkColorPrototype, XdkMonikers); the rest of what the pairs in finding 2 take back is still counted, so squashed PRs come out somewhat smaller. Tests are most of every PR's size: reviewers read the main code and skim the tests.
 
@@ -227,7 +227,7 @@ These commits change files outside the components of the PR they are placed in, 
 - 469 `a14af8d820` Link DeclarationDigests' Javadoc to XvmStructure.registerConstants, which javadoc could not find as its own, in P11 (+1; also touches: javatools)
 - 472 `1ff22d7e8d` Split the user guide into a landing page, one page per chapter, and features and shortcuts pages, in P13 (+1,264; also touches: intellij)
 - 473 `cc77837927` Keep each language server's whole trace in playbook runs, with what each diagnostic pull answered, in P12 (+141; also touches: intellij, server)
-
+- 481 `781666b4d2` Give ProjectVersionWarningTest's nested build a TestKit home in the Gradle user home's caches, which CI keeps, in P13 (+26; also touches: plugin)
 
 ## Splitting commit 8
 
@@ -551,7 +551,7 @@ Kept as they are:
 
 **Scope.** The lang docs and READMEs, the configuration reference, packaging and install tasks, the PR previews, and build hygiene. Fold feature documentation into the feature PRs where it describes them; keep the rest here.
 
-**Builds on** the PRs it documents. **Commits:** 31 now, about 4 after squashing. **Added lines:** 5,683 main, 372 tests.
+**Builds on** the PRs it documents. **Commits:** 32 now, about 5 after squashing. **Added lines:** 5,704 main, 377 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -559,6 +559,7 @@ Kept as they are:
 | Publish previews of the editor plugins from a pull request | 315 `2f584ec288` Publish previews of the IntelliJ plugin and VS Code extension from a pull request<br>316 `3f6b7be77c` Name the previews "Ecstasy Language Support (bleeding edge)", and warn of a trailing space in the repository URL | 316 names and checks 315's previews. |
 | Packaging tasks and build defaults | 273 `98e148fe91` Add IDE plugin packaging and install tasks, and quiet vsce's file tree<br>317 `75873a0d79` Leave the lang build out of the root build by default again<br>379 `b45d05c3cc` Suppress UnstableApiUsage where the build still calls incubating Gradle API unsuppressed<br>284 `48310c186a` Say in AGENTS.md that gradle.properties turns the lang build flags on | Install tasks, the lang build left out of the root build by default, incubating API suppressions. Check 284 against 317: 284 says gradle.properties turns the lang flags on, 317 turns them off. |
 | The user guide, with screenshots from the tours | 424 `4610212d5c` Add a user guide for the Ecstasy language tooling, with screenshots from both editor tours<br>426 `0ae33f4a07` Make the user guide's screenshots from tagged tour steps, rebuilt by guide.py from any tour run<br>429 `d1641d1822` Show IntelliJ and VS Code side by side in the user guide wherever both tours show the feature<br>430 `544d88d7c3` Move the user guide into lang/doc/user-guide, with its screenshots in images<br>434 `9b96d6d4b4` Say in the user guide that embedded tests run with the server's XDK and xunit, not the build's<br>435 `512e6a8bec` Give testing its own chapter in the user guide: write, find, run, read, rerun, debug, build modes, troubleshooting<br>452 `cc674a23f3` Say in the user guide what a rename doesn't change or check<br>471 `e3d49dbce2` Tighten the user guide: one place for each fact, plainer sentences, and what a newcomer needs<br>472 `1ff22d7e8d` Split the user guide into a landing page, one page per chapter, and features and shortcuts pages<br>477 `d7fdf47007` Mark the user guide's keys up as keys, and the names it left plain as code<br>478 `4863fade86` Add an index of every page and section of the user guide to its landing page<br>479 `7102a7234b` Give the user guide's long sections subsections, and its index the third level<br>480 `244f824635` Box the user guide's single screenshots with their captions, as its pairs are | the guide, its testing chapter and its screenshots, made from tagged tour steps |
+| Keep the plugin tests' TestKit downloads in CI's Gradle cache (open PR #806) | 481 `781666b4d2` Give ProjectVersionWarningTest's nested build a TestKit home in the Gradle user home's caches, which CI keeps | ProjectVersionWarningTest's nested build downloads kotlin-dsl; its TestKit home under the Gradle user home's caches outlives runs, and CI's setup-gradle saves its downloads from master; open on master as #806 |
 
 ## Notes for review
 
@@ -1075,3 +1076,4 @@ Kept as they are:
 | 478 | `4863fade86` | P13 | — | L10 | The user guide, with screenshots from the tours | Add an index of every page and section of the user guide to its landing page |
 | 479 | `7102a7234b` | P13 | — | L10 | The user guide, with screenshots from the tours | Give the user guide's long sections subsections, and its index the third level |
 | 480 | `244f824635` | P13 | — | L10 | The user guide, with screenshots from the tours | Box the user guide's single screenshots with their captions, as its pairs are |
+| 481 | `781666b4d2` | P13 | #806 | — | Keep the plugin tests' TestKit downloads in CI's Gradle cache (open PR #806) | Give ProjectVersionWarningTest's nested build a TestKit home in the Gradle user home's caches, which CI keeps |
