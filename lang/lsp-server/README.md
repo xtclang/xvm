@@ -950,6 +950,13 @@ read/write, TypeInfo queries, footprint inspection and semantic-copy phases. AST
 inside a copy phase are included in its duration rather than emitting a line for every getter.
 `activeApiThreads` counts threads inside instrumented API boundaries; nested calls on the same
 thread do not imply parallel compilation. A returned compilation can still contain diagnostics.
+Source discovery, which parses the headers of a workspace's files to find its modules, writes two
+events of kind `discovery` per discovery, for a `walk`, `file-events`, a `document`'s text, or a
+search of `consumers` or a `build-model` that reads several: `start`, so that one that never ends
+shows, and `discovered` at its end, with its `outcome`, how many headers it parsed (`parses`), their time in all (`parseMs`) and the longest (`longestParseMs`), and
+the three slowest (`slowest`, each a URI and its milliseconds). The parses' own javatools events,
+`Parser.parseModuleName` and `Parser.parseSource(partial-discovery)` for each file, are written only
+at DEBUG.
 Request spans run from server receipt through reply serialization/write; they include asynchronous
 queue waits, but not the editor's later rendering time. A request (`lsp-request`) writes two events:
 `start`, and `end` with its `outcome` and, for a reply the server wrote, `writeMs`, so that the reply

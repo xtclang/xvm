@@ -24,11 +24,14 @@ internal object XdkConsumerDiscovery {
         cancelled: () -> Boolean,
     ): Result {
         val folders = roots.map(File::getCanonicalFile)
-        // The graph's own roots join the catalog only so that imports of their names count as dependencies.
+        // The graph's own roots join the catalog only so that imports of their names count as dependencies; the walk
+        // and the roots' reads are one discovery for the trace
         val catalog =
-            graph.fold(XdkWorkspaceDiscovery.Catalog().rescan(folders, overlays, cancelled)) { catalog, module ->
-                val text = overlays[module.uri] ?: module.root.takeIf(File::isFile)?.readText()
-                catalog.withSource(module.root.canonicalFile, text, cancelled)
+            XdkWorkspaceDiscovery.traced("consumers") {
+                graph.fold(XdkWorkspaceDiscovery.Catalog().rescan(folders, overlays, cancelled)) { catalog, module ->
+                    val text = overlays[module.uri] ?: module.root.takeIf(File::isFile)?.readText()
+                    catalog.withSource(module.root.canonicalFile, text, cancelled)
+                }
             }
         val names = graph.mapTo(mutableSetOf()) { it.name }
         val inGraph = graph.mapTo(mutableSetOf()) { it.root.canonicalFile }
