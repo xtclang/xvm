@@ -669,6 +669,42 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `the methods of an annotation into a union are proven by the union's, so a safe delete beside it is`() {
+        val source =
+            """
+            module Targets {
+                class /*declared*/Box {
+                    Int /*size*/size() = 1;
+                }
+                class Bag {
+                    Int size() = 2;
+                }
+                annotation Sized into Box | Bag {}
+                annotation Marked into Class | Method {}
+                class Spare {
+                    Int unused() {
+                        return 1;
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource("Targets", source) { adapter, uri ->
+            // the compiler merges the methods of Box | Bag, as size, into methods of the union itself, which no source
+            // declares, and each annotation's dispatch chains hold them
+            val at = source.positionOf("unused()")
+            assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
+                .contains("Safely delete member 'unused', unused in Targets")
+            // a rename compares the chains with each leg's declarations where the edit moves them
+            val declared = position(source, "declared")
+            val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "Crate")) { "No rename of Box" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Box", "Crate"))
+            // renamed, Box's size would leave the union's, and Sized would lose the method: the rename stays refused
+            val size = position(source, "size")
+            assertThat(adapter.rename(uri, size.line, size.column, "length")).isNull()
+        }
+    }
+
     /** The rename facts of [text], a module compiled alone, as a proof over its module takes them. */
     private fun facts(
         name: String,

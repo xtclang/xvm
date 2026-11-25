@@ -1041,7 +1041,8 @@ internal object XdkRename {
 
         fun target(constant: ProofIdentity): Target? {
             if (constant is ProofIdentity.Directory) return Target.Directory(moved(constant.path))
-            if (constant is ProofIdentity.Composed || constant is ProofIdentity.Generated) {
+            // a method that the compiler merges over a union is its legs' routes, whose declarations the edit can move
+            if (constant is ProofIdentity.Composed || constant is ProofIdentity.Generated || constant is ProofIdentity.Alternatives) {
                 return composedTarget(constant, texts, moved, translate, lines)
             }
             val symbol = declarations[constant]
