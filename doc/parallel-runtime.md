@@ -291,8 +291,9 @@ Some carried-over state is not in those figures:
   `f5ab6a72b7`.
 - **Threads.** Each worker's runtime sizes its pool to all cores (`runtime/Runtime.java:31-46`).
   Four running programs therefore mean four times as many pool threads as cores.
-- **Indirection.** All output, input and debugger traffic travels as JSON lines over the worker's
-  stdin and stdout (`lang/lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorker.kt:44-53`).
+- **Indirection.** All output, input and debugger traffic travels as JSON lines: commands on the
+  worker's stdin, events over a loopback socket of their own, which the JVM's own writes to its
+  stdout and stderr cannot reach (`lang/lsp-server/src/main/kotlin/org/xvm/lsp/run/RunWorker.kt:44-57`).
 
 What the workers buy beyond working around the limit is isolation: "a hung or crashing program
 cannot take editor features down with it", and a stuck program can be ended by ending its process

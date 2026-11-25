@@ -17,8 +17,6 @@ import org.xvm.util.Severity
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileDescriptor
-import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
 import java.io.PrintStream
@@ -27,6 +25,8 @@ import java.io.Reader
 import java.io.Writer
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryType
+import java.net.InetAddress
+import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -42,9 +42,12 @@ import org.xvm.runtime.Runtime as XvmRuntime
 
 /**
  * Entry point of the execution worker JVM. The language server starts it on demand and exchanges one
- * JSON object per line over stdin and stdout. Program output, including anything the runtime writes to
- * the process streams directly, travels as events and so can never corrupt the protocol. Stdin closing,
- * which is also what happens when the language server exits or dies, stops any run and ends the worker.
+ * JSON object per line with it: commands come on stdin, and events go over a loopback socket of their own,
+ * which the worker connects to as it starts ([connect]). Program output, including anything the runtime
+ * writes to the process streams directly, travels as events; what the JVM itself writes to its standard
+ * output and error, such as the output of `-Xlog` or `-XX:+PrintCompilation`, which may come at any point
+ * of a line, never reaches the socket, so it cannot break the protocol's messages. Stdin closing, which is
+ * also what happens when the language server exits or dies, stops any run and ends the worker.
  *
  * Commands: `run` (`id`, `modulePath`, `module`, `method`, `args`, `rootDir`, and the `setup` of a run under the
  * debugger, javatools' `DebugProtocol.Setup`), `input` (`id`, `text`), `endInput` (`id`), `stop` (`id`), `shutdown`,
@@ -59,9 +62,37 @@ object RunWorker {
     /** The exit code of a run that was stopped, as a process that a stop terminates reports it: 128 and SIGTERM's 15. */
     const val STOPPED = 143L
 
+    /** The environment variable that gives a worker the loopback port where its server waits for its events. */
+    const val PORT = "XTC_RUN_WORKER_PORT"
+
+    /**
+     * The address of that port, IPv4's loopback as a literal on both sides: the loopback address that the JVM chooses
+     * follows its options, and a worker's are its Gradle project's, where `-Djava.net.preferIPv6Addresses=true` would
+     * make it IPv6's, at which the server does not listen.
+     */
+    const val LOOPBACK = "127.0.0.1"
+
+    /** The environment variable that gives a worker the token it shows its server, the first line it sends. */
+    const val TOKEN = "XTC_RUN_WORKER_TOKEN"
+
+    /**
+     * Connects to the loopback port where the server waits for this worker's events ([PORT]), shows it the token the
+     * worker was given ([TOKEN]), as the connection's first line, and returns the stream for the events.
+     */
+    internal fun connect(): PrintStream {
+        val port = System.getenv(PORT)?.toIntOrNull()
+        val token = System.getenv(TOKEN)
+        require(port != null && token != null) { "An execution worker runs from the language server, which gives it $PORT and $TOKEN" }
+        val socket = Socket(InetAddress.getByName(LOOPBACK), port).apply { tcpNoDelay = true }
+        return PrintStream(socket.getOutputStream(), false, Charsets.UTF_8).apply {
+            println(token)
+            flush()
+        }
+    }
+
     @JvmStatic
     fun main(args: Array<String>) {
-        val channel = RunWorkerChannel(PrintStream(FileOutputStream(FileDescriptor.out), false, Charsets.UTF_8))
+        val channel = RunWorkerChannel(connect())
         val runs = Runs(channel)
         System.setOut(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
         System.setErr(PrintStream(StrayOutput(runs::stray), true, Charsets.UTF_8))
