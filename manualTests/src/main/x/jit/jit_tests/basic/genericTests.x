@@ -37,6 +37,7 @@ package genericTests {
         testErasedLambdaParameter();
         testGenericLocalClassName();
         testEscapedClassName();
+        testToString();
     }
 
     void testFormalComparison() {
@@ -98,6 +99,19 @@ package genericTests {
 
     class Valueꖛ1(Int value) {}
     class Value$1(Int value) {}
+
+    void testToString() {
+        Formal<String> ts = new Formal("test");
+        assert ts.toString() == "test";
+
+        Formal<Int> ti = new Formal(1);
+        assert ti.toString() == "1";
+
+        class Formal<Element extends Hashable>(Element value) {
+            @Override
+            String toString() = value.toString();
+        }
+    }
 
     static <Element, Result> Result apply(
             function Result(Element) transform, Element value) = transform(value);
