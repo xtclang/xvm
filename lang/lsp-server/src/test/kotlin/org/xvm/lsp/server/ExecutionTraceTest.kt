@@ -212,8 +212,8 @@ class ExecutionTraceTest {
                 }
                 assertThat(replies.first()["writeMs"].asDouble).isGreaterThanOrEqualTo(0.0)
                 assertThat(replies.last().has("writeMs")).isFalse()
-                assertThat(trace.entries.filter { it["event"].asString == "reply-ready" }.map { it["operation"].asString })
-                    .containsExactly("textDocument/hover")
+                // a request is its start and its end, which says when the reply was ready: no event in between
+                assertThat(trace.entries.map { it["event"].asString }).containsExactly("start", "start", "end", "end")
                 received.consume(
                     RequestMessage().apply {
                         id = "pending"

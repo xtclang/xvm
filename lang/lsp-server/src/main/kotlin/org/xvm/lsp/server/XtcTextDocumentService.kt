@@ -338,6 +338,9 @@ class XtcTextDocumentService(
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
         val trace = ExecutionTrace.span("lsp-query", method, uri)
+        // the query's start, and one end that says how long each phase took and what it answered at DEBUG
+        val phases = ExecutionTrace.Phases(trace)
+        val answer = AtomicReference<Map<String, Any?>>(emptyMap())
         ExecutionTrace.event(trace, "start")
         val (document, documents, revision) =
             synchronized(lifecycle) {
@@ -375,7 +378,7 @@ class XtcTextDocumentService(
                     else -> "failed"
                 }
             if (outcome == "failed") logger.error("$method: request failed for $uri", cause)
-            ExecutionTrace.event(trace, "end", mapOf("outcome" to outcome))
+            ExecutionTrace.event(trace, "end", mapOf("outcome" to outcome) + phases.fields() + answer.get())
             server.answered()
             logger.info(
                 "{}: {} in {}",
@@ -397,13 +400,13 @@ class XtcTextDocumentService(
                     ?: CompletableFuture.completedFuture(null)
             }
         ready
-            .handle { _, _ -> ExecutionTrace.event(trace, "analysis-ready") }
+            .handle { _, _ -> phases.reached("analysisReady") }
             .thenRunAsync {
                 val work =
                     synchronized(lifecycle) {
                         if (result.isDone) return@thenRunAsync
                         if (stale()) throw contentModified()
-                        ExecutionTrace.event(trace, "started")
+                        phases.reached("started")
                         ExecutionTrace.within(trace, request)
                     }
                 // Register after starting work: prior cancellation still schedules backend cleanup.
@@ -411,7 +414,7 @@ class XtcTextDocumentService(
                 // Do not occupy the compiler worker while acquiring the publication lock: a
                 // synchronous navigation request can hold it while awaiting that same worker.
                 work.whenCompleteAsync { value, failure ->
-                    ExecutionTrace.event(trace, "backend-complete")
+                    phases.reached("backendComplete")
                     synchronized(lifecycle) {
                         if (!result.isDone) {
                             when {
@@ -432,7 +435,8 @@ class XtcTextDocumentService(
                                 else -> {
                                     try {
                                         val converted = convert(value)
-                                        ExecutionTrace.event(trace, "converted", ExecutionTrace.details { traced(converted) })
+                                        phases.reached("converted")
+                                        answer.set(ExecutionTrace.details { traced(converted) })
                                         result.complete(converted)
                                     } catch (e: Exception) {
                                         result.completeExceptionally(e)
