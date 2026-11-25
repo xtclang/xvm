@@ -77,8 +77,13 @@ Run icon in the gutter of that line. Click either to run it. Other ways:
 
 </td></tr></table>
 
+<table><tr><td>
+
 ![IntelliJ Run Configuration dialog for an Ecstasy Application](images/intellij-run-configuration.png)
+
 *IntelliJ: an Ecstasy Application configuration, with its arguments and what it runs with.*
+
+</td></tr></table>
 
 ### Program input
 
