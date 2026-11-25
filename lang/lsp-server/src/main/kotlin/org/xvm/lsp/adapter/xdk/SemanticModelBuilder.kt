@@ -17,6 +17,7 @@ import org.xvm.asm.Register
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.DeferredValueConstant
 import org.xvm.asm.constants.FormalConstant
+import org.xvm.asm.constants.FormalTypeChildConstant
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.ModuleConstant
@@ -1806,9 +1807,24 @@ private class SemanticModelBuilder(
                     else -> return null
                 }
         }
-        return (target as? IdentityConstant)?.takeUnless {
-            it.containsUnresolved() || (it is MethodConstant && it.isNascent)
-        }
+        return (target as? IdentityConstant)
+            ?.takeUnless {
+                it.containsUnresolved() || (it is MethodConstant && it.isNascent)
+            }?.let { if (it is FormalTypeChildConstant) constrained(it) ?: it else it }
+    }
+
+    /**
+     * The formal type that [child] names, as Element in CompileType.Element, for a CompileType that extends List: the
+     * formal type of its name that its parent's constraint has, List's Element, which the compiler resolves it by
+     * (FormalTypeChildConstant.getConstraintType); null when the constraint has none, as for OuterType in
+     * PublicType.OuterType, which the compiler resolves by its name alone. The compiler takes the type that the
+     * constraint gives the name, which a contribution can map to a formal type of another name, as `interface Crate<E>
+     * extends Box<E>` maps Box's Item to E: the name is still Box's Item's, which a rename of E does not change.
+     */
+    private fun constrained(child: FormalTypeChildConstant): PropertyConstant? {
+        val constraint = child.parentConstant.constraintType
+        if (constraint.isTuple || !constraint.containsGenericParam(child.name) || !constraint.isSingleUnderlyingClass(true)) return null
+        return (constraint.getSingleUnderlyingClass(true).component as? ClassStructure)?.formalNamed(child.name)
     }
 
     private fun identity(statement: ComponentStatement): IdentityConstant? = statement.component?.identityConstant
@@ -2198,3 +2214,26 @@ private class SemanticModelBuilder(
             ),
         )
 }
+
+/**
+ * The formal type of [name] that this class declares, or else the first that one of its contributions has, in the order
+ * the class writes them: the declaration that a name of a formal type of the class spells.
+ */
+private fun ClassStructure.formalNamed(
+    name: String,
+    seen: MutableSet<ClassStructure> = hashSetOf(),
+): PropertyConstant? {
+    if (!seen.add(this)) return null
+    (getChild(name) as? PropertyStructure)?.takeIf { it.isGenericTypeParameter }?.let { return it.identityConstant }
+    return contributionsAsList
+        .asSequence()
+        .filter { it.composition in formalContributions }
+        .map { it.typeConstant }
+        .filter { it.isSingleUnderlyingClass(true) }
+        .mapNotNull { (it.getSingleUnderlyingClass(true).component as? ClassStructure)?.formalNamed(name, seen) }
+        .firstOrNull()
+}
+
+/** The contributions through which a class has another's formal types: what it extends, implements, incorporates or is into. */
+private val formalContributions =
+    setOf(Composition.Extends, Composition.Implements, Composition.Incorporates, Composition.Into)
