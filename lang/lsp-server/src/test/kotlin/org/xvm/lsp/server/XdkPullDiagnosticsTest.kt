@@ -340,6 +340,30 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `a module in a temporary folder whose name only starts as a server's folder of copies keeps its errors`() {
+        CompilerTestSupport.configure()
+        // a server's folder is the prefix and the digits that Files.createTempDirectory adds; this one is a user's
+        val folder = Path.of(System.getProperty("java.io.tmpdir")).resolve("xtc-library-sources-myapp")
+        Files.createDirectories(folder)
+        val file = folder.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        val uri = file.canonicalFile.toURI().toString()
+        try {
+            assertThat(XdkLibrarySources.owns(uri)).isFalse()
+            Session().use { session ->
+                session.open(uri, BROKEN, 1)
+                assertThat(
+                    session
+                        .pull(uri)
+                        .left.items
+                        .map { it.message.left },
+                ).anyMatch { "missing" in it }
+            }
+        } finally {
+            folder.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `an open document whose analysis fails pulls that error, and fails no other document's pull`() {
         CompilerTestSupport.configure()
         val support = EmbeddingSupport.instance()
