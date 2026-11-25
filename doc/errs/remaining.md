@@ -2504,14 +2504,18 @@ change shows in them. In the order worth doing:
     others are taken; an idle worker's crash output went only to the log at debug, so its standard error
     outside a run is now a warning; and whether the JVM printed in a run carried over to the worker's
     later runs.
-  - [ ] Found with K3, not changed: `jvmArgs("...")` in `xtcRun` or `xtcTest` replaces the plugin's
-    default JVM options (`-ea` and the build's others) instead of adding to them, as Gradle's `addAll`
-    does on a property with only a convention; `runXtc` runs without them, and manualTests' build script
-    says the call adds to the defaults.
-  - [ ] Found with K3, not changed: the editors' Gradle mode runs `runXtc --module=<module>`, which the
-    plugin runs without the method and arguments that `xtcRun` gives that module
-    (`XtcRunTask.createCliOverrideModule`), so an embedded run now takes them where the editor's Gradle run
-    does not. The plugin could keep a configured module's own method and arguments when `--module` names it.
+  - [x] Found with K3: `jvmArgs("...")` in `xtcRun` or `xtcTest` replaced the plugin's default JVM
+    options (`-ea` and the build's others) instead of adding to them, as Gradle's `addAll` does on a
+    property with only a convention; `runXtc` ran without them, though manualTests' build script says the
+    call adds to the defaults. Fixed in master PR [#804](https://github.com/xtclang/xvm/pull/804)
+    (2026-11-25, mirrored here): the defaults are the extension's value, and a task's JVM options take the
+    extension's as theirs, so `jvmArgs(...)` adds; the export, and so embedded runs, then carry the
+    defaults and the build's options alike.
+  - [x] Found with K3: the editors' Gradle mode runs `runXtc --module=<module>`, which the plugin ran
+    without the method and arguments that `xtcRun` gives that module (`XtcRunTask.createCliOverrideModule`),
+    so an embedded run took them where the editor's Gradle run did not. Fixed in master PR
+    [#804](https://github.com/xtclang/xvm/pull/804) (2026-11-25, mirrored here): `--module` runs the
+    configured module of that name with its method and arguments, which `--method` and `--args` override.
 - [ ] K1: an `xtc` command-line mode in VS Code. IntelliJ's command-line mode runs `xtc run --deduce`,
   `xtc test` and `--debug` (`XtcRunConfiguration.xtcCommandLine`); VS Code's `xtc.build.mode` has
   embedded, Gradle and automatic, and its debug launch says it does not run `commandLine`
