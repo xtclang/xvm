@@ -306,6 +306,10 @@ xtcRun {
 }
 ```
 
+A task that names its own modules (`moduleName`, `moduleNames`, `module { }`) runs those instead of its extension's
+(`xtcRun`'s, or `xtcTest`'s for a test task); a task that names none runs the extension's. Within the extension or a
+task, those calls add, and `setModuleNames(...)`/`setModules(...)` replace.
+
 ### Test Configuration
 
 **Extension**: `XtcTestExtension`
