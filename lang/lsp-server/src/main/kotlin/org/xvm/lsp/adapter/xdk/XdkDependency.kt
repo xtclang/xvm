@@ -2,13 +2,9 @@ package org.xvm.lsp.adapter.xdk
 
 import org.slf4j.LoggerFactory
 import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
-import org.xvm.asm.Constants.Access
 import org.xvm.asm.FileStructure
-import org.xvm.asm.MethodStructure
 import org.xvm.asm.ModuleRepository
-import org.xvm.asm.PropertyStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.compiler.BuildRepository
 import org.xvm.lsp.adapter.ReadOnlyDocument
@@ -79,99 +75,55 @@ class XdkDependency
                 .let { HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(it)) }
 
         /**
-         * What a module that depends on this one compiles against: the artifact without its methods' code and source
-         * text, its build time and its source directory, with whether each method has code, and where each declaration
-         * is. A module that depends on this one compiles against another artifact with the same as it did against this
-         * one, and its facts name this one's declarations at the same places. Null when the artifact cannot be read
-         * alone ([apis]), which no other artifact's API equals.
+         * What a module that depends on this one compiles against, as a whole ([XdkModuleApi.all]) and declaration by
+         * declaration, with where each is ([XdkModuleApi]), or null when the artifact cannot be read alone, though no
+         * artifact is known that cannot: a module that depends on such an artifact is then compiled again whenever it
+         * is, as the log says.
          */
-        internal val api: String? get() = apis?.all
+        internal val moduleApi: XdkModuleApi? by lazy {
+            readable("API") {
+                ExecutionTrace.api("FileStructure.api", module) {
+                    val file = FileStructure(ByteArrayInputStream(artifact))
+                    // each declaration's identity, read before writing the API renumbers the constants
+                    val located =
+                        ConstantPool.withPool(file.constantPool).use {
+                            declarations.entries.associate { (index, location) ->
+                                file.constantPool.getConstant(index) as IdentityConstant to location
+                            }
+                        }
+                    XdkModuleApi.of(file, located)
+                }
+            }
+        }
 
         /**
-         * [api] without where the private methods and properties are, and what they declare. A module that compiled
-         * against this one cannot name them, so against another artifact with the same it compiles as it did, and its
-         * facts name this one's declarations at the same places. The facts of a module whose compile failed are what it
-         * got that far, which name every member of a type it used, private ones too: [api] is what keeps those. Null
-         * when [api] is.
+         * What this module's compile used of the modules it depends on ([XdkModuleUses]), or null when the artifact cannot
+         * be read alone, and the module is compiled again whenever one of them is.
          */
-        internal val accessibleApi: String? get() = apis?.accessible
+        internal val uses: XdkModuleUses? by lazy {
+            readable("uses") {
+                ExecutionTrace.api("FileStructure.uses", module) {
+                    XdkModuleUses.of(FileStructure(ByteArrayInputStream(artifact)))
+                }
+            }
+        }
 
-        /** [api] and [accessibleApi], from one read of the artifact. */
-        private class Apis(
-            val all: String,
-            val accessible: String,
-        )
-
-        /**
-         * [api] and [accessibleApi], or null when the artifact cannot be read alone, though no artifact is known that
-         * cannot: a module that depends on such an artifact is then compiled again whenever it is, as the log says.
-         */
-        private val apis: Apis? by lazy {
+        private fun <T> readable(
+            what: String,
+            read: () -> T,
+        ): T? =
             try {
-                readApis()
+                read()
             } catch (failure: CancellationException) {
                 throw failure
             } catch (failure: RuntimeException) {
                 logger.info(
-                    "compile: the API of {}'s artifact cannot be read alone ({}), so the modules that depend on it compile again with it",
+                    "compile: the {} of {}'s artifact cannot be read alone ({}), so the modules that depend on it compile again with it",
+                    what,
                     module,
                     failure.message,
                 )
                 null
-            }
-        }
-
-        private fun readApis(): Apis =
-            ExecutionTrace.api("FileStructure.api", module) {
-                val file = FileStructure(ByteArrayInputStream(artifact))
-                ConstantPool.withPool(file.constantPool).use {
-                    val pool = file.constantPool
-                    // read before writing the API renumbers the constants: each declaration's constant and place, with
-                    // whether it is private
-                    val located =
-                        declarations.entries.map { (index, location) ->
-                            val constant = pool.getConstant(index)
-                            val private = constant is IdentityConstant && isPrivate(constant)
-                            Triple(constant, "${location.sourceName} ${location.range}", private)
-                        }
-                    // what a module that imports this one compiles against, as javatools defines it for Gradle's builds
-                    // (FileStructure.writeApi): the module without its methods' code and source text, its build time and
-                    // its source directory, with whether each method is abstract, native or has code
-                    val api = ByteArrayOutputStream().also(file::writeApiTo).toByteArray()
-
-                    // A constant is named by its index in the API's pool, where the write put it: two artifacts whose
-                    // APIs are the same hold the same constant at each index. A description of it would ask of its
-                    // signature's types what only the dependencies' classes answer, which the artifact read alone holds
-                    // only as fingerprints, such as whether a parameterized type is a function's: in a library of the XVM
-                    // repository, which depends on the workspace's ecstasy, "missing class for constant". A constant that
-                    // the API does not hold is described, as before.
-                    fun named(constant: Constant): String = constant.position.takeIf { it >= 0 }?.let { "#$it" } ?: constant.toString()
-
-                    fun digest(places: List<String>): String {
-                        val digest = MessageDigest.getInstance("SHA-256")
-                        digest.update(api)
-                        places.sorted().forEach {
-                            digest.update(it.toByteArray(Charsets.UTF_8))
-                            digest.update(0)
-                        }
-                        return HexFormat.of().formatHex(digest.digest())
-                    }
-                    val places = located.map { (constant, place, private) -> "${named(constant)} $place" to private }
-                    Apis(digest(places.map { it.first }), digest(places.filterNot { it.second }.map { it.first }))
-                }
-            }
-
-        /**
-         * Whether [identity] is a private method or property, other than a constructor, or is declared in one: what
-         * only its own class can name.
-         */
-        private fun isPrivate(identity: IdentityConstant): Boolean =
-            generateSequence(identity) { it.parentConstant }.any { parent ->
-                when (val component = parent.component) {
-                    is MethodStructure -> !component.isConstructor && component.access == Access.PRIVATE
-                    is PropertyStructure -> component.access == Access.PRIVATE
-                    else -> false
-                }
             }
 
         /** Constant-table symbol identity qualified by its module and immutable artifact revision. */
