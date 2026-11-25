@@ -16,6 +16,7 @@ import java.nio.file.StandardOpenOption.READ
 import java.nio.file.StandardOpenOption.WRITE
 import java.time.Instant
 import java.util.Base64
+import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.jvm.optionals.getOrNull
@@ -61,6 +62,28 @@ internal object SessionLock {
     const val NAME = "server.lock"
 
     /**
+     * The lock files that this process holds or shares, or is about to, as [path] names them, which [held] answers for
+     * without looking: on Linux and macOS, closing any channel to a file releases the process's locks on it, and a look
+     * closes one.
+     */
+    private val own: MutableSet<Path> = ConcurrentHashMap.newKeySet()
+
+    /**
+     * A monitor for each [guard] file, by its absolute path, which this process's threads take before its lock: the OS
+     * lock serializes processes, not the threads of one, where a second thread's attempt on the file fails, and closing
+     * its channel then releases the first thread's lock.
+     */
+    private val guards = ConcurrentHashMap<Path, Any>()
+
+    /** [lock] as [own] names it: its real path, which another path to the same file has too, when it exists. */
+    private fun path(lock: Path): Path =
+        try {
+            lock.toRealPath()
+        } catch (_: IOException) {
+            lock.toAbsolutePath().normalize()
+        }
+
+    /**
      * The lock file of a [directory] that other code may read every file of, beside it rather than in it: on Linux and
      * macOS a process that opens and closes a file it holds a lock on, by any channel or stream, releases the lock. A
      * compile does so in the library source copies' folder, whose files it reads to fingerprint a module's resources,
@@ -80,9 +103,19 @@ internal object SessionLock {
         try {
             Files.createDirectories(directory)
             val channel = FileChannel.open(lock, CREATE, WRITE, NOFOLLOW_LINKS)
+            // before the lock, so that no look of another thread's, between the two, closes a channel to it and releases it
+            val owned = path(lock)
+            // false when another call of this process's noted it first, whose note a failure here must not remove
+            val noted = own.add(owned)
             try {
-                channel.tryLock().also { if (it == null) channel.close() }
+                channel.tryLock().also {
+                    if (it == null) {
+                        own.remove(owned)
+                        channel.close()
+                    }
+                }
             } catch (failure: IOException) {
+                if (noted) own.remove(owned)
                 channel.close()
                 Files.deleteIfExists(lock)
                 throw failure
@@ -98,9 +131,18 @@ internal object SessionLock {
     fun share(lock: Path): FileLock? =
         try {
             val channel = FileChannel.open(lock, CREATE, READ, WRITE, NOFOLLOW_LINKS)
+            // before the lock, as hold does
+            val owned = path(lock)
+            val noted = own.add(owned)
             try {
-                channel.tryLock(0, Long.MAX_VALUE, true).also { if (it == null) channel.close() }
+                channel.tryLock(0, Long.MAX_VALUE, true).also {
+                    if (it == null) {
+                        own.remove(owned)
+                        channel.close()
+                    }
+                }
             } catch (failure: IOException) {
+                if (noted) own.remove(owned)
                 channel.close()
                 throw failure
             }
@@ -109,28 +151,32 @@ internal object SessionLock {
         }
 
     /**
-     * Opens and locks [file], creating it: the lock that servers make their directories of one kind under, and delete
-     * the [unheld] ones, so that no server sees another's directory before that one is held. Closing the channel
-     * releases it. Null when the file system has no locks; then nothing is to be deleted.
+     * Runs [action] holding [file]'s lock, creating the file: the lock that servers make their directories of one kind
+     * under, and delete the [unheld] ones, so that no server sees another's directory before that one is held. The
+     * threads of this process take it one at a time, by its monitor in [guards]; [action] is told whether it holds the
+     * lock, which it does not on a file system without locks, where nothing is to be deleted.
      */
-    fun guard(file: Path): FileChannel? {
-        val channel =
-            try {
-                FileChannel.open(file, CREATE, WRITE, NOFOLLOW_LINKS)
-            } catch (_: IOException) {
-                return null
+    fun <T> guard(
+        file: Path,
+        action: (guarded: Boolean) -> T,
+    ): T =
+        synchronized(guards.computeIfAbsent(file.toAbsolutePath().normalize()) { Any() }) {
+            val channel =
+                try {
+                    FileChannel.open(file, CREATE, WRITE, NOFOLLOW_LINKS)
+                } catch (_: IOException) {
+                    null
+                }
+            channel.use {
+                val guarded =
+                    try {
+                        channel?.lock() != null
+                    } catch (_: IOException) {
+                        false
+                    }
+                action(guarded)
             }
-        return try {
-            channel.lock()
-            channel
-        } catch (_: IOException) {
-            channel.close()
-            null
-        } catch (_: OverlappingFileLockException) {
-            channel.close()
-            null
         }
-    }
 
     /**
      * The other directories beside [own] whose names match [glob], which the same user owns and whose lock [beside]
@@ -160,14 +206,17 @@ internal object SessionLock {
 
     /**
      * Whether a process holds the session's lock, [lock], by default its [NAME], or null when the session has no lock
-     * file, as one written before servers took it, or its lock cannot be tested. A process must not ask about a session
-     * it holds: on Linux and macOS, closing any channel to the file releases the process's locks on it.
+     * file, as one written before servers took it, or its lock cannot be tested. One that this process holds or shares
+     * is held without a look ([own]): on Linux and macOS, the look's closing of its channel to the file would release
+     * this process's lock, and another process would take the session or directory for an ended one's and delete it, as
+     * a second directory of a kind made in one process did to the first ([ProcessDirectories.create]).
      */
     fun held(
         directory: Path,
         lock: Path = directory.resolve(NAME),
     ): Boolean? {
         if (!Files.isRegularFile(lock, NOFOLLOW_LINKS)) return null
+        if (path(lock) in own) return true
         return try {
             FileChannel.open(lock, WRITE, NOFOLLOW_LINKS).use { channel ->
                 try {

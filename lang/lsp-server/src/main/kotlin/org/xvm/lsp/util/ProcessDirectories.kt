@@ -20,7 +20,7 @@ internal object ProcessDirectories {
      */
     fun create(prefix: String): Path {
         val temporary = Path.of(System.getProperty("java.io.tmpdir"))
-        return SessionLock.guard(temporary.resolve(".${prefix}lock")).use { guard ->
+        return SessionLock.guard(temporary.resolve(".${prefix}lock")) { guarded ->
             Files.createTempDirectory(temporary, prefix).also { directory ->
                 val lock = SessionLock.hold(directory, SessionLock.beside(directory))
                 Runtime.getRuntime().addShutdownHook(
@@ -33,7 +33,7 @@ internal object ProcessDirectories {
                         "${prefix}cleanup",
                     ),
                 )
-                if (guard != null) deleteAbandoned(directory, prefix)
+                if (guarded) deleteAbandoned(directory, prefix)
             }
         }
     }
