@@ -113,7 +113,7 @@ public class xRTFileTemplate
                             Files.readAttributes(fileOS.toPath(), BasicFileAttributes.class);
                     return frame.assignValue(iReturn,
                             xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
-                } catch (IOException _) {}
+                } catch (IOException ignore) {}
             }
             return frame.assignValue(iReturn, xInt64.makeHandle(0L));
         }

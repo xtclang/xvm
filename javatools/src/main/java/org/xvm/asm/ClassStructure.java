@@ -198,12 +198,23 @@ public class ClassStructure
     public Annotation[] collectAnnotations(boolean fIntoClass) {
         Annotation[] annos = fIntoClass ? m_aAnnoClass : m_aAnnoMixin;
         if (annos == null) {
-            annos = getContributionsAsList().stream()
-                    .filter(contrib -> contrib.getComposition() == Composition.Annotation)
-                    .map(Contribution::getAnnotation)
-                    .filter(anno -> fIntoClass ==
-                            anno.getAnnotationType().getExplicitClassInto().isIntoClassType())
-                    .toArray(Annotation[]::new);
+            List<Annotation> listAnnos = null;
+
+            for (Contribution contrib : getContributionsAsList()) {
+                if (contrib.getComposition() == Composition.Annotation) {
+                    Annotation anno = contrib.getAnnotation();
+
+                    if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
+                        if (listAnnos == null) {
+                            listAnnos = new ArrayList<>();
+                        }
+                        listAnnos.add(anno);
+                    }
+                }
+            }
+            annos = listAnnos == null
+                    ? Annotation.NO_ANNOTATIONS
+                    : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
             if (fIntoClass) {
                 m_aAnnoClass = annos;
             } else {
@@ -3717,7 +3728,7 @@ public class ClassStructure
                     List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
 
                     if (id.equals(pool.clzClass()) && cActual > 0) {
-                        TypeConstant typePublic = listActual.getFirst();
+                        TypeConstant typePublic = listActual.get(0);
                         if (typePublic.isSingleUnderlyingClass(false) && !typePublic.isFormalType()) {
                             // we know a bit more about the relationship between Class formal types;
                             // prime them accordingly

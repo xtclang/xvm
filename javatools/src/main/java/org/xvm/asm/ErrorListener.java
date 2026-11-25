@@ -429,24 +429,6 @@ public interface ErrorListener {
     }
 
     /**
-     * Observational metadata about the thread that constructed a diagnostic.
-     *
-     * <p>This is not a request identifier, ownership token, or deduplication key. A host that
-     * needs document/request identity must retain that context separately. Two equal diagnostic
-     * reports are not made distinct merely because they came from different threads.
-     *
-     * @param thread  the reporting thread's name, which can be empty for an unnamed thread
-     */
-    record Origin(String thread) {
-        /**
-         * @return the origin of a diagnostic reported now, on this thread
-         */
-        static Origin here() {
-            return new Origin(Thread.currentThread().getName());
-        }
-    }
-
-    /**
      * The location of a diagnostic, independent of its severity and message arguments.
      *
      * <p>Hosts can switch exhaustively over source spans, structure references, and unpositioned
@@ -823,7 +805,6 @@ public interface ErrorListener {
          */
         public ErrorInfo(Severity severity, String sCode, Object[] aoParam,
                 Source source, long lPosStart, long lPosEnd) {
-            m_origin    = Origin.here();
             m_severity  = severity;
             m_sCode     = sCode;
             m_aoParam   = aoParam;
@@ -843,7 +824,6 @@ public interface ErrorListener {
          * @param xs          the related structure, or null for an unpositioned diagnostic
          */
         public ErrorInfo(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
-            m_origin   = Origin.here();
             m_severity = severity;
             m_sCode    = sCode;
             m_aoParam  = aoParam;
@@ -864,15 +844,6 @@ public interface ErrorListener {
             return m_source != null ? new Site.In(m_source, m_lPosStart, m_lPosEnd)
                  : m_xs     != null ? new Site.At(m_xs)
                                     : NOWHERE;
-        }
-
-        /**
-         * Return the thread metadata captured when this diagnostic was constructed.
-         *
-         * @return the original reporting-thread metadata, unchanged by forwarding or replay
-         */
-        public Origin origin() {
-            return m_origin;
         }
 
         /**
@@ -966,6 +937,9 @@ public interface ErrorListener {
                     .append(m_sCode);
 
             if (m_aoParam != null) {
+                // the parameters are part of the identity, so they have to be compared, not
+                // digested: a 32-bit hash collides, and a collision here does not merge two
+                // reports of the same thing, it discards one of two different things
                 sb.append('#')
                   .append(Arrays.toString(m_aoParam));
             }
@@ -1061,7 +1035,6 @@ public interface ErrorListener {
         private final Severity     m_severity;
         private final String       m_sCode;
         private final Object[]     m_aoParam;
-        private final Origin       m_origin;
         private       Source       m_source;
         private       long         m_lPosStart;
         private       long         m_lPosEnd;

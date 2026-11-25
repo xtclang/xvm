@@ -187,7 +187,7 @@ public class xTerminalConsole
                     READER   = builder.build();
                     TERMINAL = terminal;
                 }
-            } catch (IOException _) {}
+            } catch (IOException ignore) {}
         }
         return READER;
     }
@@ -195,7 +195,7 @@ public class xTerminalConsole
     /**
      * Trivial DefaultHistory extension that limits the history file size.
      *
-     * <p>Note: {@link LineReader#HISTORY_SIZE} controls the history size in memory, not on disk
+     * Note: {@link LineReader#HISTORY_SIZE} controls the history size in memory, not on disk
      */
     static public class LimitedHistory
             extends DefaultHistory {
@@ -210,7 +210,7 @@ public class xTerminalConsole
                 // purge a quarter of the history
                 try {
                     trimHistory(f_path, f_cMaxEntries - (f_cMaxEntries >> 2));
-                } catch (IOException _) {}
+                } catch (IOException ignore) {}
             }
             super.add(time, line);
         }

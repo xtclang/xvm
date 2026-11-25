@@ -38,19 +38,14 @@ public class Source
     }
 
     /**
-     * Construct a Source from Ecstasy source code that is not in a file, naming it anyway.
-     *
-     * <p>The name a diagnostic reports is part of its identity, so a host holding several documents
-     * that are not on disk - an editor's unsaved buffers - needs to be able to tell them apart.
-     * Two unnamed documents with a problem at the same offset produce the same identity, and a
-     * listener that deduplicates then discards the second one.
+     * Construct a Source from Ecstasy source code that is associated with a name.
      *
      * @param sScript  the Ecstasy source code, as a String
      * @param sName    the name to report this source under, e.g. the document's URI
      */
     public Source(String sScript, String sName) {
         this(sScript.toCharArray());
-        m_sFile = requireNonNull(sName, "sName");
+        m_sFile = requireNonNull(sName, "Name is required");
     }
 
     /**

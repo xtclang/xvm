@@ -9646,7 +9646,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "LSP4IJ never sends DAP cancel (UP41 in doc/errs/remaining.md), so IntelliJ checks the call's value through the Evaluate Expression dialog, the views LSP4IJ rebuilds on the invalidated event, the watch after it, the time limit and the exit; cancel is checked in VS Code."
+          "LSP4IJ never sends DAP cancel (UP41), so IntelliJ checks the call's value through the Evaluate Expression dialog, the views LSP4IJ rebuilds on the invalidated event, the watch after it, the time limit and the exit; cancel is checked in VS Code."
         ]
       }
     },

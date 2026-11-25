@@ -53,7 +53,7 @@ public interface Argument {
                     return context.getCurrentFrame().localConstants()[Op.convertId(nArg)].getValueString();
                 }
             }
-        } catch (Throwable _) {}
+        } catch (Throwable ignore) {}
 
         return Register.getIdString(nArg);
     }

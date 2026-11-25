@@ -24,7 +24,7 @@ import org.xvm.compiler.ast.LambdaExpression.LambdaContext;
  */
 public final class LambdaBindings {
     private final Map<Register, Register>        captureOrigins = new IdentityHashMap<>();
-    private final Map<Integer, ParameterBinding> parameters     = new LinkedHashMap<>();
+    private final Map<Integer, ParameterBinding> parameters = new LinkedHashMap<>();
 
     private LambdaBindings() {}
 

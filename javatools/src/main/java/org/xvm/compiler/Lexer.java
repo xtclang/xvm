@@ -49,8 +49,8 @@ public class Lexer
         }
         requireNonNull(errs, "errs");
 
-        m_source = source;
-        f_errs   = errs;
+        m_source        = source;
+        m_errorListener = errs;
 
         eatWhitespace();
     }
@@ -59,9 +59,9 @@ public class Lexer
      * @param parent a Lexer that this Lexer can delegate to
      */
     protected Lexer(Lexer parent) {
-        m_source      = parent.m_source;
-        f_errs        = parent.f_errs;
-        m_fWhitespace = parent.m_fWhitespace;
+        m_source        = parent.m_source;
+        m_errorListener = parent.m_errorListener;
+        m_fWhitespace   = parent.m_fWhitespace;
     }
 
     // ----- Iterator methods ----------------------------------------------------------------------
@@ -134,7 +134,7 @@ public class Lexer
             @Override
             public Token next() {
         // Valid input must also observe cancellation; no diagnostic may be emitted.
-        if (f_errs.isAbortDesired()) {
+        if (m_errorListener.isAbortDesired()) {
             throw new CompilerException("Tokenization aborted");
         }
                 if (hasNext()) {
@@ -237,8 +237,8 @@ public class Lexer
 
     @Override
     public Token next() {
-        // A valid token stream may never log an error. It must still observe host cancellation.
-        if (f_errs.isAbortDesired()) {
+        // Valid input must also observe cancellation; no diagnostic may be emitted.
+        if (m_errorListener.isAbortDesired()) {
             throw new CompilerException("Tokenization aborted");
         }
         boolean fWhitespaceBefore = m_fWhitespace;
@@ -2540,9 +2540,9 @@ public class Lexer
      * to build one by hand.
      */
     protected void log(Severity severity, String sCode, ErrorListener.Site site, Object... aoParam) {
-        f_errs.log(severity, sCode, site, aoParam);
-        if (f_errs.isAbortDesired()) {
-            throw new CompilerException("error list is full: " + f_errs);
+        m_errorListener.log(severity, sCode, site, aoParam);
+        if (m_errorListener.isAbortDesired()) {
+            throw new CompilerException("error list is full: " + m_errorListener);
         }
     }
 
@@ -2900,7 +2900,7 @@ public class Lexer
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener f_errs;
+    private final ErrorListener m_errorListener;
 
     /**
      * Keeps track of whether whitespace was encountered.

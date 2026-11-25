@@ -67,7 +67,7 @@ import static org.xvm.util.Handy.NO_ARGS;
 /**
  * Debugger console.
  *
- * <p>TODO implementation Watch Eval
+ * TODO implementation Watch Eval
  * TODO show which variables changed when stepping
  */
 public final class DebugConsole
@@ -352,7 +352,7 @@ public final class DebugConsole
                     iPC = iResult;
                     break NextCommand;
                 }
-            } catch (IOException _) {}
+            } catch (IOException ignored) {}
         }
 
         frame.f_context.setDebuggerActive(

@@ -115,7 +115,7 @@ public class nType
     /**
      * Native implementation of {@code conditional Hasher<DataType> hashed()}.
      *
-     * <p>TODO: this is temporary - it needs to be removed here and naturally generated
+     * TODO: this is temporary - it needs to be removed here and naturally generated
      */
     public boolean hashed$p(Ctx ctx) {
         ConstantPool pool = ctx.pool();
@@ -388,7 +388,7 @@ public class nType
 
             try {
                 return valueClass.getDeclaredMethod(methodName, paramClasses);
-            } catch (NoSuchMethodException _) {
+            } catch (NoSuchMethodException ignore) {
                 valueClass = valueClass.getSuperclass();
             }
         } while (valueClass != null);

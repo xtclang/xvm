@@ -75,7 +75,7 @@ public class xBit
                 if (lBit == 0 || lBit == 1) {
                     return frame.assignValue(iReturn, makeHandle(lBit == 1));
                 }
-            } catch (IllegalStateException _) {}
+            } catch (IllegalStateException ignore) {}
 
             return frame.raiseException(xException.illegalArgument(frame,
                 hIntN.getValue().toString()));

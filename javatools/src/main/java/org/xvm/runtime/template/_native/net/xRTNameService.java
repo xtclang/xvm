@@ -151,7 +151,7 @@ public class xRTNameService
                         return frameCaller.assignValues(aiReturn,
                                 xBoolean.TRUE, xArray.createImmutableArray(clz, ah));
                     }
-                } catch (Throwable _) {
+                } catch (Throwable ignore) {
                     // REVIEW CP: do we want to report the reason somehow?
                     // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
                 }
@@ -176,7 +176,7 @@ public class xRTNameService
                         return frameCaller.assignValues(aiReturn,
                                 xBoolean.TRUE, xString.makeHandle(sName));
                     }
-                } catch (Exception _) {
+                } catch (Exception ignore) {
                     // REVIEW CP: do we want to report the reason somehow?
                     // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
                 }
@@ -245,7 +245,7 @@ public class xRTNameService
             } finally {
                 valueEnum.close();
             }
-        } catch (NameNotFoundException _) {}
+        } catch (NameNotFoundException ignore) {}
     }
 
     static String exceptionMessage(Throwable e) {

@@ -518,7 +518,7 @@ public class UnresolvedTypeConstant
             return getResolvedType().validate(errs);
         }
 
-        errs.error(Compiler.NAME_UNRESOLVABLE, ErrorListener.at(this), getValueString());
+        errs.error(Compiler.NAME_UNRESOLVABLE, at(this), getValueString());
         return true;
     }
 

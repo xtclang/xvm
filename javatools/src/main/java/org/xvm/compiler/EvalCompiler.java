@@ -218,7 +218,7 @@ public class EvalCompiler {
                             return arg;
                         }
                     }
-                } catch (ExceptionHandle.WrapperException _) {}
+                } catch (ExceptionHandle.WrapperException ignore) {}
             }
             return arg;
         }
