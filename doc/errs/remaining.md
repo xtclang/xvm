@@ -271,23 +271,23 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   interfaces by their members and their members' types, checks abstractness and enum switches against
   all members, and resolves operators by annotation (the reach rule's fixpoint, for every change).
   Every module uses each type of ecstasy and the turtle as a whole, but for their private members and
-  their namespaces' members, which a module finds by name. Proof: `XdkMemberUseTrackerTest`, 26 cases
+  their namespaces' members, which a module finds by name. Proof: `XdkMemberUseTrackerTest`, 30 cases
   whose kept modules compile to the same facts, artifact and errors as from nothing; each rule but one
   has a case that fails without it, some of them renames that must be refused (`XdkRenameReachTest`,
   12 cases) and are proven without it. The exception, the private members of the types a module's
   classes extend, which no case shows another module to see, is kept as a conservative rule; a changed
   default value, which a call leaves to the callee, is carried by the modules its case compiles alone.
   `XdkIncrementalBaseTest` compares whole facts now; heavy `XdkMemberUseTrackerLibrariesTest`, over
-  the 22 modules of the 21 libraries, renames among its edits. Over all 21 libraries, the modules that the next revision's compile compiles after an edit,
-  before and after: a method body of `String`, 3 and 3 (ecstasy, and json and xenia, whose facts name
-  ecstasy's members by artifact); a private method added to `String`, 22 and 3; a public method added
-  to json's `Parser`, 12 and 4; a comment line that moves `Parser`'s declarations, 12 and 4. A rename's
-  proof after the edit: of `Parser.expectString`, 4 and 4, as the reach rule; of a `String` method,
-  22 and 22 (`splitMap`'s is refused before and after). Not applied to the diagnostics and navigation
-  builds, keyed by artifact revisions, whose navigation names other modules' declarations by revision
-  and constant index. A rename of a `String` method still compiles every module, as every module uses
-  ecstasy's types as a whole; getting below that would need the compiler to record which whole-type consults
-  each module makes, which is deliberately not pursued.
+  the 22 modules of the 21 libraries, renames among its edits. Over all 21 libraries, the modules that
+  the next revision's compile compiles after an edit, before and after: a method body of `String`, 3 and
+  3 (ecstasy, and json and xenia, whose facts name ecstasy's members by artifact); a private method added
+  to `String`, 22 and 3; a public method added to json's `Parser`, 12 and 4; a comment line that moves
+  `Parser`'s declarations, 12 and 4. A rename's proof after the edit: of `Parser.expectString`, 4 and 4,
+  as the reach rule; of a `String` method, 22 and 22 (`splitMap`'s is refused before and after). Not
+  applied to the diagnostics and navigation builds, keyed by artifact revisions, whose navigation names
+  other modules' declarations by revision and constant index. A rename of a `String` method still
+  compiles every module, as every module uses ecstasy's types as a whole; getting below that would need
+  the compiler to record which whole-type consults each module makes, which is deliberately not pursued.
 - [x] A rename that the client cancelled ran its proof to the end: `textDocument/rename` maps a
   refusal with `exceptionallyCompose` (`856d5ef01b`), whose new future the cancellation cancelled
   without reaching the adapter's, so the proof, half a minute over the XVM repository's libraries,

@@ -585,6 +585,179 @@ class XdkMemberUseTrackerTest {
     }
 
     @Test
+    fun `a method renamed in a mixin's virtual child compiles the module that matches it through a class that incorporates the mixin`() {
+        val lib =
+            """
+            module Lib {
+                static Int other() = 2;
+
+                mixin Maker
+                        into Object {
+                    class Child {
+                        Int foo() = 1;
+                    }
+
+                    Child make() = new Child();
+                }
+
+                class C
+                        incorporates Maker {
+                }
+            }
+            """.trimIndent()
+        val duck =
+            """
+            module Duck {
+                package lib import Lib;
+                package iface import Iface;
+
+                Int run() {
+                    iface.HasFoo h = new lib.C().make();
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to lib, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
+                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
+        assertThat(outcome.errors("Duck")).isNotEmpty()
+    }
+
+    @Test
+    fun `a method renamed in a virtual child of a virtual child compiles the module that matches it through another module's override`() {
+        // Sub overrides Base's Middle, whose Leaf it takes; Duck names Sub and the methods, neither Base nor Leaf
+        val lib =
+            """
+            module Lib {
+                static Int other() = 2;
+
+                class Base {
+                    class Middle {
+                        class Leaf {
+                            Int foo() = 1;
+                        }
+
+                        Leaf leaf() = new Leaf();
+                    }
+                }
+            }
+            """.trimIndent()
+        val mid =
+            """
+            module Mid {
+                package lib import Lib;
+
+                class Sub
+                        extends lib.Base {
+                    @Override
+                    class Middle {
+                        Int bar() = 2;
+                    }
+
+                    Middle middle() = new Middle();
+                }
+            }
+            """.trimIndent()
+        val duck =
+            """
+            module Duck {
+                package mid import Mid;
+                package iface import Iface;
+
+                Int run() {
+                    iface.HasFoo h = new mid.Sub().middle().leaf();
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to lib, "Mid" to mid, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
+                mapOf("Mid" to setOf("Lib"), "Duck" to setOf("Mid", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Mid", "Duck")
+        assertThat(outcome.errors("Duck")).isNotEmpty()
+    }
+
+    @Test
+    fun `a method renamed in a virtual child of a parameterized class compiles the module that matches the child with an interface`() {
+        val lib =
+            """
+            module Lib {
+                static Int other() = 2;
+
+                class Outer<Element> {
+                    class Child {
+                        Int foo() = 1;
+                    }
+
+                    Child make() = new Child();
+                }
+            }
+            """.trimIndent()
+        val duck =
+            """
+            module Duck {
+                package lib import Lib;
+                package iface import Iface;
+
+                Int run() {
+                    iface.HasFoo h = new lib.Outer<String>().make();
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to lib, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
+                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
+        assertThat(outcome.errors("Duck")).isNotEmpty()
+    }
+
+    @Test
+    fun `a method renamed in a virtual child compiles the module that matches it through another module's typedef of the child`() {
+        // Duck names Mid's make alone, whose type is Mid's typedef of Base's Child
+        val mid =
+            """
+            module Mid {
+                package lib import Lib;
+
+                typedef lib.Base.Child as Kid;
+
+                static Kid make() = new lib.Base().make();
+            }
+            """.trimIndent()
+        val duck =
+            """
+            module Duck {
+                package mid import Mid;
+                package iface import Iface;
+
+                Int run() {
+                    iface.HasFoo h = mid.make();
+                    return 0;
+                }
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to CHILD, "Mid" to mid, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
+                mapOf("Mid" to setOf("Lib"), "Duck" to setOf("Mid", "Iface"), "Far" to setOf("Lib")),
+                "Lib" to CHILD.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Mid", "Duck")
+        assertThat(outcome.errors("Duck")).isNotEmpty()
+    }
+
+    @Test
     fun `a member removed from a class compiles the module that matches the class with its own interface`() {
         val own =
             """
