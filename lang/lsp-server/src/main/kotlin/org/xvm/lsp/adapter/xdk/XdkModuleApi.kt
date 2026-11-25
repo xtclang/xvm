@@ -9,6 +9,7 @@ import org.xvm.asm.FileStructure
 import org.xvm.asm.ModuleStructure
 import org.xvm.asm.TypedefStructure
 import org.xvm.asm.constants.AnnotatedTypeConstant
+import org.xvm.asm.constants.DecoratedClassConstant
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.TerminalTypeConstant
 import org.xvm.asm.constants.TypeConstant
@@ -312,6 +313,8 @@ internal fun types(
                 }
             }
         }
+        // a class literal of a parameterized or annotated class, whose underlying constants leave its type out
+        if (constant is DecoratedClassConstant) visit(constant.type)
         constant.forEachUnderlying(::visit)
     }
     constants.forEach(::visit)
