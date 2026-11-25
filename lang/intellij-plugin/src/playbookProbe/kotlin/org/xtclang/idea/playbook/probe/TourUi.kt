@@ -113,10 +113,13 @@ import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.features.LSPCompletionProposal
 import com.redhat.devtools.lsp4ij.dap.client.DAPStackFrame
+import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticsApplier
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettings.LanguageServerDefinitionSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 import com.redhat.devtools.lsp4ij.settings.ServerTrace
+import org.eclipse.lsp4j.DiagnosticSeverity
 import org.xtclang.idea.XtcFileType
+import org.xtclang.idea.lsp.XtcClientFeatures
 import org.xtclang.idea.lsp.XtcLanguageServer
 import org.xtclang.idea.run.XtcAttachConfiguration
 import org.xtclang.idea.run.XtcAttachConfigurationType
@@ -1529,6 +1532,10 @@ object TourUi {
             listOfNotNull(newestWindow(), lightweightPopup()).joinToString("\n") { textOf(it) }
         }
 
+    /** What can close a popup, counted since the first call: see [PopupClosers]. */
+    @JvmStatic
+    fun popupClosers(): String = PopupClosers.observed()
+
     /** The completion lookup's items, by their lookup strings, as the list shows them. */
     @JvmStatic
     fun lookupItems(): String =
@@ -1664,6 +1671,34 @@ object TourUi {
             DaemonCodeAnalyzerImpl
                 .getHighlights(document, HighlightSeverity.WARNING, project())
                 .joinToString("\n") { "${it.severity.name} ${it.description}" }
+        }
+
+    /**
+     * The errors and warnings that LSP4IJ holds for the open file at [path], from the reports it took, each as
+     * `SEVERITY code: message`; how many items the latest report of the file's own pull had, for its text as it is
+     * now; whether LSP4IJ's document of the file is one without a connection; and whether a change of its
+     * diagnostics has yet to reach the editor's marks. What a failure of [diagnostics] shows with, to tell a mark
+     * that the editor did not take back from an item that LSP4IJ kept, and that from a report of another document.
+     */
+    @JvmStatic
+    fun heldDiagnostics(path: String): String =
+        onEdt {
+            val file = file(path)
+            val servers = LanguageServiceAccessor.getInstance(project()).startedServers
+            val documents = servers.flatMap { server -> server.openedDocuments.filter { it.file == file } }
+            val held =
+                documents
+                    .flatMap { it.diagnostics }
+                    .filter { it.severity == DiagnosticSeverity.Error || it.severity == DiagnosticSeverity.Warning }
+                    .joinToString("; ") { "${it.severity.name.uppercase()} ${it.code?.get()}: ${it.message}" }
+            val own = servers.firstNotNullOfOrNull { (it.clientFeatures as? XtcClientFeatures)?.currentDiagnosticItems(path) }
+            val pending = LSPDiagnosticsApplier.getInstance(project()).isRefreshPending(file)
+            listOfNotNull(
+                held.ifEmpty { "none" },
+                "its own pull's latest report for this text: ${own?.let { "$it items" } ?: "none"}",
+                "without a connection".takeIf { documents.any { it.synchronizer == null } },
+                "with a refresh of the editor's marks pending".takeIf { pending },
+            ).joinToString(", ")
         }
 
     /**
