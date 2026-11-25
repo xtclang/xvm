@@ -601,6 +601,16 @@ class XdkOccurrenceBindingTest {
                 Int sized(Sized s) = s.estimateStringLength();
             }
             """.trimIndent()
+        // Point's own route for the method, of which Sized's is a member, keeps the runtime's body unsupported, as only a
+        // call's route takes it for the contract it implements: XdkRename.methodFamily refuses a rename over it
+        val facts = facts("Natives", source)
+        val sized = declared(facts, "estimateStringLength").single()
+        assertThat(facts.methods.chains.filter { (it.owner as? ProofIdentity.Source)?.name == "Point" && sized in it.members })
+            .isNotEmpty
+            .allMatch { !it.supported }
+        // the rename, applied by hand, compiles, so its refusal is the proof's
+        val renamed = source.replace("estimateStringLength() = 0", "estimate() = 0").replace("s.estimateStringLength()", "s.estimate()")
+        assertCompiles("Natives", renamed)
         withSource("Natives", source) { adapter, uri ->
             // the runtime implements Point's estimateStringLength, by its name: renamed, Sized's would no longer be
             // Stringable's, and a Point would take Sized's default where it took the runtime's
@@ -670,6 +680,33 @@ class XdkOccurrenceBindingTest {
     }
 
     @Test
+    fun `a formal type that several contributions give a mixin binds to the first's, whose rename stays refused`() {
+        val source =
+            """
+            module Shared {
+                class Holder</*holder*/Inner> {}
+                annotation Base</*base*/Inner> {}
+                annotation Cap into Holder extends Base {
+                    Int peek(Object value) {
+                        /*local*/Inner? held = value.is(Inner) ? value : Null;
+                        return held == Null ? 0 : 1;
+                    }
+                }
+            }
+            """.trimIndent()
+        // Inner binds to Holder's, the first contribution's; renamed, Holder's gives Cap a formal type Item, and Inner
+        // binds to Base's instead: that compiles, so the rename's refusal is not the compiler's
+        val renamed = source.replace("/*holder*/Inner", "/*holder*/Item")
+        assertCompiles("Shared", renamed)
+        withSource("Shared", source) { adapter, uri ->
+            val local = position(source, "local")
+            assertThat(adapter.findDefinition(uri, local.line, local.column)?.let(::range)).isEqualTo(range(source, "holder", "Inner"))
+            val at = position(source, "holder")
+            assertThat(adapter.rename(uri, at.line, at.column, "Item")).isNull()
+        }
+    }
+
+    @Test
     fun `the methods of an annotation into a union are proven by the union's, so a safe delete beside it is`() {
         val source =
             """
@@ -689,6 +726,19 @@ class XdkOccurrenceBindingTest {
                 }
             }
             """.trimIndent()
+        // Sized's chain for size holds the union's merged method, proven by each leg's route to its declaration
+        val facts = facts("Targets", source)
+        val sizes = declared(facts, "size")
+        val merged =
+            facts.methods.chains
+                .filter { (it.owner as? ProofIdentity.Source)?.name == "Sized" }
+                .flatMap { it.members }
+                .filterIsInstance<ProofIdentity.Alternatives>()
+                .map { alternatives -> alternatives.targets.mapTo(hashSetOf()) { (it as ProofIdentity.Composed).members } }
+        assertThat(sizes).hasSize(2)
+        assertThat(merged).contains(sizes.mapTo(hashSetOf()) { listOf(it) })
+        // the rename of Box's size, applied by hand, compiles, so its refusal is the proof's
+        assertCompiles("Targets", source.replace("/*size*/size()", "/*size*/length()"))
         withSource("Targets", source) { adapter, uri ->
             // the compiler merges the methods of Box | Bag, as size, into methods of the union itself, which no source
             // declares, and each annotation's dispatch chains hold them
@@ -703,6 +753,26 @@ class XdkOccurrenceBindingTest {
             val size = position(source, "size")
             assertThat(adapter.rename(uri, size.line, size.column, "length")).isNull()
         }
+    }
+
+    /** The identities of the declarations of [name] in [facts]' sources, in the order they declare them. */
+    private fun declared(
+        facts: CompilerRenameFacts,
+        name: String,
+    ): List<ProofIdentity> =
+        facts.models
+            .flatMap { model -> model.occurrences.filter { it.name == name && it.role == SemanticModel.Role.DECLARATION } }
+            .map { facts.constants.getValue(requireNotNull(it.symbol)) }
+
+    /** That [text], a module compiled alone, compiles without an error. */
+    private fun assertCompiles(
+        name: String,
+        text: String,
+    ) {
+        CompilerTestSupport.configure()
+        val errors = ErrorList()
+        val compilation = EmbeddingSupport.instance().compileModule(Source(text, "$name.x"), null, errors)
+        assertThat(compilation.succeeded() && !errors.hasSeriousErrors()).describedAs(errors.errors.toString()).isTrue()
     }
 
     /** The rename facts of [text], a module compiled alone, as a proof over its module takes them. */
