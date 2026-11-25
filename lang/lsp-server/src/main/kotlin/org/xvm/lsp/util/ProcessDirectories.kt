@@ -1,5 +1,6 @@
 package org.xvm.lsp.util
 
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -9,6 +10,9 @@ import java.nio.file.Path
  * killed cannot delete its own, so making one deletes the others of its kind that no process holds.
  */
 internal object ProcessDirectories {
+    /** The temporary directory as canonical paths name it, which [holder] compares them with. */
+    private val canonicalTemporary by lazy { File(System.getProperty("java.io.tmpdir")).canonicalFile.toPath() }
+
     /**
      * A new directory whose name starts with [prefix], made under the [SessionLock.guard] of its kind, so that no
      * server sees it before this process holds it; and, under that guard, the others of its kind that no process
@@ -32,6 +36,19 @@ internal object ProcessDirectories {
                 if (guard != null) deleteAbandoned(directory, prefix)
             }
         }
+    }
+
+    /**
+     * The directory of [prefix]'s kind in the temporary directory that holds [path], a canonical path, whichever process
+     * made it, or null when none does.
+     */
+    fun holder(
+        path: Path,
+        prefix: String,
+    ): Path? {
+        val temporary = canonicalTemporary
+        if (!path.startsWith(temporary) || path.nameCount <= temporary.nameCount + 1) return null
+        return temporary.resolve(path.getName(temporary.nameCount)).takeIf { it.fileName.toString().startsWith(prefix) }
     }
 
     /** Deletes the other directories beside [own] whose names start with [prefix] that [SessionLock.unheld] finds. */

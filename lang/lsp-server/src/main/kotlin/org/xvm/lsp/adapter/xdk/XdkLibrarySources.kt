@@ -53,8 +53,14 @@ internal object XdkLibrarySources {
         }
     }
 
+    /** The start of the name of each server process's folder of read-only copies, in the temporary directory. */
+    private const val FOLDER_PREFIX = "xtc-library-sources-"
+
     /** The folder of the read-only copies, deleted when this process exits, or by the next server if it is killed. */
-    private val directory by lazy { ProcessDirectories.create("xtc-library-sources-") }
+    private val folder = lazy { ProcessDirectories.create(FOLDER_PREFIX) }
+
+    /** The path of [folder], which makes it. */
+    private val directory by folder
 
     private val sources = ConcurrentHashMap<String, SourceFile>()
 
@@ -119,30 +125,68 @@ internal object XdkLibrarySources {
     }
 
     private fun source(uri: String): SourceFile? {
-        if (sources.isEmpty()) return null
         if (uri.startsWith("$SCHEME:")) return sources.values.find { it.document.uri == uri }
-        val canonical = XdkSources.file(uri)?.toURI()?.toString() ?: return null
+        // another server's copy names its folder, as this server's copies do, so no other file costs a look at the disk
+        if (sources.isEmpty() && FOLDER_PREFIX !in uri) return null
+        val canonical = fileOf(uri)?.toURI()?.toString() ?: return null
         return sources.values.find { it.uri == canonical }
     }
 
-    fun owns(uri: String): Boolean = source(uri) != null
+    /**
+     * True when [uri] is a library source: one that [document] has, or a file in another server process's folder of
+     * copies ([ownCopy]), which no compile of this server takes as a module's own source, even when this server has
+     * no such source.
+     */
+    fun owns(uri: String): Boolean = source(uri) != null || (FOLDER_PREFIX in uri && XdkSources.file(uri)?.let(::otherFolder) != null)
 
     /**
-     * True when [uri] is one of the read-only copies, as navigation or a debugger's stack frame opens them, or a copy's
-     * ecstasy-library content ([fileOf]): a library's own source, which belongs to no project, so its compile on its own
-     * reports errors that are not its own. [owns] is true of each copy too.
+     * True when [uri] is one of the read-only copies, as navigation or a debugger's stack frame opens them, another
+     * server process's copy of a source that this server has ([ownCopy]), or a copy's ecstasy-library content
+     * ([fileOf]): a library's own source, which belongs to no project, so its compile on its own reports errors that
+     * are not its own. [owns] is true of each copy too.
      */
     fun isCopy(uri: String): Boolean {
-        if (copies.isEmpty()) return false
+        if (copies.isEmpty() && FOLDER_PREFIX !in uri) return false
         val file = fileOf(uri)?.toPath() ?: return false
         return copies.values.any { it == file }
     }
 
     /**
-     * The file that [uri] names, or, for the ecstasy-library content of a library source, as VS Code shows it, the
-     * read-only copy whose text that is, so that the content compiles, and answers, as the copy does.
+     * The file that [uri] names, or the read-only copy that answers for it: for the ecstasy-library content of a library
+     * source, as VS Code shows it, the copy whose text that is, so that the content compiles, and answers, as the copy
+     * does; and for another server process's copy, this server's copy of the same source ([ownCopy]).
      */
-    fun fileOf(uri: String): File? = if (uri.startsWith("$SCHEME:")) source(uri)?.uri?.let { File(URI(it)) } else XdkSources.file(uri)
+    fun fileOf(uri: String): File? =
+        if (uri.startsWith("$SCHEME:")) {
+            source(uri)?.uri?.let { File(URI(it)) }
+        } else {
+            XdkSources.file(uri)?.let { ownCopy(it) ?: it }
+        }
+
+    /** The folder of copies of another server process that holds [file], a canonical file, or null when none does. */
+    private fun otherFolder(file: File): Path? {
+        if (FOLDER_PREFIX !in file.path) return null
+        // this server's folder is made with its first copy
+        return ProcessDirectories
+            .holder(file.toPath(), FOLDER_PREFIX)
+            ?.takeUnless { folder.isInitialized() && it.fileName == directory.fileName }
+    }
+
+    /**
+     * This server's copy of the bundled source of which [other], a canonical file, is the copy of another server process,
+     * or null when [other] is not such a copy, or this server has no such source. An editor that had a copy open opens
+     * it again at the server that a restart started, while the server before it deletes its copies as it exits, or the
+     * next server does once it was killed: the copy is answered for as this server's own, never as a source of a module
+     * whose compile would read the other server's folder while it goes. As with each copy, this server's text is what
+     * compiles and answers, also for the copy of a server of another build, whose text can differ.
+     */
+    private fun ownCopy(other: File): File? {
+        val otherFolder = otherFolder(other) ?: return null
+        val path = otherFolder.relativize(other.toPath()).joinToString("/")
+        val name = path.substringBefore('/').removeSuffix(".x")
+        val module = XdkLibraries.moduleNames.find { it.substringBefore('.') == name } ?: return null
+        return file(module, path)?.let(::File)
+    }
 
     fun document(uri: String): ReadOnlyDocument? = source(uri)?.document
 
