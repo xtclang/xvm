@@ -37,11 +37,17 @@ internal data class CompilerDispatch(
     )
 }
 
-/** Follow existing dispatch metadata without generating optimized or forwarding method bodies. */
+/**
+ * Follow existing dispatch metadata without generating optimized or forwarding method bodies. For a call site's route,
+ * [natives] takes a body that the runtime implements, as it does a const's appendTo, as the written contract it
+ * implements: the site binds to that contract alike in every compile. A method family's route does not, as the runtime
+ * knows such a method by its name, which a rename would change.
+ */
 internal fun TypeInfo.dispatch(
     method: MethodInfo,
     errors: ErrorListener,
     visited: List<Pair<TypeConstant, MethodInfo>> = emptyList(),
+    natives: Boolean = false,
 ): CompilerDispatch {
     val key = type to method
     if (
@@ -80,12 +86,12 @@ internal fun TypeInfo.dispatch(
                 }
 
                 Implementation.FromInto -> {
-                    body.intoMethodInfo?.let { dispatch(it, errors, seen) }
+                    body.intoMethodInfo?.let { dispatch(it, errors, seen, natives) }
                         ?: CompilerDispatch(listOf(body.identity), supported = false)
                 }
 
                 Implementation.Capped -> {
-                    getNarrowingMethod(method)?.let { dispatch(it, errors, seen) }
+                    getNarrowingMethod(method)?.let { dispatch(it, errors, seen, natives) }
                         ?: CompilerDispatch(listOf(body.identity), supported = false)
                 }
 
@@ -103,7 +109,7 @@ internal fun TypeInfo.dispatch(
                     if (selected == null) {
                         CompilerDispatch(listOf(body.identity), supported = false)
                     } else {
-                        val target = delegate.dispatch(selected, errors, seen)
+                        val target = delegate.dispatch(selected, errors, seen, natives)
                         target.copy(delegates = listOf(receiver) + target.delegates)
                     }
                 }
@@ -120,7 +126,7 @@ internal fun TypeInfo.dispatch(
                                         ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-union-leg)") {
                                             receiver.ensureTypeInfo(errors)
                                         }
-                                    CompilerDispatch.Branch(receiver, info.dispatch(selected, errors, seen))
+                                    CompilerDispatch.Branch(receiver, info.dispatch(selected, errors, seen, natives))
                                 }
                         CompilerDispatch(
                             branches.flatMap { it.dispatch.methods }.distinct(),
@@ -130,13 +136,20 @@ internal fun TypeInfo.dispatch(
                     }
                 }
 
+                Implementation.Native -> {
+                    val declaration = body.methodStructure?.takeIf { natives && !it.isSynthetic }
+                    if (declaration == null) {
+                        CompilerDispatch(listOf(body.identity), supported = false)
+                    } else {
+                        CompilerDispatch(listOf(declaration.identityConstant))
+                    }
+                }
+
                 Implementation.Implicit,
                 Implementation.Field,
-                Implementation.Native,
                 -> {
                     // These bodies do not independently identify a written callable contract:
-                    // assumed dispatch, generated accessors or runtime
-                    // implementations.
+                    // assumed dispatch or generated accessors.
                     CompilerDispatch(listOf(body.identity), supported = false)
                 }
 

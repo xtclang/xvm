@@ -561,6 +561,54 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a call of a method that the runtime implements, on a union receiver, is proven, so a safe delete beside it is`() {
+        val source =
+            """
+            module Unions {
+                const Point(Int x, Int y);
+                String show(Point|String value) {
+                    StringBuffer buf = new StringBuffer();
+                    value.appendTo(buf);
+                    return buf.toString();
+                }
+                class Spare {
+                    Int unused() {
+                        return 1;
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource("Unions", source) { adapter, uri ->
+            // a const's appendTo is the runtime's, which the call's route on Point | String passes through; the proofs
+            // of code actions other than a rename compare every binding of the module exactly
+            val at = source.positionOf("unused()")
+            assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
+                .contains("Safely delete member 'unused', unused in Unions")
+        }
+    }
+
+    @Test
+    fun `a rename of a method that a const has from the runtime stays refused, though a union's call of it is proven`() {
+        val source =
+            """
+            module Natives {
+                interface Sized {
+                    Int /*declared*/estimateStringLength() = 0;
+                }
+                const Point(Int x, Int y) implements Sized;
+                Int size(Point|String value) = value.estimateStringLength();
+                Int sized(Sized s) = s.estimateStringLength();
+            }
+            """.trimIndent()
+        withSource("Natives", source) { adapter, uri ->
+            // the runtime implements Point's estimateStringLength, by its name: renamed, Sized's would no longer be
+            // Stringable's, and a Point would take Sized's default where it took the runtime's
+            val at = position(source, "declared")
+            assertThat(adapter.rename(uri, at.line, at.column, "estimate")).isNull()
+        }
+    }
+
     /** The rename facts of [text], a module compiled alone, as a proof over its module takes them. */
     private fun facts(
         name: String,
