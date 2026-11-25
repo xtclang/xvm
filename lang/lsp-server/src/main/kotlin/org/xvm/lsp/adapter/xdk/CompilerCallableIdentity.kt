@@ -29,7 +29,12 @@ internal fun callableIdentity(
     val dispatch = info.dispatch(selected, errors, natives = true)
     if (union) {
         if (!dispatch.supported) return ProofIdentity.Unproven()
-        return dispatch.alternatives.singleOrNull()?.proof(identity) ?: ProofIdentity.Unproven()
+        dispatch.alternatives.singleOrNull()?.let { return it.proof(identity) }
+        if (dispatch.alternatives.isNotEmpty()) return ProofIdentity.Unproven()
+        // the legs share one route, which the compiler selects for the union as a whole, as Object's toString for a
+        // Point?: the union and that route prove it, as a single receiver's route does
+        val owner = receiverIdentity(receiver, identity) ?: return ProofIdentity.Unproven()
+        return dispatch.proof(owner, identity)
     }
     if (dispatch.cycles.isEmpty() && dispatch.alternatives.isEmpty()) return null
     val owner = receiverIdentity(receiver, identity) ?: return ProofIdentity.Unproven()

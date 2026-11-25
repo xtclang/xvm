@@ -609,6 +609,28 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a call on a union receiver whose legs share one route, as Point's toString, is proven, so a safe delete beside it is`() {
+        val source =
+            """
+            module Nullables {
+                const Point(Int x, Int y);
+                String show(Point? value) = value.toString();
+                class Spare {
+                    Int unused() {
+                        return 1;
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource("Nullables", source) { adapter, uri ->
+            // Point? is Point | Nullable, whose toString the compiler selects as one route, Object's, through both
+            val at = source.positionOf("unused()")
+            assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
+                .contains("Safely delete member 'unused', unused in Nullables")
+        }
+    }
+
     /** The rename facts of [text], a module compiled alone, as a proof over its module takes them. */
     private fun facts(
         name: String,
