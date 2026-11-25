@@ -60,8 +60,8 @@ internal class ProtocolTrace(
                 is ResponseMessage -> {
                     val span = replies.remove(message.rawId)
                     if (!received) open?.remove(message.rawId)
+                    // when the reply was ready is the end's elapsedMs less its writeMs
                     val writeStarted = System.nanoTime()
-                    if (!received) span?.let { ExecutionTrace.event(it, "reply-ready") }
                     try {
                         next.consume(message)
                         span?.let {

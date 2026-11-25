@@ -660,6 +660,40 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `a query traces its start and one end with its phases' times and its outcome, and at DEBUG each phase and its answer`() {
+        val app = directory.resolve("Pull.x").toFile().apply { writeText("module Pull { MissingType value; }") }
+        val uri = app.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("Pull", uri)))
+            session.open(uri, app.readText(), 1)
+            TraceRecording().use { trace ->
+                session.pull(uri)
+
+                fun query() = trace.entries.filter { it["kind"].asString == "lsp-query" && it["uri"]?.asString == uri }
+                // a query's end is written once its result is complete, which the pull's caller can hear of first
+                awaitUntil("the pull's query has ended in the trace") { query().any { it["event"].asString == "end" } }
+                val query = query()
+                assertThat(query.map { it["event"].asString }).containsExactly("start", "end")
+                val end = query.last()
+                assertThat(end["outcome"].asString).isEqualTo("completed")
+                val phases = listOf("analysisReadyMs", "startedMs", "backendCompleteMs", "convertedMs").map { end[it].asDouble }
+                assertThat(phases).isSorted().allSatisfy { assertThat(it).isBetween(0.0, end["elapsedMs"].asDouble) }
+                assertThat(end.has("report")).isFalse()
+            }
+            // at DEBUG, each phase is an event too, as it is reached, so that a query that never ends shows how far it came
+            TraceRecording(details = true).use { trace ->
+                session.pull(uri)
+
+                fun query() = trace.entries.filter { it["kind"].asString == "lsp-query" && it["uri"]?.asString == uri }
+                awaitUntil("the pull's query has ended in the trace") { query().any { it["event"].asString == "end" } }
+                assertThat(query().map { it["event"].asString })
+                    .containsExactly("start", "analysis-ready", "started", "backend-complete", "converted", "end")
+                assertThat(query().last().has("report")).isTrue()
+            }
+        }
+    }
+
+    @Test
     fun `the trace says what each pull answered, by result IDs and item codes, for the related documents too`() {
         val lib =
             directory.resolve("Library.x").toFile().apply {
@@ -682,10 +716,15 @@ class XdkPullDiagnosticsTest {
                 val full = session.pull(uri).left
                 session.pull(uri, full.resultId)
                 session.workspace()
-                val answers =
+
+                fun answers() =
                     trace.entries.filter {
-                        it["kind"].asString == "lsp-query" && it["event"].asString == "converted"
+                        it["kind"].asString == "lsp-query" && it["event"].asString == "end"
                     }
+                // a query's end, which has its answer, is written once its result is complete, which the pull's caller
+                //  can hear of first
+                awaitUntil("the pulls' queries have ended in the trace") { answers().size == 3 }
+                val answers = answers()
                 val pulls = answers.filter { it["operation"].asString == "textDocument/diagnostic" }
                 assertThat(pulls).hasSize(2)
                 pulls[0].let {

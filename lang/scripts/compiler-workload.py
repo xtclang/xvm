@@ -205,10 +205,14 @@ def percentiles(values):
             "p95Ms": ordered[math.ceil(len(ordered) * 0.95) - 1], "maxMs": ordered[-1]}
 
 
+# A query's phases, in the order it reaches them, as its end's fields and as this report names them.
+QUERY_PHASES = (("analysisReadyMs", "analysis-ready"), ("startedMs", "started"),
+                ("backendCompleteMs", "backend-complete"), ("convertedMs", "converted"))
+
+
 def trace_statistics(directory):
     timings = collections.defaultdict(list)
     phases = collections.defaultdict(list)
-    previous = {}
     max_active = 0
     largest_queue = []
     for file in sorted((directory / "trace").glob("*.jsonl")):
@@ -220,12 +224,13 @@ def trace_statistics(directory):
                 largest_queue = jobs
             if event.get("kind") == "javatools" and event.get("event") == "end":
                 timings[event["operation"]].append(event["elapsedMs"])
-            if event.get("kind") == "lsp-query" and event["event"] in (
-                    "start", "analysis-ready", "started", "backend-complete", "converted"):
-                phase = event["event"]
-                if phase != "start" and event["id"] in previous:
-                    phases[f"{event['operation']}:{phase}"].append(event["elapsedMs"] - previous[event["id"]])
-                previous[event["id"]] = event["elapsedMs"]
+            if event.get("kind") == "lsp-query" and event["event"] == "end":
+                # the end has the time each phase was reached, from the query's start; one not reached is absent
+                previous = 0.0
+                for field, phase in QUERY_PHASES:
+                    if field in event:
+                        phases[f"{event['operation']}:{phase}"].append(event[field] - previous)
+                        previous = event[field]
             if event.get("writeMs") is not None:
                 phases[f"{event['operation']}:write"].append(event["writeMs"])
     return {"apiTimings": {name: percentiles(values) for name, values in sorted(timings.items())},

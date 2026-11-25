@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.concurrent.CancellationException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
@@ -20,6 +21,9 @@ internal object ExecutionTrace {
     private val apiThreads = AtomicInteger()
     private val pid = ProcessHandle.current().pid()
 
+    /** The capital letters of a phase's name, each of which starts a word after its first. */
+    private val capital = Regex("[A-Z]")
+
     /** Operation identity, parent and monotonic start time propagated across asynchronous work. */
     data class Span(
         val id: Long,
@@ -29,6 +33,28 @@ internal object ExecutionTrace {
         val uri: String?,
         val created: Long = System.nanoTime(),
     )
+
+    /**
+     * When a span reached each of its phases, in milliseconds from its start, which its end event carries as
+     * `<phase>Ms` fields, so that at INFO a span is its start and its end, and its start alone shows one that never
+     * ends. At DEBUG, as the IntelliJ playbook's runs have it, each phase is also an event when it is reached, named as
+     * the phase in kebab case (`analysis-ready` for `analysisReady`), so that one that never ends shows how far it came.
+     */
+    class Phases(
+        private val span: Span,
+    ) {
+        private val reached = ConcurrentHashMap<String, Double>()
+
+        /** Notes that the span has reached [phase], and writes it at DEBUG; only the first time counts. */
+        fun reached(phase: String) {
+            if (reached.putIfAbsent(phase, elapsed(span.created)) == null && logger.isDebugEnabled) {
+                event(span, phase.replace(capital) { "-${it.value.lowercase()}" })
+            }
+        }
+
+        /** The phases reached so far, in the order reached, as the end event's fields. */
+        fun fields(): Map<String, Double> = reached.entries.sortedBy { it.value }.associate { (phase, ms) -> "${phase}Ms" to ms }
+    }
 
     /** Active trace span and API nesting depth for the current scoped execution. */
     private data class Context(

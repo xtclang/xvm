@@ -10183,8 +10183,11 @@ python3 lang/scripts/compiler-workload.py \
 ```
 
 `lsp-query` trace phases separate analysis readiness, execution dispatch/lock wait, backend
-completion and conversion/publication. Protocol `reply-ready` and `writeMs` measure serialization
-plus transport output, not pure JSON serialization. Backend completion includes callback scheduling;
+completion and conversion/publication: since 2026-11-25 a query's `end` gives the time it reached
+each (`analysisReadyMs`, `startedMs`, `backendCompleteMs`, `convertedMs`), which DEBUG also writes
+as an event each. A protocol `end`'s `writeMs`, from the reply being ready to its write's end,
+measures serialization plus transport output, not pure JSON serialization; the reply was ready at
+the end's `elapsedMs` less its `writeMs`. Backend completion includes callback scheduling;
 compiler queue/API spans identify actual compiler execution within it. No source/payload logging or
 compiler lifetime changes are introduced.
 
