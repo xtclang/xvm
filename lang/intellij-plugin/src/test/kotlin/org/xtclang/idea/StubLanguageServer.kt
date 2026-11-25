@@ -35,6 +35,7 @@ import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.RelatedFullDocumentDiagnosticReport
+import org.eclipse.lsp4j.RelatedUnchangedDocumentDiagnosticReport
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelp
@@ -110,6 +111,15 @@ class StubLanguageServer(
 
     /** What a pull of a document's diagnostics reports, by the document's URI; none for a document not here. */
     val pulled = ConcurrentHashMap<String, List<Diagnostic>>()
+
+    /**
+     * The result ID of a document's pull report, by the document's URI: a pull that names it is answered as unchanged, as
+     * the real server answers it. A document not here gets reports without one.
+     */
+    val pullResults = ConcurrentHashMap<String, String>()
+
+    /** The URIs of the documents whose pulls have been answered as unchanged, in order. */
+    val unchangedPulls = CopyOnWriteArrayList<String>()
 
     /** The documents of the workspace report and their diagnostics, by URI, which the report has in URI order. */
     val reported = ConcurrentHashMap<String, List<Diagnostic>>()
@@ -216,7 +226,15 @@ class StubLanguageServer(
     override fun diagnostic(params: DocumentDiagnosticParams): CompletableFuture<DocumentDiagnosticReport> {
         requests += "textDocument/diagnostic"
         val uri = params.textDocument.uri
-        return pulls(uri).thenApply { DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(pulled[uri].orEmpty())) }
+        return pulls(uri).thenApply {
+            val result = pullResults[uri]
+            if (result != null && result == params.previousResultId) {
+                unchangedPulls += uri
+                DocumentDiagnosticReport(RelatedUnchangedDocumentDiagnosticReport(result))
+            } else {
+                DocumentDiagnosticReport(RelatedFullDocumentDiagnosticReport(pulled[uri].orEmpty()).apply { resultId = result })
+            }
+        }
     }
 
     override fun diagnostic(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> {
