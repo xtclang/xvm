@@ -141,6 +141,11 @@ internal class PlaybookIde(
                         // the IDE's probes wait as long as the playbook does
                         addSystemProperty("xtc.playbook.hang", HANG_SECONDS.toString())
                         addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
+                        // each server's whole trace, for a failure early in a run too: a tour's server writes about
+                        // 100 MB in half an hour, of which the logs' cap kept only the last 50 MB
+                        addSystemProperty("xtc.trace.totalSizeMb", TRACE_TOTAL_MB.toString())
+                        // and its details, such as what each diagnostic pull answered
+                        addSystemProperty("xtc.trace.level", "DEBUG")
                         addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
                         addSystemProperty("idea.auto.reload.plugins", false)
                         // no Got It tooltip shows in the middle of a case; X286 and the tour turn the plugin's on for
@@ -190,6 +195,9 @@ internal class PlaybookIde(
 
         /** The bin directory of the XDK built from this tree, with xtc and xec. */
         val XDK_BIN: Path = TREE.resolve("xdk/build/install/xdk/bin")
+
+        /** The most that each language server's trace may take, in MB: more than any run's server writes. */
+        const val TRACE_TOTAL_MB = 1000
     }
 }
 
