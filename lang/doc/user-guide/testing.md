@@ -69,7 +69,7 @@ tests' output is with the results.
 <table><tr><td width="50%">
 
 ![IntelliJ: DeckTest with test icons in the gutter, and the test runner reporting 1 test failed and 7 passed](images/intellij-test-results.png)
-*IntelliJ: the gutter's test icons run DeckTest, embedded, and the test runner shows each test's result and output; one was made to fail.*
+*IntelliJ: the gutter's test icons run `DeckTest`, embedded, and the test runner shows each test's result and output; one was made to fail.*
 
 </td><td width="50%">
 
@@ -130,7 +130,7 @@ The build mode applies to tests as to runs:
 - **No test icons in a test module**: the module doesn't compile, and its errors are in the Problems
   view; or its tests are where xunit can't run them, in a non-static inner class or a special class
   such as an enum.
-- **"Dependencies unavailable" on a test module**: the module it tests has errors; fix those first.
+- **`Dependencies unavailable` on a test module**: the module it tests has errors; fix those first.
 - **The XVM repository's own tests** run with Gradle, as builds and runs do there, since its modules
   replace the bundled libraries.
 

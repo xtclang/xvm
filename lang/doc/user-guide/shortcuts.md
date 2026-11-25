@@ -5,19 +5,19 @@ the editors' default Windows keymaps, which IntelliJ's Linux keymap shares. A na
 menu item without a key of its own.
 
 On macOS, most shortcuts use Cmd in place of Ctrl; each editor's keymap reference lists the rest. The
-Ecstasy chord **Ctrl+Alt+X, then a letter** is **Control+Option+X, then the letter**, Build is Cmd+F9, and
-running the module at the cursor is Ctrl+Shift+R.
+Ecstasy chord <kbd>Ctrl+Alt+X</kbd>, then a letter is <kbd>Control+Option+X</kbd>, then the letter, Build is <kbd>Cmd+F9</kbd>, and
+running the module at the cursor is <kbd>Ctrl+Shift+R</kbd>.
 
 <details>
 <summary><b>Ecstasy commands</b></summary>
 
 | Action | IntelliJ | VS Code |
 |--------|----------|---------|
-| Choose the build mode | Ctrl+Alt+X, then B | Ctrl+Alt+X, then B |
-| Switch the language adapter: compiler or Tree-sitter | Ctrl+Alt+X, then A | Ctrl+Alt+X, then A |
-| Show or hide the language server's log | Ctrl+Alt+X, then L | Ctrl+Alt+X, then L |
-| Restart the language server | Ctrl+Alt+X, then R | Ctrl+Alt+X, then R |
-| Open the Command Palette, for the **Ecstasy:** commands | | Ctrl+Shift+P |
+| Choose the build mode | <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd> | <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd> |
+| Switch the language adapter: compiler or Tree-sitter | <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd> | <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd> |
+| Show or hide the language server's log | <kbd>Ctrl+Alt+X</kbd>, then <kbd>L</kbd> | <kbd>Ctrl+Alt+X</kbd>, then <kbd>L</kbd> |
+| Restart the language server | <kbd>Ctrl+Alt+X</kbd>, then <kbd>R</kbd> | <kbd>Ctrl+Alt+X</kbd>, then <kbd>R</kbd> |
+| Open the Command Palette, for the **Ecstasy:** commands | | <kbd>Ctrl+Shift+P</kbd> |
 
 </details>
 
@@ -26,18 +26,18 @@ running the module at the cursor is Ctrl+Shift+R.
 
 | Action | IntelliJ | VS Code |
 |--------|----------|---------|
-| Open completion | Ctrl+Space | Ctrl+Space |
-| Quick documentation | Ctrl+Q, or hover | Ctrl+K Ctrl+I, or hover |
-| Parameter info | Ctrl+P | Ctrl+Shift+Space |
-| List the templates | Ctrl+J | |
-| Go to a template's next placeholder | Tab | Tab |
-| Reformat the file or selection | Ctrl+Alt+L | Shift+Alt+F |
-| Comment out lines | Ctrl+/ | Ctrl+/ |
-| Comment out a selection as a block | Ctrl+Shift+/ | |
-| Extend the selection | Ctrl+W | Shift+Alt+Right |
-| Shrink the selection | Ctrl+Shift+W | Shift+Alt+Left |
-| Show the compiler's message for a problem | Ctrl+F1, at the problem | F8, the next problem |
-| Open the list of problems | **Problems** window | Ctrl+Shift+M |
+| Open completion | <kbd>Ctrl+Space</kbd> | <kbd>Ctrl+Space</kbd> |
+| Quick documentation | <kbd>Ctrl+Q</kbd>, or hover | <kbd>Ctrl+K</kbd> <kbd>Ctrl+I</kbd>, or hover |
+| Parameter info | <kbd>Ctrl+P</kbd> | <kbd>Ctrl+Shift+Space</kbd> |
+| List the templates | <kbd>Ctrl+J</kbd> | |
+| Go to a template's next placeholder | <kbd>Tab</kbd> | <kbd>Tab</kbd> |
+| Reformat the file or selection | <kbd>Ctrl+Alt+L</kbd> | <kbd>Shift+Alt+F</kbd> |
+| Comment out lines | <kbd>Ctrl+/</kbd> | <kbd>Ctrl+/</kbd> |
+| Comment out a selection as a block | <kbd>Ctrl+Shift+/</kbd> | |
+| Extend the selection | <kbd>Ctrl+W</kbd> | <kbd>Shift+Alt+Right</kbd> |
+| Shrink the selection | <kbd>Ctrl+Shift+W</kbd> | <kbd>Shift+Alt+Left</kbd> |
+| Show the compiler's message for a problem | <kbd>Ctrl+F1</kbd>, at the problem | <kbd>F8</kbd>, the next problem |
+| Open the list of problems | **Problems** window | <kbd>Ctrl+Shift+M</kbd> |
 
 </details>
 
@@ -46,14 +46,14 @@ running the module at the cursor is Ctrl+Shift+R.
 
 | Action | IntelliJ | VS Code |
 |--------|----------|---------|
-| Open the declaration of what's under the cursor | Ctrl+B or Ctrl+click | F12 or Ctrl+click |
-| Open the declaration of its type | Ctrl+Shift+B | **Go to Type Definition** |
-| List the implementations of an interface method | Ctrl+Alt+B | Ctrl+F12 |
-| Find every use, in all modules | Alt+F7 | Shift+Alt+F12 |
-| See who calls a method | Ctrl+Alt+H | **Show Call Hierarchy** |
-| See a class's supertypes and subtypes | Ctrl+H | **Show Type Hierarchy** |
-| Find a class, method or property by name | Ctrl+Alt+Shift+N | Ctrl+T |
-| The file's outline | Ctrl+F12 | **Outline** view |
+| Open the declaration of what's under the cursor | <kbd>Ctrl+B</kbd> or <kbd>Ctrl</kbd>+click | <kbd>F12</kbd> or <kbd>Ctrl</kbd>+click |
+| Open the declaration of its type | <kbd>Ctrl+Shift+B</kbd> | **Go to Type Definition** |
+| List the implementations of an interface method | <kbd>Ctrl+Alt+B</kbd> | <kbd>Ctrl+F12</kbd> |
+| Find every use, in all modules | <kbd>Alt+F7</kbd> | <kbd>Shift+Alt+F12</kbd> |
+| See who calls a method | <kbd>Ctrl+Alt+H</kbd> | **Show Call Hierarchy** |
+| See a class's supertypes and subtypes | <kbd>Ctrl+H</kbd> | **Show Type Hierarchy** |
+| Find a class, method or property by name | <kbd>Ctrl+Alt+Shift+N</kbd> | <kbd>Ctrl+T</kbd> |
+| The file's outline | <kbd>Ctrl+F12</kbd> | **Outline** view |
 
 </details>
 
@@ -62,11 +62,11 @@ running the module at the cursor is Ctrl+Shift+R.
 
 | Action | IntelliJ | VS Code |
 |--------|----------|---------|
-| Rename | Shift+F6 | F2 |
-| Move a file to another package | F6 | Cut and paste, or drag, in the Explorer |
-| Code actions: extract, inline, safe delete, quick fixes, doc comments | Alt+Enter | Ctrl+. |
-| The refactorings of a selection | Alt+Enter | Ctrl+Shift+R |
-| Organize imports | Ctrl+Alt+O | Shift+Alt+O |
+| Rename | <kbd>Shift+F6</kbd> | <kbd>F2</kbd> |
+| Move a file to another package | <kbd>F6</kbd> | Cut and paste, or drag, in the Explorer |
+| Code actions: extract, inline, safe delete, quick fixes, doc comments | <kbd>Alt+Enter</kbd> | <kbd>Ctrl+.</kbd> |
+| The refactorings of a selection | <kbd>Alt+Enter</kbd> | <kbd>Ctrl+Shift+R</kbd> |
+| Organize imports | <kbd>Ctrl+Alt+O</kbd> | <kbd>Shift+Alt+O</kbd> |
 
 </details>
 
@@ -75,10 +75,10 @@ running the module at the cursor is Ctrl+Shift+R.
 
 | Action | IntelliJ | VS Code |
 |--------|----------|---------|
-| Build | Ctrl+F9 | Ctrl+F9 |
-| Run the module at the cursor | Ctrl+Shift+F10 | Ctrl+Shift+F10 |
-| Run the selected run configuration | Shift+F10 | |
-| End the program's input | **Send EOF** | Ctrl+D on an empty line |
+| Build | <kbd>Ctrl+F9</kbd> | <kbd>Ctrl+F9</kbd> |
+| Run the module at the cursor | <kbd>Ctrl+Shift+F10</kbd> | <kbd>Ctrl+Shift+F10</kbd> |
+| Run the selected run configuration | <kbd>Shift+F10</kbd> | |
+| End the program's input | **Send EOF** | <kbd>Ctrl+D</kbd> on an empty line |
 
 </details>
 
@@ -87,17 +87,17 @@ running the module at the cursor is Ctrl+Shift+R.
 
 | Action | IntelliJ | VS Code |
 |--------|----------|---------|
-| Debug | Shift+F9 | F5 |
-| Continue | F9 | F5 |
-| Step over | F8 | F10 |
-| Step into | F7 | F11 |
-| Step out | Shift+F8 | Shift+F11 |
-| Step into one of the line's calls | Shift+F7, Smart Step Into | **Step Into Target**, in the editor's context menu |
-| Step into the XDK's code | Alt+Shift+F7, Force Step Into | |
-| Run to the cursor's line | Alt+F9 | **Run to Cursor**, in the editor's context menu |
-| Stop a running program where it is | **Pause Program** | F6 |
-| Open the breakpoints | Ctrl+Shift+F8 | **Breakpoints** view |
-| Evaluate an expression in the paused frame | Alt+F8 | Ctrl+Shift+Y, the Debug Console |
+| Debug | <kbd>Shift+F9</kbd> | <kbd>F5</kbd> |
+| Continue | <kbd>F9</kbd> | <kbd>F5</kbd> |
+| Step over | <kbd>F8</kbd> | <kbd>F10</kbd> |
+| Step into | <kbd>F7</kbd> | <kbd>F11</kbd> |
+| Step out | <kbd>Shift+F8</kbd> | <kbd>Shift+F11</kbd> |
+| Step into one of the line's calls | <kbd>Shift+F7</kbd>, Smart Step Into | **Step Into Target**, in the editor's context menu |
+| Step into the XDK's code | <kbd>Alt+Shift+F7</kbd>, Force Step Into | |
+| Run to the cursor's line | <kbd>Alt+F9</kbd> | **Run to Cursor**, in the editor's context menu |
+| Stop a running program where it is | **Pause Program** | <kbd>F6</kbd> |
+| Open the breakpoints | <kbd>Ctrl+Shift+F8</kbd> | **Breakpoints** view |
+| Evaluate an expression in the paused frame | <kbd>Alt+F8</kbd> | <kbd>Ctrl+Shift+Y</kbd>, the Debug Console |
 
 </details>
 
