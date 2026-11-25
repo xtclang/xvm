@@ -1,0 +1,12 @@
+branch	head	date	subject
+errs/c1-listener-contract-20261008	10f03d17d36b72af2b9aafa5a7e0295deae503c0	2026-10-08	Separate diagnostic reporting from listener abort policy
+errs/c2-explicit-listeners-20261008	91ca7b9794a4aecd835e22a6e013da612011f543	2026-10-09	Describe listener regression baseline without internal slice labels
+errs/compiler-foundations-reference-20261009	31021f504d084ef4f31023358f019b5bcde6e65f	2026-10-13	Clarify repository caching and explicit LSP dependency validation
+errs/compiler-partial-analysis-20261009	5c75745f69dac8fd685d429e620d3014e092098a	2026-10-13	Clarify repository caching and explicit LSP dependency validation
+errs/compiler-review-base-20261009	d37ff2188a940a6997e523bc763ac15550a0d466	2026-10-13	Keep embedding diagnostics tests independent of repository observers
+errs/compiler-semantic-facts-20261009	12c622c675479da8ee55999598e85a22b3b8a1b6	2026-10-12	Align captured-variable declarations after binary AST removal
+errs/embedding-api-combined-20261009	3dd8479956c07ad5bd4df793730300bafd6867c6	2026-10-12	Clarify compiler tooling contracts and simplify new code
+errs/lsp-editors-20261009	ae2dc11f986d8e9eaf966636432f37526f5501b6	2026-10-13	Format LSP test settings for the CI Kotlin Gradle check
+errs/lsp-review-base-20261009	2178259166b941602c515bfe33de0e0db627c272	2026-10-12	Remove deferred queue test from transient-local fix
+errs/repository-read-failures-20261009	82a5ff29fda89a17497f620efcf2f7b1b9f7d09e	2026-10-13	Align FileRepository's write-cache assignments with the Java whitespace rules
+errs/scoped-reporting-20261009	339cdf9819f2e56e8d2c92f8c339aac93451aff8	2026-10-09	Use explicit resolution listeners and test scope behavior
