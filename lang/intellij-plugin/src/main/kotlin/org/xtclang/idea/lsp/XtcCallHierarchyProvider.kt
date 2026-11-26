@@ -24,9 +24,10 @@ import com.redhat.devtools.lsp4ij.features.callHierarchy.LSPCallHierarchyProvide
  *  children again once the write action is done, with a new request.
  */
 class XtcCallHierarchyProvider : LSPCallHierarchyProvider() {
-    override fun createHierarchyBrowser(target: PsiElement): HierarchyBrowser = Browser(target)
+    override fun createHierarchyBrowser(target: PsiElement): HierarchyBrowser = XtcCallHierarchyBrowser(target)
 
-    private class Browser(
+    /** LSP4IJ's browser with the structures below; the playbook finds the Hierarchy window's browser by this name. */
+    private class XtcCallHierarchyBrowser(
         target: PsiElement,
     ) : LSPCallHierarchyBrowser(target) {
         override fun createHierarchyTreeStructure(

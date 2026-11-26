@@ -177,8 +177,13 @@ internal fun Driver.nativeHierarchy(
         if (kind == "type") "TypeHierarchy" else "CallHierarchy",
         component = document.editor.component,
     )
-    val className = if (kind == "type") "LSPTypeHierarchyBrowser" else "LSPCallHierarchyBrowser"
-    val browser = ui.x("//div[@class='$className']")
+    // TODO LSP4IJ: UP88 — an Ecstasy file's Call Hierarchy browser is the plugin's XtcCallHierarchyBrowser, a subclass of
+    //  LSP4IJ's that computes the callers again when a write action ends LSP4IJ's wait for them (redhat-developer/lsp4ij#2278),
+    //  and a component's @class is its own class's simple name. Take LSPCallHierarchyBrowser alone again once a release we
+    //  ship has the fix and the workaround goes
+    val classNames =
+        if (kind == "type") listOf("LSPTypeHierarchyBrowser") else listOf("LSPCallHierarchyBrowser", "XtcCallHierarchyBrowser")
+    val browser = ui.x("//div[${classNames.joinToString(" or ") { "@class='$it'" }}]")
     awaitUi("native $kind hierarchy contains $names", HANG_LIMIT) {
         browser.present() &&
             browser.tree().collectExpandedPaths().let { rows ->
