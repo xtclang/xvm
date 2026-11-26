@@ -55,7 +55,7 @@ running the module at the cursor is <kbd>Ctrl+Shift+R</kbd>.
 | Find every use, in all modules | <kbd>Alt+F7</kbd> | <kbd>Shift+Alt+F12</kbd> |
 | See who calls a method | <kbd>Ctrl+Alt+H</kbd> | **Show Call Hierarchy** |
 | See a class's supertypes and subtypes | <kbd>Ctrl+H</kbd> | **Show Type Hierarchy** |
-| Find a class, method or property by name | <kbd>Ctrl+Alt+Shift+N</kbd> | <kbd>Ctrl+T</kbd> |
+| Find a class, method or property by name, the XDK's too | <kbd>Ctrl+Alt+Shift+N</kbd>, twice to include the XDK's | <kbd>Ctrl+T</kbd> |
 | The file's outline | <kbd>Ctrl+F12</kbd> | **Outline** view |
 
 </details>
