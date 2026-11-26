@@ -2144,11 +2144,7 @@ private fun Tour.debugging() {
     }
     verify("an Ecstasy Attach configuration debugs the game that xtc runs outside the IDE") {
         within(HANG) { !debug()["session"].asBoolean }
-        val xtc = PlaybookIde.XDK_BIN.resolve("xtc").toString()
-        program(xtc, "run", "--debug", "listen:127.0.0.1:0,suspend", "--deduce", "cardGame").use { game ->
-            val listening = Regex("Listening for the debugger at [^ ]+:(\\d+)")
-            expect(within(HANG) { listening.containsMatchIn(game.output) }) { "The program: ${game.output.takeLast(400)}" }
-            val port = listening.find(game.output)!!.groupValues[1].toInt()
+        gameAwaitingDebugger { game, port ->
             open(source("Deck.x"), 0)
             val added = at("addCard(new Card(suit, rank));")
             breakpoint(added, "")
@@ -2168,11 +2164,7 @@ private fun Tour.debugging() {
     }
     verify("the threads are the program's fibers, the Scoreboard service's while it records the win") {
         within(HANG) { !debug()["session"].asBoolean }
-        val xtc = PlaybookIde.XDK_BIN.resolve("xtc").toString()
-        program(xtc, "run", "--debug", "listen:127.0.0.1:0,suspend", "--deduce", "cardGame").use { game ->
-            val listening = Regex("Listening for the debugger at [^ ]+:(\\d+)")
-            expect(within(HANG) { listening.containsMatchIn(game.output) }) { "The program: ${game.output.takeLast(400)}" }
-            val port = listening.find(game.output)!!.groupValues[1].toInt()
+        gameAwaitingDebugger { game, port ->
             // the service has a fiber only while it runs a call, and the game calls it once a player has won
             open(source("Scoreboard.x"), 0)
             val recorded = at("wins.put(name, winsOf(name) + 1);")
@@ -2359,11 +2351,7 @@ private fun Tour.testing() {
         replace("assert deck.size() == GameConstants.DECK_SIZE as", 0, "assert deck.size() == GameConstants.DECK_SIZE + 1 as")
         failing = at("void testDeckHas52Cards")
         within(HANG) { analyzed(test("DeckTest.x")) }
-        gutter(module, "Tests of DeckTest")
-        expect(within(HANG) { "Run" in rows() }) { "No test choices: ${rows()}" }
-        watchTests()
-        started = runId()
-        check(choose("Run")) { "No Run: ${rows()}" }
+        started = runTests(module, "Tests of DeckTest")
     }
     verify("a test in the results goes to its source") {
         expect(selectRow("Run", "testDeckHas52Cards")) { "No testDeckHas52Cards in ${toolWindowText("Run").take(400)}" }
@@ -2384,11 +2372,7 @@ private fun Tour.testing() {
     verify("a test method's icon runs that test alone") {
         open(test("DeckTest.x"), 0)
         val one = at("void testDeckCanBeShuffled")
-        gutter(one, "Test ")
-        expect(within(HANG) { "Run" in rows() }) { "No test choices: ${rows()}" }
-        watchTests()
-        started = runId()
-        check(choose("Run")) { "No Run: ${rows()}" }
+        started = runTests(one, "Test ")
         expect(
             within(HANG) {
                 runId() != started && runEnded() && testCounts().values.sum() >= 1
@@ -2433,11 +2417,7 @@ private fun Tour.testing() {
         within(HANG) { !debug()["session"].asBoolean }
         buildMode("GRADLE")
         open(test("DeckTest.x"), 0)
-        gutter(module, "Tests of DeckTest")
-        expect(within(HANG) { "Run" in rows() }) { "No test choices: ${rows()}" }
-        watchTests()
-        started = runId()
-        check(choose("Run")) { "No Run: ${rows()}" }
+        started = runTests(module, "Tests of DeckTest")
     }
     verify("embedded and Gradle runs give each test the same result") {
         val gradle = testStates()
@@ -2521,11 +2501,7 @@ private fun Tour.testing() {
         replace(DECK_HEADER, 0, DECK_HEADER + XUNIT_IMPORT)
         replace(DECK_END, 0, ADDED_TESTS)
         expect(within(HANG) { "testDeckAddedLater" in gutterIcons() }) { "The icons: ${gutterIcons()}" }
-        gutter(module, "Tests of DeckTest")
-        expect(within(HANG) { "Run" in rows() }) { "No test choices: ${rows()}" }
-        watchTests()
-        started = runId()
-        check(choose("Run")) { "No Run: ${rows()}" }
+        started = runTests(module, "Tests of DeckTest")
         expect(within(HANG) { runId() != started && runEnded() && testCounts().values.sum() >= DECK_TESTS + 4 }) {
             "The tests did not run: ${testStates()}"
         }
@@ -2545,11 +2521,7 @@ private fun Tour.testing() {
     verify("Stop ends a test run partway, and the test that was running does not pass", setOf(Need.SERVER)) {
         replace(ADDED_END, 0, WAITING_TEST)
         expect(within(HANG) { "testDeckWaits" in gutterIcons() }) { "The icons: ${gutterIcons()}" }
-        gutter(module, "Tests of DeckTest")
-        expect(within(HANG) { "Run" in rows() }) { "No test choices: ${rows()}" }
-        watchTests()
-        started = runId()
-        check(choose("Run")) { "No Run: ${rows()}" }
+        started = runTests(module, "Tests of DeckTest")
         // the test waits an hour for a timer, so the run cannot end before Stop
         expect(within(HANG) { runId() != started && "testDeckWaits" in testsRunning() }) {
             "testDeckWaits did not start: ${testStates()}; running: ${testsRunning()}"
@@ -2826,11 +2798,14 @@ private fun Tour.settings() {
         toolWindow("Language Servers", false)
     }
     verify("switching the language adapter restarts the server with it, and back again", setOf(Need.SERVER)) {
+        // Ctrl+Alt+X, A, as a user presses it, and the adapter chosen in its popup
+        fun chooseAdapter(adapter: String) {
+            open(source("Eights.x"), 0)
+            editorChord("ctrl alt X", "A")
+            expect(within(HANG) { pick(adapter) }) { "No adapter chooser: ${popupText().take(300)}" }
+        }
         val before = serverState()
-        // Ctrl+Alt+X, A, as a user presses it, and the other adapter chosen in its popup
-        open(source("Eights.x"), 0)
-        editorChord("ctrl alt X", "A")
-        expect(within(HANG) { pick("Tree-sitter") }) { "No adapter chooser: ${popupText().take(300)}" }
+        chooseAdapter("Tree-sitter")
         try {
             expect(within(HANG) { serverState().let { it.startsWith("started") && it != before } }) { "The server: ${serverState()}" }
             // the tree-sitter adapter has the syntax's features: the file's structure among them, once LSP4IJ has
@@ -2849,9 +2824,7 @@ private fun Tour.settings() {
             //  server: in that run they ran on tree-sitter, and failed for want of documentation and errors
             dismiss()
             val treeSitter = serverState()
-            open(source("Eights.x"), 0)
-            editorChord("ctrl alt X", "A")
-            expect(within(HANG) { pick("Bundled default") }) { "No adapter chooser: ${popupText().take(300)}" }
+            chooseAdapter("Bundled default")
             expect(
                 within(HANG) { serverState().let { it.startsWith("started") && it != treeSitter } },
             ) { "The server: ${serverState()}" }
@@ -2859,9 +2832,7 @@ private fun Tour.settings() {
         answers()
         // the adapter in use, chosen again, keeps the server as it is: no restart, and no message either
         val same = serverState()
-        open(source("Eights.x"), 0)
-        editorChord("ctrl alt X", "A")
-        expect(within(HANG) { pick("Bundled default") }) { "No adapter chooser: ${popupText().take(300)}" }
+        chooseAdapter("Bundled default")
         expect(!within(HANG) { serverState() != same }) { "Choosing the adapter in use restarted the server: ${serverState()}" }
     }
     verify("Restart on the Ecstasy | Server Runtime and Logs page, clicked, restarts the server, which answers") {
