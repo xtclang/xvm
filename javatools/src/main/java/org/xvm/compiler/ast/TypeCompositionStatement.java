@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import java.util.stream.Collectors;
 
@@ -1817,11 +1818,11 @@ public class TypeCompositionStatement
 
         mgr.processChildren();
 
-        Map<String, Component> mapChildren        = component.getChildByNameMap();
-        MultiMethodStructure   constructors       = (MultiMethodStructure) mapChildren.get("construct");
-        List<Parameter>        listParams         = constructorParams;
-        boolean                fExplicitDefault   = false;
-        boolean                fExplicitShorthand = false;
+        Map<String, Component> mapChildren         = component.getChildByNameMap();
+        MultiMethodStructure   constructors        = (MultiMethodStructure) mapChildren.get("construct");
+        List<Parameter>        listParams          = constructorParams;
+        MethodStructure        constructorExplicit = null;
+        boolean                fExplicitShorthand  = false;
 
         if (listParams == null) {
             // there is no "shorthand" declaration; there must be no more than one explicit
@@ -1834,11 +1835,11 @@ public class TypeCompositionStatement
                     }
 
                     // should only find one match; make sure we didn't already find one
-                    if (fExplicitDefault) {
+                    if (constructorExplicit != null) {
                         reportAmbiguousConstructor(listParams, TypeConstant.NO_TYPES, errs);
                         break;
                     }
-                    fExplicitDefault = true;
+                    constructorExplicit = constructor;
                 }
             }
         } else {
@@ -1926,7 +1927,8 @@ public class TypeCompositionStatement
                     }
 
                     constructor.markAsShorthand();
-                    fExplicitShorthand = true;
+                    fExplicitShorthand  = true;
+                    constructorExplicit = constructor;
                 }
             }
 
@@ -1956,23 +1958,15 @@ public class TypeCompositionStatement
             }
         }
 
-        if (fExplicitShorthand) {
-            // the explicit constructor replaces the shorthand one, and a property that the class
-            // declares itself takes no initial value from the shorthand declaration, so a default
-            // value written there would never be compiled
-            for (Parameter param : listParams) {
-                Component prop = mapChildren.get(param.getName());
-                if (param.value != null && prop != null && !prop.isSynthetic()) {
-                    param.value.log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_UNUSED,
-                            param.getName());
-                }
-            }
-        }
-
-        if (fExplicitShorthand || (listParams == null && constructors != null)) {
-            // only a synthetic constructor passes the arguments of a parameterized contribution
-            // ("extends" or "incorporates"); explicit constructors construct the contributions
-            // themselves, so the arguments would be neither used nor compiled
+        // only a synthetic constructor passes the arguments of a parameterized contribution
+        // ("extends" or "incorporates"); explicit constructors construct the contributions
+        // themselves, so the arguments are neither used nor compiled. a class with neither a
+        // shorthand declaration nor any constructor gets a synthetic default constructor (below),
+        // which does pass them; hence the test for explicit constructors. arguments that match the
+        // ones that the explicit shorthand or default constructor passes are redundant, and allowed.
+        // an enum value has no compositions
+        if (compositions != null
+                && (fExplicitShorthand || (listParams == null && constructors != null))) {
             for (CompositionNode composition : compositions) {
                 List<Expression> listArgs =
                         composition instanceof Extends nodeExtends
@@ -1981,7 +1975,8 @@ public class TypeCompositionStatement
                             ? nodeIncorp.args
                             : null;
 
-                if (listArgs != null && !listArgs.isEmpty()) {
+                if (listArgs != null && !listArgs.isEmpty()
+                        && !matchesExplicitConstruct(composition, listArgs, constructorExplicit)) {
                     composition.log(errs, Severity.ERROR, Compiler.CONTRIBUTION_PARAMS_UNEXPECTED);
                 }
             }
@@ -2366,6 +2361,13 @@ public class TypeCompositionStatement
         if (component.getFormat() != Format.INTERFACE) {
             MethodStructure constructor =
                     component.findMethod("construct", MethodStructure::isShorthandConstructor);
+            if (constructor != null && !constructor.isSynthetic()) {
+                // an explicit constructor replaces the shorthand one; the children are processed,
+                // so its default values are known
+                validateReplacedDefaults(createConstructorContext(constructor).validatingContext(),
+                        constructor, errs);
+            }
+
             if (constructor == null ||
                     !constructor.isSynthetic() || constructor.hasOps()) {
                 break ValidateShorthand;
@@ -2548,6 +2550,188 @@ public class TypeCompositionStatement
         }
 
         return fValid;
+    }
+
+    /**
+     * Validate the default values of the shorthand constructor parameters that an explicit
+     * constructor replaces. Where the class declares the property itself, neither the explicit
+     * constructor nor the property takes the default value, so it is allowed only if it matches
+     * the explicit constructor's: the explicit constructor's parameter at the same position has a
+     * default value, and both compile to the same constant.
+     *
+     * @param ctx          the context to validate the default values in
+     * @param constructor  the explicit constructor that replaces the shorthand one
+     * @param errs         the error listener to log to
+     */
+    private void validateReplacedDefaults(Context ctx, MethodStructure constructor,
+                                          ErrorListener errs) {
+        Map<String, Component> mapChildren = getComponent().getChildByNameMap();
+        List<Parameter>        listParams  = constructorParams;
+
+        for (int i = 0, cParams = listParams.size(); i < cParams; ++i) {
+            Parameter  param = listParams.get(i);
+            Expression value = param.getValue();
+            if (value == null || !(mapChildren.get(param.getName()) instanceof PropertyStructure prop)
+                    || prop.isSynthetic()) {
+                // no default value, or a synthetic property takes it as its initial value
+                continue;
+            }
+
+            org.xvm.asm.Parameter paramExplicit = constructor.getParam(i);
+            Constant              constExplicit = paramExplicit.getDefaultValue();
+            if (constExplicit == null && paramExplicit.hasDefaultValue()) {
+                // the explicit default value failed to compile; the error must have been reported
+                continue;
+            }
+
+            Constant constValue = null;
+            if (constExplicit != null) {
+                TypeConstant typeParam = paramExplicit.getType();
+
+                ctx = ctx.enterInferring(typeParam);
+                Expression valueNew = value.validate(ctx, typeParam, errs);
+                ctx = ctx.exit();
+
+                if (valueNew == null) {
+                    // the error must have been reported
+                    continue;
+                }
+                if (valueNew.isConstant()) {
+                    constValue = valueNew.toConstant();
+                }
+            }
+
+            if (constValue == null || !constValue.equals(constExplicit)) {
+                value.log(errs, Severity.ERROR, Compiler.CONSTRUCTOR_PARAM_DEFAULT_MISMATCH,
+                        param.getName());
+            }
+        }
+    }
+
+    /**
+     * Determine whether the arguments of a contribution, which no synthetic constructor passes,
+     * match the ones that the explicit constructor taking the synthetic one's place passes. They
+     * match iff the body of that constructor has exactly one {@code construct T(...)} statement
+     * for the contribution's type, with as many arguments, and each pair of arguments is:
+     * <ul>
+     *   <li>the same parameter: the contribution's argument names the shorthand parameter, and the
+     *       constructor's argument names the constructor parameter, at the same position;</li>
+     *   <li>the same literal, of the same kind and value; or</li>
+     *   <li>the same name, which names a parameter in neither, such as a constant.</li>
+     * </ul>
+     * Any other expression never matches, and the arguments are compared as written, so an
+     * assignment to the parameter before the {@code construct} statement is not considered.
+     *
+     * @param composition  the composition node of the contribution
+     * @param listArgs     the arguments of the contribution
+     * @param constructor  the explicit shorthand or default constructor, or null if there is none
+     *
+     * @return true iff the constructor passes the contribution the same arguments
+     */
+    private boolean matchesExplicitConstruct(CompositionNode composition, List<Expression> listArgs,
+                                             MethodStructure constructor) {
+        if (constructor == null || body == null
+                || !(composition.getType() instanceof NamedTypeExpression exprType)) {
+            return false;
+        }
+
+        MethodDeclarationStatement stmtConstructor = null;
+        for (Statement stmt : body.getStatements()) {
+            if (stmt instanceof MethodDeclarationStatement stmtMethod
+                    && stmtMethod.getComponent() == constructor) {
+                stmtConstructor = stmtMethod;
+                break;
+            }
+        }
+        if (stmtConstructor == null || stmtConstructor.body == null) {
+            return false;
+        }
+
+        String               sType         = exprType.getName();
+        InvocationExpression exprConstruct = null;
+        for (Statement stmt : stmtConstructor.body.getStatements()) {
+            if (stmt instanceof ExpressionStatement stmtExpr
+                    && stmtExpr.getExpression() instanceof InvocationExpression exprInvoke
+                    && exprInvoke.expr instanceof NameExpression exprName
+                    && exprName.getNameToken().getId() == Id.CONSTRUCT
+                    && exprName.getLeftExpression() instanceof NameExpression exprTarget
+                    && sType.equals(exprTarget.getNameTokens().stream()
+                            .map(Token::getValueText)
+                            .collect(Collectors.joining(".")))) {
+                if (exprConstruct != null) {
+                    // the contribution is constructed more than once
+                    return false;
+                }
+                exprConstruct = exprInvoke;
+            }
+        }
+        if (exprConstruct == null || exprConstruct.args.size() != listArgs.size()) {
+            return false;
+        }
+
+        List<Expression> listConstructArgs = exprConstruct.args;
+        for (int i = 0, cArgs = listArgs.size(); i < cArgs; ++i) {
+            if (!isSameArgument(listArgs.get(i), listConstructArgs.get(i), stmtConstructor.params)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @param exprArg              an argument of a contribution
+     * @param exprConstructArg     the explicit constructor's argument at the same position
+     * @param listConstructParams  the explicit constructor's parameters
+     *
+     * @return true iff the two arguments are the same parameter, the same literal, or the same
+     *         name that names a parameter in neither
+     */
+    private boolean isSameArgument(Expression exprArg, Expression exprConstructArg,
+                                   List<Parameter> listConstructParams) {
+        if (exprArg instanceof LiteralExpression exprLit) {
+            Token tokLit = exprLit.getLiteral();
+            return exprConstructArg instanceof LiteralExpression exprConstructLit
+                    && tokLit.getId() == exprConstructLit.getLiteral().getId()
+                    && Objects.equals(tokLit.getValue(), exprConstructLit.getLiteral().getValue());
+        }
+
+        String sArg          = getSimpleName(exprArg);
+        String sConstructArg = getSimpleName(exprConstructArg);
+        if (sArg == null || sConstructArg == null) {
+            return false;
+        }
+
+        int iParam          = indexOfParameter(constructorParams, sArg);
+        int iConstructParam = indexOfParameter(listConstructParams, sConstructArg);
+        return iParam >= 0 || iConstructParam >= 0
+                ? iParam == iConstructParam
+                : sArg.equals(sConstructArg);
+    }
+
+    /**
+     * @return the name if the expression is a simple name, otherwise null
+     */
+    private static String getSimpleName(Expression expr) {
+        return expr instanceof NameExpression exprName
+                && exprName.getLeftExpression() == null
+                && !exprName.hasTrailingTypeParams()
+                && !exprName.isSuppressDeref()
+                ? exprName.getName()
+                : null;
+    }
+
+    /**
+     * @return the position of the named parameter in the list, or -1 if there is none
+     */
+    private static int indexOfParameter(List<Parameter> listParams, String sName) {
+        if (listParams != null) {
+            for (int i = 0, cParams = listParams.size(); i < cParams; ++i) {
+                if (listParams.get(i).getName().equals(sName)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     private <T> List<T> ensureList(List<T> list) {
