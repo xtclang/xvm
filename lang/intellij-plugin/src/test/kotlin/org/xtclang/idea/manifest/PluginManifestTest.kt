@@ -242,12 +242,23 @@ class PluginManifestTest {
         assertThat(required)
             .containsExactlyInAnyOrder(
                 "com.intellij.modules.platform",
-                "com.intellij.modules.java",
-                "com.intellij.gradle",
                 "org.jetbrains.plugins.textmate",
                 "com.redhat.devtools.lsp4ij",
                 "intellij.testRunner.plugin",
             )
+    }
+
+    @Test
+    @DisplayName("depends on IntelliJ's Gradle plugin optionally, so that it installs in every JetBrains IDE")
+    fun gradleDependency() {
+        val elements = pluginXml.getElementsByTagName("depends")
+        val gradle =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .single { it.textContent.trim() == "com.intellij.gradle" }
+        assertThat(gradle.getAttribute("optional")).isEqualTo("true")
+        val config = gradle.getAttribute("config-file")
+        assertThat(javaClass.classLoader.getResource("META-INF/$config")).describedAs(config).isNotNull()
     }
 
     @Test

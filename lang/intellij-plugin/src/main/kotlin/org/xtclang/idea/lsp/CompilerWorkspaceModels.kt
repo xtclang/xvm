@@ -3,19 +3,32 @@ package org.xtclang.idea.lsp
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.project.Project
-import org.jetbrains.plugins.gradle.settings.GradleSettings
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+
+/**
+ * The roots of the builds that IntelliJ links to a project besides its own directory, such as the Gradle builds it
+ * imported, where a build's model reports are. The Gradle plugin's are registered only where the IDE has that plugin
+ * (xtc-gradle.xml), so that the plugin needs neither Gradle nor Java in other JetBrains IDEs.
+ */
+interface BuildRoots {
+    fun roots(project: Project): List<String>
+
+    companion object {
+        val EP_NAME = ExtensionPointName<BuildRoots>("org.xtclang.idea.buildRoots")
+    }
+}
 
 /** Aggregate evaluated reports, never source directories guessed from build-script text. */
 internal object CompilerWorkspaceModels {
     const val PATH = ".gradle/xtc/lsp-workspace.json"
 
     fun roots(project: Project): List<Path> =
-        (listOfNotNull(project.basePath) + GradleSettings.getInstance(project).linkedProjectsSettings.map { it.externalProjectPath })
+        (listOfNotNull(project.basePath) + BuildRoots.EP_NAME.extensionList.flatMap { it.roots(project) })
             .map { Path.of(it).toAbsolutePath().normalize() }
             .distinct()
             .sorted()

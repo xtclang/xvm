@@ -1,0 +1,11 @@
+<!-- What the plugin does with IntelliJ's Gradle plugin, which only some JetBrains IDEs have: the roots of the Gradle
+     builds it imported, where their model reports are, and the model published again after a sync or an unlink. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="org.xtclang.idea">
+        <buildRoots implementation="org.xtclang.idea.lsp.GradleBuildRoots"/>
+    </extensions>
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="org.xtclang.idea.lsp.GradleBuildUnlinks"/>
+        <externalSystemTaskNotificationListener implementation="org.xtclang.idea.lsp.CompilerGradleSync"/>
+    </extensions>
+</idea-plugin>
