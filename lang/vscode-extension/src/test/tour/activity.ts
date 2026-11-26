@@ -55,8 +55,10 @@ interface ExpectedFiles {
 /**
  * What could still make a wait's condition true, read as it is, not from a time: the requests the server is working on
  * and its compiles, from the traces it writes as it works; the debug adapter's requests that have no response yet and
- * a program that runs; the tasks and the embedded runs that have not ended; and when anything last happened, the
- * server's work, an edit, the diagnostics or a debug message, whose effect may still be drawing.
+ * a program that runs; the tasks whose processes have not ended; and when anything last happened, the server's work,
+ * an edit, the diagnostics, a debug message or an embedded build's or run's output, whose effect may still be drawing.
+ * An embedded build or run is the server's work while it builds, and its output after: one whose program only waits
+ * for input, or whose stop did not take, is no work, so a wait on it fails once nothing has happened for [QUIET_MS].
  */
 export class Activity implements vscode.Disposable {
     /** The server's requests that started and have not ended, by their servers' process IDs and their trace IDs. */
@@ -84,8 +86,7 @@ export class Activity implements vscode.Disposable {
     private reading: Promise<void> = Promise.resolve();
     private readonly subscriptions: vscode.Disposable[];
 
-    constructor(private readonly traces: string | undefined, private readonly dap: readonly { from: 'vscode' | 'adapter'; message: DapMessage }[],
-                private readonly runs: () => string[]) {
+    constructor(private readonly traces: string | undefined, private readonly dap: readonly { from: 'vscode' | 'adapter'; message: DapMessage }[]) {
         this.subscriptions = [
             vscode.workspace.onDidChangeTextDocument(event => {
                 if (event.contentChanges.length > 0) this.happened(`an edit of ${path.basename(event.document.uri.path)}`);
@@ -183,8 +184,10 @@ export class Activity implements vscode.Disposable {
             ...[...this.requests.values()].map(each => `the server's ${each.what}, for ${ago(each.since)}`),
             ...[...this.compiles.values()].map(each => `the compiler's ${each.what}, for ${ago(each.since)}`),
             ...this.dapPending().map(command => `the debug adapter's ${command}`),
-            ...vscode.tasks.taskExecutions.map(execution => `the task ${execution.task.name}`),
-            ...this.runs(),
+            // a process's task, as Gradle's, which may print nothing for a while: the extension's own tasks, embedded
+            //  builds and runs, are the server's work and their output
+            ...vscode.tasks.taskExecutions.filter(execution => execution.task.execution instanceof vscode.ShellExecution
+                || execution.task.execution instanceof vscode.ProcessExecution).map(execution => `the task ${execution.task.name}`),
         ];
         const session = vscode.debug.activeDebugSession;
         if (session && !this.paused()) work.push(`the debug session ${session.name}, running`);
