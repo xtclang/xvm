@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { State } from 'vscode-languageclient/node';
 import { onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { getClient } from '../../lsp-client';
+import { terminateTask } from '../../task-termination';
 import { onDidReportTest, onDidRefreshTests, type TestReport } from '../../test-explorer';
 import { Activity, QUIET_MS, type FileChange } from './activity';
 import { actingBy } from './editor';
@@ -704,8 +705,18 @@ export class Tour implements vscode.Disposable {
             await this.within(10_000, () => !vscode.debug.activeDebugSession);
         }
         await this.until('Every debug session ends', () => !vscode.debug.activeDebugSession, () => vscode.debug.activeDebugSession?.name);
-        for (const execution of vscode.tasks.taskExecutions) execution.terminate();
+        // and a task again while one is left: VS Code drops a terminate that comes before it has started the task, as
+        // Run with a key's did in run-gfPZ8c ("Task to terminate not found"), whose program then waited for input
+        for (let tries = 0; vscode.tasks.taskExecutions.length > 0 && tries < 5; tries++) {
+            vscode.tasks.taskExecutions.forEach(terminateTask);
+            await this.within(10_000, () => vscode.tasks.taskExecutions.length === 0);
+        }
         await this.until('Every task ends', () => vscode.tasks.taskExecutions.length === 0, () => vscode.tasks.taskExecutions.map(each => each.task.name));
+        // and every embedded run's end, which its terminal reports after VS Code has ended its task: one that came later
+        // would be the next check's to read, as the Run lens's run's was Run with a key's start in run-gfPZ8c
+        const unended = () => [...this.executions.values()].filter(each => each.exitCode === undefined);
+        await this.until('Every embedded build and run reports its end', () => unended().length === 0,
+            () => unended().map(each => `${each.kind} ${each.label}`));
     }
 
     /** Checks that every source of the project is back as [fixture] has it, as each section leaves it. */
