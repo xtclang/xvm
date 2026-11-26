@@ -4185,7 +4185,8 @@ public class CommonBuilder
 
         if (srcName.equals(dstName)) {
             // it must be a covariant cap for a natively implemented method
-            assert typeSystem.findReservedJitName(srcMethod.getIdentity()) != null;
+            // the bridge reserves the name on the narrowing implementation
+            assert typeSystem.findReservedJitName(dstMethod.getJitIdentity()) != null;
             return;
         }
 
