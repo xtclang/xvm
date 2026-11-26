@@ -29,17 +29,17 @@ class XdkUnionRenameTest {
                 class Other { Int read() = 3; }
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
+        directory.workspace(text) { adapter, uri ->
             val offset =
                 Regex("read")
                     .findAll(text)
                     .elementAt(entry)
                     .range.first
-            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, offset, "fetch")).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, offset, "fetch")), uri)
             assertThat(changed).isEqualTo(text.replace("read", "fetch").replace("fetch() = 3", "read() = 3"))
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             val undo = requireNotNull(adapter.renameAt(uri, changed, changed.indexOf("fetch"), "read"))
-            assertThat(apply(changed, undo.changes.getValue(uri))).isEqualTo(text)
+            assertThat(apply(changed, undo, uri)).isEqualTo(text)
         }
     }
 
@@ -55,12 +55,7 @@ class XdkUnionRenameTest {
                 Int direct(Second target) = target.read();
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
-            val edit = requireNotNull(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch"))
-            val changed = apply(text, edit.changes.getValue(uri))
-            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
-            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
-        }
+        directory.assertReadRenamed(text, text.lastIndexOf("read"))
     }
 
     @Test
@@ -121,9 +116,9 @@ class XdkUnionRenameTest {
                 Int use(First | Second target) = target.read();
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
+        directory.workspace(text) { adapter, uri ->
             val edit = requireNotNull(adapter.renameAt(uri, text, text.indexOf("First"), "Zed"))
-            val changed = apply(text, edit.changes.getValue(uri))
+            val changed = apply(text, edit, uri)
             assertThat(changed).isEqualTo(text.replace("First", "Zed"))
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -142,7 +137,7 @@ class XdkUnionRenameTest {
                 Int use(First | Second target) = target.read();
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
+        directory.workspace(text) { adapter, uri ->
             assertThat(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch")).isNull()
         }
     }
@@ -158,23 +153,13 @@ class XdkUnionRenameTest {
                 $argument use(First<$argument> | Second<$argument> target) = target.read();
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
-            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch")).changes.getValue(uri))
-            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
-            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
-            val reverse = requireNotNull(adapter.renameAt(uri, changed, changed.indexOf("fetch"), "read"))
-            assertThat(apply(changed, reverse.changes.getValue(uri))).isEqualTo(text)
-        }
+        directory.assertReadRenamed(text, text.lastIndexOf("read"), reversible = true)
     }
 
     @ParameterizedTest
     @MethodSource("annotatedReceivers")
     fun `annotated union receivers preserve annotation values and composed methods`(text: String) {
-        workspace(text) { adapter, uri ->
-            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch")).changes.getValue(uri))
-            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
-            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
-        }
+        directory.assertReadRenamed(text, text.lastIndexOf("read"))
     }
 
     @Test
@@ -189,11 +174,7 @@ class XdkUnionRenameTest {
                 }
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
-            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch")).changes.getValue(uri))
-            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
-            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
-        }
+        directory.assertReadRenamed(text, text.lastIndexOf("read"))
     }
 
     @ParameterizedTest
@@ -212,11 +193,7 @@ class XdkUnionRenameTest {
                 }
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
-            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch")).changes.getValue(uri))
-            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
-            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
-        }
+        directory.assertReadRenamed(text, text.lastIndexOf("read"))
     }
 
     @Test
@@ -230,8 +207,8 @@ class XdkUnionRenameTest {
                 Payload use(First<Payload> | Second<Payload> target) = target.read();
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
-            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.indexOf("Payload"), "Content")).changes.getValue(uri))
+        directory.workspace(text) { adapter, uri ->
+            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.indexOf("Payload"), "Content")), uri)
             assertThat(changed).isEqualTo(text.replace("Payload", "Content"))
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -249,35 +226,7 @@ class XdkUnionRenameTest {
                 }
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
-            val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.indexOf("read"), "fetch")).changes.getValue(uri))
-            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
-            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
-        }
-    }
-
-    private fun workspace(
-        text: String,
-        check: (XdkAdapter, String) -> Unit,
-    ) {
-        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
-        val uri = source.toURI().toString()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.compile(uri, text).diagnostics).describedAs(text).isEmpty()
-            check(adapter, uri)
-            assertThat(source.readText()).isEqualTo(text)
-        }
-    }
-
-    private fun XdkAdapter.renameAt(
-        uri: String,
-        text: String,
-        offset: Int,
-        name: String,
-    ): WorkspaceEdit? {
-        val prefix = text.take(offset)
-        return rename(uri, prefix.count { it == '\n' }, prefix.substringAfterLast('\n').length, name)
+        directory.assertReadRenamed(text, text.indexOf("read"))
     }
 
     private companion object {

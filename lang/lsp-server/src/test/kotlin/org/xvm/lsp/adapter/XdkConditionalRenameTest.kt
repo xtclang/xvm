@@ -6,7 +6,6 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Path
 
 /** Concrete conditional members need not have a matching formal host declaration. */
@@ -23,7 +22,7 @@ class XdkConditionalRenameTest {
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             val at = text.positionOf("text.$member", member)
             val edit = requireNotNull(adapter.rename(uri, at.line, at.column, "width"))
-            val changed = apply(text, edit.changes.getValue(uri))
+            val changed = apply(text, edit, uri)
             assertThat(changed).isEqualTo(text.replace(member, "width"))
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -35,26 +34,15 @@ class XdkConditionalRenameTest {
         val library = library()
         val consumer =
             "module Consumer { package lib import Library; Int read(lib.Box<String> text) = text.measure() + text.length; }"
-        val libraryUri = directory.source("Library", library)
-        val consumerUri = directory.source("Consumer", consumer)
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(
-                listOf(
-                    XdkSourceModule("Library", libraryUri),
-                    XdkSourceModule("Consumer", consumerUri, setOf("Library")),
-                ),
-            )
+        directory.libraryAndConsumer(library, consumer, initialized = true) { adapter, libraryUri, consumerUri ->
             assertThat(adapter.compile(libraryUri, library).diagnostics).isEmpty()
             val at = library.positionOf("Int $member", member)
             val edit = requireNotNull(adapter.rename(libraryUri, at.line, at.column, "width"))
             assertThat(edit.changes.keys).containsExactlyInAnyOrder(libraryUri, consumerUri)
-            assertThat(apply(library, edit.changes.getValue(libraryUri)))
+            assertThat(apply(library, edit, libraryUri))
                 .isEqualTo(library.replace(member, "width"))
-            assertThat(apply(consumer, edit.changes.getValue(consumerUri)))
+            assertThat(apply(consumer, edit, consumerUri))
                 .isEqualTo(consumer.replace(member, "width"))
-            assertThat(directory.resolve("Library.x").toFile().readText()).isEqualTo(library)
-            assertThat(directory.resolve("Consumer.x").toFile().readText()).isEqualTo(consumer)
         }
     }
 
@@ -77,7 +65,7 @@ class XdkConditionalRenameTest {
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             val at = text.positionOf("text.measure", "measure")
             val edit = requireNotNull(adapter.rename(uri, at.line, at.column, "width"))
-            val changed = apply(text, edit.changes.getValue(uri))
+            val changed = apply(text, edit, uri)
             assertThat(changed).isEqualTo(
                 text
                     .replace("Int measure() = value.size", "Int width() = value.size")
@@ -99,22 +87,12 @@ class XdkConditionalRenameTest {
             }
             """.trimIndent()
         val consumer = "module Consumer { package lib import Library; lib.Box<String>? saved = Null; }"
-        val libraryUri = directory.source("Library", library)
-        val consumerUri = directory.source("Consumer", consumer)
-        XdkAdapter().use { adapter ->
-            adapter.replaceSourceModules(
-                listOf(
-                    XdkSourceModule("Library", libraryUri),
-                    XdkSourceModule("Consumer", consumerUri, setOf("Library")),
-                ),
-            )
+        directory.libraryAndConsumer(library, consumer) { adapter, libraryUri, consumerUri ->
             assertThat(adapter.compile(consumerUri, consumer).diagnostics).isEmpty()
             val at = library.positionOf("Int read", "read")
             assertThat(adapter.rename(libraryUri, at.line, at.column, "fetch")).isNull()
             assertThat(adapter.compile(libraryUri, library.replace("read", "fetch")).diagnostics).isEmpty()
             assertThat(adapter.compile(consumerUri, consumer).diagnostics).isEmpty()
-            assertThat(directory.resolve("Library.x").toFile().readText()).isEqualTo(library)
-            assertThat(directory.resolve("Consumer.x").toFile().readText()).isEqualTo(consumer)
         }
     }
 
