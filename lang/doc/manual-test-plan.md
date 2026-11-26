@@ -4041,6 +4041,16 @@ the worker's command line as the server builds it.
 |---|---|---|
 | X351 | Write `GradleRuns.x`, a module whose `run` and `greet` print their name, the number of their arguments and the first. Write the Gradle model of a project `:app` whose `xtcRun` runs `GradleRuns` with `greet` and `hello world`, with the JVM options `-Dxtc.gradle.origin=playbook` and `-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005`, as `.gradle/xtc/lsp-model.json`, and use it, with no explicit modules. Run `GradleRuns` embedded without arguments (IntelliJ: an Ecstasy Application configuration with no method or arguments; VS Code: an `xtc` task), then with the argument `own`. | The client hears that `GradleRuns` is in `:app`. The first run prints `From Gradle project :app's xtcRun: method greet, arguments [hello world], JVM options [-Dxtc.gradle.origin=playbook].`, then `Left out of Gradle project :app's xtcRun JVM options: -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005 (a Java debugger's agent would hold the run's JVM; Debug debugs the program).`, then `greet 1:hello world`, and ends with exit code 0: the worker did not wait for a Java debugger. The second prints `From Gradle project :app's xtcRun: method greet, JVM options [-Dxtc.gradle.origin=playbook].` and `greet 1:own`: its own argument wins, and the method is still Gradle's. |
 
+### A loop's label (X352)
+
+A label names a loop or a block for its `break` and `continue`, and for its variable, as `Loop.first`. It is a
+declaration of its own, which hover, highlights, Find References, Go to Definition and a rename reach, and a rename
+is refused where the new name would hide another from the code in the label's scope.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X352 | Write `Labels.x`, a module with a property `span` and a method whose `for` loop is labeled `Loop`, reads `Loop.first` and `span.first`, and has a `continue Loop` and a `break Loop`. Hover `Loop` in `Loop.first`; on the label's declaration, highlight its uses and Find References; Go to Definition from `break Loop`. Rename the label to `span`, then to `Each`. | The hover shows `Label Loop`. The highlights and the references are the declaration and its three uses, exactly. Go to Definition goes to the declaration. The rename to `span` is refused: the loop's `span.first` would read the label's variable. The rename to `Each` changes all four, and the module compiles. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and
