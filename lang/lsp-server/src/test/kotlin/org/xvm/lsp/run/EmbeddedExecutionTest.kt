@@ -1019,6 +1019,88 @@ class EmbeddedExecutionTest {
     }
 
     @Test
+    fun `an edit above a verified breakpoint moves it with its line, and the session hears where it is now`() {
+        debugging("Stops", STOPS) {
+            val thread = stopAt(5)
+            // Int result = n * 2, line 11 as built
+            sessions.request(id, 5, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 11}]}""")
+            val placed =
+                client
+                    .responseBody(id, "setBreakpoints")["breakpoints"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject
+            assertThat(placed["verified"].asBoolean to placed["line"].asInt).isEqualTo(true to 11)
+
+            // two lines typed above it, without a save: it is on line 13 now, as an editor that moves its breakpoints
+            // with its lines shows it, and a client that does not, as VS Code until the file is saved, hears
+            val lines = STOPS.trimIndent().lines().toMutableList()
+            lines.addAll(3, listOf("    // one", "    // two"))
+            adapter.updateDocument(uri, lines.joinToString("\n"))
+            runs.sourceChanged(uri).join()
+            val moved = client.eventBody(id, "breakpoint")
+            assertThat(moved["reason"].asString).isEqualTo("changed")
+            val breakpoint = moved["breakpoint"].asJsonObject
+            assertThat(Triple(breakpoint["id"].asInt, breakpoint["verified"].asBoolean, breakpoint["line"].asInt))
+                .isEqualTo(Triple(placed["id"].asInt, true, 13))
+
+            // a later setBreakpoints on its line now, as VS Code sends once the file is saved, places it there again
+            sessions.request(id, 6, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 13}]}""")
+            val again =
+                client
+                    .responseBody(id, "setBreakpoints")["breakpoints"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject
+            assertThat(again["verified"].asBoolean to again["line"].asInt).isEqualTo(true to 13)
+
+            // and the program, built before the edit, stops there, which shows on its line now
+            sessions.request(id, 7, "continue", """{"threadId": $thread}""")
+            client.until(id) { it.event == "stopped" }
+            assertThat(
+                sessions.topFrame(client, id, 8, thread).let { it["name"].asString to it["line"].asInt },
+            ).isEqualTo("Stops.twice" to 13)
+            sessions.request(id, 9, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
+    fun `an edit that removes a verified breakpoint's line makes it unverified, says why, and the program stops there no more`() {
+        debugging("Stops", STOPS) {
+            val thread = stopAt(5)
+            sessions.request(id, 5, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 11}]}""")
+            val placed =
+                client
+                    .responseBody(id, "setBreakpoints")["breakpoints"]
+                    .asJsonArray
+                    .single()
+                    .asJsonObject
+            assertThat(placed["verified"].asBoolean).isTrue()
+
+            // Int result = n * 2, line 11, deleted
+            val lines = STOPS.trimIndent().lines().toMutableList()
+            lines.removeAt(10)
+            adapter.updateDocument(uri, lines.joinToString("\n"))
+            runs.sourceChanged(uri).join()
+            val breakpoint = client.eventBody(id, "breakpoint")["breakpoint"].asJsonObject
+            assertThat(breakpoint["id"].asInt to breakpoint["verified"].asBoolean).isEqualTo(placed["id"].asInt to false)
+            assertThat(breakpoint["message"].asString).isEqualTo(EmbeddedRuns.CHANGED_SINCE_BUILD)
+            // where the change is: the line after twice's, which return result is now
+            assertThat(breakpoint["line"].asInt).isEqualTo(11)
+
+            // the program runs to its end, as nothing stops it in twice now
+            sessions.request(id, 6, "continue", """{"threadId": $thread}""")
+            val rest = client.until(id) { it.event == "terminated" }
+            assertThat(rest.filter { it.event == "stopped" }).isEmpty()
+            assertThat(rest.single { it.event == "exited" }["body"].asJsonObject["exitCode"].asInt).isEqualTo(42)
+            sessions.end(DebugSessionParams(id))
+        }
+    }
+
+    @Test
     fun `a step into one of the calls of the line goes into that call, and the line's other calls run on`() {
         debugging("Targets", TARGETS) {
             val thread = stopAt(4)
@@ -2965,19 +3047,24 @@ class EmbeddedExecutionTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule(name, uri)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val runs = EmbeddedRuns(adapter, { client }, worker)
+            val sessions = DebugSessions(runs, { client })
             val id = sessions.start().sessionId
             sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            Debugging(name, uri, directory.resolve("$name.x").toString(), adapter, client, sessions, id).test()
+            Debugging(name, uri, directory.resolve("$name.x").toString(), adapter, runs, client, sessions, id).test()
         }
     }
 
-    /** A debug session that [debugging] started, of the module [name] at [uri], whose file's [path] breakpoints name. */
+    /**
+     * A debug session that [debugging] started, of the module [name] at [uri], whose file's [path] breakpoints name, with
+     * the [runs] that run its program.
+     */
     private class Debugging(
         val name: String,
         val uri: String,
         val path: String,
         val adapter: XdkAdapter,
+        val runs: EmbeddedRuns,
         val client: DebugClient,
         val sessions: DebugSessions,
         val id: String,
