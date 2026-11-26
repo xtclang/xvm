@@ -1825,6 +1825,16 @@ class CompilerPlaybook(
                     // use the complete selection specified by the shared scenario.
                     val selectionEnd = if (data.values["initiallyValid"]?.asBoolean == false) at else at + data.text("selected").length
                     quickFix(editor, at, data.text("title"), selectionEnd)
+                    if (companion) {
+                        // TODO LSP4IJ: UP89 — LSP4IJ applies a resolved action's edit only to the documents as they
+                        // were when the action ran, and refuses the whole edit, with an error hint only, when a target
+                        // was opened since ("The document was opened after the edit was requested"), even a closed file
+                        // opened with its text unchanged, as the companion was when it opened before the reply (X214,
+                        // in run-7200481125011092613). It opens once the edit has changed its document.
+                        awaitUi("local refactoring changes the closed ${data.text("destinationFile")}", HANG_LIMIT) {
+                            documentText(data.text("destinationFile")) == data.text("expected")
+                        }
+                    }
                     val destination = if (companion) open(data.text("destinationFile")) else editor
                     val destinationOriginal = if (companion) data.text("destinationSource") else original
                     awaitUi("local refactoring matches shared source", HANG_LIMIT) { destination.text == data.text("expected") }
@@ -1968,6 +1978,14 @@ class CompilerPlaybook(
                     .setServerTrace(utility(ClientTraceLevel::class).valueOf("verbose"))
             service<ProjectLspSettings>(singleProject())
                 .updateSettings("xtcLanguageServer", traceSettings)
+        }
+
+    /** The text of IntelliJ's document of [file], read without opening an editor, which would have LSP4IJ open it. */
+    private fun Driver.documentText(file: String): String? =
+        findFile(relativePath = file)?.let { source ->
+            withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                service<ParityDocuments>().getDocument(source)?.getText()
+            }
         }
 
     private fun Driver.open(file: String): JEditorUiComponent {
