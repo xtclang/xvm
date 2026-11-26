@@ -755,6 +755,46 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a parameter of a constructor with a finally block, in its body and a named argument, is an occurrence of it`() {
+        val source =
+            """
+            module Finals {
+                class Holder {
+                    Int seed;
+                    Boolean flag = True;
+                    construct(Int[] keys, Boolean /*declared*/inPlace = False) {
+                        seed = /*body*/inPlace && flag ? keys[0] : keys.size;
+                    } finally {
+                        if (!/*finally*/inPlace) {
+                            seed++;
+                        }
+                    }
+                }
+                Holder make() = new Holder([1], /*named*/inPlace=True);
+            }
+            """.trimIndent()
+        // renamed to flag, the body's read of the property flag would read the parameter: that compiles, so the
+        // rename's refusal is the proof's
+        assertCompiles("Finals", source.replace("inPlace", "flag"))
+        // the parameter is the public constructor's, whose named arguments other modules may write: only a proof
+        // over the project renames it, as any public method's, not the block's, a private method of its own
+        val model = snapshot("Finals", source)
+        val parameter = model.symbols.single { it.name == "inPlace" && it.kind == SemanticModel.SymbolKind.PARAMETER }
+        assertThat(parameter.renameable).isFalse()
+        withSource("Finals", source) { adapter, uri ->
+            val uses = listOf("declared", "body", "finally", "named").map { range(source, it, "inPlace") }
+            val at = position(source, "declared")
+            assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactlyElementsOf(uses)
+            assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactlyInAnyOrderElementsOf(uses)
+            val body = position(source, "body")
+            assertThat(adapter.findDefinition(uri, body.line, body.column)?.let(::range)).isEqualTo(range(source, "declared", "inPlace"))
+            val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "fresh")) { "No rename of inPlace" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("inPlace", "fresh"))
+            assertThat(adapter.rename(uri, at.line, at.column, "flag")).isNull()
+        }
+    }
+
     /** The identities of the declarations of [name] in [facts]' sources, in the order they declare them. */
     private fun declared(
         facts: CompilerRenameFacts,
