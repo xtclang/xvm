@@ -29,7 +29,8 @@
 # and the VS Code playbook, with the uncommitted paths. A run's container may use $XTC_CONTAINER_MEMORY, 14g by
 # default, which the IntelliJ playbook and tours need (7g let the kernel kill the IDE), or less on a smaller machine.
 # As many runs go at once as the engine's memory and CPUs hold, or $XTC_CONTAINER_SLOTS: on a 32 GiB, 8-CPU Podman
-# machine, two; on a 16 GiB one, one.
+# machine, two; on a 16 GiB one, one. Waiting runs take the slots in the order they asked, each the first that is
+# free, or only the one $XTC_CONTAINER_SLOT names; each slot has its own volumes and /out.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -70,11 +71,11 @@ for stale in "$container"/src-*; do
     fi
 done
 source="$container/src-$(date +%Y%m%d-%H%M%S)-$$"
-ticket=""
+tickets=()
 locked=false
 cleanup() {
     rm -rf "$source"
-    if [ -n "$ticket" ]; then rm -f "$ticket"; fi
+    rm -f ${tickets[@]+"${tickets[@]}"}
     if [ "$locked" = true ]; then rm -rf "$lock"; fi
 }
 trap cleanup EXIT
@@ -119,12 +120,13 @@ fingerprint="$(
     } | git hash-object --stdin
 )"
 
-# one container run at a time in each slot on this machine: the runs of a slot share its work volume, whichever
-# worktree they start from, so its lock is in the repository's common git directory, which every worktree shares; a
-# lock whose owner has gone is taken over. Slot 1's lock, queue, work volume and container names are the ones runs
-# have always used, so that a run of an older playbook.sh, which knows only those, still takes its turn, and waits
-# for every other slot's container too. A checkout always runs in the same slot, or in $XTC_CONTAINER_SLOT, so that
-# a build and the cases that need it share a work volume, and its runs share no output directory
+# one container run at a time in each slot on this machine: the runs of a slot share its volumes, whichever worktree
+# they start from, so its lock is in the repository's common git directory, which every worktree shares; a lock whose
+# owner has gone is taken over. A run takes the first slot that is free when its turn comes, or only the one that
+# $XTC_CONTAINER_SLOT names: as a run that tests builds the XDK first when its slot's is of other sources, no build
+# needs to share a slot with the cases that use it. Slot 1's lock, queue, volumes and container names are the ones
+# runs have always used, so that a run of an older playbook.sh, which knows only those, or takes the slot that its
+# checkout's path hashes to, still takes its turn
 common="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)"
 bytes() {
     local value="${1%[kKmMgG]}"
@@ -154,16 +156,90 @@ if [ -z "$slots" ]; then
     if [ "$((cpus / 4))" -lt "$slots" ]; then slots=$((cpus / 4)); fi
     if [ "$slots" -lt 1 ]; then slots=1; fi
 fi
-slot="${XTC_CONTAINER_SLOT:-$(($(printf '%s' "$root" | cksum | cut -d ' ' -f 1) % slots + 1))}"
+# the slots this run may take: the one $XTC_CONTAINER_SLOT pins it to, or any
+wanted=()
+if [ -n "${XTC_CONTAINER_SLOT:-}" ]; then
+    wanted=("$XTC_CONTAINER_SLOT")
+else
+    for ((each = 1; each <= slots; each++)); do wanted+=("$each"); done
+fi
+lock_of() {
+    if [ "$1" -eq 1 ]; then
+        echo "$common/xvm-playbook-container.lock"
+    else
+        echo "$common/xvm-playbook-container.lock.s$1"
+    fi
+}
+queue_of() {
+    if [ "$1" -eq 1 ]; then
+        echo "$common/xvm-playbook-queue"
+    else
+        echo "$common/xvm-playbook-queue.s$1"
+    fi
+}
+# runs take the slots in the order they asked for them. Each waiter holds a ticket, named by the time it asked and its
+# pid, in the queue of each slot it may take: a run that any slot will do in every one, a pinned run in its slot's
+# only, as a run of an older playbook.sh does. It takes a slot only when the slot is free and its ticket is the first
+# of a waiting run's in that slot's queue: so of the runs that may take a slot, the earliest takes it, and a run that
+# waits for one slot keeps no run behind it from another slot that is free. Slot 1's queue is the one that every run
+# that may take slot 1 waits in, as runs always have; an older run's ticket there wants slot 1 only, as it is in no
+# other queue. A ticket whose run has gone is dropped
+ticket="$(printf '%010d-%010d' "$(date +%s)" "$$")"
+for each in "${wanted[@]}"; do
+    mkdir -p "$(queue_of "$each")"
+    touch "$(queue_of "$each")/$ticket"
+    tickets+=("$(queue_of "$each")/$ticket")
+done
+# the name of the first ticket of a waiting run in queue $1
+first_ticket() {
+    local waiting waiter
+    for waiting in "$1"/*; do
+        [ -e "$waiting" ] || continue
+        waiter=$((10#${waiting##*-}))
+        if ps -p "$waiter" -o command= 2> /dev/null | grep -q 'playbook\.sh'; then
+            echo "${waiting##*/}"
+            return
+        fi
+        rm -f "$waiting"
+    done
+}
+# takes the first slot this run may take whose queue it heads and whose lock it gets, the lock of a run that has gone
+# included, into $slot; fails when there is none
+slot=""
+take_slot() {
+    local each owner
+    for each in "${wanted[@]}"; do
+        [ "$(first_ticket "$(queue_of "$each")")" = "$ticket" ] || continue
+        owner="$(cat "$(lock_of "$each")/pid" 2> /dev/null || true)"
+        if [ -n "$owner" ] && ! kill -0 "$owner" 2> /dev/null; then rm -rf "$(lock_of "$each")"; fi
+        if mkdir "$(lock_of "$each")" 2> /dev/null; then
+            slot="$each"
+            return 0
+        fi
+    done
+    return 1
+}
+until take_slot; do
+    holders=""
+    for each in "${wanted[@]}"; do
+        owner="$(cat "$(lock_of "$each")/pid" 2> /dev/null || true)"
+        holders="${holders:+$holders or }slot $each (pid ${owner:-queued})"
+    done
+    echo "waiting for an earlier playbook container run to finish, in $holders of $slots"
+    sleep 15
+done
+lock="$(lock_of "$slot")"
+locked=true
+echo $$ > "$lock/pid"
+rm -f "${tickets[@]}"
+tickets=()
+echo "running in slot $slot of $slots"
+# all that depends on the slot, set once the run has it
 if [ "$slot" -eq 1 ]; then
-    lock="$common/xvm-playbook-container.lock"
-    queue="$common/xvm-playbook-queue"
     volume=""
     prefix=xvm-playbook-
     running='^xvm-playbook-[0-9]'
 else
-    lock="$common/xvm-playbook-container.lock.s$slot"
-    queue="$common/xvm-playbook-queue.s$slot"
     # its own volumes, Gradle's too: two containers can't share a Gradle user home, as Gradle asks a lock's owner to
     # release it over localhost, which is each container's own ("Timeout waiting to lock journal cache")
     volume="-s$slot"
@@ -171,40 +247,10 @@ else
     running="^$prefix"
 fi
 # each slot's own /out: a run removes the screen recording there as it starts, so that it never takes an earlier
-# run's for its own, and with $XTC_CONTAINER_SLOT one checkout's runs go in two slots at once, which a shared /out
-# would let one run's start delete the other's recording from
+# run's for its own, and one checkout's runs may go in two slots at once, which a shared /out would let one run's
+# start delete the other's recording from
 out="$container/out$volume"
 mkdir -p "$out"
-# runs take a slot's lock in the order they asked for it: each waiter holds a ticket, named by the time it asked,
-# and takes the lock only when its ticket is the first of a waiting run's; a ticket whose run has gone is dropped
-mkdir -p "$queue"
-ticket="$queue/$(printf '%010d-%010d' "$(date +%s)" "$$")"
-touch "$ticket"
-first_ticket() {
-    local waiting waiter
-    for waiting in "$queue"/*; do
-        [ -e "$waiting" ] || continue
-        waiter=$((10#${waiting##*-}))
-        if ps -p "$waiter" -o command= 2> /dev/null | grep -q 'playbook\.sh'; then
-            echo "$waiting"
-            return
-        fi
-        rm -f "$waiting"
-    done
-}
-until [ "$(first_ticket)" = "$ticket" ] && mkdir "$lock" 2> /dev/null; do
-    owner="$(cat "$lock/pid" 2> /dev/null || true)"
-    if [ -n "$owner" ] && ! kill -0 "$owner" 2> /dev/null; then
-        rm -rf "$lock"
-        continue
-    fi
-    echo "waiting for an earlier playbook container run in slot $slot of $slots (pid ${owner:-queued}) to finish"
-    sleep 15
-done
-locked=true
-echo $$ > "$lock/pid"
-rm -f "$ticket"
-ticket=""
 # a run that took no lock, such as one of an older checkout, shares the slot's volumes as well
 while "$engine" ps --format '{{.Names}}' | grep -q "$running"; do
     echo "waiting for the running playbook container to finish"
@@ -230,8 +276,11 @@ status=0
     "$image" \
     bash /in-container.sh "${args[@]}" 2>&1 | tee "$out/$mode-$stamp.log" || status=$?
 
+# the VS Code reports of each slot's /out into the checkout's: a run's directory is its own, and of the files that
+# runs share, such as latest-run.txt, the newer one stays, as a run of this checkout in another slot may have
+# written it later
 if [ -d "$out/vscode-reports" ]; then
     mkdir -p "$root/lang/vscode-extension/build/reports"
-    rsync -a "$out/vscode-reports/" "$root/lang/vscode-extension/build/reports/"
+    rsync -a --update "$out/vscode-reports/" "$root/lang/vscode-extension/build/reports/"
 fi
 exit "$status"
