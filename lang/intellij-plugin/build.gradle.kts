@@ -375,8 +375,6 @@ dependencies {
             libs.versions.lang.intellij.ide
                 .get(),
         )
-        bundledPlugin("com.intellij.java")
-        bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
         plugin(
             "com.redhat.devtools.lsp4ij",
