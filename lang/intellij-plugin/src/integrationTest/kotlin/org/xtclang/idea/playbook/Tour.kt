@@ -401,9 +401,20 @@ internal class Tour(
     private fun cleanUp() {
         runCatching {
             ui.dismiss()
-            ui.closeDialogs()
-            if (!within(HANG) { !ui.dialogShowing() }) dialogLeft = lastFailure
+            if (!closeDialogs()) dialogLeft = lastFailure
         }.onFailure { println("Tour: what a failure left open was not closed: $it") }
+    }
+
+    /**
+     * Closes the dialogs that show, as [TourProbe.closeDialogs] does, and answers whether none shows once that has run:
+     * it queues each dialog's Cancel on the EDT, which runs the calls made after it once it has run those, so a dialog
+     * that shows then stays open, but a progress's, which closes once its task ends, as is waited for. A dialog that
+     * stays is not waited on: nothing is to close it, and a wait for that would end only at a hang's bound.
+     */
+    private fun closeDialogs(): Boolean {
+        ui.closeDialogs()
+        within(HANG, "a progress's dialog to close") { !ui.progressShowing() }
+        return !ui.dialogShowing()
     }
 
     private fun causes(failure: Throwable): String =
@@ -426,8 +437,7 @@ internal class Tour(
         runCatching {
             ui.dismiss()
             // a modal dialog holds every call that waits for the EDT outside it, as restoring the files does
-            ui.closeDialogs()
-            if (!within(15.seconds) { !ui.dialogShowing() }) repeat(3) { ui.key("ESCAPE") }
+            if (!closeDialogs()) repeat(3) { ui.key("ESCAPE") }
             ui.stopAll()
         }
         val sources = project.resolve("src")
@@ -556,6 +566,8 @@ internal interface TourProbe {
     fun ready(): Boolean
 
     fun serverState(): String
+
+    fun settledServerState(): String
 
     /** The process ids of the language servers that the IDE runs, as a JSON array. */
     fun serverProcesses(): String
@@ -845,6 +857,8 @@ internal interface TourProbe {
     fun click(text: String)
 
     fun dialogShowing(): Boolean
+
+    fun progressShowing(): Boolean
 
     fun dialogTitled(title: String): Boolean
 
