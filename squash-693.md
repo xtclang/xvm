@@ -1,6 +1,6 @@
 # Squashing #693 into reviewable pull requests
 
-A plan only: making it changed nothing in #693. It covers the 523 commits of `errs/full-testable-lsp-20261009` over `master` (tip `2c4e48e7bd`, master `fb7ba82052`, 2026-11-26), numbered 1 to 523 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-523 came after, and were placed by the same rules. One is open on master as its own PR: 459, with 502 its review round, is #802, which leaves #693 when it merges. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480.
+A plan only: making it changed nothing in #693. It covers the 524 commits of `errs/full-testable-lsp-20261009` over `master` (tip `f91f0f8842`, master `fb7ba82052`, 2026-11-26), numbered 1 to 524 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-524 came after, and were placed by the same rules. One is open on master as its own PR: 459, with 502 and 524 its review round, is #802, which leaves #693 when it merges. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480.
 
 It proposes 15 pull requests, each of which changes either only files outside lang/ (xvm only: X1-X5) or only files in lang/ (lang only: L1-L10), merged in one order. To get there, the commits are first sorted into 13 topics (P1-P13), the commits of a topic that implement or fix the same thing, however far apart, are grouped to be joined, and every commit is then divided at lang/: its other files go to its topic's xvm PR, its lang/ files to its topic's lang PR.
 
@@ -24,7 +24,7 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 14 | **L9** | lang/ | Debugging: the DAP server, debug sessions, launch and attach, and both editors' debug UI | X4, L8 | P10 | 48 | 8.6k / 11.0k |
 | 15 | **L10** | lang/ | Test infrastructure: the playbooks, the scenario catalog, the manual test plan and the tours | L9, X5 | P12, P13 | 158 | 8.4k / 57.1k |
 
-Already open on master, apart from these: #802 (unused constructor arguments, commits 459 and 502), which leaves #693 when it merges. #804 (runXtc keeps xtcRun's settings) and #808 (the plugin tests' one network download dropped) are merged.
+Already open on master, apart from these: #802 (unused constructor arguments, commits 459, 502 and 524), which leaves #693 when it merges. #804 (runXtc keeps xtcRun's settings) and #808 (the plugin tests' one network download dropped) are merged.
 
 Prerequisites are the PRs that must be merged first; the order above satisfies all of them, so merging in it always works. Where a PR lists two, either can be merged first of the two, but both before it. Some can be reviewed side by side: L4 and L5 both need only L3, and L6 and L7 both need L4 and L5.
 
@@ -42,7 +42,7 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 
 | Topic | Title | Builds on | Only lang/? | Commits now | After squashing (about) | Added lines: main / tests |
 |---|---|---|---|---|---|---|
-| P1 | Compiler diagnostics: the error-listener contract and repository read failures | master | no | 14 | 4 | 3.1k / 3.2k |
+| P1 | Compiler diagnostics: the error-listener contract and repository read failures | master | no | 15 | 4 | 3.1k / 3.2k |
 | P2 | Compiler host API: compilation outcomes, snapshots, syntax and semantic facts | P1 | no | 8 | 4 | 5.8k / 3.1k |
 | P3 | Compiler analysis of incomplete source: recovery, cursor fitting, declarations | P2 | no | 6 | 2 | 5.7k / 2.0k |
 | P4 | Language server core: protocol, document sync, compile pipeline, discovery, diagnostics | P3 | yes, once 5 commits' other files move | 42 | 15 | 19.1k / 28.0k |
@@ -55,7 +55,7 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 | P11 | The XDK's library sources and the XDK workspace | P5 | yes, once 1 commit's other files move | 23 | 9 | 3.4k / 3.4k |
 | P12 | Test infrastructure: playbooks, scenarios, tours and their container | P7-P11 | no | 115 | 21 | 3.2k / 57.5k |
 | P13 | Documentation, build and CI | the PRs it documents | no | 45 | 6 | 6.8k / 372 |
-| | **Total** | | | **523** | **172** | |
+| | **Total** | | | **524** | **172** | |
 
 The topics group the commits; the PRs above divide them at lang/. Sizes count added lines, with commit 8 divided by package (below). They leave out only the two files that later commits delete whole (XdkColorPrototype, XdkMonikers); the rest of what the pairs in finding 2 take back is still counted, so squashed PRs come out somewhat smaller. Tests are most of every PR's size: reviewers read the main code and skim the tests.
 
@@ -239,6 +239,7 @@ These commits change files outside the components of the PR they are placed in, 
 - 520 `9030a62ed2` Build the extension's invalid-settings message once, and offer a Gradle build's Test and Clean tasks once for either build mode, in P13 (+7; also touches: vscode)
 - 521 `f0a118b838` Share the language server's cancellation-owning future and its formatter's parenthesis search, in P13 (+23; also touches: server)
 
+
 ## Splitting commit 8
 
 | Goes to | Main lines | Test lines | What |
@@ -261,14 +262,14 @@ The division is by file; inside XdkAdapter.kt, the largest file (2,448 lines), a
 
 **Scope.** javatools: every report goes to an explicit ErrorListener, with a reason for silence; parser and validation listeners scoped and restored; module repository read failures kept, cached and reported.
 
-**Builds on** master. **Commits:** 14 now, about 4 after squashing. **Added lines:** 3,196 main, 3,227 tests.
+**Builds on** master. **Commits:** 15 now, about 4 after squashing. **Added lines:** 3,196 main, 3,247 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
 | Keep, cache and report module repository read failures | 1 `bbd50129ce` Preserve module repository read failures without blocking usable candidates<br>9 `d1aea30100` Report repository read attempts without inferring dependency failures<br>11 `cb1fa5a931` Keep unchanged repository read failures cached until file metadata changes | Three steps of one change to ModuleRepository's failure handling: preserve the failures, report the attempts without inferring dependency failures, keep them cached until file metadata changes. |
 | Require explicit error listeners, separate reporting from abort policy | 2 `4241a9d32d` Separate diagnostic reporting from listener abort policy<br>3 `5b48062dfe` Require explicit compiler listeners and reasons for silence<br>4 `6aecc7106c` Scope parser diagnostics and restore validation listeners on every exit<br>19 `1b729a944a` Route repository and runtime reports through error listeners<br>41 `213b8bb002` Stop the lexer at a source's end and keep diagnostics that only look like duplicates<br>467 `b0ed28d07e` Drop TypeConstant's import of Silence.PROBE, whose only use went with getJitICType()<br>468 `fa48926084` Say silent(PROBE) at each newable check of #803's JIT code, and drop the helper that chose a listener for them | One contract change (ErrorListener) made over five commits: separate reporting from abort, require listeners and reasons for silence, scope parser diagnostics, route repository and runtime reports, and the lexer fix that the new duplicate check exposed. |
 | Regression tests for diagnostics, embedding, cancellation and duplicate types | 384 `197c7ce1f0` Add errs' regression tests for compiler diagnostics, embedding, cancellation and duplicate types<br>386 `e0839181e9` Check duplicate source types through the command line, and implicitly abstract classes, in manualTests | Tests of the behaviour above, added later from errs; put them with the change they test. The embedding and cancellation test classes of 384 belong to P2 instead: split 384 by test class. |
-| Unused constructor arguments and defaults (open PR #802) | 459 `2c24fb20c0` Report constructor arguments and default values that no constructor uses<br>502 `4a746eb12e` Allow contribution arguments and shorthand defaults that match the explicit constructor | already open on master as #802, with 502 its review round; both drop out of #693 when #802 merges |
+| Unused constructor arguments and defaults (open PR #802) | 459 `2c24fb20c0` Report constructor arguments and default values that no constructor uses<br>502 `4a746eb12e` Allow contribution arguments and shorthand defaults that match the explicit constructor<br>524 `f91f0f8842` Test that a class without constructors compiles and uses its contribution's arguments | already open on master as #802, with 502 and 524 its review round; they drop out of #693 when #802 merges |
 
 ## Topic P2: Compiler host API: compilation outcomes, snapshots, syntax and semantic facts
 
@@ -1136,3 +1137,4 @@ Kept as they are:
 | 521 | `f0a118b838` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Share the language server's cancellation-owning future and its formatter's parenthesis search |
 | 522 | `891e093150` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Generate TextMate's operator patterns from one list of categories, not seven copies of the same block |
 | 523 | `2c4e48e7bd` | P7 | — | L6 | Callers that a write action interrupted in the Call Hierarchy (UP88) | Wait in XtcCallHierarchyProviderTest until LSP4IJ has connected the file, before asking for the call hierarchy |
+| 524 | `f91f0f8842` | P1 | #802 | — | Unused constructor arguments and defaults (open PR #802) | Test that a class without constructors compiles and uses its contribution's arguments |
