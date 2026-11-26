@@ -298,6 +298,17 @@ interface NativeTokensSupport {
     fun getValidLSPFuture(): NativeTokensFuture?
 }
 
+/** LSP4IJ's latest semantic-token request, once it has completed without failing. */
+internal fun NativeTokensSupport.completed(): NativeTokensFuture? =
+    getValidLSPFuture()?.takeIf {
+        it.isDone() &&
+            !it.isCompletedExceptionally()
+    }
+
+/** The encoded data of the semantic tokens that the client received. */
+internal fun ClientProtocol.tokenData(tokens: NativeTokens): List<Int> =
+    copy(tokens.getSemanticTokens()).asJsonObject["data"].asJsonArray.map { it.asInt }
+
 /** Polls the native semantic-token result. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface NativeTokensFuture : ClientFuture {

@@ -1244,7 +1244,7 @@ internal fun ParityScenarios.gradleRunCases() {
         try {
             // the model that an import writes, which the plugin gives the language server once no explicit modules replace it
             Files.createDirectories(report.parent)
-            Files.writeString(report, data["model"].toString().replace("\${workspace}", directory.toUri().toString().trimEnd('/')))
+            Files.writeString(report, workspaceModel(data["model"], directory))
             configure(null)
             awaitUi("the model's Gradle projects", HANG_LIMIT, errorMessage = { projects().toString() }) {
                 projects()[module]?.asString == data.string("project")

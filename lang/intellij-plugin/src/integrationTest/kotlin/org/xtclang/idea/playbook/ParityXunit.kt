@@ -201,6 +201,14 @@ private fun xunitEvents(
     return events.joinToString("") { "##xunit ${Gson().toJson(it)}\n" }
 }
 
+/** Opens the case's module, configured as the workspace's, with its test console, which has no results yet. */
+private fun ParityWorkspace.moduleConsole(data: JsonObject): Pair<ParityWorkspace.Document, TestConsole> {
+    val document = openModule(data)
+    val console = TestConsole(this)
+    console.tests.reset(console.project)
+    return document to console
+}
+
 /** The state and message of a result, for a check's message. */
 private fun JsonObject.shown() = "${string("state")}: ${get("message")?.asString}"
 
@@ -211,9 +219,7 @@ private fun JsonObject.shown() = "${string("state")}: ${get("message")?.asString
  */
 internal fun ParityScenarios.xunitCases() {
     case("X342") { data ->
-        val document = openModule(data)
-        val console = TestConsole(this)
-        console.tests.reset(console.project)
+        val (document, console) = moduleConsole(data)
         console.run(document, data.string("runAll"))
         // xunit runs the module's tests one at a time, in an order of its own: the stop comes as either waiting test starts
         val blocking = data.strings("blocking")
@@ -242,9 +248,7 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X343") { data ->
-        val document = openModule(data)
-        val console = TestConsole(this)
-        console.tests.reset(console.project)
+        val (document, console) = moduleConsole(data)
         val after = data.string("after")
         val text = data.string("source").replace(after, after + data.string("added"))
         replace(document, text)
@@ -258,9 +262,7 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X344") { data ->
-        val document = openModule(data)
-        val console = TestConsole(this)
-        console.tests.reset(console.project)
+        val (document, console) = moduleConsole(data)
         console.run(document, data.string("runAll"))
         val (failed, errored) = console.ended(listOf(data.string("failed"), data.string("errored")), "Run reports both tests")
         check(failed.string("state") == "failed" && data.string("failure") in failed.string("message")) { "fails: ${failed.shown()}" }
@@ -271,9 +273,7 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X345") { data ->
-        val document = openModule(data)
-        val console = TestConsole(this)
-        console.tests.reset(console.project)
+        val (document, console) = moduleConsole(data)
         console.run(document, data.string("runAll"))
         val (passed, disabled, precondition) =
             console.ended(listOf(data.string("passed"), data.string("disabled"), data.string("precondition")), "Run reports every test")
@@ -288,10 +288,8 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X346") { data ->
-        val document = openModule(data)
-        val console = TestConsole(this)
+        val (document, console) = moduleConsole(data)
         val failed = data.strings("failed")
-        console.tests.reset(console.project)
         console.run(document, data.string("runAll"))
         val first = console.ended(listOf(data.string("passed")) + failed, "Run reports every test")
         check(first.map { it.string("state") } == listOf("passed") + failed.map { "failed" }) { "The run: ${console.results()}" }
@@ -306,9 +304,7 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X347") { data ->
-        val document = openModule(data)
-        val console = TestConsole(this)
-        console.tests.reset(console.project)
+        val (document, console) = moduleConsole(data)
         console.run(document, data.string("runAll"))
         val tests = data.getAsJsonObject("tests").entrySet().associate { (id, line) -> id to line.asInt }
         val ran = console.ended(tests.keys.toList(), "Run reports every test")

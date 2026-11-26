@@ -844,27 +844,14 @@ internal fun ParityScenarios.platformCases() {
         // Gradle's project cache, which holds the report; X303 makes its project in a project root without it.
         val cache = root.resolve(".gradle")
         val made = !Files.exists(cache)
-        val model =
-            JsonParser
-                .parseString(
-                    data["model"]
-                        .toString()
-                        .replace("\${workspace}", directory.toUri().toString().trimEnd('/')),
-                ).asJsonObject
+        val model = JsonParser.parseString(workspaceModel(data["model"], directory)).asJsonObject
         val inputs = model["sourceSets"].asJsonArray[0].asJsonObject
         val resources = inputs["resourceRoots"].deepCopy()
-
-        fun refresh() =
-            with(driver) {
-                withContext(OnDispatcher.EDT) {
-                    utility(CompilerSettingsPage::class).refreshBuildModel(singleProject())
-                }
-            }
 
         fun writeModel() {
             Files.createDirectories(report.parent)
             Files.writeString(report, model.toString())
-            refresh()
+            refreshBuildModel()
         }
 
         fun automatic() =
@@ -891,7 +878,7 @@ internal fun ParityScenarios.platformCases() {
             writeModel()
             clean(document)
             Files.writeString(report, "{")
-            refresh()
+            refreshBuildModel()
             clean(document)
             with(driver) {
                 withContext(OnDispatcher.EDT) {
@@ -921,7 +908,7 @@ internal fun ParityScenarios.platformCases() {
                     utility(CompilerSettingsPage::class).clearProjectGraph(singleProject())
                 }
             }
-            refresh()
+            refreshBuildModel()
         }
     }
     case("X130") { data ->

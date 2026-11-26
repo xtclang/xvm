@@ -26,17 +26,7 @@ private fun ParityWorkspace.highlightTokens(doc: ParityWorkspace.Document): List
     val support = with(driver) { semanticSupport(doc.editor).getSemanticTokensSupport() }
     val values =
         awaitUi("native semantic highlighting uses the current document", HANG_LIMIT, getter = {
-            support.getValidLSPFuture()?.takeIf { it.isDone() && !it.isCompletedExceptionally() }?.let { future ->
-                future
-                    .get()
-                    ?.let {
-                        protocol
-                            .copy(it.getSemanticTokens())
-                            .asJsonObject["data"]
-                            .asJsonArray
-                            .map { number -> number.asInt }
-                    }.orEmpty()
-            }
+            support.completed()?.let { future -> future.get()?.let(protocol::tokenData).orEmpty() }
         }, checker = { it == expected })!!
     val legend =
         protocol

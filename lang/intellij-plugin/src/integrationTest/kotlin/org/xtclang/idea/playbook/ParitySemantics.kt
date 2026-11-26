@@ -101,17 +101,7 @@ internal fun ParityScenarios.semanticCases() {
                         "native editor receives semantic token classifications",
                         HANG_LIMIT,
                         getter = {
-                            support
-                                .getValidLSPFuture()
-                                ?.takeIf { it.isDone() && !it.isCompletedExceptionally() }
-                                ?.get()
-                                ?.let {
-                                    protocol
-                                        .copy(it.getSemanticTokens())
-                                        .asJsonObject["data"]
-                                        .asJsonArray
-                                        .map { value -> value.asInt }
-                                }
+                            support.completed()?.get()?.let(protocol::tokenData)
                         },
                         checker = { it != null },
                     )
