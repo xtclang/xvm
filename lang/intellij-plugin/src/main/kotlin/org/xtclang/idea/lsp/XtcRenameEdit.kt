@@ -19,6 +19,8 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageServer
+import org.xvm.lsp.protocol.RenameProposal
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -333,7 +335,7 @@ class XtcRenameEdit
             private fun propose(
                 wrapper: LanguageServerWrapper,
                 snapshot: Snapshot,
-                xtc: (XtcLanguageServer) -> CompletableFuture<RenameProposal?>,
+                xtc: (XtcServerProtocol) -> CompletableFuture<RenameProposal?>,
                 fallback: (LanguageServer) -> CompletableFuture<RenameProposal?>,
                 finish: (RenameProposal?, SourceGraphEdit.Snapshot) -> XtcRenameEdit?,
             ): CompletableFuture<XtcRenameEdit?> {
@@ -345,7 +347,7 @@ class XtcRenameEdit
                         .thenCompose {
                             cancellation.checkCanceled()
                             val server = snapshot.server
-                            cancellation.execute(if (server is XtcLanguageServer) xtc(server) else fallback(server))
+                            cancellation.execute(if (server is XtcServerProtocol) xtc(server) else fallback(server))
                         }.thenApply { finish(it, graph) }
                 result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
                 return result

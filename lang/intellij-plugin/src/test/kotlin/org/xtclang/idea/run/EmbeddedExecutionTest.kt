@@ -9,21 +9,21 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.awaitUntil
 import org.xtclang.idea.awaited
-import org.xtclang.idea.lsp.BuildDiagnostic
-import org.xtclang.idea.lsp.BuildPosition
-import org.xtclang.idea.lsp.BuildRange
-import org.xtclang.idea.lsp.BuildResponse
-import org.xtclang.idea.lsp.BuiltModule
-import org.xtclang.idea.lsp.DocumentDiagnostics
-import org.xtclang.idea.lsp.RunExitedParams
-import org.xtclang.idea.lsp.RunInputParams
-import org.xtclang.idea.lsp.RunOutputParams
-import org.xtclang.idea.lsp.RunParams
-import org.xtclang.idea.lsp.RunResponse
-import org.xtclang.idea.lsp.ServerTest
-import org.xtclang.idea.lsp.StopRunParams
-import org.xtclang.idea.lsp.TestSelector
-import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.BuildDiagnostic
+import org.xvm.lsp.protocol.BuildPosition
+import org.xvm.lsp.protocol.BuildRange
+import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.BuiltModule
+import org.xvm.lsp.protocol.DocumentDiagnostics
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunInputParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.RunResponse
+import org.xvm.lsp.protocol.ServerTest
+import org.xvm.lsp.protocol.StopRunParams
+import org.xvm.lsp.protocol.TestSelector
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.lang.reflect.Proxy
 import java.nio.file.Files
 import java.nio.file.Path
@@ -150,8 +150,13 @@ class EmbeddedExecutionTest {
                             DocumentDiagnostics(
                                 source.toUri().toString(),
                                 listOf(
-                                    BuildDiagnostic(BuildRange(BuildPosition(1, 4), BuildPosition(1, 9)), 1, "no such name", "COMPILER-43"),
-                                    BuildDiagnostic(BuildRange(BuildPosition(0, 0), BuildPosition(0, 1)), 2, "unused"),
+                                    BuildDiagnostic(
+                                        BuildRange(BuildPosition(1, 4), BuildPosition(1, 9)),
+                                        1,
+                                        message = "no such name",
+                                        code = "COMPILER-43",
+                                    ),
+                                    BuildDiagnostic(BuildRange(BuildPosition(0, 0), BuildPosition(0, 1)), 2, message = "unused"),
                                 ),
                             ),
                         ),
@@ -191,7 +196,7 @@ class EmbeddedExecutionTest {
         val request = server.requests.awaited()!!
         assertThat(request.module).isEqualTo("file:///work/App.x")
         sessions.output(RunOutputParams(request.runId!!, "Hello, World!\n"))
-        sessions.exited(RunExitedParams(request.runId, 7, null))
+        sessions.exited(RunExitedParams(request.runId!!, 7, null))
         awaitUntil("the run to end") { handler.isProcessTerminated }
         assertThat(handler.exitCode).isEqualTo(7)
         assertThat(handler.stdout()).isEqualTo("Hello, World!\n")
@@ -300,8 +305,8 @@ class EmbeddedExecutionTest {
         val calls = ConcurrentLinkedQueue<String>()
         val started = CompletableFuture<Unit>()
 
-        val proxy: XtcLanguageServer =
-            Proxy.newProxyInstance(javaClass.classLoader, arrayOf(XtcLanguageServer::class.java)) { _, method, args ->
+        val proxy: XtcServerProtocol =
+            Proxy.newProxyInstance(javaClass.classLoader, arrayOf(XtcServerProtocol::class.java)) { _, method, args ->
                 calls += method.name
                 when (method.name) {
                     "run" -> {
@@ -325,7 +330,7 @@ class EmbeddedExecutionTest {
                         throw UnsupportedOperationException(method.name)
                     }
                 }
-            } as XtcLanguageServer
+            } as XtcServerProtocol
     }
 
     private class RecordingHandler(

@@ -1,8 +1,5 @@
 package org.xvm.lsp.server
 
-import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
-import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.debug.AttachTarget
@@ -25,7 +22,6 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
-import org.xvm.debug.TestSelector
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
 import org.xvm.lsp.adapter.Adapter
@@ -36,8 +32,20 @@ import org.xvm.lsp.adapter.xdk.XdkBuiltModule
 import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
-import org.xvm.lsp.model.toLsp
+import org.xvm.lsp.protocol.BuildParams
+import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.DebugTaskParams
+import org.xvm.lsp.protocol.DebugTaskResult
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunInputParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.RunResponse
+import org.xvm.lsp.protocol.StopRunParams
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.TestEventParams
+import org.xvm.lsp.protocol.TestSelector
+import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.run.AttachedProgram
 import org.xvm.lsp.run.JvmOptions
 import org.xvm.lsp.run.RunDebugClient
@@ -60,171 +68,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * `xtc/build` parameters: a module name or root URI; or when [module] is absent, the source modules of the workspace
- * folder [folder], a URI, or every source module without one.
- */
-data class BuildParams(
-    val module: String? = null,
-    val rebuild: Boolean? = null,
-    val folder: String? = null,
-)
-
-/** `xtc/build` result. Diagnostics are grouped by document, in the shape of `publishDiagnostics`. */
-data class BuildResponse(
-    val succeeded: Boolean,
-    val cancelled: Boolean,
-    val modules: List<XdkBuiltModule>,
-    val diagnostics: List<PublishDiagnosticsParams>,
-    val outputDirectory: String?,
-)
-
-/**
- * `xtc/run` parameters. [module] is a module name or root URI; a client that sends a root URI also sends the
- * module's name as [moduleName], which identifies the module when the URI no longer does, as after its root file
- * was renamed or moved. The client chooses [runId] so it can attach its console before any output arrives;
- * [args] are passed to the entry method as given, never shell-parsed. Without a [method], or with no [args], the run
- * takes those that the module's Gradle project's `xtcRun` runs it with, where the imported build model has them, and
- * `run` and none otherwise; it runs with `xtcRun`'s JVM options ([EmbeddedRuns]). With [tests], xunit runs the module's
- * tests that they select instead, all of them for an empty list, as `xtc test` does, and the server reports their
- * execution as `xtc/testEvent` notifications, which are not in the output; the entry method and its arguments are not
- * used, and the tests run with the JVM options of the project's `xtcTest`.
- */
-data class RunParams(
-    val module: String? = null,
-    val method: String? = null,
-    val args: List<String>? = null,
-    val workingDirectory: String? = null,
-    val runId: String? = null,
-    val moduleName: String? = null,
-    val tests: List<TestSelector>? = null,
-)
-
-/** `xtc/run` result: the build outcome, and the run's ID when the build succeeded and the run started. */
-data class RunResponse(
-    val runId: String?,
-    val build: BuildResponse,
-)
-
-/** A Run lens of a document: the module it runs and the zero-based line it is on. */
-data class RunLens(
-    val module: String,
-    val line: Int,
-)
-
-data class StopRunParams(
-    val runId: String? = null,
-)
-
-/**
- * `xtc/runInput` parameters: [text] for the program's console, sent as typed, with line ends; [end] ends
- * the input, after which a program waiting for a line gets an empty one.
- */
-data class RunInputParams(
-    val runId: String? = null,
-    val text: String? = null,
-    val end: Boolean? = null,
-)
-
-/**
- * `xtc/replacedLibraries` parameters: the bundled libraries that the workspace's own modules replace, by name, and the
- * workspace folders, as URIs, whose modules are built against them, which then build and run with Gradle.
- */
-data class ReplacedLibrariesParams(
-    val libraries: List<String> = emptyList(),
-    val folders: List<String> = emptyList(),
-)
-
-/** `xtc/gradleProjects` parameters: the Gradle project that owns each source module, by module name, as its path in the build tree. */
-data class GradleProjectsParams(
-    val projects: Map<String, String> = emptyMap(),
-)
-
-data class RunOutputParams(
-    val runId: String,
-    val text: String,
-)
-
-/** `xtc/testEvent` parameters: an [event] of the tests that the run [runId] runs, as xunit reported it ([TestEvent]). */
-data class TestEventParams(
-    val runId: String,
-    val event: TestEvent,
-)
-
-/** A run's single terminal outcome: the entry method's exit code, or the reason it failed. */
-data class RunExitedParams(
-    val runId: String,
-    val exitCode: Long?,
-    val error: String?,
-)
-
-/**
- * `xtc/debugTask` parameters: the task that runs a debug session's ([sessionId]) module under the debugger, its
- * Gradle task or the xtc command, as the launch's [buildMode] says ([DebugTask.buildMode]): the module's [module],
- * [method] and [args], as a Gradle run or `xtc run` takes them, with the launcher's `--debug` options [debug], which a
- * Gradle task takes as the Gradle property `xtcDebug`. The program's XDK has the debugger's agent. With [tests], the
- * task runs those tests of the module instead, as `testXtc` or `xtc test` take them, all of them for an empty list,
- * with xunit's `json` report, whose events ([TestEvent]) the client reads from the task's output.
- */
-data class DebugTaskParams(
-    val sessionId: String,
-    val module: String,
-    val method: String?,
-    val args: List<String>,
-    val debug: String,
-    val buildMode: String,
-    val tests: List<TestSelector>? = null,
-)
-
-/** The end of an `xtc/debugTask`: the task's exit code, when it has one. */
-data class DebugTaskResult(
-    val exitCode: Int? = null,
-)
-
-/** Client side of the embedded execution notifications. */
-interface XtcLanguageClient : LanguageClient {
-    @JsonNotification("xtc/runOutput")
-    fun runOutput(params: RunOutputParams)
-
-    @JsonNotification("xtc/runExited")
-    fun runExited(params: RunExitedParams)
-
-    /** An event of the tests that a run with `tests` runs, ahead of the run's exit; see [RunParams]. */
-    @JsonNotification("xtc/testEvent")
-    fun testEvent(params: TestEventParams) {}
-
-    /** One DAP message from a debug session to the client; see [DebugSessions]. */
-    @JsonNotification("xtc/debugMessage")
-    fun debugMessage(params: DebugMessageParams) {}
-
-    /**
-     * The bundled libraries that the workspace's own modules replace, each time they change: while there are any, the
-     * client builds and runs with Gradle, as the server builds and runs only with the bundled XDK.
-     */
-    @JsonNotification("xtc/replacedLibraries")
-    fun replacedLibraries(params: ReplacedLibrariesParams) {}
-
-    /**
-     * The Gradle project of each source module that the workspace's imported build model names, each time they change:
-     * the client runs a module's `runXtc` and `testXtc` by their full path, such as `:xdk:lib-json:testXtc`, which in a
-     * composite build reaches the included build that a bare name does not. Empty without a build model.
-     */
-    @JsonNotification("xtc/gradleProjects")
-    fun gradleProjects(params: GradleProjectsParams) {}
-
-    /**
-     * Runs a debug session's module with its Gradle task or the xtc command, as [DebugTaskParams] says, and answers
-     * once the task has ended; canceling the request ends the task.
-     */
-    @JsonRequest("xtc/debugTask")
-    fun debugTask(params: DebugTaskParams): CompletableFuture<DebugTaskResult> =
-        CompletableFuture.failedFuture(
-            UnsupportedOperationException(EmbeddedRuns.noTasks(DebugTask.of(params.buildMode) ?: DebugTask.GRADLE)),
-        )
-}
-
-/**
  * Embedded build and run for IDE clients: builds through the compiler adapter's serialized queue, then runs
- * the built module in the execution worker JVM. Clients that do not implement [XtcLanguageClient] can still
+ * the built module in the execution worker JVM. Clients that do not implement [XtcClientProtocol] can still
  * build; runs then have nowhere to report.
  *
  * Where the imported Gradle build model says what the module's Gradle project runs it with ([runSettings]), a run
@@ -300,18 +145,18 @@ internal class EmbeddedRuns(
             params.copy(runId = runId),
             object : ProgramEvents {
                 override fun output(text: String) {
-                    (client() as? XtcLanguageClient)?.runOutput(RunOutputParams(runId, text))
+                    (client() as? XtcClientProtocol)?.runOutput(RunOutputParams(runId, text))
                 }
 
                 override fun tested(event: TestEvent) {
-                    (client() as? XtcLanguageClient)?.testEvent(TestEventParams(runId, event))
+                    (client() as? XtcClientProtocol)?.testEvent(TestEventParams(runId, event))
                 }
 
                 override fun exited(
                     code: Long?,
                     error: String?,
                 ) {
-                    (client() as? XtcLanguageClient)?.runExited(RunExitedParams(runId, code, error))
+                    (client() as? XtcClientProtocol)?.runExited(RunExitedParams(runId, code, error))
                 }
             },
         )
@@ -414,7 +259,7 @@ internal class EmbeddedRuns(
         ready: CompletionStage<out DebugSetup>,
     ): CompletableFuture<String> {
         val client =
-            client() as? XtcLanguageClient
+            client() as? XtcClientProtocol
                 ?: return CompletableFuture.failedFuture(UnsupportedOperationException(noTasks(kind)))
         // a module that neither the source graph nor the workspace has, such as a file compiled alone outside it, has its
         // directory from the source file that the launch names it by, since its binary no longer records one
@@ -1084,11 +929,8 @@ internal class EmbeddedRuns(
         BuildResponse(
             succeeded = result.succeeded,
             cancelled = result.cancelled,
-            modules = result.modules,
-            diagnostics =
-                result.diagnostics
-                    .groupBy { it.location.uri }
-                    .map { (uri, diagnostics) -> PublishDiagnosticsParams(uri, diagnostics.map { it.toLsp(uri) }) },
+            modules = result.modules.map { it.toProtocol() },
+            diagnostics = result.diagnostics.toProtocol(),
             outputDirectory = result.modulePath.firstOrNull(),
         )
 

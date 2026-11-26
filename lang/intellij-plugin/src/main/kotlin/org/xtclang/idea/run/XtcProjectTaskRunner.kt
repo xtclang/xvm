@@ -25,9 +25,9 @@ import org.jetbrains.concurrency.AsyncPromise
 import org.jetbrains.concurrency.Promise
 import org.jetbrains.jps.model.java.JavaModuleSourceRootTypes
 import org.xtclang.idea.XtcFileType
-import org.xtclang.idea.lsp.BuildParams
-import org.xtclang.idea.lsp.BuildResponse
 import org.xtclang.idea.lsp.ProjectErrors
+import org.xvm.lsp.protocol.BuildParams
+import org.xvm.lsp.protocol.BuildResponse
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException

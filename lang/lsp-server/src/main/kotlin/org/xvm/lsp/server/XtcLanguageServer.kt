@@ -57,11 +57,9 @@ import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
-import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageClientAware
-import org.eclipse.lsp4j.services.LanguageServer
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
@@ -73,12 +71,30 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
-import org.xvm.lsp.adapter.xdk.XdkModuleTests
 import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
+import org.xvm.lsp.protocol.BuildParams
+import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.ConsumerDiscovery
+import org.xvm.lsp.protocol.DebugMessageParams
+import org.xvm.lsp.protocol.DebugSessionParams
+import org.xvm.lsp.protocol.DebugSessionResponse
+import org.xvm.lsp.protocol.DiscoverConsumersParams
+import org.xvm.lsp.protocol.GradleProjectsParams
+import org.xvm.lsp.protocol.ModuleTests
+import org.xvm.lsp.protocol.RenameProposal
+import org.xvm.lsp.protocol.ReplacedLibrariesParams
+import org.xvm.lsp.protocol.RunInputParams
+import org.xvm.lsp.protocol.RunLens
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.RunResponse
+import org.xvm.lsp.protocol.SourceModuleConfiguration
+import org.xvm.lsp.protocol.StopRunParams
+import org.xvm.lsp.protocol.XtcClientProtocol
+import org.xvm.lsp.protocol.XtcServerProtocol
 import org.xvm.lsp.run.RunWorkerProcess
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 import org.xvm.lsp.util.ExecutionTrace
@@ -132,7 +148,7 @@ class XtcLanguageServer internal constructor(
     private val rescans: (rescan: () -> Unit) -> Unit = { it() },
     /** The limits of the execution workers that run the server's programs; a test lifts them. */
     workerLimits: RunWorkerProcess.Limits,
-) : LanguageServer,
+) : XtcServerProtocol,
     LanguageClientAware,
     AutoCloseable {
     /** A server whose execution workers have their own limits. */
@@ -483,7 +499,7 @@ class XtcLanguageServer internal constructor(
                 CompletableFuture.runAsync {
                     synchronized(connectedClient) {
                         val params = ReplacedLibrariesParams(xdk.replacedLibraries().sorted(), xdk.replacedFolders())
-                        (this.client as? XtcLanguageClient)?.replacedLibraries(params)
+                        (this.client as? XtcClientProtocol)?.replacedLibraries(params)
                     }
                 }
             }
@@ -506,7 +522,7 @@ class XtcLanguageServer internal constructor(
         // read when sent, under one lock, so the last one sent is the current map
         CompletableFuture.runAsync {
             synchronized(connectedClient) {
-                (client as? XtcLanguageClient)?.gradleProjects(GradleProjectsParams(gradleProjects.get()))
+                (client as? XtcClientProtocol)?.gradleProjects(GradleProjectsParams(gradleProjects.get()))
             }
         }
     }
@@ -1307,7 +1323,10 @@ class XtcLanguageServer internal constructor(
     // =========================================================================
     //
     // LSP allows servers to define custom methods beyond the standard protocol.
-    // Custom methods use the @JsonRequest annotation with a method name.
+    // Custom methods use the @JsonRequest annotation with a method name. Those that the
+    // IntelliJ plugin calls are declared, with their annotations, by lang/protocol's
+    // XtcServerProtocol, which this class implements: an override must not repeat the
+    // annotation, as lsp4j's endpoint refuses a method name that it finds twice.
     //
     // Convention: Custom methods should be prefixed with the language/server name
     // to avoid collisions (e.g., "xtc/health check", "xtc/getModuleInfo").
@@ -1327,15 +1346,14 @@ class XtcLanguageServer internal constructor(
     // =========================================================================
 
     /** Effective immutable inputs for host configuration views and explicit override creation. */
-    @JsonRequest("xtc/compilerSourceModules")
-    fun compilerSourceModules(): CompletableFuture<List<SourceModuleConfiguration>> =
+    override fun compilerSourceModules(): CompletableFuture<List<SourceModuleConfiguration>> =
         supplyAsync(
             "xtc/compilerSourceModules",
             "effective inputs",
         ) {
             (adapter as? XdkAdapter)
                 ?.effectiveSourceModules()
-                ?.map(::SourceModuleConfiguration)
+                ?.map { it.toProtocol() }
                 .orEmpty()
         }
 
@@ -1343,8 +1361,7 @@ class XtcLanguageServer internal constructor(
      * Modules under the given folders that import the current source graph, directly or through each other.
      * Nothing is installed: the host adds the ones it wants to its explicit source modules.
      */
-    @JsonRequest("xtc/discoverConsumers")
-    fun discoverConsumers(params: DiscoverConsumersParams): CompletableFuture<ConsumerDiscovery> {
+    override fun discoverConsumers(params: DiscoverConsumersParams): CompletableFuture<ConsumerDiscovery> {
         val roots = params.roots.map { XdkSources.file(it) }
         if (roots.isEmpty() || roots.any { it == null || !it.isDirectory }) {
             return CompletableFuture.failedFuture(
@@ -1358,26 +1375,23 @@ class XtcLanguageServer internal constructor(
         ) {
             val found = (adapter as? XdkAdapter)?.discoverConsumers(roots.filterNotNull())
             ConsumerDiscovery(
-                found?.modules.orEmpty().map(::SourceModuleConfiguration),
-                found?.conflicts.orEmpty().map(::SourceModuleConfiguration),
+                found?.modules.orEmpty().map { it.toProtocol() },
+                found?.conflicts.orEmpty().map { it.toProtocol() },
             )
         }
     }
 
     /** Embedded build: compiles to the workspace's embedded output directory through the compiler queue. */
-    @JsonRequest("xtc/build")
-    fun build(params: BuildParams): CompletableFuture<BuildResponse> = embeddedRuns.build(params)
+    override fun build(params: BuildParams): CompletableFuture<BuildResponse> = embeddedRuns.build(params)
 
     /**
      * Embedded run: builds the module, then runs it in the execution worker JVM. Output and the exit are
      * reported as `xtc/runOutput` and `xtc/runExited` notifications for the client-chosen run ID.
      */
-    @JsonRequest("xtc/run")
-    fun run(params: RunParams): CompletableFuture<RunResponse> = embeddedRuns.run(params)
+    override fun run(params: RunParams): CompletableFuture<RunResponse> = embeddedRuns.run(params)
 
     /** The Run lenses of one document, for clients that mark the same lines elsewhere, such as IntelliJ's gutter. */
-    @JsonRequest("xtc/runLenses")
-    fun runLenses(params: TextDocumentIdentifier): CompletableFuture<List<RunLens>> =
+    override fun runLenses(params: TextDocumentIdentifier): CompletableFuture<List<RunLens>> =
         supplyAsync("xtc/runLenses", params.uri, { "${it.size} lenses" }) {
             (adapter as? XdkAdapter)?.runLensLines(params.uri).orEmpty().map { (module, line) -> RunLens(module, line) }
         }
@@ -1387,14 +1401,16 @@ class XtcLanguageServer internal constructor(
      * what a run's `tests` take to run it alone ([RunParams.tests]). A module no editor has opened has them from the
      * workspace pull's compile, which this brings up to date as a pull does.
      */
-    @JsonRequest("xtc/tests")
-    fun tests(): CompletableFuture<List<XdkModuleTests>> =
+    override fun tests(): CompletableFuture<List<ModuleTests>> =
         supplyAsync("xtc/tests", "test modules") {
-            (adapter as? XdkAdapter)?.testsAsync()?.join().orEmpty()
+            (adapter as? XdkAdapter)
+                ?.testsAsync()
+                ?.join()
+                .orEmpty()
+                .map { it.toProtocol() }
         }
 
-    @JsonRequest("xtc/stopRun")
-    fun stopRun(params: StopRunParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.stop(params))
+    override fun stopRun(params: StopRunParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.stop(params))
 
     /** Process IDs of the live execution workers, for tests. */
     internal fun runWorkerPids(): List<Long> = embeddedRuns.workerPids()
@@ -1403,30 +1419,26 @@ class XtcLanguageServer internal constructor(
     internal fun runWorkerCommands(): Map<Long, List<String>> = embeddedRuns.workerCommands()
 
     /** Console input for a run, or its end. False when no such run is building or running. */
-    @JsonRequest("xtc/runInput")
-    fun runInput(params: RunInputParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.input(params))
+    override fun runInput(params: RunInputParams): CompletableFuture<Boolean> =
+        CompletableFuture.completedFuture(embeddedRuns.input(params))
 
     /**
      * Starts a Debug Adapter Protocol session carried by this connection: its messages travel as `xtc/debugMessage`
      * notifications in both directions, and a launch builds and runs the module as `xtc/run` does.
      */
-    @JsonRequest("xtc/debugStart")
-    fun debugStart(): CompletableFuture<DebugSessionResponse> = CompletableFuture.completedFuture(debugSessions.start())
+    override fun debugStart(): CompletableFuture<DebugSessionResponse> = CompletableFuture.completedFuture(debugSessions.start())
 
     /** One DAP message from the client to a debug session. */
-    @JsonNotification("xtc/debugMessage")
-    fun debugMessage(params: DebugMessageParams) = debugSessions.receive(params)
+    override fun debugMessage(params: DebugMessageParams) = debugSessions.receive(params)
 
     /** Ends a debug session, which stops the program it launched. */
-    @JsonNotification("xtc/debugEnd")
-    fun debugEnd(params: DebugSessionParams) = debugSessions.end(params)
+    override fun debugEnd(params: DebugSessionParams) = debugSessions.end(params)
 
     /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
-    @JsonRequest("xtc/rename")
-    fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> = textDocumentService.renameProposal(params)
+    override fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> = textDocumentService.renameProposal(params)
 
-    @JsonRequest("xtc/renameFiles")
-    fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?> = textDocumentService.renameFilesProposal(params)
+    override fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?> =
+        textDocumentService.renameFilesProposal(params)
 
     /**
      * Custom health check method that clients can call to verify the server is working.
@@ -1443,9 +1455,7 @@ class XtcLanguageServer internal constructor(
      * NOTE: Called at runtime via JSON-RPC by LSP clients (e.g., IntelliJ plugin, VS Code
      * extension) sending a request with method "xtc/health check". LSP4J dispatches via reflection.
      */
-    @Suppress("unused")
-    @JsonRequest("xtc/languageServiceStatus")
-    fun languageServiceStatus(): CompletableFuture<Map<String, Any?>> =
+    override fun languageServiceStatus(): CompletableFuture<Map<String, Any?>> =
         CompletableFuture.completedFuture(
             mapOf(
                 "adapter" to adapter.displayName,
@@ -1502,9 +1512,7 @@ class XtcLanguageServer internal constructor(
      * which it refreshes the diagnostics. A client that waits for something to change, such as an editor's test, can
      * tell from it that nothing on the server's side is coming.
      */
-    @Suppress("unused") // JSON-RPC entry point, which the IntelliJ tour's waits ask
-    @JsonRequest(BUSY)
-    fun busy(): CompletableFuture<Map<String, Any?>> {
+    override fun busy(): CompletableFuture<Map<String, Any?>> {
         val queue = (adapter as? XdkAdapter)?.compilerQueueSnapshot().orEmpty()
 
         fun size(key: String) = (queue[key] as? Int) ?: 0
@@ -1516,9 +1524,7 @@ class XtcLanguageServer internal constructor(
         )
     }
 
-    @Suppress("unused") // JSON-RPC entry point invoked by both editor plugins through LSP4J.
-    @JsonRequest("xtc/exportLogs")
-    fun exportLogs(): CompletableFuture<Map<String, String>> =
+    override fun exportLogs(): CompletableFuture<Map<String, String>> =
         supplyAsync("xtc/exportLogs", "bounded server log archive") {
             ServerLogs.export(languageServiceStatus().join())
         }

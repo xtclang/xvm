@@ -39,6 +39,13 @@ import org.xvm.lsp.awaitAsserted
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
 import org.xvm.lsp.logged
+import org.xvm.lsp.protocol.BuildParams
+import org.xvm.lsp.protocol.GradleProjectsParams
+import org.xvm.lsp.protocol.ReplacedLibrariesParams
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.run.LIVELOCK_LIMITS
 import java.io.File
 import java.nio.file.Files
@@ -371,7 +378,7 @@ class XdkProjectServerTest {
             )
         val heard = CopyOnWriteArrayList<Map<String, String>>()
         val client =
-            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
                 override fun runOutput(params: RunOutputParams) {}
 
                 override fun runExited(params: RunExitedParams) {}
@@ -432,7 +439,7 @@ class XdkProjectServerTest {
         val output = StringBuffer()
         val exits = LinkedBlockingQueue<RunExitedParams>()
         val client =
-            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
                 override fun runOutput(params: RunOutputParams) {
                     output.append(params.text)
                 }
@@ -507,7 +514,7 @@ class XdkProjectServerTest {
             )
         val heard = CopyOnWriteArrayList<Map<String, String>>()
         val client =
-            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
                 override fun runOutput(params: RunOutputParams) {}
 
                 override fun runExited(params: RunExitedParams) {}
@@ -545,7 +552,7 @@ class XdkProjectServerTest {
         val app = workspace.resolve("App.x").also { it.writeText("module App { package json import json.xtclang.org; }") }
         val heard = CopyOnWriteArrayList<List<String>>()
         val client =
-            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
                 override fun runOutput(params: RunOutputParams) {}
 
                 override fun runExited(params: RunExitedParams) {}

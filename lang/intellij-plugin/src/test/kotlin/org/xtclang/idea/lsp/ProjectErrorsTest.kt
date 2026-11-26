@@ -14,6 +14,11 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.run.EmbeddedBuild
+import org.xvm.lsp.protocol.BuildDiagnostic
+import org.xvm.lsp.protocol.BuildPosition
+import org.xvm.lsp.protocol.BuildRange
+import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.DocumentDiagnostics
 import java.lang.reflect.Proxy
 import java.nio.file.Files
 import java.nio.file.Path
@@ -111,7 +116,7 @@ class ProjectErrorsTest {
         message: String,
         line: Int,
         code: String? = null,
-    ) = BuildDiagnostic(BuildRange(BuildPosition(line, 4), BuildPosition(line, 10)), 1, message, code)
+    ) = BuildDiagnostic(BuildRange(BuildPosition(line, 4), BuildPosition(line, 10)), 1, message = message, code = code)
 
-    private fun warning(message: String) = BuildDiagnostic(BuildRange(), 2, message)
+    private fun warning(message: String) = BuildDiagnostic(BuildRange(), 2, message = message)
 }

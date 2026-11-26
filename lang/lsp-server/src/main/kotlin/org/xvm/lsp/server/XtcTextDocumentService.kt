@@ -127,6 +127,9 @@ import org.xvm.lsp.model.fmt
 import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
+import org.xvm.lsp.protocol.RenameProposal
+import org.xvm.lsp.protocol.RenameScope
+import org.xvm.lsp.protocol.SourceGraphReplacement
 import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.lsp.util.snapshot
 import java.io.File
@@ -1590,12 +1593,12 @@ class XtcTextDocumentService(
                 edit,
                 proposal.sourceModules?.let { modules ->
                     SourceGraphReplacement(
-                        requireNotNull(proposal.previousSourceModules).map(::SourceModuleConfiguration),
-                        modules.map(::SourceModuleConfiguration),
+                        requireNotNull(proposal.previousSourceModules).map { it.toProtocol() },
+                        modules.map { it.toProtocol() },
                     )
                 },
                 proposal.scope?.let { scope ->
-                    RenameScope(scope.boundary.name, scope.modules.map(::SourceModuleConfiguration), scope.sourceUris, scope.revision)
+                    RenameScope(scope.boundary.name, scope.modules.map { it.toProtocol() }, scope.sourceUris, scope.revision)
                 },
             )
         }

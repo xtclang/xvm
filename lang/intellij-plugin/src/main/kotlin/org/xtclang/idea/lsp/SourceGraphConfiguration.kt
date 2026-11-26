@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
 import com.google.gson.JsonParser
+import org.xvm.lsp.protocol.SourceModuleConfiguration
 import java.net.URI
 
 /** Pure settings transformation, shared by initial application, Undo and Redo. */

@@ -1,8 +1,6 @@
 package org.xvm.lsp.server
 
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.debug.AttachTarget
@@ -21,6 +19,14 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.XtcDebugServer
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
+import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.DebugMessageParams
+import org.xvm.lsp.protocol.DebugSessionParams
+import org.xvm.lsp.protocol.DebugSessionResponse
+import org.xvm.lsp.protocol.RunInputParams
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.StopRunParams
+import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.util.snapshot
 import java.io.Closeable
 import java.net.URI
@@ -32,22 +38,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.time.Duration
-
-/** `xtc/debugStart` result: the ID of the new debug session. */
-data class DebugSessionResponse(
-    val sessionId: String,
-)
-
-/** `xtc/debugEnd` parameters. */
-data class DebugSessionParams(
-    val sessionId: String? = null,
-)
-
-/** `xtc/debugMessage` parameters: one Debug Adapter Protocol message of a session, in either direction. */
-data class DebugMessageParams(
-    val sessionId: String,
-    val message: JsonObject,
-)
 
 /**
  * Debug Adapter Protocol (DAP) sessions carried by the language server's own connection. A client starts one with
@@ -76,7 +66,7 @@ internal class DebugSessions(
         val server = XtcDebugServer(Launches(id), messages, limits)
         val endpoint =
             DebugMessageEndpoint(server) { message ->
-                (client() as? XtcLanguageClient)?.debugMessage(DebugMessageParams(id, JsonParser.parseString(message).asJsonObject))
+                (client() as? XtcClientProtocol)?.debugMessage(DebugMessageParams(id, JsonParser.parseString(message).asJsonObject))
             }
 
         fun close() {
@@ -319,18 +309,15 @@ internal class DebugSessions(
                     val path = runCatching { Path.of(URI(file.uri)).toString() }.getOrDefault(file.uri)
                     file.diagnostics.forEach { diagnostic ->
                         val start = diagnostic.range.start
+                        // LSP's severities: 1 error, 2 warning, 3 information, 4 hint
                         val severity =
                             when (diagnostic.severity) {
-                                DiagnosticSeverity.Warning -> "warning"
-                                DiagnosticSeverity.Information -> "info"
-                                DiagnosticSeverity.Hint -> "hint"
+                                2 -> "warning"
+                                3 -> "info"
+                                4 -> "hint"
                                 else -> "error"
                             }
-                        val code =
-                            diagnostic.code
-                                ?.get()
-                                ?.let { " [$it]" }
-                                .orEmpty()
+                        val code = diagnostic.code?.let { " [$it]" }.orEmpty()
                         add("$path:${start.line + 1}:${start.character + 1}: $severity: ${diagnostic.message}$code")
                     }
                 }

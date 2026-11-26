@@ -120,13 +120,13 @@ import com.redhat.devtools.lsp4ij.settings.ServerTrace
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.xtclang.idea.XtcFileType
 import org.xtclang.idea.lsp.XtcClientFeatures
-import org.xtclang.idea.lsp.XtcLanguageServer
 import org.xtclang.idea.run.XtcAttachConfiguration
 import org.xtclang.idea.run.XtcAttachConfigurationType
 import org.xtclang.idea.run.XtcBuildSettings
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xtclang.idea.run.XtcRunMode
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.awt.AWTEvent
 import java.awt.Component
 import java.awt.Container
@@ -315,7 +315,7 @@ object TourUi {
                 .getInstance(project())
                 .startedServers
                 .firstOrNull { it.serverDefinition.id == SERVER_ID }
-                ?.languageServer as? XtcLanguageServer ?: return ""
+                ?.languageServer as? XtcServerProtocol ?: return ""
         val busy =
             runCatching { server.busy().get(30, TimeUnit.SECONDS) }.getOrElse { return "the server is not answering" }
         val requests = (busy["requests"] as? Number)?.toInt() ?: 0

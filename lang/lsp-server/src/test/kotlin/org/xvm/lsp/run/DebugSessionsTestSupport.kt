@@ -5,17 +5,17 @@ import com.google.gson.JsonParser
 import org.eclipse.lsp4j.services.LanguageClient
 import org.mockito.Mockito.mock
 import org.xvm.lsp.awaited
-import org.xvm.lsp.server.DebugMessageParams
+import org.xvm.lsp.protocol.DebugMessageParams
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.server.DebugSessions
-import org.xvm.lsp.server.RunExitedParams
-import org.xvm.lsp.server.RunOutputParams
-import org.xvm.lsp.server.XtcLanguageClient
 import org.xvm.lsp.what
 import java.util.concurrent.LinkedBlockingQueue
 
 /** Records the DAP messages that debug sessions send their client. */
 internal class DebugClient :
-    XtcLanguageClient,
+    XtcClientProtocol,
     LanguageClient by mock(LanguageClient::class.java) {
     private val messages = LinkedBlockingQueue<DebugMessageParams>()
 

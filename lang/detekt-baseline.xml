@@ -212,7 +212,7 @@
     <ID>LargeClass:XdkProjectQueries.kt:XdkProjectQueries</ID>
     <ID>LargeClass:XdkRename.kt:XdkRename</ID>
     <ID>LargeClass:XtcDebugServer.kt:XtcDebugServer : IDebugProtocolServer</ID>
-    <ID>LargeClass:XtcLanguageServer.kt:XtcLanguageServer : LanguageServerLanguageClientAwareAutoCloseable</ID>
+    <ID>LargeClass:XtcLanguageServer.kt:XtcLanguageServer : XtcServerProtocolLanguageClientAwareAutoCloseable</ID>
     <ID>LargeClass:XtcTextDocumentService.kt:XtcTextDocumentService : TextDocumentService</ID>
     <ID>LongMethod:AdapterFormatter.kt:AdapterFormatter$private fun handleEnter: List&lt;TextEdit&gt;</ID>
     <ID>LongMethod:ClientPresentation.kt:ClientPresentation.Companion$fun read: ClientPresentation</ID>
@@ -381,7 +381,7 @@
     <ID>MagicNumber:XtcProjectTaskRunner.kt:EmbeddedBuild$4</ID>
     <ID>MagicNumber:XtcTextDocumentService.kt:XtcTextDocumentService$10</ID>
     <ID>MagicNumber:XtcTextDocumentService.kt:XtcTextDocumentService$5</ID>
-    <ID>MatchingDeclarationName:DebugSessionsTestSupport.kt:DebugClient : XtcLanguageClientLanguageClient</ID>
+    <ID>MatchingDeclarationName:DebugSessionsTestSupport.kt:DebugClient : XtcClientProtocolLanguageClient</ID>
     <ID>MatchingDeclarationName:LibraryReferences.kt:LibraryReference</ID>
     <ID>MatchingDeclarationName:PlaybookFailure.kt:PlaybookCleanupFailure : IllegalStateException</ID>
     <ID>MatchingDeclarationName:SignatureHints.kt:Signature</ID>
@@ -570,8 +570,8 @@
     <ID>TooManyFunctions:XdkProjectQueries.kt:XdkProjectQueries</ID>
     <ID>TooManyFunctions:XdkRename.kt:XdkRename</ID>
     <ID>TooManyFunctions:XdkWorkspaceNavigation.kt:XdkWorkspaceNavigation</ID>
-    <ID>TooManyFunctions:XtcLanguageServer.kt:XtcLanguageServer : LanguageServer</ID>
-    <ID>TooManyFunctions:XtcLanguageServer.kt:XtcLanguageServer : LanguageServerLanguageClientAwareAutoCloseable</ID>
+    <ID>TooManyFunctions:XtcLanguageServer.kt:XtcLanguageServer : XtcServerProtocolLanguageClientAwareAutoCloseable</ID>
+    <ID>TooManyFunctions:XtcServerProtocol.kt:XtcServerProtocol : LanguageServer</ID>
     <ID>UnusedParameter:DebugSessionUi.kt:DebugSessionUi$project: Project</ID>
     <ID>UtilityClassWithPublicConstructor:WatchedTest.kt:WatchedTest$Cached</ID>
     <ID>VariableNaming:XtcCodeStyleSettings.kt:XtcCodeStyleSettings$/** * Continuation indent for `extends`, `implements`, `incorporates`, `delegates` lines. XTC * convention: double the normal indent (8 spaces by default). */ @JvmField @Suppress("ktlint:standard:property-naming") // IntelliJ settings serialization convention. var CONTINUATION_INDENT_SIZE: Int = 8</ID>

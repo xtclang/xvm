@@ -1,6 +1,7 @@
 package org.xvm.debug
 
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.TestSelector
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import kotlin.time.Duration
@@ -18,15 +19,6 @@ data class LaunchTarget(
     val args: List<String> = emptyList(),
     val workingDirectory: String? = null,
     val tests: List<TestSelector>? = null,
-)
-
-/**
- * A test of a module, or a container of tests, to run: its xunit [selector], the path of a package, class or test
- * method in its module, and its [kind], `package`, `class` or `test`; a `module` selects every test of the module.
- */
-data class TestSelector(
-    val selector: String,
-    val kind: String,
 )
 
 /**

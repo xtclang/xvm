@@ -48,6 +48,8 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
 import org.xvm.lsp.logged
+import org.xvm.lsp.protocol.DiscoverConsumersParams
+import org.xvm.lsp.protocol.SourceModuleConfiguration
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -336,7 +338,7 @@ class XdkRenameServerTest {
                     .uri,
             ).isEqualTo(root.toURI().toString())
             assertThat(
-                proposal.graph
+                proposal.graph!!
                     .after
                     .single()
                     .uri,
@@ -348,7 +350,7 @@ class XdkRenameServerTest {
                     .toString(),
             )
             assertThat(
-                proposal.graph
+                proposal.graph!!
                     .after
                     .single()
                     .resourceRoots,
@@ -410,7 +412,7 @@ class XdkRenameServerTest {
                     .dependencies,
             ).isEmpty()
             assertThat(
-                proposal.graph
+                proposal.graph!!
                     .after
                     .single { it.name == "App" }
                     .dependencies,

@@ -7,10 +7,10 @@ import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
 import com.redhat.devtools.lsp4ij.dap.DAPDebugProcess
-import org.xtclang.idea.lsp.DebugMessageParams
-import org.xtclang.idea.lsp.DebugSessionParams
-import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.DebugMessageParams
+import org.xvm.lsp.protocol.DebugSessionParams
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
@@ -32,7 +32,7 @@ internal class LanguageServerDebugProcessHandler(
     private val output: (String) -> Unit = {},
     /** Receives the events of a test run's tests, from the session's `xtcTest` events, for its Tests tab. */
     private val tested: (TestEvent) -> Unit = {},
-    private val server: () -> CompletableFuture<XtcLanguageServer>,
+    private val server: () -> CompletableFuture<XtcServerProtocol>,
 ) : ProcessHandler(),
     DebugSessions.Session {
     private val lock = Any()
@@ -42,7 +42,7 @@ internal class LanguageServerDebugProcessHandler(
     private val console = DebugConsoleLines()
 
     private class Connection(
-        val server: XtcLanguageServer,
+        val server: XtcServerProtocol,
         val sessionId: String,
     )
 

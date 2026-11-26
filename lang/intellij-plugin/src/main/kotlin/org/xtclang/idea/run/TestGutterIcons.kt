@@ -23,8 +23,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.awt.RelativePoint
 import com.redhat.devtools.lsp4ij.LSPIJUtils
 import org.xtclang.idea.XtcFileType
-import org.xtclang.idea.lsp.ModuleTests
-import org.xtclang.idea.lsp.ServerTest
+import org.xvm.lsp.protocol.ModuleTests
+import org.xvm.lsp.protocol.ServerTest
 import java.awt.event.MouseEvent
 import javax.swing.Icon
 

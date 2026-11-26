@@ -104,7 +104,7 @@ class XtcDebugAdapterDescriptor(
             configuration.moduleName.takeIf { it.isNotBlank() }?.let { parameters["module"] = it }
             configuration.moduleUri.takeIf { it.isNotBlank() }?.let { parameters["moduleUri"] = it }
             configuration.methodName.takeIf { it.isNotBlank() }?.let { parameters["method"] = it }
-            parameters["args"] = configuration.embeddedRequest().args
+            parameters["args"] = configuration.embeddedRequest().args.orEmpty()
             if (configuration.stopOnEntry) parameters["stopOnEntry"] = true
             if (configuration.evaluationRunsProgram) parameters["evaluationRunsProgram"] = true
             parameters.putAll(EvaluationLimits.parameters(configuration.evaluationTimeLimit, configuration.lazyValueTimeLimit))

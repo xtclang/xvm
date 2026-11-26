@@ -10,15 +10,15 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import org.eclipse.lsp4j.services.LanguageServer
-import org.xtclang.idea.lsp.BuildResponse
 import org.xtclang.idea.lsp.CompilerSettings
-import org.xtclang.idea.lsp.RunExitedParams
-import org.xtclang.idea.lsp.RunOutputParams
-import org.xtclang.idea.lsp.RunParams
-import org.xtclang.idea.lsp.TestEventParams
-import org.xtclang.idea.lsp.XtcLanguageServer
 import org.xtclang.idea.snapshot
+import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.RunParams
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.TestEventParams
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -31,14 +31,14 @@ import java.util.concurrent.ConcurrentHashMap
  */
 internal object EmbeddedExecution {
     /** The project's Ecstasy language server, started if it is not running yet. */
-    fun server(project: Project): CompletableFuture<XtcLanguageServer> =
+    fun server(project: Project): CompletableFuture<XtcServerProtocol> =
         LanguageServerManager
             .getInstance(project)
             .getLanguageServer(CompilerSettings.SERVER_ID)
             .thenCompose { item ->
                 item?.initializedServer
                     ?: CompletableFuture.failedFuture<LanguageServer>(IllegalStateException("The Ecstasy language server is not available"))
-            }.thenApply { it as XtcLanguageServer }
+            }.thenApply { it as XtcServerProtocol }
 
     /**
      * Completes once the Ecstasy language server has every edit of the documents it has open. Builds and runs use

@@ -12,6 +12,7 @@ import com.intellij.ui.dsl.builder.Align
 import com.intellij.ui.dsl.builder.MAX_LINE_LENGTH_WORD_WRAP
 import com.intellij.ui.dsl.builder.panel
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.util.concurrent.atomic.AtomicLong
 import javax.swing.JComboBox
 import javax.swing.JComponent
@@ -124,7 +125,7 @@ open class LanguageServiceConfigurable(
             } ?: return
         val connection = wrapper.languageServer
         wrapper.initializedServer
-            .thenCompose { (it as XtcLanguageServer).languageServiceStatus() }
+            .thenCompose { (it as XtcServerProtocol).languageServiceStatus() }
             .whenComplete { status, failure ->
                 ApplicationManager.getApplication().invokeLater {
                     if (!owner.isDisposed && reportRevision.get() == revision &&

@@ -2,11 +2,11 @@ package org.xtclang.idea.dap
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.lsp.DebugTaskParams
-import org.xtclang.idea.lsp.ServerTest
-import org.xtclang.idea.lsp.TestSelector
 import org.xtclang.idea.run.XtcBuildSettings
 import org.xtclang.idea.run.XtcRunConfiguration
+import org.xvm.lsp.protocol.DebugTaskParams
+import org.xvm.lsp.protocol.ServerTest
+import org.xvm.lsp.protocol.TestSelector
 
 /**
  * The task of a Gradle-mode or command-line debug launch, without an IDE: the module's Gradle run with the debug

@@ -4,8 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
-import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.snapshot
+import org.xvm.lsp.protocol.DebugMessageParams
 import org.xvm.lsp.protocol.TestEvent
 import java.util.concurrent.ConcurrentHashMap
 

@@ -82,6 +82,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.TestSelector
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.CancellationException
