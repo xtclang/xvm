@@ -29,6 +29,22 @@ cd /work/xvm
 # the VS Code builds which the VS Code extension's tests download, kept in a volume between runs
 export XTC_VSCODE_TEST_CACHE=/gradle/vscode-test
 
+# a slot's Gradle volume would keep the caches and wrapper of every Gradle version a run ever used: 20 GB of one that
+# no checkout used any more filled the Podman machine's disk on 2026-11-26; keep only the checkout's wrapper version's
+wrapper_version="$(sed -n 's/^distributionUrl=.*gradle-\([0-9][0-9.]*\)-\(bin\|all\)\.zip$/\1/p' gradle/wrapper/gradle-wrapper.properties)"
+if [ -n "$wrapper_version" ]; then
+    for stale in /gradle/caches/[0-9]*.[0-9]* /gradle/wrapper/dists/gradle-[0-9]*; do
+        [ -e "$stale" ] || continue
+        case "$stale" in
+            /gradle/caches/"$wrapper_version" | /gradle/wrapper/dists/gradle-"$wrapper_version"-*) ;;
+            *)
+                echo "gradle: removing $stale, of a version this checkout does not use ($wrapper_version)"
+                rm -rf "$stale"
+                ;;
+        esac
+    done
+fi
+
 # container-local Gradle settings: modest heaps for an 8 GiB VM, no file watching on overlay storage
 cat > /gradle/gradle.properties <<'EOF'
 org.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8
