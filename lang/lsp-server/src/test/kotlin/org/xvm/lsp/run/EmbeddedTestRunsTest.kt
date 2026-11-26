@@ -402,9 +402,7 @@ class EmbeddedTestRunsTest {
                 sessions.request(id, 5, "stackTrace", """{"threadId": ${stopped["threadId"].asInt}}""")
                 val top =
                     client
-                        .until(id) { it.response == "stackTrace" }
-                        .last()["body"]
-                        .asJsonObject["stackFrames"]
+                        .responseBody(id, "stackTrace")["stackFrames"]
                         .asJsonArray
                         .first()
                         .asJsonObject
@@ -461,12 +459,7 @@ class EmbeddedTestRunsTest {
     private fun source(
         path: String,
         text: String,
-    ): String {
-        val file = directory.resolve(path).toFile()
-        file.parentFile.mkdirs()
-        file.writeText(text)
-        return file.toURI().toString()
-    }
+    ): String = writeSource(directory, path, text)
 
     private companion object {
         /** A test that passes when the JVM it runs in has the system property `xvm.gradle.origin=test`. */

@@ -155,15 +155,7 @@ class XtcDebugAgentTest {
                 val runs = EmbeddedRuns(adapter, { client }, attachLimit = ATTACH_LIMIT)
                 DebugSessions(runs, { client }).use { sessions ->
                     val id = sessions.start().sessionId
-                    sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-                    sessions.request(id, 2, "attach", """{"port": ${program.port()}}""")
-                    sessions.request(
-                        id,
-                        3,
-                        "setBreakpoints",
-                        """{"source": {"path": "${program.source}"}, "breakpoints": [{"line": $LOOP_LINE}]}""",
-                    )
-                    sessions.request(id, 4, "configurationDone")
+                    sessions.attachAtLoop(id, program)
                     val untilStop = client.until(id) { it.event == "stopped" }
                     assertThat(untilStop.single { it.response == "attach" }["success"].asBoolean).isTrue()
                     val installed = untilStop.single { it.event == "breakpoint" }["body"].asJsonObject["breakpoint"].asJsonObject
@@ -174,9 +166,7 @@ class XtcDebugAgentTest {
                     sessions.request(id, 5, "stackTrace", """{"threadId": ${stopped["threadId"].asInt}}""")
                     val frames =
                         client
-                            .until(id) { it.response == "stackTrace" }
-                            .last()["body"]
-                            .asJsonObject["stackFrames"]
+                            .responseBody(id, "stackTrace")["stackFrames"]
                             .asJsonArray
                     assertThat(frames.first().asJsonObject["line"].asInt).isEqualTo(LOOP_LINE)
 
@@ -202,24 +192,14 @@ class XtcDebugAgentTest {
             val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT) { listOf(folder) }
             DebugSessions(runs, { client }).use { sessions ->
                 val id = sessions.start().sessionId
-                sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-                sessions.request(id, 2, "attach", """{"port": ${program.port()}}""")
-                sessions.request(
-                    id,
-                    3,
-                    "setBreakpoints",
-                    """{"source": {"path": "${program.source}"}, "breakpoints": [{"line": $LOOP_LINE}]}""",
-                )
-                sessions.request(id, 4, "configurationDone")
+                sessions.attachAtLoop(id, program)
                 // a refused breakpoint is a breakpoint event too, and then no stop comes
                 val installed =
                     client
-                        .until(id) { it.event == "breakpoint" }
-                        .last()["body"]
-                        .asJsonObject["breakpoint"]
+                        .eventBody(id, "breakpoint")["breakpoint"]
                         .asJsonObject
                 assertThat(installed["verified"].asBoolean).describedAs(installed.toString()).isTrue()
-                val stopped = client.until(id) { it.event == "stopped" }.last()["body"].asJsonObject
+                val stopped = client.eventBody(id, "stopped")
                 assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
 
                 sessions.request(id, 5, "disconnect")
@@ -281,16 +261,12 @@ class XtcDebugAgentTest {
                 // a refused breakpoint is a breakpoint event too, and then no stop comes
                 val installed =
                     client.messages
-                        .until(id) { it.event == "breakpoint" }
-                        .last()["body"]
-                        .asJsonObject["breakpoint"]
+                        .eventBody(id, "breakpoint")["breakpoint"]
                         .asJsonObject
                 assertThat(installed["verified"].asBoolean).describedAs(installed.toString()).isTrue()
                 val stopped =
                     client.messages
-                        .until(id) { it.event == "stopped" }
-                        .last()["body"]
-                        .asJsonObject
+                        .eventBody(id, "stopped")
                 assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
 
                 sessions.request(id, 5, "setBreakpoints", """{"source": {"path": "$source"}, "breakpoints": []}""")
@@ -556,6 +532,17 @@ class XtcDebugAgentTest {
             assertThat(program.exit()).isEqualTo(0)
             assertThat(program.output).contains("before", "after")
         }
+    }
+
+    /** Initializes the debug session [id], attaches it to [program] with a breakpoint on its loop's line, and ends the configuration. */
+    private fun DebugSessions.attachAtLoop(
+        id: String,
+        program: Program,
+    ) {
+        request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+        request(id, 2, "attach", """{"port": ${program.port()}}""")
+        request(id, 3, "setBreakpoints", """{"source": {"path": "${program.source}"}, "breakpoints": [{"line": $LOOP_LINE}]}""")
+        request(id, 4, "configurationDone")
     }
 
     /** Runs a program from its source with `--debug` and the [options] given, in a JVM of its own. */

@@ -636,18 +636,7 @@ class EmbeddedExecutionTest {
     fun `input typed while the module is still building reaches the program`() {
         CompilerTestSupport.configure()
         val ask = source("Ask.x", ASK.trimIndent())
-        val output = StringBuffer()
-        val exited = CompletableFuture<RunExitedParams>()
-        val client =
-            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
-                override fun runOutput(params: RunOutputParams) {
-                    output.append(params.text)
-                }
-
-                override fun runExited(params: RunExitedParams) {
-                    exited.complete(params)
-                }
-            }
+        val client = RunClient()
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Ask", ask)))
@@ -657,10 +646,10 @@ class EmbeddedExecutionTest {
                 // typed right away: until the build finishes and the program starts, the server holds it
                 assertThat(runs.input(RunInputParams("typed-early", "Grace\n", end = true))).isTrue()
                 assertThat(started.awaited().runId).isEqualTo("typed-early")
-                val exit = exited.awaited()
+                val exit = client.exits.awaited()!!
 
                 assertThat(exit.error).isNull()
-                assertThat(output.toString()).contains("Hello, Grace!").contains("next=[]")
+                assertThat(client.output.toString()).contains("Hello, Grace!").contains("next=[]")
                 assertThat(runs.tracked()).isZero()
                 assertThat(runs.input(RunInputParams("typed-early", "late\n"))).isFalse()
                 assertThat(runs.input(RunInputParams("no-such-run", "text\n"))).isFalse()
@@ -829,18 +818,9 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a debug session over the server's connection builds and runs the module, and its exit ends the session`() {
-        CompilerTestSupport.configure()
-        val hello =
-            source("Hello.x", "module Hello { void run(String[] args) { @Inject Console console; console.print($\"hello {args[0]}\"); } }")
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Hello", hello)))
-            // on the class's worker, which is already started; closing these runs would close it
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Hello", "moduleUri": "$hello", "args": ["world"]}""")
+        // on the class's worker, which is already started; closing these runs would close it
+        debugging("Hello", "module Hello { void run(String[] args) { @Inject Console console; console.print($\"hello {args[0]}\"); } }") {
+            sessions.request(id, 2, "launch", """{"module": "Hello", "moduleUri": "$uri", "args": ["world"]}""")
             sessions.request(id, 3, "configurationDone")
             val messages = client.until(id) { it.event == "terminated" }
 
@@ -857,15 +837,7 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a line a debug session's client sends from its console while the program runs is the program's input`() {
-        CompilerTestSupport.configure()
-        val asks = source("Asks.x", ONE_LINE.trimIndent())
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Asks", asks)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+        debugging("Asks", ONE_LINE) {
             sessions.request(id, 2, "launch", """{"module": "Asks", "noDebug": true}""")
             sessions.request(id, 3, "configurationDone")
             client.until(id) { it.event == "output" && "Name? " in it["body"].asJsonObject["output"].asString }
@@ -881,17 +853,8 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a breakpoint stops a debugged program, which shows its threads, stack and variables, and continue runs it to its exit`() {
-        CompilerTestSupport.configure()
-        val stops = source("Stops.x", STOPS.trimIndent())
-        val path = directory.resolve("Stops.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Stops", stops)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
+        debugging("Stops", STOPS) {
+            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$uri"}""")
             sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 11}]}""")
             sessions.request(id, 4, "configurationDone")
             // output events can come between any of the replies
@@ -993,17 +956,8 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `once a debugged file is edited, a breakpoint is placed on the line the program was built from, or refused on a changed line`() {
-        CompilerTestSupport.configure()
-        val stops = source("Stops.x", STOPS.trimIndent())
-        val path = directory.resolve("Stops.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Stops", stops)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
+        debugging("Stops", STOPS) {
+            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$uri"}""")
             // once launch is handled, its build has taken the text it compiles
             sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
             client.until(id) { it.response == "setBreakpoints" }
@@ -1011,13 +965,11 @@ class EmbeddedExecutionTest {
             // two lines typed above n = twice(21), on line 5 as built and on line 7 now
             val lines = STOPS.trimIndent().lines().toMutableList()
             lines.addAll(3, listOf("    // one", "    // two"))
-            adapter.updateDocument(stops, lines.joinToString("\n"))
+            adapter.updateDocument(uri, lines.joinToString("\n"))
             sessions.request(id, 4, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 7}, {"line": 4}]}""")
             val pending =
                 client
-                    .until(id) { it.response == "setBreakpoints" }
-                    .last()["body"]
-                    .asJsonObject["breakpoints"]
+                    .responseBody(id, "setBreakpoints")["breakpoints"]
                     .asJsonArray
                     .map { it.asJsonObject["id"].asInt }
             sessions.request(id, 5, "configurationDone")
@@ -1038,9 +990,7 @@ class EmbeddedExecutionTest {
             fun stack(seq: Int): List<Pair<String, Int>> {
                 sessions.request(id, seq, "stackTrace", """{"threadId": $thread}""")
                 return client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
+                    .responseBody(id, "stackTrace")["stackFrames"]
                     .asJsonArray
                     .map { it.asJsonObject }
                     .map { it["name"].asString to it["line"].asInt }
@@ -1052,9 +1002,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 7, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 13}, {"line": 5}]}""")
             val placed =
                 client
-                    .until(id) { it.response == "setBreakpoints" }
-                    .last()["body"]
-                    .asJsonObject["breakpoints"]
+                    .responseBody(id, "setBreakpoints")["breakpoints"]
                     .asJsonArray
                     .map { it.asJsonObject }
             assertThat(placed.map { it["verified"].asBoolean to it["line"].asInt }).containsExactly(true to 13, false to 5)
@@ -1072,42 +1020,14 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a step into one of the calls of the line goes into that call, and the line's other calls run on`() {
-        CompilerTestSupport.configure()
-        val module = source("Targets.x", TARGETS.trimIndent())
-        val path = directory.resolve("Targets.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Targets", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Targets", "moduleUri": "$module"}""")
-            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 4}]}""")
-            sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
+        debugging("Targets", TARGETS) {
+            val thread = stopAt(4)
 
-            fun top(seq: Int): JsonObject {
-                sessions.request(id, seq, "stackTrace", """{"threadId": $thread}""")
-                return client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
-                    .asJsonArray
-                    .first()
-                    .asJsonObject
-            }
+            fun top(seq: Int) = sessions.topFrame(client, id, seq, thread)
             sessions.request(id, 6, "stepInTargets", """{"frameId": ${top(5)["id"].asInt}}""")
             val targets =
                 client
-                    .until(id) { it.response == "stepInTargets" }
-                    .last()["body"]
-                    .asJsonObject["targets"]
+                    .responseBody(id, "stepInTargets")["targets"]
                     .asJsonArray
                     .map { it.asJsonObject }
             assertThat(targets.map { it["label"].asString }).containsExactly("add(Int, Int)", "twice(Int)")
@@ -1130,22 +1050,12 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a function breakpoint set before the start stops where the method of its name is entered`() {
-        CompilerTestSupport.configure()
-        val module = source("Entered.x", TARGETS.trimIndent().replace("Targets", "Entered"))
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Entered", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Entered", "moduleUri": "$module"}""")
+        debugging("Entered", TARGETS.trimIndent().replace("Targets", "Entered")) {
+            sessions.request(id, 2, "launch", """{"module": "Entered", "moduleUri": "$uri"}""")
             sessions.request(id, 3, "setFunctionBreakpoints", """{"breakpoints": [{"name": "twice"}, {"name": "nothing"}]}""")
             val pending =
                 client
-                    .until(id) { it.response == "setFunctionBreakpoints" }
-                    .last()["body"]
-                    .asJsonObject["breakpoints"]
+                    .responseBody(id, "setFunctionBreakpoints")["breakpoints"]
                     .asJsonArray
                     .map { it.asJsonObject }
             assertThat(pending.map { it["verified"].asBoolean }).containsOnly(false)
@@ -1167,9 +1077,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 5, "stackTrace", """{"threadId": ${stop["threadId"].asInt}}""")
             val top =
                 client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
+                    .responseBody(id, "stackTrace")["stackFrames"]
                     .asJsonArray
                     .first()
                     .asJsonObject
@@ -1188,25 +1096,8 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a data breakpoint on a field of an object stops at the next line once the field has changed`() {
-        CompilerTestSupport.configure()
-        val module = source("Watched.x", WATCHED.trimIndent())
-        val path = directory.resolve("Watched.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Watched", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Watched", "moduleUri": "$module"}""")
-            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 5}]}""")
-            sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
+        debugging("Watched", WATCHED) {
+            val thread = stopAt(5)
 
             fun body(
                 seq: Int,
@@ -1240,7 +1131,7 @@ class EmbeddedExecutionTest {
             // the first add() stops at the line after the one that changed the count
             body(10, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": []}""")
             sessions.request(id, 11, "continue", """{"threadId": $thread}""")
-            val stop = client.until(id) { it.event == "stopped" }.last()["body"].asJsonObject
+            val stop = client.eventBody(id, "stopped")
             assertThat(stop["reason"].asString).isEqualTo("data breakpoint")
             assertThat(stop["description"].asString).isEqualTo("Counter.count changed from 0 to 2")
             assertThat(top(12).let { it["name"].asString to it["line"].asInt }).isEqualTo("Counter.add" to 17)
@@ -1256,28 +1147,14 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a restarted frame is called again by its caller, which stops at its first line`() {
-        CompilerTestSupport.configure()
-        val module = source("Restarts.x", RESTARTS.trimIndent())
-        val path = directory.resolve("Restarts.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Restarts", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Restarts", "moduleUri": "$module"}""")
-            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 16}]}""")
-            sessions.request(id, 4, "configurationDone")
-            val first = client.until(id) { it.event == "stopped" }
+        debugging("Restarts", RESTARTS) {
+            val first = launchTo(16)
             val thread = first.last()["body"].asJsonObject["threadId"].asInt
 
             fun frames(seq: Int): List<JsonObject> {
                 sessions.request(id, seq, "stackTrace", """{"threadId": $thread}""")
                 return client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
+                    .responseBody(id, "stackTrace")["stackFrames"]
                     .asJsonArray
                     .map { it.asJsonObject }
             }
@@ -1384,17 +1261,8 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a stop lists the fibers that do not wait at a line, with what they do, and the stack of one that waits`() {
-        CompilerTestSupport.configure()
-        val module = source("Waits.x", PROGRAM.trimIndent().replace("Program", "Waits"))
-        val path = directory.resolve("Waits.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Waits", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Waits", "moduleUri": "$module"}""")
+        debugging("Waits", PROGRAM.trimIndent().replace("Program", "Waits")) {
+            sessions.request(id, 2, "launch", """{"module": "Waits", "moduleUri": "$uri"}""")
             // by then, run() has asked the busy worker for its count, and waits for the answer
             sessions.request(
                 id,
@@ -1403,18 +1271,11 @@ class EmbeddedExecutionTest {
                 """{"source": {"path": "$path"}, "breakpoints": [{"line": 7, "condition": "done == 100000"}]}""",
             )
             sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
+            val thread = client.eventBody(id, "stopped")["threadId"].asInt
             sessions.request(id, 5, "threads")
             val threads =
                 client
-                    .until(id) { it.response == "threads" }
-                    .last()["body"]
-                    .asJsonObject["threads"]
+                    .responseBody(id, "threads")["threads"]
                     .asJsonArray
                     .map { it.asJsonObject }
             // the stopped fiber, run()'s that waits, and the worker's fiber for that call, once it has taken it
@@ -1427,18 +1288,14 @@ class EmbeddedExecutionTest {
             sessions.request(id, 6, "stackTrace", """{"threadId": ${threads[1]["id"].asInt}}""")
             val frames =
                 client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
+                    .responseBody(id, "stackTrace")["stackFrames"]
                     .asJsonArray
                     .map { it.asJsonObject }
             assertThat(frames.map { it["name"].asString to it["line"].asInt }).containsExactly("Waits.run" to 19)
             sessions.request(id, 7, "scopes", """{"frameId": ${frames[0]["id"].asInt}}""")
             assertThat(
                 client
-                    .until(id) { it.response == "scopes" }
-                    .last()["body"]
-                    .asJsonObject["scopes"]
+                    .responseBody(id, "scopes")["scopes"]
                     .asJsonArray,
             ).isEmpty()
 
@@ -1453,32 +1310,13 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a debugged program's modules and loaded sources are its own and its libraries', a library's in its bundled source`() {
-        CompilerTestSupport.configure()
-        val library = source("Library.x", LIBRARY.trimIndent())
-        val path = directory.resolve("Library.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Library", library)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Library", "moduleUri": "$library"}""")
-            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 6}]}""")
-            sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
+        debugging("Library", LIBRARY) {
+            val thread = stopAt(6)
 
             sessions.request(id, 5, "modules", "{}")
             val modules =
                 client
-                    .until(id) { it.response == "modules" }
-                    .last()["body"]
-                    .asJsonObject["modules"]
+                    .responseBody(id, "modules")["modules"]
                     .asJsonArray
                     .map { it.asJsonObject }
                     .associate { it["name"].asString to it["isUserCode"].asBoolean }
@@ -1487,9 +1325,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 6, "loadedSources")
             val sources =
                 client
-                    .until(id) { it.response == "loadedSources" }
-                    .last()["body"]
-                    .asJsonObject["sources"]
+                    .responseBody(id, "loadedSources")["sources"]
                     .asJsonArray
                     .map { Path.of(it.asJsonObject["path"].asString) }
             assertThat(sources.map { it.toRealPath() }).contains(Path.of(path).toRealPath())
@@ -1509,31 +1345,12 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a frame in a bundled library's code shows the library's bundled source, read-only, at its line`() {
-        CompilerTestSupport.configure()
-        val library = source("Library.x", LIBRARY.trimIndent())
-        val path = directory.resolve("Library.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Library", library)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Library", "moduleUri": "$library"}""")
-            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 6}]}""")
-            sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
+        debugging("Library", LIBRARY) {
+            val thread = stopAt(6)
             sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
             val frames =
                 client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
+                    .responseBody(id, "stackTrace")["stackFrames"]
                     .asJsonArray
                     .map { it.asJsonObject }
             // the lambda, the library's forEach that calls it, and run, which calls forEach
@@ -1563,28 +1380,14 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `run to cursor, a breakpoint added while stopped and removed once reached, stops the program there once`() {
-        CompilerTestSupport.configure()
-        val loops = source("Loops.x", LOOPS.trimIndent())
-        val path = directory.resolve("Loops.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Loops", loops)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Loops", "moduleUri": "$loops"}""")
-            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 4}]}""")
-            sessions.request(id, 4, "configurationDone")
-            val first = client.until(id) { it.event == "stopped" }
+        debugging("Loops", LOOPS) {
+            val first = launchTo(4)
             val thread = first.last()["body"].asJsonObject["threadId"].asInt
 
             fun top(seq: Int): Pair<String, Int> {
                 sessions.request(id, seq, "stackTrace", """{"threadId": $thread}""")
                 return client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
+                    .responseBody(id, "stackTrace")["stackFrames"]
                     .asJsonArray
                     .first()
                     .asJsonObject
@@ -1631,18 +1434,11 @@ class EmbeddedExecutionTest {
             sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$module"}""")
             sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
             sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
+            val thread = client.eventBody(id, "stopped")["threadId"].asInt
             sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
             val frame =
                 client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
+                    .responseBody(id, "stackTrace")["stackFrames"]
                     .asJsonArray
                     .first()
                     .asJsonObject
@@ -1659,9 +1455,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 7, "evaluate", """{"expression": "box.count", "frameId": $frameId, "context": "watch"}""")
             assertThat(
                 client
-                    .until(id) { it.response == "evaluate" }
-                    .last()["body"]
-                    .asJsonObject["result"]
+                    .responseBody(id, "evaluate")["result"]
                     .asString,
             ).isEqualTo("5")
 
@@ -1672,18 +1466,14 @@ class EmbeddedExecutionTest {
             ): List<JsonObject> {
                 sessions.request(id, seq, "variables", """{"variablesReference": $reference}""")
                 return client
-                    .until(id) { it.response == "variables" }
-                    .last()["body"]
-                    .asJsonObject["variables"]
+                    .responseBody(id, "variables")["variables"]
                     .asJsonArray
                     .map { it.asJsonObject }
             }
             sessions.request(id, 30, "scopes", """{"frameId": $frameId}""")
             val locals =
                 client
-                    .until(id) { it.response == "scopes" }
-                    .last()["body"]
-                    .asJsonObject["scopes"]
+                    .responseBody(id, "scopes")["scopes"]
                     .asJsonArray
                     .single()
                     .asJsonObject["variablesReference"]
@@ -1700,9 +1490,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 34, "variables", """{"variablesReference": $locals, "format": {"hex": true}}""")
             val hex =
                 client
-                    .until(id) { it.response == "variables" }
-                    .last()["body"]
-                    .asJsonObject["variables"]
+                    .responseBody(id, "variables")["variables"]
                     .asJsonArray
                     .map { it.asJsonObject }
                     .associate { it["name"].asString to it["value"].asString }
@@ -1714,9 +1502,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 35, "variables", """{"variablesReference": $locals, "filter": "named", "start": 1, "count": 1}""")
             assertThat(
                 client
-                    .until(id) { it.response == "variables" }
-                    .last()["body"]
-                    .asJsonObject["variables"]
+                    .responseBody(id, "variables")["variables"]
                     .asJsonArray
                     .map { it.asJsonObject["name"].asString },
             ).containsExactly(names[1])
@@ -1729,9 +1515,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 39, "completions", """{"frameId": $frameId, "text": "box.co", "column": 7}""")
             assertThat(
                 client
-                    .until(id) { it.response == "completions" }
-                    .last()["body"]
-                    .asJsonObject["targets"]
+                    .responseBody(id, "completions")["targets"]
                     .asJsonArray
                     .map { it.asJsonObject }
                     .map { Triple(it["label"].asString, it["type"].asString, it["length"].asInt) },
@@ -1739,9 +1523,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 36, "variables", """{"variablesReference": $locals, "filter": "indexed"}""")
             assertThat(
                 client
-                    .until(id) { it.response == "variables" }
-                    .last()["body"]
-                    .asJsonObject["variables"]
+                    .responseBody(id, "variables")["variables"]
                     .asJsonArray,
             ).isEmpty()
 
@@ -1764,36 +1546,10 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a console line whose code never ends is ended at the console's time limit`() {
-        CompilerTestSupport.configure()
-        val module = source("Runs.x", RUNS.trimIndent())
-        val path = directory.resolve("Runs.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Runs", module)))
-            // the session's own limit, which spin() never meets, so the limit ends it at any speed
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$module"}""")
-            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
-            sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
-            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
-            val frameId =
-                client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
-                    .asJsonArray
-                    .first()
-                    .asJsonObject["id"]
-                    .asInt
+        // the session's own limit, which spin() never meets, so the limit ends it at any speed
+        debugging("Runs", RUNS) {
+            val thread = stopAt(21)
+            val frameId = sessions.topFrame(client, id, 5, thread)["id"].asInt
 
             sessions.request(id, 6, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
             val ended = client.until(id) { it.response == "evaluate" }.last()
@@ -1829,22 +1585,8 @@ class EmbeddedExecutionTest {
             )
             sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
             sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
-            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
-            val frameId =
-                client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
-                    .asJsonArray
-                    .first()
-                    .asJsonObject["id"]
-                    .asInt
+            val thread = client.eventBody(id, "stopped")["threadId"].asInt
+            val frameId = sessions.topFrame(client, id, 5, thread)["id"].asInt
 
             sessions.request(id, 6, "evaluate", """{"expression": "spin()", "frameId": $frameId, "context": "repl"}""")
             val ended = client.until(id) { it.response == "evaluate" }.last()
@@ -1868,9 +1610,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 7, "scopes", """{"frameId": $frameId}""")
             val locals =
                 client
-                    .until(id) { it.response == "scopes" }
-                    .last()["body"]
-                    .asJsonObject["scopes"]
+                    .responseBody(id, "scopes")["scopes"]
                     .asJsonArray
                     .single()
                     .asJsonObject["variablesReference"]
@@ -1905,22 +1645,8 @@ class EmbeddedExecutionTest {
             sessions.request(id, 2, "launch", """{"module": "Program", "moduleUri": "$module", "evaluationRunsProgram": true}""")
             sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 18}]}""")
             sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
-            sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
-            val frameId =
-                client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
-                    .asJsonArray
-                    .first()
-                    .asJsonObject["id"]
-                    .asInt
+            val thread = client.eventBody(id, "stopped")["threadId"].asInt
+            val frameId = sessions.topFrame(client, id, 5, thread)["id"].asInt
 
             // the worker's service answers once its own fiber, which the stop held, has done its work
             sessions.request(id, 6, "evaluate", """{"expression": "worker.finished()", "frameId": $frameId, "context": "repl"}""")
@@ -1940,25 +1666,8 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a stopped program steps into a call and out of it, and continue runs it to its exit`() {
-        CompilerTestSupport.configure()
-        val stops = source("Stops.x", STOPS.trimIndent())
-        val path = directory.resolve("Stops.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Stops", stops)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Stops", "moduleUri": "$stops"}""")
-            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 5}]}""")
-            sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
+        debugging("Stops", STOPS) {
+            val thread = stopAt(5)
             var request = 5
 
             /** Steps the fiber and returns the reason of the stop where the step ends, and its stack. */
@@ -1969,9 +1678,7 @@ class EmbeddedExecutionTest {
                 sessions.request(id, request++, "stackTrace", """{"threadId": $thread}""")
                 val frames =
                     client
-                        .until(id) { it.response == "stackTrace" }
-                        .last()["body"]
-                        .asJsonObject["stackFrames"]
+                        .responseBody(id, "stackTrace")["stackFrames"]
                         .asJsonArray
                         .map { it.asJsonObject["name"].asString to it.asJsonObject["line"].asInt }
                 return stopped.last()["body"].asJsonObject["reason"].asString to frames.take(2)
@@ -2007,12 +1714,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 2, "launch", """{"module": "Counters", "moduleUri": "$counters"}""")
             sessions.request(id, 3, "setBreakpoints", firstAt(1000))
             sessions.request(id, 4, "configurationDone")
-            val thread =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject["threadId"]
-                    .asInt
+            val thread = client.eventBody(id, "stopped")["threadId"].asInt
 
             sessions.request(id, 5, "setBreakpoints", firstAt(1500))
             sessions.request(id, 6, "continue", """{"threadId": $thread, "singleThread": true}""")
@@ -2040,17 +1742,8 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a conditional breakpoint, a logpoint, an exception class and exceptionInfo work on a real program`() {
-        CompilerTestSupport.configure()
-        val logs = source("Logs.x", LOGS.trimIndent())
-        val path = directory.resolve("Logs.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Logs", logs)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Logs", "moduleUri": "$logs"}""")
+        debugging("Logs", LOGS) {
+            sessions.request(id, 2, "launch", """{"module": "Logs", "moduleUri": "$uri"}""")
             sessions.request(
                 id,
                 3,
@@ -2067,25 +1760,14 @@ class EmbeddedExecutionTest {
             sessions.request(id, 5, "configurationDone")
 
             // the second hit where i is even
-            val stopped = client.until(id) { it.event == "stopped" }.last()["body"].asJsonObject
+            val stopped = client.eventBody(id, "stopped")
             assertThat(stopped["reason"].asString).isEqualTo("breakpoint")
             val thread = stopped["threadId"].asInt
-            sessions.request(id, 6, "stackTrace", """{"threadId": $thread}""")
-            val frame =
-                client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
-                    .asJsonArray
-                    .first()
-                    .asJsonObject["id"]
-                    .asInt
+            val frame = sessions.topFrame(client, id, 6, thread)["id"].asInt
             sessions.request(id, 7, "evaluate", """{"expression": "i", "frameId": $frame, "context": "watch"}""")
             assertThat(
                 client
-                    .until(id) { it.response == "evaluate" }
-                    .last()["body"]
-                    .asJsonObject["result"]
+                    .responseBody(id, "evaluate")["result"]
                     .asString,
             ).isEqualTo("2")
 
@@ -2099,7 +1781,7 @@ class EmbeddedExecutionTest {
             val exception = untilException.last()["body"].asJsonObject
             assertThat(exception["reason"].asString).isEqualTo("exception")
             sessions.request(id, 9, "exceptionInfo", """{"threadId": ${exception["threadId"].asInt}}""")
-            val info = client.until(id) { it.response == "exceptionInfo" }.last()["body"].asJsonObject
+            val info = client.responseBody(id, "exceptionInfo")
             assertThat(listOf(info["exceptionId"].asString, info["description"].asString, info["breakMode"].asString))
                 .containsExactly("IllegalArgument", "bad 6", "unhandled")
             assertThat(info["details"].asJsonObject["stackTrace"].asString).contains("check").doesNotContain("runner.x")
@@ -2112,23 +1794,11 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `an uncaught exception stops a debugged program where it is thrown, with the exception among the variables`() {
-        CompilerTestSupport.configure()
-        val throws = source("Throws.x", THROWS.trimIndent())
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Throws", throws)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Throws", "moduleUri": "$throws"}""")
+        debugging("Throws", THROWS) {
+            sessions.request(id, 2, "launch", """{"module": "Throws", "moduleUri": "$uri"}""")
             sessions.request(id, 3, "setExceptionBreakpoints", """{"filters": ["uncaught"]}""")
             sessions.request(id, 4, "configurationDone")
-            val stopped =
-                client
-                    .until(id) { it.event == "stopped" }
-                    .last()["body"]
-                    .asJsonObject
+            val stopped = client.eventBody(id, "stopped")
             assertThat(stopped["reason"].asString).isEqualTo("exception")
             assertThat(stopped["text"].asString).startsWith("IllegalArgument").endsWith(": uncaught one")
             val thread = stopped["threadId"].asInt
@@ -2136,9 +1806,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
             val top =
                 client
-                    .until(id) { it.response == "stackTrace" }
-                    .last()["body"]
-                    .asJsonObject["stackFrames"]
+                    .responseBody(id, "stackTrace")["stackFrames"]
                     .asJsonArray
                     .first()
                     .asJsonObject
@@ -2146,9 +1814,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 6, "scopes", """{"frameId": ${top["id"].asInt}}""")
             val reference =
                 client
-                    .until(id) { it.response == "scopes" }
-                    .last()["body"]
-                    .asJsonObject["scopes"]
+                    .responseBody(id, "scopes")["scopes"]
                     .asJsonArray
                     .single()
                     .asJsonObject["variablesReference"]
@@ -2156,9 +1822,7 @@ class EmbeddedExecutionTest {
             sessions.request(id, 7, "variables", """{"variablesReference": $reference}""")
             val first =
                 client
-                    .until(id) { it.response == "variables" }
-                    .last()["body"]
-                    .asJsonObject["variables"]
+                    .responseBody(id, "variables")["variables"]
                     .asJsonArray
                     .first()
                     .asJsonObject
@@ -2176,16 +1840,8 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a debugged program stops on entry in its own code, and pause stops it while it runs`() {
-        CompilerTestSupport.configure()
-        val spins = source("Spins.x", SPINS.trimIndent())
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Spins", spins)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Spins", "moduleUri": "$spins", "stopOnEntry": true}""")
+        debugging("Spins", SPINS) {
+            sessions.request(id, 2, "launch", """{"module": "Spins", "moduleUri": "$uri", "stopOnEntry": true}""")
             sessions.request(id, 3, "configurationDone")
             val entry = client.until(id) { it.event == "stopped" }
             val stopped = entry.last()["body"].asJsonObject
@@ -2199,9 +1855,7 @@ class EmbeddedExecutionTest {
                 sessions.request(id, request, "stackTrace", """{"threadId": $thread}""")
                 val frame =
                     client
-                        .until(id) { it.response == "stackTrace" }
-                        .last()["body"]
-                        .asJsonObject["stackFrames"]
+                        .responseBody(id, "stackTrace")["stackFrames"]
                         .asJsonArray
                         .first()
                         .asJsonObject
@@ -2257,17 +1911,8 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `a debug launch waits for configurationDone however late it comes, and the breakpoint set before it stops the program`() {
-        CompilerTestSupport.configure()
-        val module = source("Runs.x", RUNS.trimIndent())
-        val path = directory.resolve("Runs.x").toString()
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Runs", module)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
-            sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$module"}""")
+        debugging("Runs", RUNS) {
+            sessions.request(id, 2, "launch", """{"module": "Runs", "moduleUri": "$uri"}""")
             // the session handles its requests in order, so the launch has asked for its build once this is answered;
             // the compiler builds in order too, so the launch's build has finished once this later one has
             sessions.request(id, 3, "threads")
@@ -2277,7 +1922,7 @@ class EmbeddedExecutionTest {
             // the client sets its breakpoint only now, after the build, and the program has waited for it
             sessions.request(id, 4, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": 21}]}""")
             sessions.request(id, 5, "configurationDone")
-            val stop = client.until(id) { it.event == "stopped" }.last()["body"].asJsonObject
+            val stop = client.eventBody(id, "stopped")
             assertThat(stop["reason"].asString).isEqualTo("breakpoint")
             sessions.request(id, 6, "continue", """{"threadId": ${stop["threadId"].asInt}}""")
             val rest = client.until(id) { it.event == "terminated" }
@@ -2288,15 +1933,7 @@ class EmbeddedExecutionTest {
 
     @Test
     fun `terminating a debug session while its module builds keeps the program from starting`() {
-        CompilerTestSupport.configure()
-        val late = source("Waits.x", "module Waits { void run() { @Inject Console console; console.print(\"started\"); } }")
-        val client = DebugClient()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            adapter.replaceSourceModules(listOf(XdkSourceModule("Waits", late)))
-            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
-            val id = sessions.start().sessionId
-            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+        debugging("Waits", "module Waits { void run() { @Inject Console console; console.print(\"started\"); } }") {
             // without configurationDone, the launch waits for it until the session ends
             sessions.request(id, 2, "launch", """{"module": "Waits"}""")
             sessions.request(id, 3, "terminate")
@@ -2357,9 +1994,7 @@ class EmbeddedExecutionTest {
                     sessions.request(id, 5, "stackTrace", """{"threadId": $thread}""")
                     val frame =
                         client
-                            .until(id) { it.response == "stackTrace" }
-                            .last()["body"]
-                            .asJsonObject["stackFrames"]
+                            .responseBody(id, "stackTrace")["stackFrames"]
                             .asJsonArray
                             .first()
                             .asJsonObject
@@ -2388,9 +2023,7 @@ class EmbeddedExecutionTest {
                         sessions.request(id, 6, "evaluate", """{"expression": "n * 2 + 1", "frameId": $frame, "context": "watch"}""")
                         assertThat(
                             client
-                                .until(id) { it.response == "evaluate" }
-                                .last()["body"]
-                                .asJsonObject["result"]
+                                .responseBody(id, "evaluate")["result"]
                                 .asString,
                         ).isEqualTo("43")
                         sessions.request(id, 7, "evaluate", """{"expression": "spin()", "frameId": $frame, "context": "repl"}""")
@@ -2796,18 +2429,7 @@ class EmbeddedExecutionTest {
             """.trimIndent()
         val contributions = source("Contributions.x", contributionsText)
         val annotated = source("Annotated.x", annotatedText)
-        val output = StringBuffer()
-        val exited = CompletableFuture<RunExitedParams>()
-        val client =
-            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
-                override fun runOutput(params: RunOutputParams) {
-                    output.append(params.text)
-                }
-
-                override fun runExited(params: RunExitedParams) {
-                    exited.complete(params)
-                }
-            }
+        val client = RunClient()
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(
@@ -2824,8 +2446,8 @@ class EmbeddedExecutionTest {
                 assertThat(
                     runs.run(RunParams(module = "Annotated", runId = "contributed")).awaited().runId,
                 ).isEqualTo("contributed")
-                assertThat(exited.awaited().error).isNull()
-                assertThat(output.toString()).contains("run from an annotation")
+                assertThat(client.exits.awaited()!!.error).isNull()
+                assertThat(client.output.toString()).contains("run from an annotation")
             }
         }
     }
@@ -2869,6 +2491,11 @@ class EmbeddedExecutionTest {
             sessionId: String,
             last: (JsonObject) -> Boolean,
         ) = debug.until(sessionId, last)
+
+        fun responseBody(
+            sessionId: String,
+            command: String,
+        ) = debug.responseBody(sessionId, command)
     }
 
     private data class Outcome(
@@ -3323,13 +2950,52 @@ class EmbeddedExecutionTest {
             """
     }
 
+    /**
+     * Runs [test] with an initialized debug session of the module [name], whose source [text] is the test directory's
+     * [name].x and the only source module of an adapter whose workspace is the directory, on the class's worker.
+     */
+    private fun debugging(
+        name: String,
+        text: String,
+        test: Debugging.() -> Unit,
+    ) {
+        CompilerTestSupport.configure()
+        val uri = source("$name.x", text.trimIndent())
+        val client = DebugClient()
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceSourceModules(listOf(XdkSourceModule(name, uri)))
+            val sessions = DebugSessions(EmbeddedRuns(adapter, { client }, worker), { client })
+            val id = sessions.start().sessionId
+            sessions.request(id, 1, "initialize", """{"adapterID": "xtc"}""")
+            Debugging(name, uri, directory.resolve("$name.x").toString(), adapter, client, sessions, id).test()
+        }
+    }
+
+    /** A debug session that [debugging] started, of the module [name] at [uri], whose file's [path] breakpoints name. */
+    private class Debugging(
+        val name: String,
+        val uri: String,
+        val path: String,
+        val adapter: XdkAdapter,
+        val client: DebugClient,
+        val sessions: DebugSessions,
+        val id: String,
+    ) {
+        /** Launches the module with a breakpoint on its [line], ends the configuration, and answers the messages up to the stop. */
+        fun launchTo(line: Int): List<JsonObject> {
+            sessions.request(id, 2, "launch", """{"module": "$name", "moduleUri": "$uri"}""")
+            sessions.request(id, 3, "setBreakpoints", """{"source": {"path": "$path"}, "breakpoints": [{"line": $line}]}""")
+            sessions.request(id, 4, "configurationDone")
+            return client.until(id) { it.event == "stopped" }
+        }
+
+        /** Launches the module to a stop at the breakpoint on its [line], and answers the stopped fiber. */
+        fun stopAt(line: Int): Int = launchTo(line).last()["body"].asJsonObject["threadId"].asInt
+    }
+
     private fun source(
         path: String,
         text: String,
-    ): String {
-        val file = directory.resolve(path).toFile()
-        file.parentFile.mkdirs()
-        file.writeText(text)
-        return file.toURI().toString()
-    }
+    ): String = writeSource(directory, path, text)
 }
