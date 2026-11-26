@@ -52,8 +52,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         }
 
         val document = editor.document
-        val caretModel = editor.caretModel
-        val caretOffset = caretModel.offset
+        val caretOffset = editor.caretModel.offset
         val currentLine = document.getLineNumber(caretOffset)
         logger.warn(
             "postProcessEnter: file=${file.virtualFile?.path} caretOffset=$caretOffset line=$currentLine " +
@@ -62,48 +61,53 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                 "next='${safeLine(document, currentLine + 1)}'",
         )
 
-        val fix =
-            when {
-                isCompactEmptyBlockSplit(document, currentLine) -> {
-                    rewriteEmptyBlock(document, currentLine - 1, currentLine, currentLine + 1)
-                }
+        val split = blockSplit(document, currentLine) ?: return EnterHandlerDelegate.Result.Continue
+        logger.info("postProcessEnter: ${repair(file, editor, split)}")
+        return EnterHandlerDelegate.Result.Stop
+    }
 
-                isClosingBraceCaretAfterBadSplit(document, currentLine) -> {
-                    rewriteEmptyBlock(document, currentLine - 2, currentLine - 1, currentLine)
-                }
-
-                isLineMovedIntoBlock(document, currentLine) -> {
-                    Triple(currentLine - 1, currentLine, currentLine + 1)
-                }
-
-                else -> {
-                    null
-                }
+    /** The declaration, body and closing lines of the block split that Enter at [currentLine] left; null when it left none. */
+    private fun blockSplit(
+        document: Document,
+        currentLine: Int,
+    ): Triple<Int, Int, Int>? =
+        when {
+            isCompactEmptyBlockSplit(document, currentLine) -> {
+                rewriteEmptyBlock(document, currentLine - 1, currentLine, currentLine + 1)
             }
 
-        if (fix == null) {
-            return EnterHandlerDelegate.Result.Continue
+            isClosingBraceCaretAfterBadSplit(document, currentLine) -> {
+                rewriteEmptyBlock(document, currentLine - 2, currentLine - 1, currentLine)
+            }
+
+            isLineMovedIntoBlock(document, currentLine) -> {
+                Triple(currentLine - 1, currentLine, currentLine + 1)
+            }
+
+            else -> {
+                null
+            }
         }
 
-        val (declarationLine, bodyLine, closingLine) = fix
+    /** Indents [split]'s body and closing lines from its declaration's, puts the caret in the body, and says what it did. */
+    private fun repair(
+        file: PsiFile,
+        editor: Editor,
+        split: Triple<Int, Int, Int>,
+    ): String {
+        val document = editor.document
+        val (declarationLine, bodyLine, closingLine) = split
         val declarationIndent = lineIndent(document, declarationStart(declarationLine) { lineText(document, it) })
         val bodyIndent = declarationIndent + indentUnit(file)
 
         replaceLineWithIndent(document, bodyLine, bodyIndent, suffix = lineText(document, bodyLine).trimStart())
         replaceLineWithIndent(document, closingLine, declarationIndent, suffix = "}")
 
-        val bodyCaretOffset = document.getLineStartOffset(bodyLine) + bodyIndent.length
-        caretModel.moveToOffset(bodyCaretOffset)
+        editor.caretModel.moveToOffset(document.getLineStartOffset(bodyLine) + bodyIndent.length)
         editor.scrollingModel.scrollToCaret(ScrollType.RELATIVE)
         PsiDocumentManager.getInstance(file.project).commitDocument(document)
-
-        logger.info(
-            "postProcessEnter: repaired block split " +
-                "declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
-                "declarationIndent='${visualizeIndent(declarationIndent)}' bodyIndent='${visualizeIndent(bodyIndent)}'",
-        )
-
-        return EnterHandlerDelegate.Result.Stop
+        return "repaired block split declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
+            "declarationIndent='${visualizeIndent(declarationIndent)}' bodyIndent='${visualizeIndent(bodyIndent)}'"
     }
 
     private fun rewriteEmptyBlock(
@@ -235,35 +239,8 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
             WriteCommandAction.runWriteCommandAction(project) {
                 val document = editor.document
                 val currentLine = document.getLineNumber(editor.caretModel.offset)
-                val fix =
-                    when {
-                        isCompactEmptyBlockSplit(document, currentLine) -> {
-                            rewriteEmptyBlock(
-                                document,
-                                currentLine - 1,
-                                currentLine,
-                                currentLine + 1,
-                            )
-                        }
-
-                        isClosingBraceCaretAfterBadSplit(document, currentLine) -> {
-                            rewriteEmptyBlock(
-                                document,
-                                currentLine - 2,
-                                currentLine - 1,
-                                currentLine,
-                            )
-                        }
-
-                        isLineMovedIntoBlock(document, currentLine) -> {
-                            Triple(currentLine - 1, currentLine, currentLine + 1)
-                        }
-
-                        else -> {
-                            null
-                        }
-                    }
-                if (fix == null) {
+                val split = blockSplit(document, currentLine)
+                if (split == null) {
                     logger.warn(
                         "deferredRepair: no fix at line=$currentLine " +
                             "prev='${safeLine(document, currentLine - 1)}' " +
@@ -272,25 +249,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                     )
                     return@runWriteCommandAction
                 }
-
-                val (declarationLine, bodyLine, closingLine) = fix
-                val declarationIndent = lineIndent(document, declarationStart(declarationLine) { lineText(document, it) })
-                val bodyIndent = declarationIndent + indentUnit(file)
-
-                replaceLineWithIndent(document, bodyLine, bodyIndent, suffix = lineText(document, bodyLine).trimStart())
-                replaceLineWithIndent(document, closingLine, declarationIndent, suffix = "}")
-
-                val bodyCaretOffset = document.getLineStartOffset(bodyLine) + bodyIndent.length
-                editor.caretModel.moveToOffset(bodyCaretOffset)
-                editor.scrollingModel.scrollToCaret(ScrollType.RELATIVE)
-                PsiDocumentManager.getInstance(project).commitDocument(document)
-
-                logger.warn(
-                    "deferredRepair: repaired block split " +
-                        "declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
-                        "declarationIndent='${visualizeIndent(declarationIndent)}' " +
-                        "bodyIndent='${visualizeIndent(bodyIndent)}'",
-                )
+                logger.warn("deferredRepair: ${repair(file, editor, split)}")
             }
         }
     }

@@ -1,18 +1,11 @@
 package org.xtclang.idea.lsp
 
-import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import org.xtclang.idea.XtcProjectAction
 
 /** The existing settings listener owns restarting and reopening the project's documents. */
-class SelectLanguageAdapterAction : DumbAwareAction() {
-    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
-
-    override fun update(event: AnActionEvent) {
-        event.presentation.isEnabled = event.project != null
-    }
-
+class SelectLanguageAdapterAction : XtcProjectAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
         val selected = LanguageAdapter.fromSetting(LanguageServiceSettings.validated(project).adapter)
