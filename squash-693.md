@@ -1,6 +1,6 @@
 # Squashing #693 into reviewable pull requests
 
-A plan only: making it changed nothing in #693. It covers the 502 commits of `errs/full-testable-lsp-20261009` over `master` (tip `4a746eb12e`, master `fb7ba82052`, 2026-11-26), numbered 1 to 502 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-502 came after, and were placed by the same rules. One is open on master as its own PR: 459, with 502 its review round, is #802, which leaves #693 when it merges. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480.
+A plan only: making it changed nothing in #693. It covers the 509 commits of `errs/full-testable-lsp-20261009` over `master` (tip `67235f011c`, master `fb7ba82052`, 2026-11-26), numbered 1 to 509 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-509 came after, and were placed by the same rules. One is open on master as its own PR: 459, with 502 its review round, is #802, which leaves #693 when it merges. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480.
 
 It proposes 15 pull requests, each of which changes either only files outside lang/ (xvm only: X1-X5) or only files in lang/ (lang only: L1-L10), merged in one order. To get there, the commits are first sorted into 13 topics (P1-P13), the commits of a topic that implement or fix the same thing, however far apart, are grouped to be joined, and every commit is then divided at lang/: its other files go to its topic's xvm PR, its lang/ files to its topic's lang PR.
 
@@ -15,10 +15,10 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 5 | **X5** | files outside lang/ | Build, CI and test tooling outside lang: CI test tiers, build checks, test hang detection, the LSP4IJ and IntelliJ versions, PR previews | X4 | P4, P7, P12, P13 | 26 | 1.7k / 985 |
 | 6 | **L1** | lang/ | Language server: the server, its protocol, document synchronization, Tree-sitter and the mock adapter | X3, X5 | P4 | 38 | 10.1k / 13.0k |
 | 7 | **L2** | lang/ | Language server: the compiler adapter's core, compiling, discovery, diagnostics and workspace pulls | L1 | P1, P2, P3, P4 | 39 | 9.3k / 17.6k |
-| 8 | **L3** | lang/ | Language server: the semantic model and read-only editor features | L2 | P5 | 28 | 5.9k / 6.7k |
-| 9 | **L4** | lang/ | Language server: code actions and refactorings | L3 | P6 | 38 | 9.3k / 13.1k |
+| 8 | **L3** | lang/ | Language server: the semantic model and read-only editor features | L2 | P5 | 33 | 6.0k / 7.1k |
+| 9 | **L4** | lang/ | Language server: code actions and refactorings | L3 | P6 | 39 | 9.3k / 13.1k |
 | 10 | **L5** | lang/ | Language server: the XDK's library sources and the XDK workspace | L3 | P11 | 22 | 3.0k / 3.2k |
-| 11 | **L6** | lang/ | IntelliJ plugin, on LSP4IJ 0.30.1 | L4, L5, X5 | P7 | 73 | 10.3k / 6.4k |
+| 11 | **L6** | lang/ | IntelliJ plugin, on LSP4IJ 0.30.1 | L4, L5, X5 | P7 | 74 | 10.4k / 6.6k |
 | 12 | **L7** | lang/ | VS Code extension | L4, L5 | P8 | 12 | 2.7k / 341 |
 | 13 | **L8** | lang/ | Embedded build, run and tests in the language server and both editors | X4, L6, L7 | P9 | 49 | 9.6k / 8.8k |
 | 14 | **L9** | lang/ | Debugging: the DAP server, debug sessions, launch and attach, and both editors' debug UI | X4, L8 | P10 | 48 | 8.6k / 11.0k |
@@ -46,16 +46,16 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 | P2 | Compiler host API: compilation outcomes, snapshots, syntax and semantic facts | P1 | no | 8 | 4 | 5.8k / 3.1k |
 | P3 | Compiler analysis of incomplete source: recovery, cursor fitting, declarations | P2 | no | 6 | 2 | 5.7k / 2.0k |
 | P4 | Language server core: protocol, document sync, compile pipeline, discovery, diagnostics | P3 | yes, once 5 commits' other files move | 42 | 15 | 19.1k / 28.0k |
-| P5 | Language server: semantic model and read-only editor features | P4 | yes | 27 | 8 | 6.0k / 6.7k |
-| P6 | Language server: code actions and refactorings | P5 | yes | 37 | 10 | 9.3k / 13.1k |
-| P7 | IntelliJ plugin, built against LSP4IJ 0.30.1 | P6 | nearly | 72 | 26 | 10.4k / 6.5k |
+| P5 | Language server: semantic model and read-only editor features | P4 | yes | 32 | 8 | 6.1k / 7.1k |
+| P6 | Language server: code actions and refactorings | P5 | yes | 38 | 10 | 9.3k / 13.1k |
+| P7 | IntelliJ plugin, built against LSP4IJ 0.30.1 | P6 | nearly | 73 | 27 | 10.5k / 6.7k |
 | P8 | VS Code extension | P6 | yes | 11 | 7 | 2.7k / 341 |
 | P9 | Embedded build, run and tests from the editors | P4 (and P7, P8 for the editor parts) | no | 55 | 23 | 10.6k / 9.7k |
 | P10 | Debugger: runtime debugger, DAP server and the editors' debugging | P9 | no | 60 | 36 | 17.2k / 15.2k |
 | P11 | The XDK's library sources and the XDK workspace | P5 | yes, once 1 commit's other files move | 23 | 9 | 3.4k / 3.4k |
 | P12 | Test infrastructure: playbooks, scenarios, tours and their container | P7-P11 | no | 115 | 21 | 3.2k / 57.5k |
 | P13 | Documentation, build and CI | the PRs it documents | no | 32 | 5 | 5.8k / 372 |
-| | **Total** | | | **502** | **170** | |
+| | **Total** | | | **509** | **171** | |
 
 The topics group the commits; the PRs above divide them at lang/. Sizes count added lines, with commit 8 divided by package (below). They leave out only the two files that later commits delete whole (XdkColorPrototype, XdkMonikers); the rest of what the pairs in finding 2 take back is still counted, so squashed PRs come out somewhat smaller. Tests are most of every PR's size: reviewers read the main code and skim the tests.
 
@@ -230,6 +230,7 @@ These commits change files outside the components of the PR they are placed in, 
 - 493 `07ed1be157` Compress the playbook runs' traces once a run ends, and keep whole traces only for failures and the newest passing run, in P12 (+367; also touches: build, intellij, vscode)
 - 502 `4a746eb12e` Allow contribution arguments and shorthand defaults that match the explicit constructor, in P1 (+400; also touches: xdk)
 
+
 ## Splitting commit 8
 
 | Goes to | Main lines | Test lines | What |
@@ -317,7 +318,7 @@ Kept as they are:
 
 **Scope.** lsp-server: the semantic model (SemanticModelBuilder, SemanticModel, PartialSemanticModel), cursor queries, hover, definition, references, symbols, semantic tokens, folding, inlay hints, code lens, completion, signature help, linked editing and formatting.
 
-**Builds on** P4. **Commits:** 27 now, about 8 after squashing. **Added lines:** 5,971 main, 6,727 tests.
+**Builds on** P4. **Commits:** 32 now, about 8 after squashing. **Added lines:** 6,077 main, 7,114 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -325,7 +326,7 @@ Kept as they are:
 | Hover, inlay hint and code lens presentation fixes | 132 `6ab8c3de37` Name a type by what it is when hovering its name<br>156 `7add8b1385` Give a constructor's finally block no references lens of its own<br>157 `5a331cc495` Name an inferred local's type in its hint as the source names it | Small presentation fixes of the read-only features: a type's hover, a constructor's finally block lens, an inferred local's hint. |
 | Formatting: indentation while typing, switches, on-type formatting | 31 `c6883e0b1a` Keep indentation while typing, and lay out switches as the XDK does<br>135 `ff5def42b4` Share the formatter's empty-block skeleton and whitespace edits<br>186 `5c2da6b8d9` Answer on-type formatting without waiting for the change to compile | The formatter's typing support, its shared whitespace edits and on-type formatting without waiting for a compile. |
 | Bind more names in the semantic model | 441 `2043b408dd` Bind a local or parameter used for its formal type, as in t1.DataType, to its declaration<br>442 `803c777033` Make the _ placeholder no occurrence in the semantic model<br>443 `9f9f80c4c4` Bind the names of a method's multiple return values to the values they declare<br>444 `d342a434a5` Bind this in a lazy property's calc() and super in a method reference to what they name<br>453 `3835882b93` Bind a primary constructor's parameter passed in an extends or incorporates clause to the property it declares<br>454 `e1394ddc89` Keep the initializer facts of a property declared in a loop's body, such as a static local<br>455 `5654db07ad` Bind a local or parameter used as a type, as in new Pair<String, type>(), to its declaration<br>456 `cd5790e82e` Declare the names of a function type's values in the semantic model, as of its return values in a typedef<br>457 `1b6ab24cda` Bind a reserved name such as this:class in a property's accessor, as in a method of the class<br>458 `47ed5ab915` Bind this.Outer in a virtual child to ecstasy's Outer interface, the class its name spells | each adds a kind of binding; the compiler facts that 441, 443, 444 and 454 add go to X2 |
-| The semantic model's census, and the bindings of 2026-11-25 | 481 `7c2a268023` Keep the semantic model's census of the libraries as a heavy test, which fails on an unbound occurrence<br>483 `7cb276a8bc` Bind a formal type's child, as Element in CompileType.Element, to the formal type its constraint declares<br>486 `1298a24dcb` Count the dispatch chains that hold an unproven identity in the semantic model's census<br>487 `f79a8adb7e` Bind a formal type that the compiler adds to a mixin or annotation to the contribution's, as Inner in annotation Cap into Holder<br>489 `63b67a2278` Count the bindings that no proof can place in the semantic model's census, and fail on one | the census of the 21 libraries as a heavy test, counting dispatch chains and unplaceable bindings, and the formal children and implicit formals it found unbound |
+| The semantic model's censuses, and the bindings they found missing | 481 `7c2a268023` Keep the semantic model's census of the libraries as a heavy test, which fails on an unbound occurrence<br>483 `7cb276a8bc` Bind a formal type's child, as Element in CompileType.Element, to the formal type its constraint declares<br>486 `1298a24dcb` Count the dispatch chains that hold an unproven identity in the semantic model's census<br>487 `f79a8adb7e` Bind a formal type that the compiler adds to a mixin or annotation to the contribution's, as Inner in annotation Cap into Holder<br>489 `63b67a2278` Count the bindings that no proof can place in the semantic model's census, and fail on one<br>503 `fab927046b` Count in the semantic model's census what hover, definition, references and highlights miss at a name<br>504 `743f6944a3` Bind the parameters of a constructor with a finally block, in its body and named arguments, to their declarations<br>505 `938326f32e` Declare a label as a symbol, which a break, a continue and its variable, as Loop in Loop.first, refer to<br>507 `6811b1e41c` Count in the editor's census the references whose declaration is in no source of the workspace<br>508 `5390b9e736` Compile the census's libraries as one workspace folder, as an editor that opens the repository does | the census of the 21 libraries as a heavy test, counting dispatch chains and unplaceable bindings, and the formal children and implicit formals it found unbound; the editor's census of what hover, definition, references and highlights miss, over the repository as one workspace folder, and the parameters of a constructor with a finally block and labels it found unbound |
 
 Kept as they are:
 
@@ -337,7 +338,7 @@ Kept as they are:
 
 **Scope.** lsp-server: quick fixes, rename (with its facts and guards), moves, extraction, inlining, safe delete and the proof compiles that check code actions. Commit 8's XdkProjectQueries, XdkRename, CompilerRenameFacts, CompilerMissingMethod, XdkMissingMethods, XdkMissingDeclarations, XdkMethodExtraction, XdkLocalExtraction, XdkTypeMoves, XdkLocalInline, XdkMemberInline, XdkMemberActions and CompilerMemberAction with their tests.
 
-**Builds on** P5. **Commits:** 37 now, about 10 after squashing. **Added lines:** 9,341 main, 13,114 tests.
+**Builds on** P5. **Commits:** 38 now, about 10 after squashing. **Added lines:** 9,361 main, 13,163 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -350,7 +351,7 @@ Kept as they are:
 | Quick fixes: a const with toString, Create class, declared action kinds | 145 `82000ffa28` Offer code actions in a module that has a const with a toString<br>176 `af943787c7` Offer Create class for the diagnostic of a statement that constructs it<br>211 `54d79ab46f` Declare the code action kinds the language server's actions have | Small fixes and additions to the same quick-fix provider. |
 | Say what a change to a public declaration reaches outside the workspace | 436 `71225c7dd5` Say, when a rename or safe delete changes a public declaration, that modules outside the workspace are not changed<br>445 `dc2b9be3ab` Say, when a file move or rename or a plain rename changes a public declaration, that modules outside the workspace are not changed | renames, safe deletes and file moves say when a public declaration changes for modules outside it |
 | A client's cancellation reaches the adapter's work | 438 `6713328b8d` Let a client's cancellation of a rename, or of xtc/build, reach the adapter's work<br>451 `92d12985fc` Ask an adapter's work to stop on every cancellation of a converted result, also once the result is done | cancelling a rename or xtc/build stops the adapter's work, also once a result is converted |
-| Proofs of 2026-11-25: anonymous classes, runtime-implemented and union-merged methods | 482 `bf11748204` Prove an anonymous class's this and construction by the span of the type it constructs<br>484 `d4a9fa96db` Prove a union receiver's call of a method that the runtime implements, as a const's appendTo<br>485 `6cb431e844` Prove a call on a union receiver whose legs share one route, as toString on a Point?<br>488 `6792b111ae` Prove the methods that the compiler merges over a union, as those of an annotation into Class \| Method<br>490 `f7a679e1ed` Make the binding tests' must-stay-refused renames show that the proof refuses them, and for the reason they name | an anonymous class's this and constructors by the span and the constructor they pass to, calls whose union legs share a route or a runtime body, methods merged for an annotation into a union, and tests that the refusals that must stay are the proof's |
+| Proofs the census found missing: anonymous classes, runtime-implemented and union-merged methods, Referents | 482 `bf11748204` Prove an anonymous class's this and construction by the span of the type it constructs<br>484 `d4a9fa96db` Prove a union receiver's call of a method that the runtime implements, as a const's appendTo<br>485 `6cb431e844` Prove a call on a union receiver whose legs share one route, as toString on a Point?<br>488 `6792b111ae` Prove the methods that the compiler merges over a union, as those of an annotation into Class \| Method<br>490 `f7a679e1ed` Make the binding tests' must-stay-refused renames show that the proof refuses them, and for the reason they name<br>506 `3224b9de22` Prove the Referent that the compiler adds to a property with code or a Ref annotation by its property | an anonymous class's this and constructors by the span and the constructor they pass to, calls whose union legs share a route or a runtime body, methods merged for an annotation into a union, the Referent the compiler adds to a property by its property, and tests that the refusals that must stay are the proof's |
 
 Kept as they are:
 
@@ -360,7 +361,7 @@ Kept as they are:
 
 **Scope.** lang/intellij-plugin main and unit tests (not the playbook): the LSP4IJ integration, settings, restart, rename and move handlers, Undo of server edits, Project Errors, the Ecstasy PSI and editing, Code Style, live templates, tips and Got It tooltips. Commit 8's intellij-plugin/src/main and src/test, written against LSP4IJ 0.30.1 from the start.
 
-**Builds on** P6. **Commits:** 72 now, about 26 after squashing. **Added lines:** 10,354 main, 6,552 tests.
+**Builds on** P6. **Commits:** 73 now, about 27 after squashing. **Added lines:** 10,416 main, 6,711 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -381,6 +382,7 @@ Kept as they are:
 | The language server JVM's memory setting | 421 `0e3dba96e1` Choose how the language server's JVM uses memory: the JVM's default or a set maximum, or adaptive | a setting in both editors with its server side; divide by path |
 | Every IntelliJ settings page under one Ecstasy node | 425 `d558e9a095` Put every Ecstasy settings page of the IntelliJ plugin under Languages & Frameworks \| Ecstasy<br>427 `1f0db784b7` Fit IntelliJ's Language Service and Server Runtime pages to the Settings dialog, and show both in the user guide | one Ecstasy node in IntelliJ's settings, its pages fitted to the dialog |
 | Marks that LSP4IJ made before it connected a file's document (UP86) | 475 `071d15b31c` Take back an editor's marks that LSP4IJ made before it connected the file's document (UP86)<br>491 `bdb3ed8101` Count an unchanged diagnostic report's items from the report it names, which closes the UP86 bridge's gap | refreshes an editor's marks once the connected document holds its own report; lsp4ij#2231 and our fix #2232 would retire it |
+| Callers that a write action interrupted in the Call Hierarchy (UP88) | 509 `67235f011c` Show a method's callers when a write action interrupts the Call hierarchy's wait for them (UP88) | LSP4IJ 0.30.1's call hierarchy returns no children when a write action cancels its wait for the server; the provider rethrows the cancellation so IntelliJ asks again; redhat-developer/lsp4ij#2278 would retire it |
 
 Kept as they are:
 
@@ -1082,16 +1084,16 @@ Kept as they are:
 | 478 | `f152591cbd` | P13 | — | L10 | The user guide, with screenshots from the tours | Add an index of every page and section of the user guide to its landing page |
 | 479 | `e898c62217` | P13 | — | L10 | The user guide, with screenshots from the tours | Give the user guide's long sections subsections, and its index the third level |
 | 480 | `8069b702c8` | P13 | — | L10 | The user guide, with screenshots from the tours | Box the user guide's single screenshots with their captions, as its pairs are |
-| 481 | `7c2a268023` | P5 | — | L3 | The semantic model's census, and the bindings of 2026-11-25 | Keep the semantic model's census of the libraries as a heavy test, which fails on an unbound occurrence |
-| 482 | `bf11748204` | P6 | — | L4 | Proofs of 2026-11-25: anonymous classes, runtime-implemented and union-merged methods | Prove an anonymous class's this and construction by the span of the type it constructs |
-| 483 | `7cb276a8bc` | P5 | — | L3 | The semantic model's census, and the bindings of 2026-11-25 | Bind a formal type's child, as Element in CompileType.Element, to the formal type its constraint declares |
-| 484 | `d4a9fa96db` | P6 | — | L4 | Proofs of 2026-11-25: anonymous classes, runtime-implemented and union-merged methods | Prove a union receiver's call of a method that the runtime implements, as a const's appendTo |
-| 485 | `6cb431e844` | P6 | — | L4 | Proofs of 2026-11-25: anonymous classes, runtime-implemented and union-merged methods | Prove a call on a union receiver whose legs share one route, as toString on a Point? |
-| 486 | `1298a24dcb` | P5 | — | L3 | The semantic model's census, and the bindings of 2026-11-25 | Count the dispatch chains that hold an unproven identity in the semantic model's census |
-| 487 | `f79a8adb7e` | P5 | — | L3 | The semantic model's census, and the bindings of 2026-11-25 | Bind a formal type that the compiler adds to a mixin or annotation to the contribution's, as Inner in annotation Cap into Holder |
-| 488 | `6792b111ae` | P6 | — | L4 | Proofs of 2026-11-25: anonymous classes, runtime-implemented and union-merged methods | Prove the methods that the compiler merges over a union, as those of an annotation into Class \| Method |
-| 489 | `63b67a2278` | P5 | — | L3 | The semantic model's census, and the bindings of 2026-11-25 | Count the bindings that no proof can place in the semantic model's census, and fail on one |
-| 490 | `f7a679e1ed` | P6 | — | L4 | Proofs of 2026-11-25: anonymous classes, runtime-implemented and union-merged methods | Make the binding tests' must-stay-refused renames show that the proof refuses them, and for the reason they name |
+| 481 | `7c2a268023` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Keep the semantic model's census of the libraries as a heavy test, which fails on an unbound occurrence |
+| 482 | `bf11748204` | P6 | — | L4 | Proofs the census found missing: anonymous classes, runtime-implemented and union-merged methods, Referents | Prove an anonymous class's this and construction by the span of the type it constructs |
+| 483 | `7cb276a8bc` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Bind a formal type's child, as Element in CompileType.Element, to the formal type its constraint declares |
+| 484 | `d4a9fa96db` | P6 | — | L4 | Proofs the census found missing: anonymous classes, runtime-implemented and union-merged methods, Referents | Prove a union receiver's call of a method that the runtime implements, as a const's appendTo |
+| 485 | `6cb431e844` | P6 | — | L4 | Proofs the census found missing: anonymous classes, runtime-implemented and union-merged methods, Referents | Prove a call on a union receiver whose legs share one route, as toString on a Point? |
+| 486 | `1298a24dcb` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Count the dispatch chains that hold an unproven identity in the semantic model's census |
+| 487 | `f79a8adb7e` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Bind a formal type that the compiler adds to a mixin or annotation to the contribution's, as Inner in annotation Cap into Holder |
+| 488 | `6792b111ae` | P6 | — | L4 | Proofs the census found missing: anonymous classes, runtime-implemented and union-merged methods, Referents | Prove the methods that the compiler merges over a union, as those of an annotation into Class \| Method |
+| 489 | `63b67a2278` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Count the bindings that no proof can place in the semantic model's census, and fail on one |
+| 490 | `f7a679e1ed` | P6 | — | L4 | Proofs the census found missing: anonymous classes, runtime-implemented and union-merged methods, Referents | Make the binding tests' must-stay-refused renames show that the proof refuses them, and for the reason they name |
 | 491 | `bdb3ed8101` | P7 | — | L6 | Marks that LSP4IJ made before it connected a file's document (UP86) | Count an unchanged diagnostic report's items from the report it names, which closes the UP86 bridge's gap |
 | 492 | `8f1b46c770` | P12 | — | L10 | IntelliJ tour step fixes | Press the tour's Parameter info once the file's code lenses are in place, as the Warnings step's popup does |
 | 493 | `07ed1be157` | P12 | X5 | L10 | Playbook traces: compressed, kept whole for failures and the newest pass | Compress the playbook runs' traces once a run ends, and keep whole traces only for failures and the newest passing run |
@@ -1104,3 +1106,10 @@ Kept as they are:
 | 500 | `d042ec2845` | P8 | — | L7 | npm dependencies of master's #805 | Bring #805's npm changes into the VS Code extension's package.json, and its package-lock.json from npm |
 | 501 | `fbed837613` | P13 | X5 | L10 | Opt-in static analysis of lang: detekt and CPD | Add opt-in static analysis to lang: detekt over its Kotlin, and CPD over its Kotlin and TypeScript |
 | 502 | `4a746eb12e` | P1 | #802 | — | Unused constructor arguments and defaults (open PR #802) | Allow contribution arguments and shorthand defaults that match the explicit constructor |
+| 503 | `fab927046b` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Count in the semantic model's census what hover, definition, references and highlights miss at a name |
+| 504 | `743f6944a3` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Bind the parameters of a constructor with a finally block, in its body and named arguments, to their declarations |
+| 505 | `938326f32e` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Declare a label as a symbol, which a break, a continue and its variable, as Loop in Loop.first, refer to |
+| 506 | `3224b9de22` | P6 | — | L4 | Proofs the census found missing: anonymous classes, runtime-implemented and union-merged methods, Referents | Prove the Referent that the compiler adds to a property with code or a Ref annotation by its property |
+| 507 | `6811b1e41c` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Count in the editor's census the references whose declaration is in no source of the workspace |
+| 508 | `5390b9e736` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Compile the census's libraries as one workspace folder, as an editor that opens the repository does |
+| 509 | `67235f011c` | P7 | — | L6 | Callers that a write action interrupted in the Call Hierarchy (UP88) | Show a method's callers when a write action interrupts the Call hierarchy's wait for them (UP88) |
