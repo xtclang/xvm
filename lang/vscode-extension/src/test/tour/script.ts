@@ -79,7 +79,7 @@
  *
  * Debug adapter (XtcDebugServer)
  * | launch, configurationDone, threads, stackTrace, scopes, variables | step "Debug"; check "Restart debugging" |
- * | setBreakpoints (line, condition, disabled)| steps "A conditional breakpoint", "Frames and the call stack"; check "Disable a breakpoint" |
+ * | setBreakpoints (line, condition, disabled)| steps "A conditional breakpoint", "Frames and the call stack", "Breakpoints while you edit"; check "Disable a breakpoint" |
  * | setBreakpoints (hitCondition)             | check "A hit count"                                               |
  * | setBreakpoints (logMessage)               | step "A logpoint"                                                 |
  * | setFunctionBreakpoints                    | step "A function breakpoint"                                      |
@@ -2741,6 +2741,55 @@ async function debugging(tour: Tour): Promise<void> {
             () => tour.dapResponses('evaluate').slice(-2).map(each => JSON.stringify(each.body)));
         await tour.stopAll();
         vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
+    });
+    // displayState's separator, which the game prints once it is dealt, and the deal's first line, where the session stops first
+    const separator = await lineOf(eights, 'console.print(GameConstants.DISPLAY_SEPARATOR);');
+    const dealt = await lineOf(eights, 'Deck deck = new Deck(GameConstants.DECK_NAME);');
+    await tour.shot({
+        title: 'Breakpoints while you edit',
+        caption: 'A breakpoint follows its line as a line is typed above it, and the program, built before the edit, stops there all the same.',
+        feature: 'setBreakpoints',
+        focus: 'editor',
+        settleMs: 3_000,
+        act: async () => {
+            await breakpoint(eights, dealt);
+            // launch.json's plain launch, by its name: F5 would launch the one that the Run and Debug view has selected
+            await open(module);
+            await debugConfiguration(tour, 'Debug the scoreboard');
+            await stoppedAt(tour, 'Eights.x', dealt);
+            vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
+            await breakpoint(eights, separator);
+            // a line typed at the end of the line above, which the running program was not built with
+            await open(eights);
+            await replace('    void displayState() {\n        @Inject Console console;',
+                '    void displayState() {\n        @Inject Console console;\n        // the table, as it stands');
+            // unsaved: VS Code sends a file's breakpoints only as it is saved, and shows one that the session verified on
+            // the line the debug adapter gave it, which the adapter's breakpoint event moves as the text changes
+            await tour.until('The breakpoint follows its line', () => breakpoints().includes(`Eights.x:${separator + 1}`), breakpoints);
+            await command('workbench.action.debug.continue');
+        },
+        // the line is the editor's now, one below the line that the program was built with
+        until: () => tour.pausedAt('Eights.x', separator + 1),
+        check: async () => {
+            const moved = `Eights.x:${separator + 1}`;
+            expect(breakpoints().includes(moved), () => `The breakpoints: ${breakpoints().join(', ')}`);
+            const rows = await tour.ui.viewRows('Breakpoints');
+            expect(rows.some(each => each.includes('Eights.x') && new RegExp(`\\b${separator + 1}\\b`).test(each)), () => `The Breakpoints view: ${rows.join(' | ')}`);
+            const frames = tour.stopped()?.frames ?? [];
+            expect(frames[0]?.includes('displayState') ?? false, () => `The frames: ${frames.join(' | ')}`);
+            // a save sends the breakpoint on its line now, which the adapter places there again: it moves no further
+            const asked = tour.dap.length;
+            await vscode.workspace.textDocuments.find(each => each.uri.fsPath === eights)?.save();
+            const placed = () => tour.dapResponses('setBreakpoints', asked).map(each => JSON.stringify(each.body?.breakpoints));
+            await tour.until('The save sends the breakpoint', () => placed().length > 0, placed);
+            expect(placed().every(each => each.includes(`"line":${separator + 1}`)) && breakpoints().includes(moved),
+                () => `After the save: ${placed().join(' | ')}; the breakpoints: ${breakpoints().join(', ')}`);
+        },
+        after: async () => {
+            await tour.stopAll();
+            vscode.debug.removeBreakpoints(vscode.debug.breakpoints);
+            await tour.restore();
+        },
     });
     await tour.shot({
         title: 'Attach to a program',
