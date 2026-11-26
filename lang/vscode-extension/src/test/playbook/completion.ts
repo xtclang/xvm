@@ -1,7 +1,15 @@
 import * as assert from 'node:assert';
 import { SignatureHelp } from 'vscode-languageclient/node';
 import { editScenario, scenarioOffset, scenarioRegex, scenarioText, shared } from './shared';
-import { client, fixture, label, noErrors, playbook, position, targets } from './support';
+import { client, fixture, label, noErrors, playbook, position, targets, type Workspace } from './support';
+
+/** Checks that the completion at the cursor of [data]'s body offers [data]'s include and none of its exclude. */
+async function offers(workspace: Workspace, data: { body: string; include: readonly string[]; exclude: readonly string[] }): Promise<void> {
+    const { document, at } = await workspace.editing(data.body);
+    const names = (await workspace.completion(document, at)).map(label);
+    for (const name of data.include) { assert.ok(names.includes(name), names.join(', ')); }
+    for (const name of data.exclude) { assert.ok(!names.includes(name), names.join(', ')); }
+}
 
 export function completionCases(): void {
     playbook('X6', async (workspace, data) => {
@@ -25,36 +33,25 @@ export function completionCases(): void {
         const incomplete = editScenario(fixture(scenario.file), scenario.edit);
         await workspace.replace(document, incomplete);
         const at = document.positionAt(scenarioOffset(incomplete, scenario.cursor));
-        const item = (await workspace.completion(document, at)).find(value => label(value) === scenario.label);
-        assert.ok(item);
-        await workspace.accept(document, item);
+        await workspace.acceptNamed(document, at, scenario.label);
         assert.strictEqual(document.getText(), editScenario(incomplete, scenario.accepted));
         await noErrors(document.uri);
     });
 
     playbook('X8', async (workspace, data) => {
         const { document, at } = await workspace.editing(data.body);
-        const item = (await workspace.completion(document, at)).find(value => label(value) === data.label);
-        assert.ok(item);
-        await workspace.accept(document, item);
+        await workspace.acceptNamed(document, at, data.label);
         assert.ok(document.getText().includes(data.acceptedSuffix));
         await noErrors(document.uri);
     });
 
-    playbook('X9', async (workspace, data) => {
-        const { document, at } = await workspace.editing(data.body);
-        const names = (await workspace.completion(document, at)).map(label);
-        for (const name of data.include) { assert.ok(names.includes(name), names.join(', ')); }
-        for (const name of data.exclude) { assert.ok(!names.includes(name), names.join(', ')); }
-    });
+    playbook('X9', (workspace, data) => offers(workspace, data));
 
     playbook('X10', async (workspace, data) => {
         const { document, at } = await workspace.editing(data.body);
         const before = document.getText();
         const offset = document.offsetAt(at);
-        const item = (await workspace.completion(document, at)).find(value => label(value) === data.label);
-        assert.ok(item);
-        await workspace.accept(document, item);
+        await workspace.acceptNamed(document, at, data.label);
         assert.strictEqual(document.getText(), before.slice(0, offset) + data.label + before.slice(offset));
     });
 
@@ -69,12 +66,7 @@ export function completionCases(): void {
         assert.ok(!shadowed.some(item => label(item) === data.excludedLabel));
     });
 
-    playbook('X12', async (workspace, data) => {
-        const { document, at } = await workspace.editing(data.body);
-        const names = (await workspace.completion(document, at)).map(label);
-        for (const name of data.include) { assert.ok(names.includes(name), names.join(', ')); }
-        for (const name of data.exclude) { assert.ok(!names.includes(name), names.join(', ')); }
-    });
+    playbook('X12', (workspace, data) => offers(workspace, data));
 
     playbook('X13', async (workspace, data) => {
         for (const { prefix, name, addition } of data.variants) {
@@ -91,9 +83,7 @@ export function completionCases(): void {
         const document = await workspace.open(data.file, text.replace('§', ''));
         const at = document.positionAt(text.indexOf('§'));
         const before = document.getText();
-        const item = (await workspace.completion(document, at)).find(value => label(value) === data.label);
-        assert.ok(item);
-        await workspace.accept(document, item);
+        await workspace.acceptNamed(document, at, data.label);
         assert.strictEqual(document.getText(), before.replace(data.prefix, data.accepted));
         assert.ok(document.getText().includes('\r\n'));
         await noErrors(document.uri);
