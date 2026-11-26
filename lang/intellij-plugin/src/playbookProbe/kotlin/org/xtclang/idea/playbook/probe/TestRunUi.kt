@@ -26,20 +26,17 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.impl.DocumentMarkupModel
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.ui.UIUtil
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
 import com.intellij.xdebugger.XDebuggerManagerListener
-import com.intellij.xdebugger.XDebuggerUtil
 import org.xtclang.idea.run.XtcBuildSettings
 import org.xtclang.idea.run.XtcRunAllTestsAction
 import org.xtclang.idea.run.XtcRunConfiguration
@@ -372,12 +369,7 @@ object TestRunUi {
         project: Project,
         uri: String,
         line: Int,
-    ) {
-        boundedEdt(ModalityState.defaultModalityState()) {
-            val file = checkNotNull(VirtualFileManager.getInstance().refreshAndFindFileByUrl(uri)) { "No file $uri" }
-            XDebuggerUtil.getInstance().toggleLineBreakpoint(project, file, line - 1)
-        }
-    }
+    ) = DebugSessionUi.addBreakpoint(project, uri, line)
 
     /** Resumes the paused debug session of the test run [name]. */
     @JvmStatic
