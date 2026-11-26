@@ -689,13 +689,24 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   info steps in a third step. With the error, the file has no lenses: its three go. The step now presses once the
   lenses differ from those before the edit, none pending and nothing in progress, possibly none (`lensesInPlace`'s
   `some = false`); a first version that required some failed all three of its runs, each with "now none".
-- [ ] Found 2026-11-25 in `run-tour-14199203050296383832`, the tour's sections through Diagnostics in the container,
+- [x] Found 2026-11-25 in `run-tour-14199203050296383832`, the tour's sections through Diagnostics in the container,
   not in the 8 other runs of that day's series: Navigation's Call hierarchy showed `cardMatches` with no callers and
   failed its wait and check after 3 minutes. The server's trace shows IntelliJ's `callHierarchy/incomingCalls`
   request at 18:48:48.578 and LSP4IJ's `$/cancelRequest` for it 4 ms later; the server stopped the query as asked
   (outcome canceled, the request answered with an error), and IntelliJ asked no more, so the Hierarchy window kept
-  no callers. Not the server's fault: the cancel is the client's. To find: what cancels the request in IntelliJ's
-  hierarchy browser or LSP4IJ, and whether the step should refresh the hierarchy when it shows no callers.
+  no callers. Not the server's fault: the cancel is the client's. LSP4IJ 0.30.1 sends it (UP88), and users hit it
+  too, so the fix is the product's, not the tour's. IntelliJ's hierarchy tree computes a node's children in a read
+  action that it cancels for a write action and runs again only when it ends with the cancellation; LSP4IJ's call
+  hierarchy catches that `ProcessCanceledException`, cancels the request and returns no children, which IntelliJ
+  caches in the node. The write action was the cloud registry's update of `trace.state.event.service.url`
+  (`RegistryUpdater`, in `edtWriteAction`), which the IDE log has at 19:48:48.580–.583 local time, the cancel's
+  5 ms. Fixed (2026-11-26, `lagergren/call-hierarchy-flake`): `XtcCallHierarchyProvider` throws the cancellation
+  that LSP4IJ caught, so IntelliJ asks again. `XtcCallHierarchyProviderTest` reproduces it: a write action while the
+  stub server holds its first answer leaves no callers with LSP4IJ's structure, and the caller with the plugin's.
+  The Navigation section passed 5 of 5 runs in the container (`run-tour-5641130009855803754`,
+  `-7223607507479699437`, `-1077955297390743273`, `-10947987415425839701`, `-1471102060868252773`); in the last
+  the same registry update came during an `incomingCalls` request, LSP4IJ canceled it 5 ms later, and IntelliJ
+  asked again 3 ms after that and showed the callers.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
