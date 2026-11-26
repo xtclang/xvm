@@ -145,6 +145,10 @@ class StubLanguageServer(
     @Volatile
     var pulls: (String) -> CompletableFuture<*> = { CompletableFuture.completedFuture(null) }
 
+    /** When the server answers a workspace pull, which a test can hold as [pulls] a document's: by default, at once. */
+    @Volatile
+    var workspacePulls: () -> CompletableFuture<*> = { CompletableFuture.completedFuture(null) }
+
     /** How the server answers textDocument/hover, which a test can answer when it chooses: by default, with none. */
     @Volatile
     var hovers: (HoverParams) -> CompletableFuture<Hover?> = { CompletableFuture.completedFuture(null) }
@@ -278,17 +282,19 @@ class StubLanguageServer(
 
     override fun diagnostic(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> {
         requests += "workspace/diagnostic"
-        val current = reported.toMap()
-        everReported += current.keys
-        // as the real server does (DiagnosticReports.workspace), a document no longer reported gets an empty report, so
-        // that no client keeps its errors: LSP leaves open what a client does with a document a report leaves out. The
-        // server sends it once to each client, or again to one that names its old result ID; the stub, which gives no
-        // result IDs, sends it each time
-        val items =
-            everReported.sorted().map { uri ->
-                WorkspaceDocumentDiagnosticReport(WorkspaceFullDocumentDiagnosticReport(current[uri].orEmpty(), uri, null))
-            }
-        return CompletableFuture.completedFuture(WorkspaceDiagnosticReport(items))
+        return workspacePulls().thenApply {
+            val current = reported.toMap()
+            everReported += current.keys
+            // as the real server does (DiagnosticReports.workspace), a document no longer reported gets an empty report,
+            // so that no client keeps its errors: LSP leaves open what a client does with a document a report leaves out.
+            // The server sends it once to each client, or again to one that names its old result ID; the stub, which
+            // gives no result IDs, sends it each time
+            val items =
+                everReported.sorted().map { uri ->
+                    WorkspaceDocumentDiagnosticReport(WorkspaceFullDocumentDiagnosticReport(current[uri].orEmpty(), uri, null))
+                }
+            WorkspaceDiagnosticReport(items)
+        }
     }
 
     override fun didOpen(params: DidOpenTextDocumentParams) {

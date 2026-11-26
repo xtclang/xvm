@@ -42,6 +42,7 @@ import org.xvm.lsp.protocol.DocumentDiagnostics
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The errors of an Ecstasy file that is not open, from the server's workspace report, make it one of IntelliJ's problem
@@ -165,6 +166,14 @@ class ClosedFileProblemsTest {
 
     @Test
     fun `a closed file's error is in Project Errors once after a build`() {
+        // the first workspace pull that reports Child.x is answered, and any after it held until the next refresh: one
+        // that LSP4IJ asked for before the build, for opening Root.x or for the refresh, would otherwise be answered
+        // after it, under load, and take the build's place before the test looks
+        val answered = AtomicBoolean()
+        val held = CompletableFuture<Unit>()
+        server.workspacePulls = {
+            if (server.reported.isNotEmpty() && answered.getAndSet(true)) held else CompletableFuture.completedFuture(null)
+        }
         val child = closedChildWithError()
         editor.await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
 
@@ -174,6 +183,8 @@ class ClosedFileProblemsTest {
         assertThat(projectErrors(child).single()).isInstanceOf(HighlightingDuplicateProblem::class.java)
 
         // and the next report's takes the build's
+        server.workspacePulls = { CompletableFuture.completedFuture(null) }
+        held.complete(Unit)
         refresh()
         editor.await("Child.x's error is the report's") { projectErrors(child).none { it is HighlightingDuplicateProblem } }
         assertThat(projectErrors(child).map { it.text }).containsExactly("unknown-type")
