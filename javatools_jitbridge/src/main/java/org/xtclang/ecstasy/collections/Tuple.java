@@ -71,6 +71,15 @@ public interface Tuple {
      * Native implementation of:
      *
      * <pre>{@code
+     *     Int size;
+     * }</pre>
+     */
+    long size$get$p(Ctx ctx);
+
+    /**
+     * Native implementation of:
+     *
+     * <pre>{@code
      *     <Element> Tuple!<> add(Element value)
      * }</pre>
      */

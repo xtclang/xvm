@@ -3674,7 +3674,7 @@ public class CommonBuilder
      * Generate the "Stringable" method "estimateStringLength" and "estimateStringLength$p" if
      * they do not already exist.
      * <pre>{@code
-     *     Int estimateStringLength();
+     *     Int estimateStringLength()
      * }</pre>
      */
     protected void assembleConstEstimateStringLength(ClassBuilder classBuilder) {
@@ -3820,7 +3820,7 @@ public class CommonBuilder
     /**
      * Generate the "appendTo" method if it does not already exist.
      * <pre>{@code
-     *     Appender<Char> appendTo(Appender<Char> buf);
+     *     Appender<Char> appendTo(Appender<Char> buf)
      * }</pre>
      */
     protected void assembleConstAppendTo(ClassBuilder classBuilder) {
@@ -3849,7 +3849,7 @@ public class CommonBuilder
     /**
      * Generate the native "appendTo" method.
      * <pre>{@code
-     *     Appender<Char> appendTo(Appender<Char> buf);
+     *     Appender<Char> appendTo(Appender<Char> buf)
      * }</pre>
      */
     private void assembleConstAppendTo(CodeBuilder code, TypeConstant type) {

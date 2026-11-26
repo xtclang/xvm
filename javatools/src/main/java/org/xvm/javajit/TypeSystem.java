@@ -270,7 +270,7 @@ public class TypeSystem {
     public ModuleLoader findOwnerLoader(TypeConstant type) {
         ModuleConstant id = type.peekJitModuleOwner();
         if (id == null) {
-            // no peek'd module owner, which means there may be more than one module involved
+            // no peeked module owner, which means there may be more than one module involved
             Set<ModuleConstant> ids = type.collectJitModuleOwners(new HashSet<>());
             switch (ids.size()) {
             case 0:
@@ -590,18 +590,15 @@ public class TypeSystem {
     public String findReservedJitName(MethodConstant methodId) {
         IdentityConstant classId   = methodId.getNamespace();
         TypeConstant     classType = classId.getType();
-        String           jitName   = null;
 
-        if (classType.isSingleUnderlyingClass(true)) {
-            ModuleLoader loader = findOwnerLoader(classType);
-            jitName = loader.findReservedJitName(classId, methodId);
-        }
-        return jitName;
+        return classType.isSingleUnderlyingClass(true)
+                ? findOwnerLoader(classType).findReservedJitName(classId, methodId)
+                : null;
     }
 
     /**
-     * @return the name reserved by the JIT for the specified method or {@code null} if the JIT
-     *         has no reserved name for the method
+     * @return the name reserved by the JIT for the specified method on {@code className} or
+     *         {@code null} if no name is reserved
      */
     public String findReservedJitName(String className, TypeConstant type, MethodConstant methodId) {
         return null;

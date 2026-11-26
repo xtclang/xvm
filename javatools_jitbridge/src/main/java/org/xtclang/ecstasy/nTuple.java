@@ -31,36 +31,16 @@ public class nTuple
         return $type;
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     Int size;
-     * }</pre>
-     */
+    @Override
     public long size$get$p(Ctx ctx) {
         return $values.length;
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     Object getElement(Int index)
-     * }</pre>
-     */
     @Override
     public Object getElement$p(Ctx ctx, long index) {
         return $values[checkIndex(ctx, index)];
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     Ref<Object> elementAt(Int index)
-     * }</pre>
-     */
     @Override
     public nRef elementAt$p(Ctx ctx, long index) {
         int            i     = checkIndex(ctx, index);
@@ -71,13 +51,6 @@ public class nTuple
         return new nRef(ctx, $values[i], type, false);
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     <Element> Tuple!<> add(Element value)
-     * }</pre>
-     */
     @Override
     public nTuple add(Ctx ctx, nType elementType, Object value) {
         int       count     = $values.length;
@@ -95,13 +68,6 @@ public class nTuple
         return new nTuple(ctx, typeNew, valuesNew);
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     Tuple!<> addAll(Tuple!<> that)
-     * }</pre>
-     */
     @Override
     public nTuple addAll(Ctx ctx, nTuple that) {
         int countThis = $values.length;
@@ -128,13 +94,6 @@ public class nTuple
         return new nTuple(ctx, typeNew, valuesNew);
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     Tuple replace(Int index, Object value)
-     * }</pre>
-     */
     @Override
     public nTuple replace$p(Ctx ctx, long index, Object value) {
         int            i     = checkIndex(ctx, index);
@@ -153,13 +112,6 @@ public class nTuple
         return new nTuple(ctx, $type, valuesNew);
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     Tuple!<> slice(Range<Int> interval)
-     * }</pre>
-     */
     @Override
     public nTuple slice(Ctx ctx, RangeᐸInt64ᐳ interval) {
         long lower = interval.$lowerBound + (interval.$lowerExclusive ? 1 : 0);
@@ -202,25 +154,11 @@ public class nTuple
         return new nTuple(ctx, typeNew, valuesNew);
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     Tuple!<> remove(Int index)
-     * }</pre>
-     */
     @Override
     public nTuple remove$p(Ctx ctx, long index) {
         throw Exception.$unsupported(ctx, "Tuple.remove()");
     }
 
-    /**
-     * Native implementation of:
-     *
-     * <pre>{@code
-     *     Tuple!<> removeAll(Interval<Int> interval)
-     * }</pre>
-     */
     @Override
     public nTuple removeAll(Ctx ctx, RangeᐸInt64ᐳ interval) {
         throw Exception.$unsupported(ctx, "Tuple.removeAll()");

@@ -197,7 +197,7 @@ public interface TextSupport {
     /**
      * Implementation for Char.x
      * <pre>{@code
-     *     UInt32 sub(Char ch) = this.codepoint - ch.codepoint;
+     *     UInt32 sub(Char ch) = this.codepoint - ch.codepoint
      * }</pre>
      *
      * <p>Neither the target nor argument should have been loaded to the stack.

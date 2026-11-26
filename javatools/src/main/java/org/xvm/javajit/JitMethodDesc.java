@@ -451,8 +451,8 @@ public class JitMethodDesc {
                 assert type.isSingleUnderlyingClass(true);
 
                 type = resolveMixinAutoNarrowing(type, targetType, pool);
+                cd   = builder == null ? type.getJitCCDesc(typeSystem) : builder.getCCDesc(type);
 
-                cd = builder != null ? builder.getCCDesc(type) : type.getJitCCDesc(typeSystem);
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
                 if (iOrig >= 0) {
@@ -484,7 +484,7 @@ public class JitMethodDesc {
             }
 
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
-                ClassDesc cdStd = builder != null ? builder.getCCDesc(type) : type.getJitCCDesc(typeSystem);
+                ClassDesc cdStd = builder == null ? type.getJitCCDesc(typeSystem) : builder.getCCDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Primitive, cd,   iOrig, ixLong++, false));
@@ -521,7 +521,7 @@ public class JitMethodDesc {
                 assert type.isSingleUnderlyingClass(true);
 
                 type = resolveMixinAutoNarrowing(type, targetType, pool);
-                cd   = builder != null ? builder.getCCDesc(type) : type.getJitCCDesc(typeSystem);
+                cd   = builder == null ? type.getJitCCDesc(typeSystem) : builder.getCCDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));
@@ -543,14 +543,15 @@ public class JitMethodDesc {
 
         if (isConstructor) {
             ClassDesc targetCd;
-            if (builder != null) {
-                targetCd = targetType.isAnnotated()
-                        ? builder.getICDesc(targetType)
-                        : builder.getCCDesc(targetType);
-            } else {
+            if (builder == null) {
                 targetCd = targetType.isAnnotated()
                         ? targetType.getJitICDesc(typeSystem)
                         : targetType.getJitCCDesc(typeSystem);
+            }
+            else {
+                targetCd = targetType.isAnnotated()
+                        ? builder.getICDesc(targetType)
+                        : builder.getCCDesc(targetType);
             }
 
             return new JitCtorDesc(targetType, targetCd,

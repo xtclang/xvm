@@ -65,7 +65,7 @@ public interface EnumBuilderSupport {
 
     /**
      * Assemble the enumeration property:
-     * <p>{@code Enumeration<Enum> enumeration;}
+     * <p>{@code Enumeration<Enum> enumeration}
      */
     default void assembleEnumerationProp(CommonBuilder builder, ClassBuilder classBuilder) {
         PropertyInfo  prop = builder.typeInfo.findProperty("enumeration");

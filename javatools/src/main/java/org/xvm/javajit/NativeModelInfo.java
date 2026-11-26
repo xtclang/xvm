@@ -128,21 +128,21 @@ public class NativeModelInfo {
         if (!isJitGenerated) {
             return null;
         }
-        Map<MethodKey, String> jitNames = ensureJitNames();
 
-        TypeInfo               typeInfo  = type.ensureTypeInfo();
-        MethodInfo             method    = typeInfo.getMethodById(methodId);
-        MethodStructure        structure = method != null
-                                                ? method.getTopmostMethodStructure(typeInfo)
-                                                : (MethodStructure) methodId.getComponent();
-        String                 name      = structure.getName();
-        int                    flags     = JitMethodDesc.flagsFor(structure);
-        SignatureConstant      signature = methodId.getSignature();
-        JitMethodDesc          jmd       = JitMethodDesc.of(typeSystem, type, flags,
+        TypeInfo          typeInfo  = type.ensureTypeInfo();
+        MethodInfo        method    = typeInfo.getMethodById(methodId);
+        MethodStructure   structure = method == null
+                                        ? (MethodStructure) methodId.getComponent()
+                                        : method.getTopmostMethodStructure(typeInfo);
+        String            name      = structure.getName();
+        int               flags     = JitMethodDesc.flagsFor(structure);
+        SignatureConstant signature = methodId.getSignature();
+        JitMethodDesc     jmd       = JitMethodDesc.of(typeSystem, type, flags,
                                                 signature.getRawParams(), signature.getRawReturns(),
                                                 structure.getRequiredParamCount());
 
-        String jitName   = null;
+        Map<MethodKey, String> jitNames = ensureJitNames();
+        String                 jitName  = null;
         if (jmd.isOptimized) {
             // we try the optimized signature first because the native classes are more likely
             // to have annotated the optimized method

@@ -180,6 +180,24 @@ public class ModuleLoader
         return set;
     }
 
+    /**
+     * Look up a method name reserved by the JIT using the class name qualified by this loader's
+     * module prefix.
+     *
+     * @param classId   the identity of the method's containing class
+     * @param methodId  the identity of the method to look up
+     *
+     * @return the reserved JIT name, or {@code null} if no name is reserved
+     */
+    public String findReservedJitName(IdentityConstant classId, MethodConstant methodId) {
+        TypeConstant type = classId.getType();
+        if (type.isSingleUnderlyingClass(true) && !type.isInnerChildClass()) {
+            String className = prefix + classId.getClassJitName(typeSystem);
+            return typeSystem.findReservedJitName(className, classId.getType(), methodId);
+        }
+        return null;
+    }
+
     // ----- debugging -----------------------------------------------------------------------------
 
     public void dump(File dir, Predicate<String> filter) {
@@ -218,22 +236,22 @@ public class ModuleLoader
                     if (!interfaces.isEmpty()) {
                         out.println("Implements:");
                         interfaces.stream()
-                                .map(iface -> "  " + iface.asInternalName().replace('/', '.'))
-                                .forEach(out::println);
+                                  .map(iface -> "  " + iface.asInternalName().replace('/', '.'))
+                                  .forEach(out::println);
                     }
 
                     out.println("Fields:");
                     model.fields()
-                            .stream()
-                            .map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString() +
-                                    (f.flags().has(AccessFlag.STATIC) ? " static" : ""))
-                            .forEach(out::println);
+                         .stream()
+                         .map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString() +
+                                (f.flags().has(AccessFlag.STATIC) ? " static" : ""))
+                         .forEach(out::println);
 
                     out.println("Methods:");
                     model.methods().stream().map(m -> "  " + m.methodName() +
-                                    m.methodTypeSymbol().displayDescriptor() +
-                                    (m.flags().has(AccessFlag.STATIC) ? " static" : "") +
-                                    (m.code().isPresent() ? "\n" + render(m.code().get().toDebugString()) : "")).
+                                m.methodTypeSymbol().displayDescriptor() +
+                                (m.flags().has(AccessFlag.STATIC) ? " static" : "") +
+                                (m.code().isPresent() ? "\n" + render(m.code().get().toDebugString()) : "")).
                             forEach(out::println);
                 } catch (FileNotFoundException e) {
                     System.err.println(e.getMessage());
@@ -265,15 +283,6 @@ public class ModuleLoader
             }
         }
         return sb == null ? s : sb.toString();
-    }
-
-    public String findReservedJitName(IdentityConstant classId, MethodConstant methodId) {
-        TypeConstant type = classId.getType();
-        if (type.isSingleUnderlyingClass(true) && !type.isInnerChildClass()) {
-            String className = prefix + classId.getClassJitName(typeSystem);
-            return typeSystem.findReservedJitName(className, classId.getType(), methodId);
-        }
-        return null;
     }
 
     private Map<String, byte[]> loadedClasses = new HashMap<>();

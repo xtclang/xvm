@@ -59,6 +59,9 @@ import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
 
+import static org.xvm.javajit.Builder.N_FPNumber;
+import static org.xvm.javajit.Builder.N_Number;
+
 import static org.xvm.util.Handy.require;
 
 /**
@@ -167,9 +170,6 @@ public class NativeTypeSystem
      */
     private final Map<TypeConstant, String> nativeByType = new ConcurrentHashMap<>();
 
-    private static final String N_Number = "org.xtclang.ecstasy.numbers.Number";
-    private static final String N_FPNumber = "org.xtclang.ecstasy.numbers.FPNumber";
-
     /**
      * @return a reserved class name for the specified type, or null if it's not reserved
      */
@@ -255,11 +255,7 @@ public class NativeTypeSystem
 
     private String findJitName(TypeConstant type, String className, MethodConstant methodId) {
         NativeModelInfo info = getNativeModelInfo(className);
-
-        if (info != null) {
-            return info.findReservedJitName(this, type, methodId);
-        }
-        return null;
+        return info == null ? null : info.findReservedJitName(this, type, methodId);
     }
 
     private String debugMethodDesc(String name, MethodTypeDesc md) {
@@ -397,10 +393,7 @@ public class NativeTypeSystem
      */
     public ClassModel getNativeClassModel(String className) {
         NativeModelInfo modelInfo = getNativeModelInfo(className);
-        if (modelInfo != null) {
-            return modelInfo.model;
-        }
-        return null;
+        return modelInfo == null ? null : modelInfo.model;
     }
 
     /**
@@ -418,7 +411,7 @@ public class NativeTypeSystem
         try (InputStream in = bridgeLoader.getResourceAsStream(classPath)) {
             if (in != null) {
                 ClassModel model = ClassFile.of().parse(in.readAllBytes());
-                NativeModelInfo  info  = new NativeModelInfo(model);
+                NativeModelInfo info = new NativeModelInfo(model);
                 nativeModels.put(className, info);
                 return info;
             }

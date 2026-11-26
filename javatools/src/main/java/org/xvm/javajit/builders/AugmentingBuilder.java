@@ -358,7 +358,6 @@ public class AugmentingBuilder extends CommonBuilder {
      * @param element       the {@link ClassFileElement} to customize
      * @param classBuilder  the {@link ClassBuilder} to use to generate code
      */
-    @SuppressWarnings("unchecked")
     public void processElement(ClassElement element, ClassBuilder classBuilder) {
         if (isJitGenerated) {
             if (isAnnotated(element, CD_JitFromNatural)) {
@@ -369,8 +368,8 @@ public class AugmentingBuilder extends CommonBuilder {
             Annotation generated = findAnnotation(element, CD_JitGenerated);
             if (generated != null) {
                 // element has a JitGenerated annotation; execute its generator
-                ClassDesc  genCD = getGeneratorClass(generated);
-                var        clz   = Builder.toClass(genCD, Generator.class);
+                ClassDesc genCD = getGeneratorClass(generated);
+                var       clz   = Builder.toClass(genCD, Generator.class);
                 try {
                     var constructor = clz.getDeclaredConstructor();
                     var generator   = constructor.newInstance();

@@ -373,7 +373,7 @@ public class JitAnnotation
      */
     @SuppressWarnings("unchecked")
     public static <A extends JitAnnotation> A create(Annotation annotation) {
-        ClassDesc cd  = annotation.classSymbol();
+        ClassDesc cd = annotation.classSymbol();
         Function<Annotation, JitAnnotation> factory
                 = annotationFactories.computeIfAbsent(cd, JitAnnotation::createAnnotationFactory);
         return (A) factory.apply(annotation);

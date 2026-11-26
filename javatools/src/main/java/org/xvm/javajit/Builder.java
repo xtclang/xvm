@@ -2846,6 +2846,7 @@ public abstract class Builder {
     public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
     public static final String N_Float32      = "org.xtclang.ecstasy.numbers.Float32";
     public static final String N_Float64      = "org.xtclang.ecstasy.numbers.Float64";
+    public static final String N_FPNumber     = "org.xtclang.ecstasy.numbers.FPNumber";
     public static final String N_IntLiteral   = "org.xtclang.ecstasy.numbers.IntLiteral";
     public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";
     public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
@@ -2856,6 +2857,7 @@ public abstract class Builder {
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
     public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
     public static final String N_Null         = "org.xtclang.ecstasy.Nullable$Null";
+    public static final String N_Number       = "org.xtclang.ecstasy.numbers.Number";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";

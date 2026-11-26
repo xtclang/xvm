@@ -11,6 +11,7 @@ import org.xvm.javajit.annotations.JitName;
 @JitGenerated
 public interface Iterator extends Object {
 
+    @JitName
     nType Element$get(Ctx ctx);
 
     @JitName
