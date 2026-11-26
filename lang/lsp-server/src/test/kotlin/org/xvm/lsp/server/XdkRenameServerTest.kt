@@ -999,6 +999,52 @@ class XdkRenameServerTest {
     }
 
     @Test
+    fun `a rename says which string literals and comments of the modules it changes spell the old name`() {
+        directory = directory.toRealPath()
+        val library = directory.resolve("library/Library.x").toFile().apply { parentFile.mkdirs() }
+        val consumer = directory.resolve("library/Consumer.x").toFile()
+        val other = directory.resolve("library/Other.x").toFile()
+        val text = "module Library {\n    /** [pick] picks, unlike repick. */\n    class Box {\n        String pick() = \"pick\";\n    }\n}"
+        library.writeText(text)
+        consumer.writeText(
+            "module Consumer {\n    package lib import Library;\n    // pick the box\n    String run(lib.Box box) = box.pick();\n}",
+        )
+        // a module the rename does not change, whose comments it does not count
+        other.writeText("module Other {\n    package lib import Library;\n    // pick, which Other does not call\n}")
+        val uri = library.toURI().toString()
+        val client = mock(LanguageClient::class.java)
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(client)
+        try {
+            server.initialize(workspace(library.parentFile)).awaited()
+            server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", uri),
+                    XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                    XdkSourceModule("Other", other.toURI().toString(), setOf("Library")),
+                ),
+            )
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+            val params = RenameParams(TextDocumentIdentifier(uri), Position(3, text.lines()[3].indexOf("pick")), "choose")
+
+            // what each answer sent before it: the client has it as it applies the edit
+            fun notes(request: () -> Any?): List<String> {
+                val before = messages(client).size
+                requireNotNull(request())
+                return messages(client).drop(before).map { it.message }.filterNot { "modules outside the workspace" in it }
+            }
+            val note =
+                "Ecstasy: 1 string literal and 2 comments in the modules this rename changes spell 'pick' and are not " +
+                    "changed by it: Consumer.x:3, Library.x:2, Library.x:4."
+            assertThat(notes { server.renameProposal(params).awaited() }).containsExactly(note)
+            assertThat(notes { server.textDocumentService.rename(params).awaited() }).containsExactly(note)
+            assertThat(library.readText()).isEqualTo(text)
+        } finally {
+            server.shutdown().awaited()
+        }
+    }
+
+    @Test
     fun `a plain rename, a move and a file rename say modules outside the workspace are not changed`() {
         directory = directory.toRealPath()
         val root = directory.resolve("App.x").toFile().apply { writeText("module App { tools.Box make() = new tools.Box(); }") }

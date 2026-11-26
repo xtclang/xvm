@@ -65,7 +65,7 @@ fun Driver.renameFamily(
             .filter { it !== request }
             .forEach { check(root.resolve(it["file"].asString).toString() !in opened) }
     }
-    if (data.values.has("outsideUses")) dismissServerMessages()
+    if (data.values.has("outsideUses") || data.values.has("unchangedSpellings")) dismissServerMessages()
     rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
     awaitUi("$id source and resource edits applied", HANG_LIMIT) {
         files.all { file ->
@@ -92,6 +92,11 @@ fun Driver.renameFamily(
             // a proof that the project overtook and that ran again says it again
             check(notes().all { it == message }) { "The message: ${notes()}" }
         }
+    }
+    // and its message on the comments and string literals that spell the old name, which the rename leaves
+    data.values["unchangedSpellings"]?.let { value ->
+        val message = "Ecstasy: ${value.asString}."
+        awaitUi("$id message on comments and strings that spell the old name", HANG_LIMIT) { message in serverMessages() }
     }
     val renamed = open("$id/${request["destination"].asString}")
     clean(renamed)

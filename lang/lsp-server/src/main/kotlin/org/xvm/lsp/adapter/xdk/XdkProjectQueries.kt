@@ -479,6 +479,7 @@ internal class XdkProjectQueries(
             return XdkRenameProposal(
                 WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                 scope = renameScope(),
+                unchangedSpellings = unchangedSpellings(alias.name, plan),
             )
         }
         val selected = model.symbolAt(line, column) ?: return null
@@ -623,6 +624,24 @@ internal class XdkProjectQueries(
             },
             renameScope(),
             listOfNotNull(outsideUses(before, symbol.name, targets)),
+            unchangedSpellings(symbol.name, plan),
+        )
+    }
+
+    /** [XdkRenameSpellings.note] on the spellings of [name] in the modules whose sources [plan] edits. */
+    private fun unchangedSpellings(
+        name: String,
+        plan: XdkRename.Plan,
+    ): String? {
+        val reached =
+            sources.values.filter { module ->
+                module.inputs.text.keys
+                    .any { it.path in plan.edits }
+            }
+        return XdkRenameSpellings.note(
+            name,
+            reached.flatMap { it.inputs.text.entries }.associate { it.key.path to it.value },
+            plan.edits,
         )
     }
 

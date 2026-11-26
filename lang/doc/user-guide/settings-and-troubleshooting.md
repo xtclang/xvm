@@ -139,7 +139,8 @@ When something doesn't work as you expect, look at the language server first.
   change, or check, what no name in the code carries: a name in a string or a comment, or one built
   at run time to look a member up by reflection; an `is` check against an interface, which matches a
   class by its members' names; and the keys a renamed property's value gets in JSON or other data
-  that the program writes and reads back.
+  that the program writes and reads back. For strings and comments, a notification says how many in
+  the modules the rename changes spell the old name, and where the first of them are.
 
 ### Building, running and testing
 

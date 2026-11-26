@@ -19,6 +19,9 @@ import org.xvm.lsp.util.ExecutionTrace
 internal object XdkLexical {
     private val newlines = Regex("\r\n|\r|\n")
     private val urls = Regex("https?://[^\\s<>\"'`\\\\]+")
+
+    /** A template's expressions, `{...}`, which are code. */
+    private val expressions = Regex("\\{[^{}]*}")
     private val comments = setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT)
     private val strings =
         setOf(Token.Id.LIT_STRING, Token.Id.LIT_CHAR, Token.Id.LIT_BINSTR, Token.Id.TEMPLATE)
@@ -393,6 +396,35 @@ internal object XdkLexical {
                         )
                     }.toList()
             }
+
+    /**
+     * Where a comment or a string literal spells a name: the offset in its text, the offset where the comment or literal
+     * starts, and whether it is a comment.
+     */
+    data class Spelling(
+        val offset: Int,
+        val token: Int,
+        val comment: Boolean,
+    )
+
+    /**
+     * Where the comments and the string literals of [text] spell [name] as a word, not as part of a longer name; a
+     * template's expressions are code, not its literal. None when [text] cannot be lexed.
+     */
+    fun spellings(
+        text: String,
+        name: String,
+    ): List<Spelling> {
+        val word = Regex("(?<![\\p{L}\\p{N}_])${Regex.escape(name)}(?![\\p{L}\\p{N}_])")
+        return lex(text)
+            .orEmpty()
+            .filter { it.id in comments || it.id == Token.Id.LIT_STRING || it.id == Token.Id.TEMPLATE }
+            .flatMap { host ->
+                val literal =
+                    if (host.id == Token.Id.TEMPLATE) host.text.replace(expressions) { " ".repeat(it.value.length) } else host.text
+                word.findAll(literal).map { Spelling(host.start + it.range.first, host.start, host.id in comments) }.toList()
+            }
+    }
 
     /**
      * Documentation adds a semantic modifier absent from the lexical grammar. Leave ordinary

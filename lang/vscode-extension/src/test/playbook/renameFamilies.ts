@@ -121,7 +121,7 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                     }
                     // the server's message on modules outside the workspace, which it shows as it answers the rename
                     const shown: string[] = [];
-                    const observer = 'outsideUses' in data
+                    const observer = 'outsideUses' in data || 'unchangedSpellings' in data
                         ? client().onNotification('window/showMessage', (params: { message: string }) => { shown.push(params.message); })
                         : undefined;
                     const edit = await eventually(
@@ -137,6 +137,8 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                             assert.ok(notes.length > 0 && notes.every(note => note === message), JSON.stringify(notes));
                         }
                     }
+                    // and its message on the comments and string literals that spell the old name, which the rename leaves
+                    if ('unchangedSpellings' in data) assert.ok(shown.includes(`Ecstasy: ${data.unchangedSpellings}.`), JSON.stringify(shown));
                     assert.ok(await vscode.workspace.applyEdit(edit, { isRefactoring: true }));
                 } finally { cancellation.dispose(); }
                 for (const file of data.files) {

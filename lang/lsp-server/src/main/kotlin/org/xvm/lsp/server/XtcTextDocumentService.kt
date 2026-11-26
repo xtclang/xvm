@@ -1560,8 +1560,8 @@ class XtcTextDocumentService(
             workspace = true,
             progress = params,
         ) { proposal ->
-            proposal?.let { protocolEdit(it.edit)?.to(it.outsideUses) }
-        }.mapCancellable { answer -> answer?.let { (edit, names) -> outsideUses("rename", names, edit) } }
+            proposal?.let { protocolEdit(it.edit)?.to(it) }
+        }.mapCancellable { answer -> answer?.let { (edit, proposal) -> notes("rename", proposal, edit) } }
     }
 
     /**
@@ -1583,10 +1583,20 @@ class XtcTextDocumentService(
                 )
             },
             workspace = true,
-        ) { proposal -> proposal?.let { protocolProposal(it)?.to(it.outsideUses) } }.mapCancellable { answer ->
-            answer?.let { (protocol, names) -> outsideUses("rename", names, protocol) }
+        ) { proposal -> proposal?.let { protocolProposal(it)?.to(it) } }.mapCancellable { answer ->
+            answer?.let { (protocol, proposal) -> notes("rename", proposal, protocol) }
         }
     }
+
+    /**
+     * [answer], once the client is shown what [proposal]'s edit leaves as it is: modules outside the workspace that may use
+     * what it changes ([outsideUses]), and the string literals and comments that spell the old name.
+     */
+    private fun <T> notes(
+        operation: String,
+        proposal: XdkRenameProposal,
+        answer: T,
+    ): T = outsideUses(operation, proposal.outsideUses, answer).also { proposal.unchangedSpellings?.let(server::showInfo) }
 
     /**
      * [answer], once the client is shown that the edit leaves modules outside the workspace as they are when it changes
