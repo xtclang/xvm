@@ -138,7 +138,11 @@ class ServerRuntimeConfigurable : Configurable {
             ServerRuntimeSettings.getInstance().install(original, draft())
             reset()
         } catch (failure: IllegalArgumentException) {
-            throw ConfigurationException(failure.message ?: "Invalid Ecstasy JVM options")
+            throw ConfigurationException(
+                failure.message ?: "Invalid Ecstasy JVM options",
+                failure,
+                ConfigurationException.getDefaultTitle(),
+            )
         }
     }
 }

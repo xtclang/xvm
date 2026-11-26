@@ -198,6 +198,8 @@ open class LanguageServiceConfigurable(
         } catch (failure: IllegalArgumentException) {
             throw ConfigurationException(
                 failure.message ?: "Invalid Ecstasy language-service settings",
+                failure,
+                ConfigurationException.getDefaultTitle(),
             )
         }
     }
