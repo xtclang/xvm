@@ -2271,6 +2271,16 @@ object TourUi {
         return onEdt { PopupChoices.chooseListRow(text) }
     }
 
+    /**
+     * Chooses the row of the showing list popup whose whole text is [text], such as the build mode chooser's Gradle,
+     * which its Automatic row names too.
+     */
+    @JvmStatic
+    fun chooseRow(text: String): Boolean {
+        logAction("key", "Enter: $text")
+        return onEdt { PopupChoices.chooseListRowNamed(text) }
+    }
+
     /** Chooses [label] in the showing chooser, such as the language adapter's, as Enter on it does; false if none lists it. */
     @JvmStatic
     fun pick(label: String): Boolean = onEdt { AdapterChooserUi.pick(label) }

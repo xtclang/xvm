@@ -29,14 +29,24 @@ object PopupChoices {
 
     /** Chooses the first row of the showing list popup that contains [text], as Enter does; false if none shows it. */
     @JvmStatic
-    fun chooseListRow(text: String): Boolean {
+    fun chooseListRow(text: String): Boolean = chooseListRow { text in it }
+
+    /**
+     * Chooses the row of the showing list popup whose whole text is [text], as Enter does, where another row contains
+     * it too; false if none is.
+     */
+    @JvmStatic
+    fun chooseListRowNamed(text: String): Boolean = chooseListRow { it == text }
+
+    private fun chooseListRow(matches: (String) -> Boolean): Boolean {
         check(SwingUtilities.isEventDispatchThread())
         val popup = listPopup() ?: return false
-        val index = texts(popup).indexOfFirst { text in it }
-        if (index < 0) return false
-        popup.list.selectedIndex = index
-        popup.handleSelect(true)
-        return true
+        val index = texts(popup).indexOfFirst(matches)
+        if (index >= 0) {
+            popup.list.selectedIndex = index
+            popup.handleSelect(true)
+        }
+        return index >= 0
     }
 
     /** The rows of the one showing popup table, such as LSP4IJ's navigation chooser, each as its cells' text. */
