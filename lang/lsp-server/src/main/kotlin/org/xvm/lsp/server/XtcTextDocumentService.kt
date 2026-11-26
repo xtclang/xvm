@@ -2059,6 +2059,9 @@ class XtcTextDocumentService(
                     },
                 )
             } catch (e: IllegalArgumentException) {
+                // a range outside the document, or overlapping edits from the formatter: the client gets the reason,
+                // which LSP4J's ResponseErrorException cannot carry a cause for, so the log keeps the trace
+                logger.warn("textDocument/rangesFormatting: refused for {}: {}", uri, e.message, e)
                 throw ResponseErrorException(
                     ResponseError(ResponseErrorCode.InvalidParams, e.message, null),
                 )

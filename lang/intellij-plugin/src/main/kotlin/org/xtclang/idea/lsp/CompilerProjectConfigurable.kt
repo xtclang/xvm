@@ -507,7 +507,11 @@ class CompilerProjectConfigurable
                 original = next
                 originalLibraries = nextLibraries
             } catch (failure: IllegalArgumentException) {
-                throw ConfigurationException(failure.message ?: "Invalid compiler source graph")
+                throw ConfigurationException(
+                    failure.message ?: "Invalid compiler source graph",
+                    failure,
+                    ConfigurationException.getDefaultTitle(),
+                )
             }
         }
     }

@@ -54,7 +54,8 @@ internal class SourceGraphEdit
             try {
                 snapshot.replacement(expected, next)
             } catch (failure: IllegalArgumentException) {
-                throw UnexpectedUndoException(failure.message)
+                // the undo manager reports the message; the cause keeps the failure's trace
+                throw UnexpectedUndoException(failure.message).apply { initCause(failure) }
             }
 
         /** Captured project, server and settings content that must still match when a graph edit is applied. */
