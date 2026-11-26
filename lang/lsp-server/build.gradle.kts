@@ -198,8 +198,8 @@ dependencies {
     testImplementation(libs.assertj)
     testImplementation(libs.mockito)
     testImplementation(libs.awaitility)
-    // the waits that go through the watchdog of hangs (org.xvm.testing.Await)
-    testImplementation(testFixtures(libs.javatools.utils))
+    // the waits that go through the watchdog of hangs (org.xvm.testing.Await), shared by lang's tests
+    testImplementation(project(":test-support"))
 }
 
 // =============================================================================

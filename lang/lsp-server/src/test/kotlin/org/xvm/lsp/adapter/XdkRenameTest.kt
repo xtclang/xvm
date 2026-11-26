@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger

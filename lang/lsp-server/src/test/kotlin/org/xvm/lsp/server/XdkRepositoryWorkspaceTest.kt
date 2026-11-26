@@ -33,9 +33,9 @@ import org.mockito.Mockito.mock
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.Heavy
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaitAsserted
-import org.xvm.lsp.awaited
 import org.xvm.lsp.protocol.BuildParams
+import org.xvm.testing.awaitAsserted
+import org.xvm.testing.awaited
 import java.io.File
 import java.net.URI
 import java.nio.file.Path

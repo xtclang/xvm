@@ -4,7 +4,7 @@ import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xtclang.idea.awaited
+import org.xvm.testing.awaited
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest

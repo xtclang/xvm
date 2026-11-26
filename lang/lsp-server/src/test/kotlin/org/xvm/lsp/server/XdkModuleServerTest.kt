@@ -30,8 +30,8 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaitAsserted
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaitAsserted
+import org.xvm.testing.awaited
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path

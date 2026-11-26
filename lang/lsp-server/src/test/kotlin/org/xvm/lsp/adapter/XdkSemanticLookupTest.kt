@@ -9,8 +9,8 @@ import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Location
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.net.URI as SourceUri

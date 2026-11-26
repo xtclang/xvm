@@ -7,7 +7,7 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkConsumerDiscovery
 import org.xvm.lsp.adapter.xdk.XdkRenameScope
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.io.File
 import java.nio.file.Path
 

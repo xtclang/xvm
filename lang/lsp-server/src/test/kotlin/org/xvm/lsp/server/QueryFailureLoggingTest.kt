@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletionException
 import java.util.concurrent.CopyOnWriteArrayList

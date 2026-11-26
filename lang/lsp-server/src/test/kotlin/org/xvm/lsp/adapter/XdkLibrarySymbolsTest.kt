@@ -15,11 +15,11 @@ import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.matchRank
 import org.xvm.lsp.adapter.xdk.toDependency
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.server.XtcLanguageServer
 import org.xvm.lsp.server.editorInitializeParams
+import org.xvm.testing.awaited
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path

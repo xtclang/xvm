@@ -15,6 +15,8 @@ complexity:
       - '**/playbookProbe/**'
       - '**/starter262/**'
       - '**/starter263/**'
+      # lang's shared test fixture, test code in a main source set of its own project
+      - '**/test-support/**'
   LongMethod:
     # A test reads as one scenario, step after step, and splitting it hides the steps; main code keeps the limit.
     excludes: *tests
@@ -73,6 +75,7 @@ style:
       - '**/playbookProbe/**'
       - '**/starter262/**'
       - '**/starter263/**'
+      - '**/test-support/**'
       - '**/*.kts'
   MaxLineLength:
     # ktlint, through spotless, enforces 140, its ktlint_official default, which lang/.editorconfig leaves in place. As

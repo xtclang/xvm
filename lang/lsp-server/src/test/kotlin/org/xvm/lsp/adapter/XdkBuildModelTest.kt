@@ -19,7 +19,7 @@ import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList

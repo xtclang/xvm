@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path

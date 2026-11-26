@@ -23,9 +23,9 @@ import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
 import org.xtclang.idea.XtcIntelliJLanguage
-import org.xtclang.idea.awaitUntil
 import org.xtclang.idea.synchronizer
-import org.xtclang.idea.what
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.what
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture

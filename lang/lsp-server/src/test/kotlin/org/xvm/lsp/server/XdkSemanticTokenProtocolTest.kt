@@ -31,8 +31,8 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaitAsserted
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaitAsserted
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 
 /**

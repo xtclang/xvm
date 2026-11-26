@@ -26,10 +26,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
-import org.xvm.lsp.what
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
+import org.xvm.testing.what
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException

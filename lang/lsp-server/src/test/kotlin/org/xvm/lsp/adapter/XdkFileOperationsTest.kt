@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path

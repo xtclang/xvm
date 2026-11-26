@@ -16,7 +16,7 @@ import org.eclipse.lsp4j.jsonrpc.Endpoint
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.xtclang.idea.LightEditor
-import org.xtclang.idea.awaitUntil
+import org.xvm.testing.awaitUntil
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList

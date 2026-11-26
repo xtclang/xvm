@@ -10,7 +10,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture

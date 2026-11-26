@@ -15,7 +15,7 @@ import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkProject
 import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path

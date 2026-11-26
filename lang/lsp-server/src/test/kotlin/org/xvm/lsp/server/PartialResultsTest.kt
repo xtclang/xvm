@@ -12,10 +12,10 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaited
-import org.xvm.lsp.awaitedTermination
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import org.xvm.testing.awaited
+import org.xvm.testing.awaitedTermination
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors

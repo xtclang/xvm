@@ -10,7 +10,7 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Path
 
 /**

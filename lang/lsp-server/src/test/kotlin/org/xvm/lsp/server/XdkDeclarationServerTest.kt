@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 
 /**
  * Checks declaration-provider negotiation and conversion of multiple targets to wire locations. Unsupported

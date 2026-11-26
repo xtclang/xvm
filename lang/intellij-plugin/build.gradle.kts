@@ -447,8 +447,8 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testRuntimeOnly(libs.lang.intellij.junit4.compat)
     testImplementation(libs.assertj)
-    // the waits that go through the watchdog of hangs (org.xvm.testing.Await)
-    testImplementation(testFixtures(libs.javatools.utils))
+    // the waits that go through the watchdog of hangs (org.xvm.testing.Await), shared by lang's tests
+    testImplementation(project(":test-support"))
     add(
         integrationTestSourceSet.implementationConfigurationName,
         if (playbookOnNextIde) libs.lang.intellij.next.kodein else libs.lang.intellij.kodein,

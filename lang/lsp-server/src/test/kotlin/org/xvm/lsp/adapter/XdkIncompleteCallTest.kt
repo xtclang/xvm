@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.util.concurrent.Executors
 
 /**

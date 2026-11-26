@@ -7,8 +7,6 @@ import com.intellij.openapi.util.Key
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xtclang.idea.awaitUntil
-import org.xtclang.idea.awaited
 import org.xvm.lsp.protocol.BuildResponse
 import org.xvm.lsp.protocol.BuiltModule
 import org.xvm.lsp.protocol.RunExitedParams
@@ -20,6 +18,8 @@ import org.xvm.lsp.protocol.ServerTest
 import org.xvm.lsp.protocol.StopRunParams
 import org.xvm.lsp.protocol.TestSelector
 import org.xvm.lsp.protocol.XtcServerProtocol
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.lang.reflect.Proxy
 import java.nio.file.Files
 import java.nio.file.Path

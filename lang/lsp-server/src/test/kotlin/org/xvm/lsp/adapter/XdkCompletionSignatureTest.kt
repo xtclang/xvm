@@ -3,7 +3,7 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 
 /**
  * Checks member completion and signature help against resolved receiver types and incomplete calls. Preserves

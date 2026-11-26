@@ -14,7 +14,7 @@ import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import org.xvm.lsp.adapter.xdk.toDependency
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import org.xvm.tool.ModuleInfo
 import java.nio.file.Files
 import java.nio.file.Path

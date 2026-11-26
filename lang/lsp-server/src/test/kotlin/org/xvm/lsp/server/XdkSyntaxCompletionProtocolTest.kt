@@ -18,7 +18,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 
 /**
  * Checks template and name-completion wire edits against snippet and indentation capabilities. Minimal

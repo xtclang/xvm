@@ -9,7 +9,7 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkFileChanges
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch

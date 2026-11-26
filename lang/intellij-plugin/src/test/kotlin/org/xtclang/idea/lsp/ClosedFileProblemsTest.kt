@@ -33,12 +33,12 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
-import org.xtclang.idea.awaited
 import org.xvm.lsp.protocol.BuildDiagnostic
 import org.xvm.lsp.protocol.BuildPosition
 import org.xvm.lsp.protocol.BuildRange
 import org.xvm.lsp.protocol.BuildResponse
 import org.xvm.lsp.protocol.DocumentDiagnostics
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch

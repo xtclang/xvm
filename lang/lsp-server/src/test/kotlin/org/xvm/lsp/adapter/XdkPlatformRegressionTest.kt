@@ -14,7 +14,7 @@ import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Path
 
 /** Minimized real-source failures from the platform demo, without a sibling checkout dependency. */

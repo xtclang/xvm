@@ -3,8 +3,8 @@ package org.xvm.lsp.run
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.io.PrintWriter
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch

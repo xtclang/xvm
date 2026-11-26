@@ -6,7 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkInlineCompletions
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 
 /**
  * Exercises compiler-backed inline suggestions for names, members and literals. Checks fitting and explicit-

@@ -25,8 +25,8 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaitAsserted
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaitAsserted
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList

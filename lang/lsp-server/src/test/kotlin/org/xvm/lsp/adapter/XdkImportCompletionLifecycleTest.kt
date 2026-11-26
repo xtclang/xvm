@@ -7,7 +7,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean

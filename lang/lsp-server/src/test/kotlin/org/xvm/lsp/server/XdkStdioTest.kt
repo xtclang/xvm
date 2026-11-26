@@ -86,8 +86,8 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.awaited
-import org.xvm.lsp.what
+import org.xvm.testing.awaited
+import org.xvm.testing.what
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties

@@ -1,7 +1,7 @@
 package org.xvm.lsp.run
 
 import org.xvm.debug.XtcDebugServer
-import org.xvm.lsp.LIVELOCK
+import org.xvm.testing.LIVELOCK
 
 /**
  * The execution worker's limits for tests that start real workers: a worker may take as long as it needs to start, a

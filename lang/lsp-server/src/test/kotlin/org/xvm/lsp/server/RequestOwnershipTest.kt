@@ -9,8 +9,8 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.CompilationResult
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
 

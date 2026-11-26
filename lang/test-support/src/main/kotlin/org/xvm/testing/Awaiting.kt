@@ -1,6 +1,5 @@
-package org.xvm.debug
+package org.xvm.testing
 
-import org.xvm.testing.Await
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
@@ -10,8 +9,8 @@ import java.util.concurrent.Semaphore
 import kotlin.time.Duration
 import kotlin.time.toKotlinDuration
 
-// The waits of the debug server's tests, each until what it waits for happens: the watchdog of org.xvm.testing fails one
-// when nothing has used CPU for a minute, at once on a deadlock, and after LIVELOCK on a livelock, with a dump of every
+// The waits of lang's tests, each until what it waits for happens: the watchdog of org.xvm.testing fails one when
+// nothing has used CPU for a minute, at once on a deadlock, and after LIVELOCK on a livelock, with a dump of every
 // thread. None has a limit of time that a slow machine reaches. Each takes, optionally, what it waits for, for the
 // failure's message, which otherwise names the object waited on and the line that waits.
 
