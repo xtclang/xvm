@@ -214,7 +214,14 @@ class XtcTextDocumentService(
     private val hintReports = ResolveReports<String>()
     private val symbolReports = ResolveReports<AdapterLocation>()
 
-    private fun clearResolveReports() =
+    /**
+     * What the resolve handles were made from: a new one with each change of a text that the server reads, and not with
+     * a document's open or close that leaves its text as the file has it, as [diagnosticRevision] has.
+     */
+    private var resolveRevision = 0L
+
+    private fun clearResolveReports() {
+        resolveRevision++
         listOf(
             completionReports,
             actionReports,
@@ -223,6 +230,7 @@ class XtcTextDocumentService(
             hintReports,
             symbolReports,
         ).forEach { it.clear() }
+    }
 
     private fun requireResolve(
         enabled: Boolean,
@@ -660,7 +668,8 @@ class XtcTextDocumentService(
         edited: Boolean = true,
     ) {
         diagnosticRevision++
-        clearResolveReports()
+        // an open with the text on disk, as a close with it, leaves what a listed action was made from as it was
+        if (edited) clearResolveReports()
         val compiler = adapter as? XdkAdapter
         val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
         analyzeOne(uri, content, version, edited = edited)
@@ -796,7 +805,11 @@ class XtcTextDocumentService(
             val uri = params.textDocument.uri
             logger.info("textDocument/didClose: {}", uri)
             diagnosticRevision++
-            clearResolveReports()
+            // a close that leaves the text as the file has it, as VS Code's release of a document that no editor
+            // shows, three minutes after an extension or a navigation opened it, changes nothing that a listed action
+            // or lens was made from: a click on an action listed before it still applies the action
+            val kept = openDocuments[uri]?.takeIf { uri !in outOfSync }?.let { onDisk(uri, it.content) } == true
+            if (!kept) clearResolveReports()
             val affected = adapter.affectedAnalysisScopes(uri)
             semanticTokenReports.retire(uri)
             val document = openDocuments.remove(uri)
@@ -1113,7 +1126,7 @@ class XtcTextDocumentService(
                                 ?.takeIf { server.resolvesCompletionDocumentation }
                                 ?.let {
                                     completionReports.remember(
-                                        diagnosticRevision,
+                                        resolveRevision,
                                         c.label,
                                         it,
                                         it.length,
@@ -1187,7 +1200,7 @@ class XtcTextDocumentService(
             }
             if (item.data != null) {
                 val documentation =
-                    completionReports.resolve(item.data, diagnosticRevision, item.label)
+                    completionReports.resolve(item.data, resolveRevision, item.label)
                 if (item.documentation == null) item.documentation = Either.forLeft(documentation)
             }
             item
@@ -1409,7 +1422,7 @@ class XtcTextDocumentService(
                     val handle =
                         if (server.resolvesDocumentLinkTarget) {
                             linkReports.remember(
-                                diagnosticRevision,
+                                resolveRevision,
                                 range.fmt(),
                                 l,
                                 (l.target?.length ?: 0) + (l.tooltip?.length ?: 0),
@@ -1736,7 +1749,7 @@ class XtcTextDocumentService(
                             (server.resolvesCodeActionEdit && action.outsideUses == null) || !server.presentation.actionLiterals
                         }?.let {
                             actionReports.remember(
-                                diagnosticRevision,
+                                resolveRevision,
                                 action.title,
                                 it,
                                 it.changes.values.sumOf { edits ->
@@ -1839,7 +1852,7 @@ class XtcTextDocumentService(
                 val edit =
                     actionReports.resolve(
                         arguments.firstOrNull(),
-                        diagnosticRevision,
+                        resolveRevision,
                         title,
                         consume = true,
                     )
@@ -1876,7 +1889,7 @@ class XtcTextDocumentService(
                 )
             }
             if (action.data != null) {
-                val edit = actionReports.resolve(action.data, diagnosticRevision, action.title)
+                val edit = actionReports.resolve(action.data, resolveRevision, action.title)
                 if (action.edit == null) action.edit = protocolEdit(edit) ?: throw contentModified()
             }
             action
@@ -1979,7 +1992,7 @@ class XtcTextDocumentService(
                             ?.takeIf { server.resolvesInlayHintTooltip }
                             ?.let {
                                 hintReports.remember(
-                                    diagnosticRevision,
+                                    resolveRevision,
                                     hintKey(this),
                                     it,
                                     it.length,
@@ -2244,7 +2257,7 @@ class XtcTextDocumentService(
                         val handle =
                             if (server.resolvesCodeLensCommand) {
                                 lensReports.remember(
-                                    diagnosticRevision,
+                                    resolveRevision,
                                     range.fmt(),
                                     cmd.copy(arguments = cmd.arguments.toList()),
                                     cmd.title.length +
@@ -2292,7 +2305,7 @@ class XtcTextDocumentService(
         supplyAsync("codeLens/resolve", lens.range.fmt()) {
             requireResolve(server.resolvesCodeLensCommand, "Code lens")
             if (lens.data != null) {
-                val command = lensReports.resolve(lens.data, diagnosticRevision, lens.range.fmt())
+                val command = lensReports.resolve(lens.data, resolveRevision, lens.range.fmt())
                 lens.command = Command(command.title, command.command, command.arguments.toList())
             }
             lens
@@ -2302,7 +2315,7 @@ class XtcTextDocumentService(
         supplyAsync("documentLink/resolve", link.range.fmt()) {
             requireResolve(server.resolvesDocumentLinkTarget, "Document link")
             if (link.data != null) {
-                val resolved = linkReports.resolve(link.data, diagnosticRevision, link.range.fmt())
+                val resolved = linkReports.resolve(link.data, resolveRevision, link.range.fmt())
                 link.target = resolved.target?.let(server.readOnlyDocuments::present)
                 link.tooltip = resolved.tooltip.takeIf { server.presentation.linkTooltips }
             }
@@ -2319,7 +2332,7 @@ class XtcTextDocumentService(
                     Either.forRight(
                         MarkupContent(
                             MarkupKind.MARKDOWN,
-                            hintReports.resolve(hint.data, diagnosticRevision, hintKey(hint)),
+                            hintReports.resolve(hint.data, resolveRevision, hintKey(hint)),
                         ),
                     )
             }
@@ -2355,7 +2368,7 @@ class XtcTextDocumentService(
                         val handle =
                             if (server.resolvesWorkspaceSymbolRange) {
                                 symbolReports.remember(
-                                    diagnosticRevision,
+                                    resolveRevision,
                                     "$name:$kind",
                                     symbol.location,
                                     symbol.location.uri.length + 64,
@@ -2383,7 +2396,7 @@ class XtcTextDocumentService(
                         symbolReports
                             .resolve(
                                 symbol.data,
-                                diagnosticRevision,
+                                resolveRevision,
                                 "${symbol.name}:${symbol.kind}",
                             ).toLsp(),
                     )
