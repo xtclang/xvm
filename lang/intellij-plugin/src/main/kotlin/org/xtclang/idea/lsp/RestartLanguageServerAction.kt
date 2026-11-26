@@ -2,20 +2,13 @@ package org.xtclang.idea.lsp
 
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import org.xtclang.idea.XtcProjectAction
 
 /** Restarts the project's Ecstasy language server with its adapter and the saved runtime settings. */
-class RestartLanguageServerAction : DumbAwareAction() {
-    override fun getActionUpdateThread() = ActionUpdateThread.BGT
-
-    override fun update(event: AnActionEvent) {
-        event.presentation.isEnabled = event.project != null
-    }
-
+class RestartLanguageServerAction : XtcProjectAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
         try {
