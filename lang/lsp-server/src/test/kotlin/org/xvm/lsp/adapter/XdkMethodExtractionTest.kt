@@ -11,7 +11,6 @@ import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
 import org.xvm.debug.ProgramEvents
 import org.xvm.lsp.Slow
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -600,17 +599,7 @@ class XdkMethodExtractionTest {
             }
             val edit = requireNotNull(action) { "No method extraction for $marked" }.edit!!
             assertThat(edit.versioned).isTrue()
-            val changed =
-                edit.changes
-                    .getValue(uri)
-                    .sortedWith(
-                        compareByDescending<TextEdit> {
-                            it.range.start.line
-                        }.thenByDescending { it.range.start.column },
-                    ).fold(text) { value, change ->
-                        fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-                        value.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-                    }
+            val changed = apply(text, edit, uri)
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             assertThat(file.readText()).isEqualTo(text)
             check(text, changed)

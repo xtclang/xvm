@@ -6,7 +6,6 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
@@ -693,15 +692,7 @@ class XdkMissingMethodsTest {
             val edit = requireNotNull(action.edit)
             assertThat(edit.versioned).isTrue()
             assertThat(edit.changes.keys).containsExactly(uri)
-            val changed =
-                edit.changes
-                    .getValue(uri)
-                    .sortedByDescending { it.range.start.line * text.length + it.range.start.column }
-                    .fold(text) { value, change ->
-                        fun at(position: Position) =
-                            requireNotNull(XdkRename.offset(text, SemanticModel.Position(position.line, position.column)))
-                        value.replaceRange(at(change.range.start), at(change.range.end), change.newText)
-                    }
+            val changed = apply(text, edit, uri)
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).filter { it.title == action.title }).isEmpty()
             assertThat(file.readText()).isEqualTo(text)

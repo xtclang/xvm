@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
@@ -62,15 +61,7 @@ class XdkMissingDeclarationsTest {
             val statement = Range(Position(2, 8), Position(2, 34))
             assertThat(adapter.getCodeActions(uri, statement, listOf(diagnostic)).filter { it.title == "Create class 'Joker'" })
                 .hasSize(1)
-            val changed =
-                requireNotNull(action.edit)
-                    .changes
-                    .getValue(uri)
-                    .sortedByDescending { it.range.start.line * text.length + it.range.start.column }
-                    .fold(text) { current, change ->
-                        fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-                        current.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-                    }
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).contains("class Joker {}")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -150,14 +141,7 @@ class XdkMissingDeclarationsTest {
                 assertThat(actions).describedAs("Diagnostics: %s", diagnostics).hasSize(1)
                 val edit = requireNotNull(actions.single().edit)
                 assertThat(edit.versioned).isTrue()
-                val changed =
-                    edit.changes
-                        .getValue(uri)
-                        .sortedByDescending { it.range.start.line * text.length + it.range.start.column }
-                        .fold(text) { current, change ->
-                            fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-                            current.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-                        }
+                val changed = apply(text, edit, uri)
                 assertThat(changed).contains(expected)
                 assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             }

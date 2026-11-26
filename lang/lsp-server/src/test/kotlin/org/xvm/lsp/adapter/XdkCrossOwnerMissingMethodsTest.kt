@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Files
@@ -484,17 +483,7 @@ class XdkCrossOwnerMissingMethodsTest {
                 val edit = requireNotNull(action.edit)
                 assertThat(edit.versioned).isTrue()
                 assertThat(edit.changes.keys).containsExactly(targetUri)
-                val changed =
-                    edit.changes
-                        .getValue(targetUri)
-                        .sortedByDescending {
-                            it.range.start.line * targetOriginal.length +
-                                it.range.start.column
-                        }.fold(targetOriginal) { text, change ->
-                            fun offset(position: Position) =
-                                requireNotNull(XdkRename.offset(targetOriginal, SemanticModel.Position(position.line, position.column)))
-                            text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-                        }
+                val changed = apply(targetOriginal, edit, targetUri)
                 assertThat(changed).contains(signature, "TODO();")
                 assertThat(adapter.compile(targetUri, changed).diagnostics).isEmpty()
                 if (target != source) assertThat(adapter.compile(uri, original).diagnostics).isEmpty()
