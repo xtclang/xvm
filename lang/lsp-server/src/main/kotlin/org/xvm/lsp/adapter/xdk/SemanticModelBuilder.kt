@@ -194,7 +194,7 @@ internal fun EmbeddingSupport.Compilation.compiledSemantics(
                 }
             val artifact =
                 if (succeeded() && !errors.hasSeriousErrors()) {
-                    XdkDependency.capture(this, builder.declarations())
+                    XdkDependency.capture(this, builder.declarations(), builder.parameterDeclarations())
                 } else {
                     null
                 }
@@ -270,7 +270,7 @@ fun EmbeddingSupport.Compilation.toDependency(): XdkDependency =
         return@api ConstantPool.withPool(pool()).use {
             val builder = SemanticModelBuilder()
             builder.build(this)
-            XdkDependency.capture(this, builder.declarations())
+            XdkDependency.capture(this, builder.declarations(), builder.parameterDeclarations())
         }
     }
 
@@ -431,6 +431,20 @@ private class SemanticModelBuilder(
                 }
                 identity to SourceLocation(symbol.declarationSource, range)
             }.toMap()
+
+    /**
+     * Where the parameters of the module's own methods are, by method and name, in the source of the method's declaration:
+     * where Go to Definition of a named argument goes from a module that depends on this one.
+     */
+    fun parameterDeclarations(): Map<IdentityConstant, Map<String, Range>> =
+        parameters.entries
+            .mapNotNull { (slot, id) ->
+                val (method, index) = slot
+                if (index < 0 || module == null || method.moduleConstant != module) return@mapNotNull null
+                val symbol = symbols[id]?.takeIf { it.declarationSource != null } ?: return@mapNotNull null
+                Triple(method, symbol.name, symbol.declaration ?: return@mapNotNull null)
+            }.groupBy({ it.first }, { it.second to it.third })
+            .mapValues { (_, names) -> names.toMap() }
 
     fun unavailable(): SemanticModel =
         SemanticModel(
@@ -1036,8 +1050,18 @@ private class SemanticModelBuilder(
         val value = method.params.getOrNull(index + method.typeParamCount) ?: return null
         return parameters.getOrPut(method.identityConstant to index) {
             val id = SymbolId(this.id, symbols.size)
+            // a parameter of another module's method, as a named argument names it, is where that method's source has it
+            val declared = dependency(method.identityConstant)?.takeIf { value.name in it.parameters }
             symbols[id] =
-                Symbol(id, value.name, SymbolKind.PARAMETER, null, type(value.type), null, null)
+                Symbol(
+                    id,
+                    value.name,
+                    SymbolKind.PARAMETER,
+                    declared?.parameters?.get(value.name),
+                    type(value.type),
+                    null,
+                    declared?.location?.sourceName,
+                )
             id
         }
     }
@@ -1796,12 +1820,7 @@ private class SemanticModelBuilder(
         val existing = if (target is Register) registers[target] else constants[target as Constant]
         if (existing != null) return existing
         val symbol = SymbolId(id, symbols.size)
-        val dependency =
-            (target as? IdentityConstant)?.let {
-                // the module being built declares its own identities, also one that a bundled library has: the XDK's
-                // own sources compile a module of a bundled library's name
-                dependencies[it] ?: it.takeUnless { identity -> identity.moduleConstant == module }?.let(XdkLibrarySources::declaration)
-            }
+        val dependency = (target as? IdentityConstant)?.let(::dependency)
         val location = declaration ?: dependency?.location
         val component = (target as? IdentityConstant)?.component
         if (target is Register) {
@@ -1841,6 +1860,12 @@ private class SemanticModelBuilder(
             )
         return symbol
     }
+
+    /** Where another module, a dependency or a bundled library, declares [identity], or null for one of the module's own. */
+    private fun dependency(identity: IdentityConstant): DependencyDeclaration? =
+        // the module being built declares its own identities, also one that a bundled library has: the XDK's own sources
+        // compile a module of a bundled library's name
+        dependencies[identity] ?: identity.takeUnless { it.moduleConstant == module }?.let(XdkLibrarySources::declaration)
 
     private fun modifiers(target: Argument): Set<SemanticModel.Modifier> =
         immutableSet(

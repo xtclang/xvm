@@ -7,13 +7,15 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
+import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
 
 /**
  * Declaration located in attached library source, with the source range used for navigation and its doc comment, which
- * a compiled module does not keep.
+ * a compiled module does not keep, and of a method the range of each of its parameters' names, by name, which Go to
+ * Definition of a named argument goes to.
  */
 internal data class LibraryDeclaration(
     val path: List<String>,
@@ -21,6 +23,7 @@ internal data class LibraryDeclaration(
     val firstLine: Int,
     val lastLine: Int,
     val documentation: String?,
+    val parameters: Map<String, SemanticModel.Range>,
 )
 
 /** Parse declaration spans and doc comments shared by bundled and explicitly attached library sources. */
@@ -58,6 +61,21 @@ internal fun libraryDeclarations(
                         Source.calculateLine(position),
                         Source.calculateOffset(position),
                     )
+                // a method's parameters, its type parameters among them, as its compiled structure has them, but not the
+                // names of its return values, which no argument names
+                val parameters =
+                    if (node is MethodDeclarationStatement) {
+                        val returns = node.returns.orEmpty()
+                        node
+                            .childNodes()
+                            .filterIsInstance<Parameter>()
+                            .filter { parameter -> returns.none { it === parameter } }
+                            .mapNotNull { parameter ->
+                                parameter.nameToken?.let { parameter.name to SemanticModel.Range(at(it.startPosition), at(it.endPosition)) }
+                            }.toMap()
+                    } else {
+                        emptyMap()
+                    }
                 add(
                     LibraryDeclaration(
                         names,
@@ -65,6 +83,7 @@ internal fun libraryDeclarations(
                         Source.calculateLine(node.startPosition),
                         Source.calculateLine(node.endPosition),
                         documentation?.trim()?.takeIf { it.isNotEmpty() },
+                        parameters,
                     ),
                 )
             }

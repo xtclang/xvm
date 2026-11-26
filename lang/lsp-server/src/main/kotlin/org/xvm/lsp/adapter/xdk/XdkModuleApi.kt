@@ -30,13 +30,17 @@ internal class XdkModuleApi private constructor(
     /**
      * The whole API and where each declaration is: what a module that depends on the artifact compiles against, the
      * artifact without its methods' code and source text, its build time and its source directory, with whether each
-     * method has code ([org.xvm.asm.FileStructure.writeApiTo]), and the place of each declaration. A module that depends
-     * on the artifact compiles against another with the same as it did against this one, and its facts name the
-     * artifact's declarations at the same places.
+     * method has code ([org.xvm.asm.FileStructure.writeApiTo]), and the place of each declaration and of each method's
+     * parameters. A module that depends on the artifact compiles against another with the same as it did against this
+     * one, and its facts name the artifact's declarations at the same places.
      */
     val all: String,
     val declarations: List<Declaration>,
-    /** The key of the declaration at each place, for the places that the artifact's declarations have. */
+    /**
+     * The key of the declaration at each place, for the places that the artifact's declarations have, and of a method's
+     * parameter, the method's key and the parameter's name, for the places of their names, which a named argument's
+     * facts name.
+     */
     val places: Map<SemanticModel.SourceLocation, String>,
     /** The components and constants whose digest is one that no other compile gives them ([DeclarationDigests.unstable]). */
     val unstable: Int,
@@ -124,11 +128,13 @@ internal class XdkModuleApi private constructor(
     companion object {
         /**
          * The API of [file], an artifact read alone, which this strips; [located] gives the place of each declaration
-         * that has one, by its identity, read from the file before it is stripped.
+         * that has one, by its identity, read from the file before it is stripped, and [parameters] those of the names of
+         * each such method's parameters, by name, in the source of the method's place.
          */
         fun of(
             file: FileStructure,
             located: Map<IdentityConstant, SemanticModel.SourceLocation>,
+            parameters: Map<IdentityConstant, Map<String, SemanticModel.Range>>,
         ): XdkModuleApi =
             ConstantPool.withPool(file.constantPool).use {
                 val api = ByteArrayOutputStream()
@@ -141,12 +147,20 @@ internal class XdkModuleApi private constructor(
                 // repository, which depends on the workspace's ecstasy, "missing class for constant". A constant that
                 // the API does not hold is described, as before.
                 fun named(constant: Constant): String = constant.position.takeIf { it >= 0 }?.let { "#$it" } ?: constant.toString()
+                val parameterPlaces =
+                    parameters.entries.flatMap { (method, names) ->
+                        val source = located[method]?.sourceName ?: return@flatMap emptyList()
+                        names.map { (name, range) -> Triple(method, name, SemanticModel.SourceLocation(source, range)) }
+                    }
                 val all =
                     sha256 { digest ->
                         digest.update(api.toByteArray())
-                        located.entries
-                            .map { (identity, place) -> "${named(identity)} ${place.sourceName} ${place.range}" }
-                            .sorted()
+                        (
+                            located.entries.map { (identity, place) -> "${named(identity)} ${place.sourceName} ${place.range}" } +
+                                parameterPlaces.map { (method, name, place) ->
+                                    "${named(method)}($name) ${place.sourceName} ${place.range}"
+                                }
+                        ).sorted()
                             .forEach {
                                 digest.update(it.toByteArray(Charsets.UTF_8))
                                 digest.update(0)
@@ -159,7 +173,8 @@ internal class XdkModuleApi private constructor(
                     XdkModuleApi(
                         all,
                         declarations,
-                        located.entries.associate { (identity, place) -> place to digests.of(identity) },
+                        located.entries.associate { (identity, place) -> place to digests.of(identity) } +
+                            parameterPlaces.associate { (method, name, place) -> place to "${digests.of(method)}($name)" },
                         digests.unstable(),
                     )
                 }
