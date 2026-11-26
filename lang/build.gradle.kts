@@ -117,6 +117,87 @@ val updateGeneratedExamples =
     }
 
 // =============================================================================
+// Static analysis, opt-in
+// =============================================================================
+// detekt over lang's Kotlin, and CPD, PMD's copy-paste detector, over its Kotlin and TypeScript.
+// They are not part of check: each writes its reports under build/reports, for review.
+//
+//   ./gradlew :lang:detekt :lang:cpdKotlin :lang:cpdTypeScript -PincludeBuildLang=true -PincludeBuildAttachLang=true
+
+val detektTool: Configuration by configurations.creating {
+    isCanBeConsumed = false
+}
+val pmdTool: Configuration by configurations.creating {
+    isCanBeConsumed = false
+}
+
+dependencies {
+    detektTool(libs.lang.detekt.cli)
+    pmdTool(libs.lang.pmd.cli)
+    pmdTool(libs.lang.pmd.kotlin)
+    pmdTool(libs.lang.pmd.javascript)
+}
+
+// every source set of the Kotlin projects: main, tests, integration tests and probes
+val kotlinSources =
+    listOf("dsl", "lsp-server", "dap-server", "intellij-plugin").map { layout.projectDirectory.dir("$it/src").asFile }
+val typeScriptSources = listOf(layout.projectDirectory.dir("vscode-extension/src").asFile)
+val analysisReports = layout.buildDirectory.dir("reports")
+
+tasks.register<JavaExec>("detekt") {
+    group = "verification"
+    description = "Analyze lang's Kotlin with detekt, default rules; reports in build/reports/detekt"
+    classpath = detektTool
+    mainClass.set("dev.detekt.cli.Main")
+    val out = analysisReports.get().dir("detekt").asFile
+    inputs.files(kotlinSources.map { fileTree(it) { include("**/*.kt") } })
+    outputs.dir(out)
+    // detekt fails on its first findings; the reports are what this task is for
+    isIgnoreExitValue = true
+    args(
+        "--input",
+        kotlinSources.joinToString(File.pathSeparator) { it.path },
+        "--base-path",
+        layout.projectDirectory.asFile.path,
+        "--report",
+        "html:${out.resolve("detekt.html")}",
+        "--report",
+        "checkstyle:${out.resolve("detekt.xml")}",
+    )
+}
+
+fun cpd(
+    name: String,
+    language: String,
+    sources: List<File>,
+) = tasks.register<JavaExec>(name) {
+    group = "verification"
+    description = "Find duplicated $language code in lang with CPD; report in build/reports/cpd/$language.xml"
+    classpath = pmdTool
+    mainClass.set("net.sourceforge.pmd.cli.PmdCli")
+    val report = analysisReports.get().file("cpd/$language.xml").asFile
+    inputs.files(sources.map { fileTree(it) })
+    outputs.file(report)
+    doFirst(CreateParentDirectory(report))
+    args(
+        listOf("cpd", "--minimum-tokens", "100", "--language", language, "--format", "xml", "--report-file", report.path) +
+            listOf("--no-fail-on-violation") + sources.flatMap { listOf("--dir", it.path) },
+    )
+}
+
+/** Creates the report's directory, which CPD does not. */
+class CreateParentDirectory(
+    private val file: File,
+) : Action<Task> {
+    override fun execute(task: Task) {
+        file.parentFile.mkdirs()
+    }
+}
+
+cpd("cpdKotlin", "kotlin", kotlinSources)
+cpd("cpdTypeScript", "typescript", typeScriptSources)
+
+// =============================================================================
 // Aggregate subproject tasks
 // =============================================================================
 
