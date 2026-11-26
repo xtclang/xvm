@@ -10959,6 +10959,43 @@
         "limitations": []
       }
     },
+    "X353": {
+      "title": "a parameter of a constructor with a finally block: Find References from its use in the body and from a named argument reach its declaration, both uses and the finally block's, and a rename from either changes them all",
+      "manual": [],
+      "values": {
+        "file": "Finals.x",
+        "module": "Finals",
+        "source": "module Finals {\n    class Holder {\n        Int seed;\n        Boolean flag = True;\n\n        construct(Int[] keys, Boolean inPlace = False) {\n            seed = inPlace && flag ? keys[0] : keys.size;\n        } finally {\n            if (!inPlace) {\n                seed++;\n            }\n        }\n    }\n\n    Holder make() = new Holder([1], inPlace=True);\n}\n",
+        "name": "inPlace",
+        "uses": [
+          {
+            "anchor": "Boolean inPlace",
+            "offset": 8
+          },
+          {
+            "anchor": "= inPlace &&",
+            "offset": 2
+          },
+          {
+            "anchor": "(!inPlace)",
+            "offset": 2
+          },
+          {
+            "anchor": "inPlace=True",
+            "offset": 0
+          }
+        ],
+        "from": [
+          1,
+          3
+        ],
+        "newName": "fresh"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

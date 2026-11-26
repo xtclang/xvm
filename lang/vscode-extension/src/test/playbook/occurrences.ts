@@ -50,3 +50,20 @@ export function labelCases(): void {
         assert.strictEqual(document.getText(), data.source.split(data.name).join(data.newName));
     });
 }
+
+/**
+ * X353, registered after X352 in catalog order: a parameter of a constructor with a finally block, which the compiler
+ * compiles as a method of its own over the same parameters, from its use in the body and from a named argument.
+ */
+export function constructorFinallyCases(): void {
+    playbook('X353', async (workspace, data) => {
+        const document = await workspace.module(data.file, data.source, data.module);
+        for (const from of data.from) {
+            await workspace.replace(document, data.source);
+            const uses = useRanges(document, data.uses, data.name);
+            await checkUses(document, uses[from].start, uses, false);
+            await applyRename(document, uses[from].start, data.newName);
+            assert.strictEqual(document.getText(), data.source.split(data.name).join(data.newName), `Rename from ${data.uses[from].anchor}`);
+        }
+    });
+}

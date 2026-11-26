@@ -23,6 +23,26 @@ internal fun ParityScenarios.labelCases() {
     }
 }
 
+/**
+ * X353, registered after X352 in catalog order: a parameter of a constructor with a finally block, which the compiler
+ * compiles as a method of its own over the same parameters, from its use in the body and from a named argument.
+ */
+internal fun ParityScenarios.constructorFinallyCases() {
+    case("X353") { data ->
+        val document = openModule(data)
+        val name = data.string("name")
+        data["from"].asJsonArray.map { it.asInt }.forEach { from ->
+            replace(document, data.string("source"))
+            val uses = document.uses(data)
+            checkUses(document, uses[from], uses, name, highlights = false)
+            applyRename(document, uses[from], data.string("newName"))
+            check(
+                document.text == data.string("source").replace(name, data.string("newName")),
+            ) { "Rename from ${uses[from]}: ${document.text}" }
+        }
+    }
+}
+
 /** The offsets of the case's name at each of its uses, an anchor and the name's offset in it. */
 private fun ParityWorkspace.Document.uses(data: JsonObject): List<Int> =
     data["uses"].rows().map { at(it.string("anchor"), it.int("offset")) }
