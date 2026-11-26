@@ -287,6 +287,38 @@ async function reveal(tour: Tour, uri: vscode.Uri): Promise<void> {
             .some(each => each.trim() === name));
 }
 
+/**
+ * Opens the Explorer's name box on [uri]'s row, which [reveal] selected, as Rename (F2) there does, and waits until the
+ * box has the keyboard. Rename acts on the tree's focused row, and its box closes, keeping the name, as soon as it loses
+ * the keyboard: in run-JvRfPu the box never showed, with Hand.x the selected row and the tree holding the keyboard by
+ * the time the wait gave up. So Rename goes only once the tree has the keyboard on that row, and again whenever the one
+ * before has ended and no box shows, until one does and has the keyboard.
+ */
+async function renameInExplorer(tour: Tour, uri: vscode.Uri): Promise<void> {
+    const name = path.basename(uri.fsPath);
+    const tree = tour.ui.page.locator('.explorer-folders-view .monaco-list').first();
+    const box = tour.ui.page.locator('.explorer-folders-view .monaco-inputbox input');
+    const focusedRows = () => tour.ui.page.locator('.explorer-folders-view .monaco-list-row.focused').allInnerTexts()
+        .then(rows => rows.map(row => row.trim()), () => [] as string[]);
+    let renaming: Promise<unknown> | undefined;
+    await tour.until(`The name box of ${name}`, async () => {
+        if (await box.isVisible() && await tour.ui.focusedIn(box)) return true;
+        // a box that shows without the keyboard yet takes it or closes; a Rename that has not ended may still open one
+        if (renaming || await box.isVisible()) return false;
+        if (!(await focusedRows()).includes(name)) {
+            await Promise.resolve(command('revealInExplorer', uri)).catch(() => undefined);
+            return false;
+        }
+        // the keyboard in the tree, as a click into the Explorer gives it
+        if (!await tour.ui.focusedIn(tree)) await tree.focus({ timeout: 2_000 }).catch(() => undefined);
+        if (!await tour.ui.focusedIn(tree)) return false;
+        renaming = Promise.resolve(vscode.commands.executeCommand('renameFile')).catch(() => undefined)
+            .finally(() => { renaming = undefined; });
+        return false;
+    }, async () => `the focused rows: ${(await focusedRows()).join(', ') || 'none'}; the tree has the keyboard: ${await tour.ui.focusedIn(tree)}; `
+        + `a box shows: ${await box.isVisible()}`);
+}
+
 /** The Explorer's view of the project's folder, by its title. */
 function folders(tour: Tour) {
     return tour.ui.page.locator('.pane-header').filter({ hasText: /^\s*cardGame/i }).first();
@@ -1315,8 +1347,7 @@ async function refactoring(tour: Tour): Promise<void> {
         act: async () => {
             await command('workbench.view.explorer');
             await reveal(tour, vscode.Uri.file(hand));
-            await launch('renameFile');
-            await tour.until('The name box', () => tour.ui.showing('css:.explorer-folders-view .monaco-inputbox input'));
+            await renameInExplorer(tour, vscode.Uri.file(hand));
             await tour.ui.press('Control+a');
             await tour.ui.type('PlayerHand.x');
             await tour.ui.press('Enter');
