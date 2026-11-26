@@ -3,7 +3,7 @@ import * as fs from './disk';
 import * as vscode from 'vscode';
 import { compilerSettingsLocation } from '../../rename-proposal';
 import { edges, hierarchy } from './modules';
-import { client, diagnostics, eventually, label, noErrors, playbook, position, targetNames, targets, Workspace } from './support';
+import { client, diagnostics, eventually, label, noErrors, playbook, position, renameOrNone, targetNames, targets, Workspace } from './support';
 
 export async function discovered<T>(workspace: Workspace, body: () => Promise<T>): Promise<T> {
     const original = vscode.workspace.workspaceFolders!.map(folder => ({ uri: folder.uri.toString(), name: folder.name }));
@@ -111,7 +111,7 @@ export function liveWorkspaceCases(): void {
                 // Fixture creation can deliver a late watcher notification that cancels the
                 // proof. Retry only the unapplied query; apply the resulting edit exactly once.
                 const edit = await eventually(
-                    async () => provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token),
+                    async () => renameOrNone(provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token)),
                     edit => !!edit, 'Companion rename proof after fixture watcher notifications');
                 assert.ok(edit);
                 // Apply it as native Rename does: as a refactoring, which files.refactoring.autoSave saves.
