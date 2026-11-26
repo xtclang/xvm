@@ -1098,6 +1098,14 @@ internal class XdkProjectQueries(
             }
         val source = XdkSources.file(uri)?.path ?: return emptyList()
         val text = texts[source] ?: return emptyList()
+
+        // a refactoring's plan for this source, with the relocation it may make, and the code action's edit of it
+        fun sourcePlan(
+            edits: List<XdkRename.Edit>,
+            relocation: XdkRename.Relocation? = null,
+        ) = XdkRename.Plan(texts, mapOf(source to edits), relocations = relocation?.let { mapOf(source to listOf(it)) }.orEmpty())
+
+        fun sourceEdit(plan: XdkRename.Plan) = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true)
         // The requests of one revision share its compile and its import cleanup.
         val revision = revision()
         val base = revisionBase(revision, made::set) ?: return emptyList()
@@ -1119,14 +1127,13 @@ internal class XdkProjectQueries(
                     .imports(revision, source) {
                         fun proved(candidate: XdkImports.Candidate): CodeAction? {
                             checkCurrent()
-                            val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
+                            val plan = sourcePlan(candidate.edits)
                             val after = compile(plan.proposed, reuse = base) ?: return null
                             if (!XdkRename.preservesBindings(before, after, plan)) return null
                             return CodeAction(
                                 candidate.title,
                                 candidate.kind,
-                                edit =
-                                    WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                                edit = sourceEdit(plan),
                             )
                         }
                         val imports = XdkImports.imports(text)
@@ -1190,7 +1197,7 @@ internal class XdkProjectQueries(
                     .mapNotNull { candidate ->
                         checkCurrent()
                         if (!Files.isWritable(File(source).toPath())) return@mapNotNull null
-                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
+                        val plan = sourcePlan(listOf(candidate.edit))
                         val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@mapNotNull null
                         if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.proves(after, plan)) {
                             return@mapNotNull null
@@ -1199,7 +1206,7 @@ internal class XdkProjectQueries(
                             candidate.title,
                             CodeAction.CodeActionKind.QUICKFIX,
                             diagnostics = resolved(candidate.use.range),
-                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            edit = sourceEdit(plan),
                         )
                     }
             }
@@ -1210,7 +1217,7 @@ internal class XdkProjectQueries(
             XdkMemberActions.actions(before.memberActions.takeIf { rewrites }.orEmpty(), source, range).mapNotNull { candidate ->
                 checkCurrent()
                 val edit = candidate.edit(text) ?: return@mapNotNull null
-                val plan = XdkRename.Plan(texts, mapOf(source to edit.all))
+                val plan = sourcePlan(edit.all)
                 val after = shared(revision, plan.proposed) ?: return@mapNotNull null
                 if (
                     !XdkRename.preservesMemberAdditions(
@@ -1228,7 +1235,7 @@ internal class XdkProjectQueries(
                     // The class may be valid until constructed, and a construction diagnostic can
                     // be elsewhere. This is a class intention, not a diagnostic-attached quick fix.
                     CodeAction.CodeActionKind.REFACTOR_REWRITE,
-                    edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                    edit = sourceEdit(plan),
                 )
             }
         val extraction =
@@ -1236,17 +1243,13 @@ internal class XdkProjectQueries(
                 XdkLocalExtraction.candidate(text, range)?.let { candidate ->
                     checkCurrent()
                     val plan =
-                        XdkRename.Plan(
-                            texts,
-                            mapOf(source to candidate.edits),
-                            relocations = mapOf(source to listOf(candidate.relocation)),
-                        )
+                        sourcePlan(candidate.edits, candidate.relocation)
                     val after = shared(revision, plan.proposed) ?: return@let null
                     if (!XdkRename.preservesKnownBindings(before, after, plan)) return@let null
                     CodeAction(
                         candidate.title,
                         CodeAction.CodeActionKind.REFACTOR_EXTRACT,
-                        edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                        edit = sourceEdit(plan),
                     )
                 }
             } else {
@@ -1258,11 +1261,7 @@ internal class XdkProjectQueries(
                     XdkLocalInline.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
                         val plan =
-                            XdkRename.Plan(
-                                texts,
-                                mapOf(source to candidate.edits),
-                                relocations = mapOf(source to listOf(candidate.relocation)),
-                            )
+                            sourcePlan(candidate.edits, candidate.relocation)
                         val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@let null
                         if (candidate.expression != null &&
                             !XdkRename.preservesRelocatedType(before, after, plan, candidate.expression)
@@ -1273,7 +1272,7 @@ internal class XdkProjectQueries(
                         CodeAction(
                             candidate.title,
                             CodeAction.CodeActionKind.REFACTOR_INLINE,
-                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            edit = sourceEdit(plan),
                         )
                     }
                 }
@@ -1285,13 +1284,13 @@ internal class XdkProjectQueries(
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkMemberInline.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
-                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
+                        val plan = sourcePlan(listOf(candidate.edit))
                         val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@let null
                         if (!XdkRename.preservesMemberInline(before, after, plan, candidate)) return@let null
                         CodeAction(
                             candidate.title,
                             CodeAction.CodeActionKind.REFACTOR_INLINE,
-                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            edit = sourceEdit(plan),
                         )
                     }
                 }
@@ -1303,13 +1302,13 @@ internal class XdkProjectQueries(
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkMemberInline.everyUse(text, range, model, before)?.let { candidate ->
                         checkCurrent()
-                        val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
+                        val plan = sourcePlan(candidate.edits)
                         val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@let null
                         if (!XdkRename.preservesMemberRemoval(before, after, plan, candidate)) return@let null
                         CodeAction(
                             candidate.title,
                             CodeAction.CodeActionKind.REFACTOR_INLINE,
-                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            edit = sourceEdit(plan),
                         )
                     }
                 }
@@ -1321,13 +1320,13 @@ internal class XdkProjectQueries(
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkLocalRemoval.candidate(text, range, model, before.removableLocals)?.let { candidate ->
                         checkCurrent()
-                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
+                        val plan = sourcePlan(listOf(candidate.edit))
                         val after = shared(revision, plan.proposed) ?: return@let null
                         if (!XdkRename.preservesLocalRemoval(before, after, plan, candidate.removed)) return@let null
                         CodeAction(
                             "Remove unused local variable",
                             CodeAction.CodeActionKind.REFACTOR_REWRITE,
-                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            edit = sourceEdit(plan),
                         )
                     }
                 }
@@ -1339,7 +1338,7 @@ internal class XdkProjectQueries(
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
                     XdkSafeDelete.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
-                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
+                        val plan = sourcePlan(listOf(candidate.edit))
                         val after = shared(revision, plan.proposed) ?: return@let null
                         if (!XdkRename.preservesSafeDelete(before, after, plan, candidate)) return@let null
                         // A public member's consumers are the configured modules', which the title names.
@@ -1354,7 +1353,7 @@ internal class XdkProjectQueries(
                                     }
                             },
                             CodeAction.CodeActionKind.REFACTOR_REWRITE,
-                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            edit = sourceEdit(plan),
                             outsideUses = outsideUses(before, candidate.name, listOf(candidate.identity)),
                         )
                     }
@@ -1368,17 +1367,13 @@ internal class XdkProjectQueries(
                     XdkMethodExtraction.candidate(text, range, model, before.extraction)?.let { candidate ->
                         checkCurrent()
                         val plan =
-                            XdkRename.Plan(
-                                texts,
-                                mapOf(source to candidate.edits),
-                                relocations = mapOf(source to listOf(candidate.relocation)),
-                            )
+                            sourcePlan(candidate.edits, candidate.relocation)
                         val after = shared(revision, plan.proposed, Proof.REPAIR) ?: return@let null
                         if (!XdkRename.preservesMethodExtraction(before, after, plan, candidate)) return@let null
                         CodeAction(
                             if (candidate.statements) "Extract statements to private method" else "Extract expression to private method",
                             CodeAction.CodeActionKind.REFACTOR_EXTRACT,
-                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            edit = sourceEdit(plan),
                         )
                     }
                 }

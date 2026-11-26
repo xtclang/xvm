@@ -1,13 +1,10 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ErrorList
-import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
-import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.StatementBlock
 import org.xvm.lsp.adapter.Range
-import org.xvm.lsp.util.ExecutionTrace
 
 /** Delete an unused plain local only after the compiler proves its initializer needs no evaluation. */
 internal object XdkLocalRemoval {
@@ -51,17 +48,10 @@ internal object XdkLocalRemoval {
         val start = offset(candidate.statement.startPosition) ?: return null
         val end = offset(candidate.statement.endPosition) ?: return null
         val indent = XdkRefactoringSyntax.indentBefore(text, start) ?: return null
-        val lineStart = start - indent.length
         val tail = Regex("[ \t]*;").find(text, end)?.takeIf { it.range.first == end } ?: return null
         val syntaxEnd = tail.range.last + 1
-        val tokens =
-            ExecutionTrace.api("Lexer.lex(remove-local)") {
-                Lexer(Source(text.substring(start, syntaxEnd)), errors).asSequence().toList()
-            }
         // Never discard a comment hidden among the declaration or expression tokens.
-        if (errors.hasSeriousErrors() || tokens.any { it.id in setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT) }) return null
-        val lineEnd = Regex("[ \t]*(?:\r\n|\r|\n)").find(text, syntaxEnd)?.takeIf { it.range.first == syntaxEnd }
-        val edit = if (lineEnd == null) XdkRename.Edit(start, syntaxEnd, "") else XdkRename.Edit(lineStart, lineEnd.range.last + 1, "")
+        val edit = XdkRefactoringSyntax.removal(text, start, syntaxEnd, start - indent.length, "remove-local") ?: return null
         val removed =
             model.occurrences
                 .filter {

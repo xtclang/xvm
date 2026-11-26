@@ -147,11 +147,7 @@ internal object XdkAutoImports {
 
             else -> {
                 val names = tokens.mapTo(hashSetOf()) { it.valueText }
-                val base = target.module.substringBefore('.').replaceFirstChar { it.lowercase() }
-                val alias =
-                    generateSequence(0) { it + 1 }
-                        .map { if (it == 0) base else "$base$it" }
-                        .first { it !in names && XdkRename.identifier(it) }
+                val alias = XdkMemberActions.moduleAlias(target.module) { it in names }
                 prefix = "$alias."
                 declaration = "package $alias import ${target.module};$newline"
             }

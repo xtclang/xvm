@@ -2,7 +2,6 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorList
-import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotationExpression
@@ -12,7 +11,6 @@ import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.Range
-import org.xvm.lsp.util.ExecutionTrace
 
 /**
  * Removes a member that nothing uses. A private member's uses are its source's; a public or protected member's are
@@ -126,18 +124,7 @@ internal object XdkSafeDelete {
         val end = XdkRename.offset(text, at(member.endPosition)) ?: return null
         val terminator = Regex("[ \t]*;").find(text, end)?.takeIf { it.range.first == end }
         val syntaxEnd = terminator?.range?.last?.plus(1) ?: end
-        val errors = ErrorList()
-        val tokens =
-            ExecutionTrace.api("Lexer.lex(safe-delete)") {
-                Lexer(Source(text.substring(start, syntaxEnd)), errors).asSequence().toList()
-            }
-        if (errors.hasSeriousErrors() || tokens.any { it.id in setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT) }) return null
         val lineStart = maxOf(text.lastIndexOf('\n', start - 1), text.lastIndexOf('\r', start - 1)) + 1
-        val lineEnd = Regex("[ \t]*(?:\r\n|\r|\n)").find(text, syntaxEnd)?.takeIf { it.range.first == syntaxEnd }
-        return if (text.substring(lineStart, start).isBlank() && lineEnd != null) {
-            XdkRename.Edit(lineStart, lineEnd.range.last + 1, "")
-        } else {
-            XdkRename.Edit(start, syntaxEnd, "")
-        }
+        return XdkRefactoringSyntax.removal(text, start, syntaxEnd, lineStart.takeIf { text.substring(it, start).isBlank() }, "safe-delete")
     }
 }
