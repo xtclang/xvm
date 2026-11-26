@@ -118,7 +118,11 @@ internal class Tour(
             val call = CompletableFuture.supplyAsync { method.invoke(probe, *(args ?: emptyArray())) }
             try {
                 // most calls answer at once; one that does not is waited for as within() waits, with its idle check
-                if (runCatching { call.get(1, TimeUnit.SECONDS) }.isFailure && !call.isDone && !within(HANG) { call.isDone }) {
+                if (
+                    runCatching { call.get(1, TimeUnit.SECONDS) }.isFailure &&
+                    !call.isDone &&
+                    !within(HANG, "the IDE's answer to ${method.name}") { call.isDone }
+                ) {
                     throw TimeoutException()
                 }
                 call.get()
@@ -141,6 +145,7 @@ internal class Tour(
         Quiescence.state = { asked { "${probe.activity().ifEmpty { "idle" }}; ${probe.serverState()}" } ?: "the IDE not answering" }
         val trace = TraceProgress(run.resolve("server-trace"))
         Quiescence.progress = { "${trace.events()} server trace events" }
+        Quiescence.report = { line -> progress("$section: $line") }
         Quiescence.watching = true
     }
 
@@ -277,6 +282,7 @@ internal class Tour(
         var shot: Long? = null
         val number = steps.size + 1
         progress("$number $title: starts")
+        Quiescence.doing = "$number $title"
         val image = "frames/%03d.png".format(number)
         var step =
             try {
@@ -347,6 +353,7 @@ internal class Tour(
         if (!recording || skips(what, needs)) return
         checks++
         progress("check $what: starts")
+        Quiescence.doing = "check $what"
         val started = System.currentTimeMillis()
         Quiescence.stuck = null
         val failure = runCatching { ui.block() }.exceptionOrNull()
@@ -404,7 +411,9 @@ internal class Tour(
 
     /** Runs [block] as a step's preparation that captures nothing, in a recorded section only; a failure is not fatal. */
     fun prepare(block: TourProbe.() -> Unit) {
-        if (recording) runCatching { ui.block() }.onFailure { println("Tour: preparation failed in $section: $it") }
+        if (!recording) return
+        Quiescence.doing = "a preparation"
+        runCatching { ui.block() }.onFailure { println("Tour: preparation failed in $section: $it") }
     }
 
     /**
@@ -413,6 +422,7 @@ internal class Tour(
      */
     fun restore() {
         if (!recording) return
+        Quiescence.doing = "the restore of the project's sources"
         runCatching {
             ui.dismiss()
             // a modal dialog holds every call that waits for the EDT outside it, as restoring the files does
@@ -1000,12 +1010,19 @@ internal fun TourProbe.addWatch(
 /** The Debug window's text, with its watches beside the frame's variables. */
 internal fun TourProbe.watches(): String = toolWindowText("Debug")
 
-/** Whether [condition] holds within [timeout], polled: a bound against a hang, which a condition that holds never reaches. */
+/**
+ * Whether [condition] holds within [timeout], polled: a bound against a hang, which a condition that holds never reaches.
+ * A wait that goes on says so about once a minute, as the VS Code tour's waits do: what it waits for, [what] in the step
+ * or check that waits, and what is in progress.
+ */
 internal fun within(
     timeout: Duration,
+    what: String? = null,
     condition: () -> Boolean,
 ): Boolean {
-    val deadline = TimeSource.Monotonic.markNow() + timeout
+    val begun = TimeSource.Monotonic.markNow()
+    val deadline = begun + timeout
+    var report = REPORT
     var idleSince: TimeSource.Monotonic.ValueTimeMark? = null
     // what is in progress, with the server's trace, and since when it has stood still: in progress means progress made
     var progress = ""
@@ -1040,6 +1057,12 @@ internal fun within(
             Quiescence.stuck = "nothing that was in progress moved for $IDLE: $now"
             return false
         }
+        // a wait that goes on says so, about once a minute, as the VS Code tour's waits do
+        if (begun.elapsedNow() >= report) {
+            val waited = listOfNotNull(what, Quiescence.doing.ifEmpty { null }).joinToString(", in ").ifEmpty { "a condition" }
+            Quiescence.report("waiting ${begun.elapsedNow().inWholeSeconds} s for: $waited; under way: ${activity.ifEmpty { "nothing" }}")
+            report += REPORT
+        }
         Thread.sleep(250)
     }
 }
@@ -1058,12 +1081,23 @@ internal const val NOT_ANSWERING = "the IDE, not answering what is in progress"
  */
 private val IDLE = 60.seconds
 
+/** How often a wait that has not ended says what it waits for, as the VS Code tour's waits do. */
+private val REPORT = 60.seconds
+
 /**
  * What the tour's waits ask about the IDE between their polls: whether anything is in progress that could still make
  * their condition hold, which [within] reads, and the wait that last gave up, which a failure's message and dumps
  * name. The tour sets it up as it starts; a wait outside a tour has nothing to ask and waits out its bound.
  */
 internal object Quiescence {
+    /** The step or check that runs, which a wait's report names; set by the tour. */
+    @Volatile
+    var doing = ""
+
+    /** Writes a wait's report into the run's progress, with the section; set by the tour. */
+    @Volatile
+    var report: (String) -> Unit = {}
+
     /** What is in progress, empty when nothing is; set by the tour. */
     @Volatile
     var activity: () -> String = { "" }
