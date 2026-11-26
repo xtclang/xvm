@@ -648,6 +648,7 @@ private class SemanticModelBuilder(
                 parameters[method.identityConstant to (register.index - method.typeParamCount)] = id
             }
         }
+        bindFinallyParameters(nodes)
         nodes.forEach { node ->
             when (node) {
                 is VariableDeclarationStatement -> {
@@ -829,8 +830,9 @@ private class SemanticModelBuilder(
         }
         parameters.forEach { (parameter, id) ->
             val method = parameter.first.component as? MethodStructure ?: return@forEach
-            // Calls through function values are positional (COMPILER-141 rejects named arguments).
-            if (method.access == Access.PRIVATE && !method.isConstructor) {
+            // Calls through function values are positional (COMPILER-141 rejects named arguments). A constructor's
+            // finally block is a private method over the constructor's parameters, which named arguments name.
+            if (method.access == Access.PRIVATE && !method.isConstructor && !method.isConstructorFinalizer) {
                 symbols[id]?.let { symbols[id] = it.copy(renameable = true) }
             }
         }
@@ -1617,6 +1619,45 @@ private class SemanticModelBuilder(
             .filterIsInstance<MethodDeclarationStatement>()
             .firstOrNull()
             ?.let(::identity)
+
+    /**
+     * Binds the parameters of a constructor with a `finally` block to the parameters it declares, in the constructor's
+     * body and in a call's named argument. The block is a method of its own, which the compiler compiles after the
+     * constructor over the same written parameters, so each parameter's node is the block's and keeps the block's
+     * register (StatementBlock.RootContext): the body's names, which the constructor's registers resolve, and a named
+     * argument of the constructor had symbols of their own with no declaration. Find References and highlights of a
+     * parameter missed them, Go to Definition went nowhere from them, and a rename of the parameter was refused. The
+     * constructor's slot of each parameter is registered after the block's, so the parameter is the constructor's.
+     */
+    private fun bindFinallyParameters(nodes: List<AstNode>) {
+        val constructors =
+            nodes
+                .filterIsInstance<MethodDeclarationStatement>()
+                .filter { statement ->
+                    val constructor = statement.takeIf { it.isConstructor }?.component as? MethodStructure ?: return@filter false
+                    val block = statement.constructorFinally?.component as? MethodStructure ?: return@filter false
+                    (0 until constructor.paramCount - constructor.typeParamCount).forEach { slot ->
+                        parameters[block.identityConstant to slot]?.let { parameters[constructor.identityConstant to slot] = it }
+                    }
+                    true
+                }.toCollection(Collections.newSetFromMap(IdentityHashMap()))
+        if (constructors.isEmpty()) return
+        nodes.filterIsInstance<NameExpression>().forEach { name ->
+            val register = normalized(name.resolvedTarget) as? Register ?: return@forEach
+            if (register in registers) return@forEach
+            // the method, lambda or class whose body the name is in; a lambda's captures and a class's are their own
+            val scope =
+                generateSequence(name.parent) { it.parent }.firstOrNull {
+                    it is MethodDeclarationStatement || it is LambdaExpression || it is TypeCompositionStatement
+                }
+            if (scope !in constructors) return@forEach
+            val method = (scope as MethodDeclarationStatement).component as MethodStructure
+            // the constructor's register of each of its parameters has the parameter's name and index
+            val parameter = method.params.getOrNull(register.index)?.takeUnless { it.isTypeParameter } ?: return@forEach
+            if (parameter.name != register.name) return@forEach
+            parameters[method.identityConstant to (register.index - method.typeParamCount)]?.let { registers[register] = it }
+        }
+    }
 
     private fun declare(
         token: Token?,
