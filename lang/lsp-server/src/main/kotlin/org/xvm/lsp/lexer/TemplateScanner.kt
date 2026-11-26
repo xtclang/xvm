@@ -106,6 +106,14 @@ class TemplateScanner {
         val content = StringBuilder()
         var pos = start
 
+        // the content read so far, when there is some, else the template's end, which ends at [end]
+        fun ended(end: Int): Step =
+            if (content.isNotEmpty()) {
+                Step(TemplateScannerToken.content(start, pos, content.toString()), state.copy(pos = pos))
+            } else {
+                Step(TemplateScannerToken.templateEnd(pos, end), ScanState.Normal(end))
+            }
+
         while (pos < source.length) {
             val ch = source[pos]
             when {
@@ -126,17 +134,7 @@ class TemplateScanner {
 
                 // Template end (non-multiline)
                 ch == '"' && !state.multiline -> {
-                    return if (content.isNotEmpty()) {
-                        Step(
-                            TemplateScannerToken.content(start, pos, content.toString()),
-                            state.copy(pos = pos),
-                        )
-                    } else {
-                        Step(
-                            TemplateScannerToken.templateEnd(pos, pos + 1),
-                            ScanState.Normal(pos + 1),
-                        )
-                    }
+                    return ended(pos + 1)
                 }
 
                 // Escape sequence - accumulate unescaped value
@@ -162,17 +160,7 @@ class TemplateScanner {
                         pos = newPos
                     } else {
                         // End of multiline template
-                        return if (content.isNotEmpty()) {
-                            Step(
-                                TemplateScannerToken.content(start, pos, content.toString()),
-                                state.copy(pos = pos),
-                            )
-                        } else {
-                            Step(
-                                TemplateScannerToken.templateEnd(pos, pos),
-                                ScanState.Normal(pos),
-                            )
-                        }
+                        return ended(pos)
                     }
                 }
 
@@ -186,17 +174,7 @@ class TemplateScanner {
 
         // End of input
         return if (state.multiline) {
-            if (content.isNotEmpty()) {
-                Step(
-                    TemplateScannerToken.content(start, pos, content.toString()),
-                    state.copy(pos = pos),
-                )
-            } else {
-                Step(
-                    TemplateScannerToken.templateEnd(pos, pos),
-                    ScanState.Normal(pos),
-                )
-            }
+            ended(pos)
         } else {
             Step(
                 TemplateScannerToken.error(start, pos, "Unterminated template string"),

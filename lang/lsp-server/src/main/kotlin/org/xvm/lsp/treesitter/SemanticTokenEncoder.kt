@@ -150,17 +150,9 @@ class SemanticTokenEncoder {
     private fun classifyMethodDeclaration(node: XtcNode) {
         emitModifierTokens(node)
         classifyTypeParameters(node)
-        node.childByFieldName("return_type")?.let { returnType ->
-            classifyTypeExpression(returnType)
-            markClassified(returnType)
-        }
+        classifyTypeField(node, "return_type")
 
-        node.childByFieldName("name")?.let { id ->
-            val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
-            val mods =
-                buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
-            emitToken(id, "method", mods)
-        }
+        emitDeclaredName(node, "method")
 
         classifyParameterChildren(node)
     }
@@ -191,34 +183,42 @@ class SemanticTokenEncoder {
 
     private fun classifyPropertyDeclaration(node: XtcNode) {
         emitModifierTokens(node)
-        node.childByFieldName("type")?.let { typeExpr ->
-            classifyTypeExpression(typeExpr)
-            markClassified(typeExpr)
-        }
+        classifyTypeField(node, "type")
 
+        emitDeclaredName(node, "property")
+    }
+
+    /** Classifies the type expression in [node]'s [field], when it has one. */
+    private fun classifyTypeField(
+        node: XtcNode,
+        field: String,
+    ) {
+        node.childByFieldName(field)?.let { type ->
+            classifyTypeExpression(type)
+            markClassified(type)
+        }
+    }
+
+    /** Emits [node]'s name as a declaration of [tokenType], deprecated when its annotations say so. */
+    private fun emitDeclaredName(
+        node: XtcNode,
+        tokenType: String,
+    ) {
         node.childByFieldName("name")?.let { id ->
             val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
-            val mods =
-                buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
-            emitToken(id, "property", mods)
+            emitToken(id, tokenType, buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray()))
         }
     }
 
     private fun classifyVariableDeclaration(node: XtcNode) {
-        node.childByFieldName("type")?.let { typeExpr ->
-            classifyTypeExpression(typeExpr)
-            markClassified(typeExpr)
-        }
+        classifyTypeField(node, "type")
         node.childByFieldName("name")?.let { id ->
             emitToken(id, "variable", SemanticTokenLegend.modifierBitmask("declaration"))
         }
     }
 
     private fun classifyParameter(node: XtcNode) {
-        node.childByFieldName("type")?.let { typeExpr ->
-            classifyTypeExpression(typeExpr)
-            markClassified(typeExpr)
-        }
+        classifyTypeField(node, "type")
         node.childByFieldName("name")?.let { id ->
             emitToken(id, "parameter", SemanticTokenLegend.modifierBitmask("declaration"))
         }
