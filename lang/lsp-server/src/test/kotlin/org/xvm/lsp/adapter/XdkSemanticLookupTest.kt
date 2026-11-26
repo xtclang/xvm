@@ -637,7 +637,7 @@ class XdkSemanticLookupTest {
         assertThat(compilation.succeeded()).isTrue()
         val cancelled = ErrorListener.cancellable(errors) { true }
         val model = compilation.semanticSnapshots(cancelled).single()
-        val at = position(source, "api")
+        val at = source.markedPosition("api")
         assertThat(model.implementationLocationsAt(at.line, at.column)).isEmpty()
         assertThat(errors.errors).isEmpty()
     }
@@ -691,8 +691,8 @@ class XdkSemanticLookupTest {
         val passive = compilation.semanticSnapshots().single()
         val inspected = compilation.semanticSnapshots(errors).single()
         assertThat(errors.errors).isEmpty()
-        val use = position(source, "use")
-        val api = position(source, "api")
+        val use = source.markedPosition("use")
+        val api = source.markedPosition("api")
         Executors.newSingleThreadExecutor().use { executor ->
             executor
                 .submit {
@@ -720,7 +720,7 @@ class XdkSemanticLookupTest {
         marker: String,
         uri: String = URI,
     ): List<Location> {
-        val position = position(source, marker)
+        val position = source.markedPosition(marker)
         return adapter.findTypeDefinitions(uri, position.line, position.column)
     }
 
@@ -730,20 +730,8 @@ class XdkSemanticLookupTest {
         marker: String,
         uri: String = URI,
     ): List<Location> {
-        val position = position(source, marker)
+        val position = source.markedPosition(marker)
         return adapter.findImplementation(uri, position.line, position.column)
-    }
-
-    private fun position(
-        source: String,
-        marker: String,
-    ): Position {
-        val token = "/*$marker*/"
-        val offset = source.indexOf(token).also { check(it >= 0) } + token.length
-        return Position(
-            source.take(offset).count { it == '\n' },
-            offset - source.lastIndexOf('\n', offset - 1) - 1,
-        )
     }
 
     private fun location(
@@ -752,7 +740,7 @@ class XdkSemanticLookupTest {
         name: String,
         uri: String = URI,
     ): Location {
-        val start = position(source, marker)
+        val start = source.markedPosition(marker)
         return Location(uri, start.line, start.column, start.line, start.column + name.length)
     }
 

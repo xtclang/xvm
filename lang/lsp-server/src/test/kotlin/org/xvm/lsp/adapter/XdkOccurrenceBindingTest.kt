@@ -37,7 +37,7 @@ class XdkOccurrenceBindingTest {
             """.trimIndent()
         withSource("Formals", source) { adapter, uri ->
             val local = listOf(range(source, "local", "t1"), range(source, "declared", "t1"), range(source, "cast", "t1"))
-            val at = position(source, "cast")
+            val at = source.markedPosition("cast")
             assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactlyElementsOf(local)
             assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactlyInAnyOrderElementsOf(local)
             assertThat(adapter.getHoverInfo(uri, at.line, at.column)).contains("t1")
@@ -45,7 +45,7 @@ class XdkOccurrenceBindingTest {
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("t1", "t2"))
 
             // a parameter's rename is the workspace's, which proves it over the module's compile
-            val formal = position(source, "formal")
+            val formal = source.markedPosition("formal")
             assertThat(adapter.findReferences(uri, formal.line, formal.column, true).map(::range))
                 .containsExactly(range(source, "parameter", "t0"), range(source, "copied", "t0"), range(source, "formal", "t0"))
             val parameter = requireNotNull(adapter.rename(uri, formal.line, formal.column, "t9")) { "No rename of t0" }
@@ -68,7 +68,7 @@ class XdkOccurrenceBindingTest {
             }
             """.trimIndent()
         withSource("Placeholders", source) { adapter, uri ->
-            listOf("assigned", "parameter").map { position(source, it) }.forEach { at ->
+            listOf("assigned", "parameter").map { source.markedPosition(it) }.forEach { at ->
                 assertThat(adapter.findReferences(uri, at.line, at.column, true)).isEmpty()
                 assertThat(adapter.getDocumentHighlights(uri, at.line, at.column)).isEmpty()
             }
@@ -99,12 +99,12 @@ class XdkOccurrenceBindingTest {
             """.trimIndent()
         withSource("Returns", source) { adapter, uri ->
             val label = range(source, "label", "label")
-            val at = position(source, "label")
+            val at = source.markedPosition("label")
             assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactly(label)
             assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactly(label)
             assertThat(adapter.getHoverInfo(uri, at.line, at.column)).contains("String label")
             // a conditional method's structure holds its Boolean before the written values
-            val text = position(source, "text")
+            val text = source.markedPosition("text")
             assertThat(adapter.getHoverInfo(uri, text.line, text.column)).contains("String text")
             val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "title")) { "No rename of label" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("/*label*/label", "/*label*/title"))
@@ -126,13 +126,13 @@ class XdkOccurrenceBindingTest {
         withSource("Receivers", source) { adapter, uri ->
             // Find References takes every this of the class, as the workspace's navigation joins them by their proof
             // identity, and highlighting those of the method
-            val second = position(source, "second")
+            val second = source.markedPosition("second")
             val holder = listOf("first", "second", "third", "method").map { range(source, it, "this") }
             assertThat(adapter.findReferences(uri, second.line, second.column, true).map(::range)).containsExactlyElementsOf(holder)
             assertThat(adapter.getDocumentHighlights(uri, second.line, second.column).map { it.range })
                 .containsExactlyInAnyOrder(range(source, "second", "this"), range(source, "third", "this"))
             assertThat(adapter.getHoverInfo(uri, second.line, second.column)).contains("Holder")
-            val method = position(source, "method")
+            val method = source.markedPosition("method")
             assertThat(adapter.findReferences(uri, method.line, method.column, true).map(::range)).containsExactlyElementsOf(holder)
         }
     }
@@ -165,22 +165,22 @@ class XdkOccurrenceBindingTest {
             }
             """.trimIndent()
         withSource("References", source) { adapter, uri ->
-            val bound = position(source, "bound")
+            val bound = source.markedPosition("bound")
             val value = listOf(range(source, "declaration", "value"), range(source, "bound", "super"))
             assertThat(adapter.findReferences(uri, bound.line, bound.column, true).map(::range)).containsExactlyElementsOf(value)
             assertThat(adapter.getHoverInfo(uri, bound.line, bound.column)).contains("value(Int n)")
-            val declaration = position(source, "declaration")
+            val declaration = source.markedPosition("declaration")
             val renamed = requireNotNull(adapter.rename(uri, declaration.line, declaration.column, "amount")) { "No rename of value" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("value(", "amount("))
 
             // a mixin's super dispatches to whatever its host has, which a call of it names as the method's super too
-            val mixed = position(source, "mixed")
+            val mixed = source.markedPosition("mixed")
             val supers = listOf(range(source, "mixed", "super"), range(source, "called", "super"))
             assertThat(adapter.findReferences(uri, mixed.line, mixed.column, true).map(::range)).containsExactlyElementsOf(supers)
             assertThat(adapter.getHoverInfo(uri, mixed.line, mixed.column)).contains("super")
 
             // a local function's, too
-            val local = position(source, "local")
+            val local = source.markedPosition("local")
             val add = listOf(range(source, "sum", "add"), range(source, "local", "add"))
             assertThat(adapter.findReferences(uri, local.line, local.column, true).map(::range)).containsExactlyElementsOf(add)
             val plus = requireNotNull(adapter.rename(uri, local.line, local.column, "plus")) { "No rename of add" }
@@ -203,14 +203,14 @@ class XdkOccurrenceBindingTest {
             """.trimIndent()
         withSource("Header", source) { adapter, uri ->
             val seed = listOf(range(source, "declared", "seed"), range(source, "passed", "seed"), range(source, "used", "seed"))
-            val passed = position(source, "passed")
+            val passed = source.markedPosition("passed")
             assertThat(adapter.findReferences(uri, passed.line, passed.column, true).map(::range)).containsExactlyElementsOf(seed)
             assertThat(
                 adapter.getDocumentHighlights(uri, passed.line, passed.column).map { it.range },
             ).containsExactlyInAnyOrderElementsOf(seed)
             assertThat(adapter.findDefinition(uri, passed.line, passed.column)?.let(::range)).isEqualTo(range(source, "declared", "seed"))
             for (from in listOf("passed", "declared")) {
-                val at = position(source, from)
+                val at = source.markedPosition(from)
                 val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "start")) { "No rename of seed from $from" }
                 assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("seed", "start"))
             }
@@ -241,13 +241,13 @@ class XdkOccurrenceBindingTest {
         withSource("Statics", source) { adapter, uri ->
             // the loop validates a clone of its body, whose static locals the compiler folds to constants
             val base = listOf(range(source, "declared", "Base"), range(source, "used", "Base"))
-            val declared = position(source, "declared")
+            val declared = source.markedPosition("declared")
             assertThat(adapter.findReferences(uri, declared.line, declared.column, true).map(::range)).containsExactlyElementsOf(base)
             val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "Origin")) { "No rename of Base" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Base", "Origin"))
 
             // MaxValue resolves through the static local's type, UInt
-            val inferred = position(source, "inferred")
+            val inferred = source.markedPosition("inferred")
             assertThat(adapter.getHoverInfo(uri, inferred.line, inferred.column)).contains("MaxValue")
         }
     }
@@ -269,7 +269,7 @@ class XdkOccurrenceBindingTest {
             """.trimIndent()
         withSource("Dynamic", source) { adapter, uri ->
             val type = listOf(range(source, "parameter", "type"), range(source, "tested", "type"), range(source, "narrowed", "type"))
-            val narrowed = position(source, "narrowed")
+            val narrowed = source.markedPosition("narrowed")
             assertThat(adapter.findReferences(uri, narrowed.line, narrowed.column, true).map(::range)).containsExactlyElementsOf(type)
             assertThat(
                 adapter.findDefinition(uri, narrowed.line, narrowed.column)?.let(::range),
@@ -278,7 +278,7 @@ class XdkOccurrenceBindingTest {
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("type", "target"))
 
             // without narrowing, the type binding is the parameter's formal type, Other; the name is still the parameter
-            val plain = position(source, "plain")
+            val plain = source.markedPosition("plain")
             assertThat(adapter.findReferences(uri, plain.line, plain.column, true).map(::range))
                 .containsExactly(range(source, "declared", "kind"), range(source, "plain", "kind"))
         }
@@ -298,10 +298,10 @@ class XdkOccurrenceBindingTest {
             """.trimIndent()
         withSource("Functions", source) { adapter, uri ->
             val password = range(source, "password", "password")
-            val at = position(source, "password")
+            val at = source.markedPosition("password")
             assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactly(password)
             assertThat(adapter.getHoverInfo(uri, at.line, at.column)).contains("String password")
-            val name = position(source, "name")
+            val name = source.markedPosition("name")
             assertThat(adapter.getHoverInfo(uri, name.line, name.column)).contains("String name")
             val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "token")) { "No rename of password" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("/*password*/password", "/*password*/token"))
@@ -330,14 +330,14 @@ class XdkOccurrenceBindingTest {
             """.trimIndent()
         withSource("Reserved", source) { adapter, uri ->
             for (marker in listOf("accessor", "method")) {
-                val at = position(source, marker)
+                val at = source.markedPosition(marker)
                 assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range })
                     .describedAs(marker)
                     .containsExactly(range(source, marker, "this:class"))
                 assertThat(adapter.getHoverInfo(uri, at.line, at.column)).describedAs(marker).contains("this:class")
             }
             // a rename in the module is proven beside both
-            val declared = position(source, "declared")
+            val declared = source.markedPosition("declared")
             val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "title")) { "No rename of label" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("/*declared*/label", "/*declared*/title"))
         }
@@ -362,7 +362,7 @@ class XdkOccurrenceBindingTest {
             val outer = named("this.Outer").start
             assertThat(adapter.getDocumentHighlights(uri, outer.line, outer.column).map { it.range }).containsExactly(named("this.Outer"))
             assertThat(adapter.getHoverInfo(uri, outer.line, outer.column)).contains("Outer")
-            val declared = position(source, "declared")
+            val declared = source.markedPosition("declared")
             assertThat(adapter.findReferences(uri, declared.line, declared.column, true).map(::range))
                 .contains(named("this.Host"))
                 .doesNotContain(named("this.Outer"))
@@ -396,7 +396,7 @@ class XdkOccurrenceBindingTest {
         withSource("Anonymous", source) { adapter, uri ->
             // the class's construction calls the constructor that the compiler writes for it, a call that spells the
             // type it implements, so its rename was refused
-            val declared = position(source, "declared")
+            val declared = source.markedPosition("declared")
             val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "Stepper")) { "No rename of Walker" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Walker", "Stepper"))
             // the proofs of code actions other than a rename compare every binding of the module exactly
@@ -447,7 +447,7 @@ class XdkOccurrenceBindingTest {
         withSource("Overloads", source) { adapter, uri ->
             // a rename of construct(Int)'s size renames the name that binds to it, as for a named class, and not the one
             // that binds to construct(Number)'s
-            val at = position(source, "int")
+            val at = source.markedPosition("int")
             val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "n")) { "No rename of size" }
             assertThat(apply(source, renamed.changes.getValue(uri)))
                 .isEqualTo(source.replace("/*int*/size", "/*int*/n").replace("Base(size=5)", "Base(n=5)"))
@@ -550,7 +550,7 @@ class XdkOccurrenceBindingTest {
             val mapped = item("T.Item")
             assertThat(adapter.findDefinition(uri, mapped.start.line, mapped.start.column)?.let(::range))
                 .isEqualTo(range(source, "item", "Item"))
-            val e = position(source, "e")
+            val e = source.markedPosition("e")
             assertThat(adapter.findReferences(uri, e.line, e.column, true).map(::range)).doesNotContain(mapped)
             val boxed = item("B.Item")
             assertThat(adapter.findReferences(uri, boxed.start.line, boxed.start.column, true).map(::range))
@@ -614,7 +614,7 @@ class XdkOccurrenceBindingTest {
         withSource("Natives", source) { adapter, uri ->
             // the runtime implements Point's estimateStringLength, by its name: renamed, Sized's would no longer be
             // Stringable's, and a Point would take Sized's default where it took the runtime's
-            val at = position(source, "declared")
+            val at = source.markedPosition("declared")
             assertThat(adapter.rename(uri, at.line, at.column, "estimate")).isNull()
         }
     }
@@ -668,7 +668,7 @@ class XdkOccurrenceBindingTest {
             """.trimIndent()
         withSource("Implicit", source) { adapter, uri ->
             // the compiler adds Inner to Cap, and Message to Dedup, as a formal type of its own, which no source declares
-            val local = position(source, "local")
+            val local = source.markedPosition("local")
             val declared = range(source, "declared", "Inner")
             assertThat(adapter.findDefinition(uri, local.line, local.column)?.let(::range)).isEqualTo(declared)
             assertThat(adapter.findReferences(uri, declared.start.line, declared.start.column, true).map(::range))
@@ -699,9 +699,9 @@ class XdkOccurrenceBindingTest {
         val renamed = source.replace("/*holder*/Inner", "/*holder*/Item")
         assertCompiles("Shared", renamed)
         withSource("Shared", source) { adapter, uri ->
-            val local = position(source, "local")
+            val local = source.markedPosition("local")
             assertThat(adapter.findDefinition(uri, local.line, local.column)?.let(::range)).isEqualTo(range(source, "holder", "Inner"))
-            val at = position(source, "holder")
+            val at = source.markedPosition("holder")
             assertThat(adapter.rename(uri, at.line, at.column, "Item")).isNull()
         }
     }
@@ -746,11 +746,11 @@ class XdkOccurrenceBindingTest {
             assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
                 .contains("Safely delete member 'unused', unused in Targets")
             // a rename compares the chains with each leg's declarations where the edit moves them
-            val declared = position(source, "declared")
+            val declared = source.markedPosition("declared")
             val renamed = requireNotNull(adapter.rename(uri, declared.line, declared.column, "Crate")) { "No rename of Box" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Box", "Crate"))
             // renamed, Box's size would leave the union's, and Sized would lose the method: the rename stays refused
-            val size = position(source, "size")
+            val size = source.markedPosition("size")
             assertThat(adapter.rename(uri, size.line, size.column, "length")).isNull()
         }
     }
@@ -784,10 +784,10 @@ class XdkOccurrenceBindingTest {
         assertThat(parameter.renameable).isFalse()
         withSource("Finals", source) { adapter, uri ->
             val uses = listOf("declared", "body", "finally", "named").map { range(source, it, "inPlace") }
-            val at = position(source, "declared")
+            val at = source.markedPosition("declared")
             assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactlyElementsOf(uses)
             assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactlyInAnyOrderElementsOf(uses)
-            val body = position(source, "body")
+            val body = source.markedPosition("body")
             assertThat(adapter.findDefinition(uri, body.line, body.column)?.let(::range)).isEqualTo(range(source, "declared", "inPlace"))
             val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "fresh")) { "No rename of inPlace" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("inPlace", "fresh"))
@@ -822,12 +822,12 @@ class XdkOccurrenceBindingTest {
         assertCompiles("Labels", source.replace("Loop", "span"))
         withSource("Labels", source) { adapter, uri ->
             val uses = listOf("declared", "first", "continued", "broken").map { range(source, it, "Loop") }
-            val at = position(source, "declared")
+            val at = source.markedPosition("declared")
             assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactlyElementsOf(uses)
             assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactlyInAnyOrderElementsOf(uses)
-            val broken = position(source, "broken")
+            val broken = source.markedPosition("broken")
             assertThat(adapter.findDefinition(uri, broken.line, broken.column)?.let(::range)).isEqualTo(range(source, "declared", "Loop"))
-            val first = position(source, "first")
+            val first = source.markedPosition("first")
             assertThat(adapter.getHoverInfo(uri, first.line, first.column)).contains("Label").contains("Loop")
             val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "Each")) { "No rename of Loop" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Loop", "Each"))
@@ -876,10 +876,10 @@ class XdkOccurrenceBindingTest {
             assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
                 .contains("Safely delete member 'unused', unused in Tracking")
             // a rename of count places its Referent by count's declaration, through the edit
-            val property = position(source, "count")
+            val property = source.markedPosition("count")
             val renamed = requireNotNull(adapter.rename(uri, property.line, property.column, "total")) { "No rename of count" }
             assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("count = 0", "total = 0"))
-            val annotation = position(source, "annotation")
+            val annotation = source.markedPosition("annotation")
             assertThat(adapter.rename(uri, annotation.line, annotation.column, "Unassigned")).isNull()
         }
     }
@@ -947,17 +947,11 @@ class XdkOccurrenceBindingTest {
         }
     }
 
-    /** The position just after the marker comment that names [marker]. */
-    private fun position(
-        source: String,
-        marker: String,
-    ): Position = "/*$marker*/".let { comment -> source.positionOf(comment, "").let { Position(it.line, it.column + comment.length) } }
-
     private fun range(
         source: String,
         marker: String,
         name: String,
-    ): Range = position(source, marker).let { Range(it, Position(it.line, it.column + name.length)) }
+    ): Range = source.markedPosition(marker).let { Range(it, Position(it.line, it.column + name.length)) }
 
     private fun range(location: Location): Range =
         Range(Position(location.startLine, location.startColumn), Position(location.endLine, location.endColumn))
