@@ -11,7 +11,7 @@ Frameworks | Ecstasy**, which links each of them.
 | Build mode | **Settings \| Languages & Frameworks \| Ecstasy \| Build and Run**, or <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd> | `xtc.build.mode`, or <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd> |
 | Language adapter: compiler or Tree-sitter | **Tools \| Switch Ecstasy Language Adapter**, or <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd> | **Ecstasy: Switch Language Adapter**, <kbd>Ctrl+Alt+X</kbd>, then <kbd>A</kbd>, or the status bar |
 | Inlay hints, reference counts | **Settings \| Languages & Frameworks \| Ecstasy \| Language Service** | `xtc.inlayHints.enabled`, `xtc.codeLens.references` |
-| Indentation and line width | **Settings \| Editor \| Code Style \| Ecstasy** | `xtc.formatting.*` |
+| Indentation, line width and comment wrapping | **Settings \| Editor \| Code Style \| Ecstasy** | `xtc.formatting.*` |
 | The server's memory and logs | **Settings \| Languages & Frameworks \| Ecstasy \| Server Runtime and Logs**: the memory policy, a maximum heap, JVM options, logs | `xtc.server.memoryPolicy`, `xtc.server.maxHeap`, `xtc.java.vmOptions`, `xtc.server.logs`, in user settings |
 | The Java that runs the server | IntelliJ's own | `xtc.java.home` |
 | Which modules the compiler builds, and libraries | **Settings \| Languages & Frameworks \| Ecstasy \| Compiler** | **Ecstasy: Configure Compiler Paths**, **Ecstasy: Configure Libraries and Sources** |
@@ -122,7 +122,8 @@ When something doesn't work as you expect, look at the language server first.
 
 ### Editing
 
-- The formatter doesn't reflow comments or split string literals.
+- The formatter doesn't split string literals. It refills only comments with `/**` or `/*` and `*/` on lines of
+  their own, and only with comment wrapping on; `//` comments keep their lines.
 - The Tree-sitter adapter knows only syntax: no type errors, no type-aware completion or checked
   refactorings, and no embedded builds or runs.
 

@@ -28,6 +28,7 @@ class EditorFormattingStateTest {
         assertThat(state.accept(newest, mapOf("indentSize" to 2)) {}).isTrue()
         assertThat(state.accept(old, mapOf("indentSize" to 8)) { error("stale install") }).isFalse()
         assertThat(state.config?.indentSize).isEqualTo(2)
+        assertThat(state.config?.wrapComments).isFalse()
         state.accept(state.request(), null) {}
         assertThat(state.config).isNull()
         assertThat(state.accept(newest, mapOf("indentSize" to 2)) { error("reset undone") })
@@ -43,6 +44,7 @@ class EditorFormattingStateTest {
             mapOf("indentSize" to 1.5),
             mapOf("indentSize" to "2"),
             mapOf("insertSpaces" to "false"),
+            mapOf("wrapComments" to "true"),
             mapOf("continuationIndentSize" to 1000000),
         ).forEach { invalid ->
             assertThatThrownBy {

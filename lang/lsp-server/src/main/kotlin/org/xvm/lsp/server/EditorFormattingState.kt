@@ -61,18 +61,23 @@ internal class EditorFormattingState : AutoCloseable {
                     }
                     value
                 } ?: default
-            val spaces =
-                settings["insertSpaces"]?.let {
+
+            fun boolean(
+                name: String,
+                default: Boolean,
+            ): Boolean =
+                settings[name]?.let {
                     require(it.isJsonPrimitive && it.asJsonPrimitive.isBoolean) {
-                        "insertSpaces must be a boolean"
+                        "$name must be a boolean"
                     }
                     it.asBoolean
-                } ?: true
+                } ?: default
             return FormattingConfig(
                 integer("indentSize", 4, 32),
                 integer("continuationIndentSize", 8, 32),
-                spaces,
+                boolean("insertSpaces", true),
                 integer("maxLineWidth", 120, 1000),
+                boolean("wrapComments", false),
             )
         }
     }

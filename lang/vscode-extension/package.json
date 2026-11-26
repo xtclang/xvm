@@ -587,10 +587,16 @@
                     "xtc.formatting.maxLineWidth": {
                         "type": "integer",
                         "default": 120,
-                        "description": "Compiler adapter target width for expression and list wrapping at safe token boundaries; literals and comments are not split.",
+                        "description": "Compiler adapter target width for expression and list wrapping at safe token boundaries, and for comments with xtc.formatting.wrapComments; literals are not split.",
                         "scope": "window",
                         "minimum": 1,
                         "maximum": 1000
+                    },
+                    "xtc.formatting.wrapComments": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Refill the paragraphs of doc and block comments that run past xtc.formatting.maxLineWidth, keeping @param lines, lists and code as they are laid out (compiler adapter).",
+                        "scope": "window"
                     }
                 }
             },

@@ -24,7 +24,16 @@ export function formattingSettings(): object {
         }
         return value;
     };
-    const insertSpaces = config.get<unknown>('insertSpaces', true);
-    if (typeof insertSpaces !== 'boolean') throw new Error('Ecstasy formatting.insertSpaces must be a boolean');
-    return { indentSize: integer('indentSize', 4), continuationIndentSize: integer('continuationIndentSize', 8), maxLineWidth: integer('maxLineWidth', 120, 1000), insertSpaces };
+    const boolean = (key: string, fallback: boolean) => {
+        const value = config.get<unknown>(key, fallback);
+        if (typeof value !== 'boolean') throw new Error(`Ecstasy formatting.${key} must be a boolean`);
+        return value;
+    };
+    return {
+        indentSize: integer('indentSize', 4),
+        continuationIndentSize: integer('continuationIndentSize', 8),
+        maxLineWidth: integer('maxLineWidth', 120, 1000),
+        insertSpaces: boolean('insertSpaces', true),
+        wrapComments: boolean('wrapComments', false),
+    };
 }

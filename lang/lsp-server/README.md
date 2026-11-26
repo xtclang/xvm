@@ -1029,7 +1029,8 @@ The LSP server provides three levels of formatting support:
 Compiler mode uses the Java lexer for nesting/operator continuation indentation, wrapping at
 expression/list token boundaries using `maxLineWidth`, and standalone block-comment margins.
 Code and literal token spellings are verified after formatting. Literal/template contents and
-relative comment layout are preserved; comments are not reflowed and literals are not split.
+relative comment layout are preserved, and literals are not split. With `wrapComments` (off by default), a doc or
+block comment's paragraphs that run past `maxLineWidth` are refilled (`XdkCommentReflow`).
 Range formatting is confined to selected lines. On-type formatting adjusts indentation without
 wrapping lines. A lexical error refuses formatting. Shared X249/X250 cover exact output and history.
 

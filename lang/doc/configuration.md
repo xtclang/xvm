@@ -39,8 +39,8 @@ Three ways of reaching the server recur in the tables:
 
 ### 1.1 VS Code
 
-The 22 settings in `contributes.configuration` of `lang/vscode-extension/package.json`, whose
-entries start at lines 292 to 556. The six machine-scoped ones, `xtc.java.vmOptions`, `xtc.server.memoryPolicy`, `xtc.server.maxHeap`,
+The 23 settings in `contributes.configuration` of `lang/vscode-extension/package.json`, whose
+entries start at lines 358 to 653. The six machine-scoped ones, `xtc.java.vmOptions`, `xtc.server.memoryPolicy`, `xtc.server.maxHeap`,
 `xtc.server.compileLibraries`, `xtc.server.replaceLibraries` and `xtc.server.logs`, are read from the user settings only
 (`inspect(...).globalValue`); workspace values of them are ignored.
 
@@ -56,11 +56,12 @@ entries start at lines 292 to 556. The six machine-scoped ones, `xtc.java.vmOpti
 | `xtc.inlayHints.enabled` | boolean, `true` | Inlay hints. The client drops the request when off; the server is not told. | Not sent | `vsc/lsp-client.ts:204` |
 | `xtc.languageService.textSynchronization` | `full` or `incremental`; `full` | Whether edits are sent as whole documents or as changes. A change restarts the server. | `xtcDocumentSync.incremental` initialization option | `vsc/editor-settings.ts:8`, `vsc/service-settings.ts:32` |
 | `xtc.languageService.saveFormatting` | `editor` or `server`; `editor` | Who formats on save. Native `editor.formatOnSave` wins, so two formatters never run. A change restarts the server. | `xtcDocumentSync.formatOnSave` initialization option | `vsc/editor-settings.ts:9`, `vsc/service-settings.ts:33`, per-save check `vsc/editor-settings.ts:15` |
-| `xtc.formatting.indentSize` | integer 1 to 32, `4` | Spaces per indentation level. | `xtc.formatting` section | `vsc/editor-settings.ts:29` |
-| `xtc.formatting.continuationIndentSize` | integer 1 to 32, `8` | Spaces for continuation lines. | `xtc.formatting` section | `vsc/editor-settings.ts:29` |
+| `xtc.formatting.indentSize` | integer 1 to 32, `4` | Spaces per indentation level. | `xtc.formatting` section | `vsc/editor-settings.ts:33` |
+| `xtc.formatting.continuationIndentSize` | integer 1 to 32, `8` | Spaces for continuation lines. | `xtc.formatting` section | `vsc/editor-settings.ts:34` |
 | `xtc.formatting.tabSize` | integer 1 to 32, `4` | Deprecated; nothing reads it (`deprecationMessage` in `package.json`). Use `editor.tabSize`. | Not sent | none |
-| `xtc.formatting.insertSpaces` | boolean, `true` | Spaces instead of tabs. | `xtc.formatting` section | `vsc/editor-settings.ts:27` |
-| `xtc.formatting.maxLineWidth` | integer 1 to 1000, `120` | Target width for the compiler adapter's wrapping. | `xtc.formatting` section | `vsc/editor-settings.ts:29` |
+| `xtc.formatting.insertSpaces` | boolean, `true` | Spaces instead of tabs. | `xtc.formatting` section | `vsc/editor-settings.ts:36` |
+| `xtc.formatting.maxLineWidth` | integer 1 to 1000, `120` | Target width for the compiler adapter's wrapping. | `xtc.formatting` section | `vsc/editor-settings.ts:35` |
+| `xtc.formatting.wrapComments` | boolean, `false` | The compiler adapter refills the paragraphs of doc and block comments that run past `maxLineWidth`. | `xtc.formatting` section | `vsc/editor-settings.ts:37` |
 | `xtc.java.home` | string, `""` | The Java 25+ installation that runs the server. Empty: `jdk-utils` discovery (`JAVA_HOME`, `PATH`, SDKMAN and others), then a JRE downloaded earlier, then a download from Adoptium. A path without `bin/java` is an error. A change restarts the server. | The `java` executable of the command line | `vsc/java.ts:54`, order `vsc/java.ts:22` |
 | `xtc.java.vmOptions` | string array, `[]` | JVM options, one per item: `-Xms`, `-Xmx`, `-Xss`, `-XX:MaxMetaspaceSize=`, `-XX:ReservedCodeCacheSize=` (K, M or G), `-XX:ActiveProcessorCount=`, `-XX:+UseG1GC`, `UseSerialGC`, `UseParallelGC`, `UseZGC`. Anything else is rejected. Without a collector or `-Xmx` among them, the server runs `-XX:+UseZGC -XX:SoftMaxHeapSize=1G`: ZGC keeps the heap near 1 GB and grows past it only as far as the live data needs. Machine scope. | JVM options | `vsc/runtime-settings.ts:37`, validation `vsc/runtime-settings.ts:4`, default `vsc/runtime-settings.ts:31` |
 | `xtc.server.compileLibraries` | boolean, `true` | Compile an opened XDK source with its whole library, so that navigation works for every name in it. Needs a server heap of about 1 GB. Machine scope. | `-Dxtc.lsp.compileLibraries=<value>` | `vsc/runtime-settings.ts:59` |
@@ -135,7 +136,7 @@ Deployment | Ecstasy** (`XtcBuildPointerConfigurable`). Stored in the project's 
 | Build and run using | Embedded compiler, Automatic (Gradle when the project has a Gradle build), Gradle; Embedded. While the project's own modules replace bundled libraries, Embedded is shown not available, here and in Ctrl+Alt+X, B; a choice of it is kept | Not sent; a debug launch in Gradle or command-line mode carries `buildMode` (section 3.1) | `idea/run/XtcBuildSettings.kt:58`, `:194` |
 
 **Editor | Code Style | Ecstasy**. IntelliJ's code style, answered as the `xtc.formatting` section
-(`idea/lsp/XtcLanguageClient.kt:388`); defaults from
+(`idea/lsp/XtcLanguageClient.kt:236`); defaults from
 `idea/style/XtcLanguageCodeStyleSettingsProvider.kt:38`.
 
 | Field | Default | Reaches the server as |
@@ -145,6 +146,7 @@ Deployment | Ecstasy** (`XtcBuildPointerConfigurable`). Stored in the project's 
 | Tab size | 4 | `tabSize`, which the server does not read |
 | Use tab character | off | `insertSpaces` (inverted) |
 | Hard wrap at (right margin) | 120 | `maxLineWidth` |
+| Comments: Wrap at right margin, on the Wrapping and Braces tab | off | `wrapComments` |
 
 **LSP4IJ's Language Servers page** keeps the trace level and the debug port for `xtcLanguageServer`.
 They belong to LSP4IJ: the plugin builds the command with LSP4IJ's `JavaProcessCommandBuilder`, which
@@ -249,10 +251,11 @@ The server asks only when the client declares `workspace.configuration`.
 | `xtc.compiler` `buildModels` | array, absent | Gradle source sets from `.gradle/xtc/lsp-model.json`; used when `sourceModules` is `null`. Each source set's `run` has its project's `xtcRun` `jvmArgs`, by module name the `methodName` and `moduleArgs` it runs each module with, and `problems`, what the export could not read and left out; its `test` has `xtcTest`'s `jvmArgs` and `problems`. Settings made only on the `runXtc` or `testXtc` task are not in it: the export reads the extensions, without configuring the tasks. Embedded runs take them (section 3.3); a model without them, from an older plugin, gives none, and a malformed one of them is left out with a warning in the log, never making the model refused. | `lsp/server/CompilerConfiguration.kt:36`, `lsp/adapter/xdk/XdkBuildModel.kt:251` |
 | `xtc.compiler` `libraries.modulePath` | null or path array, `null` | Binary libraries; `null` inherits the build model's. | `lsp/server/CompilerLibraries.kt:109` |
 | `xtc.compiler` `libraries.sourceAttachments` | array, `[]` | `[{module, roots}]`: read-only sources for binary modules. | `lsp/server/CompilerLibraries.kt:111` |
-| `xtc.formatting` `indentSize` | integer 1 to 32, `4` | Formatter indent. | `lsp/server/XtcLanguageServer.kt:849`, `lsp/server/EditorFormattingState.kt:72` |
-| `xtc.formatting` `continuationIndentSize` | integer 1 to 32, `8` | Continuation indent. | `lsp/server/EditorFormattingState.kt:73` |
-| `xtc.formatting` `insertSpaces` | boolean, `true` | Spaces or tabs. | `lsp/server/EditorFormattingState.kt:65` |
-| `xtc.formatting` `maxLineWidth` | integer 1 to 1000, `120` | Wrapping width. | `lsp/server/EditorFormattingState.kt:75` |
+| `xtc.formatting` `indentSize` | integer 1 to 32, `4` | Formatter indent. | `lsp/server/XtcLanguageServer.kt:849`, `lsp/server/EditorFormattingState.kt:76` |
+| `xtc.formatting` `continuationIndentSize` | integer 1 to 32, `8` | Continuation indent. | `lsp/server/EditorFormattingState.kt:77` |
+| `xtc.formatting` `insertSpaces` | boolean, `true` | Spaces or tabs. | `lsp/server/EditorFormattingState.kt:78` |
+| `xtc.formatting` `maxLineWidth` | integer 1 to 1000, `120` | Wrapping width. | `lsp/server/EditorFormattingState.kt:79` |
+| `xtc.formatting` `wrapComments` | boolean, `false` | Refills a comment's paragraphs that run past `maxLineWidth`: in a comment with `/**` or `/*` and `*/` on lines of their own and a `*` starting each line between, keeping `@param` lines, list items and code as they are laid out. | `lsp/server/EditorFormattingState.kt:80`, `lsp/adapter/xdk/XdkCommentReflow.kt` |
 | `xtc.codeLens` `references` | boolean, `true` | Reference-count lenses, asked per document (`scopeUri`); after 10 seconds without an answer the lenses are off. | `lsp/server/XtcLanguageServer.kt:427`, `lsp/server/CodeLensSettings.kt:11` |
 
 On `workspace/didChangeConfiguration` the server asks for `xtc.formatting` again, refreshes inlay
