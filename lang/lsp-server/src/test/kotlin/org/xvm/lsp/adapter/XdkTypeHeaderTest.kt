@@ -5,11 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.ErrorList
-import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Parser
-import org.xvm.compiler.Source
 import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
@@ -42,12 +38,7 @@ class XdkTypeHeaderTest {
         val prefix =
             "module Headers { class Base {} Int BaseValue = 1; " + header.substringBefore('§')
         val text = prefix + header.substringAfter('§') + " { Int inside = 1; } Int later = 2; }"
-        val source = Source(text, URI)
-        repeat(prefix.length) { source.next() }
-        val cursor = source.position
-        source.reset()
-        val errors = ErrorList()
-        val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
+        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
         assertThat(errors.errors.map { it.code })
             .describedAs(header)
             .containsExactly(Parser.INCOMPLETE_EXPRESSION)
@@ -67,14 +58,7 @@ class XdkTypeHeaderTest {
         ).contains(if (header.contains("Str")) "String" else "Base")
             .doesNotContain("BaseValue")
         assertThat(source.toRawString()).isEqualTo(text)
-        listOf(ErrorList(ErrorList.FIRST_ERROR), ErrorListener.cancellable(ErrorList()) { true })
-            .forEach { listener ->
-                source.reset()
-                val stopped =
-                    EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
-                assertThat(stopped.pool()).isNull()
-                assertThat(stopped.cursorBindings()).isEmpty()
-            }
+        assertListenersStop(source, cursor)
     }
 
     @Test

@@ -7,10 +7,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.ErrorList
 import org.xvm.compiler.Parser
-import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import java.nio.file.Path
@@ -259,12 +256,7 @@ class XdkArgumentCompletionTest {
         CompilerTestSupport.configure()
         val prefix = "$HEADER pair(second = $typed"
         val text = "$prefix); } }"
-        val source = Source(text, URI)
-        repeat(prefix.length) { source.next() }
-        val cursor = source.position
-        source.reset()
-        val errors = ErrorList()
-        val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
+        val (analysis, errors) = analyzeIncomplete(text, URI, prefix.length)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
         assertThat(site.arguments).isEmpty()

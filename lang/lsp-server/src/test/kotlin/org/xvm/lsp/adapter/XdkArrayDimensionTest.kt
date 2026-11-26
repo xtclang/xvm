@@ -4,11 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.ErrorList
-import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Parser
-import org.xvm.compiler.Source
 import org.xvm.compiler.ast.NewExpression
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
@@ -149,12 +145,7 @@ class XdkArrayDimensionTest {
         CompilerTestSupport.configure()
         val prefix = HEADER + "new String[nu"
         val text = "$prefix]; } Int later = 42; }"
-        val source = Source(text, URI)
-        repeat(prefix.length) { source.next() }
-        val cursor = source.position
-        source.reset()
-        val errors = ErrorList()
-        val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
+        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
         assertThat(site.isCall).isTrue()
@@ -165,19 +156,7 @@ class XdkArrayDimensionTest {
         assertThat(analysis.cursorBindings()[site]!!.candidates()).hasSize(1)
         assertThat(analysis.cursorBindings()[site]!!.argumentValues().map { it.name() })
             .containsExactly("number")
-        for (
-        listener in
-        listOf(
-            ErrorList(ErrorList.FIRST_ERROR),
-            ErrorListener.cancellable(ErrorList()) { true },
-        )
-        ) {
-            source.reset()
-            val stopped =
-                EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
-            assertThat(stopped.pool()).isNull()
-            assertThat(stopped.cursorBindings()).isEmpty()
-        }
+        assertListenersStop(source, cursor)
     }
 
     private companion object {

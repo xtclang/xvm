@@ -8,7 +8,6 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.Component
 import org.xvm.asm.ErrorList
-import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
@@ -62,7 +61,8 @@ class XdkAnonymousConstructorTest {
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(adapter.compile(URI, complete).diagnostics).isEmpty()
         }
-        val (analysis, errors) = analyze(prefix, suffix)
+        CompilerTestSupport.configure()
+        val (analysis, errors) = analyzeIncomplete(prefix + suffix, URI, prefix.length)
         assertThat(errors.errors.map { it.code })
             .describedAs(expression)
             .containsExactly(Parser.INCOMPLETE_EXPRESSION)
@@ -222,35 +222,11 @@ class XdkAnonymousConstructorTest {
         CompilerTestSupport.configure()
         val prefix = HEADER + "new Base<String>(\"x\", te"
         val suffix = ") { String read() = text; }; } }"
-        for (
-        errors in
-        listOf(
-            ErrorList(ErrorList.FIRST_ERROR),
-            ErrorListener.cancellable(ErrorList()) { true },
-        )
-        ) {
-            val source = Source(prefix + suffix, URI)
-            repeat(prefix.length) { source.next() }
-            val cursor = source.position
-            source.reset()
-            val analysis =
-                EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
+        for (errors in stoppingListeners()) {
+            val (analysis) = analyzeIncomplete(prefix + suffix, URI, prefix.length, errors)
             assertThat(analysis.pool()).isNull()
             assertThat(analysis.cursorBindings()).isEmpty()
         }
-    }
-
-    private fun analyze(
-        prefix: String,
-        suffix: String,
-    ): Pair<EmbeddingSupport.PartialAnalysis, ErrorList> {
-        CompilerTestSupport.configure()
-        val source = Source(prefix + suffix, URI)
-        repeat(prefix.length) { source.next() }
-        val cursor = source.position
-        source.reset()
-        val errors = ErrorList()
-        return EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors) to errors
     }
 
     private fun nodes(node: AstNode): List<AstNode> = listOf(node) + node.children().flatMap(::nodes)
