@@ -109,7 +109,7 @@
  * Debug adapter: XtcDebugServer's capabilities and requests
  *   initialize, launch, configurationDone           step Debug
  *   attach                                          check an Ecstasy Attach configuration debugs the game that xtc runs outside
- *   setBreakpoints: lines                           step Frames and variables
+ *   setBreakpoints: lines                           steps Frames and variables, Breakpoints while you edit
  *   setBreakpoints: conditions                      steps A conditional breakpoint, Debug, A condition that cannot be evaluated
  *   setBreakpoints: hit conditions, log messages    needs LSP4IJ 0.30.0 (UP55, UP32); the Coming card; playbook X311
  *   setExceptionBreakpoints                         step An exception
@@ -226,6 +226,7 @@
  *   LSP4IJ's log and trace                          step Language servers; check Toggle Ecstasy Language Server Log
  *   the server's process dies                       check the server comes back when its process dies
  *   a refused rename's message                      step A rename it refuses: the plugin's hint, as the server answers no edit
+ *   a line breakpoint as lines are typed above it   step Breakpoints while you edit, the program stopping on the line it moved to
  *
  * Parity with the VS Code tour, by the coverage table of its script (lang/vscode-extension/src/test/tour/script.ts on
  * lagergren/vscode-tour, b6025441ec): the shared servers' features that one tour checks and the other does not.
@@ -2373,6 +2374,49 @@ private fun Tour.debugging() {
         breakpoint(deck, "noSuchName == 1")
         open(file(MODULE), 0)
         toolbar("Debug")
+    }
+    var separator = 0
+    shot(
+        "Breakpoints while you edit",
+        "A breakpoint follows its line as a line is typed above it, and the program, built before the edit, stops there all the same.",
+        feature = "setBreakpoints (edited source)",
+        needs = setOf(Need.RUN_CONFIGURATION),
+        focus = "editor",
+        // the line is the editor's now, one below the line that the program was built with
+        until = { pausedIn("Eights.x", separator + 2) },
+        check = {
+            // one breakpoint, on its line now: the IDE's move of it and the debug adapter's event of it agree
+            expect(breakpointConditions().lines().map(String::trim) == listOf("Eights.x:${separator + 2}")) {
+                "The breakpoints: ${breakpointConditions()}"
+            }
+            expect(frameNames().firstOrNull()?.contains("displayState") == true) { "The frames: ${frameNames()}" }
+        },
+        settle = 3.seconds,
+        after = {
+            stopAll()
+            clearBreakpoints()
+            restore()
+        },
+    ) {
+        within(HANG) { !debug()["session"].asBoolean }
+        open(source("Eights.x"), 0)
+        val dealt = at("Deck deck = new Deck(GameConstants.DECK_NAME);")
+        breakpoint(dealt, "")
+        open(file(MODULE), 0)
+        action("Debug")
+        check(within(HANG) { pausedIn("Eights.x", dealt + 1) }) { "Not paused in initializeGame: ${position()}" }
+        clearBreakpoints()
+        open(source("Eights.x"), 0)
+        // displayState's separator, which the game prints once it is dealt
+        separator = at("console.print(GameConstants.DISPLAY_SEPARATOR);")
+        breakpoint(separator, "")
+        // a line typed above it, at the end of the line before, which the running program was not built with
+        at("@Inject Console console;\n        console.print(GameConstants.DISPLAY_SEPARATOR);", delta = "@Inject Console console;".length)
+        insert("\n        // the table, as it stands")
+        check(within(HANG) { breakpointConditions().lines().any { it.trim() == "Eights.x:${separator + 2}" } }) {
+            "The breakpoint did not follow its line: ${breakpointConditions()}"
+        }
+        action("Resume")
     }
     verify("Debug of Current File on the module file starts a session, which ends cleanly") {
         within(HANG) { !debug()["session"].asBoolean }
