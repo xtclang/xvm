@@ -19,6 +19,14 @@ export function client() {
     return result;
 }
 
+/** What the language server's xtc/languageServiceStatus answers, or nothing while the client is not running, as in a restart. */
+export async function serviceStatus<T>(): Promise<T | undefined> {
+    const current = getClient();
+    if (!current?.isRunning()) return undefined;
+    try { return await current.sendRequest<T>('xtc/languageServiceStatus'); }
+    catch { return undefined; }
+}
+
 export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string, timeoutMs?: number): Promise<T> {
     return withTestWait(message, () => waitFor(read, accept, message, timeoutMs));
 }
@@ -37,6 +45,11 @@ export async function loadFixtures(): Promise<void> {
     const ids = [...manual.matchAll(/^\| (X\d+) \|/gm)].map(match => match[1]);
     assert.deepStrictEqual([...cases.keys()].filter(id => /^X\d+$/.test(id)), ids,
         'Every XdkAdapter playbook row must have exactly one registered case, in playbook order');
+}
+
+/** The server's message on the uses in modules outside the workspace that a rename, move or safe delete leaves alone. */
+export function outsideUsesMessage(uses: string): string {
+    return `Ecstasy: ${uses}. To include them, run Ecstasy: Configure Compiler Paths and choose Add consumers from folders.`;
 }
 
 export function fixture(file: string): string {
@@ -271,6 +284,15 @@ export class Workspace {
 
     async signature(document: vscode.TextDocument, at: vscode.Position): Promise<vscode.SignatureHelp | undefined> {
         return vscode.commands.executeCommand<vscode.SignatureHelp>('vscode.executeSignatureHelpProvider', document.uri, at);
+    }
+
+    /** Writes [source] to [file] as the module [name], the graph's only one, opens it, and waits until it has no errors. */
+    async module(file: string, source: string, name: string): Promise<vscode.TextDocument> {
+        await this.write(file, source);
+        await this.configure([{ name, uri: this.uri(file).toString() }]);
+        const document = await this.open(file);
+        await noErrors(document.uri);
+        return document;
     }
 
     async project(): Promise<vscode.TextDocument> {

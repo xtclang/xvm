@@ -5,11 +5,38 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { ApplyWorkspaceEditParams, ApplyWorkspaceEditResponse, CodeAction, ProgressType } from 'vscode-languageclient/node';
 import { modelPath } from '../../build-model';
-import { getClient, updateCompilerConfiguration } from '../../lsp-client';
+import { updateCompilerConfiguration } from '../../lsp-client';
 import { cutAndPasteDirectories } from '../explorer-move';
 import { ExplorerMoveTrace } from '../explorer-move-trace';
 import { discovered } from './liveWorkspace';
-import { client, diagnostics, eventually, hover, label, noErrors, playbook, symbols, targets } from './support';
+import { client, diagnostics, eventually, hover, label, noErrors, playbook, serviceStatus, symbols, targets, type Workspace } from './support';
+
+/** The Gradle model [model] that an import of the case's build writes, with ${workspace} for the case's directory. */
+export function gradleModel(workspace: Workspace, model: unknown): string {
+    return JSON.stringify(model).split('${workspace}').join(vscode.Uri.file(workspace.directory).toString());
+}
+
+/**
+ * Runs [body] with [report], where an import of the folder's Gradle build writes its model, and removes the model again,
+ * with Gradle's project cache that holds it if the case made it, and leaves the explicit modules as they were.
+ */
+export async function withGradleModel(body: (report: vscode.Uri) => Promise<void>): Promise<void> {
+    const folder = vscode.workspace.workspaceFolders![0];
+    const report = vscode.Uri.joinPath(folder.uri, modelPath);
+    // Gradle's project cache, which holds the report; X303 makes its project in a folder root without it
+    const cache = path.join(folder.uri.fsPath, '.gradle');
+    const made = !await fs.stat(cache).then(() => true, () => false);
+    const settings = vscode.workspace.getConfiguration('xtc.compiler');
+    const previous = settings.get('sourceModules');
+    try {
+        await body(report);
+    } finally {
+        await fs.rm(report.fsPath, { force: true });
+        if (made) await fs.rm(cache, { recursive: true, force: true });
+        await settings.update('sourceModules', previous, vscode.ConfigurationTarget.Workspace);
+        await updateCompilerConfiguration();
+    }
+}
 
 export function platformCases(): void {
     playbook('X124', async (workspace, data) => {
@@ -130,51 +157,39 @@ export function platformCases(): void {
         }
     });
 
-    playbook('X129', async (workspace, data) => {
-        const report = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, modelPath);
-        // Gradle's project cache, which holds the report; X303 makes its project in a folder root without it.
-        const cache = path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, '.gradle');
-        const made = !await fs.stat(cache).then(() => true, () => false);
-        const model = JSON.parse(JSON.stringify(data.model).split('${workspace}').join(vscode.Uri.file(workspace.directory).toString()));
+    playbook('X129', (workspace, data) => withGradleModel(async report => {
+        const model = JSON.parse(gradleModel(workspace, data.model));
         const settings = vscode.workspace.getConfiguration('xtc.compiler');
-        const previous = settings.get('sourceModules');
         const writeModel = async () => {
             await fs.mkdir(path.dirname(report.fsPath), { recursive: true });
             await fs.writeFile(report.fsPath, JSON.stringify(model));
             await updateCompilerConfiguration();
         };
-        try {
-            await workspace.write(data.file, data.source);
-            await workspace.write(data.resource, data.contents);
-            await writeModel();
-            await settings.update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
-            const document = await workspace.open(data.file);
-            await noErrors(document.uri);
-            model.sourceSets[0].resourceRoots = [];
-            await writeModel();
-            await diagnostics(document.uri, values => values.length > 0, 'Reimport disabled resources');
-            model.sourceSets[0].resourceRoots = [workspace.uri('processed').toString()];
-            await writeModel();
-            await noErrors(document.uri);
-            await fs.writeFile(report.fsPath, '{');
-            await updateCompilerConfiguration();
-            await noErrors(document.uri);
-            const override = [{ name: 'GradleAssets', uri: document.uri.toString(), resourceRoots: [] }];
-            await workspace.configure(override);
-            await diagnostics(document.uri, values => values.length > 0, 'Explicit override disables resources');
-            await writeModel();
-            assert.deepStrictEqual(vscode.workspace.getConfiguration('xtc.compiler').get('sourceModules'), override);
-            await diagnostics(document.uri, values => values.length > 0, 'Refresh preserves explicit override');
-            await settings.update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
-            await noErrors(document.uri);
-            await vscode.commands.executeCommand('xtc.showCompilerPaths');
-        } finally {
-            await fs.rm(report.fsPath, { force: true });
-            if (made) await fs.rm(cache, { recursive: true, force: true });
-            await settings.update('sourceModules', previous, vscode.ConfigurationTarget.Workspace);
-            await updateCompilerConfiguration();
-        }
-    });
+        await workspace.write(data.file, data.source);
+        await workspace.write(data.resource, data.contents);
+        await writeModel();
+        await settings.update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        model.sourceSets[0].resourceRoots = [];
+        await writeModel();
+        await diagnostics(document.uri, values => values.length > 0, 'Reimport disabled resources');
+        model.sourceSets[0].resourceRoots = [workspace.uri('processed').toString()];
+        await writeModel();
+        await noErrors(document.uri);
+        await fs.writeFile(report.fsPath, '{');
+        await updateCompilerConfiguration();
+        await noErrors(document.uri);
+        const override = [{ name: 'GradleAssets', uri: document.uri.toString(), resourceRoots: [] }];
+        await workspace.configure(override);
+        await diagnostics(document.uri, values => values.length > 0, 'Explicit override disables resources');
+        await writeModel();
+        assert.deepStrictEqual(vscode.workspace.getConfiguration('xtc.compiler').get('sourceModules'), override);
+        await diagnostics(document.uri, values => values.length > 0, 'Refresh preserves explicit override');
+        await settings.update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
+        await noErrors(document.uri);
+        await vscode.commands.executeCommand('xtc.showCompilerPaths');
+    }));
 
     playbook('X130', async (workspace, data) => {
         for (const file of data.files) await workspace.write(file.file, file.text);
@@ -212,10 +227,7 @@ export function platformCases(): void {
     });
 
     playbook('X131', async (workspace, data) => {
-        await workspace.write(data.file, data.source);
-        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
-        const document = await workspace.open(data.file);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         const id = { textDocument: { uri: document.uri.toString() } };
         const lenses = await client().sendRequest<import('vscode-languageclient/node').CodeLens[]>('textDocument/codeLens', id);
         const links = await client().sendRequest<import('vscode-languageclient/node').DocumentLink[]>('textDocument/documentLink', id);
@@ -238,10 +250,7 @@ export function platformCases(): void {
     });
 
     playbook('X132', async (workspace, data) => {
-        await workspace.write(data.file, data.source);
-        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
-        const document = await workspace.open(data.file);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         const params = { textDocument: { uri: document.uri.toString() }, options: { tabSize: 4, insertSpaces: true }, ranges: data.ranges };
         const edits = await client().sendRequest<import('vscode-languageclient/node').TextEdit[]>('textDocument/rangesFormatting', params);
         assert.deepStrictEqual(edits.map(edit => edit.range.start.line), data.lines);
@@ -256,10 +265,7 @@ export function platformCases(): void {
     });
 
     playbook('X133', async (workspace, data) => {
-        await workspace.write(data.file, data.source);
-        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
-        const document = await workspace.open(data.file);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         const linked = async (anchor: string) => client().sendRequest<import('vscode-languageclient/node').LinkedEditingRanges>('textDocument/linkedEditingRange', {
             textDocument: { uri: document.uri.toString() }, position: document.positionAt(document.getText().indexOf(anchor))
         });
@@ -334,18 +340,7 @@ export function platformCases(): void {
         await workspace.replace(document, data.edited);
         const config = vscode.workspace.getConfiguration('xtc.languageService');
         const original = config.inspect('textSynchronization')?.workspaceValue;
-        const status = async () => {
-            const current = getClient();
-            if (!current?.isRunning()) return undefined;
-            try { return await current.sendRequest<{ pid: number; textSynchronization: string }>('xtc/languageServiceStatus'); }
-            catch { return undefined; }
-        };
-        const adapterStatus = async () => {
-            const current = getClient();
-            if (!current?.isRunning()) return undefined;
-            try { return await current.sendRequest<{ pid: number; adapter: string }>('xtc/languageServiceStatus'); }
-            catch { return undefined; }
-        };
+        const status = () => serviceStatus<{ pid: number; adapter: string; textSynchronization: string }>();
         let previous = (await status())!.pid;
         try {
             for (const transport of ['incremental', 'full']) {
@@ -367,7 +362,7 @@ export function platformCases(): void {
             const names = (values: vscode.DocumentSymbol[]): string[] => values.flatMap(symbol => [symbol.name, ...names(symbol.children ?? [])]);
             for (const [choice, expected] of [['treesitter', 'TreeSitter'], ['compiler', 'XDK']]) {
                 await vscode.commands.executeCommand('xtc.selectLanguageAdapter', choice);
-                const after = await eventually(adapterStatus, value => value?.adapter === expected && value.pid !== previous, `Adapter restart into ${choice}`);
+                const after = await eventually(status, value => value?.adapter === expected && value.pid !== previous, `Adapter restart into ${choice}`);
                 previous = after!.pid;
                 assert.strictEqual(document.getText(), unsaved);
                 assert.ok(document.isDirty, 'An adapter restart must not save the buffer');
@@ -377,7 +372,7 @@ export function platformCases(): void {
             await config.update('textSynchronization', original, vscode.ConfigurationTarget.Workspace);
             await eventually(status, value => value?.textSynchronization === config.get('textSynchronization'), 'Original transport restored');
             await vscode.commands.executeCommand('xtc.selectLanguageAdapter', 'compiler');
-            await eventually(adapterStatus, value => value?.adapter === 'XDK', 'Compiler adapter restored for later cases');
+            await eventually(status, value => value?.adapter === 'XDK', 'Compiler adapter restored for later cases');
         }
     });
 
@@ -413,12 +408,7 @@ export function platformCases(): void {
         const editor = vscode.workspace.getConfiguration('editor', { uri: document.uri, languageId: 'xtc' });
         const previousOwner = config.inspect('saveFormatting')?.workspaceValue;
         const previousNative = editor.inspect('formatOnSave')?.workspaceValue;
-        const running = async () => {
-            const current = getClient();
-            if (!current?.isRunning()) return undefined;
-            try { return await current.sendRequest<{ serverSaveFormatting: boolean }>('xtc/languageServiceStatus'); }
-            catch { return undefined; }
-        };
+        const running = () => serviceStatus<{ serverSaveFormatting: boolean }>();
         try {
             await editor.update('formatOnSave', false, vscode.ConfigurationTarget.Workspace);
             await config.update('saveFormatting', 'server', vscode.ConfigurationTarget.Workspace);
@@ -479,10 +469,7 @@ export function platformCases(): void {
     });
 
     playbook('X142', async (workspace, data) => {
-        await workspace.write(data.file, data.source);
-        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
-        const document = await workspace.open(data.file);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         const at = document.positionAt(data.source.indexOf(data.anchor));
         assert.ok((await hover(document, at)).includes(data.expected));
         const definitions = await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeDefinitionProvider', document.uri, at);
@@ -499,10 +486,7 @@ export function platformCases(): void {
 
     playbook('X143', async (workspace, data) => {
         const source = `module ${data.module} {\n${Array.from({ length: data.declarations }, (_, i) => `    class ${data.prefix}${i} {}`).join('\n')}\n}\n`;
-        await workspace.write(data.file, source);
-        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
-        const document = await workspace.open(data.file);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, source, data.module);
         await symbols(document);
         const batches: { name: string }[][] = [];
         const observer = client().onProgress(new ProgressType<{ name: string }[]>(), data.token, values => { batches.push(values); });

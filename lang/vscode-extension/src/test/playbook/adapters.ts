@@ -1,15 +1,9 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { getClient } from '../../lsp-client';
 import { WorkbenchUi } from '../workbenchUi';
-import { eventually, noErrors, playbook } from './support';
+import { eventually, noErrors, playbook, serviceStatus } from './support';
 
-async function adapterStatus() {
-    const current = getClient();
-    if (!current?.isRunning()) return undefined;
-    try { return await current.sendRequest<{ pid: number; adapter: string }>('xtc/languageServiceStatus'); }
-    catch { return undefined; }
-}
+const adapterStatus = () => serviceStatus<{ pid: number; adapter: string }>();
 
 /** Playwright key presses for a VS Code keybinding such as `ctrl+alt+x a`: one press per chord part. */
 function keyPresses(binding: string): string[] {

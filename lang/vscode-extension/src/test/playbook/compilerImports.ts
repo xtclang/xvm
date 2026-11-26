@@ -10,6 +10,20 @@ import { catalog, sharedScenarioPath } from './shared';
 import { client, diagnostics, eventually, noErrors, playbook } from './support';
 
 /** Same real Gradle producer and gated outcomes as the IntelliJ driver; no mocked task/progress. */
+/**
+ * Waits until the fixture's Gradle action [operation], whose control files are in [control], has finished, or, when
+ * [exitCounts], until its JVM is gone.
+ */
+async function retired(control: string, operation: string, exitCounts: boolean, message: string): Promise<void> {
+    const producer = Number(await fs.readFile(path.join(control, `${operation}.pid`), 'utf8'));
+    assert.ok(Number.isSafeInteger(producer) && producer > 0);
+    await eventually(async () => {
+        if (await fs.stat(path.join(control, `${operation}.finished`)).then(() => true, () => false)) return true;
+        try { process.kill(producer, 0); return false; }
+        catch (error) { return exitCounts && (error as NodeJS.ErrnoException).code === 'ESRCH'; }
+    }, Boolean, message);
+}
+
 export function compilerImportCases(): void {
     for (const id of ['X260', 'X261', 'X262', 'X263', 'X264'] as const) {
         playbook(id, async (workspace, data) => {
@@ -130,14 +144,8 @@ export function compilerImportCases(): void {
                     await eventually(async () => executions.size, count => count === 0, 'Owned native task has ended');
                     // Retire a Gradle daemon action even if the client process was terminated first.
                     await fs.writeFile(path.join(control, `${operation}.release`), 'cleanup\n');
-                    const producer = Number(await fs.readFile(path.join(control, `${operation}.pid`), 'utf8'));
-                    assert.ok(Number.isSafeInteger(producer) && producer > 0);
-                    await eventually(async () => {
-                        if (await fs.stat(path.join(control, `${operation}.finished`)).then(() => true, () => false)) return true;
-                        // Native cancellation may kill the producer JVM, so its finally cannot run.
-                        try { process.kill(producer, 0); return false; }
-                        catch (error) { return step.cancel && (error as NodeJS.ErrnoException).code === 'ESRCH'; }
-                    }, Boolean, 'Gradle fixture action retired or its cancelled JVM exited');
+                    // Native cancellation may kill the producer JVM, so its finally cannot run.
+                    await retired(control, operation, !!step.cancel, 'Gradle fixture action retired or its cancelled JVM exited');
                     await updateCompilerConfiguration();
                     await client().sendRequest('xtc/healthCheck');
                     if (step.accepted) {
@@ -222,12 +230,7 @@ export function compilerImportCases(): void {
             await eventually(async () => !vscode.workspace.workspaceFolders?.some(folder => folder.uri.toString() === uri.toString()), Boolean, 'Folder removed through native workspace API');
             await pending;
             await fs.writeFile(path.join(control, `${data.operation}.release`), 'late completion\n');
-            const producer = Number(await fs.readFile(path.join(control, `${data.operation}.pid`), 'utf8'));
-            await eventually(async () => {
-                if (await fs.stat(path.join(control, `${data.operation}.finished`)).then(() => true, () => false)) return true;
-                try { process.kill(producer, 0); return false; }
-                catch (error) { return (error as NodeJS.ErrnoException).code === 'ESRCH'; }
-            }, Boolean, 'Removed folder producer retired');
+            await retired(control, data.operation, true, 'Removed folder producer retired');
             assert.ok(compilerBuildModels().flatMap(item => item.sourceSets).every(entry => entry.projectDirectory !== model.sourceSets[0].projectDirectory));
             assert.strictEqual((await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus')).pid, original.pid);
             await workspace.write('Survivor.x', 'module Survivor {}\n');

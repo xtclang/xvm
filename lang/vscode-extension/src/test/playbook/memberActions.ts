@@ -2,7 +2,7 @@ import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { focusTestEditor, focusTestWindow } from '../native-focus';
 import { discovered } from './liveWorkspace';
-import { client, diagnostics, eventually, noErrors, playbook, position } from './support';
+import { client, diagnostics, eventually, noErrors, outsideUsesMessage, playbook, position } from './support';
 
 export function memberActionCases(): void {
     playbook('X122', async (workspace, data) => {
@@ -55,7 +55,7 @@ async function outsideUses(action: vscode.CodeAction, expected: string | null): 
         assert.strictEqual(action.command, undefined, 'A private member\'s safe delete has no message');
         return;
     }
-    const message = `Ecstasy: ${expected}. To include them, run Ecstasy: Configure Compiler Paths and choose Add consumers from folders.`;
+    const message = outsideUsesMessage(expected);
     const command = action.command;
     assert.ok(command, 'A public member\'s safe delete has a message');
     assert.strictEqual(command.command, 'xtc.outsideUses');
