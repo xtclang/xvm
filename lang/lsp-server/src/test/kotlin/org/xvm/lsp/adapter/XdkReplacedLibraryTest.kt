@@ -30,8 +30,8 @@ class XdkReplacedLibraryTest {
     fun `a rename of a workspace library's public declaration edits the modules that import it`() {
         val json = "module json.xtclang.org { class Answer {} }"
         val app = "module App { package json import json.xtclang.org; json.Answer? find() = Null; }"
-        val jsonUri = source("json", json)
-        val appUri = source("App", app)
+        val jsonUri = directory.source("json", json)
+        val appUri = directory.source("App", app)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(
@@ -73,8 +73,8 @@ class XdkReplacedLibraryTest {
 
     @Test
     fun `a workspace library with errors says that the server's compiler may be older than the repository's`() {
-        source("json", "module json.xtclang.org { Missing value; }")
-        source("xml", "module xml.xtclang.org {}")
+        directory.source("json", "module json.xtclang.org { Missing value; }")
+        directory.source("xml", "module xml.xtclang.org {}")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             val reports = adapter.workspaceDiagnosticsAsync().awaited().flatMap { it.diagnostics }
@@ -88,9 +88,9 @@ class XdkReplacedLibraryTest {
     @Test
     fun `a replaced library reaches only the modules of its own workspace folder`() {
         // the XVM repository's json, with a class the bundled one lacks, beside a project that uses the bundled json
-        source("xdk/json", "module json.xtclang.org { class WorkspaceOnly {} }")
-        source("xdk/App", "module App { package json import json.xtclang.org; json.WorkspaceOnly? find() = Null; }")
-        source("other/Tool", "module Tool { package json import json.xtclang.org; json.Parser? find() = Null; }")
+        directory.source("xdk/json", "module json.xtclang.org { class WorkspaceOnly {} }")
+        directory.source("xdk/App", "module App { package json import json.xtclang.org; json.WorkspaceOnly? find() = Null; }")
+        directory.source("other/Tool", "module Tool { package json import json.xtclang.org; json.Parser? find() = Null; }")
         val xdk = folder("xdk")
         val other = folder("other")
         XdkAdapter().use { adapter ->
@@ -133,30 +133,6 @@ class XdkReplacedLibraryTest {
             .canonicalFile
             .toURI()
             .toString()
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory
-            .resolve("$name.x")
-            .also { it.parent.toFile().mkdirs() }
-            .toFile()
-            .apply { writeText(text) }
-            .canonicalFile
-            .toURI()
-            .toString()
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
-            .fold(text) { current, edit ->
-                fun offset(position: Position) = current.splitToSequence('\n').take(position.line).sumOf { it.length + 1 } + position.column
-                current.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
 
     private companion object {
         const val JSON = "json.xtclang.org"

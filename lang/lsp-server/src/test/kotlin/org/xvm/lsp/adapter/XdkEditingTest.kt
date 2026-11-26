@@ -105,22 +105,6 @@ class XdkEditingTest {
         }
     }
 
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedWith(
-                compareByDescending<TextEdit> { it.range.start.line }
-                    .thenByDescending { it.range.start.column },
-            ).fold(text) { current, edit ->
-                current.replaceRange(
-                    offset(text, edit.range.start),
-                    offset(text, edit.range.end),
-                    edit.newText,
-                )
-            }
-
     private fun offset(
         text: String,
         at: Position,

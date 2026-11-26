@@ -62,7 +62,7 @@ class DocumentFormattingTest {
         val uri = freshUri()
         ts.compile(uri, input)
         val edits = ts.formatDocument(uri, input, defaultOptions)
-        return applyEdits(input, edits)
+        return apply(input, edits)
     }
 
     /**
@@ -81,7 +81,7 @@ class DocumentFormattingTest {
                 end = Position(endLine, 0),
             )
         val edits = ts.formatRange(uri, input, range, defaultOptions)
-        return applyEdits(input, edits)
+        return apply(input, edits)
     }
 
     /** Compile [input], format, assert that no edits are returned. */
@@ -104,53 +104,6 @@ class DocumentFormattingTest {
         val result = formatWhole(input)
         val expectedWithNewline = if (expected.endsWith("\n")) expected else expected + "\n"
         assertThat(result).isEqualTo(expectedWithNewline)
-    }
-
-    /**
-     * Apply text edits to source. Edits are applied in reverse order (bottom-to-top, right-to-left)
-     * to preserve positions of earlier edits.
-     */
-    private fun applyEdits(
-        source: String,
-        edits: List<TextEdit>,
-    ): String {
-        if (edits.isEmpty()) return source
-        val lines = source.split("\n").toMutableList()
-
-        // Sort edits in reverse document order so we can apply them without shifting positions.
-        val sorted =
-            edits.sortedWith(
-                compareByDescending<TextEdit> { it.range.start.line }
-                    .thenByDescending { it.range.start.column },
-            )
-
-        for (edit in sorted) {
-            val startLine = edit.range.start.line
-            val startCol = edit.range.start.column
-            val endLine = edit.range.end.line
-            val endCol = edit.range.end.column
-
-            if (startLine == endLine) {
-                // Single-line edit: replace within the line
-                val line = lines[startLine]
-                lines[startLine] =
-                    line.substring(0, startCol) + edit.newText + line.substring(endCol)
-            } else {
-                // Multi-line edit: splice lines
-                val prefix = lines[startLine].substring(0, startCol)
-                val suffix = lines[endLine].substring(endCol)
-                val newContent = prefix + edit.newText + suffix
-                val newLines = newContent.split("\n")
-
-                // Remove old lines and insert new ones
-                for (i in endLine downTo startLine) {
-                    lines.removeAt(i)
-                }
-                lines.addAll(startLine, newLines)
-            }
-        }
-
-        return lines.joinToString("\n")
     }
 
     // ========================================================================
@@ -510,7 +463,7 @@ class DocumentFormattingTest {
 
             // Default options have insertFinalNewline = true
             val edits = ts.formatDocument(uri, input, defaultOptions)
-            val result = applyEdits(input, edits)
+            val result = apply(input, edits)
             assertThat(result).endsWith("\n")
         }
 
@@ -528,7 +481,7 @@ class DocumentFormattingTest {
                     insertFinalNewline = false,
                 )
             val edits = ts.formatDocument(uri, input, options)
-            val result = applyEdits(input, edits)
+            val result = apply(input, edits)
 
             // User explicitly opted out of final newline
             assertThat(result).doesNotEndWith("\n")

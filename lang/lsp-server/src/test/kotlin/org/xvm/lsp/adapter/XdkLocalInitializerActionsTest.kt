@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
@@ -205,19 +204,4 @@ class XdkLocalInitializerActionsTest {
             check(adapter, uri, text, adapter.getCodeActions(uri, range, emptyList()))
         }
     }
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedWith(
-                compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column },
-            ).fold(text) { current, edit ->
-                fun offset(position: Position) =
-                    requireNotNull(
-                        XdkRename.offset(text, SemanticModel.Position(position.line, position.column)),
-                    )
-                current.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
 }

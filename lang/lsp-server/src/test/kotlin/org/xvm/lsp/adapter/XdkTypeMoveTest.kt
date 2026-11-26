@@ -8,7 +8,6 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaited
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -694,39 +693,4 @@ class XdkTypeMoveTest {
             .toURI()
             .toString()
             .removeSuffix("/")
-
-    private fun apply(
-        edit: WorkspaceEdit,
-        requested: Map<String, String>,
-    ) {
-        edit.changes.forEach { (uri, changes) ->
-            val path = Path.of(URI(uri))
-            val text = Files.readString(path)
-
-            fun offset(position: Position): Int =
-                if (position.line == 0) {
-                    position.column
-                } else {
-                    Regex("\\r\\n|\\r|\\n")
-                        .findAll(text)
-                        .elementAt(position.line - 1)
-                        .range.last + 1 + position.column
-                }
-            Files.writeString(
-                path,
-                changes
-                    .sortedByDescending { offset(it.range.start) }
-                    .fold(text) { value, change ->
-                        value.replaceRange(
-                            offset(change.range.start),
-                            offset(change.range.end),
-                            change.newText,
-                        )
-                    },
-            )
-        }
-        (edit.renames + requested).forEach { (from, to) ->
-            Files.move(Path.of(URI(from)), Path.of(URI(to)))
-        }
-    }
 }

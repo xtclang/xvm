@@ -48,14 +48,14 @@ class XdkIndexLifecycleTest {
     fun `replacing binary indices source authority and graphs retires old hierarchy handles`() {
         CompilerTestSupport.configure()
         val libraryText = "module Library { class Box { Int pick(Int value) = value; } }"
-        val first = source("first/Library.x", libraryText)
-        val second = source("second/Library.x", libraryText)
+        val first = directory.source("first/Library", libraryText)
+        val second = directory.source("second/Library", libraryText)
         val sourceText = "module Library {\n    class Box { Int pick(Int value) = value + 1; }\n}"
-        val editable = source("editable/Library.x", sourceText)
+        val editable = directory.source("editable/Library", sourceText)
         val text =
             "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); " +
                 "Int forward(lib.Box box) = run(box); }"
-        val consumer = source("Consumer.x", text)
+        val consumer = directory.source("Consumer", text)
         val firstArtifact = artifact(libraryText, first)
         val secondArtifact = artifact(libraryText, second)
         val graph = XdkSourceModule("Consumer", consumer, setOf("Library"))
@@ -113,16 +113,6 @@ class XdkIndexLifecycleTest {
             assertThat(adapter.getOutgoingCalls(current)).isEmpty()
         }
     }
-
-    private fun source(
-        path: String,
-        text: String,
-    ): String =
-        directory.resolve(path).toFile().let {
-            it.parentFile.mkdirs()
-            it.writeText(text)
-            it.canonicalFile.toURI().toString()
-        }
 
     private fun artifact(
         text: String,

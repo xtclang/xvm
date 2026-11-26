@@ -280,16 +280,6 @@ class XdkUnionRenameTest {
         return rename(uri, prefix.count { it == '\n' }, prefix.substringAfterLast('\n').length, name)
     }
 
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String {
-        fun offset(position: Position) = text.lineSequence().take(position.line).sumOf { it.length + 1 } + position.column
-        return edits.sortedByDescending { offset(it.range.start) }.fold(text) { value, edit ->
-            value.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-        }
-    }
-
     private companion object {
         @JvmStatic
         fun annotationArguments() =

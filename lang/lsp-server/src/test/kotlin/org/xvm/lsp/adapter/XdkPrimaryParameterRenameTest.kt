@@ -27,7 +27,7 @@ class XdkPrimaryParameterRenameTest {
                     .toList()[occurrence]
                     .range.first
             val edit = requireNotNull(adapter.rename(uri("App"), 0, at, "value"))
-            assertThat(apply(text, edit, "App")).isEqualTo(text.replace("input", "value"))
+            assertThat(apply(text, edit, uri("App"))).isEqualTo(text.replace("input", "value"))
         }
     }
 
@@ -42,9 +42,9 @@ class XdkPrimaryParameterRenameTest {
             val edit =
                 requireNotNull(adapter.rename(uri("Library"), 0, library.indexOf("input"), "value"))
             assertThat(edit.changes.keys).containsExactlyInAnyOrder(uri("Library"), uri("Consumer"))
-            assertThat(apply(library, edit, "Library"))
+            assertThat(apply(library, edit, uri("Library")))
                 .contains("Box(Int value", "Other(Int input)")
-            assertThat(apply(consumer, edit, "Consumer"))
+            assertThat(apply(consumer, edit, uri("Consumer")))
                 .contains("count = 2, value = 1", "box.value", "Other(input = 3)")
         }
     }
@@ -57,7 +57,7 @@ class XdkPrimaryParameterRenameTest {
         workspace(mapOf("App" to text)) { adapter ->
             val edit =
                 requireNotNull(adapter.rename(uri("App"), 0, text.lastIndexOf("input"), "value"))
-            assertThat(apply(text, edit, "App")).isEqualTo(text.replace("input", "value"))
+            assertThat(apply(text, edit, uri("App"))).isEqualTo(text.replace("input", "value"))
         }
     }
 
@@ -90,22 +90,6 @@ class XdkPrimaryParameterRenameTest {
             }
         }
     }
-
-    private fun apply(
-        text: String,
-        edit: WorkspaceEdit,
-        module: String,
-    ): String =
-        edit.changes
-            .getValue(uri(module))
-            .sortedByDescending { it.range.start.column }
-            .fold(text) { value, change ->
-                value.replaceRange(
-                    change.range.start.column,
-                    change.range.end.column,
-                    change.newText,
-                )
-            }
 
     private fun uri(module: String): String =
         directory

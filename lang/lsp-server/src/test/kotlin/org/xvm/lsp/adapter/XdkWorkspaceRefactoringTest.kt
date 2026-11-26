@@ -21,9 +21,9 @@ class XdkWorkspaceRefactoringTest {
     fun `inline types static functions and constants rename through unopened consumers`(name: String) {
         val libraryText =
             "module Library { class Box {} static Int answer() = number; static Int number = 42; }"
-        val library = source("Library", libraryText)
+        val library = directory.source("Library", libraryText)
         val consumer =
-            source(
+            directory.source(
                 "Consumer",
                 "module Consumer { package lib import Library; lib.Box make() = new lib.Box(); Int run() = lib.answer() + lib.number; }",
             )
@@ -52,7 +52,7 @@ class XdkWorkspaceRefactoringTest {
                 "    import ecstasy.maps.HashMap;\r\n" +
                 "    // Keep this comment 😀\r\n" +
                 "    Buffer make() = new Buffer();\r\n}"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -124,7 +124,7 @@ class XdkWorkspaceRefactoringTest {
         name: String,
         text: String,
     ): String? {
-        val uri = source(name, text)
+        val uri = directory.source(name, text)
         return XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -137,33 +137,23 @@ class XdkWorkspaceRefactoringTest {
                 val edit = requireNotNull(action.edit)
                 assertThat(edit.versioned).isTrue()
                 assertThat(action.title).isEqualTo("Organize imports")
-                applied(text, edit.changes.getValue(uri)).also {
+                apply(text, edit.changes.getValue(uri)).also {
                     assertThat(adapter.compile(uri, it).diagnostics).isEmpty()
                 }
             }
         }
     }
 
-    private fun applied(
-        text: String,
-        edits: List<TextEdit>,
-    ): String {
-        fun offset(position: Position): Int = text.splitToSequence("\n").take(position.line).sumOf { it.length + 1 } + position.column
-        return edits
-            .sortedByDescending { offset(it.range.start) }
-            .fold(text) { value, edit -> value.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText) }
-    }
-
     @Test
     fun `binary types and broken graphs do not yield source refactoring edits`() {
         val text =
             "module App { package xml import xml.xtclang.org; void use(xml.Document doc) {} }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             assertThat(adapter.rename(uri, 0, text.indexOf("Document"), "Renamed")).isNull()
-            source("Broken", "module Broken { Missing value; }")
+            directory.source("Broken", "module Broken { Missing value; }")
             adapter.refreshDiscoveredSources()
             assertThat(
                 adapter
@@ -181,9 +171,9 @@ class XdkWorkspaceRefactoringTest {
         val text =
             "module Library { class Base { Int value { Int get() = 1; void set(Int value) {} } } " +
                 "class Child extends Base { @Override Int value { Int get() = 2; } } class Other { Int value = 3; } }"
-        val library = source("Library", text)
+        val library = directory.source("Library", text)
         val consumer =
-            source(
+            directory.source(
                 "Consumer",
                 "module Consumer { package lib import Library; Int run(lib.Base base, lib.Child child) = base.value + child.value; }",
             )
@@ -215,7 +205,7 @@ class XdkWorkspaceRefactoringTest {
     fun `property renames reject accidental capture of an existing derived property`() {
         val text =
             "module Library { class Base { Int value = 1; } class Child extends Base { Int amount = 2; } }"
-        val library = source("Library", text)
+        val library = directory.source("Library", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(library, text).diagnostics).isEmpty()
@@ -226,7 +216,7 @@ class XdkWorkspaceRefactoringTest {
     @Test
     fun `member type rename proves new source membership and returns a nonoverwriting file move`() {
         val text = "module App { Item make() = new Item(); }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         val member =
             directory.resolve("App/Item.x").toFile().also {
                 it.parentFile.mkdirs()
@@ -258,7 +248,7 @@ class XdkWorkspaceRefactoringTest {
     fun `explicit import aliases rename locally while the imported binary identity stays unchanged`() {
         val text =
             "module App { import ecstasy.text.StringBuffer as Buffer; Buffer make() = new Buffer(); }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -280,7 +270,7 @@ class XdkWorkspaceRefactoringTest {
     fun `alias renames reject a new name that captures an existing binding`() {
         val text =
             "module App { import ecstasy.text.StringBuffer as Buffer; Buffer make() = new Buffer(); String text = \"ok\"; }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -291,7 +281,7 @@ class XdkWorkspaceRefactoringTest {
     @Test
     fun `auto import repairs a missing bundled type without changing known bindings`() {
         val text = "module App { String text = \"ok\"; Document echo(Document doc) = doc; }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
@@ -309,9 +299,9 @@ class XdkWorkspaceRefactoringTest {
 
     @Test
     fun `auto import proves a newly discovered source dependency and rejects inaccessible candidates`() {
-        source("Library", "module Library { class Widget {} private class Hidden {} }")
+        directory.source("Library", "module Library { class Widget {} private class Hidden {} }")
         val text = "module App { Widget make() = new Widget(); }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
@@ -342,9 +332,9 @@ class XdkWorkspaceRefactoringTest {
 
     @Test
     fun `auto import reuses the package that already imports the type's module`() {
-        source("Library", "module Library { class Widget {} class Gadget {} }")
+        directory.source("Library", "module Library { class Widget {} class Gadget {} }")
         val text = "module App { package lib import Library; lib.Gadget gadget = new lib.Gadget(); Widget make() = new Widget(); }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
@@ -362,7 +352,7 @@ class XdkWorkspaceRefactoringTest {
     @Test
     fun `auto import withholds edits when a separate error prevents a complete proof`() {
         val text = "module App { Document echo(Document doc) = doc; Missing broken; }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
@@ -379,10 +369,10 @@ class XdkWorkspaceRefactoringTest {
 
     @Test
     fun `auto import offers separate proven choices and respects explicit dependency configuration`() {
-        val first = source("First", "module First { class Widget {} }")
-        source("Second", "module Second { class Widget {} }")
+        val first = directory.source("First", "module First { class Widget {} }")
+        directory.source("Second", "module Second { class Widget {} }")
         val text = "module App { Widget make() = new Widget(); }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         val range = Range(Position(0, 13), Position(0, 19))
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
@@ -402,7 +392,7 @@ class XdkWorkspaceRefactoringTest {
         val text =
             "module App { import ecstasy.text.StringBuffer as Buffer; Buffer make() = new Buffer(); " +
                 "class Nested { import ecstasy.text.StringBuffer as Buffer; Buffer make() = new Buffer(); } }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -417,23 +407,4 @@ class XdkWorkspaceRefactoringTest {
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
     }
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedByDescending { it.range.start.column }
-            .fold(text) { value, edit ->
-                value.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)
-            }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory.resolve("$name.x").toFile().let {
-            it.writeText(text)
-            it.canonicalFile.toURI().toString()
-        }
 }

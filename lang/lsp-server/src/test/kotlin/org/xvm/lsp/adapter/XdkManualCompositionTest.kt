@@ -16,7 +16,7 @@ class XdkManualCompositionTest {
     @Test
     fun `manual covariant mixin redirects navigate to written source methods`() {
         val text = manualCompositionFixture("mixinTests")
-        val uri = source("mixinTests", text)
+        val uri = directory.source("mixinTests", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -35,7 +35,7 @@ class XdkManualCompositionTest {
     @Test
     fun `manual interface delegation never invents a runtime receiver implementation`() {
         val text = manualCompositionFixture("delegationTests")
-        val uri = source("delegationTests", text)
+        val uri = directory.source("delegationTests", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -53,16 +53,4 @@ class XdkManualCompositionTest {
             }
         }
     }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory
-            .resolve("$name.x")
-            .toFile()
-            .also { it.writeText(text) }
-            .canonicalFile
-            .toURI()
-            .toString()
 }

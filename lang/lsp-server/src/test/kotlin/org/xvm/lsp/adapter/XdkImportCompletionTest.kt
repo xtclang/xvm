@@ -31,8 +31,8 @@ class XdkImportCompletionTest {
 
     @Test
     fun `same named source candidates retain separate imports and private types are absent`() {
-        source("First", "module First { class Widget {} private class Widden {} }")
-        source("Second", "module Second { class Widget {} }")
+        directory.source("First", "module First { class Widget {} private class Widden {} }")
+        directory.source("Second", "module Second { class Widget {} }")
         withCompletions("module App { Wid§ value; }") { _, _, _, items ->
             val imported = items.filter { it.additionalTextEdits.isNotEmpty() }
             assertThat(imported.map { it.label }).containsExactly("Widget", "Widget")
@@ -45,7 +45,7 @@ class XdkImportCompletionTest {
 
     @Test
     fun `a name typed as a statement of its own imports a type of another module`() {
-        source("Library", "module Library { class Widget {} }")
+        directory.source("Library", "module Library { class Widget {} }")
         withCompletions("module App {\n    void run() {\n        Wid§\n        Int after = 1;\n    }\n}") { adapter, uri, original, items ->
             val item = items.single { it.label == "Widget" }
             assertThat(item.detail).isEqualTo("Widget — import from Library")
@@ -59,7 +59,7 @@ class XdkImportCompletionTest {
 
     @Test
     fun `an import of a type reuses the package that already imports its module`() {
-        source("Library", "module Library { class Widget {} class Gadget {} }")
+        directory.source("Library", "module Library { class Widget {} class Gadget {} }")
         val marked =
             "module App {\n    package lib import Library;\n    lib.Gadget gadget = new lib.Gadget();\n" +
                 "    void run() {\n        Wid§\n        Int after = 1;\n    }\n}"
@@ -84,9 +84,9 @@ class XdkImportCompletionTest {
 
     @Test
     fun `explicit graph does not gain an undeclared dependency through completion`() {
-        val library = source("Library", "module Library { class Widget {} }")
+        val library = directory.source("Library", "module Library { class Widget {} }")
         val text = "module App { Wid value; }"
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("Library", library), XdkSourceModule("App", uri)))
             adapter.compile(uri, text)
@@ -114,7 +114,7 @@ class XdkImportCompletionTest {
         val offset = marked.indexOf('§')
         val text = marked.replace("§", "")
         val before = text.take(offset)
-        val uri = source("App", text)
+        val uri = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.compile(uri, text)
@@ -122,27 +122,4 @@ class XdkImportCompletionTest {
             check(adapter, uri, text, items)
         }
     }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory
-            .resolve("$name.x")
-            .toFile()
-            .also { it.writeText(text) }
-            .canonicalFile
-            .toURI()
-            .toString()
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
-            .fold(text) { current, edit ->
-                fun offset(position: Position) = current.splitToSequence('\n').take(position.line).sumOf { it.length + 1 } + position.column
-                current.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
 }

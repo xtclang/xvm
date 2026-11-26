@@ -202,30 +202,6 @@ class XdkRenameTest {
         }
     }
 
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String {
-        fun offset(position: Position): Int =
-            (
-                if (position.line == 0) {
-                    0
-                } else {
-                    Regex("\r\n|\r|\n")
-                        .findAll(text)
-                        .elementAt(position.line - 1)
-                        .range.last + 1
-                }
-            ) + position.column
-        return edits
-            .sortedWith(
-                compareByDescending<TextEdit> { it.range.start.line }
-                    .thenByDescending { it.range.start.column },
-            ).fold(text) { value, edit ->
-                value.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
-    }
-
     private companion object {
         const val URI = "file:///Rename.x"
     }

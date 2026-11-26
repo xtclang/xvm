@@ -22,11 +22,11 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `discovery reads module imports ignores generated sources and honors buffers`() {
-        val base = source("Base.x", "module Base { class Box {} }")
-        val app = source("App.x", "module App { package lib import Base; }")
-        source("App/Member.x", "class Member {}")
-        source("build/Generated.x", "module Generated {}")
-        source("Comment.x", "// module Fake {}\nclass Ordinary {}")
+        val base = directory.source("Base", "module Base { class Box {} }")
+        val app = directory.source("App", "module App { package lib import Base; }")
+        directory.source("App/Member", "class Member {}")
+        directory.source("build/Generated", "module Generated {}")
+        directory.source("Comment", "// module Fake {}\nclass Ordinary {}")
         val modules =
             XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) {
                 false
@@ -49,9 +49,9 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `a discovery traces its start and one end with its parses, which it traces one by one only at DEBUG`() {
-        val base = source("Base.x", "module Base { class Box {} }")
-        source("App.x", "module App { package lib import Base; }")
-        source("App/Member.x", "class Member {}")
+        val base = directory.source("Base", "module Base { class Box {} }")
+        directory.source("App", "module App { package lib import Base; }")
+        directory.source("App/Member", "class Member {}")
         val parses = setOf("Parser.parseModuleName", "Parser.parseSource(partial-discovery)")
 
         fun scan() = XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }
@@ -90,9 +90,9 @@ class XdkWorkspaceDiscoveryTest {
     fun `a workspace's own module replaces the bundled library of its name, and its own ecstasy is everyone's`() {
         val json = "json.xtclang.org"
         val ecstasy = "ecstasy.xtclang.org"
-        source("lib_json/json.x", "module json.xtclang.org {}")
-        source("App.x", "module App { package json import json.xtclang.org; }")
-        source("javatools_turtle/mack.x", "module mack.xtclang.org {}")
+        directory.source("lib_json/json", "module json.xtclang.org {}")
+        directory.source("App", "module App { package json import json.xtclang.org; }")
+        directory.source("javatools_turtle/mack", "module mack.xtclang.org {}")
 
         fun graph() =
             XdkWorkspaceDiscovery
@@ -100,7 +100,7 @@ class XdkWorkspaceDiscoveryTest {
                 .associate { it.name to it.dependencies }
         assertThat(graph()).isEqualTo(mapOf("App" to setOf(json), json to emptySet()))
         // as in the XVM repository: every module imports ecstasy without saying so, and mack stays bundled
-        source("lib_ecstasy/ecstasy.x", "module ecstasy.xtclang.org {}")
+        directory.source("lib_ecstasy/ecstasy", "module ecstasy.xtclang.org {}")
         assertThat(graph()).isEqualTo(mapOf("App" to setOf(ecstasy, json), ecstasy to emptySet(), json to setOf(ecstasy)))
         // turned off, the libraries stay bundled, and no module depends on their sources
         System.setProperty(XdkLibraryReplacement.PROPERTY, "false")
@@ -113,10 +113,10 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `unopened graph resolves imports and indexes independent healthy modules despite a broken neighbor`() {
-        val base = source("Base.x", "module Base { static Int answer() = 42; }")
+        val base = directory.source("Base", "module Base { static Int answer() = 42; }")
         val appText = "module App { package lib import Base; Int run() = lib.answer(); }"
-        val app = source("App.x", appText)
-        source("Broken.x", "module Broken { Missing value; }")
+        val app = directory.source("App", appText)
+        directory.source("Broken", "module Broken { Missing value; }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(
@@ -128,7 +128,7 @@ class XdkWorkspaceDiscoveryTest {
             assertThat(adapter.compile(app, appText).diagnostics).isEmpty()
             assertThat(adapter.findDefinition(app, 0, appText.indexOf("answer"))!!.uri)
                 .isEqualTo(base)
-            val added = source("Added.x", "module Added { class AddedType {} }")
+            val added = directory.source("Added", "module Added { class AddedType {} }")
             adapter.refreshDiscoveredSources()
             assertThat(
                 adapter
@@ -144,13 +144,13 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `explicit graphs win and invalid replacements preserve automatic discovery`() {
-        val base = source("Base.x", "module Base { class Box {} }")
+        val base = directory.source("Base", "module Base { class Box {} }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             val module = XdkSourceModule("Base", base)
             assertThatThrownBy { adapter.replaceSourceModules(listOf(module, module)) }
                 .isInstanceOf(IllegalArgumentException::class.java)
-            val other = source("Other.x", "module Other { class OtherBox {} }")
+            val other = directory.source("Other", "module Other { class OtherBox {} }")
             adapter.refreshDiscoveredSources()
             assertThat(
                 adapter
@@ -168,7 +168,7 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `file events bring discovery to what a full walk finds, reading only the paths they name`() {
-        source("Base.x", "module Base { class Box {} }")
+        directory.source("Base", "module Base { class Box {} }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
 
@@ -182,18 +182,18 @@ class XdkWorkspaceDiscoveryTest {
                 assertThat(graph()).describedAs("a full walk after %s", uris.toList()).isEqualTo(incremental)
                 return incremental.associate { (name, _, dependencies) -> name to dependencies }
             }
-            val app = source("App.x", "module App {}")
+            val app = directory.source("App", "module App {}")
             assertThat(applied(app)).isEqualTo(mapOf("App" to emptySet<String>(), "Base" to emptySet()))
 
             // a watcher may report only the folder that holds a new file
-            val members = source("App/lib.x", "package lib import Base;").substringBeforeLast("/lib.x")
+            val members = directory.source("App/lib", "package lib import Base;").substringBeforeLast("/lib.x")
             assertThat(applied(members)).containsEntry("App", setOf("Base"))
             directory.resolve("App/lib.x").toFile().delete()
             assertThat(applied("$members/lib.x")).containsEntry("App", emptySet<String>())
 
             // a new folder with a module and its members, then the folder moved and deleted
-            source("Nested/Tool.x", "module Tool {}")
-            source("Nested/Tool/base.x", "package base import Base;")
+            directory.source("Nested/Tool", "module Tool {}")
+            directory.source("Nested/Tool/base", "package base import Base;")
             val nested = directory.resolve("Nested").toFile()
             assertThat(applied(nested.toURI().toString())).containsEntry("Tool", setOf("Base"))
             val moved = directory.resolve("Moved").toFile()
@@ -204,7 +204,7 @@ class XdkWorkspaceDiscoveryTest {
             assertThat(applied(moved.toURI().toString())).doesNotContainKey("Tool")
 
             // generated sources stay out, as in a full walk
-            val generated = source("build/Generated.x", "module Generated {}")
+            val generated = directory.source("build/Generated", "module Generated {}")
             assertThat(applied(generated, generated.substringBeforeLast("/Generated.x"))).doesNotContainKey("Generated")
 
             // an open buffer outlives its file
@@ -216,10 +216,10 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `an empty source, as an editor creates a file, is read as a member, by a file event and by a walk`() {
-        source("App.x", "module App {}")
+        directory.source("App", "module App {}")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            val empty = source("App/Joker.x", "")
+            val empty = directory.source("App/Joker", "")
             // its event, as VS Code's Explorer sends on creating the file, and a walk that finds it
             assertThat(adapter.applyFileEvents(listOf(empty))).describedAs("installed").isNotNull()
             adapter.refreshDiscoveredSources()
@@ -231,11 +231,11 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `a source that cannot be read costs only itself, in a file event's batch and in a walk`() {
-        source("App.x", "module App {}")
+        directory.source("App", "module App {}")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            val unreadable = source("App/Locked.x", "class Locked {}")
-            val tool = source("Tool.x", "module Tool {}")
+            val unreadable = directory.source("App/Locked", "class Locked {}")
+            val tool = directory.source("Tool", "module Tool {}")
             val locked = directory.resolve("App/Locked.x").toFile()
             assertThat(locked.setReadable(false)).isTrue()
             try {
@@ -252,8 +252,8 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `a root whose header does not parse keeps its name and imports when it is renamed`() {
-        source("Base.x", "module Base {}")
-        val app = source("App.x", "module App { package lib import Base; }")
+        directory.source("Base", "module Base {}")
+        val app = directory.source("App", "module App { package lib import Base; }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
 
@@ -281,9 +281,9 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `an editor left open on a root renamed outside the IDE does not declare its module twice`() {
-        source("Base.x", "module Base {}")
+        directory.source("Base", "module Base {}")
         val text = "module App { package lib import Base; }"
-        val app = source("App.x", text)
+        val app = directory.source("App", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.updateDocument(app, text)
@@ -305,14 +305,4 @@ class XdkWorkspaceDiscoveryTest {
             assertThat(graph()).contains("Draft" to app, "App" to uri)
         }
     }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory.resolve(name).toFile().let {
-            it.parentFile.mkdirs()
-            it.writeText(text)
-            it.canonicalFile.toURI().toString()
-        }
 }

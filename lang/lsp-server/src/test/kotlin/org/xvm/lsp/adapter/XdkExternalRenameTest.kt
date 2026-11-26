@@ -47,7 +47,7 @@ class XdkExternalRenameTest {
                 .containsExactlyInAnyOrder(library.toURI().toString(), consumer.toURI().toString())
             assertThat(proposal.edit.changes.keys)
                 .containsExactlyInAnyOrder(library.toURI().toString(), consumer.toURI().toString())
-            assertThat(apply(CONSUMER, proposal.edit, consumer))
+            assertThat(apply(CONSUMER, proposal.edit, consumer.toURI().toString()))
                 .isEqualTo(CONSUMER.replace("input", "value"))
             assertThat(omitted.readText()).isEqualTo(CONSUMER.replace("Consumer", "Other"))
             assertThat(library.readText()).isEqualTo(LIBRARY)
@@ -88,7 +88,7 @@ class XdkExternalRenameTest {
                 )
             assertThat(requireNotNull(after.scope).revision)
                 .isNotEqualTo(requireNotNull(before.scope).revision)
-            assertThat(apply(overlay, after.edit, consumer))
+            assertThat(apply(overlay, after.edit, consumer.toURI().toString()))
                 .isEqualTo(overlay.replace("input", "value"))
             assertThat(consumer.readText()).isEqualTo(CONSUMER)
         }
@@ -179,22 +179,6 @@ class XdkExternalRenameTest {
             XdkSourceModule("Library", library.toURI().toString()),
             XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
         )
-
-    private fun apply(
-        text: String,
-        edit: WorkspaceEdit,
-        file: File,
-    ): String =
-        edit.changes
-            .getValue(file.toURI().toString())
-            .sortedByDescending { it.range.start.column }
-            .fold(text) { value, change ->
-                value.replaceRange(
-                    change.range.start.column,
-                    change.range.end.column,
-                    change.newText,
-                )
-            }
 
     private companion object {
         const val LIBRARY = "module Library { class Box { Int pick(Int input) = input; } }"

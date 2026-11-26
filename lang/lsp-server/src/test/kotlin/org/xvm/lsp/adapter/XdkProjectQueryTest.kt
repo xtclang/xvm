@@ -563,15 +563,5 @@ class XdkProjectQueryTest {
     private fun apply(
         file: File,
         edit: WorkspaceEdit,
-    ): String =
-        edit.changes
-            .getValue(file.toURI().toString())
-            .sortedByDescending { it.range.start.column }
-            .fold(file.readText()) { text, change ->
-                text.replaceRange(
-                    change.range.start.column,
-                    change.range.end.column,
-                    change.newText,
-                )
-            }
+    ): String = apply(file.readText(), edit, file.toURI().toString())
 }

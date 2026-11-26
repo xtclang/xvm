@@ -16,7 +16,7 @@ class XdkRenameUnprovableTest {
 
     @Test
     fun `a rename is proven in a module with a binding the model cannot prove`() {
-        val uri = source("Pairs", PAIRS)
+        val uri = directory.source("Pairs", PAIRS)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, PAIRS).diagnostics).isEmpty()
@@ -28,7 +28,7 @@ class XdkRenameUnprovableTest {
 
     @Test
     fun `a rename to a name that an unprovable binding spells is refused, as nothing shows it is not captured`() {
-        val uri = source("Pairs", PAIRS)
+        val uri = directory.source("Pairs", PAIRS)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, PAIRS).diagnostics).isEmpty()
@@ -36,29 +36,6 @@ class XdkRenameUnprovableTest {
             assertThat(adapter.rename(uri, at.line, at.column, "OuterType")).isNull()
         }
     }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory
-            .resolve("$name.x")
-            .toFile()
-            .apply { writeText(text) }
-            .canonicalFile
-            .toURI()
-            .toString()
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
-            .fold(text) { current, edit ->
-                fun offset(position: Position) = current.splitToSequence('\n').take(position.line).sumOf { it.length + 1 } + position.column
-                current.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
 
     private companion object {
         // OuterType in Public.OuterType names no declaration, as Public's constraint is Object

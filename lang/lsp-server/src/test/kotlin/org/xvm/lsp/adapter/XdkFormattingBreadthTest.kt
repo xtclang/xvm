@@ -5,10 +5,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLexical
-import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
 /**
@@ -113,16 +111,6 @@ class XdkFormattingBreadthTest {
         assertThat(formatted.lines()).hasSizeGreaterThan(1)
         assertThat(XdkLexical.format(formatted, config, OPTIONS)).isEmpty()
         XdkAdapter().use { adapter -> assertThat(adapter.compile("untitled:Compact.x", formatted).diagnostics).isEmpty() }
-    }
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String {
-        fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-        return edits.sortedByDescending { offset(it.range.start) }.fold(text) { changed, edit ->
-            changed.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-        }
     }
 
     private companion object {

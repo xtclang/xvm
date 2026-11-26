@@ -146,15 +146,4 @@ class XdkLocalExtractionTest {
             check(adapter, uri, adapter.getCodeActions(uri, Range(at, Position(at.line, at.column + selected.length)), emptyList()))
         }
     }
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
-            .fold(text) { current, edit ->
-                fun offset(position: Position) = current.splitToSequence('\n').take(position.line).sumOf { it.length + 1 } + position.column
-                current.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
 }

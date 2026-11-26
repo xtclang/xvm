@@ -210,12 +210,7 @@ class XdkConfigurationReplacementTest {
         path: String,
         text: String,
         dependencies: Set<String> = emptySet(),
-    ): XdkSourceModule {
-        val file = directory.resolve("$path.x").toFile().canonicalFile
-        file.parentFile.mkdirs()
-        file.writeText(text)
-        return XdkSourceModule(file.nameWithoutExtension, file.toURI().toString(), dependencies)
-    }
+    ): XdkSourceModule = XdkSourceModule(path.substringAfterLast('/'), directory.source(path, text), dependencies)
 
     private fun text(module: XdkSourceModule): String = module.root.readText()
 }

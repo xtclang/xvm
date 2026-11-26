@@ -121,7 +121,7 @@ class XdkMemberUseTrackerLibrariesTest {
             println("tracker case=$case proof compiled=${compiled.size} (${compiled.joinToString()})")
             return edit.changes.entries.associate { (uri, edits) ->
                 val target = File(URI(uri))
-                target to applied(target.readText(), edits)
+                target to apply(target.readText(), edits)
             }
         }
 
@@ -141,17 +141,4 @@ class XdkMemberUseTrackerLibrariesTest {
         text: String,
         member: String,
     ) = text.substring(0, text.trimEnd().lastIndexOf('}')) + "\n    $member\n}\n"
-
-    /** [text] with [edits] applied, last first. */
-    private fun applied(
-        text: String,
-        edits: List<TextEdit>,
-    ): String {
-        val starts = text.lines().runningFold(0) { offset, line -> offset + line.length + 1 }
-
-        fun offset(position: Position) = starts[position.line] + position.column
-        return edits.sortedByDescending { offset(it.range.start) }.fold(text) { result, edit ->
-            result.substring(0, offset(edit.range.start)) + edit.newText + result.substring(offset(edit.range.end))
-        }
-    }
 }

@@ -18,7 +18,7 @@ class XdkManualCompositionRenameTest {
     @Test
     fun `manual covariant self family renames without touching the unrelated mixin`() {
         val text = manualCompositionFixture("mixinTests")
-        val uri = source("mixinTests", text)
+        val uri = directory.source("mixinTests", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -38,7 +38,7 @@ class XdkManualCompositionRenameTest {
     @Test
     fun `manual conditional mixin rename preserves other conditional compositions`() {
         val text = manualCompositionFixture("condMixinTests", "TestConsole")
-        val uri = source("condMixinTests", text)
+        val uri = directory.source("condMixinTests", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -58,7 +58,7 @@ class XdkManualCompositionRenameTest {
     @Test
     fun `manual mixin rename refuses a colliding default method`() {
         val text = manualCompositionFixture("mixinTests").replace("interface Root {", "interface Root { Root occupied() = this;")
-        val uri = source("mixinTests", text)
+        val uri = directory.source("mixinTests", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -72,7 +72,7 @@ class XdkManualCompositionRenameTest {
     @ValueSource(strings = ["Int size()", "text.size()"])
     fun `conditional source composition renames from declaration and concrete receiver`(anchor: String) {
         val text = conditionalSource()
-        val uri = source("Conditional", text)
+        val uri = directory.source("Conditional", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -91,7 +91,7 @@ class XdkManualCompositionRenameTest {
     @Test
     fun `conditional composition rename refuses a concrete host collision`() {
         val text = conditionalSource("Int width() = 0;")
-        val uri = source("Conditional", text)
+        val uri = directory.source("Conditional", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -110,27 +110,4 @@ class XdkManualCompositionRenameTest {
             Int unrelated(Box<Int> number) = number.value;
         }
         """.trimIndent()
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory
-            .resolve("$name.x")
-            .toFile()
-            .also { it.writeText(text) }
-            .canonicalFile
-            .toURI()
-            .toString()
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
-            .fold(text) { current, edit ->
-                fun offset(position: Position) = current.splitToSequence('\n').take(position.line).sumOf { it.length + 1 } + position.column
-                current.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
 }
