@@ -114,6 +114,7 @@ import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.features.LSPCompletionProposal
 import com.redhat.devtools.lsp4ij.dap.client.DAPStackFrame
 import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticsApplier
+import com.redhat.devtools.lsp4ij.settings.GlobalLanguageServerSettings
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettings.LanguageServerDefinitionSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 import com.redhat.devtools.lsp4ij.settings.ServerTrace
@@ -156,6 +157,7 @@ import javax.swing.JLayeredPane
 import javax.swing.JList
 import javax.swing.JMenuBar
 import javax.swing.JMenuItem
+import javax.swing.JProgressBar
 import javax.swing.JSpinner
 import javax.swing.JTable
 import javax.swing.JToggleButton
@@ -166,6 +168,7 @@ import javax.swing.MenuSelectionManager
 import javax.swing.RootPaneContainer
 import javax.swing.SwingUtilities
 import javax.swing.text.JTextComponent
+import kotlin.time.TimeSource
 
 /**
  * Drives the IDE for the tour, the guided recording of the plugin's features: it lays the IDE's window out, opens
@@ -432,6 +435,32 @@ object TourUi {
             .firstOrNull { it.serverDefinition.id == SERVER_ID }
             ?.let { wrapper -> "${wrapper.serverStatus} ${runCatching { wrapper.currentProcessId }.getOrNull() ?: ""}".trim() }
             .orEmpty()
+
+    /**
+     * The Ecstasy language server's state, as [serverState] says it, once the EDT has run what the tour's last action
+     * set off there: what was queued for it outside a modal dialog before the call, and again until a round of it
+     * changes neither that state nor the server's settings. A choice that changes the settings has the plugin restart
+     * the server later on the EDT, and LSP4IJ's restart stops the server at once, so a restart that the action asked for
+     * shows here; the server's own work, such as a pass over the workspace's diagnostics, changes neither. A check that
+     * the server was not restarted reads this once: a wait for a change that is not to come would end at a hang's bound.
+     */
+    @JvmStatic
+    fun settledServerState(): String {
+        val started = TimeSource.Monotonic.markNow()
+        var seen = serverState() to serverSettings()
+        while (true) {
+            onEdt {}
+            val now = serverState() to serverSettings()
+            if (now == seen) return now.first
+            check(started.elapsedNow() < HANG_LIMIT) { "The server's state did not settle within $HANG_LIMIT: $now" }
+            seen = now
+        }
+    }
+
+    /** The content of the Ecstasy language server's settings, the project's and the application's. */
+    private fun serverSettings(): String =
+        listOf(ProjectLanguageServerSettings.getInstance(project()), GlobalLanguageServerSettings.getInstance())
+            .joinToString("; ") { it.getLanguageServerSettings(SERVER_ID)?.configurationContent.orEmpty() }
 
     /**
      * Whether LSP4IJ has opened the file at [path] at the started Ecstasy language server, as it does with each open
@@ -1991,6 +2020,16 @@ object TourUi {
     /** Whether a dialog shows. */
     @JvmStatic
     fun dialogShowing(): Boolean = anyEdt { Window.getWindows().any { it is JDialog && it.isShowing } }
+
+    /** Whether a dialog that shows a progress shows, as a modal task's does, which closes by itself once the task ends. */
+    @JvmStatic
+    fun progressShowing(): Boolean =
+        anyEdt {
+            Window.getWindows().any {
+                it is JDialog && it.isShowing &&
+                    descendants(it).any { part -> part is JProgressBar && part.isShowing }
+            }
+        }
 
     /** Whether a dialog titled [title] shows, such as Undo's question, which asks whether to undo a change of the project. */
     @JvmStatic

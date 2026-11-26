@@ -3038,10 +3038,13 @@ private fun Tour.settings() {
             ) { "The server: ${serverState()}" }
         }
         answers()
-        // the adapter in use, chosen again, keeps the server as it is: no restart, and no message either
+        // the adapter in use, chosen again, keeps the server as it is: no restart, and no message either. Read once the
+        //  choice has run, with what it set off on the EDT, and not waited for: a wait for a restart that is not to come
+        //  ends only at the hang's bound, as the server's own work, such as a pass over the workspace's diagnostics,
+        //  keeps its idle check from ending it
         val same = serverState()
         chooseAdapter("Bundled default")
-        expect(!within(HANG) { serverState() != same }) { "Choosing the adapter in use restarted the server: ${serverState()}" }
+        expect(settledServerState() == same) { "Choosing the adapter in use restarted the server: ${serverState()}" }
     }
     verify("Restart on the Ecstasy | Server Runtime and Logs page, clicked, restarts the server, which answers") {
         val before = serverState()
