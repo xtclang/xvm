@@ -41,6 +41,9 @@ included, and a click lists them.
 Hover a name, or press <kbd>Ctrl+Q</kbd> (IntelliJ) or <kbd>Ctrl+K</kbd> <kbd>Ctrl+I</kbd> (VS Code), for its declaration and doc
 comment, as the compiler sees it. This works for the XDK's own types too.
 
+URLs in comments and strings are links, and so is an import's name, to the source it imports: <kbd>Ctrl</kbd>+click
+one to open it.
+
 <table><tr><td width="50%">
 
 ![IntelliJ quick documentation for INITIAL_HAND_SIZE, its type and doc comment](images/intellij-hover.png)
@@ -194,8 +197,9 @@ until you fix them. IntelliJ also draws such files red in the Project view.
 ### The XDK's sources
 
 Navigation reaches into the XDK as well: going to `HashMap`'s declaration opens the `ecstasy`
-module's source, read-only. Its names are links too, as the language server compiles the library's
-sources when the first one opens.
+module's source, read-only. In VS Code its names are links too, as the language server compiles the library's
+sources when the first one opens; IntelliJ doesn't follow them yet, as LSP4IJ 0.30.1 doesn't navigate from a
+read-only library source.
 
 <table><tr><td width="50%">
 

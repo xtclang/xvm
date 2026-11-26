@@ -87,7 +87,8 @@ When something doesn't work as you expect, look at the language server first.
   after the time, such as `INFO`, is the line's real one.
 - **Restart it.** <kbd>Ctrl+Alt+X</kbd>, then <kbd>R</kbd>: IntelliJ's **Tools | Restart Ecstasy Language Server**, VS
   Code's **Ecstasy: Restart Language Server**. Unsaved changes are kept. If the server's process
-  dies, IntelliJ starts it again; in VS Code, a click on the status bar item does.
+  dies, both editors start it again; should VS Code give up after it fails again and again, a click on the status
+  bar item starts it.
 - **Export its logs.** IntelliJ's **Tools | Export Ecstasy Server Logs** and VS Code's **Ecstasy:
   Export Server Logs** save the server's recent logs, timing traces and status as one ZIP file, to
   attach to an [issue](https://github.com/xtclang/xvm/issues). It holds no source files, but it may

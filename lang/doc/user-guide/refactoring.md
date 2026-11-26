@@ -85,6 +85,8 @@ On an error, <kbd>Alt+Enter</kbd> (IntelliJ) or <kbd>Ctrl+.</kbd> (VS Code) offe
 - **Create class** for a `new` of a class that doesn't exist yet, in the same module.
 - **Import** for a type of another module that isn't imported.
 - **Remove unused import** and **Remove unused local variable**.
+- **Implement** or **Override** a member that the class inherits, with its signature and the imports it needs, or
+  **Implement all required members** for every abstract one it still lacks, the XDK's included.
 
 <table><tr><td width="50%">
 

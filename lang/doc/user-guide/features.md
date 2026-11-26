@@ -16,6 +16,7 @@ editor, through the editor's usual action for it, and each feature links to the 
 | [Completion](editing-and-navigation.md#completion) | Yes | Yes | Members, names in scope and argument values, with types |
 | [Inline completion](editing-and-navigation.md#completion) | Yes | Yes | A name in scope, suggested as you type |
 | [Quick documentation](editing-and-navigation.md#documentation) | Yes | Yes | On hover too, and for the XDK's types |
+| [Links](editing-and-navigation.md#documentation) | Yes | Yes | URLs in comments and strings, and imports' names |
 | [Parameter info](editing-and-navigation.md#parameter-info) | Yes | Yes | |
 | [Inlay hints](editing-and-navigation.md#colors-hints-and-reference-counts) | Yes | Yes | Parameter names and inferred types |
 | [Reference counts above declarations](editing-and-navigation.md#colors-hints-and-reference-counts) | Yes | Yes | A click lists the references |
@@ -51,6 +52,7 @@ shortcuts.
 | [Inline a local, a private method or a constant](refactoring.md#extract-inline-and-safe-delete) | Yes | Yes | |
 | [Safe delete of an unused member](refactoring.md#extract-inline-and-safe-delete) | Yes | Yes | |
 | [Quick fixes: create a method or class, add an import, remove what's unused](refactoring.md#quick-fixes-and-imports) | Yes | Yes | |
+| [Implement and override members](refactoring.md#quick-fixes-and-imports) | Yes | Yes | One member, or all that are required |
 | [Organize imports](refactoring.md#quick-fixes-and-imports) | Yes | Yes | |
 | [Generate a doc comment](refactoring.md#quick-fixes-and-imports) | Yes | Yes | |
 | [Undo a refactoring across files](refactoring.md#rename) | Asks first, then one step | One step, without asking | |
