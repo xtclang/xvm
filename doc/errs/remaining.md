@@ -774,28 +774,35 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 - [x] Found 2026-11-26: one checkout's container runs in two slots (`$XTC_CONTAINER_SLOT`) shared `/out`, and a run
   removes `/out/screen.mp4` as it starts, so a VS Code run could have deleted an IntelliJ tour's recording in the
   other slot; the progress monitor also read the other slot's log. Fixed (`3286daadb1`): each slot has its own `/out`.
-- [ ] Found 2026-11-26 in VS Code's tour (`run-JvRfPu`): Refactoring's "Rename a file" waited 60 s for the Explorer's
+- [x] Found 2026-11-26 in VS Code's tour (`run-JvRfPu`): Refactoring's "Rename a file" waited 60 s for the Explorer's
   name box, which never opened, with Hand.x selected and the Explorer list focused; passed in `run-MSVwhR` and before.
   `reveal` waits for the row to be selected, and `renameFile` acts on the tree's focused element; or something took
-  focus and the inline box closed. The tour-steps branch makes it wait for the focused row and ask again.
+  focus and the inline box closed. Fixed (`054f5824de`): it waits until the tree has the keyboard on the row, and asks again until the box shows.
 - [x] Found 2026-11-26 in a VS Code tour run on the tour-steps branch: the building section sat 43 minutes in
   `stopAll`'s "Every task ends", a run of the card game alive and waiting for console input. VS Code drops a
   `TaskExecution.terminate()` that comes before it has started the task ("Task to terminate not found"), reproduced
   in the extension suite, where the task still ran 20 s later; a user's Stop in that moment could be lost the same
   way. Fixed (`8ea3fe91c7`): the extension's tasks repeat the terminate as the task starts, the Gradle import's and
   Gradle debug's cancellations included. The tour's harness: `stopAll` stops again while tasks are left and waits for
-  every embedded run's end (`62498cbaa0`), a silent run and its task no longer count as work (`4dbcbc4ee8`), and a
-  click or focus no longer waits silently in Playwright for an hour (`64e363c2dc`), which had left a later tour silent
+  every embedded run's end (`768fe3dffe`), a silent run and its task no longer count as work (`b79a852e3b`), and a
+  click or focus no longer waits silently in Playwright for an hour (`d80318082e`), which had left a later tour silent
   for 7 minutes.
-- [ ] Found 2026-11-26 in VS Code's tour (debugging, `run-hAoYtv`): "Set a value" chose Set Value from the variable's
-  context menu, but the menu stayed open with Set Value focused and the value box never came; intermittent, cause
-  unknown. A failed step now closes such a menu (`64e363c2dc`).
-- [ ] Found 2026-11-26 in VS Code's full playbook (`run-LgTm8x`): X251's first Find References gave 0 instead of 2,
+- [x] Found 2026-11-26 in VS Code's tour (debugging, `run-hAoYtv`): "Set a value" chose Set Value from the variable's
+  context menu, but the menu stayed open with Set Value focused and the value box never came; the click had only given the item the keyboard and left the menu open ("A data breakpoint" in `run-Snny5m` the same,
+  on Break on Value Change). Fixed (`870ce8e0ef`): the tour chooses the item by Enter then. A failed step also closes such a menu (`d80318082e`).
+- [x] Found 2026-11-26 by the tour's new "Breakpoints while you edit" step (`run-sal4lf`): in VS Code a breakpoint the debug
+  session had verified did not follow its line when a line was typed above it, until the file was saved, though the
+  user guide says it does and IntelliJ moved it at once; VS Code sends a file's breakpoints only on save, and shows a
+  verified breakpoint at the line the adapter answered. Fixed (`555b407660`): on an edit of a debugged file,
+  the adapter sends a DAP breakpoint `changed` event for each of its breakpoints at its edited line, from the line map
+  `EmbeddedRuns` keeps; one whose line the edit changed or removed is unverified and taken out of the program. Both
+  tours now show it unsaved (`run-CkWG5v`, `run-tour-1183441586494297494`).
+- [x] Found 2026-11-26 in VS Code's full playbook (`run-LgTm8x`): X251's first Find References gave 0 instead of 2,
   right after the case configured its graph and opened its file; it passed in the runs before and twice alone after.
   The server's fault, which a user could hit too: the references request queued behind the graph's diagnostics, and
   the `didClose` of a document VS Code had released (X207's leftover `Extract.x`, outside the graph) ended it as
   canceled, which VS Code shows as no references; a workspace query ended on any open or close, the client never
-  canceled it. Fixed on the playbook deduplication branch (`05ac217c8d`), not yet on errs: Find References asks again
+  canceled it. Fixed (`73ef53e12d`): Find References asks again
   when documents only opened or closed while it ran, and an edit still refuses it; `XdkReferencesServerTest`
   reproduces it by ordering.
 - [ ] Found 2026-11-26 in VS Code's full playbook (`run-InIBIg`, on the playbook deduplication branch): X216 timed out
