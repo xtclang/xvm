@@ -48,35 +48,40 @@ internal fun ParityScenarios.runtimeSettingsCases() {
                     restart(before.int("pid"))
                     val applied = protocol.status()
                     check(applied["jvmOptions"].asJsonArray.contains(data["vmOptions"].asJsonArray.single()))
-                    if (id == "X269") {
-                        edit(
-                            JsonObject().apply {
-                                addProperty("vmOptions", data["invalidOptions"].asJsonArray.joinToString("\n") { it.asString })
-                            },
-                            "invalid",
-                        )
-                    } else {
-                        check(applied["logs"].asJsonObject["retention"] == data["logs"])
-                        check(applied["logs"].asJsonObject["directory"] != before["logs"].asJsonObject["directory"])
-                        val destination = Files.createTempFile("ecstasy-server-logs-", ".zip")
-                        try {
-                            page.export(project, destination.toString())
-                            check(Files.size(destination) < 6 * 1024 * 1024)
-                            ZipFile(destination.toFile()).use { zip ->
-                                check(zip.entries().asSequence().any { it.name.endsWith("server.log") })
-                                val manifest =
-                                    zip.getInputStream(zip.getEntry("manifest.json")).reader().use {
-                                        JsonParser.parseReader(it).asJsonObject
-                                    }
-                                check(manifest["service"].asJsonObject.int("pid") == applied.int("pid"))
-                                check(manifest["service"].asJsonObject["logs"].asJsonObject["retention"] == data["logs"])
+                    val working =
+                        if (id == "X269") {
+                            memoryOptions(data, ::edit, ::restart)
+                            protocol.status().int("pid").also {
+                                edit(
+                                    JsonObject().apply {
+                                        addProperty("vmOptions", data["invalidOptions"].asJsonArray.joinToString("\n") { it.asString })
+                                    },
+                                    "invalid",
+                                )
                             }
-                        } finally {
-                            Files.deleteIfExists(destination)
+                        } else {
+                            check(applied["logs"].asJsonObject["retention"] == data["logs"])
+                            check(applied["logs"].asJsonObject["directory"] != before["logs"].asJsonObject["directory"])
+                            val destination = Files.createTempFile("ecstasy-server-logs-", ".zip")
+                            try {
+                                page.export(project, destination.toString())
+                                check(Files.size(destination) < 6 * 1024 * 1024)
+                                ZipFile(destination.toFile()).use { zip ->
+                                    check(zip.entries().asSequence().any { it.name.endsWith("server.log") })
+                                    val manifest =
+                                        zip.getInputStream(zip.getEntry("manifest.json")).reader().use {
+                                            JsonParser.parseReader(it).asJsonObject
+                                        }
+                                    check(manifest["service"].asJsonObject.int("pid") == applied.int("pid"))
+                                    check(manifest["service"].asJsonObject["logs"].asJsonObject["retention"] == data["logs"])
+                                }
+                            } finally {
+                                Files.deleteIfExists(destination)
+                            }
+                            edit(JsonObject().apply { addProperty("xtc.logs.totalSizeMb", 0) }, "invalid")
+                            applied.int("pid")
                         }
-                        edit(JsonObject().apply { addProperty("xtc.logs.totalSizeMb", 0) }, "invalid")
-                    }
-                    check(protocol.status().int("pid") == applied.int("pid"))
+                    check(protocol.status().int("pid") == working)
                     clean(document)
                     check(document.text == data.string("source"))
                 } finally {
@@ -160,6 +165,36 @@ internal fun ParityScenarios.runtimeSettingsCases() {
         }
     }
 }
+
+/**
+ * X269's memory settings, as the Server Runtime and Logs page applies them, each followed by a restart, as [restart] does
+ * from the running server's process ID: the maximum heap and the adaptive policy reach the restarted server's JVM
+ * options, when the page's own JVM options choose no maximum heap or collector, and those options win over the policy.
+ */
+private fun ParityWorkspace.memoryOptions(
+    data: JsonObject,
+    edit: (JsonObject, String) -> Unit,
+    restart: (Int) -> Unit,
+) {
+    val chosen = data["vmOptions"].asJsonArray.single().asString
+    val maxHeap = data.string("maxHeapOption")
+    val adaptive = data.strings("adaptiveOptions")
+
+    fun restarted(vararg values: Pair<String, String>): List<String> {
+        edit(JsonObject().apply { values.forEach { (key, value) -> addProperty(key, value) } }, "apply")
+        restart(protocol.status().int("pid"))
+        return protocol.status()["jvmOptions"].asJsonArray.map { it.asString }
+    }
+    restarted("vmOptions" to "", POLICY to "DEFAULT", MAX_HEAP to data.string("maxHeap")).let {
+        check(maxHeap in it && chosen !in it) { "With a maximum heap: $it" }
+    }
+    restarted(POLICY to "ADAPTIVE").let { check(it.containsAll(adaptive) && maxHeap !in it) { "Adaptive: $it" } }
+    restarted("vmOptions" to chosen).let { check(chosen in it && adaptive.first() !in it) { "Adaptive with $chosen: $it" } }
+}
+
+/** The Server Runtime and Logs page's memory policy and maximum heap, as [ServerRuntimePage] names them. */
+private const val POLICY = "xtc.runtime.memoryPolicy"
+private const val MAX_HEAP = "xtc.runtime.maxHeap"
 
 /** Edits runtime launch and logging options through the native settings probe. */
 @Remote("org.xtclang.idea.playbook.probe.ServerRuntimePage", plugin = "org.xtclang.playbook.probe")

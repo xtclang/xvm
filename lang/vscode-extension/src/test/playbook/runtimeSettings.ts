@@ -16,6 +16,8 @@ export function runtimeSettingsCases(): void {
         const settings = vscode.workspace.getConfiguration('xtc');
         const previousVm = settings.inspect('java.vmOptions')?.globalValue;
         const previousLogs = settings.inspect('server.logs')?.globalValue;
+        const previousPolicy = settings.inspect('server.memoryPolicy')?.globalValue;
+        const previousHeap = settings.inspect('server.maxHeap')?.globalValue;
         const document = await workspace.open(data.file, data.source);
         await noErrors(document.uri);
         const status = () => client().sendRequest<Status>('xtc/languageServiceStatus');
@@ -31,11 +33,30 @@ export function runtimeSettingsCases(): void {
             assert.notStrictEqual(applied.pid, before.pid);
             assert.ok(applied.jvmOptions.includes(data.vmOptions[0]));
             if (id === 'X269') {
+                // the maximum heap and the memory policy reach the restarted server, unless the JVM options choose
+                const restarted = async () => {
+                    await vscode.commands.executeCommand('xtc.restartServer');
+                    await noErrors(document.uri);
+                    return (await status()).jvmOptions;
+                };
+                await settings.update('java.vmOptions', [], vscode.ConfigurationTarget.Global);
+                await settings.update('server.maxHeap', data.maxHeap, vscode.ConfigurationTarget.Global);
+                const bounded = await restarted();
+                assert.ok(bounded.includes(data.maxHeapOption) && !bounded.includes(data.vmOptions[0]), JSON.stringify(bounded));
+                await settings.update('server.memoryPolicy', 'adaptive', vscode.ConfigurationTarget.Global);
+                const adaptive = await restarted();
+                assert.ok(data.adaptiveOptions.every(option => adaptive.includes(option)) && !adaptive.includes(data.maxHeapOption),
+                    JSON.stringify(adaptive));
+                await settings.update('java.vmOptions', data.vmOptions, vscode.ConfigurationTarget.Global);
+                const chosen = await restarted();
+                assert.ok(chosen.includes(data.vmOptions[0]) && !chosen.includes(data.adaptiveOptions[0]), JSON.stringify(chosen));
+
+                const working = await status();
                 await settings.update('java.vmOptions', data.invalidOptions, vscode.ConfigurationTarget.Global);
                 await assert.rejects(async () => vscode.commands.executeCommand('xtc.restartServer'), /heap/);
                 await ui.page.locator('.notification-list-item').filter({ hasText: 'Invalid Ecstasy runtime/log settings' })
                     .filter({ hasText: 'heap' }).waitFor({ state: 'visible', timeout: 5_000 });
-                assert.strictEqual((await status()).pid, applied.pid);
+                assert.strictEqual((await status()).pid, working.pid);
                 await noErrors(document.uri);
             } else {
                 assert.deepStrictEqual(applied.logs.retention, data.logs);
@@ -57,6 +78,8 @@ export function runtimeSettingsCases(): void {
             try {
                 await settings.update('java.vmOptions', previousVm, vscode.ConfigurationTarget.Global);
                 await settings.update('server.logs', previousLogs, vscode.ConfigurationTarget.Global);
+                await settings.update('server.memoryPolicy', previousPolicy, vscode.ConfigurationTarget.Global);
+                await settings.update('server.maxHeap', previousHeap, vscode.ConfigurationTarget.Global);
                 await vscode.commands.executeCommand('xtc.restartServer');
                 await vscode.commands.executeCommand('notifications.clearAll');
             } finally { await ui.close(); }

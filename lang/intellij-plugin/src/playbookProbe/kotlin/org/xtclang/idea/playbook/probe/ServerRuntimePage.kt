@@ -5,22 +5,33 @@ import com.google.gson.JsonParser
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
 import org.xtclang.idea.lsp.ExportServerLogsAction
+import org.xtclang.idea.lsp.MemoryPolicy
 import org.xtclang.idea.lsp.ServerRuntimeConfigurable
 import java.awt.Component
 import java.awt.Container
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 import javax.swing.JButton
+import javax.swing.JComboBox
 import javax.swing.JSpinner
 import javax.swing.JTextArea
+import javax.swing.JTextField
 
 /** Exercises the installed application settings page, including validation and explicit restart. */
 object ServerRuntimePage {
+    /** The names of the memory policy's and the maximum heap's controls, and of their values in [content] and [edit]. */
+    private const val POLICY = "xtc.runtime.memoryPolicy"
+    private const val MAX_HEAP = "xtc.runtime.maxHeap"
+
     private fun descendants(component: Component): Sequence<Component> =
         sequence {
             yield(component)
             if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
         }
+
+    private fun policy(controls: List<Component>): JComboBox<*> = controls.filterIsInstance<JComboBox<*>>().single { it.name == POLICY }
+
+    private fun maxHeap(controls: List<Component>): JTextField = controls.filterIsInstance<JTextField>().single { it.name == MAX_HEAP }
 
     @JvmStatic
     fun content(): String {
@@ -31,6 +42,8 @@ object ServerRuntimePage {
                 .apply {
                     addProperty("vmOptions", controls.filterIsInstance<JTextArea>().single().text)
                     controls.filterIsInstance<JSpinner>().forEach { addProperty(it.name, it.value as Int) }
+                    addProperty(POLICY, (policy(controls).selectedItem as MemoryPolicy).name)
+                    addProperty(MAX_HEAP, maxHeap(controls).text)
                 }.toString()
         } finally {
             page.disposeUIResources()
@@ -51,6 +64,8 @@ object ServerRuntimePage {
             controls.filterIsInstance<JSpinner>().forEach { spinner ->
                 values[spinner.name]?.let { spinner.value = it.asInt }
             }
+            values[POLICY]?.let { policy(controls).selectedItem = MemoryPolicy.valueOf(it.asString) }
+            values[MAX_HEAP]?.let { maxHeap(controls).text = it.asString }
             when (action) {
                 "cancel" -> {
                     check(content() == before)
