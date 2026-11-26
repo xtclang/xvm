@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
 /**
@@ -29,12 +28,13 @@ class XdkUnionDelegationRenameTest {
                 Int use(Outer value) = value.read();
             }
             """.trimIndent()
-        renamed(
+        directory.assertReadRenamed(
             text,
             Regex("read")
                 .findAll(text)
                 .elementAt(entry)
                 .range.first,
+            reversible = true,
         )
     }
 
@@ -50,7 +50,7 @@ class XdkUnionDelegationRenameTest {
                 Int use(Forward value) = value.read();
             }
             """.trimIndent()
-        renamed(text, text.lastIndexOf("read"))
+        directory.assertReadRenamed(text, text.lastIndexOf("read"), reversible = true)
     }
 
     @Test
@@ -66,7 +66,7 @@ class XdkUnionDelegationRenameTest {
                 }
             }
             """.trimIndent()
-        renamed(text, text.lastIndexOf("read"))
+        directory.assertReadRenamed(text, text.lastIndexOf("read"), reversible = true)
     }
 
     @Test
@@ -81,7 +81,7 @@ class XdkUnionDelegationRenameTest {
                 Int use(Forward value) = value.read();
             }
             """.trimIndent()
-        renamed(text, text.lastIndexOf("read"))
+        directory.assertReadRenamed(text, text.lastIndexOf("read"), reversible = true)
     }
 
     @Test
@@ -99,46 +99,8 @@ class XdkUnionDelegationRenameTest {
                 Int use(Forward value) = value.read();
             }
             """.trimIndent()
-        workspace(text) { adapter, uri ->
+        directory.workspace(text) { adapter, uri ->
             assertThat(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch")).isNull()
         }
-    }
-
-    private fun renamed(
-        text: String,
-        offset: Int,
-    ) {
-        workspace(text) { adapter, uri ->
-            val edit = requireNotNull(adapter.renameAt(uri, text, offset, "fetch"))
-            val changed = apply(text, edit.changes.getValue(uri))
-            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
-            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
-            val reverse = requireNotNull(adapter.renameAt(uri, changed, changed.indexOf("fetch"), "read"))
-            assertThat(apply(changed, reverse.changes.getValue(uri))).isEqualTo(text)
-        }
-    }
-
-    private fun workspace(
-        text: String,
-        check: (XdkAdapter, String) -> Unit,
-    ) {
-        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
-        val uri = source.toURI().toString()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.compile(uri, text).diagnostics).describedAs(text).isEmpty()
-            check(adapter, uri)
-            assertThat(source.readText()).isEqualTo(text)
-        }
-    }
-
-    private fun XdkAdapter.renameAt(
-        uri: String,
-        text: String,
-        offset: Int,
-        name: String,
-    ): WorkspaceEdit? {
-        val prefix = text.take(offset)
-        return rename(uri, prefix.count { it == '\n' }, prefix.substringAfterLast('\n').length, name)
     }
 }
