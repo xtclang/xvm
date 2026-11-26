@@ -420,6 +420,52 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     compiler makes a property of a class named for the union, `Observe | Intercept`, that no source
     declares; proving it needs the legs' properties, as a union's methods take their legs' routes,
     which the facts keep for calls only. Medium, for a rare construct.
+
+  2026-11-26 (`lagergren/semantic-gaps-3`): the census confirmed 213 at errs' f835e4003f, and it takes
+  an editor's census too, from the same compiles, of what hover, Go to Definition, Find References and
+  highlights miss at a name, which no proof judges: an identifier that no occurrence holds
+  (unrecorded), a reference whose symbol has no declaration (undeclared), a value without a type
+  (untyped), a reference that the workspace's navigation joins apart from its declaration (unjoined),
+  and one declared in no source of the workspace (elsewhere). It counts only, by construct and by
+  library, in `lang/lsp-server/build/semantic-model-editor-census.txt` (summary lines start with
+  `editor`). Its elsewhere count found the census compiling 5 libraries against the bundled ecstasy,
+  and 3 against those: it scanned each library as a workspace folder of its own, under which no module
+  depends on the workspace's ecstasy; it scans them as one folder now, as an editor that opens the
+  repository does (835e5d44a0). At f835e4003f: unrecorded 2798, undeclared 588, untyped 1, unjoined 0, elsewhere 0.
+  Fixed, one commit each, each with an `XdkOccurrenceBindingTest` case that fails without it and a
+  rename that compiles and stays refused, all in `lang/`, no compiler change:
+  - [x] the parameters of a constructor with a `finally` block bind to their declarations in its body
+    and in a call's named argument: the block is a method of its own over the same written parameters,
+    whose nodes keep the block's registers, so Find References and highlights of such a parameter missed
+    its uses in the body, and its rename was refused, as `ListMap`'s `inPlace` (185 locals, 6 named
+    arguments; 0828362316);
+  - [x] a label declares a symbol, which `break`, `continue` and its variable, `Loop` in `Loop.first`,
+    refer to: hover, highlights, references, definition and rename of a label (287 unrecorded, 145
+    undeclared; 06abeb0327);
+  - [x] the `Referent` that the compiler adds to a property with code or a Ref annotation, which it
+    treats as a class of its own, is proven by its property, `Generated(property)`: its 173 chains in
+    ecstasy refused every proof but a rename's there, and in a module of an annotation into `Var`
+    (bfba79979d).
+
+  After: rename facts 0 unbound, 0 unplaceable, 40 unproven (4 occurrences, 36 chains); editor
+  unrecorded 2511, undeclared 251, untyped 5, unjoined 0, elsewhere 0. Left, not worth it now:
+  - json's 36 chains, `OuterType` (3) and `httpMethod` (1), as above: the json chains touch only a
+    workspace that holds the repository's json.
+  - 2414 unrecorded package and module segments of import paths, `ecstasy` and `collections` in
+    `import ecstasy.collections.HashMap;`: low value, as most packages are directories with nothing to
+    go to, and an occurrence there would join the renames of packages and package aliases. Also 44
+    segments of module names (`xtclang`, `org`), 19 `Path:` literal prefixes, and 34 named arguments of
+    an annotation or contribution clause, `@Inject(resourceName=...)`: small, rare.
+  - 119 undeclared named arguments of other modules' methods, `freeze(inPlace=True)`: Go to Definition
+    goes nowhere (hover has the type); a dependency's declarations and the bundled libraries' index keep
+    no parameter locations, so both would need them. Medium to large.
+  - 61 undeclared method formal types named in a lambda, `To` in `n -> n.toIntN().as(To)`: the lambda's
+    captured formal type has no declaration, so Go to Definition, references and highlights of the
+    method's formal type miss it; it would bind to its method's. Small to medium, mostly in ecstasy.
+  - 37 calls of a primary constructor, `construct Point(x, y)`, and 13 methods that the compiler adds:
+    no declaration to go to. 16 others, as xenia's `param.ParamType` (9) and `this.List` (3).
+    5 untyped: 4 labels of modules that name no label's variable, whose compile has no `Label` type,
+    and one property.
 - [x] The 8 unbound occurrences left are code the compiler never compiles, found 2026-11-24:
   - 6 extends arguments, in `OrderedMapSet`, `JsonLogStoreBase`, `JsonProcessorStore` and
     `KeyCredential`. Each class's explicit constructors call the super constructor themselves, so no
