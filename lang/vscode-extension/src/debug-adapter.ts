@@ -7,6 +7,7 @@ import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from './embedded-execution
 import { gradleProjects, gradleTask, noticeMissingTask } from './gradle-projects';
 import type { SourceModule } from './source-graph-configuration';
 import { createXtcRunTask, type XtcTaskDefinition } from './task-provider';
+import { terminateTask } from './task-termination';
 import { LineSplitter, parseTestEvent, REPORT, type TestEvent } from './test-events';
 
 type ClientAccess = () => LanguageClient | undefined;
@@ -157,7 +158,7 @@ async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationT
                     end(undefined);
                 }
             }),
-            token.onCancellationRequested(() => execution.terminate()),
+            token.onCancellationRequested(() => terminateTask(execution)),
         );
     });
 }

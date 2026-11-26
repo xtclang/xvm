@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ImportResult } from './compiler-import';
+import { terminateTask } from './task-termination';
 
 type TaskHost = Pick<typeof vscode.tasks, 'executeTask' | 'onDidEndTask' | 'onDidEndTaskProcess'>;
 
@@ -28,7 +29,7 @@ export async function runCompilerTask(task: vscode.Task, token: vscode.Cancellat
                 token.onCancellationRequested(() => {
                     report('Cancelling Gradle import…');
                     void started.then(execution => {
-                        if (!retired.signal.aborted) execution?.terminate();
+                        if (!retired.signal.aborted && execution) terminateTask(execution);
                     }, () => { /* Dispatch failure is handled by the task promise below. */ });
                 }),
             );
