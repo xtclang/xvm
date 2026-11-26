@@ -21,8 +21,8 @@
 # directories to lang/intellij-plugin/build/reports/compiler-playbook, where a native run puts them, which the
 # container mounts as /out/runs and prunes as a native run's report retention does, and the
 # VS Code extension's reports to lang/vscode-extension/build/reports. The
-# volumes xvm-playbook-gradle, xvm-playbook-work (xvm-playbook-work-sN in slot N) and xvm-playbook-m2 keep
-# Gradle's caches, the build and mavenLocal between runs.
+# volumes xvm-playbook-gradle, xvm-playbook-work and xvm-playbook-m2 (each with -sN in slot N) keep Gradle's
+# caches, the build and mavenLocal between runs.
 # The container is aarch64 Linux on an Apple machine: its fonts and timing are not macOS's. The export
 # has no .git: its commit and branch are passed in as XTC_COMMIT and XTC_BRANCH, for javatools' build info
 # and the VS Code playbook, with the uncommitted paths. A run's container may use $XTC_CONTAINER_MEMORY, 14g by
@@ -120,13 +120,15 @@ slot="${XTC_CONTAINER_SLOT:-$(($(printf '%s' "$root" | cksum | cut -d ' ' -f 1) 
 if [ "$slot" -eq 1 ]; then
     lock="$common/xvm-playbook-container.lock"
     queue="$common/xvm-playbook-queue"
-    work=xvm-playbook-work
+    volume=""
     prefix=xvm-playbook-
     running='^xvm-playbook-[0-9]'
 else
     lock="$common/xvm-playbook-container.lock.s$slot"
     queue="$common/xvm-playbook-queue.s$slot"
-    work="xvm-playbook-work-s$slot"
+    # its own volumes, Gradle's too: two containers can't share a Gradle user home, as Gradle asks a lock's owner to
+    # release it over localhost, which is each container's own ("Timeout waiting to lock journal cache")
+    volume="-s$slot"
     prefix="xvm-playbook-s$slot-"
     running="^$prefix"
 fi
@@ -174,9 +176,9 @@ status=0
     --memory "$memory" --shm-size 1g --security-opt label=disable \
     -e XTC_COMMIT="$commit" -e XTC_BRANCH="$branch" -e XTC_PLAYBOOK_DIRTY="$dirty" \
     -e XTC_RECORD_VIDEO="${XTC_RECORD_VIDEO:-}" \
-    -v xvm-playbook-gradle:/gradle \
-    -v "$work:/work" \
-    -v xvm-playbook-m2:/home/playbook/.m2 \
+    -v "xvm-playbook-gradle$volume:/gradle" \
+    -v "xvm-playbook-work$volume:/work" \
+    -v "xvm-playbook-m2$volume:/home/playbook/.m2" \
     -v "$source:/src:ro" \
     -v "$container/out:/out" \
     -v "$reports:/out/runs" \

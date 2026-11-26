@@ -520,18 +520,19 @@ The root build's `containerPlaybook`, `containerPlaybookImage`, `containerPlaybo
 | `playbookCases` | Gradle property (`providers`), `all` | Cases for the IntelliJ and VS Code container tasks. | `build.gradle.kts:233` |
 | `org.xtclang.docker.command` | `xdkProperties`, `docker` (`xdk.properties:17`) | The container engine, such as `podman`; passed as `XTC_CONTAINER_COMMAND`. | `build.gradle.kts:232`, `:240` |
 | `XTC_CONTAINER_COMMAND` | environment; else `docker`, or `podman` when `docker` is not installed | The engine `playbook.sh` runs. | `lang/intellij-plugin/container/playbook.sh:38` |
-| `XTC_CONTAINER_MEMORY` | environment, `14g` | A run's container memory limit; the IntelliJ playbook and tours need `14g` (with `7g` the kernel killed the IDE). | `lang/intellij-plugin/container/playbook.sh:103`, `:174` |
+| `XTC_CONTAINER_MEMORY` | environment, `14g` | A run's container memory limit; the IntelliJ playbook and tours need `14g` (with `7g` the kernel killed the IDE). | `lang/intellij-plugin/container/playbook.sh:103`, `:176` |
 | `XTC_CONTAINER_SLOTS` | environment; else the engine's memory over a run's, at least 1 | How many container runs go at once: two on a 32 GiB Podman machine with `14g` runs. | `lang/intellij-plugin/container/playbook.sh:113` |
 | `XTC_CONTAINER_SLOT` | environment; else fixed by the checkout's path | The slot a checkout's runs take, so that a build and the cases that need it share a work volume. | `lang/intellij-plugin/container/playbook.sh:119` |
-| `XTC_RECORD_VIDEO` | environment, empty | `1` records the virtual display to `/out/screen.mp4`; passed into the container. | `lang/intellij-plugin/container/playbook.sh:176`, `lang/intellij-plugin/container/in-container.sh:61` |
-| `XTC_COMMIT`, `XTC_BRANCH`, `XTC_PLAYBOOK_DIRTY` | set by `playbook.sh` from git, since the export has no `.git` | The commit, branch and uncommitted paths, for javatools' build information and the VS Code playbook. | `lang/intellij-plugin/container/playbook.sh:175`, `javatools/build.gradle.kts:172`, `:174` |
+| `XTC_RECORD_VIDEO` | environment, empty | `1` records the virtual display to `/out/screen.mp4`; passed into the container. | `lang/intellij-plugin/container/playbook.sh:178`, `lang/intellij-plugin/container/in-container.sh:61` |
+| `XTC_COMMIT`, `XTC_BRANCH`, `XTC_PLAYBOOK_DIRTY` | set by `playbook.sh` from git, since the export has no `.git` | The commit, branch and uncommitted paths, for javatools' build information and the VS Code playbook. | `lang/intellij-plugin/container/playbook.sh:177`, `javatools/build.gradle.kts:172`, `:174` |
 | `XTC_VSCODE_TEST_CACHE`, `XTC_RECORDING_START_FILE` | set inside the container | The VS Code download cache on the Gradle volume; the recording's start file. | `lang/intellij-plugin/container/in-container.sh:28`, `:66` |
 | `PLAYBOOK_WM` | environment inside the container, `openbox` | Window manager on Xvfb; `playbook.sh` does not pass it in, so it stays `openbox`. | `lang/intellij-plugin/container/in-container.sh:47` |
 
 Inside the container, Gradle runs with `/gradle/gradle.properties`: `org.gradle.jvmargs=-Xmx2g
 -XX:MaxMetaspaceSize=768m`, `kotlin.daemon.jvmargs=-Xmx1g`, `org.gradle.workers.max=4`, no file
 watching (`lang/intellij-plugin/container/in-container.sh:31`). The volumes `xvm-playbook-gradle`,
-`xvm-playbook-work` (`xvm-playbook-work-sN` in slot N) and `xvm-playbook-m2` keep caches between runs; one run at a
+`xvm-playbook-work` and `xvm-playbook-m2`, each with `-sN` in slot N, keep caches between runs (a slot can't share
+another's Gradle user home); one run at a
 time in each slot holds its lock, `xvm-playbook-container.lock` for slot 1 and `xvm-playbook-container.lock.sN` for
 slot N, in the repository's common git directory (`lang/intellij-plugin/container/playbook.sh:121`). `playbook.sh playbook` and `playbook.sh vscode`
 take further Gradle arguments, such as `-Plsp4ijChannel`; the root tasks pass none.
