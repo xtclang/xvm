@@ -31,8 +31,9 @@
  *   documentHighlightProvider                       step Highlight usages
  *   selectionRangeProvider                          step Extend selection
  *   foldingRangeProvider                            step Folding
- *   renameProvider, prepareRename                   IntelliJ renames through xtc/rename (below); the standard requests are VS Code's,
- *                                                   in its playbook
+ *   renameProvider, prepareRename                   IntelliJ renames through xtc/rename (below), and asks prepareRename first: its
+ *                                                   refusal, check a rename of a name the XDK declares is refused before its dialog,
+ *                                                   with the server's reason; textDocument/rename is VS Code's, in its playbook
  *   codeActionProvider: quick fixes                 steps Quick fixes, Add an import; checks Create class makes a type that a use
  *                                                   in the module names, the fix for an unused import removes it, the fix for an
  *                                                   unused local removes it
@@ -89,7 +90,8 @@
  *   xtc/compilerSourceModules                       step The compiler
  *   xtc/discoverConsumers                           the Compiler page's Add consumers from folders: playbook X99, X105
  *   xtc/rename                                      steps Rename, Renamed everywhere, Undo asks first, Undone everywhere, Rename a
- *                                                   class; check renaming a local and a parameter renames their uses
+ *                                                   class, A rename it refuses; check renaming a local and a parameter renames
+ *                                                   their uses
  *   xtc/renameFiles                                 checks renaming a file renames its type and every use, moving a class to
  *                                                   another package, renaming the file renames its type
  *   xtc/build                                       steps Build Project, A failed build; check Rebuild Project rebuilds every module
@@ -223,6 +225,7 @@
  *                                                   plugin's own Restart, on Settings | Ecstasy | Server Runtime and Logs, clicked
  *   LSP4IJ's log and trace                          step Language servers; check Toggle Ecstasy Language Server Log
  *   the server's process dies                       check the server comes back when its process dies
+ *   a refused rename's message                      step A rename it refuses: the plugin's hint, as the server answers no edit
  *
  * Parity with the VS Code tour, by the coverage table of its script (lang/vscode-extension/src/test/tour/script.ts on
  * lagergren/vscode-tour, b6025441ec): the shared servers' features that one tour checks and the other does not.
@@ -261,6 +264,9 @@ private val EXTRACTED = Regex("""\n\s+Boolean \w+ = one\.hand\.isEmpty\(\) \|\| 
 
 /** The tests of DeckTest, which the test steps run. */
 private const val DECK_TESTS = 8
+
+/** What the plugin says over the editor when the server refuses a rename, as one that would change what a name means. */
+private const val REFUSED = "This rename is not supported or would change another binding."
 
 /** The block that Enter and braces opens before drawForMatch's return: the return in it, indented, and its brace closing it. */
 private val WRAPPED = Regex("""if \(hand\.isEmpty\(\)\) \{\n {12}return drawForMatch\(eights, prev\);\n {8}\}""")
@@ -1377,6 +1383,45 @@ private fun Tour.refactoring() {
         compilesCleanly(source("Player.x"))
     }
     restore()
+    shot(
+        "A rename it refuses",
+        "A rename that would change what the code means is refused: the card drawn, named name, would print in place of the " +
+            "player's name.",
+        feature = "xtc/rename",
+        // the message is a hint over the editor
+        focus = "editor",
+        until = { hinted(REFUSED) },
+        check = {
+            expect(hinted(REFUSED)) { "The message: ${popupText().take(300)}; the hints: ${hints()}" }
+            expect(fileText(source("Player.x")).let { "Card card := eights.drawCard()" in it && "{name} draws {card}" in it }) {
+                "Player.x changed: ${fileText(source("Player.x")).lines().filter { "drawCard" in it || " draws " in it }}"
+            }
+            compilesCleanly(source("Player.x"))
+        },
+        settle = 2.seconds,
+        after = { dismiss() },
+    ) {
+        open(source("Player.x"), 0)
+        // the local's name, which the print's {name}, the player's, would then mean: the server's proof finds that use's
+        //  binding changed, as the playbook's X55 does
+        at("card := eights.drawCard()", delta = 1)
+        action("RenameElement")
+        expect(within(HANG) { dialogShowing() }) { "No Rename dialog" }
+        fillDialog("name")
+        check(confirm("Refactor")) { "The rename dialog did not take the new name" }
+    }
+    verify("a rename of a name the XDK declares is refused before its dialog, with the server's reason") {
+        open(source("Player.x"), 0)
+        at("Console console;", delta = 2)
+        action("RenameElement")
+        // the server's answer to prepareRename, which the plugin shows over the editor, as the playbook's X69 and X101
+        expect(within(HANG) { hinted("Rename failed: Rename not allowed at this position") }) {
+            "The message: ${popupText().take(300)}; the hints: ${hints()}"
+        }
+        expect(!dialogShowing()) { "A Rename dialog opened: ${popupText().take(300)}" }
+        dismiss()
+    }
+    restore()
     verify("renaming a file renames its type and every use") {
         close(source("FirstMatch.x"))
         projectAction(source("FirstMatch.x"), "RenameElement")
@@ -1532,6 +1577,9 @@ private fun Tour.refactoring() {
     restore()
     verifyRestored()
 }
+
+/** Whether a hint or popup over the IDE says [text], such as the error hint of a rename that the server refuses. */
+private fun TourProbe.hinted(text: String): Boolean = text in popupText() || text in hints()
 
 private fun Tour.files() {
     section("Project and files")
