@@ -4,51 +4,9 @@ import * as fs from './disk';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { onDidRefreshTests, onDidReportTest, onDidStartTest, testLocation, type TestReport } from '../../test-explorer';
-import { configureModules } from './execution';
-import { client, eventually, noErrors, playbook, type Workspace } from './support';
-
-/** What the Test Explorer listed, started and reported while a case watched it, until [dispose]. */
-class TestWatch implements vscode.Disposable {
-    readonly reports: TestReport[] = [];
-    readonly started: string[] = [];
-    listed: readonly string[] = [];
-    private readonly subscriptions = [
-        onDidReportTest(report => this.reports.push(report)),
-        onDidStartTest(id => this.started.push(id)),
-        onDidRefreshTests(ids => { this.listed = ids; }),
-    ];
-
-    /** The latest report of the test [id]. */
-    result(id: string): TestReport | undefined {
-        return this.reports.filter(report => report.id === id).pop();
-    }
-
-    /** Waits until the Test Explorer lists each of [ids], asking it to list the tests again. */
-    async listing(ids: readonly string[]): Promise<void> {
-        await eventually(async () => {
-            await vscode.commands.executeCommand('testing.refreshTests');
-            return this.listed;
-        }, listed => ids.every(id => listed.includes(id)), 'The Test Explorer lists the module\'s tests');
-    }
-
-    /** Waits until each of [ids] has a report, and answers the latest of each. */
-    async results(ids: readonly string[], what: string): Promise<TestReport[]> {
-        return eventually(async () => ids.map(id => this.result(id)!), reports => reports.every(Boolean), what);
-    }
-
-    dispose(): void {
-        this.subscriptions.forEach(each => each.dispose());
-    }
-}
-
-/** Writes [file] with [source] as the module [module], configured as the workspace's, with no errors. */
-async function module(workspace: Workspace, file: string, name: string, source: string): Promise<vscode.TextDocument> {
-    const document = await workspace.open(file, source);
-    await configureModules(workspace, [{ name, file }]);
-    await noErrors(document.uri);
-    return document;
-}
+import { testLocation } from '../../test-explorer';
+import { configureModules, TestWatch, watchTests } from './execution';
+import { client, eventually, noErrors, playbook } from './support';
 
 /** How many embedded runs the server still tracks, by its language service status. */
 async function embeddedRuns(): Promise<number> {
@@ -61,9 +19,8 @@ async function embeddedRuns(): Promise<number> {
  */
 export function xunitCases(): void {
     playbook('X342', async (workspace, data) => {
-        await module(workspace, data.file, data.module, data.source);
-        const tests = new TestWatch();
-        try {
+        await workspace.module(data.file, data.source, data.module);
+        await watchTests(async tests => {
             await tests.listing(data.items);
             const running = vscode.commands.executeCommand('testing.runAll');
             // xunit runs the module's tests one at a time, in an order of its own: the stop comes as either waiting test starts
@@ -78,15 +35,12 @@ export function xunitCases(): void {
             assert.ok(passed.state === 'passed' || (passed.state === 'errored' && passed.message?.includes(data.notRun)), JSON.stringify(passed));
             waiting.forEach(report => assert.ok(report.state === 'errored' && report.message?.includes(notPassed(report.id)), JSON.stringify(report)));
             await eventually(embeddedRuns, count => count === 0, 'No program of the stopped run is left');
-        } finally {
-            tests.dispose();
-        }
+        });
     });
 
     playbook('X343', async (workspace, data) => {
-        const document = await module(workspace, data.file, data.module, data.source);
-        const tests = new TestWatch();
-        try {
+        const document = await workspace.module(data.file, data.source, data.module);
+        await watchTests(async tests => {
             await tests.listing(data.items);
             const editor = await vscode.window.showTextDocument(document);
             const end = document.positionAt(document.getText().indexOf(data.after) + data.after.length);
@@ -101,45 +55,36 @@ export function xunitCases(): void {
             const [added] = await tests.results([data.addedItem], 'The added test runs');
             assert.strictEqual(added.state, 'passed', JSON.stringify(added));
             assert.deepStrictEqual(tests.reports.map(report => report.id), [data.addedItem], 'It runs alone');
-        } finally {
-            tests.dispose();
-        }
+        });
     });
 
     playbook('X344', async (workspace, data) => {
-        await module(workspace, data.file, data.module, data.source);
-        const tests = new TestWatch();
-        try {
+        await workspace.module(data.file, data.source, data.module);
+        await watchTests(async tests => {
             await tests.listing(data.items);
             await vscode.commands.executeCommand('testing.runAll');
             const [failed, errored] = await tests.results([data.failed, data.errored], 'Run All reports both tests');
             assert.ok(failed.state === 'failed' && failed.message === data.failure && failed.line === data.failureLine, JSON.stringify(failed));
             assert.ok(errored.state === 'errored' && errored.message?.includes(data.error) && errored.line === data.errorLine,
                 `A test that throws is an error, apart from a failure: ${JSON.stringify(errored)}`);
-        } finally {
-            tests.dispose();
-        }
+        });
     });
 
     playbook('X345', async (workspace, data) => {
-        await module(workspace, data.file, data.module, data.source);
-        const tests = new TestWatch();
-        try {
+        await workspace.module(data.file, data.source, data.module);
+        await watchTests(async tests => {
             await tests.listing(data.items);
             await vscode.commands.executeCommand('testing.runAll');
             const [passed, disabled, precondition] = await tests.results([data.passed, data.disabled, data.precondition], 'Run All reports every test');
             assert.strictEqual(passed.state, 'passed', JSON.stringify(passed));
             assert.ok(disabled.state === 'skipped' && disabled.message?.includes(data.disabledReason), JSON.stringify(disabled));
             assert.ok(precondition.state === 'skipped' && precondition.message?.includes(data.preconditionReason), JSON.stringify(precondition));
-        } finally {
-            tests.dispose();
-        }
+        });
     });
 
     playbook('X346', async (workspace, data) => {
-        await module(workspace, data.file, data.module, data.source);
-        const tests = new TestWatch();
-        try {
+        await workspace.module(data.file, data.source, data.module);
+        await watchTests(async tests => {
             await tests.listing(data.items);
             await vscode.commands.executeCommand('testing.runAll');
             const first = await tests.results([data.passed, ...data.failed], 'Run All reports every test');
@@ -150,15 +95,12 @@ export function xunitCases(): void {
             assert.ok(rerun.every(report => report.state === 'failed'), JSON.stringify(rerun));
             assert.deepStrictEqual([...new Set(tests.reports.map(report => report.id))].sort(), [...data.failed].sort(),
                 'The rerun runs only the failed tests');
-        } finally {
-            tests.dispose();
-        }
+        });
     });
 
     playbook('X347', async (workspace, data) => {
-        const document = await module(workspace, data.file, data.module, data.source);
-        const tests = new TestWatch();
-        try {
+        const document = await workspace.module(data.file, data.source, data.module);
+        await watchTests(async tests => {
             await tests.listing(data.items);
             for (const [id, line] of Object.entries(data.tests)) {
                 const location = testLocation(id);
@@ -169,29 +111,24 @@ export function xunitCases(): void {
             await vscode.commands.executeCommand('testing.runAll');
             const [failed] = await tests.results([data.failed], 'Run All reports the nested test');
             assert.ok(failed.state === 'failed' && failed.message === data.failure && failed.line === data.failureLine, JSON.stringify(failed));
-        } finally {
-            tests.dispose();
-        }
+        });
     });
 
     playbook('X348', async (workspace, data) => {
         for (const each of data.modules) await workspace.open(each.file, each.source);
         await configureModules(workspace, data.modules.map(each => ({ name: each.module, file: each.file })));
         for (const each of data.modules) await noErrors(workspace.uri(each.file));
-        const tests = new TestWatch();
-        try {
+        await watchTests(async tests => {
             await tests.listing([...data.passed, data.failed]);
             await vscode.commands.executeCommand('testing.runAll');
             const reports = await tests.results([...data.passed, data.failed], 'Run All reports every module\'s tests');
             assert.deepStrictEqual(reports.map(report => report.state), [...data.passed.map(() => 'passed'), 'failed'], JSON.stringify(reports));
             assert.strictEqual(reports[reports.length - 1].message, data.failure);
-        } finally {
-            tests.dispose();
-        }
+        });
     });
 
     playbook('X349', async (workspace, data) => {
-        const document = await module(workspace, data.file, data.module, data.source);
+        const document = await workspace.module(data.file, data.source, data.module);
         const xtc = path.resolve(__dirname, '../../../../../xdk/build/install/xdk/bin', process.platform === 'win32' ? 'xtc.bat' : 'xtc');
         assert.ok(await fs.stat(xtc).then(() => true, () => false), `X349 runs ${xtc}; run ./gradlew xdk:installDist first`);
         const tests = new TestWatch();
