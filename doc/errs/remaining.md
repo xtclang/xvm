@@ -707,6 +707,17 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   `-7223607507479699437`, `-1077955297390743273`, `-10947987415425839701`, `-1471102060868252773`); in the last
   the same registry update came during an `incomingCalls` request, LSP4IJ canceled it 5 ms later, and IntelliJ
   asked again 3 ms after that and showed the callers.
+- [ ] Found 2026-11-26 in VS Code's full playbook in the container (`run-Rf8Tt8`, at `d7e27f6a03`), not in the 3 full
+  runs before it nor in 3 runs of the case alone after it: X342 failed with "The request (id: 721, method:
+  'xtc/tests') has been cancelled". The server answered that `xtc/tests` with RequestCancelled after 21 ms, its
+  `project-DIAGNOSTICS` job `cancel-or-failure-signalled`, with no `$/cancelRequest` from the client for it; the
+  extension's Test Explorer refresh takes the error as a failure. To find: what cancels the job, and whether the
+  refresh should ask again.
+- [ ] Found 2026-11-26 in VS Code's full tour in the container (`run-UcTGyc`, at `d7e27f6a03`): Refactoring's
+  "Extracted to a local" did not happen, and its check failed with "No local in nextPlayer". The step clicked the
+  action widget's "Extract expression to local variable" row at 10:17:02.071; the server got no `codeAction/resolve`
+  after it, and the file's code lenses were resolved again 11 ms after the click, a race like IntelliJ's Warnings and
+  Parameter info steps', which `lensesInPlace` fixed there.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
