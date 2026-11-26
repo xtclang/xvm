@@ -1639,7 +1639,7 @@ private class SemanticModelBuilder(
                 .filter { statement ->
                     val constructor = statement.takeIf { it.isConstructor }?.component as? MethodStructure ?: return@filter false
                     val block = statement.constructorFinally?.component as? MethodStructure ?: return@filter false
-                    (0 until constructor.paramCount - constructor.typeParamCount).forEach { slot ->
+                    for (slot in 0 until constructor.paramCount - constructor.typeParamCount) {
                         parameters[block.identityConstant to slot]?.let { parameters[constructor.identityConstant to slot] = it }
                     }
                     true

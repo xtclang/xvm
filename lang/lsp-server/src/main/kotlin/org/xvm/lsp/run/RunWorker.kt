@@ -419,7 +419,9 @@ internal class OutputBatches(
         }
     }
 
-    override fun flush() {}
+    override fun flush() {
+        // a flush does not end a batch: the delay or the limit sends it, and close sends the rest
+    }
 
     /** Sends what waits at once: when the program stops at a breakpoint, its output so far comes before the stop. */
     @Synchronized

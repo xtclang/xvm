@@ -147,8 +147,8 @@ internal fun TypeConstant.memberSourceType(
                     // Class formals are properties, not method type parameters. Only the exact
                     // owning class or an enclosing class can supply this spelling; an unrelated
                     // owner's identically named formal must never be substituted by name.
-                    identity.name.takeIf { it ->
-                        identity.isFormalType && XdkRename.identifier(it) &&
+                    identity.name.takeIf { name ->
+                        identity.isFormalType && XdkRename.identifier(name) &&
                             generateSequence(owner) { it.parentConstant }.any { it == identity.parentConstant }
                     }
                 }
