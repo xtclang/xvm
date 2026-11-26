@@ -92,7 +92,7 @@
  *                                                   class; check renaming a local and a parameter renames their uses
  *   xtc/renameFiles                                 checks renaming a file renames its type and every use, moving a class to
  *                                                   another package, renaming the file renames its type
- *   xtc/build                                       steps Build Project, A failed build
+ *   xtc/build                                       steps Build Project, A failed build; check Rebuild Project rebuilds every module
  *   xtc/run, xtc/runOutput                          steps Run, Test results; check the Run lens runs the module
  *   xtc/runInput                                    step Console input
  *   xtc/runExited                                   check the game plays to its end, and the run ends with its exit code
@@ -164,8 +164,11 @@
  *   configurationType Ecstasy Application           steps The run configuration, Run; check the arguments that the configuration
  *                                                   gives are the program's
  *   configurationType Ecstasy Attach                check an Ecstasy Attach configuration debugs the game that xtc runs outside
- *   runConfigurationProducer                        step Debug, whose configuration is the open module's, as Current File
- *   projectTaskRunner                               steps Build Project, A failed build
+ *   runConfigurationProducer                        step Debug, whose configuration is the open module's, as Current File; check
+ *                                                   Ctrl+Shift+F10 runs the module whose file has the cursor
+ *   projectTaskRunner                               steps Build Project, A failed build; check Rebuild Project rebuilds every module
+ *                                                   with the embedded compiler; in Gradle mode, step Build with Gradle, which it
+ *                                                   leaves to Gradle's
  *   defaultLiveTemplates, liveTemplateContext       steps Live templates, Expand a template
  *   lang.parserDefinition (the Ecstasy PSI)         check an Ecstasy file's PSI is the plugin's language; the steps of the features
  *                                                   below, which IntelliJ looks up by language
@@ -196,8 +199,11 @@
  *                                                   step Run with xtc
  *   the gutter's Run and test icons                 steps Run, Run or debug a test, Test results
  *   Rerun, Stop                                     check Rerun runs it again, and Stop ends it
- *   build modes: embedded, Gradle, xtc              steps Run, Run with Gradle, Run with xtc, Debug with Gradle, Tests with Gradle;
- *                                                   checks in command-line mode, Debug runs xtc; the tests run with xtc test
+ *   build modes: embedded, Gradle, xtc              steps Run, Build with Gradle, Run with Gradle, Run with xtc, Debug with Gradle,
+ *                                                   Tests with Gradle; checks in command-line mode, Debug runs xtc; the tests run
+ *                                                   with xtc test
+ *   Rebuild Project                                 check Rebuild Project rebuilds every module with the embedded compiler
+ *   Run Context Configuration, Ctrl+Shift+F10       check Ctrl+Shift+F10 runs the module whose file has the cursor
  *   the Gradle window                               step The Gradle window
  *   a test method, a module's tests                 check a test method's icon runs that test alone; step Test results
  *   every test module, Run 'All Ecstasy Tests'      checks Run 'All Ecstasy Tests' on the test sources runs every test module's
@@ -1673,6 +1679,20 @@ private fun Tour.building() {
         toolWindow("Problems View", false)
     }
     restore()
+    verify("Rebuild Project rebuilds every module with the embedded compiler, without Gradle") {
+        open(source("Eights.x"), 0)
+        // the earlier builds' reports go first, so that only the rebuild's own can satisfy the wait
+        clearToolWindow("Build")
+        action("CompileProject")
+        toolWindow("Build", true)
+        // the module's line of the summary comes once the build has ended
+        val rebuilt = { toolWindowText("Build").let { "Rebuilding with the embedded compiler" in it && "✓ cardGame" in it } }
+        expect(within(HANG) { busy().isEmpty() && rebuilt() }) {
+            "The rebuild: ${toolWindowText("Build").take(400)}; the modules: ${buildModules()}"
+        }
+        toolWindowText("Build").let { expect("compileXtc" !in it && "Executing" !in it) { "The rebuild ran Gradle: ${it.take(400)}" } }
+        toolWindow("Build", false)
+    }
     var run = 0
     var started = ""
     shot(
@@ -1765,6 +1785,19 @@ private fun Tour.building() {
         expect(within(HANG) { runId() != started && "Press Enter" in console() }) { "The console: ${console().takeLast(300)}" }
         stopAll()
     }
+    verify("Ctrl+Shift+F10 runs the module whose file has the cursor") {
+        open(file(MODULE), 0)
+        at("module cardGame")
+        started = runId()
+        // the keys, as a user presses them in the editor: the keymap's Run Context Configuration, whose configuration
+        //  the plugin's producer makes for the module file
+        focusedEditor()
+        val pressed = editorShortcut("RunClass")
+        expect(within(HANG) { runId() != started && "Press Enter" in console() }) {
+            "The console: ${console().takeLast(300)}; the keys: $pressed"
+        }
+        stopAll()
+    }
     shot(
         "Choose the build mode",
         "Ctrl+Alt+X, B, or Tools | Select Ecstasy Build Mode, chooses how Build, Rebuild and Run work: embedded, Gradle, or automatic.",
@@ -1788,6 +1821,30 @@ private fun Tour.building() {
         expect(within(HANG) { chooseRow("Gradle") }) { "No Gradle to choose: ${rows()}" }
         // the mode as its label names it, which Build and Run follow
         expect(within(HANG) { buildModules().startsWith("mode=Gradle ") }) { "The build mode: ${buildModules()}" }
+    }
+    shot(
+        "Build with Gradle",
+        "In Gradle mode, Ctrl+F9 builds with the project's Gradle build, the XTC plugin's compileXtc among its tasks.",
+        feature = "compileXtc",
+        focus = "toolwindow:Build",
+        until = { busy().isEmpty() && toolWindowText("Build").let { "BUILD SUCCESSFUL" in it || "BUILD FAILED" in it } },
+        check = {
+            toolWindowText("Build").let {
+                expect("compileXtc" in it && "BUILD SUCCESSFUL" in it && "with the embedded compiler" !in it) {
+                    "Gradle mode's build: ${it.take(600)}; the modules: ${buildModules()}"
+                }
+            }
+        },
+        settle = 3.seconds,
+        after = { toolWindow("Build", false) },
+    ) {
+        // Gradle, as the chooser left it, unless choosing it failed: this step shows the build, not the chooser
+        buildMode("GRADLE")
+        // the earlier builds' reports go first, so that only this build's own can satisfy the wait
+        clearToolWindow("Build")
+        open(source("Eights.x"), 0)
+        action("CompileDirty")
+        toolWindow("Build", true)
     }
     shot(
         "Run with Gradle",
