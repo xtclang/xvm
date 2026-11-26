@@ -1,6 +1,6 @@
 # Squashing #693 into reviewable pull requests
 
-A plan only: making it changed nothing in #693. It covers the 509 commits of `errs/full-testable-lsp-20261009` over `master` (tip `67235f011c`, master `fb7ba82052`, 2026-11-26), numbered 1 to 509 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-509 came after, and were placed by the same rules. One is open on master as its own PR: 459, with 502 its review round, is #802, which leaves #693 when it merges. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480.
+A plan only: making it changed nothing in #693. It covers the 523 commits of `errs/full-testable-lsp-20261009` over `master` (tip `2c4e48e7bd`, master `fb7ba82052`, 2026-11-26), numbered 1 to 523 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-523 came after, and were placed by the same rules. One is open on master as its own PR: 459, with 502 its review round, is #802, which leaves #693 when it merges. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480.
 
 It proposes 15 pull requests, each of which changes either only files outside lang/ (xvm only: X1-X5) or only files in lang/ (lang only: L1-L10), merged in one order. To get there, the commits are first sorted into 13 topics (P1-P13), the commits of a topic that implement or fix the same thing, however far apart, are grouped to be joined, and every commit is then divided at lang/: its other files go to its topic's xvm PR, its lang/ files to its topic's lang PR.
 
@@ -18,11 +18,11 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 8 | **L3** | lang/ | Language server: the semantic model and read-only editor features | L2 | P5 | 33 | 6.0k / 7.1k |
 | 9 | **L4** | lang/ | Language server: code actions and refactorings | L3 | P6 | 39 | 9.3k / 13.1k |
 | 10 | **L5** | lang/ | Language server: the XDK's library sources and the XDK workspace | L3 | P11 | 22 | 3.0k / 3.2k |
-| 11 | **L6** | lang/ | IntelliJ plugin, on LSP4IJ 0.30.1 | L4, L5, X5 | P7 | 74 | 10.4k / 6.6k |
+| 11 | **L6** | lang/ | IntelliJ plugin, on LSP4IJ 0.30.1 | L4, L5, X5 | P7 | 75 | 10.4k / 6.6k |
 | 12 | **L7** | lang/ | VS Code extension | L4, L5 | P8 | 12 | 2.7k / 341 |
 | 13 | **L8** | lang/ | Embedded build, run and tests in the language server and both editors | X4, L6, L7 | P9 | 49 | 9.6k / 8.8k |
 | 14 | **L9** | lang/ | Debugging: the DAP server, debug sessions, launch and attach, and both editors' debug UI | X4, L8 | P10 | 48 | 8.6k / 11.0k |
-| 15 | **L10** | lang/ | Test infrastructure: the playbooks, the scenario catalog, the manual test plan and the tours | L9, X5 | P12, P13 | 145 | 7.4k / 57.1k |
+| 15 | **L10** | lang/ | Test infrastructure: the playbooks, the scenario catalog, the manual test plan and the tours | L9, X5 | P12, P13 | 158 | 8.4k / 57.1k |
 
 Already open on master, apart from these: #802 (unused constructor arguments, commits 459 and 502), which leaves #693 when it merges. #804 (runXtc keeps xtcRun's settings) and #808 (the plugin tests' one network download dropped) are merged.
 
@@ -48,14 +48,14 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 | P4 | Language server core: protocol, document sync, compile pipeline, discovery, diagnostics | P3 | yes, once 5 commits' other files move | 42 | 15 | 19.1k / 28.0k |
 | P5 | Language server: semantic model and read-only editor features | P4 | yes | 32 | 8 | 6.1k / 7.1k |
 | P6 | Language server: code actions and refactorings | P5 | yes | 38 | 10 | 9.3k / 13.1k |
-| P7 | IntelliJ plugin, built against LSP4IJ 0.30.1 | P6 | nearly | 73 | 27 | 10.5k / 6.7k |
+| P7 | IntelliJ plugin, built against LSP4IJ 0.30.1 | P6 | nearly | 74 | 27 | 10.5k / 6.7k |
 | P8 | VS Code extension | P6 | yes | 11 | 7 | 2.7k / 341 |
 | P9 | Embedded build, run and tests from the editors | P4 (and P7, P8 for the editor parts) | no | 55 | 23 | 10.6k / 9.7k |
 | P10 | Debugger: runtime debugger, DAP server and the editors' debugging | P9 | no | 60 | 36 | 17.2k / 15.2k |
 | P11 | The XDK's library sources and the XDK workspace | P5 | yes, once 1 commit's other files move | 23 | 9 | 3.4k / 3.4k |
 | P12 | Test infrastructure: playbooks, scenarios, tours and their container | P7-P11 | no | 115 | 21 | 3.2k / 57.5k |
-| P13 | Documentation, build and CI | the PRs it documents | no | 32 | 5 | 5.8k / 372 |
-| | **Total** | | | **509** | **171** | |
+| P13 | Documentation, build and CI | the PRs it documents | no | 45 | 6 | 6.8k / 372 |
+| | **Total** | | | **523** | **172** | |
 
 The topics group the commits; the PRs above divide them at lang/. Sizes count added lines, with commit 8 divided by package (below). They leave out only the two files that later commits delete whole (XdkColorPrototype, XdkMonikers); the rest of what the pairs in finding 2 take back is still counted, so squashed PRs come out somewhat smaller. Tests are most of every PR's size: reviewers read the main code and skim the tests.
 
@@ -229,7 +229,15 @@ These commits change files outside the components of the PR they are placed in, 
 - 473 `6527cf1f9b` Keep each language server's whole trace in playbook runs, with what each diagnostic pull answered, in P12 (+141; also touches: intellij, server)
 - 493 `07ed1be157` Compress the playbook runs' traces once a run ends, and keep whole traces only for failures and the newest passing run, in P12 (+367; also touches: build, intellij, vscode)
 - 502 `4a746eb12e` Allow contribution arguments and shorthand defaults that match the explicit constructor, in P1 (+400; also touches: xdk)
-
+- 512 `f2a93b4846` Keep the cause of a refused settings change, undo or range format, which detekt found swallowed, in P13 (+17; also touches: intellij, server)
+- 513 `a56f748564` Fix detekt's small findings in the language server: an unused parameter, an empty flush, shadowed its, range loops, in P13 (+16; also touches: server)
+- 514 `1902fe1b37` Narrow two of the 55 catch-alls that detekt found in lang's main code, and keep the rest, which are deliberate, in P13 (+2; also touches: server)
+- 515 `d4ece11d83` Share the IntelliJ plugin's duplicated action and Enter-repair code: XtcProjectAction, blockSplit and repair, in P13 (+60; also touches: intellij)
+- 516 `4fe7772dc1` Share the language server's location requests and edit conversion, and say the semantic tokens setting once, in P13 (+32; also touches: server)
+- 517 `6498c282ce` Share the tree-sitter code's duplicated helpers: shorthand properties, typed declarations, a template's end, in P13 (+40; also touches: server)
+- 518 `7891e3e0bb` Share the compiler adapter's duplicated refactoring code: a source's plan and edit, a removal, a module's alias, in P13 (+68; also touches: server)
+- 520 `9030a62ed2` Build the extension's invalid-settings message once, and offer a Gradle build's Test and Clean tasks once for either build mode, in P13 (+7; also touches: vscode)
+- 521 `f0a118b838` Share the language server's cancellation-owning future and its formatter's parenthesis search, in P13 (+23; also touches: server)
 
 ## Splitting commit 8
 
@@ -361,7 +369,7 @@ Kept as they are:
 
 **Scope.** lang/intellij-plugin main and unit tests (not the playbook): the LSP4IJ integration, settings, restart, rename and move handlers, Undo of server edits, Project Errors, the Ecstasy PSI and editing, Code Style, live templates, tips and Got It tooltips. Commit 8's intellij-plugin/src/main and src/test, written against LSP4IJ 0.30.1 from the start.
 
-**Builds on** P6. **Commits:** 73 now, about 27 after squashing. **Added lines:** 10,416 main, 6,711 tests.
+**Builds on** P6. **Commits:** 74 now, about 27 after squashing. **Added lines:** 10,416 main, 6,714 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -382,7 +390,7 @@ Kept as they are:
 | The language server JVM's memory setting | 421 `0e3dba96e1` Choose how the language server's JVM uses memory: the JVM's default or a set maximum, or adaptive | a setting in both editors with its server side; divide by path |
 | Every IntelliJ settings page under one Ecstasy node | 425 `d558e9a095` Put every Ecstasy settings page of the IntelliJ plugin under Languages & Frameworks \| Ecstasy<br>427 `1f0db784b7` Fit IntelliJ's Language Service and Server Runtime pages to the Settings dialog, and show both in the user guide | one Ecstasy node in IntelliJ's settings, its pages fitted to the dialog |
 | Marks that LSP4IJ made before it connected a file's document (UP86) | 475 `071d15b31c` Take back an editor's marks that LSP4IJ made before it connected the file's document (UP86)<br>491 `bdb3ed8101` Count an unchanged diagnostic report's items from the report it names, which closes the UP86 bridge's gap | refreshes an editor's marks once the connected document holds its own report; lsp4ij#2231 and our fix #2232 would retire it |
-| Callers that a write action interrupted in the Call Hierarchy (UP88) | 509 `67235f011c` Show a method's callers when a write action interrupts the Call hierarchy's wait for them (UP88) | LSP4IJ 0.30.1's call hierarchy returns no children when a write action cancels its wait for the server; the provider rethrows the cancellation so IntelliJ asks again; redhat-developer/lsp4ij#2278 would retire it |
+| Callers that a write action interrupted in the Call Hierarchy (UP88) | 509 `67235f011c` Show a method's callers when a write action interrupts the Call hierarchy's wait for them (UP88)<br>523 `2c4e48e7bd` Wait in XtcCallHierarchyProviderTest until LSP4IJ has connected the file, before asking for the call hierarchy | LSP4IJ 0.30.1's call hierarchy returns no children when a write action cancels its wait for the server; the provider rethrows the cancellation so IntelliJ asks again; redhat-developer/lsp4ij#2278 would retire it |
 
 Kept as they are:
 
@@ -559,7 +567,7 @@ Kept as they are:
 
 **Scope.** The lang docs and READMEs, the configuration reference, packaging and install tasks, the PR previews, and build hygiene. Fold feature documentation into the feature PRs where it describes them; keep the rest here.
 
-**Builds on** the PRs it documents. **Commits:** 32 now, about 5 after squashing. **Added lines:** 5,774 main, 372 tests.
+**Builds on** the PRs it documents. **Commits:** 45 now, about 6 after squashing. **Added lines:** 6,760 main, 372 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -567,7 +575,8 @@ Kept as they are:
 | Publish previews of the editor plugins from a pull request | 315 `ab5a68454d` Publish previews of the IntelliJ plugin and VS Code extension from a pull request<br>316 `35224fec1a` Name the previews "Ecstasy Language Support (bleeding edge)", and warn of a trailing space in the repository URL | 316 names and checks 315's previews. |
 | Packaging tasks and build defaults | 273 `0f00d6041f` Add IDE plugin packaging and install tasks, and quiet vsce's file tree<br>317 `5c1ef62c0d` Leave the lang build out of the root build by default again<br>379 `1f32cc6bf8` Suppress UnstableApiUsage where the build still calls incubating Gradle API unsuppressed<br>284 `6ee2752a81` Say in AGENTS.md that gradle.properties turns the lang build flags on | Install tasks, the lang build left out of the root build by default, incubating API suppressions. Check 284 against 317: 284 says gradle.properties turns the lang flags on, 317 turns them off. |
 | The user guide, with screenshots from the tours | 424 `46153a73ca` Add a user guide for the Ecstasy language tooling, with screenshots from both editor tours<br>426 `8fec91d67b` Make the user guide's screenshots from tagged tour steps, rebuilt by guide.py from any tour run<br>429 `37d5d73fa9` Show IntelliJ and VS Code side by side in the user guide wherever both tours show the feature<br>430 `9ec501dbb3` Move the user guide into lang/doc/user-guide, with its screenshots in images<br>434 `7ebb1c4b6a` Say in the user guide that embedded tests run with the server's XDK and xunit, not the build's<br>435 `44cbf3ede6` Give testing its own chapter in the user guide: write, find, run, read, rerun, debug, build modes, troubleshooting<br>452 `b91745b809` Say in the user guide what a rename doesn't change or check<br>471 `2311f339f3` Tighten the user guide: one place for each fact, plainer sentences, and what a newcomer needs<br>472 `4c2133388c` Split the user guide into a landing page, one page per chapter, and features and shortcuts pages<br>477 `9b3275821f` Mark the user guide's keys up as keys, and the names it left plain as code<br>478 `f152591cbd` Add an index of every page and section of the user guide to its landing page<br>479 `e898c62217` Give the user guide's long sections subsections, and its index the third level<br>480 `8069b702c8` Box the user guide's single screenshots with their captions, as its pairs are | the guide, its testing chapter and its screenshots, made from tagged tour steps |
-| Opt-in static analysis of lang: detekt and CPD | 501 `fbed837613` Add opt-in static analysis to lang: detekt over its Kotlin, and CPD over its Kotlin and TypeScript | lang's tasks for detekt over its Kotlin and CPD over its Kotlin and TypeScript, reporting only, not in check; the two tools' version pins in the root catalog go to X5 |
+| Opt-in static analysis of lang: detekt and CPD | 501 `fbed837613` Add opt-in static analysis to lang: detekt over its Kotlin, and CPD over its Kotlin and TypeScript<br>510 `a78314576d` Configure lang's detekt for its style, and baseline what is left, so that a run reports only new findings<br>511 `26e6e21b59` Find duplicated code in lang as IntelliJ's "Duplicated code fragment" inspection does, renamed copies too | lang's tasks for detekt over its Kotlin and CPD over its Kotlin and TypeScript, reporting only, not in check; the two tools' version pins in the root catalog go to X5 |
+| Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | 512 `f2a93b4846` Keep the cause of a refused settings change, undo or range format, which detekt found swallowed<br>513 `a56f748564` Fix detekt's small findings in the language server: an unused parameter, an empty flush, shadowed its, range loops<br>514 `1902fe1b37` Narrow two of the 55 catch-alls that detekt found in lang's main code, and keep the rest, which are deliberate<br>515 `d4ece11d83` Share the IntelliJ plugin's duplicated action and Enter-repair code: XtcProjectAction, blockSplit and repair<br>516 `4fe7772dc1` Share the language server's location requests and edit conversion, and say the semantic tokens setting once<br>517 `6498c282ce` Share the tree-sitter code's duplicated helpers: shorthand properties, typed declarations, a template's end<br>518 `7891e3e0bb` Share the compiler adapter's duplicated refactoring code: a source's plan and edit, a removal, a module's alias<br>519 `052d37e783` Escape a C char literal in one place in the scanner generator: escapeForC, which CCodeDsl had twice over<br>520 `9030a62ed2` Build the extension's invalid-settings message once, and offer a Gradle build's Test and Clean tasks once for either build mode<br>521 `f0a118b838` Share the language server's cancellation-owning future and its formatter's parenthesis search<br>522 `891e093150` Generate TextMate's operator patterns from one list of categories, not seven copies of the same block | detekt's and the duplicate checks' (CPD, IntelliJ's) findings fixed in lang's main code; it touches files of L1-L9, so it goes last, in L10, or is divided by path into each file's PR when the PRs are cut |
 
 ## Notes for review
 
@@ -1113,3 +1122,17 @@ Kept as they are:
 | 507 | `6811b1e41c` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Count in the editor's census the references whose declaration is in no source of the workspace |
 | 508 | `5390b9e736` | P5 | — | L3 | The semantic model's censuses, and the bindings they found missing | Compile the census's libraries as one workspace folder, as an editor that opens the repository does |
 | 509 | `67235f011c` | P7 | — | L6 | Callers that a write action interrupted in the Call Hierarchy (UP88) | Show a method's callers when a write action interrupts the Call hierarchy's wait for them (UP88) |
+| 510 | `a78314576d` | P13 | — | L10 | Opt-in static analysis of lang: detekt and CPD | Configure lang's detekt for its style, and baseline what is left, so that a run reports only new findings |
+| 511 | `26e6e21b59` | P13 | — | L10 | Opt-in static analysis of lang: detekt and CPD | Find duplicated code in lang as IntelliJ's "Duplicated code fragment" inspection does, renamed copies too |
+| 512 | `f2a93b4846` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Keep the cause of a refused settings change, undo or range format, which detekt found swallowed |
+| 513 | `a56f748564` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Fix detekt's small findings in the language server: an unused parameter, an empty flush, shadowed its, range loops |
+| 514 | `1902fe1b37` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Narrow two of the 55 catch-alls that detekt found in lang's main code, and keep the rest, which are deliberate |
+| 515 | `d4ece11d83` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Share the IntelliJ plugin's duplicated action and Enter-repair code: XtcProjectAction, blockSplit and repair |
+| 516 | `4fe7772dc1` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Share the language server's location requests and edit conversion, and say the semantic tokens setting once |
+| 517 | `6498c282ce` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Share the tree-sitter code's duplicated helpers: shorthand properties, typed declarations, a template's end |
+| 518 | `7891e3e0bb` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Share the compiler adapter's duplicated refactoring code: a source's plan and edit, a removal, a module's alias |
+| 519 | `052d37e783` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Escape a C char literal in one place in the scanner generator: escapeForC, which CCodeDsl had twice over |
+| 520 | `9030a62ed2` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Build the extension's invalid-settings message once, and offer a Gradle build's Test and Clean tasks once for either build mode |
+| 521 | `f0a118b838` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Share the language server's cancellation-owning future and its formatter's parenthesis search |
+| 522 | `891e093150` | P13 | — | L10 | Static analysis fixes across lang: causes kept, catch-alls narrowed, duplicates shared | Generate TextMate's operator patterns from one list of categories, not seven copies of the same block |
+| 523 | `2c4e48e7bd` | P7 | — | L6 | Callers that a write action interrupted in the Call Hierarchy (UP88) | Wait in XtcCallHierarchyProviderTest until LSP4IJ has connected the file, before asking for the call hierarchy |
