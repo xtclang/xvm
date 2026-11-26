@@ -4,8 +4,9 @@
  * XtcDebugServer, and the actions, extensions and settings pages of the plugin's plugin.xml, with the IntelliJ and
  * LSP4IJ actions that a user uses them by. Each feature has the steps (frames of the recording, each with its check)
  * or the checks (verify, between the steps, without a frame) that exercise it, by their titles; or why the tour
- * cannot, and what covers it instead: a case of the compiler playbook (X...), the plugin's or the servers' own tests,
- * or LSP4IJ 0.30.0, whose client the IDE needs first (UP.. in docs/remaining.md).
+ * cannot, and what covers it instead: a case of the compiler playbook (X...), or the plugin's or the servers' own tests.
+ * What LSP4IJ 0.30.1's client brings to the IDE (UP.. in doc/errs/errs-upstream-issues.md) and the tour does not show
+ * is on its With LSP4IJ 0.30.1 card, "the card" below, with the playbook case that checks it.
  *
  * Language server: initialize's capabilities
  *   textDocumentSync: didOpen, didChange, didClose  step Errors as you type; check a test module sees an edit of the module it tests
@@ -57,7 +58,7 @@
  *   documentOnTypeFormattingProvider: }             check typing a closing brace indents its line; ; and ): playbook X290
  *   inlayHintProvider                               step Inlay hints and references; checks an inferred local's type is a hint,
  *                                                   turning the inlay hints off takes them away; resolve: playbook X131
- *   inlineValueProvider                             needs LSP4IJ 0.30.0 (UP50); the Coming card; playbook X331
+ *   inlineValueProvider                             the card (UP50); playbook X331
  *   documentLinkProvider                            check a URL in a doc comment is a link; resolve: playbook X131
  *   signatureHelpProvider                           step Parameter info; check parameter info shows as a call's ( is typed
  *   semanticTokensProvider: full                    step Semantic highlighting
@@ -68,14 +69,14 @@
  *                                                   renames its type, moving a class to another package moves its file
  *   fileOperations: willCreate, didCreate         check a new file's type is one the project's code can use at once
  *   fileOperations: willDelete, didDelete         check deleting the file makes its use an error
- *   workspace.textDocumentContent                   LSP4IJ 0.21.0 has no client (UP25): step The XDK's sources opens the bundled
- *                                                   source read-only instead; playbook X254
+ *   workspace.textDocumentContent                   step The XDK's sources, whose read-only source LSP4IJ 0.30.1 opens by it
+ *                                                   (UP25); playbook X254
  *   workspace.workspaceFolders                      step Open the project; changes: playbook WorkspaceFolders
  *   codeLensProvider: references                    step Inlay hints and references; checks the references lens lists a declaration's
  *                                                   uses, the lenses count references of declarations, not of a constructor's
  *                                                   finally block, turning the reference counts off takes their lenses away
  *   codeLensProvider: Run                           check the Run lens runs the module; playbook X280
- *   linkedEditingRangeProvider                      the IDE's editing needs LSP4IJ 0.30.0, the Coming card; playbook X133
+ *   linkedEditingRangeProvider                      the card, for LSP4IJ 0.30.1's linked editing; playbook X133
  *   typeHierarchyProvider                           step Type hierarchy
  *   callHierarchyProvider                           step Call hierarchy
  *   workDoneProgress                                playbook X145
@@ -111,12 +112,12 @@
  *   attach                                          check an Ecstasy Attach configuration debugs the game that xtc runs outside
  *   setBreakpoints: lines                           steps Frames and variables, Breakpoints while you edit
  *   setBreakpoints: conditions                      steps A conditional breakpoint, Debug, A condition that cannot be evaluated
- *   setBreakpoints: hit conditions, log messages    needs LSP4IJ 0.30.0 (UP55, UP32); the Coming card; playbook X311
+ *   setBreakpoints: hit conditions, log messages    the card (UP55, UP32); playbook X311
  *   setExceptionBreakpoints                         step An exception
- *   setExceptionBreakpoints: filter conditions      needs LSP4IJ 0.30.0 (UP34); the Coming card; playbook X312
- *   exceptionInfo                                   step An exception; its stack in the hint needs LSP4IJ 0.30.0 (UP33)
- *   setFunctionBreakpoints                          needs LSP4IJ 0.30.0 (UP46); the Coming card
- *   dataBreakpointInfo, setDataBreakpoints          needs LSP4IJ 0.30.0 (UP48); the Coming card
+ *   setExceptionBreakpoints: filter conditions      the card (UP34); playbook X312
+ *   exceptionInfo                                   step An exception, whose hint LSP4IJ 0.30.1 fills from it, with its stack (UP33)
+ *   setFunctionBreakpoints                          the card (UP46); playbook X328
+ *   dataBreakpointInfo, setDataBreakpoints          the card (UP48); playbook X330
  *   threads                                         checks the threads are the program's fibers, the game's while it deals, the
  *                                                   Scoreboard service's while it records the win
  *   stackTrace, scopes, variables                   steps Debug, Frames and variables
@@ -137,13 +138,15 @@
  *   output event                                    step The program's console
  *   terminate, disconnect                           every step that stops a session; check attach (disconnect detaches)
  *   completions                                     Evaluate Expression's completion: playbook X320 (UP37)
- *   pause                                           needs LSP4IJ 0.30.0 (UP30); the Coming card; playbook X308
- *   restartFrame                                    needs LSP4IJ 0.30.0 (UP47); the Coming card; playbook X329
- *   modules, loadedSources                          needs LSP4IJ 0.30.0 (UP45); the Coming card; playbook X326
- *   valueFormattingOptions (hex), xtc/valueFormat   needs LSP4IJ 0.30.0 (UP36); the Coming card
- *   variables: pages, lazy values                   needs LSP4IJ 0.30.0 (UP42, UP35); the Coming card
- *   invalidated event, cancel                       needs LSP4IJ 0.30.0 (UP40); LSP4IJ sends no cancel (UP41): VS Code's playbook
- *   singleThreadExecutionRequests                   LSP4IJ 0.21.0 does not ask for it: dap-server's tests
+ *   pause                                           the card (UP30); playbook X308
+ *   restartFrame                                    the card (UP47); playbook X329
+ *   modules, loadedSources                          the card (UP45); playbook X326
+ *   valueFormattingOptions (hex), xtc/valueFormat   the card (UP36); playbook X317
+ *   variables: pages, lazy values                   the card (UP42, UP35); playbook X316, X318
+ *   invalidated event, cancel                       invalidated: the card (UP40); playbook X314; LSP4IJ sends no cancel (UP41):
+ *                                                   VS Code's playbook
+ *   singleThreadExecutionRequests                   LSP4IJ 0.30.1 sends it with Step Only the Current Thread (UP49), which no
+ *                                                   step or playbook case selects yet: dap-server's tests
  *
  * The plugin: plugin.xml's actions
  *   xtc.selectLanguageAdapter                       check Ctrl+Alt+X, A, and the other adapter chosen, restarts the server with
@@ -154,6 +157,12 @@
  *                                                   comment; check Undo takes the created method back in one step, without
  *                                                   asking, as a change of one file
  *   xtc.runModule                                   check the Run lens runs the module
+ *   xtc.runAllTests                                 not by the tour, whose test sources the context's Run 'All Ecstasy Tests' runs
+ *                                                   (below): the action shows only on a folder that has Java or Kotlin tests too,
+ *                                                   where Gradle's Tests in replaces that; AllTestModulesTest
+ *   xtc.selectBuildMode                             step Choose the build mode, by Ctrl+Alt+X, B; check choosing Gradle there makes
+ *                                                   Gradle the project's build mode
+ *   xtc.restartLanguageServer                       check Ctrl+Alt+X, R restarts the server, which answers
  *   xtc.toggleServerLog                             checks Ctrl+Alt+X, L shows the server's log, and hides it again; Tools |
  *                                                   Toggle Ecstasy Language Server Log, clicked, shows it
  *
@@ -232,9 +241,9 @@
  * lagergren/vscode-tour, b6025441ec): the shared servers' features that one tour checks and the other does not.
  *   VS Code's only: the debug adapter's hit counts and logpoints, function and data breakpoints, exception filter
  *     conditions, pause, restartFrame, modules and loadedSources, hexadecimal values, lazy variables and pages,
- *     invalidated, the console's completions and singleThread, which LSP4IJ 0.21.0 does not ask for (the Coming card,
- *     UP30-UP55); inlineValue and linkedEditingRange, which need LSP4IJ 0.30.0; workspace.textDocumentContent, which
- *     LSP4IJ has no client for (UP25); semanticTokens delta and range, rangesFormatting, inlayHint/resolve,
+ *     invalidated, the console's completions, inlineValue and linkedEditingRange, which LSP4IJ 0.30.1 brings and
+ *     IntelliJ's playbook checks (the card, UP30-UP55); singleThread, which IntelliJ sends only once Step Only the
+ *     Current Thread is selected (UP49); semanticTokens delta and range, rangesFormatting, inlayHint/resolve,
  *     documentLink/resolve, workspaceSymbol/resolve, workDoneProgress and the refresh requests, which the VS Code tour
  *     checks by its server trace and IntelliJ by the playbook (X126, X131, X132, X145);
  *     workspace/didChangeWatchedFiles; xtc/healthCheck; xtc/discoverConsumers (IntelliJ: playbook X99, X105)
