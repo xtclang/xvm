@@ -17,7 +17,6 @@ internal fun ParityScenarios.runtimeSettingsCases() {
             val document = open(data.string("file"), data.string("source"))
             clean(document)
 
-            fun status() = protocol.query("xtc/languageServiceStatus", emptyMap<String, String>()).asJsonObject
             with(driver) {
                 val page = utility(ServerRuntimePage::class)
                 val project = singleProject()
@@ -36,7 +35,7 @@ internal fun ParityScenarios.runtimeSettingsCases() {
                     clean(document)
                 }
                 try {
-                    val before = status()
+                    val before = protocol.status()
                     val values =
                         JsonObject().apply {
                             addProperty("vmOptions", data["vmOptions"].asJsonArray.joinToString("\n") { it.asString })
@@ -45,9 +44,9 @@ internal fun ParityScenarios.runtimeSettingsCases() {
                     edit(values, "cancel")
                     edit(values, "reset")
                     edit(values, "apply")
-                    check(status().int("pid") == before.int("pid")) { "Apply must preserve the running server" }
+                    check(protocol.status().int("pid") == before.int("pid")) { "Apply must preserve the running server" }
                     restart(before.int("pid"))
-                    val applied = status()
+                    val applied = protocol.status()
                     check(applied["jvmOptions"].asJsonArray.contains(data["vmOptions"].asJsonArray.single()))
                     if (id == "X269") {
                         edit(
@@ -77,11 +76,11 @@ internal fun ParityScenarios.runtimeSettingsCases() {
                         }
                         edit(JsonObject().apply { addProperty("xtc.logs.totalSizeMb", 0) }, "invalid")
                     }
-                    check(status().int("pid") == applied.int("pid"))
+                    check(protocol.status().int("pid") == applied.int("pid"))
                     clean(document)
                     check(document.text == data.string("source"))
                 } finally {
-                    val previous = status().int("pid")
+                    val previous = protocol.status().int("pid")
                     edit(JsonParser.parseString(original).asJsonObject, "apply")
                     restart(previous)
                 }
@@ -93,7 +92,7 @@ internal fun ParityScenarios.runtimeSettingsCases() {
             val data = common["runtimeSettings"].asJsonObject
             val document = open(data.string("file"), data.string("source"))
             clean(document)
-            val before = protocol.query("xtc/languageServiceStatus", emptyMap<String, String>()).asJsonObject
+            val before = protocol.status()
             val server = protocol.server()
             with(driver) {
                 val page = utility(ServerRuntimePage::class)

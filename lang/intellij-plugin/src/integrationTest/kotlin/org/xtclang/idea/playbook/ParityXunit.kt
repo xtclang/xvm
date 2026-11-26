@@ -13,7 +13,7 @@ import java.nio.file.Files
  * `xunit://<selector>` location, or, in a run of every test module's tests ([allModules]),
  * `xunit://<module>/<selector>`, from the IDE-side [TestRunProbe].
  */
-private class TestConsole(
+internal class TestConsole(
     private val workspace: ParityWorkspace,
     private val allModules: Boolean = false,
 ) {
@@ -89,13 +89,9 @@ private fun ParityWorkspace.gradleTests(
     val failed = data.string("failed")
     val runAll = data.string("runAll")
     val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
-    val previous = with(driver) { withContext(OnDispatcher.EDT) { execution.mode(console.project, "GRADLE") } }
+    val previous = mode(execution, console.project, "GRADLE")
     try {
-        Files.writeString(projectRoot.resolve(data.string("gradleFile")), data.string("gradleSource"))
-        val wrapper = projectRoot.resolve(data.string("wrapper"))
-        Files.writeString(wrapper, data.string("wrapperSource"))
-        wrapper.toFile().setExecutable(true)
-        Files.writeString(projectRoot.resolve(data.string("windowsWrapper")), data.string("windowsWrapperSource"))
+        writeGradleWrapper(data)
         Files.writeString(projectRoot.resolve(data.string("events")), xunitEvents(passed, listOf(failed), data.string("failure")))
 
         // without an imported model: the bare testXtc, every project's, and no project to send a rerun to
@@ -133,7 +129,7 @@ private fun ParityWorkspace.gradleTests(
         console.runsEnded("the rerun's build ends")
         check(calls().last() == data.string("gradleRerun")) { "Rerun Failed Tests in Gradle mode: ${calls()}" }
     } finally {
-        with(driver) { withContext(OnDispatcher.EDT) { execution.mode(console.project, previous) } }
+        mode(execution, console.project, previous)
         rootFiles.forEach(Files::deleteIfExists)
         Files.deleteIfExists(report)
         if (made) cache.toFile().deleteRecursively()
@@ -205,18 +201,6 @@ private fun xunitEvents(
     return events.joinToString("") { "##xunit ${Gson().toJson(it)}\n" }
 }
 
-/** Writes [file] with [source] as the module [module], configured as the workspace's, with no errors. */
-private fun ParityWorkspace.testModule(
-    file: String,
-    module: String,
-    source: String,
-): ParityWorkspace.Document {
-    val document = open(file, source)
-    configure(listOf(SharedScenarios.SourceModule(module, uri(file), emptyList())))
-    clean(document)
-    return document
-}
-
 /** The state and message of a result, for a check's message. */
 private fun JsonObject.shown() = "${string("state")}: ${get("message")?.asString}"
 
@@ -227,7 +211,7 @@ private fun JsonObject.shown() = "${string("state")}: ${get("message")?.asString
  */
 internal fun ParityScenarios.xunitCases() {
     case("X342") { data ->
-        val document = testModule(data.string("file"), data.string("module"), data.string("source"))
+        val document = openModule(data)
         val console = TestConsole(this)
         console.tests.reset(console.project)
         console.run(document, data.string("runAll"))
@@ -252,13 +236,13 @@ internal fun ParityScenarios.xunitCases() {
             "adds: ${console.results()}"
         }
         awaitUi("no program of the stopped run is left", HANG_LIMIT) {
-            protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject["embeddedRuns"]?.asInt == 0
+            protocol.status()["embeddedRuns"]?.asInt == 0
         }
         closeEditor(document)
     }
 
     case("X343") { data ->
-        val document = testModule(data.string("file"), data.string("module"), data.string("source"))
+        val document = openModule(data)
         val console = TestConsole(this)
         console.tests.reset(console.project)
         val after = data.string("after")
@@ -274,7 +258,7 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X344") { data ->
-        val document = testModule(data.string("file"), data.string("module"), data.string("source"))
+        val document = openModule(data)
         val console = TestConsole(this)
         console.tests.reset(console.project)
         console.run(document, data.string("runAll"))
@@ -287,7 +271,7 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X345") { data ->
-        val document = testModule(data.string("file"), data.string("module"), data.string("source"))
+        val document = openModule(data)
         val console = TestConsole(this)
         console.tests.reset(console.project)
         console.run(document, data.string("runAll"))
@@ -304,7 +288,7 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X346") { data ->
-        val document = testModule(data.string("file"), data.string("module"), data.string("source"))
+        val document = openModule(data)
         val console = TestConsole(this)
         val failed = data.strings("failed")
         console.tests.reset(console.project)
@@ -322,7 +306,7 @@ internal fun ParityScenarios.xunitCases() {
     }
 
     case("X347") { data ->
-        val document = testModule(data.string("file"), data.string("module"), data.string("source"))
+        val document = openModule(data)
         val console = TestConsole(this)
         console.tests.reset(console.project)
         console.run(document, data.string("runAll"))

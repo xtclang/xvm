@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.JsonObject
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
@@ -8,24 +9,7 @@ import org.xtclang.idea.playbook.probe.HANG_LIMIT
 
 internal fun ParityScenarios.reliabilityCases() {
     case("X146") { data ->
-        write(data.string("library"), data.string("original"))
-        write(data.string("consumer"), data.string("source"))
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(
-                    data.string("libraryModule"),
-                    uri(data.string("library")),
-                    emptyList(),
-                ),
-                SharedScenarios.SourceModule(
-                    data.string("consumerModule"),
-                    uri(data.string("consumer")),
-                    listOf(data.string("libraryModule")),
-                ),
-            ),
-        )
-        val library = open(data.string("library"))
-        val consumer = open(data.string("consumer"))
+        val (library, consumer) = libraryAndConsumer(data)
         val version = version(consumer)
         val support = with(driver) { semanticSupport(consumer.editor).getInlayHintsSupport() }
         val events = with(driver) { utility(RefreshRequests::class).listen(singleProject()) }
@@ -203,20 +187,7 @@ interface CompilerReportPage {
 
 internal fun ParityScenarios.refreshOverlapCases() {
     case("X259") { data ->
-        write(data.string("library"), data.string("original"))
-        write(data.string("consumer"), data.string("source"))
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(data.string("libraryModule"), uri(data.string("library")), emptyList()),
-                SharedScenarios.SourceModule(
-                    data.string("consumerModule"),
-                    uri(data.string("consumer")),
-                    listOf(data.string("libraryModule")),
-                ),
-            ),
-        )
-        val library = open(data.string("library"))
-        val consumer = open(data.string("consumer"))
+        val (library, consumer) = libraryAndConsumer(data)
         // the version of the consumer's text on the current connection; LSP4IJ's nightly reopens it with a new one
         // after a restart, where 0.21.0 kept the old one, and the consumer stays untouched as long as it doesn't change
         var version = version(consumer)
@@ -292,4 +263,17 @@ internal fun ParityScenarios.refreshOverlapCases() {
             }
         }
     }
+}
+
+/** Writes the case's library, as it was originally, and its consumer, configured as modules, and opens both. */
+private fun ParityWorkspace.libraryAndConsumer(data: JsonObject): Pair<ParityWorkspace.Document, ParityWorkspace.Document> {
+    write(data.string("library"), data.string("original"))
+    write(data.string("consumer"), data.string("source"))
+    configure(
+        listOf(
+            SharedScenarios.SourceModule(data.string("libraryModule"), uri(data.string("library")), emptyList()),
+            SharedScenarios.SourceModule(data.string("consumerModule"), uri(data.string("consumer")), listOf(data.string("libraryModule"))),
+        ),
+    )
+    return open(data.string("library")) to open(data.string("consumer"))
 }

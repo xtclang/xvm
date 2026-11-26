@@ -173,8 +173,7 @@ class ParityWorkspace(
         val target = path.toFile().canonicalFile.toPath()
         val received =
             protocol
-                .query("xtc/languageServiceStatus", emptyMap<String, Any>())
-                .asJsonObject["watchedFileChanges"]
+                .status()["watchedFileChanges"]
                 ?.takeIf { it.isJsonObject }
                 ?.asJsonObject ?: return false
         return received.entrySet().any { (uri, at) ->
@@ -385,26 +384,36 @@ class ParityWorkspace(
     }
 
     fun configure(modules: List<SharedScenarios.SourceModule>?) =
-        with(driver) {
-            val content =
-                Gson()
-                    .toJson(mapOf("xtc" to mapOf("compiler" to mapOf("sourceModules" to modules))))
-            withContext(OnDispatcher.EDT) {
-                val settings = new(LspServerSettings::class)
-                settings.setConfigurationContent(content)
-                service<LspSettings>().updateSettings("xtcLanguageServer", settings)
-                val traceSettings =
-                    new(LspServerSettings::class)
-                        .setServerTrace(utility(ClientTraceLevel::class).valueOf("verbose"))
-                service<ProjectLspSettings>(singleProject())
-                    .updateSettings("xtcLanguageServer", traceSettings)
-            }
-        }
+        driver.configure(Gson().toJson(mapOf("xtc" to mapOf("compiler" to mapOf("sourceModules" to modules)))))
 
     fun dependencies(): Document {
         shared.common.sourceModules.forEach { write(it.uri) }
         configure(shared.common.sourceModules.map { it.copy(uri = uri(it.uri)) })
         return open(shared.dependencyNavigation.file).also(::clean)
+    }
+
+    /** Writes [file] with [source] as the module [module], configured as the workspace's, with no errors. */
+    fun openModule(
+        file: String,
+        module: String,
+        source: String,
+    ): Document =
+        open(file, source).also {
+            configure(listOf(SharedScenarios.SourceModule(module, uri(file), emptyList())))
+            clean(it)
+        }
+
+    /** Writes the case's file with its source as the case's module, configured as the workspace's, with no errors. */
+    fun openModule(data: JsonObject): Document = openModule(data.string("file"), data.string("module"), data.string("source"))
+
+    /** Writes the case's file with [source] as the case's module, configured as the workspace's before it opens. */
+    fun configuredModule(
+        data: JsonObject,
+        source: String = data.string("source"),
+    ): Document {
+        write(data.string("file"), source)
+        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
+        return open(data.string("file"))
     }
 
     fun configure(modules: JsonElement) =
@@ -560,6 +569,19 @@ class ParityWorkspace(
                 position.int("character")
     }
 }
+
+/** Gives the language server the settings [content], with LSP4IJ's trace of it verbose. */
+internal fun Driver.configure(content: String) =
+    withContext(OnDispatcher.EDT) {
+        val settings = new(LspServerSettings::class)
+        settings.setConfigurationContent(content)
+        service<LspSettings>().updateSettings("xtcLanguageServer", settings)
+        val traceSettings =
+            new(LspServerSettings::class)
+                .setServerTrace(utility(ClientTraceLevel::class).valueOf("verbose"))
+        service<ProjectLspSettings>(singleProject())
+            .updateSettings("xtcLanguageServer", traceSettings)
+    }
 
 /**
  * The path IntelliJ gives the editor of a location's URI: its file's, or, for a document that LSP4IJ opens from

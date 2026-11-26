@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.JsonArray
 import com.intellij.driver.client.Driver
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
@@ -23,23 +24,7 @@ fun Driver.memberActions(
         val at = editor.text.indexOf(data.text("anchor"))
         val position = mapOf("line" to 0, "character" to at)
 
-        fun actions() =
-            ClientProtocol(this)
-                .query(
-                    "textDocument/codeAction",
-                    mapOf(
-                        "textDocument" to
-                            mapOf(
-                                "uri" to
-                                    Path
-                                        .of(editor.editor.getVirtualFile().getPath())
-                                        .toUri()
-                                        .toString(),
-                            ),
-                        "range" to mapOf("start" to position, "end" to position),
-                        "context" to mapOf("diagnostics" to emptyList<Any>()),
-                    ),
-                ).asJsonArray
+        fun actions() = codeActions(editor, position, position)
         if (title.isEmpty()) {
             val actions =
                 awaitUiNotNull("member refusal response", HANG_LIMIT) {
@@ -81,3 +66,19 @@ fun Driver.memberActions(
         }
     }
 }
+
+/** The code actions that the language server offers from [start] to [end] in [editor]'s file, with no diagnostics. */
+internal fun Driver.codeActions(
+    editor: JEditorUiComponent,
+    start: Map<String, Int>,
+    end: Map<String, Int>,
+): JsonArray =
+    ClientProtocol(this)
+        .query(
+            "textDocument/codeAction",
+            mapOf(
+                "textDocument" to mapOf("uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString()),
+                "range" to mapOf("start" to start, "end" to end),
+                "context" to mapOf("diagnostics" to emptyList<Any>()),
+            ),
+        ).asJsonArray

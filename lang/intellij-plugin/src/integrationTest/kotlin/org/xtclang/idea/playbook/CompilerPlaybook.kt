@@ -26,6 +26,10 @@ import java.time.temporal.ChronoUnit
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeSource
 
+/** The extraction and move cases, whose code action runs on `<id>/Extract.x`, with their other files beside it. */
+internal val EXTRACT_CASES =
+    (listOf(148, 156, 157) + (177..215) + (221..242) + (295..299) + (332..334)).map { "X$it" }
+
 /** Selects the harness workload, including feature checks and focused lifecycle or responsiveness runs. */
 enum class PlaybookMode {
     FEATURES,
@@ -478,13 +482,7 @@ class CompilerPlaybook(
                 scenario(id) { data ->
                     val editor = open(data.text("file"))
                     data.strings("variants").forEach { expression ->
-                        editor.text =
-                            fixtures
-                                .getValue(data.text("file"))
-                                .replace(
-                                    data.text("replaceFrom"),
-                                    SharedScenarios.text(data.text("replaceWith"), expression),
-                                )
+                        editor.text = data.edited(SharedScenarios.text(data.text("replaceWith"), expression))
                         if (id == "X75") editor.awaitError()
                         val at =
                             editor.text.indexOf(data.text("anchor")) + data.values["offset"].asInt
@@ -497,10 +495,7 @@ class CompilerPlaybook(
             scenario("X86") { data ->
                 val editor = open(data.text("file"))
                 data.strings("variants").forEach { expression ->
-                    editor.text =
-                        fixtures
-                            .getValue(data.text("file"))
-                            .replace(data.text("replaceFrom"), expression)
+                    editor.text = data.edited(expression)
                     editor.awaitError()
                     accept(
                         editor,
@@ -655,13 +650,7 @@ class CompilerPlaybook(
             val editor = open(data.text("file"))
             data.rows("variants").forEach { variant ->
                 val call = variant["call"].asString
-                editor.text =
-                    fixtures
-                        .getValue(data.text("file"))
-                        .replace(
-                            data.text("replaceFrom"),
-                            SharedScenarios.text(data.text("replaceWith"), call),
-                        )
+                editor.text = data.edited(SharedScenarios.text(data.text("replaceWith"), call))
                 signature(editor, editor.text.indexOf(call) + call.length) {
                     it.isNotEmpty() &&
                         it.first().label == data.text("signature") &&
@@ -675,13 +664,7 @@ class CompilerPlaybook(
                 val editor = open(data.text("file"))
                 data.strings(if (id == "X84") "constructors" else "variants").forEach { original ->
                     val prefix = original.replace(data.text("replaceFrom"), data.text("prefix"))
-                    editor.text =
-                        fixtures
-                            .getValue(data.text("file"))
-                            .replace(
-                                original,
-                                SharedScenarios.text(data.text("replaceWith"), prefix),
-                            )
+                    editor.text = data.edited(SharedScenarios.text(data.text("replaceWith"), prefix), original)
                     editor.awaitError()
                     val at = editor.text.indexOf(prefix) + prefix.length
                     signature(editor, at) {
@@ -718,13 +701,7 @@ class CompilerPlaybook(
         scenario("X85") { data ->
             val editor = open(data.text("file"))
             data.strings("variants").forEach { prefix ->
-                editor.text =
-                    fixtures
-                        .getValue(data.text("file"))
-                        .replace(
-                            data.text("replaceFrom"),
-                            SharedScenarios.text(data.text("replaceWith"), prefix),
-                        )
+                editor.text = data.edited(SharedScenarios.text(data.text("replaceWith"), prefix))
                 editor.awaitError()
                 val at = editor.text.indexOf(prefix) + prefix.length
                 signature(editor, at) {
@@ -1102,13 +1079,7 @@ class CompilerPlaybook(
             val editor = open(data.text("file"))
             data.rows("variants").forEach { variant ->
                 val call = variant["call"].asString
-                editor.text =
-                    fixtures
-                        .getValue(data.text("file"))
-                        .replace(
-                            data.text("replaceFrom"),
-                            SharedScenarios.text(data.text("incompleteExpression"), call),
-                        )
+                editor.text = data.edited(SharedScenarios.text(data.text("incompleteExpression"), call))
                 val anchor = SharedScenarios.text(data.text("callAnchor"), call)
                 signature(editor, editor.text.indexOf(anchor) + anchor.length) {
                     it.firstOrNull()?.let { item ->
@@ -1117,10 +1088,7 @@ class CompilerPlaybook(
                     } == true
                 }
             }
-            editor.text =
-                fixtures
-                    .getValue(data.text("file"))
-                    .replace(data.text("replaceFrom"), data.text("invalidExpression"))
+            editor.text = data.edited(data.text("invalidExpression"))
             signature(
                 editor,
                 editor.text.indexOf(data.text("invalidCall")) + data.values["offset"].asInt,
@@ -1134,13 +1102,7 @@ class CompilerPlaybook(
             editor.awaitDiagnostics(emptyList())
             if (data.values["tokensNonOverlapping"].asBoolean) assertTokenRanges(editor)
             val expression = data.text("expression")
-            editor.text =
-                fixtures
-                    .getValue(data.text("file"))
-                    .replace(
-                        data.text("replaceFrom"),
-                        SharedScenarios.text(data.text("replaceWith"), expression),
-                    )
+            editor.text = data.edited(SharedScenarios.text(data.text("replaceWith"), expression))
             editor.awaitError()
             if (data.values["tokensNonOverlapping"].asBoolean) assertTokenRanges(editor)
             signature(editor, editor.text.indexOf(expression) + expression.length) {
@@ -1187,10 +1149,7 @@ class CompilerPlaybook(
             scenario(id) { data ->
                 val editor = open(data.text("file"))
                 data.strings(if (id == "X78") "selections" else "labels").forEach { selected ->
-                    editor.text =
-                        fixtures
-                            .getValue(data.text("file"))
-                            .replace(data.text("replaceFrom"), data.text("anchor"))
+                    editor.text = data.edited(data.text("anchor"))
                     editor.awaitError()
                     val at = editor.text.indexOf(data.text("anchor")) + data.values["offset"].asInt
                     signature(editor, at) { it.size == data.values["signatureCount"].asInt }
@@ -1208,13 +1167,7 @@ class CompilerPlaybook(
         scenario("X81") { data ->
             val editor = open(data.text("file"))
             data.strings("variants").forEach { prefix ->
-                editor.text =
-                    fixtures
-                        .getValue(data.text("file"))
-                        .replace(
-                            data.text("replaceFrom"),
-                            SharedScenarios.text(data.text("replaceWith"), prefix),
-                        )
+                editor.text = data.edited(SharedScenarios.text(data.text("replaceWith"), prefix))
                 editor.awaitError()
                 val at = editor.text.indexOf(prefix) + prefix.length
                 lookup(editor, at) { items ->
@@ -1235,10 +1188,7 @@ class CompilerPlaybook(
         }
         scenario("X82") { data ->
             val editor = open(data.text("file"))
-            editor.text =
-                fixtures
-                    .getValue(data.text("file"))
-                    .replace(data.text("replaceFrom"), data.text("anchor"))
+            editor.text = data.edited(data.text("anchor"))
             editor.awaitError()
             val at = editor.text.indexOf(data.text("anchor")) + data.values["offset"].asInt
             acceptCandidates(
@@ -1676,80 +1626,7 @@ class CompilerPlaybook(
                 restore(data.text("file"))
             }
         }
-        listOf(
-            "X148",
-            "X156",
-            "X157",
-            "X177",
-            "X178",
-            "X179",
-            "X180",
-            "X181",
-            "X182",
-            "X183",
-            "X184",
-            "X185",
-            "X186",
-            "X187",
-            "X188",
-            "X189",
-            "X190",
-            "X191",
-            "X192",
-            "X193",
-            "X194",
-            "X195",
-            "X196",
-            "X197",
-            "X198",
-            "X199",
-            "X200",
-            "X201",
-            "X202",
-            "X203",
-            "X204",
-            "X205",
-            "X206",
-            "X207",
-            "X208",
-            "X209",
-            "X210",
-            "X211",
-            "X212",
-            "X213",
-            "X214",
-            "X215",
-            "X221",
-            "X222",
-            "X223",
-            "X224",
-            "X225",
-            "X226",
-            "X227",
-            "X228",
-            "X229",
-            "X230",
-            "X231",
-            "X232",
-            "X233",
-            "X234",
-            "X235",
-            "X236",
-            "X237",
-            "X238",
-            "X239",
-            "X240",
-            "X241",
-            "X242",
-            "X295",
-            "X296",
-            "X297",
-            "X298",
-            "X299",
-            "X332",
-            "X333",
-            "X334",
-        ).forEach { id ->
+        EXTRACT_CASES.forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val editor = open(data.text("file"))
@@ -1782,19 +1659,7 @@ class CompilerPlaybook(
                             val prefix = original.take(offset)
                             return mapOf("line" to prefix.count { it == '\n' }, "character" to (offset - prefix.lastIndexOf('\n') - 1))
                         }
-                        return ClientProtocol(this)
-                            .query(
-                                "textDocument/codeAction",
-                                mapOf(
-                                    "textDocument" to
-                                        mapOf(
-                                            "uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString(),
-                                        ),
-                                    "range" to mapOf("start" to position(at), "end" to position(at + data.text("selected").length)),
-                                    "context" to mapOf("diagnostics" to emptyList<Any>()),
-                                ),
-                            ).asJsonArray
-                            .map { it.asJsonObject }
+                        return codeActions(editor, position(at), position(at + data.text("selected").length)).map { it.asJsonObject }
                     }
                     if (data.values["refused"]?.asBoolean == true) {
                         check(actions().none { it["title"].asString == data.text("title") })
@@ -1968,18 +1833,6 @@ class CompilerPlaybook(
         }
     }
 
-    private fun Driver.configure(content: String) =
-        withContext(OnDispatcher.EDT) {
-            val settings = new(LspServerSettings::class)
-            settings.setConfigurationContent(content)
-            service<LspSettings>().updateSettings("xtcLanguageServer", settings)
-            val traceSettings =
-                new(LspServerSettings::class)
-                    .setServerTrace(utility(ClientTraceLevel::class).valueOf("verbose"))
-            service<ProjectLspSettings>(singleProject())
-                .updateSettings("xtcLanguageServer", traceSettings)
-        }
-
     /** The text of IntelliJ's document of [file], read without opening an editor, which would have LSP4IJ open it. */
     private fun Driver.documentText(file: String): String? =
         findFile(relativePath = file)?.let { source ->
@@ -2128,6 +1981,13 @@ class CompilerPlaybook(
         }
 
     // the editor's diagnostics count once the client holds the server's report for its current text
+
+    /** The case's file as its fixture has it, with [from], the case's replaceFrom unless given, replaced by [to]. */
+    private fun SharedScenarios.Scenario.edited(
+        to: String,
+        from: String = text("replaceFrom"),
+    ): String = fixtures.getValue(text("file")).replace(from, to)
+
     private fun JEditorUiComponent.awaitError() {
         val report = FinalReport(driver, this, "compiler error in editor")
         awaitUi(

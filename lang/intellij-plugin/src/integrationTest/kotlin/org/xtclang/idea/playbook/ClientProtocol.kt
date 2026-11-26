@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonNull
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
@@ -36,6 +37,18 @@ class ClientProtocol(
         }
 
     fun capabilities(): JsonElement = copy(server().getServerCapabilitiesSync())
+
+    /** The language server's account of itself, its `xtc/languageServiceStatus`. */
+    fun status(): JsonObject = query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+
+    /** Waits until the language server runs in another process than [previous], as [message] says, and answers the new one. */
+    fun awaitRestart(
+        message: String,
+        previous: Long?,
+    ): Long? {
+        awaitUi(message, HANG_LIMIT) { server().getCurrentProcessId()?.let { it != previous } == true }
+        return server().getCurrentProcessId()
+    }
 
     fun request(
         method: String,

@@ -18,43 +18,14 @@ fun Driver.referencesAndHighlights(
     at: Int,
     excluded: Int,
 ) {
-    val support =
-        withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-            editor.editor.getCaretModel().moveToOffset(at)
-            val file =
-                requireNotNull(
-                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()),
-                )
-            utility(LspFileSupport::class).getSupport(file)
-        }
-    val path = editor.editor.getVirtualFile().getPath()
+    val support = fileSupport(editor, at) { it }
 
     fun contains(
         range: SourceRange,
         offset: Int,
-    ): Boolean {
-        val start =
-            range.getStart().let {
-                editor.document.getLineStartOffset(it.getLine()) + it.getCharacter()
-            }
-        val end =
-            range.getEnd().let {
-                editor.document.getLineStartOffset(it.getLine()) + it.getCharacter()
-            }
-        return offset in start until end
-    }
-    val views = service<NativeUsageViews>(singleProject())
-    val previous = withContext(OnDispatcher.EDT) { views.getSelectedUsageView() }
-    invokeAction("FindUsages", component = editor.component)
-    awaitUi("native references contain this use and exclude its shadowed namesake", HANG_LIMIT) {
-        withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-            val view = views.getSelectedUsageView()
-            if (view == null || view == previous || view.isSearchInProgress()) {
-                return@withContext false
-            }
-            val ranges = view.rangesIn(path)
-            ranges.any { at in it } && ranges.none { excluded in it }
-        }
+    ): Boolean = offset in editor.offsets(range)
+    awaitFindUsages(editor, "native references contain this use and exclude its shadowed namesake") { ranges ->
+        ranges.any { at in it } && ranges.none { excluded in it }
     }
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("HighlightUsagesInFile", component = editor.component)
@@ -68,6 +39,51 @@ fun Driver.referencesAndHighlights(
             highlights.none { contains(it.getRange(), excluded) }
     }
     invokeAction("EditorEscape", component = editor.component)
+}
+
+/**
+ * Invokes Find Usages in [editor] and waits, as [message] says, until a new usage view has ended its search with ranges in
+ * the editor's file that [accept] takes.
+ */
+fun Driver.awaitFindUsages(
+    editor: JEditorUiComponent,
+    message: String,
+    accept: (List<IntRange>) -> Boolean,
+) {
+    val path = editor.editor.getVirtualFile().getPath()
+    val views = service<NativeUsageViews>(singleProject())
+    val previous = withContext(OnDispatcher.EDT) { views.getSelectedUsageView() }
+    invokeAction("FindUsages", component = editor.component)
+    awaitUi(message, HANG_LIMIT) {
+        withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+            val view = views.getSelectedUsageView()
+            if (view == null || view == previous || view.isSearchInProgress()) {
+                return@withContext false
+            }
+            accept(view.rangesIn(path))
+        }
+    }
+}
+
+/** LSP4IJ's support of [editor]'s file, as [part] takes it from the file's, read with the caret moved to [at]. */
+internal fun <T> Driver.fileSupport(
+    editor: JEditorUiComponent,
+    at: Int,
+    part: (LspFileSupport) -> T,
+): T =
+    withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+        editor.editor.getCaretModel().moveToOffset(at)
+        val file =
+            requireNotNull(
+                service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()),
+            )
+        part(utility(LspFileSupport::class).getSupport(file))
+    }
+
+/** The offsets in [this] editor's document of the protocol's [range]. */
+internal fun JEditorUiComponent.offsets(range: SourceRange): IntRange {
+    fun offset(position: SourcePosition) = document.getLineStartOffset(position.getLine()) + position.getCharacter()
+    return offset(range.getStart()) until offset(range.getEnd())
 }
 
 /** Read inside an IDE read action, after the native usage search has completed. */
