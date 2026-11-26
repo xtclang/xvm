@@ -86,7 +86,6 @@
     <ID>CyclomaticComplexMethod:EmbeddedRuns.kt:EmbeddedRuns$private fun start</ID>
     <ID>CyclomaticComplexMethod:EmbeddedRuns.kt:EmbeddedRuns$private fun startTests: CompletableFuture&lt;Unit&gt;</ID>
     <ID>CyclomaticComplexMethod:FakeRunWorker.kt:FakeRunWorker$@JvmStatic fun main</ID>
-    <ID>CyclomaticComplexMethod:LibraryConfiguration.kt:LibraryConfiguration$fun configure: String</ID>
     <ID>CyclomaticComplexMethod:ParityCompilerImports.kt:internal fun ParityScenarios.compilerImportCases</ID>
     <ID>CyclomaticComplexMethod:ParityExecution.kt:internal fun ParityScenarios.buildModeCases</ID>
     <ID>CyclomaticComplexMethod:ParityExecution.kt:internal fun ParityScenarios.executionCases</ID>

@@ -27,6 +27,7 @@ import com.redhat.devtools.lsp4ij.settings.LanguageServerSettings.LanguageServer
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 import org.xvm.lsp.protocol.ConsumerDiscovery
 import org.xvm.lsp.protocol.DiscoverConsumersParams
+import org.xvm.lsp.protocol.LibrarySettings
 import org.xvm.lsp.protocol.SourceModuleConfiguration
 import org.xvm.lsp.protocol.XtcServerProtocol
 import java.awt.BorderLayout
@@ -72,7 +73,7 @@ class CompilerProjectConfigurable
             )
         private val table = JBTable(rows).apply { name = "Ecstasy source modules" }
         private val libraries = CompilerLibrariesPanel(project)
-        private var originalLibraries = LibraryOptions()
+        private var originalLibraries = LibrarySettings()
 
         // Settings dialogs have an explicit reset/apply lifecycle. This snapshot prevents a stale
         // dialog from overwriting a graph changed by rename or another settings editor.

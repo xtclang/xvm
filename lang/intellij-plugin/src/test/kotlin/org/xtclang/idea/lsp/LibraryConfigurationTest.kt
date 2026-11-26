@@ -4,6 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.xvm.lsp.protocol.LibraryAttachment
+import org.xvm.lsp.protocol.LibrarySettings
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -18,18 +20,18 @@ class LibraryConfigurationTest {
     fun `library round trip preserves unrelated settings and ordered roots`() {
         Files.createDirectories(directory.resolve("primary"))
         Files.createDirectories(directory.resolve("fallback"))
-        val options = LibraryOptions(listOf("fallback", "primary"), listOf(LibraryAttachment("Library", listOf("primary", "fallback"))))
+        val options = LibrarySettings(listOf("fallback", "primary"), listOf(LibraryAttachment("Library", listOf("primary", "fallback"))))
         val content = """{"xtc":{"compiler":{"sourceModules":[],"other":42},"languageService":{"inlayHints":false}}}"""
         val replacement = LibraryConfiguration.configure(content, options, directory.toUri())
         assertThat(LibraryConfiguration.read(replacement)).isEqualTo(options)
         assertThat(replacement).contains("42", "inlayHints", "sourceModules")
         assertThat(
-            LibraryConfiguration.read(LibraryConfiguration.configure(replacement, LibraryOptions(), directory.toUri())).modulePath,
+            LibraryConfiguration.read(LibraryConfiguration.configure(replacement, LibrarySettings(), directory.toUri())).modulePath,
         ).isNull()
         assertThat(
             LibraryConfiguration
                 .read(
-                    LibraryConfiguration.configure(replacement, LibraryOptions(emptyList()), directory.toUri()),
+                    LibraryConfiguration.configure(replacement, LibrarySettings(emptyList()), directory.toUri()),
                 ).modulePath,
         ).isEmpty()
     }
@@ -39,13 +41,13 @@ class LibraryConfigurationTest {
         Files.createDirectories(directory.resolve("sources"))
         listOf(listOf("missing"), listOf("https://example.org/library.xtc"), listOf("sources", "./sources")).forEach { paths ->
             assertThatThrownBy {
-                LibraryConfiguration.configure(null, LibraryOptions(paths), directory.toUri())
+                LibraryConfiguration.configure(null, LibrarySettings(paths), directory.toUri())
             }.isInstanceOf(IllegalArgumentException::class.java)
         }
         assertThatThrownBy {
             LibraryConfiguration.configure(
                 null,
-                LibraryOptions(sourceAttachments = listOf(LibraryAttachment("", listOf("sources")))),
+                LibrarySettings(sourceAttachments = listOf(LibraryAttachment("", listOf("sources")))),
                 directory.toUri(),
             )
         }.hasMessageContaining("module name")
