@@ -65,6 +65,8 @@ mockito = "5.24.0"
 lang-kotlin = "2.4.21"
 lang-kotlinx-serialization = "1.13.0"
 lang-ktlint = "1.8.0"
+lang-detekt = "2.0.0-alpha.6"
+lang-pmd = "7.29.0"
 
 # =============================================================================
 # Lang tooling - LSP, DAP & logging
@@ -267,6 +269,14 @@ lang-jsoup = { module = "org.jsoup:jsoup", version.ref = "lang-jsoup" }
 lang-intellij-bouncycastle-bom = { module = "org.bouncycastle:bc-jdk18on-bom", version.ref = "bouncycastle" }
 lang-intellij-netty-bom = { module = "io.netty:netty-bom", version.ref = "lang-intellij-netty" }
 lang-intellij-opentelemetry-bom = { module = "io.opentelemetry:opentelemetry-bom", version.ref = "lang-intellij-opentelemetry" }
+
+# =============================================================================
+# lang's static analysis, opt-in (lang/build.gradle.kts: detekt, cpdKotlin, cpdTypeScript)
+# =============================================================================
+lang-detekt-cli = { module = "dev.detekt:detekt-cli", version.ref = "lang-detekt" }
+lang-pmd-cli = { module = "net.sourceforge.pmd:pmd-cli", version.ref = "lang-pmd" }
+lang-pmd-javascript = { module = "net.sourceforge.pmd:pmd-javascript", version.ref = "lang-pmd" }
+lang-pmd-kotlin = { module = "net.sourceforge.pmd:pmd-kotlin", version.ref = "lang-pmd" }
 
 [bundles]
 # One library set for the distribution and embedded compiler hosts.
