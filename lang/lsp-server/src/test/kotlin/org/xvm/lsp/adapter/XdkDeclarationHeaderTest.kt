@@ -4,12 +4,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.ErrorList
-import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Parser
-import org.xvm.compiler.Source
 import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
@@ -47,16 +44,36 @@ class XdkDeclarationHeaderTest {
     @ValueSource(
         strings =
             [
-                "void damaged(Str| value) {}",
-                "void damaged(Int first, Str| second) {}",
-                "Str| property;",
-                "Str| damaged() = \"x\";",
+                "void damaged(Str§ value) {}",
+                "void damaged(Int first, Str§ second) {}",
+                "Str§ property;",
+                "Str§ damaged() = \"x\";",
+                "void damaged(List<Str§> value) {}",
+                "void damaged(Map<Int, List<Str§>> value) {}",
+                "void damaged(Map<Str§, Int> value) {}",
+                "List<Str§> property;",
+                "List<Str§> damaged() = [\"x\"] ;",
+                "void damaged(Str§ | Int value) {}",
+                "void damaged(Int | Str§ value) {}",
+                "void damaged(Object + Str§ value) {}",
+                "void damaged(Object - Str§ value) {}",
+                "void damaged((Int | Str§) value) {}",
+                "void damaged(List<(Int | Str§)> value) {}",
+                "void damaged(List<Str§?> value) {}",
+                "void damaged(List<Str§[]> value) {}",
+                "void damaged(immutable List<Str§> value) {}",
+                "void damaged(function Str§(Int) value) {}",
+                "void damaged(function void(Str§) value) {}",
+                "void damaged(function (Int, Str§)(Int) value) {}",
+                "void damaged(function void(List<Str§>) value) {}",
+                "void damaged(Function<<Str§>, <Int>> value) {}",
+                "void damaged(Function<<Int>, <Str§>> value) {}",
             ],
     )
-    fun `header type prefixes expose compiler types with exact edits`(declaration: String) {
+    fun `header type prefixes expose compiler types with exact edits, in parameterized and compound headers too`(declaration: String) {
         val prefix =
-            "module Headers { String StringValue = \"x\"; " + declaration.substringBefore('|')
-        val suffix = declaration.substringAfter('|') + " Int later = 1; }"
+            "module Headers { String StringValue = \"x\"; " + declaration.substringBefore('§')
+        val suffix = declaration.substringAfter('§') + " Int later = 1; }"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, prefix + suffix)
             val items = adapter.getCompletions(URI, 0, prefix.length)
@@ -74,6 +91,7 @@ class XdkDeclarationHeaderTest {
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(adapter.compile(URI, prefix.dropLast(3) + "String" + suffix).diagnostics)
+                .describedAs(declaration)
                 .isEmpty()
         }
     }
@@ -90,15 +108,25 @@ class XdkDeclarationHeaderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["void damaged(Str|", "void damaged(Str| {}", "Str|;"])
-    fun `type completion works without a written name or closing delimiter`(declaration: String) {
+    @CsvSource(
+        "void damaged(Str|, String",
+        "void damaged(Str| {}, String",
+        "Str|;, String",
+        "void damaged(ecstasy.text.Str|, StringBuffer",
+        "void damaged(ecstasy.text.Str| {}, StringBuffer",
+        "ecstasy.text.Str|;, StringBuffer",
+    )
+    fun `type completion works without a written name or closing delimiter, whose diagnostics remain`(
+        declaration: String,
+        type: String,
+    ) {
         val prefix = "module Headers { " + declaration.substringBefore('|')
         val suffix = declaration.substringAfter('|') + " }"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, prefix + suffix)
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
-                .contains("String")
-            assertThat(adapter.compile(URI, prefix.dropLast(3) + "String" + suffix).diagnostics)
+                .contains(type)
+            assertThat(adapter.compile(URI, prefix.dropLast(3) + type + suffix).diagnostics)
                 .isNotEmpty()
         }
     }
@@ -130,11 +158,20 @@ class XdkDeclarationHeaderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["void damaged(Int va|) {}"])
-    fun `unsupported headers do not guess types parameters or signatures`(declaration: String) {
-        val prefix = "module Headers { " + declaration.substringBefore('|')
+    @ValueSource(
+        strings =
+            [
+                "void damaged(Int va§) {}",
+                "void damaged(missing.te§xt.StringBuffer value) {}",
+                "void damaged(missing.text.§ value) {}",
+                "<ecstasy> void damaged(ecstasy.text.Str§ value) {}",
+                "void damaged(List<Missing>.§ value) {}",
+            ],
+    )
+    fun `unsupported headers, cursor positions and shapes do not guess types, scopes, parameters or signatures`(declaration: String) {
+        val prefix = "module Headers { " + declaration.substringBefore('§')
         XdkAdapter().use { adapter ->
-            adapter.compile(URI, prefix + declaration.substringAfter('|') + " }")
+            adapter.compile(URI, prefix + declaration.substringAfter('§') + " }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length))
                 .describedAs(declaration)
                 .isEmpty()
@@ -192,12 +229,7 @@ class XdkDeclarationHeaderTest {
         CompilerTestSupport.configure()
         val prefix = "module Headers { void damaged(Str"
         val text = "$prefix value) { Int hidden = 1; } Int later = 1; }"
-        val source = Source(text, URI)
-        repeat(prefix.length) { source.next() }
-        val cursor = source.position
-        source.reset()
-        val errors = ErrorList()
-        val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
+        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
         assertThat(site.isTypeCompletion).isTrue()
@@ -208,19 +240,7 @@ class XdkDeclarationHeaderTest {
         assertThat(declaration.component.getChild("damaged")).isNull()
         assertThat(declaration.component.getChild("hidden")).isNull()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() }).contains("String")
-        for (
-        listener in
-        listOf(
-            ErrorList(ErrorList.FIRST_ERROR),
-            ErrorListener.cancellable(ErrorList()) { true },
-        )
-        ) {
-            source.reset()
-            val stopped =
-                EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
-            assertThat(stopped.pool()).isNull()
-            assertThat(stopped.cursorBindings()).isEmpty()
-        }
+        assertListenersStop(source, cursor)
     }
 
     private companion object {

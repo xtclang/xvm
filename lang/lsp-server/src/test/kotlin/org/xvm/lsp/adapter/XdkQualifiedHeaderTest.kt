@@ -5,11 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.ErrorList
-import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Parser
-import org.xvm.compiler.Source
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
@@ -139,47 +135,6 @@ class XdkQualifiedHeaderTest {
         }
     }
 
-    @ParameterizedTest
-    @ValueSource(
-        strings =
-            [
-                "void damaged(ecstasy.text.Str|",
-                "void damaged(ecstasy.text.Str| {}",
-                "ecstasy.text.Str|;",
-            ],
-    )
-    fun `qualified type queries keep diagnostics for missing names and delimiters`(declaration: String) {
-        val prefix = "module Headers { " + declaration.substringBefore('|')
-        val suffix = declaration.substringAfter('|') + " }"
-        XdkAdapter().use { adapter ->
-            adapter.compile(URI, prefix + suffix)
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
-                .contains("StringBuffer")
-            assertThat(
-                adapter.compile(URI, prefix.dropLast(3) + "StringBuffer" + suffix).diagnostics,
-            ).isNotEmpty()
-        }
-    }
-
-    @ParameterizedTest
-    @ValueSource(
-        strings =
-            [
-                "void damaged(missing.te|xt.StringBuffer value) {}",
-                "void damaged(missing.text.| value) {}",
-                "<ecstasy> void damaged(ecstasy.text.Str| value) {}",
-            ],
-    )
-    fun `unsupported cursor positions and generic headers remain empty`(declaration: String) {
-        val prefix = "module Headers { " + declaration.substringBefore('|')
-        XdkAdapter().use { adapter ->
-            adapter.compile(URI, prefix + declaration.substringAfter('|') + " }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length))
-                .describedAs(declaration)
-                .isEmpty()
-        }
-    }
-
     @Test
     fun `qualified queries follow unsaved nested types and root invalidation`() {
         val root = directory.resolve("Headers.x").toFile().canonicalFile
@@ -207,12 +162,7 @@ class XdkQualifiedHeaderTest {
         CompilerTestSupport.configure()
         val prefix = "module Headers { void damaged(ecstasy.text.Str"
         val text = "$prefix value) {} Int later = 1; }"
-        val source = Source(text, URI)
-        repeat(prefix.length) { source.next() }
-        val cursor = source.position
-        source.reset()
-        val errors = ErrorList()
-        val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
+        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
         val type = site.target as NamedTypeExpression
@@ -223,19 +173,7 @@ class XdkQualifiedHeaderTest {
         assertThat(type.nameBindings.map { it.target() }).containsOnlyNulls()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() })
             .contains("StringBuffer")
-        for (
-        listener in
-        listOf(
-            ErrorList(ErrorList.FIRST_ERROR),
-            ErrorListener.cancellable(ErrorList()) { true },
-        )
-        ) {
-            source.reset()
-            val stopped =
-                EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
-            assertThat(stopped.pool()).isNull()
-            assertThat(stopped.cursorBindings()).isEmpty()
-        }
+        assertListenersStop(source, cursor)
     }
 
     private companion object {

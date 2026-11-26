@@ -5,10 +5,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Parser
-import org.xvm.compiler.Source
 import org.xvm.compiler.ast.LambdaExpression
 import org.xvm.compiler.ast.partial.IncompleteStatement
 
@@ -102,16 +100,15 @@ class XdkCandidateProbeTest {
     @ValueSource(strings = ["pair", "new Box<String>"])
     fun `aborted candidate attempts publish no facts and do not poison the next attempt`(callee: String) {
         val call = "$callee(second = text, first = text, §)"
-        listOf(ErrorList(ErrorList.FIRST_ERROR), ErrorListener.cancellable(ErrorList()) { true })
-            .forEach { listener ->
-                val stopped = analyze(call, listener)
-                assertThat(stopped.pool()).isNull()
-                assertThat(stopped.cursorBindings()).isEmpty()
-                assertThat(stopped.callBindings()).isEmpty()
-                val recovered = analyze(call)
-                assertThat(recovered.cursorBindings().getValue(recovered.sites().single()).candidates())
-                    .hasSize(1)
-            }
+        stoppingListeners().forEach { listener ->
+            val stopped = analyze(call, listener)
+            assertThat(stopped.pool()).isNull()
+            assertThat(stopped.cursorBindings()).isEmpty()
+            assertThat(stopped.callBindings()).isEmpty()
+            val recovered = analyze(call)
+            assertThat(recovered.cursorBindings().getValue(recovered.sites().single()).candidates())
+                .hasSize(1)
+        }
     }
 
     private fun assertNoSelectedCall(
@@ -147,12 +144,7 @@ class XdkCandidateProbeTest {
             }
             """.trimIndent()
         val text = marked.replace("§", "")
-        val source = Source(text, "untitled:CandidateProbe.x")
-        repeat(marked.indexOf('§')) { source.next() }
-        val cursor = source.position
-        source.reset()
-        val errors = ErrorList()
-        val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener ?: errors)
+        val (analysis, errors) = analyzeIncomplete(text, "untitled:CandidateProbe.x", marked.indexOf('§'), listener)
         if (listener == null) {
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
             assertThat(analysis.pool()).isNotNull()

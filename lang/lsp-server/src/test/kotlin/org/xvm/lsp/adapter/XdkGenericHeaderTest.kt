@@ -7,7 +7,6 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
-import org.xvm.compiler.Source
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
@@ -183,12 +182,7 @@ class XdkGenericHeaderTest {
         val marked =
             "module Headers { class Owner<Element> { typedef Element as Alias; } void damaged(Owner<String>.Ali§ value) {} }"
         val text = marked.replace("§", "")
-        val source = Source(text, URI)
-        repeat(marked.indexOf('§')) { source.next() }
-        val cursor = source.position
-        source.reset()
-        val errors = ErrorList()
-        val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
+        val (analysis, _, source, cursor) = analyzeIncomplete(text, URI, marked.indexOf('§'))
         val site = analysis.sites().single()
         val syntax = site.target as NamedTypeExpression
         assertThat(syntax.isValidated).isFalse()

@@ -4,12 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.ErrorList
-import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.compiler.Parser
-import org.xvm.compiler.Source
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
@@ -78,13 +74,7 @@ class XdkLiteralRecoveryTest {
                     ).diagnostics,
             ).isEmpty()
             val cached = adapter.compile(URI, prefix + closing.drop(1) + " }")
-            val source = Source(prefix + closing.drop(1) + " }", URI)
-            repeat(prefix.length) { source.next() }
-            val cursor = source.position
-            source.reset()
-            val errors = ErrorList()
-            val analysis =
-                EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
+            val (analysis, errors, source) = analyzeIncomplete(prefix + closing.drop(1) + " }", URI, prefix.length)
             assertThat(analysis.cursorBindings())
                 .describedAs("%s: %s", declaration, errors.errors.map { it.code })
                 .isNotEmpty()
@@ -162,22 +152,8 @@ class XdkLiteralRecoveryTest {
     fun `declaration recovery respects cancellation and a first error budget`() {
         CompilerTestSupport.configure()
         val prefix = "module Editing { void run(Int size = Int64.Ma"
-        val text = "$prefix {} }"
-        val source = Source(text, URI)
-        repeat(prefix.length) { source.next() }
-        val cursor = source.position
-        source.reset()
-        for (
-        errors in
-        listOf(
-            ErrorList(ErrorList.FIRST_ERROR),
-            ErrorListener.cancellable(ErrorList()) { true },
-        )
-        ) {
-            val analysis =
-                EmbeddingSupport
-                    .instance()
-                    .analyzeIncomplete(Source(text, URI), cursor, null, errors)
+        for (errors in stoppingListeners()) {
+            val (analysis) = analyzeIncomplete("$prefix {} }", URI, prefix.length, errors)
             assertThat(analysis.pool()).isNull()
             assertThat(analysis.cursorBindings()).isEmpty()
         }
