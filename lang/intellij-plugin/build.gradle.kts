@@ -479,6 +479,7 @@ dependencies {
             libs.versions.lang.intellij.ide
                 .get(),
         )
+        bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
         bundledPlugin("intellij.testRunner.plugin")
         if (localLsp4ijPlugin.isPresent) {

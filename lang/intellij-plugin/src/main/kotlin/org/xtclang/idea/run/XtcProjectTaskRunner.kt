@@ -6,9 +6,9 @@ import com.intellij.build.events.MessageEvent
 import com.intellij.build.progress.BuildProgress
 import com.intellij.build.progress.BuildProgressDescriptor
 import com.intellij.execution.process.ProcessOutputType
-import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
@@ -79,7 +79,9 @@ class XtcProjectTaskRunner : ProjectTaskRunner() {
         val javaRoots = roots.getSourceRoots(JavaModuleSourceRootTypes.SOURCES)
         if (DumbService.isDumb(module.project)) return javaRoots.isEmpty()
         val content = module.moduleContentScope
-        return !FileTypeIndex.containsFileOfType(JavaFileType.INSTANCE, content) &&
+        // Java's file type, which only an IDE with the Java plugin has: without it, as in PyCharm, no file is Java
+        val java = FileTypeManager.getInstance().findFileTypeByName("JAVA")
+        return (java == null || !FileTypeIndex.containsFileOfType(java, content)) &&
             javaRoots.all { root ->
                 FileTypeIndex.containsFileOfType(XtcFileType, GlobalSearchScopesCore.directoryScope(module.project, root, true))
             } &&

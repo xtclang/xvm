@@ -24,6 +24,9 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
+    <!-- IntelliJ's Gradle plugin, where the IDE has it: its linked builds' roots and syncs; without it, as in PyCharm or
+         CLion, the plugin builds with the embedded compiler -->
+    <depends optional="true" config-file="xtc-gradle.xml">com.intellij.gradle</depends>
     <!-- TextMate plugin for syntax highlighting -->
     <depends>org.jetbrains.plugins.textmate</depends>
     <!-- LSP4IJ provides LSP support for Community Edition -->
@@ -85,10 +88,14 @@
         </action>
     </actions>
 
+    <extensionPoints>
+        <!-- the roots of the builds IntelliJ links to a project besides its own directory: Gradle's, by xtc-gradle.xml -->
+        <extensionPoint name="buildRoots" interface="org.xtclang.idea.lsp.BuildRoots" dynamic="true"/>
+    </extensionPoints>
+
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="org.xtclang.idea.lsp.ServerControlStartup"/>
         <postStartupActivity implementation="org.xtclang.idea.lsp.CompilerBuildUpdates"/>
-        <externalSystemTaskNotificationListener implementation="org.xtclang.idea.lsp.CompilerGradleSync"/>
         <!-- Languages & Frameworks | Ecstasy: one node for every settings page of the plugin, project and application -->
         <applicationConfigurable id="xtc" parentId="language" displayName="Ecstasy"
                                  instance="org.xtclang.idea.lsp.EcstasyConfigurable"/>
