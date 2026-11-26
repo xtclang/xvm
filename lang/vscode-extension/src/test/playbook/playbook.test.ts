@@ -31,7 +31,7 @@ import { editScenario, scenarioOffset, scenarioText, shared } from './shared';
 import { semanticCases, semanticClosureCases } from './semantics';
 import { syntaxCompletionCases } from './syntaxCompletion';
 import { discoveredRootMoveCases, typeMoveCases } from './typeMoves';
-import { xunitCases } from './xunit';
+import { hiddenTestCases, xunitCases } from './xunit';
 import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
 
 suite('XdkAdapter playbook', function () {
@@ -119,6 +119,7 @@ suite('XdkAdapter playbook', function () {
     labelCases();
     constructorFinallyCases();
     automaticBuildModeCases();
+    hiddenTestCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

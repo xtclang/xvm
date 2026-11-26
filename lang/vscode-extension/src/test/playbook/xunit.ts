@@ -6,7 +6,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { testLocation } from '../../test-explorer';
 import { configureModules, TestWatch, watchTests } from './execution';
-import { client, eventually, noErrors, playbook } from './support';
+import { client, diagnosticCode, diagnostics, eventually, noErrors, playbook } from './support';
 
 /** How many embedded runs the server still tracks, by its language service status. */
 async function embeddedRuns(): Promise<number> {
@@ -163,5 +163,36 @@ export function xunitCases(): void {
             tests.dispose();
             await fs.rm(output, { recursive: true, force: true });
         }
+    });
+}
+
+/**
+ * X355, registered after X354 in catalog order: tests that don't show, of a module that has an error and of one whose
+ * dependency has one, which says its dependencies are unavailable, until the errors are fixed.
+ */
+export function hiddenTestCases(): void {
+    playbook('X355', async (workspace, data) => {
+        for (const each of data.modules) await workspace.write(each.file, each.source);
+        await workspace.configure(data.modules.map(each => ({ name: each.module, uri: workspace.uri(each.file).toString(),
+            dependencies: 'dependencies' in each ? each.dependencies : undefined })));
+        const source = (file: string) => data.modules.find(each => each.file === file)!.source;
+        const broken = await workspace.open(data.broken.file);
+        const blocked = await workspace.open(data.blocked.file);
+        await diagnostics(broken.uri, values => values.some(item => item.severity === vscode.DiagnosticSeverity.Error), 'The test module\'s error');
+        await diagnostics(blocked.uri, values => values.some(item => diagnosticCode(item) === data.blocked.code && item.message.includes(data.blocked.unavailable)),
+            'The test module\'s dependencies are unavailable');
+        await watchTests(async tests => {
+            // the listing that has the tests of the module that compiles is of the modules as they are now, whose
+            // other tests no compile has found
+            await tests.listing([data.listed]);
+            for (const item of [data.broken.item, data.blocked.item]) assert.ok(!tests.listed.includes(item), `${item} is listed: ${JSON.stringify(tests.listed)}`);
+
+            await workspace.replace(broken, source(data.broken.file).replace(data.broken.replaceFrom, data.broken.replaceWith));
+            const dependency = await workspace.open(data.dependency.file);
+            await workspace.replace(dependency, source(data.dependency.file).replace(data.dependency.replaceFrom, data.dependency.replaceWith));
+            await noErrors(broken.uri);
+            await noErrors(blocked.uri);
+            await tests.listing([data.broken.item, data.blocked.item], 'The Test Explorer lists the tests once their errors are fixed');
+        });
     });
 }

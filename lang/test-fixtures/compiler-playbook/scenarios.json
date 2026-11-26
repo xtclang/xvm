@@ -11024,6 +11024,65 @@
         ]
       }
     },
+    "X355": {
+      "title": "tests that don't show: a test module that doesn't parse and one whose dependency has an error list no tests, the second says its dependencies are unavailable, and each lists its tests once the error is fixed",
+      "manual": [
+        "A module with only a type error lists its tests: its structure has them, as the server's compile declares them; only a module that doesn't parse, or whose dependency is unavailable, has none."
+      ],
+      "values": {
+        "modules": [
+          {
+            "file": "Fine.x",
+            "module": "Fine",
+            "source": "module Fine {\n    @Test\n    void works() {\n        assert 1 + 1 == 2;\n    }\n}\n"
+          },
+          {
+            "file": "Untestable.x",
+            "module": "Untestable",
+            "source": "module Untestable {\n    @Test\n    void adds() {\n        assert 1 + 1 == 2;\n    }\n\n    Int broken( = 1;\n}\n"
+          },
+          {
+            "file": "Shelf.x",
+            "module": "Shelf",
+            "source": "module Shelf {\n    static Int count() = \"none\";\n}\n"
+          },
+          {
+            "file": "ShelfTest.x",
+            "module": "ShelfTest",
+            "dependencies": [
+              "Shelf"
+            ],
+            "source": "module ShelfTest {\n    package shelf import Shelf;\n\n    @Test\n    void counts() {\n        assert shelf.count() == 1;\n    }\n}\n"
+          }
+        ],
+        "listed": "Fine/works",
+        "broken": {
+          "file": "Untestable.x",
+          "item": "Untestable/adds",
+          "icon": "Test adds@2",
+          "replaceFrom": "broken( =",
+          "replaceWith": "broken() ="
+        },
+        "blocked": {
+          "file": "ShelfTest.x",
+          "item": "ShelfTest/counts",
+          "icon": "Test counts@4",
+          "code": "DEPENDENCY-FAILED",
+          "unavailable": "Dependencies unavailable: Shelf"
+        },
+        "dependency": {
+          "file": "Shelf.x",
+          "replaceFrom": "\"none\"",
+          "replaceWith": "1"
+        }
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "That a module with errors has no test icons is checked in the server's xtc/tests answer, which the icons are drawn from, as an icon's absence on screen proves nothing; the icons that its tests get once the error is fixed are checked in the gutter."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
