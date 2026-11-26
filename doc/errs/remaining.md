@@ -466,6 +466,33 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     no declaration to go to. 16 others, as xenia's `param.ParamType` (9) and `this.List` (3).
     5 untyped: 4 labels of modules that name no label's variable, whose compile has no `Label` type,
     and one property.
+
+  2026-11-26 (`lagergren/semantic-round`): two of the groups left, and the round's two limits, at errs'
+  ce95d17c6c (editor unrecorded 2511, undeclared 251, untyped 5, unjoined 0, elsewhere 0). Fixed, one
+  commit each, each with a case that fails without it, all in `lang/`, no compiler change:
+  - [x] a named argument of another module's method, `freeze(inPlace=True)`, goes to its parameter in
+    that module's source, of the overload its call selects: a dependency compiled from source, a
+    binary's attached source and the bundled libraries' index keep each method's parameter places, by
+    method and name, which the artifact's revision and the member-use tracker's places cover, so a
+    parameter that moves alone compiles the modules whose named arguments go to it. Definition only:
+    references and highlights hold the workspace's sources, and a library's source is read-only (119
+    undeclared; 06299e71d3);
+  - [x] a formal type named in a lambda, `To` in `n -> n.toIntN().as(To)`, binds to the method's or the
+    class's formal type that the lambda's own type parameter captures, through each lambda around it:
+    hover, definition, references and highlights as outside a lambda (61 undeclared, and `Element` as a
+    value in `Service.passableAs(e, Element)`; 9fba0e5773);
+  - [x] a parameter of a constructor with a `finally` block that only lambdas in its body name binds to
+    its declaration, through each capture's origin (e6ccba3277), and a label written with `\u` escapes,
+    `L\u006Fop`, spans what is written in its declaration, a `break` and a `continue` (d0498aec46); no
+    library has either.
+
+  After: rename facts unchanged, 0 unbound, 0 unplaceable, 40 unproven; editor unrecorded 2511,
+  undeclared 70, untyped 5, unjoined 0, elsewhere 0. Left, as above, not worth it now: json's chains,
+  `OuterType` and `httpMethod`; the import paths' segments and the other unrecorded names; 37 calls of
+  a primary constructor and 13 methods that the compiler adds, with no declaration to go to, and 16
+  others; the 5 untyped. Still not done: a rename of a formal type, in a lambda or out of one, which no
+  rename offers for a type parameter, and of a name written with escapes, which a rename edits only
+  where it is written as it is spelled.
 - [x] The 8 unbound occurrences left are code the compiler never compiles, found 2026-11-24:
   - 6 extends arguments, in `OrderedMapSet`, `JsonLogStoreBase`, `JsonProcessorStore` and
     `KeyCredential`. Each class's explicit constructors call the super constructor themselves, so no
