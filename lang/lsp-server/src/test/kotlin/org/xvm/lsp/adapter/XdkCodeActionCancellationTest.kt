@@ -3,7 +3,6 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.awaited
 import java.nio.file.Path
@@ -48,7 +47,6 @@ class XdkCodeActionCancellationTest {
 
     private fun session(body: (XdkAdapter, String) -> Unit) {
         CompilerTestSupport.configure()
-        val support = EmbeddingSupport.instance()
         val uri =
             directory
                 .resolve("App.x")
@@ -57,17 +55,12 @@ class XdkCodeActionCancellationTest {
                 .canonicalFile
                 .toURI()
                 .toString()
-        XdkAdapter(
-            { source, repository, errors -> support.compileModule(source, repository, errors) },
-            { sources, repository, errors ->
-                if (compiles.incrementAndGet() == held) {
-                    entered.countDown()
-                    check(release.awaited())
-                }
-                support.compileModule(sources, repository, errors)
-            },
-            { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
-        ).use { adapter ->
+        hookedAdapter {
+            if (compiles.incrementAndGet() == held) {
+                entered.countDown()
+                check(release.awaited())
+            }
+        }.use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, SOURCE).diagnostics).isEmpty()
             body(adapter, uri)

@@ -16,9 +16,8 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
-import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
-import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
@@ -36,19 +35,13 @@ class FileEventDuringAnalysisTest {
         val workspace = directory.toRealPath().toFile()
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val support = EmbeddingSupport.instance()
         val adapter =
-            XdkAdapter(
-                { source, repository, errors -> support.compileModule(source, repository, errors) },
-                { sources, repository, errors ->
-                    if (entered.count > 0) {
-                        entered.countDown()
-                        check(release.awaited())
-                    }
-                    support.compileModule(sources, repository, errors)
-                },
-                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
-            )
+            hookedAdapter {
+                if (entered.count > 0) {
+                    entered.countDown()
+                    check(release.awaited())
+                }
+            }
         XtcLanguageServer(adapter).use { server ->
             server.connect(mock(LanguageClient::class.java))
             server

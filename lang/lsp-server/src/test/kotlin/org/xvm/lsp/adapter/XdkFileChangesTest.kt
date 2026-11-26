@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkFileChanges
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -203,18 +202,12 @@ class XdkFileChangesTest {
         test: (XdkAdapter, Hold) -> Unit,
     ) {
         val hold = Hold()
-        val support = EmbeddingSupport.instance()
-        XdkAdapter(
-            { source, repository, errors -> support.compileModule(source, repository, errors) },
-            { sources, repository, errors ->
-                if (sources.sourceFile.name == rootName && hold.entered.count > 0) {
-                    hold.entered.countDown()
-                    check(hold.release.awaited())
-                }
-                support.compileModule(sources, repository, errors)
-            },
-            { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
-        ).use { adapter ->
+        hookedAdapter { sources ->
+            if (sources.sourceFile.name == rootName && hold.entered.count > 0) {
+                hold.entered.countDown()
+                check(hold.release.awaited())
+            }
+        }.use { adapter ->
             try {
                 test(adapter, hold)
             } finally {

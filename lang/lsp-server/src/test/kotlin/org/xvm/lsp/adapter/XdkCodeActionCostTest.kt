@@ -3,7 +3,6 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -80,7 +79,6 @@ class XdkCodeActionCostTest {
     @Test
     fun `a proof of an edit in one module compiles the modules that depend on it, whose facts decide it`() {
         CompilerTestSupport.configure()
-        val support = EmbeddingSupport.instance()
         val lib =
             directory
                 .resolve("Lib.x")
@@ -93,14 +91,7 @@ class XdkCodeActionCostTest {
                 .toFile()
                 .canonicalFile
                 .apply { writeText(APP) }
-        XdkAdapter(
-            { source, repository, errors -> support.compileModule(source, repository, errors) },
-            { sources, repository, errors ->
-                compiles.incrementAndGet()
-                support.compileModule(sources, repository, errors)
-            },
-            { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
-        ).use { adapter ->
+        hookedAdapter { compiles.incrementAndGet() }.use { adapter ->
             val uri = app.toURI().toString()
             adapter.replaceSourceModules(listOf(XdkSourceModule("Lib", lib.toURI().toString()), XdkSourceModule("App", uri, setOf("Lib"))))
             val diagnostic = adapter.compile(uri, APP).diagnostics.single()
@@ -131,7 +122,6 @@ class XdkCodeActionCostTest {
 
     private fun session(body: (XdkAdapter, String) -> Unit) {
         CompilerTestSupport.configure()
-        val support = EmbeddingSupport.instance()
         val uri =
             directory
                 .resolve("App.x")
@@ -140,14 +130,7 @@ class XdkCodeActionCostTest {
                 .canonicalFile
                 .toURI()
                 .toString()
-        XdkAdapter(
-            { source, repository, errors -> support.compileModule(source, repository, errors) },
-            { sources, repository, errors ->
-                compiles.incrementAndGet()
-                support.compileModule(sources, repository, errors)
-            },
-            { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
-        ).use { adapter ->
+        hookedAdapter { compiles.incrementAndGet() }.use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, SOURCE).diagnostics).isEmpty()
             body(adapter, uri)

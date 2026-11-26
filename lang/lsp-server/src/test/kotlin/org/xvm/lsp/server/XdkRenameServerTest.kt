@@ -41,8 +41,8 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockingDetails
-import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
+import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
@@ -128,21 +128,13 @@ class XdkRenameServerTest {
         val hold = AtomicBoolean()
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val support = EmbeddingSupport.instance()
         val adapter =
-            XdkAdapter(
-                { source, repository, errors -> support.compileModule(source, repository, errors) },
-                { sources, repository, errors ->
-                    if (hold.compareAndSet(true, false)) {
-                        entered.countDown()
-                        check(release.awaited())
-                    }
-                    support.compileModule(sources, repository, errors)
-                },
-                { source, _, cursor, repository, errors ->
-                    support.analyzeIncomplete(source, cursor, repository, errors)
-                },
-            )
+            hookedAdapter {
+                if (hold.compareAndSet(true, false)) {
+                    entered.countDown()
+                    check(release.awaited())
+                }
+            }
         val server = XtcLanguageServer(adapter)
         server.connect(mock(LanguageClient::class.java))
         try {
@@ -605,21 +597,13 @@ class XdkRenameServerTest {
         val hold = AtomicBoolean()
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val support = EmbeddingSupport.instance()
         val adapter =
-            XdkAdapter(
-                { source, repository, errors -> support.compileModule(source, repository, errors) },
-                { sources, repository, errors ->
-                    if (hold.compareAndSet(true, false)) {
-                        entered.countDown()
-                        check(release.awaited())
-                    }
-                    support.compileModule(sources, repository, errors)
-                },
-                { source, _, cursor, repository, errors ->
-                    support.analyzeIncomplete(source, cursor, repository, errors)
-                },
-            )
+            hookedAdapter {
+                if (hold.compareAndSet(true, false)) {
+                    entered.countDown()
+                    check(release.awaited())
+                }
+            }
         val lines = CopyOnWriteArrayList<String>()
         logged(lines) {
             val server = XtcLanguageServer(adapter)

@@ -3,7 +3,6 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.awaited
@@ -250,17 +249,9 @@ class XdkCodeActionPatternTest {
 
     private fun session(body: (XdkAdapter, File) -> Unit) {
         CompilerTestSupport.configure()
-        val support = EmbeddingSupport.instance()
         val root = directory.toRealPath().toFile()
         File(System.getProperty("xtc.composite.root"), "lang/test-fixtures/tour/cardGame").copyRecursively(root)
-        XdkAdapter(
-            { source, repository, errors -> support.compileModule(source, repository, errors) },
-            { sources, repository, errors ->
-                compiles.incrementAndGet()
-                support.compileModule(sources, repository, errors)
-            },
-            { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
-        ).use { adapter ->
+        hookedAdapter { compiles.incrementAndGet() }.use { adapter ->
             adapter.initializeWorkspace(listOf(root.path))
             body(adapter, root)
         }
