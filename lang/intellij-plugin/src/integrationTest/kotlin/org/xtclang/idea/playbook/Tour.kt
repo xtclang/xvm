@@ -145,7 +145,7 @@ internal class Tour(
         Quiescence.state = { asked { "${probe.activity().ifEmpty { "idle" }}; ${probe.serverState()}" } ?: "the IDE not answering" }
         val trace = TraceProgress(run.resolve("server-trace"))
         Quiescence.progress = { "${trace.events()} server trace events" }
-        Quiescence.report = { line -> progress("$section: $line") }
+        Quiescence.report = { line -> progress("${section.ifEmpty { "the start" }}: $line") }
         Quiescence.watching = true
     }
 
@@ -505,19 +505,36 @@ internal class Tour(
     }
 
     /** Waits up to [timeout] for the project to open in its window. */
-    fun awaitProject(timeout: Duration = HANG) = awaitUi("the project opens", timeout) { ui.projectOpen() }
+    fun awaitProject(timeout: Duration = HANG) = awaitStart("the project opens", timeout) { ui.projectOpen() }
 
     /** Waits up to [timeout] for the IDE's background tasks, such as indexing and the Gradle import, to end. */
     fun awaitIdle(timeout: Duration = HANG) {
         var busy = ""
-        awaitUi("the IDE's background tasks end", timeout, { "Still running: $busy" }) {
+        awaitStart("the IDE's background tasks end", timeout, { "Still running: $busy" }) {
             busy = ui.busy()
             busy.isEmpty()
         }
     }
 
     /** Waits up to [timeout] for the language server to start. */
-    fun awaitServer(timeout: Duration = HANG) = awaitUi("the Ecstasy language server starts", timeout) { ui.ready() }
+    fun awaitServer(timeout: Duration = HANG) = awaitStart("the Ecstasy language server starts", timeout) { ui.ready() }
+
+    /**
+     * Waits as [awaitUi] does, up to [timeout], until [condition] holds, which [what] names, as the tour starts, and
+     * fails with [errorMessage]; it says so about once a minute, as [within] does, with what is in progress.
+     */
+    private fun awaitStart(
+        what: String,
+        timeout: Duration,
+        errorMessage: (() -> String)? = null,
+        condition: () -> Boolean,
+    ) {
+        val report = WaitReport(what)
+        awaitUi(what, timeout, errorMessage) { condition().also { done -> if (!done) report.due(::underWay) } }
+    }
+
+    /** What is in progress, as [Quiescence.activity] says, or the project's opening before its window shows. */
+    private fun underWay(): String = if (asked { probe.projectOpen() } == true) Quiescence.activity() else "the IDE, opening the project"
 }
 
 /**
@@ -1034,9 +1051,8 @@ internal fun within(
     what: String? = null,
     condition: () -> Boolean,
 ): Boolean {
-    val begun = TimeSource.Monotonic.markNow()
-    val deadline = begun + timeout
-    var report = REPORT
+    val deadline = TimeSource.Monotonic.markNow() + timeout
+    val report = WaitReport(listOfNotNull(what, Quiescence.doing.ifEmpty { null }).joinToString(", in ").ifEmpty { "a condition" })
     var idleSince: TimeSource.Monotonic.ValueTimeMark? = null
     // what is in progress, with the server's trace, and since when it has stood still: in progress means progress made
     var progress = ""
@@ -1071,12 +1087,7 @@ internal fun within(
             Quiescence.stuck = "nothing that was in progress moved for $IDLE: $now"
             return false
         }
-        // a wait that goes on says so, about once a minute, as the VS Code tour's waits do
-        if (begun.elapsedNow() >= report) {
-            val waited = listOfNotNull(what, Quiescence.doing.ifEmpty { null }).joinToString(", in ").ifEmpty { "a condition" }
-            Quiescence.report("waiting ${begun.elapsedNow().inWholeSeconds} s for: $waited; under way: ${activity.ifEmpty { "nothing" }}")
-            report += REPORT
-        }
+        report.due { activity }
         Thread.sleep(250)
     }
 }
@@ -1097,6 +1108,24 @@ private val IDLE = 60.seconds
 
 /** How often a wait that has not ended says what it waits for, as the VS Code tour's waits do. */
 private val REPORT = 60.seconds
+
+/**
+ * What a wait that goes on says, about once a minute since it began, as the VS Code tour's waits do: how long it has
+ * waited, for [what], and what is in progress, which [Quiescence.report] writes into the run's progress.
+ */
+private class WaitReport(
+    private val what: String,
+) {
+    private val begun = TimeSource.Monotonic.markNow()
+    private var next = REPORT
+
+    /** Reports, once another minute has passed since the last report, with [underWay] as what is in progress. */
+    fun due(underWay: () -> String) {
+        if (begun.elapsedNow() < next) return
+        Quiescence.report("waiting ${begun.elapsedNow().inWholeSeconds} s for: $what; under way: ${underWay().ifEmpty { "nothing" }}")
+        next += REPORT
+    }
+}
 
 /**
  * What the tour's waits ask about the IDE between their polls: whether anything is in progress that could still make
