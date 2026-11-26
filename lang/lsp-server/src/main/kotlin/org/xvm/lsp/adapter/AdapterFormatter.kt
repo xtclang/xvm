@@ -238,26 +238,14 @@ class AdapterFormatter {
 
         // 5. Closing paren -> match the opening paren's construct
         if (trimmed.startsWith(")")) {
-            val enclosing =
-                generateSequence(node) { it.parent }
-                    .firstOrNull { ancestor ->
-                        val firstChild = ancestor.children.firstOrNull()
-                        firstChild != null &&
-                            firstChild.type == "(" &&
-                            ancestor.startLine < lineIndex
-                    }
+            val enclosing = parenthesized(node, lineIndex)
             if (enclosing != null) {
                 return countIndentDepth(enclosing) * config.indentSize
             }
         }
 
         // 5b. Interior of multi-line paren construct -> continuation indent from owner
-        val parenAncestor =
-            generateSequence(node) { it.parent }
-                .firstOrNull { ancestor ->
-                    val firstChild = ancestor.children.firstOrNull()
-                    firstChild != null && firstChild.type == "(" && ancestor.startLine < lineIndex
-                }
+        val parenAncestor = parenthesized(node, lineIndex)
         if (parenAncestor != null) {
             return countIndentDepth(parenAncestor) * config.indentSize + config.indentSize
         }
@@ -295,6 +283,16 @@ class AdapterFormatter {
     private fun closedBy(node: AdapterNode): AdapterNode? =
         generateSequence(node) { it.parent }
             .firstOrNull { it.type in blockTypes || it.type in classBodyTypes || it.type in switchTypes }
+
+    /** The nearest of [node] and its ancestors that opens with a parenthesis and starts on a line before [line]. */
+    private fun parenthesized(
+        node: AdapterNode,
+        line: Int,
+    ): AdapterNode? =
+        generateSequence(node) { it.parent }.firstOrNull { ancestor ->
+            val firstChild = ancestor.children.firstOrNull()
+            firstChild != null && firstChild.type == "(" && ancestor.startLine < line
+        }
 
     /**
      * Count the number of indent-parent ancestors to determine structural nesting depth. Includes
@@ -504,12 +502,7 @@ class AdapterFormatter {
             } else {
                 // Parameter lists, argument lists and conditions start with an opening
                 // parenthesis. Only align to an ancestor that starts on an earlier line.
-                val enclosing =
-                    generateSequence(node) { it.parent }
-                        .firstOrNull { ancestor ->
-                            val firstChild = ancestor.children.firstOrNull()
-                            firstChild != null && firstChild.type == "(" && ancestor.startLine < line
-                        } ?: return emptyList()
+                val enclosing = parenthesized(node, line) ?: return emptyList()
                 enclosing.startLine
             }
 
