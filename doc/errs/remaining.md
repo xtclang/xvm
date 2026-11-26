@@ -803,7 +803,12 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   passed in `run-LgTm8x`; the branch did not change its path. Unknown.
 - [ ] Found 2026-11-26 in a one-case IntelliJ run (X1, with another container running): the test Driver's first call
   into the IDE timed out 9 s after start (DriverIllegalStateException, TimeoutException), before the case ran; X1–X3
-  passed in the next run. A startup wait that machine load can outlast.
+  passed in the next run. It came twice more the same evening, in the shared queue's validation runs (one in each
+  slot), so it is no rare event: a startup wait that machine load can outlast, to find and fix.
+- [ ] Found 2026-11-26: a checkout's copied-back VS Code reports include every run the slot's work volume keeps,
+  other checkouts' too, and since the shared queue from both slots; a script that took the newest copied run as its
+  own took another agent's tour run (`run-y0hT9c` in wt-video). Fix: copy back only the runs this container made, as
+  `copy_runs` does for IntelliJ.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
