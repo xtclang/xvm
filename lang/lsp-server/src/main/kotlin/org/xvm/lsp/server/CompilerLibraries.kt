@@ -1,10 +1,9 @@
 package org.xvm.lsp.server
 
 import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
+import org.xvm.lsp.protocol.LibrarySettings
 import java.io.File
 import java.io.IOException
 import java.net.URI
@@ -60,84 +59,21 @@ internal data class CompilerLibraries(
     }
 
     companion object {
+        /**
+         * The library settings of [raw], the compiler's configuration section, or null for none: their paths, relative
+         * ones against the single folder of [workspaceUris] ([LibrarySettings.files]), with each attachment's roots
+         * existing source directories.
+         */
         fun read(
             raw: Any?,
             workspaceUris: List<String>,
         ): CompilerLibraries? {
             val config = Gson().toJsonTree(raw)?.takeIf { it.isJsonObject }?.asJsonObject ?: return null
-            val value = config["libraries"]?.takeUnless { it.isJsonNull } ?: return null
-            require(value.isJsonObject) {
-                "libraries must be an object"
+            val files = LibrarySettings.read(config[LibrarySettings.KEY])?.files(workspaceUris.singleOrNull()?.let(::URI)) ?: return null
+            require(files.sourceAttachments.values.all { roots -> roots.all(File::isDirectory) }) {
+                "Attachment roots must be existing source directories"
             }
-            val settings = value.asJsonObject
-            require(settings.keySet().all { it in setOf("modulePath", "sourceAttachments") }) {
-                "Unknown library setting"
-            }
-
-            fun paths(values: JsonElement): List<File> {
-                require(values.isJsonArray) {
-                    "Library paths must be an array"
-                }
-                val paths =
-                    values.asJsonArray.map { element ->
-                        require(
-                            element.isJsonPrimitive && element.asJsonPrimitive.isString &&
-                                element.asString.isNotBlank(),
-                        ) {
-                            "Library paths must be non-blank strings"
-                        }
-                        val path = URI.create(element.asString)
-                        val resolved =
-                            if (path.isAbsolute) {
-                                path
-                            } else {
-                                require(workspaceUris.size == 1) {
-                                    "Relative library paths require exactly one workspace folder"
-                                }
-                                URI(workspaceUris.single().trimEnd('/') + "/").resolve(path)
-                            }
-                        require(resolved.scheme == "file" && resolved.query == null && resolved.fragment == null) {
-                            "Library paths must use local file URIs"
-                        }
-                        File(resolved).canonicalFile
-                    }
-                require(paths.distinct().size == paths.size) {
-                    "Duplicate library path"
-                }
-                return paths
-            }
-            val modules = settings["modulePath"]?.takeUnless { it.isJsonNull }?.let(::paths)
-            val attachments =
-                settings["sourceAttachments"]
-                    ?.let { entries ->
-                        require(entries.isJsonArray) {
-                            "sourceAttachments must be an array"
-                        }
-                        entries.asJsonArray
-                            .map { entry ->
-                                require(entry.isJsonObject) {
-                                    "Each source attachment must be an object"
-                                }
-                                val item: JsonObject = entry.asJsonObject
-                                val name = item["module"]
-                                require(
-                                    name?.isJsonPrimitive == true && name.asJsonPrimitive.isString &&
-                                        name.asString.isNotBlank(),
-                                ) {
-                                    "Source attachment needs a module name"
-                                }
-                                val roots = paths(requireNotNull(item["roots"]) { "Source attachment needs ordered roots" })
-                                require(roots.isNotEmpty() && roots.all(File::isDirectory)) {
-                                    "Attachment roots must be existing source directories"
-                                }
-                                name.asString to roots
-                            }.also { values ->
-                                require(values.map { it.first }.distinct().size == values.size) {
-                                    "Duplicate source attachment module"
-                                }
-                            }.toMap()
-                    }.orEmpty()
-            return CompilerLibraries(modules, attachments)
+            return CompilerLibraries(files.modulePath, files.sourceAttachments)
         }
     }
 }

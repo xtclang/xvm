@@ -7,6 +7,8 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
+import org.xvm.lsp.protocol.LibraryAttachment
+import org.xvm.lsp.protocol.LibrarySettings
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.nio.file.Path
@@ -89,8 +91,8 @@ internal class CompilerLibrariesPanel(
         )
     }
 
-    fun options(): LibraryOptions =
-        LibraryOptions(
+    fun options(): LibrarySettings =
+        LibrarySettings(
             if (inherited.isSelected) null else binaries.paths,
             (0 until rows.rowCount)
                 .map { row -> rows.getValueAt(row, 0).toString().trim() to rows.getValueAt(row, 1).toString().trim() }
@@ -102,7 +104,7 @@ internal class CompilerLibrariesPanel(
         attachments.cellEditor?.stopCellEditing()
     }
 
-    fun reset(options: LibraryOptions) {
+    fun reset(options: LibrarySettings) {
         attachments.cellEditor?.cancelCellEditing()
         inherited.isSelected = options.modulePath == null
         binaries.reset(options.modulePath.orEmpty())
