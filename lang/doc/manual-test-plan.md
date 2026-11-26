@@ -4090,6 +4090,15 @@ read-only source.
 |---|---|---|
 | X356 | Write `Symbols.x`, a module whose method takes a `Map`. Go to Symbol `getOrDefault`, and open the item. | One item is `getOrDefault` in `ecstasy/maps/Map.x`, which opens read-only (VS Code: the server's `ecstasy-library` content) with `Value getOrDefault(Key key` in it. |
 
+### Organize Imports (X357)
+
+Organize Imports (VS Code **Shift+Alt+O**; IntelliJ **Optimize Imports**, Ctrl+Alt+O) removes the imports that nothing
+uses and sorts the rest, in one edit.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X357 | Write `Imports.x`, a module that imports `ecstasy.collections.NaturalHasher`, `ecstasy.collections.ReverseList` and `ecstasy.collections.CaseInsensitive`, in that order, and uses the first and the last. Organize Imports. | One Organize Imports action is offered (VS Code); it leaves `CaseInsensitive` and `NaturalHasher`, in that order, without `ReverseList`, and the module compiles. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and

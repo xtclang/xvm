@@ -141,3 +141,19 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
     });
 
 }
+
+/** X357, registered after X356 in catalog order: Organize Imports removes an unused import and sorts the rest. */
+export function organizeImportsCases(): void {
+    playbook('X357', async (workspace, data) => {
+        const document = await workspace.module(data.file, data.source, data.module);
+        const kind = vscode.CodeActionKind.SourceOrganizeImports;
+        const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>('vscode.executeCodeActionProvider',
+            document.uri, new vscode.Range(0, 0, 0, 0), kind.value) ?? [];
+        assert.strictEqual(actions.filter(action => action.kind && kind.contains(action.kind)).length, 1, JSON.stringify(actions.map(action => action.title)));
+        // as Shift+Alt+O runs it, in one edit
+        await vscode.window.showTextDocument(document, { preview: false });
+        await vscode.commands.executeCommand('editor.action.organizeImports');
+        await eventually(async () => document.getText(), text => text === data.organized, 'Organize Imports organizes the imports');
+        await noErrors(document.uri);
+    });
+}

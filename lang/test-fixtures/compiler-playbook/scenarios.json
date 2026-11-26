@@ -11099,6 +11099,22 @@
         "limitations": []
       }
     },
+    "X357": {
+      "title": "Organize Imports removes an unused import and sorts the rest, in one edit, and the module still compiles",
+      "manual": [
+        "The unused import's gray rendering before the action is checked manually."
+      ],
+      "values": {
+        "file": "Imports.x",
+        "module": "Imports",
+        "source": "module Imports {\n    import ecstasy.collections.NaturalHasher;\n    import ecstasy.collections.ReverseList;\n    import ecstasy.collections.CaseInsensitive;\n\n    NaturalHasher<Int> hasher() = new NaturalHasher<Int>();\n    Boolean starts(String a, String b) = CaseInsensitive.stringStartsWith(a, b);\n}\n",
+        "organized": "module Imports {\n    import ecstasy.collections.CaseInsensitive;\n    import ecstasy.collections.NaturalHasher;\n\n    NaturalHasher<Int> hasher() = new NaturalHasher<Int>();\n    Boolean starts(String a, String b) = CaseInsensitive.stringStartsWith(a, b);\n}\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

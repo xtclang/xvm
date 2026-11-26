@@ -52,6 +52,7 @@ class ParityScenarios(
         automaticBuildModeCases()
         hiddenTestCases()
         librarySymbolCases()
+        organizeImportsCases()
     }
 
     internal fun case(
