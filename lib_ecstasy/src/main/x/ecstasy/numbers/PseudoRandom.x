@@ -2,7 +2,7 @@
  * An implementation of the lightweight xorshift* (xor / shift / multiply) pseudo-random number
  * generator.
  */
-service PseudoRandom(UInt64 seed)
+service PseudoRandom(UInt64 seed = 0)
         implements Random {
     /**
      * Construct the PseudoRandom generator with the specified (optional) seed.
