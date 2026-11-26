@@ -37,6 +37,12 @@ class LibraryConfigurationTest {
     }
 
     @Test
+    fun `a stray key under the libraries is left out, so that the settings still open`() {
+        val content = """{"xtc":{"compiler":{"libraries":{"modulePath":["lib"],"stray":true}}}}"""
+        assertThat(LibraryConfiguration.read(content)).isEqualTo(LibrarySettings(listOf("lib")))
+    }
+
+    @Test
     fun `invalid missing aliased and remote paths cannot be persisted`() {
         Files.createDirectories(directory.resolve("sources"))
         listOf(listOf("missing"), listOf("https://example.org/library.xtc"), listOf("sources", "./sources")).forEach { paths ->

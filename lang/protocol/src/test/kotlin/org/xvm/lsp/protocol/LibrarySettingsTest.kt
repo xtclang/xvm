@@ -33,6 +33,14 @@ class LibrarySettingsTest {
     }
 
     @Test
+    fun `a reader that takes unknown keys gets them, and the rest of the settings`() {
+        val unknown = mutableListOf<Set<String>>()
+        assertThat(LibrarySettings.read(JsonParser.parseString("""{"modulePath":["lib"],"paths":[]}""")) { unknown += it })
+            .isEqualTo(LibrarySettings(listOf("lib")))
+        assertThat(unknown).containsExactly(setOf("paths"))
+    }
+
+    @Test
     fun `paths name canonical local files, a relative one in the workspace folder`() {
         val base = directory.toUri()
         val files =

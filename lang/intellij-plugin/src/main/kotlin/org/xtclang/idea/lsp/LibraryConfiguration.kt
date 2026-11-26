@@ -3,6 +3,7 @@ package org.xtclang.idea.lsp
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.intellij.openapi.diagnostic.logger
 import org.xvm.lsp.protocol.LibrarySettings
 import java.net.URI
 
@@ -23,7 +24,12 @@ internal object LibraryConfiguration {
                     .getAsJsonObject("xtc")
                     ?.getAsJsonObject("compiler")
                     ?.get(LibrarySettings.KEY)
-            }?.let(LibrarySettings::read) ?: LibrarySettings()
+            }?.let { libraries ->
+                // a key that is no setting, which this never writes, is left out rather than keep the page from opening
+                LibrarySettings.read(libraries) { keys ->
+                    logger<LibraryConfiguration>().warn("Ignoring unknown library settings: ${keys.joinToString()}")
+                }
+            } ?: LibrarySettings()
 
     /**
      * [content] with [options] as its library settings, once each of their paths, relative ones against [base], names
