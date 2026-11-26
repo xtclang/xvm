@@ -5,7 +5,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -85,12 +84,7 @@ class XdkL63SharedActionsTest {
                 assertThat(actions).hasSize(1)
                 val edit = requireNotNull(actions.single().edit)
                 assertThat(edit.versioned).isTrue()
-
-                fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-                val changed =
-                    edit.changes.getValue(uri).sortedByDescending { offset(it.range.start) }.fold(text) { current, change ->
-                        current.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-                    }
+                val changed = apply(text, edit, uri)
                 assertThat(changed).isEqualTo(data["expected"].asString)
                 assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             }

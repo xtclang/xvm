@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkRename
@@ -162,10 +161,7 @@ class XdkSafeDeleteTest {
         // the workspace's modules are all that it checked; others elsewhere may call it
         assertThat(actions.single().outsideUses).isEqualTo("display")
         val edit = requireNotNull(actions.single().edit)
-        val change = edit.changes.getValue(hand.toURI().toString()).single()
-
-        fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-        val changed = text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
+        val changed = apply(text, listOf(edit.changes.getValue(hand.toURI().toString()).single()))
         // display's lines go, and the private heading after them stays
         val display = text.indexOf("    void display()")
         assertThat(changed).isEqualTo(text.removeRange(display, text.indexOf("\n    }\n", display) + "\n    }\n".length))
@@ -267,10 +263,7 @@ class XdkSafeDeleteTest {
                 assertThat(actions.single().outsideUses).isEqualTo(outsideUses)
                 val edit = requireNotNull(actions.single().edit)
                 assertThat(edit.versioned).isTrue()
-                val change = edit.changes.getValue(uri).single()
-
-                fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-                val changed = text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
+                val changed = apply(text, listOf(edit.changes.getValue(uri).single()))
                 assertThat(changed).doesNotContain("unused").contains("return kept();")
                 assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             }

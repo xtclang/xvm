@@ -33,7 +33,7 @@ class XdkLocalInitializerActionsTest {
             """.trimIndent()
         query(marked) { adapter, uri, text, actions ->
             val action = actions.single { it.title.endsWith("to local variable") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).isEqualTo(
                 text.replace(
                     "$type result = $expression;",
@@ -57,7 +57,7 @@ class XdkLocalInitializerActionsTest {
             """.trimIndent().replace("\n", "\r\n")
         query(marked) { adapter, uri, text, actions ->
             val action = actions.single { it.title.endsWith("to local variable") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).contains("Int extractedValue1 = extractedValue /* 😀 */ + 1;\r\n        Int result = extractedValue1;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -129,7 +129,7 @@ class XdkLocalInitializerActionsTest {
         ) { adapter, uri, text, actions ->
             val action = actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_INLINE }
             assertThat(action.title).isEqualTo("Inline local variable into initializer")
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).isEqualTo(
                 text.replace(
                     "$type value = $expression;\n        $type result = value;",
@@ -190,13 +190,7 @@ class XdkLocalInitializerActionsTest {
         val start = marked.indexOf('§')
         val end = marked.lastIndexOf('§').let { if (it == start) it else it - 1 }
         val text = marked.replace("§", "")
-        val file =
-            directory
-                .resolve("Extract.x")
-                .toFile()
-                .apply { writeText(text) }
-                .canonicalFile
-        val uri = file.toURI().toString()
+        val uri = directory.source("Extract", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
