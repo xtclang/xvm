@@ -9,12 +9,7 @@ import java.util.concurrent.CompletableFuture
  */
 internal fun <T, R> CompletableFuture<T>.mapCancellable(transform: (T) -> R): CompletableFuture<R> {
     val source = this
-    val mapped =
-        object : CompletableFuture<R>() {
-            // this one first: the source's cancellation completes it otherwise, with the failure it makes of that
-            override fun cancel(mayInterruptIfRunning: Boolean): Boolean =
-                super.cancel(mayInterruptIfRunning).also { source.cancel(mayInterruptIfRunning) }
-        }
+    val mapped = cancellingWith<R>(source)
     thenApply(transform).whenComplete { value, failure ->
         if (failure == null) mapped.complete(value) else mapped.completeExceptionally(failure)
     }
@@ -29,12 +24,7 @@ internal fun <T, R> CompletableFuture<T>.mapCancellable(transform: (T) -> R): Co
  */
 internal fun <T> CompletableFuture<T>.mapFailureCancellable(transform: (Throwable) -> Throwable): CompletableFuture<T> {
     val source = this
-    val mapped =
-        object : CompletableFuture<T>() {
-            // this one first: the source's cancellation completes it otherwise, with the failure it makes of that
-            override fun cancel(mayInterruptIfRunning: Boolean): Boolean =
-                super.cancel(mayInterruptIfRunning).also { source.cancel(mayInterruptIfRunning) }
-        }
+    val mapped = cancellingWith<T>(source)
     whenComplete { value, failure ->
         if (failure == null) mapped.complete(value) else mapped.completeExceptionally(runCatching { transform(failure) }.getOrElse { it })
     }
@@ -62,3 +52,11 @@ internal fun <T, R> CompletableFuture<T>.composeCancellable(transform: (T) -> Co
     }
     return result
 }
+
+/** A future whose cancellation, asked of it, is asked of [source] too, as the owner of the query's cancellation. */
+private fun <T> cancellingWith(source: CompletableFuture<*>): CompletableFuture<T> =
+    object : CompletableFuture<T>() {
+        // this one first: the source's cancellation completes it otherwise, with the failure it makes of that
+        override fun cancel(mayInterruptIfRunning: Boolean): Boolean =
+            super.cancel(mayInterruptIfRunning).also { source.cancel(mayInterruptIfRunning) }
+    }
