@@ -272,8 +272,7 @@ class XtcDebugServerTest {
         val early = server.dataBreakpointInfo(DataBreakpointInfoArguments().apply { name = "count" }).awaited()
         assertThat(early.dataId).isNull()
         assertThat(early.description).isEqualTo(XtcDebugServer.ONLY_FIELDS)
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
 
         val info =
             server
@@ -317,9 +316,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `a stop reports every fiber stopped, with threads and stacks from the program, until continue`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         val stopped = client.stops.single()
         assertThat(stopped.threadId).isEqualTo(12)
@@ -358,9 +355,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `a stopped frame's locals and the fields of its objects come from the program, a part at a time when asked`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         val scope =
             server
@@ -398,15 +393,8 @@ class XtcDebugServerTest {
 
     @Test
     fun `a request's hex format, or else the session's, which xtc valueFormat sets, shows integers in hexadecimal`() {
-        server.initialize(
-            InitializeRequestArguments().apply {
-                adapterID = "xtc"
-                supportsInvalidatedEvent = true
-            },
-        )
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        initializeInvalidating()
+        launchStopped()
 
         fun variables(format: Boolean?) =
             server
@@ -436,9 +424,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `setVariable changes a variable to an expression's value, and one that it cannot take says why`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         fun set(expression: String) =
             server.setVariable(
@@ -456,9 +442,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `completions are asked for at the offset of the console's line and column, and replace what is typed of the name`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         fun complete(
             text: String,
@@ -493,9 +477,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `an array's variable says how many elements it has, and a client reads them a part at a time`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         val squares =
             server
@@ -529,9 +511,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `an object's computed properties and its toString() are lazy variables, whose reference runs their code`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         val fields = server.variables(VariablesArguments().apply { variablesReference = 8 }).awaited().variables
         assertThat(fields.map { it.name to (it.presentationHint?.lazy == true) })
@@ -553,8 +533,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `a stack trace, scopes or exception that cannot be read fail with the reason, not as an internal error`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
         runs.events.stopped(StopState("exception", null, 12, listOf(4)))
         runs.unreadable = "The program's worker has ended."
 
@@ -565,9 +544,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `next, stepIn and stepOut step the stopped fiber, and a fiber that does not wait cannot be stepped`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         server.next(NextArguments().apply { threadId = 12 }).awaited()
         server.stepIn(StepInArguments().apply { threadId = 12 }).awaited()
@@ -579,9 +556,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `with singleThread, continue and the steps run only the thread's fiber, while the others stay stopped`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         val continued =
             server
@@ -641,9 +616,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `a stop that comes before a step's answer goes out after the step's response`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
         val answer = CompletableFuture<Boolean>()
         runs.stepAnswer = answer
 
@@ -663,9 +636,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `a stop while continue is handled goes out once the endpoint has answered it`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         val stopsAtResponse = CompletableFuture<Int>()
         server.receiving(7) {
@@ -681,8 +652,7 @@ class XtcDebugServerTest {
     @Test
     fun `exception filters set before the start apply from the first line, later ones at once, and an exception stop has its text`() {
         server.setExceptionBreakpoints(SetExceptionBreakpointsArguments().apply { filters = arrayOf(XtcDebugServer.UNCAUGHT_EXCEPTIONS) })
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
         assertThat(
             runs.ready
                 .toCompletableFuture()
@@ -709,8 +679,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `a breakpoint's condition, hit condition and log message reach the program, and a logpoint's message is console output`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
 
         server
             .setBreakpoints(
@@ -746,8 +715,7 @@ class XtcDebugServerTest {
         val messages = CopyOnWriteArrayList<JsonObject>()
         val endpoint = DebugMessageEndpoint(server) { messages.add(JsonParser.parseString(it).asJsonObject) }
         endpoint.receive(request(1, "initialize", """{"adapterID": "xtc"}"""))
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
         val plain = server.setBreakpoints(breakpoints("/work/Cards.x", 12)).awaited()
         val condition = "rank == Rank.Queeen"
         val conditional = breakpoints("/work/Hand.x", 9, 21).apply { breakpoints.last().condition = condition }
@@ -787,8 +755,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `an exception filter's condition names the exception classes it stops at, and one that is not names leaves it off`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
 
         val answer =
             server
@@ -821,8 +788,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `exceptionInfo tells of the exception a fiber stopped the program at, and fails for a fiber that stopped at none`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
         runs.events.stopped(StopState("exception", "IllegalArgument: bad 5", 12, emptyList()))
 
         val info = server.exceptionInfo(ExceptionInfoArguments().apply { threadId = 12 }).awaited()
@@ -906,8 +872,7 @@ class XtcDebugServerTest {
                 FrameState(2, "App.run", "/work/App.x", 5, "App", "App.x"),
             )
         runs.libraries = mapOf((ECSTASY to COLLECTION) to "/bundled/ecstasy/collections/Collection.x")
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
 
         val frames = server.stackTrace(StackTraceArguments().apply { threadId = 12 }).awaited().stackFrames
         assertThat(frames.map { it.source.path to it.source.name })
@@ -927,8 +892,7 @@ class XtcDebugServerTest {
             )
         runs.libraries = mapOf((ECSTASY to container) to "/bundled/$container")
         runs.declarations = mapOf(Triple(ECSTASY, container, "Control.invoke") to 429)
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
 
         val frames = server.stackTrace(StackTraceArguments().apply { threadId = 12 }).awaited().stackFrames
         assertThat(frames.map { it.source.path }).containsExactly("/work/App.x", "/bundled/$container", "/bundled/$container")
@@ -946,8 +910,7 @@ class XtcDebugServerTest {
         val capabilities = server.initialize(InitializeRequestArguments()).awaited()
         assertThat(capabilities.supportsModulesRequest).isTrue()
         assertThat(capabilities.supportsLoadedSourcesRequest).isTrue()
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
 
         // a page of one, the second
         val modules =
@@ -978,8 +941,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `the calls of a stopped frame's line are step targets, and stepIn with a target steps into that call`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
 
         val targets = server.stepInTargets(StepInTargetsArguments().apply { frameId = 1 }).awaited().targets
         assertThat(targets.map { it.id to it.label }).containsExactly(31 to "add(Int, Int)", 32 to "twice(Int)")
@@ -1012,8 +974,7 @@ class XtcDebugServerTest {
     @Test
     fun `a frame that can restart says so, and restartFrame restarts it, or fails for one that cannot`() {
         runs.frames = listOf(FrameState(1, "App.twice", "/work/App.x", 11, restartable = true), FrameState(2, "App.run", "/work/App.x", 5))
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
         val frames = server.stackTrace(StackTraceArguments().apply { threadId = 12 }).awaited().stackFrames
         assertThat(frames.map { it.canRestart }).containsExactly(true, false)
 
@@ -1168,9 +1129,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `a watch, a hover or a console line in a stopped frame evaluates a path, and what cannot be evaluated says why`() {
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         for (context in listOf(EvaluateArgumentsContext.WATCH, EvaluateArgumentsContext.HOVER, EvaluateArgumentsContext.REPL)) {
             val answer = server.evaluate(evaluate("point.x", context).apply { frameId = 1 }).awaited()
@@ -1188,15 +1147,8 @@ class XtcDebugServerTest {
 
     @Test
     fun `a console line that a read refuses runs as code, for at most the console's limit, and then the variables are invalidated`() {
-        server.initialize(
-            InitializeRequestArguments().apply {
-                adapterID = "xtc"
-                supportsInvalidatedEvent = true
-            },
-        )
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        initializeInvalidating()
+        launchStopped()
 
         val answer = server.evaluate(evaluate("box.bump(n)", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
         assertThat(runs.ran).containsExactly(Ran(1, "box.bump(n)", XtcDebugServer.CONSOLE_LIMIT, program = false))
@@ -1217,12 +1169,7 @@ class XtcDebugServerTest {
 
     @Test
     fun `a launch with evaluationRunsProgram lets the whole program run while console code does, and then everything is invalidated`() {
-        server.initialize(
-            InitializeRequestArguments().apply {
-                adapterID = "xtc"
-                supportsInvalidatedEvent = true
-            },
-        )
+        initializeInvalidating()
         server.configurationDone(null)
         server.launch(mutableMapOf("module" to "App", "evaluationRunsProgram" to true)).awaited()
         runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
@@ -1319,17 +1266,14 @@ class XtcDebugServerTest {
         assertFailsWith(lazyValue) { server.attach(mutableMapOf("port" to 5005, XtcDebugServer.LAZY_VALUE_TIME_LIMIT to true)) }
         assertThat(runs.ran).isEmpty()
 
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
+        launchApp()
         assertThat(runs.target.moduleName).isEqualTo("App")
     }
 
     @Test
     fun `what code run from the console throws, or why it does not compile, is its answer, and a client without invalidated gets none`() {
         server.initialize(InitializeRequestArguments().apply { adapterID = "xtc" })
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         val answer = server.evaluate(evaluate("nope()", EvaluateArgumentsContext.REPL).apply { frameId = 1 })
         runs.runAnswers.single().completeExceptionally(IllegalStateException("Could not find a matching method or function \"nope\""))
@@ -1342,9 +1286,7 @@ class XtcDebugServerTest {
         val messages = CopyOnWriteArrayList<JsonObject>()
         val endpoint = DebugMessageEndpoint(server) { messages.add(JsonParser.parseString(it).asJsonObject) }
         endpoint.receive(request(1, "initialize", """{"adapterID": "xtc"}"""))
-        server.configurationDone(null)
-        server.launch(mutableMapOf("module" to "App")).awaited()
-        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
+        launchStopped()
 
         endpoint.receive(request(7, "evaluate", """{"expression": "spin()", "frameId": 1, "context": "repl"}"""))
         val run = runs.runAnswers.single()
@@ -1503,6 +1445,27 @@ class XtcDebugServerTest {
                     },
                 ).awaited()
         assertThat(response.breakpoints.single().message).isEqualTo(XtcDebugServer.NO_SOURCE)
+    }
+
+    /** Initializes the session for a client that supports the invalidated event, as LSP4IJ and VS Code do. */
+    private fun initializeInvalidating() =
+        server.initialize(
+            InitializeRequestArguments().apply {
+                adapterID = "xtc"
+                supportsInvalidatedEvent = true
+            },
+        )
+
+    /** Ends the configuration and launches the module App. */
+    private fun launchApp() {
+        server.configurationDone(null)
+        server.launch(mutableMapOf("module" to "App")).awaited()
+    }
+
+    /** Launches the module App, which then stops at breakpoint 4 on the fiber 12. */
+    private fun launchStopped() {
+        launchApp()
+        runs.events.stopped(StopState("breakpoint", null, 12, listOf(4)))
     }
 
     private fun breakpoints(
