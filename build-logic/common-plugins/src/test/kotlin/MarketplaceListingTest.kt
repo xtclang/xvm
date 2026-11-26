@@ -11,6 +11,10 @@ import org.xml.sax.SAXParseException
 class MarketplaceListingTest {
     @Test
     fun `takes the version of the newest upload, wherever the listing names it`() {
+        // the attribute values are a real listing's: downloads and size, which the reader ignores, and date, an upload's
+        // time in epoch milliseconds, by which it picks the newest: 1793112915000 is 2026-10-27 14:55:15 UTC and
+        // 1793117052000, the second upload's, 16:04:12 UTC. The second's description spells a <version> in its CDATA,
+        // which is text, not the element the reader takes
         val listing =
             """
             <?xml version='1.0' encoding='UTF-8'?><plugin-repository><ff>"Plugin Development"</ff>
