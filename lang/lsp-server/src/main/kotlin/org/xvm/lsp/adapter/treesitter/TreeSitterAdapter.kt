@@ -280,7 +280,7 @@ class TreeSitterAdapter : AbstractAdapter() {
         val (tree, parseElapsed) =
             try {
                 measureTimedValue { parser.parse(content, oldTree) }
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
                 logger.error("parse failed for {}: {}", uri, e.message)
                 return CompilationResult.failure(
                     uri,

@@ -364,7 +364,7 @@ internal class RunWorkerProcess(
                         environment()[RunWorker.PORT] = server.localPort.toString()
                         environment()[RunWorker.TOKEN] = token
                     }.start()
-            } catch (failure: Exception) {
+            } catch (failure: IOException) {
                 runCatching { server.close() }
                 logger.error("execution worker could not be started", failure)
                 return null
