@@ -9,7 +9,6 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkRename
@@ -359,16 +358,7 @@ class XdkCrossModuleMissingMethodsTest {
                     assertThat(edit.changes.keys).containsExactlyInAnyOrderElementsOf(
                         if (imports.isNotEmpty()) setOf(targetUri, rootUri) else setOf(targetUri),
                     )
-                    val changed =
-                        edit.changes.mapValues { (changedUri, edits) ->
-                            val originalText = originals.getValue(changedUri)
-
-                            fun offset(position: Position) =
-                                requireNotNull(XdkRename.offset(originalText, SemanticModel.Position(position.line, position.column)))
-                            edits.sortedByDescending { offset(it.range.start) }.fold(originalText) { text, change ->
-                                text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-                            }
-                        }
+                    val changed = edit.changes.mapValues { (changedUri, edits) -> apply(originals.getValue(changedUri), edits) }
                     assertThat(changed.getValue(targetUri)).contains(signature)
                     val rootText = changed[rootUri] ?: library
                     imports.forEach { assertThat(rootText).containsOnlyOnce(it) }

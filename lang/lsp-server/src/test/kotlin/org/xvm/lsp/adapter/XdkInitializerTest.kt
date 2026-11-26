@@ -46,16 +46,7 @@ class XdkInitializerTest {
             val edits =
                 requireNotNull(adapter.rename(uri, 0, offset, "number")).changes.getValue(uri)
             assertThat(edits).hasSize(3)
-            val renamed =
-                edits
-                    .sortedByDescending { it.range.start.column }
-                    .fold(source) { text, edit ->
-                        text.replaceRange(
-                            edit.range.start.column,
-                            edit.range.end.column,
-                            edit.newText,
-                        )
-                    }
+            val renamed = apply(source, edits)
             assertThat(renamed).doesNotContain("value").contains("copy = number")
             assertThat(adapter.compile(uri, renamed).success).isTrue()
             adapter.closeDocument(uri)
