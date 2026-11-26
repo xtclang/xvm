@@ -125,17 +125,21 @@ copy_runs() {
         local name
         name="$(basename "$dir")"
         if ! grep -qx "$name" "$earlier" && [ ! -f "/out/runs/$name/results.json" ]; then
-            mkdir -p "/out/runs/$name"
-            rsync -a "$dir/" "/out/runs/$name/"
+            # into a directory that the retention passes over, renamed once it is whole: a run of this checkout in
+            # another slot may prune /out/runs meanwhile, and must not take a run copied in part for a whole one
+            local staged="/out/runs/.copying-$name"
+            rm -rf "$staged"
+            mkdir -p "$staged"
+            rsync -a "$dir/" "$staged/"
             if [ -f /out/screen.mp4 ]; then
-                cp /out/screen.mp4 /out/screen.start "/out/runs/$name/"
+                cp /out/screen.mp4 /out/screen.start "$staged/"
             fi
             local ide="$reports/out/ide-tests/tests"
             # Starter 262 keeps the IDE's log in the run's folder, Starter 263 in a folder of the test below it
             for folder in "$ide"/*/"XtcCompilerPlaybook-$name"; do
                 [ -d "$folder" ] || continue
                 find "$folder" -maxdepth 3 -type d -name log -print0 | while IFS= read -r -d '' logs; do
-                    rsync -a --exclude 'indexing-diagnostic/' "$logs/" "/out/runs/$name/ide-log/"
+                    rsync -a --exclude 'indexing-diagnostic/' "$logs/" "$staged/ide-log/"
                 done
             done
             # the run's own IDE folder, its config, system and logs, once its logs are copied: about 240 MB a run,
@@ -143,6 +147,8 @@ copy_runs() {
             for folder in "$ide"/*/"XtcCompilerPlaybook-$name"; do
                 [ -d "$folder" ] && rm -rf "$folder"
             done
+            rm -rf "/out/runs/$name"
+            mv "$staged" "/out/runs/$name"
             echo "copied $name"
             copied=true
         fi
