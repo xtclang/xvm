@@ -72,6 +72,18 @@ function folderOverrides(uri: vscode.Uri): unknown[] {
     return roots.map(uri => vscode.workspace.getConfiguration('xtc.compiler', uri).inspect('sourceModules')?.workspaceFolderValue);
 }
 
+/**
+ * What VS Code says when the server answers a rename with no edit, in the words of IntelliJ's plugin: the server answers
+ * so for a rename that it refuses after prepareRename accepted the name, as one that would change what a name means.
+ */
+export const RENAME_REFUSED = 'This rename is not supported or would change another binding.';
+
+/**
+ * The edit of a rename at [position] to [newName], as the server proposes it with xtc/rename. VS Code shows the message
+ * of an error that a rename provider throws, and says only "No result." when it answers nothing: a refusal that the
+ * server gives its reason for, an error, keeps that reason, and its answer of no edit fails with [RENAME_REFUSED]. A
+ * request that ends without an answer, as one the server drops as a document changes, answers nothing.
+ */
 export async function renameWithConfiguration(
     client: LanguageClient,
     document: vscode.TextDocument,
@@ -83,7 +95,10 @@ export async function renameWithConfiguration(
         () => client.sendRequest(renameRequest, {
             textDocument: client.code2ProtocolConverter.asTextDocumentIdentifier(document),
             position: client.code2ProtocolConverter.asPosition(position), newName
-        }, token).catch(error => client.handleFailedRequest(renameRequest, token, error, null, false)));
+        }, token).then(proposal => {
+            if (!proposal && !token.isCancellationRequested) throw new Error(RENAME_REFUSED);
+            return proposal;
+        }, error => client.handleFailedRequest(renameRequest, token, error, null, false)));
 }
 
 /**

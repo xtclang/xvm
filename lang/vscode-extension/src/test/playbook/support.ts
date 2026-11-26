@@ -3,6 +3,7 @@ import { realpathSync } from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type DiagnosticReport } from '../../lsp-client';
+import { RENAME_REFUSED } from '../../rename-proposal';
 import { focusTestEditor } from '../native-focus';
 import { withTestWait } from '../progress';
 import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
@@ -25,6 +26,19 @@ export async function serviceStatus<T>(): Promise<T | undefined> {
     if (!current?.isRunning()) return undefined;
     try { return await current.sendRequest<T>('xtc/languageServiceStatus'); }
     catch { return undefined; }
+}
+
+/**
+ * [rename]'s edit, or none while the server refuses it: it answers a rename with no edit until discovery and the
+ * watcher have settled, which the extension shows as [RENAME_REFUSED], so a case that asks again takes it as not yet.
+ */
+export async function renameOrNone<T>(rename: T | Thenable<T>): Promise<T | undefined> {
+    try {
+        return await rename;
+    } catch (error) {
+        if (error instanceof Error && error.message === RENAME_REFUSED) return undefined;
+        throw error;
+    }
 }
 
 export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string, timeoutMs?: number): Promise<T> {

@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { compilerSettingsLocation, compilerSourceModules, renameWithConfiguration } from '../../rename-proposal';
 import { focusTestWindow } from '../native-focus';
 import { discovered } from './liveWorkspace';
-import { client, eventually, noErrors, outsideUsesMessage, playbook, position, symbols, Workspace } from './support';
+import { client, eventually, noErrors, outsideUsesMessage, playbook, position, renameOrNone, symbols, Workspace } from './support';
 
 /** Inspect edits to closed consumers without opening their editor tabs before Undo. */
 async function contents(workspace: Workspace, file: string): Promise<string> {
@@ -51,7 +51,7 @@ async function configurationGuards(document: vscode.TextDocument, at: vscode.Pos
     try {
         const outcome = await eventually(async () => {
             try {
-                const edit = await renameWithConfiguration(delayedClient, document, at, replacement, token);
+                const edit = await renameOrNone(renameWithConfiguration(delayedClient, document, at, replacement, token));
                 return edit ? { edit } : undefined;
             } catch (error) {
                 return { error };
@@ -116,7 +116,7 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                             await configuration.update('autoSave', false, vscode.ConfigurationTarget.Workspace);
                             const refusal = await eventually(async () => {
                                 try {
-                                    const edit = await provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token);
+                                    const edit = await renameOrNone(provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token));
                                     assert.ok(!edit, 'An unsafe resource history must not be offered');
                                     return undefined;
                                 } catch (error) { return error; }
@@ -131,7 +131,7 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                         ? client().onNotification('window/showMessage', (params: { message: string }) => { shown.push(params.message); })
                         : undefined;
                     const edit = await eventually(
-                        async () => provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token),
+                        async () => renameOrNone(provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token)),
                         Boolean, `${id} rename proof after fixture discovery`).finally(() => observer?.dispose());
                     assert.ok(edit);
                     if ('outsideUses' in data) {

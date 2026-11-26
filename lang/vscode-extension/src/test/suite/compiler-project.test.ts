@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
+import { RENAME_REFUSED } from '../../rename-proposal';
 
 const LIBRARY = 'module Library { static Int value() = 1; class Item {} }';
 const CONSUMER = 'module Consumer { package lib import Library; Int value = 10; ' +
@@ -90,6 +91,9 @@ suite('Compiler editor acceptance', function () {
                 textDocument: { uri: consumer.toString() }, position: document.positionAt(document.getText().indexOf('local')), newName: 'value'
             });
             assert.strictEqual(rejected, null, 'silent property capture must be rejected');
+            // VS Code's own rename, which asks xtc/rename, says that it is refused, rather than that it has no result
+            await assert.rejects(async () => vscode.commands.executeCommand('vscode.executeDocumentRenameProvider', consumer,
+                document.positionAt(document.getText().indexOf('local')), 'value'), { message: RENAME_REFUSED });
 
             const prefix = document.getText() + '\n';
             const timings: number[] = [];

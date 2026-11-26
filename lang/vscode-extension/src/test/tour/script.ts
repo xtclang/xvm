@@ -31,7 +31,7 @@
  * | textDocument/selectionRange               | step "Expand the selection"                                       |
  * | textDocument/foldingRange                 | step "Folding"                                                    |
  * | textDocument/prepareRename, rename        | steps "Rename a method", "A rename it refuses" (prepareRename's reason) |
- * | experimental xtcRenameProposal, xtc/rename| steps "Renamed everywhere", "Undo the rename", "Undone everywhere", "Rename a class"; check "A rename that would change what the code means" (no edit) |
+ * | experimental xtcRenameProposal, xtc/rename| steps "Renamed everywhere", "Undo the rename", "Undone everywhere", "Rename a class"; check "A rename that would change what the code means" (the refusal's message) |
  * | textDocument/codeAction, codeAction/resolve | steps "Quick fixes", "Create a method", "Add an import", "Refactorings", "Extracted to a local", "Extract a method"; checks "Undo a quick fix", "Safe delete", "Generate a doc comment" |
  * | source.organizeImports                    | step "Organize imports"                                           |
  * | executeCommandProvider: xtc.outsideUses   | - check "Safe delete" lists the action without applying it; applying a public member's runs it (playbook X334) |
@@ -160,6 +160,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { buildModeStatus } from '../../build-mode-selection';
 import { getClient } from '../../lsp-client';
+import { RENAME_REFUSED } from '../../rename-proposal';
 import { testLocation } from '../../test-explorer';
 import {
     acceptSuggestion, actionRows, breakpoint, breakpoints, buildMode, chooseAction, codeActions, consoleText, debug, debugConfiguration,
@@ -183,6 +184,8 @@ const DECK_TESTS = 8;
 
 /** The sources that declare or call Player.cardMatches, which the Refactoring section renames, as its caption names them. */
 const RENAMED = ['FirstMatch.x', 'Player.x', 'PlayerTest.x', 'SaveEights.x'];
+
+/** What VS Code says when the server refuses a rename with no edit, as one that would change what a name means. */
 
 /** The tour's steps, in order. */
 export async function script(tour: Tour, coverage: Coverage): Promise<void> {
@@ -1401,7 +1404,8 @@ async function refactoring(tour: Tour): Promise<void> {
     });
     await tour.verify('A rename that would change what the code means', 'xtc/rename', async () => {
         // the card drawn, named name, would print in place of the player's name: the server's proof finds that use's
-        // binding changed, as the playbook's X55 does, and answers no edit, which VS Code says it got no result for
+        // binding changed, as the playbook's X55 does, and answers no edit, which the extension says is refused, in the
+        // words of IntelliJ's plugin, rather than VS Code's "No result."
         await open(player, 'card := eights.drawCard()', 1);
         await tour.ui.focusEditor();
         await launch('editor.action.rename');
@@ -1409,7 +1413,7 @@ async function refactoring(tour: Tour): Promise<void> {
         await tour.ui.press('Control+a');
         await tour.ui.type('name');
         await tour.ui.press('Enter');
-        await tour.until('VS Code says the rename has no edit', async () => (await tour.ui.text('notification')).includes('No result'),
+        await tour.until('VS Code says the rename is refused', async () => (await tour.ui.text('notification')).includes(RENAME_REFUSED),
             () => tour.ui.text('notification'));
         expect(await text(player) === (await tour.originals()).get(player), () => 'Player.x changed');
         await compiles(tour, player);
