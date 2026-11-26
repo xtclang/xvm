@@ -1413,6 +1413,9 @@ class XtcLanguageServer internal constructor(
 
     override fun stopRun(params: StopRunParams): CompletableFuture<Boolean> = CompletableFuture.completedFuture(embeddedRuns.stop(params))
 
+    /** The editor's text of the document at [uri] changed: the breakpoints of a debugged program built from it move with its lines. */
+    internal fun sourceChanged(uri: String): CompletableFuture<Void> = embeddedRuns.sourceChanged(uri)
+
     /** Process IDs of the live execution workers, for tests. */
     internal fun runWorkerPids(): List<Long> = embeddedRuns.workerPids()
 

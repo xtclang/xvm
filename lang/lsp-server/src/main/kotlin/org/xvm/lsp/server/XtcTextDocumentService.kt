@@ -611,6 +611,8 @@ class XtcTextDocumentService(
             if (outOfSync.remove(uri)) logger.info("textDocument/didChange: {} is in sync again", uri)
             analyze(uri, content, version)
         }
+        // outside the lock, as it tells a debug session, once the adapter has the text
+        server.sourceChanged(params.textDocument.uri)
     }
 
     /**

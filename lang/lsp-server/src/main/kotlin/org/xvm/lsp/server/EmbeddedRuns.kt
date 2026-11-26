@@ -3,6 +3,7 @@ package org.xvm.lsp.server
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.debug.AttachTarget
+import org.xvm.debug.BreakpointRequest
 import org.xvm.debug.BreakpointState
 import org.xvm.debug.ChildFilter
 import org.xvm.debug.CompletionsState
@@ -102,6 +103,28 @@ internal class EmbeddedRuns(
 
     /** The sources each run under the debugger was compiled from, by run ID, while it runs. */
     private val compiled = ConcurrentHashMap<String, CompiledSources>()
+
+    /** The breakpoints of each run under the debugger as its program has them, by run ID, while it runs. */
+    private val placements = ConcurrentHashMap<String, RunPlacements>()
+
+    /** A debugged run's breakpoints, each file's by its canonical file, and the session's [events], which hear of them. */
+    private class RunPlacements(
+        val events: ProgramEvents,
+    ) {
+        val files = ConcurrentHashMap<File, FilePlacement>()
+    }
+
+    /**
+     * One file's breakpoints in a debugged program: the session's [path] for the file, the [requests] the program has, on
+     * their compiled lines, the [installed] states it gave them, on the lines it put them, compiled lines too, and the
+     * states the session was last [told], by ID, on the lines of the file's text then.
+     */
+    private data class FilePlacement(
+        val path: String,
+        val requests: List<BreakpointRequest>,
+        val installed: List<BreakpointState>,
+        val told: Map<Int, BreakpointState>,
+    )
 
     /** Input typed while a run is still building, forwarded in order when the program starts. */
     private val waiting = HashMap<String, WaitingInput>()
@@ -520,6 +543,7 @@ internal class EmbeddedRuns(
                         placed(file, lines)
                     },
             )
+        placed?.let { placements[runId] = RunPlacements(events) }
         // the run's own method and arguments, where it gives them, else those of the module's Gradle project's xtcRun, whose
         // JVM options the run's worker has, as its output says, which leaves out what is the default anyway
         val gradle = runSettings()[module]
@@ -568,7 +592,9 @@ internal class EmbeddedRuns(
                         states: List<BreakpointState>,
                     ) {
                         val lines = sources?.lines(path) ?: LineMap.SAME
-                        events.breakpoints(path, states.map { it.copy(line = lines.now(it.line)) })
+                        val told = states.map { it.copy(line = lines.now(it.line)) }
+                        placed?.breakpoints?.firstOrNull { it.path == path }?.let { place(runId, it, states, told) }
+                        events.breakpoints(path, told)
                     }
 
                     override fun functionBreakpoints(states: List<BreakpointState>) =
@@ -588,6 +614,7 @@ internal class EmbeddedRuns(
                             workerIds.remove(runId)
                         }
                         compiled.remove(runId)
+                        placements.remove(runId)
                         events.exited(code, error)
                     }
                 },
@@ -669,13 +696,85 @@ internal class EmbeddedRuns(
     ): CompletableFuture<List<BreakpointState>> {
         val lines = lines(runId, breakpoints.path)
         val refused = refused(breakpoints, lines).associateBy { it.id }
-        return debugged(runId) { setBreakpoints(it, placed(breakpoints, lines)) }.thenApply { states ->
+        val placed = placed(breakpoints, lines)
+        return debugged(runId) { setBreakpoints(it, placed) }.thenApply { states ->
             val installed = states.associateBy { it.id }
             // in the order they were asked for, on their lines now
-            breakpoints.breakpoints.mapNotNull { request ->
-                refused[request.id] ?: installed[request.id]?.let { it.copy(line = lines.now(it.line)) }
+            breakpoints.breakpoints
+                .mapNotNull { request ->
+                    refused[request.id] ?: installed[request.id]?.let { it.copy(line = lines.now(it.line)) }
+                }.also { told -> place(runId, placed, states, told.filter { it.id in installed }) }
+        }
+    }
+
+    /**
+     * Keeps a file's breakpoints of a debugged run as its program [installed] them for the [placed] requests, on their
+     * compiled lines, and as the session was [told] of them, for [sourceChanged].
+     */
+    private fun place(
+        runId: String,
+        placed: SourceBreakpoints,
+        installed: List<BreakpointState>,
+        told: List<BreakpointState>,
+    ) {
+        val run = placements[runId] ?: return
+        val file = runCatching { File(placed.path).canonicalFile }.getOrNull() ?: return
+        synchronized(run) { run.files[file] = FilePlacement(placed.path, placed.breakpoints, installed, told.associateBy { it.id }) }
+    }
+
+    /**
+     * Tells each debugged run whose program was compiled from the file at [uri] where that file's breakpoints are in its
+     * text now, as an edit there moves them: each breakpoint whose line keeps its code follows that line, and the
+     * session hears of it, as a client that sends its breakpoints only once the file is saved, as VS Code does, would
+     * not move it until then. One whose line the edit changed or removed has no code there now: the program stops
+     * there no more, and the session hears that it is unverified, and why, at the line where the change is. Completes
+     * once the programs have left those.
+     */
+    internal fun sourceChanged(uri: String): CompletableFuture<Void> {
+        val file =
+            XdkSources.file(uri)?.let { runCatching { it.canonicalFile }.getOrNull() } ?: return CompletableFuture.completedFuture(null)
+        val removals = mutableListOf<CompletableFuture<*>>()
+        placements.forEach { (runId, run) ->
+            val sources = compiled[runId] ?: return@forEach
+            synchronized(run) {
+                val placement = run.files[file] ?: return@forEach
+                val lines = sources.lines(placement.path)
+                val now =
+                    placement.installed.map { state ->
+                        val line = lines.now(state.line)
+                        if (!state.verified || lines.compiled(line) == state.line) {
+                            (placement.told[state.id] ?: state).copy(line = line)
+                        } else {
+                            BreakpointState(state.id, line, false, CHANGED_SINCE_BUILD)
+                        }
+                    }
+                val changed = now.filter { it != placement.told[it.id] }
+                if (changed.isEmpty()) return@forEach
+                val gone = now.filter { it.message == CHANGED_SINCE_BUILD }.map { it.id }.toSet()
+                val kept = placement.requests.filter { it.id !in gone }
+                run.files[file] =
+                    placement.copy(
+                        requests = kept,
+                        installed = placement.installed.filter { it.id !in gone },
+                        told = placement.told + now.associateBy { it.id },
+                    )
+                if (gone.isNotEmpty()) {
+                    removals +=
+                        debugged(runId) { setBreakpoints(it, SourceBreakpoints(placement.path, kept)) }.whenComplete { _, failure ->
+                            if (failure != null) {
+                                logger.info(
+                                    "breakpoints on changed lines not removed: run={} path={}: {}",
+                                    runId,
+                                    placement.path,
+                                    failure.message,
+                                )
+                            }
+                        }
+                }
+                run.events.breakpoints(placement.path, changed)
             }
         }
+        return CompletableFuture.allOf(*removals.map { it.exceptionally { null } }.toTypedArray())
     }
 
     /** Names a variable of a stopped program under the debugger as a data breakpoint's target. */
