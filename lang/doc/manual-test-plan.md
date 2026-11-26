@@ -4081,6 +4081,16 @@ type error still lists them, as its structure declares them.
 |---|---|---|
 | X355 | Write and configure `Fine.x`, a module with a test `works`; `Untestable.x`, a module with a test `adds` and the syntax error `Int broken( = 1;`; `Shelf.x`, a module whose `count()` returns `"none"` as an `Int`; and `ShelfTest.x`, a module that imports `Shelf` and tests it with `counts`. Open `Untestable.x` and `ShelfTest.x`, and list the tests (VS Code: the Test Explorer's Refresh; IntelliJ: the gutter). Fix `Untestable.x`'s error, and `Shelf.x`'s. | `Untestable.x` has its error, and `ShelfTest.x` the diagnostic `Dependencies unavailable: Shelf`. `Fine/works` is listed, but not `Untestable/adds` or `ShelfTest/counts` (IntelliJ: they are not in the server's `xtc/tests`, which the gutter icons are drawn from). Once both are fixed, both are listed, and IntelliJ's gutter shows `adds`'s and `counts`'s icons. |
 
+### The XDK's declarations in Go to Symbol (X356)
+
+Go to Symbol in Workspace (VS Code **Ctrl+T**; IntelliJ **Navigate › Symbol**, Ctrl+Alt+Shift+N) finds a class,
+method or property by name, the XDK's too, as the user guide's Navigation says, and opens it in the library's
+read-only source.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X356 | Write `Symbols.x`, a module whose method takes a `Map`. Go to Symbol `getOrDefault`, and open the item. | One item is `getOrDefault` in `ecstasy/maps/Map.x`, which opens read-only (VS Code: the server's `ecstasy-library` content) with `Value getOrDefault(Key key` in it. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and

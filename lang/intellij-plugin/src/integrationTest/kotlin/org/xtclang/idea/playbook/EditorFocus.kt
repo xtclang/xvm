@@ -184,6 +184,7 @@ internal interface NativeEditorUi {
     fun goToSymbol(
         project: Project,
         name: String,
+        nonProject: Boolean,
     ): String
 
     fun interruptFocus(): Window
