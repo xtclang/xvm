@@ -389,7 +389,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                 CompletionContext.MEMBER -> {
                     // After '.': show members from the enclosing class body
                     if (tree != null) {
-                        val members = collectClassMembers(tree, uri, line, column)
+                        val members = collectClassMembers(tree, line, column)
                         logger.info(
                             "getCompletions: member-context candidates={}",
                             members.map { it.label },
@@ -633,7 +633,6 @@ class TreeSitterAdapter : AbstractAdapter() {
     /** Collect method and property names from the enclosing class body for member completion. */
     private fun collectClassMembers(
         tree: XtcTree,
-        uri: String,
         line: Int,
         column: Int,
     ): List<CompletionItem> {

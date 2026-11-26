@@ -250,9 +250,9 @@ internal object XdkCursorQueries {
                         // mapping; do not infer one from commas or choose an applicable overload
                         // here.
                         val active =
-                            slot.takeIf { it ->
+                            slot.takeIf { index ->
                                 site.arguments.none { it.label != null } &&
-                                    it in candidate.parameters.indices
+                                    index in candidate.parameters.indices
                             }
                         signature(
                             model.semantics,

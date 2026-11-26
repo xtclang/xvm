@@ -185,7 +185,7 @@ internal object XdkLexical {
         val end = range?.end?.let { if (it.column == 0 && it.line > start) it.line - 1 else it.line } ?: lines.lastIndex
         val edits =
             buildList {
-                (start..minOf(end, lines.lastIndex)).forEach { line ->
+                for (line in start..minOf(end, lines.lastIndex)) {
                     val value = lines[line]
                     val host = multiline[line]
                     // Literal bytes (including multiline/template indentation) are never reformatted.
@@ -196,7 +196,7 @@ internal object XdkLexical {
                                 lines[host.range.end.line].drop(host.range.end.column).isNotBlank()
                         )
                     ) {
-                        return@forEach
+                        continue
                     }
                     val onLine = lineTokens[line].orEmpty()
                     val depth = onLine.takeWhile { it.id in closers }.fold(nesting[line]) { current, token -> current.after(token.id) }
