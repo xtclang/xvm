@@ -16,6 +16,11 @@ class XdkRenameProposal
         previousSourceModules: List<XdkSourceModule>? = null,
         val scope: XdkRenameScope? = null,
         outsideUses: List<String> = emptyList(),
+        /**
+         * The note on the string literals and comments in the modules the edit changes that spell the old name, which
+         * it leaves as they are; null when there are none.
+         */
+        val unchangedSpellings: String? = null,
     ) {
         val sourceModules: List<XdkSourceModule>? = sourceModules?.let(::immutableList)
         val previousSourceModules: List<XdkSourceModule>? = previousSourceModules?.let(::immutableList)

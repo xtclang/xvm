@@ -3828,7 +3828,7 @@
       }
     },
     "X109": {
-      "title": "public parameter rename updates a closed caller, preserves another overload and says that modules outside the workspace are not changed",
+      "title": "public parameter rename updates a closed caller, preserves another overload and says that modules outside the workspace are not changed, nor a comment that spells the old name",
       "manual": [],
       "values": {
         "file": "Library.x",
@@ -3837,9 +3837,9 @@
         "files": [
           {
             "file": "Library.x",
-            "source": "module Library { class Box { Int pick(Int input, Int count = 1) = input + count; String pick(String input) = input; } }",
+            "source": "module Library { class Box { Int pick(Int input, Int count = 1) = input + count; /** Returns the input as it is. */ String pick(String input) = input; } }",
             "destination": "Library.x",
-            "expected": "module Library { class Box { Int pick(Int value, Int count = 1) = value + count; String pick(String input) = input; } }"
+            "expected": "module Library { class Box { Int pick(Int value, Int count = 1) = value + count; /** Returns the input as it is. */ String pick(String input) = input; } }"
           },
           {
             "file": "Consumer.x",
@@ -3854,7 +3854,8 @@
             "expected": "module Other { package lib import Library; String run(lib.Box box) = box.pick(input = \"text\"); }"
           }
         ],
-        "outsideUses": "modules outside the workspace that use 'input' are not changed by this rename"
+        "outsideUses": "modules outside the workspace that use 'input' are not changed by this rename",
+        "unchangedSpellings": "1 comment in the modules this rename changes spells 'input' and is not changed by it: Library.x:1"
       },
       "intellij": {
         "coverage": "full",
