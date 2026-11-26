@@ -126,12 +126,14 @@ val updateGeneratedExamples =
 //
 //   ./gradlew :lang:detekt :lang:cpdKotlin :lang:cpdTypeScript -PincludeBuildLang=true -PincludeBuildAttachLang=true
 
-val detektTool: Configuration by configurations.creating {
-    isCanBeConsumed = false
-}
-val pmdTool: Configuration by configurations.creating {
-    isCanBeConsumed = false
-}
+val detektTool =
+    configurations.create("detektTool") {
+        isCanBeConsumed = false
+    }
+val pmdTool =
+    configurations.create("pmdTool") {
+        isCanBeConsumed = false
+    }
 
 dependencies {
     detektTool(libs.lang.detekt.cli)
