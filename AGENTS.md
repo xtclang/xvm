@@ -41,8 +41,9 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 - Always included: `javatools`, `javatools_jitbridge`, `javatools_utils`, `javatools_unicode`, `plugin`, `xdk`, `docker`,
   `manualTests`; all of them are attached to the root lifecycle.
 - `lang` is optional: included by `includeBuildLang` (visibility) and attached to the root lifecycle by
-  `includeBuildAttachLang`. `gradle.properties` leaves both off, and so do CI's push and pull request builds; a manual
-  run of `commit.yml` turns them on with its `include-lang` input.
+  `includeBuildAttachLang`. `gradle.properties` leaves both off (on `lagergren/errs` it turns both on; #693 and master
+  keep them off), and so do CI's push and pull request builds; a manual run of `commit.yml` turns them on with its
+  `include-lang` input.
 - `manualTests` is a fake third-party consumer build that verifies published/composite plugin+XDK behavior.
 - Running any `:lang:*` task from root needs BOTH flags on (either one alone fails with "project ':lang' not
   found"), so pass them:
