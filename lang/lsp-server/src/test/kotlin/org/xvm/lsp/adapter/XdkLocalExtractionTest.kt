@@ -42,7 +42,7 @@ class XdkLocalExtractionTest {
         query(text, expression) { adapter, uri, actions ->
             val action = actions.single { it.title.endsWith("to local variable") }
             assertThat(action.title).isEqualTo("Extract expression to local variable")
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(
                 changed,
             ).isEqualTo(text.replace("return $expression;", "Int extractedValue = $expression;\n        return extractedValue;"))
@@ -57,7 +57,7 @@ class XdkLocalExtractionTest {
         val text = "module Extract {\n    Boolean probe() = True;\n    $type read($parameter) {\n        return $expression;\n    }\n}"
         query(text, expression) { adapter, uri, actions ->
             val action = actions.single { it.title.endsWith("to local variable") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).contains("$type extractedValue = $expression;\n        return extractedValue;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -69,7 +69,7 @@ class XdkLocalExtractionTest {
         val text = "module Extract {\n    function Int() read(Int input) {\n        return $expression;\n    }\n}"
         query(text, expression) { adapter, uri, actions ->
             val action = actions.single { it.title.endsWith("to local variable") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).contains("function Int() extractedValue = () -> input;\n        return extractedValue;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -82,7 +82,7 @@ class XdkLocalExtractionTest {
                 "            return \"card\";\n        }\n    }\n    Int read() {\n        return 1 + 2;\n    }\n}"
         query(text, "1 + 2") { adapter, uri, actions ->
             val action = actions.single { it.title.endsWith("to local variable") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).isEqualTo(text.replace("return 1 + 2;", "Int extractedValue = 1 + 2;\n        return extractedValue;"))
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -91,54 +91,42 @@ class XdkLocalExtractionTest {
     @Test
     fun `conditional return and partial short circuit selections refuse extraction`() {
         val conditional = "module Extract {\n    conditional Int read(String input) {\n        return input.indexOf('a');\n    }\n}"
-        query(conditional, "input.indexOf('a')") { _, _, actions ->
-            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
-        }
+        assertRefused(conditional, "input.indexOf('a')")
         val partial = "module Extract {\n    Boolean read(Boolean first, Boolean second) {\n        return first && second;\n    }\n}"
-        query(partial, "first") { _, _, actions ->
-            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
-        }
+        assertRefused(partial, "first")
     }
 
     @Test
     fun `broken known neighbor prevents refactoring publication`() {
         directory.resolve("Broken.x").toFile().writeText("module Broken { Missing value; }")
         val text = "module Extract {\n    Int read() {\n        return 42;\n    }\n}"
-        query(text, "42") { _, _, actions ->
-            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
-        }
+        assertRefused(text, "42")
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["4", "", "42;"])
     fun `partial empty and oversized selections have no extraction`(selected: String) {
         val text = "module Extract {\n    Int read() {\n        return 42;\n    }\n}"
-        query(text, selected) { _, _, actions ->
-            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
-        }
+        assertRefused(text, selected)
     }
 
     @Test
     fun `same line siblings are not reformatted by extraction`() {
         val text = "module Extract { Int read() { return 42; } }"
-        query(text, "42") { _, _, actions ->
-            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
-        }
+        assertRefused(text, "42")
     }
+
+    private fun assertRefused(
+        text: String,
+        selected: String,
+    ) = query(text, selected) { _, _, actions -> assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty() }
 
     private fun query(
         text: String,
         selected: String,
         check: (XdkAdapter, String, List<CodeAction>) -> Unit,
     ) {
-        val uri =
-            directory
-                .resolve("Extract.x")
-                .toFile()
-                .also { it.writeText(text) }
-                .canonicalFile
-                .toURI()
-                .toString()
+        val uri = directory.source("Extract", text)
         val at = text.positionOf("return $selected", selected)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))

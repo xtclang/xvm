@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
@@ -20,7 +19,7 @@ class XdkMemberInlineTest {
     @ParameterizedTest
     @ValueSource(strings = ["1 + 2", "probe() + probe()", "stored + probe()", "stored & probe()"])
     fun `inline method call preserves bindings evaluation order and its declaration`(expression: String) {
-        query(
+        inlined(
             """
             module Inline {
                 Int stored = 3;
@@ -36,7 +35,7 @@ class XdkMemberInlineTest {
 
     @Test
     fun `static constant property uses compiler validated value at selected read`() {
-        query(
+        inlined(
             """
             module Inline {
                 private static Int amount = 1 + 2;
@@ -50,7 +49,7 @@ class XdkMemberInlineTest {
 
     @Test
     fun `caller name capture refuses an otherwise valid body copy`() {
-        query(
+        inlined(
             """
             module Inline {
                 Int stored = 3;
@@ -73,7 +72,7 @@ class XdkMemberInlineTest {
         ],
     )
     fun `public parameterized multi statement and recursive methods stay unchanged`(method: String) {
-        query(
+        inlined(
             """
             module Inline {
                 $method
@@ -87,7 +86,7 @@ class XdkMemberInlineTest {
 
     @Test
     fun `instance property reads cannot discard their initialization or getter behavior`() {
-        query(
+        inlined(
             """
             module Inline {
                 private Int amount = 3;
@@ -101,7 +100,7 @@ class XdkMemberInlineTest {
 
     @Test
     fun `static runtime initializer is not repeated at its read`() {
-        query(
+        inlined(
             """
             module Inline {
                 private static Int amount = compute();
@@ -116,7 +115,7 @@ class XdkMemberInlineTest {
 
     @Test
     fun `every call of a private method is inlined and the method removed`() {
-        everyUse(
+        inlined(
             """
             module Inline {
                 Int stored = 3;
@@ -133,12 +132,13 @@ class XdkMemberInlineTest {
                 Int twice() = (stored + 1) + (stored + 1);
             }
             """.trimIndent(),
+            everyUse = true,
         )
     }
 
     @Test
     fun `every read of a constant is inlined and the constant removed, also from its declaration`() {
-        everyUse(
+        inlined(
             """
             module Inline {
                 private static Int §amount = 1 + 2;
@@ -153,12 +153,13 @@ class XdkMemberInlineTest {
                 Int more() = (1 + 2) + (1 + 2);
             }
             """.trimIndent(),
+            everyUse = true,
         )
     }
 
     @Test
     fun `a member with one use is inlined and removed`() {
-        everyUse(
+        inlined(
             """
             module Inline {
                 private Int helper() { return 7; }
@@ -171,6 +172,7 @@ class XdkMemberInlineTest {
                 Int read() = (7);
             }
             """.trimIndent(),
+            everyUse = true,
         )
     }
 
@@ -186,7 +188,7 @@ class XdkMemberInlineTest {
         ],
     )
     fun `members with a use that a copy cannot replace stay unchanged`(uses: String) {
-        everyUse(
+        inlined(
             """
             module Inline {
                 Int stored = 3;
@@ -196,14 +198,19 @@ class XdkMemberInlineTest {
             """.trimIndent(),
             "Inline and remove private method 'helper'",
             null,
+            everyUse = true,
         )
     }
 
-    /** Applies the selected action's every edit and compares the whole result. */
-    private fun everyUse(
+    /**
+     * Offers the action named [title] at the `§` in [marked], or with no [expected] checks that it is not offered. Its single
+     * edit, or [everyUse] every edit, must yield a text that contains [expected], or with [everyUse] is [expected], and compiles.
+     */
+    private fun inlined(
         marked: String,
         title: String,
         expected: String?,
+        everyUse: Boolean = false,
     ) {
         CompilerTestSupport.configure()
         val text = marked.replace("§", "")
@@ -225,52 +232,9 @@ class XdkMemberInlineTest {
                 assertThat(actions).hasSize(1)
                 val edit = requireNotNull(actions.single().edit)
                 assertThat(edit.versioned).isTrue()
-
-                fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-                val changed =
-                    edit.changes
-                        .getValue(uri)
-                        .sortedByDescending { offset(it.range.start) }
-                        .fold(
-                            text,
-                        ) { value, change -> value.replaceRange(offset(change.range.start), offset(change.range.end), change.newText) }
-                assertThat(changed).isEqualTo(expected)
-                assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
-            }
-            assertThat(file.readText()).isEqualTo(text)
-        }
-    }
-
-    private fun query(
-        marked: String,
-        title: String,
-        expected: String?,
-    ) {
-        CompilerTestSupport.configure()
-        val text = marked.replace("§", "")
-        val file =
-            directory
-                .resolve("Inline.x")
-                .toFile()
-                .canonicalFile
-                .apply { writeText(text) }
-        val uri = file.toURI().toString()
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
-            val at = XdkRename.position(text, marked.indexOf('§'))
-            val actions = adapter.getCodeActions(uri, Range(at, at), emptyList()).filter { it.title == title }
-            if (expected == null) {
-                assertThat(actions).isEmpty()
-            } else {
-                assertThat(actions).hasSize(1)
-                val edit = requireNotNull(actions.single().edit)
-                assertThat(edit.versioned).isTrue()
-                val change = edit.changes.getValue(uri).single()
-
-                fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
-                val changed = text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-                assertThat(changed).contains(expected)
+                val edits = edit.changes.getValue(uri)
+                val changed = apply(text, if (everyUse) edits else listOf(edits.single()))
+                if (everyUse) assertThat(changed).isEqualTo(expected) else assertThat(changed).contains(expected)
                 assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             }
             assertThat(file.readText()).isEqualTo(text)

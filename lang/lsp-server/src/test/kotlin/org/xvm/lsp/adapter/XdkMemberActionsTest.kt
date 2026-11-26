@@ -27,7 +27,7 @@ class XdkMemberActionsTest {
                 "class Base { Int count() = 1; } class Box extends Base {} }"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title == "Override Int64 count()" }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).contains("const Key(String name);", "class Empty;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -62,7 +62,7 @@ class XdkMemberActionsTest {
             assertThat(action.kind).isEqualTo(CodeAction.CodeActionKind.REFACTOR_REWRITE)
             val edit = requireNotNull(action.edit)
             assertThat(edit.versioned).isTrue()
-            val changed = apply(text, edit.changes.getValue(uri))
+            val changed = apply(text, edit, uri)
             assertThat(changed).contains("@Override", "TODO();")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             assertThat(actions(adapter, uri, changed).filter { it.title.startsWith("Implement ") })
@@ -80,13 +80,7 @@ class XdkMemberActionsTest {
                     it.title.startsWith("Override ") && it.title.contains(" read(")
                 }
             assertThat(action.kind).isEqualTo(CodeAction.CodeActionKind.REFACTOR_REWRITE)
-            assertThat(
-                adapter
-                    .compile(
-                        uri,
-                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                    ).diagnostics,
-            ).isEmpty()
+            assertRepairs(adapter, uri, text, action)
         }
     }
 
@@ -100,15 +94,7 @@ class XdkMemberActionsTest {
                     it.title.startsWith("Implement ") && !it.title.startsWith("Implement all")
                 }
             assertThat(actions).hasSize(2)
-            actions.forEach { action ->
-                assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        ).diagnostics,
-                ).isEmpty()
-            }
+            actions.forEach { assertRepairs(adapter, uri, text, it) }
         }
     }
 
@@ -132,7 +118,7 @@ class XdkMemberActionsTest {
             val edit = requireNotNull(action.edit)
             assertThat(edit.changes.keys).containsExactly(uri)
             assertThat(edit.changes.getValue(uri)).hasSize(1)
-            val changed = apply(text, edit.changes.getValue(uri))
+            val changed = apply(text, edit, uri)
             assertThat(changed.split("@Override")).hasSize(3)
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             assertThat(actions(adapter, uri, changed).filter { it.title.startsWith("Implement ") })
@@ -156,7 +142,7 @@ class XdkMemberActionsTest {
                 actions(adapter, uri, text).single {
                     it.title == "Implement all required members (2)"
                 }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).contains("@Override Int first() = 7; String label = \"keep\";")
             assertThat(changed.split("first()")).hasSize(3)
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
@@ -185,13 +171,7 @@ class XdkMemberActionsTest {
                 actions(adapter, uri, text).single {
                     it.title.startsWith("Implement String read(String value)")
                 }
-            assertThat(
-                adapter
-                    .compile(
-                        uri,
-                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                    ).diagnostics,
-            ).isEmpty()
+            assertRepairs(adapter, uri, text, action)
         }
     }
 
@@ -201,7 +181,7 @@ class XdkMemberActionsTest {
             "module App {\r\n    interface Api { void read(); }\r\n    // café\r\n    class Box implements Api {\r\n    }\r\n}\r\n"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed)
                 .contains("    // café\r\n", "        @Override\r\n", "            TODO();\r\n")
             assertThat(changed.replace("\r\n", "")).doesNotContain("\n")
@@ -232,7 +212,7 @@ class XdkMemberActionsTest {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             assertThat(actions(adapter, uri, changed).filter { it.title.startsWith("Implement ") })
                 .isEmpty()
@@ -263,7 +243,7 @@ class XdkMemberActionsTest {
                 "Box make() = new Box(); void use(Box box) { box.read(); } }"
         workspace(text, initiallyValid = false) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).contains(signature.substringAfter("value = ").substringBefore(')'))
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -278,13 +258,7 @@ class XdkMemberActionsTest {
                 actions(adapter, uri, text).single {
                     it.title == "Implement Int64 read(Int64 value = 3)"
                 }
-            assertThat(
-                adapter
-                    .compile(
-                        uri,
-                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                    ).diagnostics,
-            ).isEmpty()
+            assertRepairs(adapter, uri, text, action)
         }
     }
 
@@ -305,7 +279,7 @@ class XdkMemberActionsTest {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).contains(" = ecstasy.")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -320,13 +294,7 @@ class XdkMemberActionsTest {
                 actions(adapter, uri, text).single {
                     it.title.startsWith("Override ") && it.title.contains(" read(")
                 }
-            assertThat(
-                adapter
-                    .compile(
-                        uri,
-                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                    ).diagnostics,
-            ).isEmpty()
+            assertRepairs(adapter, uri, text, action)
         }
     }
 
@@ -339,7 +307,7 @@ class XdkMemberActionsTest {
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
             val edit = requireNotNull(action.edit)
             assertThat(edit.changes.keys).containsExactly(uri)
-            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics)
+            assertThat(adapter.compile(uri, apply(text, edit, uri)).diagnostics)
                 .isEmpty()
             assertThat(file.readText()).isEqualTo(library)
         }
@@ -360,7 +328,7 @@ class XdkMemberActionsTest {
             val edit = requireNotNull(action.edit)
             assertThat(edit.changes.keys).containsExactly(uri)
             assertThat(edit.changes.getValue(uri)).hasSize(2)
-            val changed = apply(text, edit.changes.getValue(uri))
+            val changed = apply(text, edit, uri)
             assertThat(changed).contains("package library1 import Library;", "Int library = 1;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             assertThat(file.readText()).isEqualTo(library)
@@ -382,7 +350,7 @@ class XdkMemberActionsTest {
                 actions(adapter, uri, text).single {
                     it.title == "Implement all required members (2)"
                 }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed.split("package library import Library;")).hasSize(2)
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
@@ -419,7 +387,7 @@ class XdkMemberActionsTest {
                 }
             val edit = requireNotNull(action.edit)
             assertThat(edit.changes.keys).containsExactly(uri)
-            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics)
+            assertThat(adapter.compile(uri, apply(text, edit, uri)).diagnostics)
                 .isEmpty()
             assertThat(dependency.bytes()).isEqualTo(original)
         }
@@ -435,7 +403,7 @@ class XdkMemberActionsTest {
                 }
             val edit = requireNotNull(action.edit)
             assertThat(edit.changes.keys).containsExactly(uri)
-            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics)
+            assertThat(adapter.compile(uri, apply(text, edit, uri)).diagnostics)
                 .isEmpty()
         }
     }
@@ -447,13 +415,7 @@ class XdkMemberActionsTest {
                 "class Child extends Box {} String use(Child child) = child.take(); }"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title == "Override String take()" }
-            assertThat(
-                adapter
-                    .compile(
-                        uri,
-                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                    ).diagnostics,
-            ).isEmpty()
+            assertRepairs(adapter, uri, text, action)
         }
     }
 
@@ -466,13 +428,7 @@ class XdkMemberActionsTest {
                 actions(adapter, uri, text).single {
                     it.title.startsWith("Override ") && it.title.contains(" read(")
                 }
-            assertThat(
-                adapter
-                    .compile(
-                        uri,
-                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                    ).diagnostics,
-            ).isEmpty()
+            assertRepairs(adapter, uri, text, action)
         }
     }
 
@@ -500,7 +456,7 @@ class XdkMemberActionsTest {
                 }
             assertThat(actions).hasSize(2)
             actions.forEach { action ->
-                val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+                val changed = apply(text, requireNotNull(action.edit), uri)
                 assertThat(changed)
                     .contains("child.read(value = 2)", "box.read(value = \"text\") + box.label")
                 assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
@@ -521,13 +477,7 @@ class XdkMemberActionsTest {
             """.trimIndent()
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Override <T>") }
-            assertThat(
-                adapter
-                    .compile(
-                        uri,
-                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                    ).diagnostics,
-            ).isEmpty()
+            assertRepairs(adapter, uri, text, action)
         }
     }
 
@@ -544,7 +494,7 @@ class XdkMemberActionsTest {
                 }
             val edit = requireNotNull(action.edit)
             assertThat(edit.changes.keys).containsExactly(uri)
-            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics)
+            assertThat(adapter.compile(uri, apply(text, edit, uri)).diagnostics)
                 .isEmpty()
             assertThat(file.readText()).isEqualTo(consumer)
         }
@@ -561,20 +511,8 @@ class XdkMemberActionsTest {
     fun `missing implementation at construction can be repaired from fresh declarations`() {
         val text =
             "module App { interface Api { String read(String value); } class Box implements Api {} Box make() = new Box(); }"
-        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            val uri = source.toURI().toString()
-            assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
-            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
-            assertThat(
-                adapter
-                    .compile(
-                        uri,
-                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                    ).diagnostics,
-            ).isEmpty()
-            assertThat(source.readText()).isEqualTo(text)
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            assertRepairs(adapter, uri, text, actions(adapter, uri, text).single { it.title.startsWith("Implement ") })
         }
     }
 
@@ -582,13 +520,7 @@ class XdkMemberActionsTest {
     fun `declaration errors do not produce a member fix from failed type information`() {
         val text =
             "module App { interface Api { Missing read(); } class Box implements Api {} Box make() = new Box(); }"
-        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
-        XdkAdapter().use { adapter ->
-            adapter.initializeWorkspace(listOf(directory.toString()))
-            val uri = source.toURI().toString()
-            assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
-            assertThat(actions(adapter, uri, text)).isEmpty()
-        }
+        workspace(text, initiallyValid = false) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
     }
 
     @Test
@@ -611,19 +543,19 @@ class XdkMemberActionsTest {
         uri: String,
         text: String,
     ): List<CodeAction> {
-        val offset = text.indexOf("Box")
-        val at = position(text, offset)
+        val at = text.positionOf("Box")
         return adapter.getCodeActions(uri, Range(at, at), emptyList())
     }
 
-    private fun position(
+    /** Applying the action's edit to the document at [uri] leaves it compiling without diagnostics. */
+    private fun assertRepairs(
+        adapter: XdkAdapter,
+        uri: String,
         text: String,
-        offset: Int,
-    ): Position =
-        Position(
-            text.take(offset).count { it == '\n' },
-            offset - text.lastIndexOf('\n', offset - 1) - 1,
-        )
+        action: CodeAction,
+    ) {
+        assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit), uri)).diagnostics).isEmpty()
+    }
 
     private fun workspace(
         text: String,

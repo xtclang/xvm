@@ -84,7 +84,7 @@ class XdkLocalInlineTest {
             """.trimIndent()
         query(text, select = "Int value") { adapter, uri, actions ->
             val action = actions.single { it.title == "Inline constant local variable" }
-            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            val changed = apply(text, requireNotNull(action.edit), uri)
             assertThat(changed).doesNotContain("Int value =").contains("return ${use.replace("value", "(1 + 2)")};")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
