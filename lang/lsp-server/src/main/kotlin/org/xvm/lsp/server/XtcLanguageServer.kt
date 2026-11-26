@@ -1106,18 +1106,16 @@ class XtcLanguageServer internal constructor(
 
             // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if
             // needed.
+            val semanticTokensSetting =
+                System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)?.let { "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it" }
+                    ?: System.getenv(SEMANTIC_TOKENS_ENV)?.let { "environment $SEMANTIC_TOKENS_ENV=$it" }
+                    ?: "build property lsp.semanticTokens=${buildInfo.getProperty("lsp.semanticTokens", "true")}"
             if (
                 semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
             ) {
                 logger.info(
                     "semantic tokens ENABLED via {} ({} types, {} modifiers)",
-                    System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)?.let {
-                        "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it"
-                    }
-                        ?: System.getenv(SEMANTIC_TOKENS_ENV)?.let {
-                            "environment $SEMANTIC_TOKENS_ENV=$it"
-                        }
-                        ?: "build property lsp.semanticTokens=${buildInfo.getProperty("lsp.semanticTokens", "true")}",
+                    semanticTokensSetting,
                     SemanticTokenLegend.tokenTypes.size,
                     SemanticTokenLegend.tokenModifiers.size,
                 )
@@ -1137,16 +1135,7 @@ class XtcLanguageServer internal constructor(
                         if (tokenCapabilities.get().range) range = Either.forLeft(true)
                     }
             } else {
-                logger.warn(
-                    "semantic tokens DISABLED via {}",
-                    System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)?.let {
-                        "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it"
-                    }
-                        ?: System.getenv(SEMANTIC_TOKENS_ENV)?.let {
-                            "environment $SEMANTIC_TOKENS_ENV=$it"
-                        }
-                        ?: "build property lsp.semanticTokens=${buildInfo.getProperty("lsp.semanticTokens", "true")}",
-                )
+                logger.warn("semantic tokens DISABLED via {}", semanticTokensSetting)
             }
 
             // --- Workspace features ---
