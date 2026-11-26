@@ -1766,6 +1766,30 @@ private fun Tour.building() {
         stopAll()
     }
     shot(
+        "Choose the build mode",
+        "Ctrl+Alt+X, B, or Tools | Select Ecstasy Build Mode, chooses how Build, Rebuild and Run work: embedded, Gradle, or automatic.",
+        feature = "xtc.selectBuildMode",
+        focus = "popup",
+        until = { "Gradle" in rows().lines() },
+        check = {
+            rows().lines().let { rows ->
+                expect(listOf("Automatic", "Embedded compiler", "Gradle").all { mode -> rows.any { it.startsWith(mode) } }) {
+                    "The build modes: $rows"
+                }
+            }
+        },
+        settle = 2.seconds,
+    ) {
+        // the keys, as a user presses them in the editor: the keymap decides, so a shortcut the plugin lost does nothing
+        open(file(MODULE), 0)
+        editorChord("ctrl alt X", "B")
+    }
+    verify("choosing Gradle there makes Gradle the project's build mode") {
+        expect(within(HANG) { chooseRow("Gradle") }) { "No Gradle to choose: ${rows()}" }
+        // the mode as its label names it, which Build and Run follow
+        expect(within(HANG) { buildModules().startsWith("mode=Gradle ") }) { "The build mode: ${buildModules()}" }
+    }
+    shot(
         "Run with Gradle",
         "In Gradle mode, the same configuration runs the XTC Gradle plugin's runXtc task, with the build's settings and XDK.",
         feature = "runXtc",
@@ -2841,6 +2865,17 @@ private fun Tour.settings() {
         expect(within(HANG) { realClick("Restart running Ecstasy servers with saved settings") }) { "No Restart: ${popupText().take(300)}" }
         expect(within(HANG) { serverState().let { it.startsWith("started") && it != before } }) { "The server: ${serverState()}" }
         closeDialogs()
+        answers()
+    }
+    verify("Ctrl+Alt+X, R restarts the server, which answers", setOf(Need.SERVER)) {
+        within(HANG) { !dialogShowing() }
+        val before = serverState()
+        // the keys, as a user presses them in the editor: the keymap decides, so a shortcut the plugin lost does nothing
+        open(source("Eights.x"), 0)
+        editorChord("ctrl alt X", "R")
+        expect(within(HANG) { serverState().let { it.startsWith("started") && it != before } }) {
+            "The server: ${serverState()}, before $before"
+        }
         answers()
     }
     verify("the server comes back when its process dies, and its features answer again") {

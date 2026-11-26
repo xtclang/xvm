@@ -447,7 +447,6 @@
     <ID>ReturnCount:EmbeddedRuns.kt:EmbeddedRuns$private fun startTests: CompletableFuture&lt;Unit&gt;</ID>
     <ID>ReturnCount:EmbeddedRuns.kt:EmbeddedRuns$private fun taskModule: String</ID>
     <ID>ReturnCount:LanguageModelTest.kt:LanguageModelTest$private fun findXvmRoot: File?</ID>
-    <ID>ReturnCount:PopupChoices.kt:PopupChoices$@JvmStatic fun chooseListRow: Boolean</ID>
     <ID>ReturnCount:PopupChoices.kt:PopupChoices$@JvmStatic fun chooseTableRowContaining: Boolean</ID>
     <ID>ReturnCount:RunWorkerProcess.kt:RunWorkerProcess$private fun firstLine: String?</ID>
     <ID>ReturnCount:SemanticModel.kt:SemanticModel$fun declarationLocationsAt: List&lt;SourceLocation&gt;</ID>

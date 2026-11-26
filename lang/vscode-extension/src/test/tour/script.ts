@@ -112,11 +112,11 @@
  * | xtc.refreshCompilerBuild                  | check "Refresh the Gradle model"                                  |
  * | xtc.prepareCompilerInputs                 | check "Prepare generated resources"                               |
  * | xtc.selectLanguageAdapter (Ctrl+Alt+X A)  | step "Switch the language adapter"; check "Back to the compiler"  |
- * | xtc.restartServer                         | check "Restart the language server"                               |
+ * | xtc.restartServer (Ctrl+Alt+X R)          | check "Restart the language server"                               |
  * | xtc.exportServerLogs                      | step "Export the server's logs"                                   |
  * | xtc.openLanguageSettings                  | step "The extension's settings"                                   |
  * | xtc.createProject                         | step "Create a project"                                           |
- * | xtc.selectBuildMode, the status bar item  | step "The build mode"; steps "Run with Gradle", "Debug with Gradle", "Tests with Gradle" |
+ * | xtc.selectBuildMode (Ctrl+Alt+X B), the status bar item | step "The build mode"; check "Choose the build mode with its keys"; steps "Run with Gradle", "Debug with Gradle", "Tests with Gradle" |
  * | xtc.build (Ctrl+F9), xtc.rebuild          | steps "Build", "A failed build"; check "Rebuild"                  |
  * | xtc.runModule (Ctrl+Shift+F10, editor/title/run, editor/context, Run lens) | step "Run from the editor"; checks "The Run lens", "Run with a key", "The editor's menu" |
  * | xtc.debug.toggleHexValues (debug/variables/context, debug/watch/context) | check "Hexadecimal values"         |
@@ -1678,7 +1678,10 @@ async function commands(tour: Tour): Promise<void> {
     });
     await tour.verify('Restart the language server', 'xtc.restartServer', async () => {
         const before = getClient();
-        await command('xtc.restartServer');
+        // Ctrl+Alt+X R, as a user presses it in the editor: the keybinding decides, so one the extension lost does nothing
+        await open(tour.source('Eights.x'));
+        await tour.ui.focusEditor();
+        await tour.ui.press('Control+Alt+KeyX', 'KeyR');
         await tour.until('A new server runs', () => getClient() !== before && !!getClient()?.isRunning(), () => getClient()?.state);
         await open(tour.source('Eights.x'));
         await replace('return drawPile.popCard();', 'return drawPile.popCrd();');
@@ -1887,6 +1890,16 @@ async function building(tour: Tour): Promise<void> {
         await tour.ui.press('Escape');
     });
     await tour.verify('A task with arguments', 'taskDefinitions', () => playWithArguments(tour, 'embedded'));
+    await tour.verify('Choose the build mode with its keys', 'xtc.selectBuildMode', async () => {
+        // Ctrl+Alt+X B, as a user presses it in the editor: the keybinding decides, so one the extension lost does nothing
+        await open(module);
+        await tour.ui.focusEditor();
+        await tour.ui.press('Control+Alt+KeyX', 'KeyB');
+        await tour.until('The build modes show', async () => (await quickRows(tour)).some(each => each.includes('Automatic')),
+            async () => (await quickRows(tour)).join(' | '));
+        await tour.ui.pick('Gradle');
+        await tour.until('The status bar says Gradle', () => buildModeStatus()?.includes('Gradle') ?? false, () => buildModeStatus());
+    });
     await tour.shot({
         title: 'Run with Gradle',
         caption: "In Gradle mode, the same Run runs the XTC Gradle plugin's runXtc task, with the build's settings and XDK, in the terminal.",

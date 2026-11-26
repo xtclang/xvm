@@ -847,6 +847,8 @@ internal interface TourProbe {
 
     fun choose(text: String): Boolean
 
+    fun chooseRow(text: String): Boolean
+
     fun pick(label: String): Boolean
 
     fun rows(): String
