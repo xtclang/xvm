@@ -28,12 +28,9 @@ internal fun ParityScenarios.adapterChooserCases() {
                     focusEditor(document.editor)
                     withContext(OnDispatcher.EDT) { chooser.invoke(document.editor.editor, data.string("actionId")) }
                     awaitUi("adapter chooser offers $label", HANG_LIMIT) { withContext(OnDispatcher.EDT) { chooser.pick(label) } }
-                    awaitUi("adapter restart into $label", HANG_LIMIT) {
-                        protocol.server().getCurrentProcessId()?.let { it != previous } == true
-                    }
                 }
-                previous = protocol.server().getCurrentProcessId()
-                val status = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+                previous = protocol.awaitRestart("adapter restart into $label", previous)
+                val status = protocol.status()
                 check(status.string("adapter") == expected) { "Expected the $expected adapter: $status" }
                 if (expected == "TreeSitter") {
                     with(driver) {

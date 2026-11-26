@@ -72,14 +72,7 @@ fun Driver.lookup(
     matches: (List<CompletionItem>) -> Boolean,
 ) {
     dismissPopups()
-    focusEditor(editor)
-    withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
-    editor.scrollToCaretNow()
-    val inspection =
-        PopupInspection(this, editor) {
-            invokeAction("CodeCompletion", component = editor.component)
-        }
-    invokeAction("CodeCompletion", component = editor.component)
+    val inspection = startCompletion(editor, at)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
     awaitUi(
         message = "shared completion scope",
@@ -189,14 +182,7 @@ fun Driver.accept(
     check(at in 0..before.length)
     val prefix = before.take(at).takeLastWhile { it.isLetterOrDigit() || it == '_' }
     val expected = expectedText ?: before.replaceRange(at - prefix.length, at, label)
-    focusEditor(editor)
-    withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
-    editor.scrollToCaretNow()
-    val inspection =
-        PopupInspection(this, editor) {
-            invokeAction("CodeCompletion", component = editor.component)
-        }
-    invokeAction("CodeCompletion", component = editor.component)
+    val inspection = startCompletion(editor, at)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
     awaitUi("$label completion or single-item insertion", HANG_LIMIT) {
         // An insertion may already have completed before focus was lost. Never reopen it.
@@ -218,4 +204,20 @@ fun Driver.accept(
         invokeAction("EditorChooseLookupItem", component = editor.component)
     }
     awaitUi("exact replacement of the typed prefix", HANG_LIMIT) { editor.text == expected }
+}
+
+/** Invokes Code Completion at [at] in [editor], focused and scrolled to it, with an inspection that invokes it again. */
+private fun Driver.startCompletion(
+    editor: JEditorUiComponent,
+    at: Int,
+): PopupInspection {
+    focusEditor(editor)
+    withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
+    editor.scrollToCaretNow()
+    val inspection =
+        PopupInspection(this, editor) {
+            invokeAction("CodeCompletion", component = editor.component)
+        }
+    invokeAction("CodeCompletion", component = editor.component)
+    return inspection
 }

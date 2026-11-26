@@ -161,8 +161,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
     awaitUi("compiler is working when its project closes", HANG_LIMIT) {
         check(!secondPending.isDone()) { "Close must overlap a pending native request" }
         second
-            .query("xtc/languageServiceStatus", emptyMap<String, Any>())
-            .asJsonObject["compilerQueue"]
+            .status()["compilerQueue"]
             .asJsonObject["runningSize"]
             .asInt > 0
     }

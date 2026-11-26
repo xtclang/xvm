@@ -13,17 +13,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 internal fun ParityScenarios.progressCases() {
     case("X145") { data ->
-        write(data.string("file"), data.string("source"))
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(
-                    data.string("module"),
-                    uri(data.string("file")),
-                    emptyList(),
-                ),
-            ),
-        )
-        val document = open(data.string("file"))
+        val document = configuredModule(data)
         val title = "Finding references"
 
         /** Restarts the language server as a user does, with the CLI, which reaches the editor and asks it to. */

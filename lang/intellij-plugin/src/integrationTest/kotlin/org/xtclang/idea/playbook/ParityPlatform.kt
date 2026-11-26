@@ -102,12 +102,7 @@ internal fun ParityScenarios.platformCases() {
             replace(document, variant.string("source"))
             errors(document)
             val outline = query("textDocument/documentSymbol", document)
-
-            fun names(rows: List<JsonObject>): List<String> =
-                rows.flatMap { symbol ->
-                    listOf(symbol.string("name")) + symbol["children"]?.let { names(it.rows()) }.orEmpty()
-                }
-            check(names(outline.rows()).containsAll(variant.strings("symbols")))
+            check(symbolNames(outline.rows()).containsAll(variant.strings("symbols")))
             val folds = query("textDocument/foldingRange", document).rows()
             check(folds.any { it["startLine"].asInt == variant["foldLine"].asInt && it["endLine"].asInt > it["startLine"].asInt })
             val at = document.at(variant.string("anchor"))
@@ -172,15 +167,13 @@ internal fun ParityScenarios.platformCases() {
     case("X136") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
-        val before =
-            protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+        val before = protocol.status()
         with(driver) {
             withContext(OnDispatcher.EDT) {
                 utility(LanguageServicePage::class).exercise(singleProject())
             }
         }
-        val after =
-            protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+        val after = protocol.status()
         check(before["pid"] == after["pid"])
         val queue = after["compilerQueue"].asJsonObject
         check(queue["queueSize"].asInt == queue["queuedJobs"].asJsonArray.size())
@@ -197,15 +190,9 @@ internal fun ParityScenarios.platformCases() {
                     withContext(OnDispatcher.EDT) {
                         utility(LanguageServicePage::class).transport(singleProject(), transport)
                     }
-                    awaitUi("transport restart into $transport", HANG_LIMIT) {
-                        protocol.server().getCurrentProcessId()?.let { it != previous } == true
-                    }
                 }
-                previous = protocol.server().getCurrentProcessId()
-                val status =
-                    protocol
-                        .query("xtc/languageServiceStatus", emptyMap<String, Any>())
-                        .asJsonObject
+                previous = protocol.awaitRestart("transport restart into $transport", previous)
+                val status = protocol.status()
                 check(status.string("textSynchronization") == transport)
                 check(document.text == data.string("edited"))
                 settle(document)
@@ -218,23 +205,13 @@ internal fun ParityScenarios.platformCases() {
                     withContext(OnDispatcher.EDT) {
                         utility(LanguageServicePage::class).adapter(singleProject(), label)
                     }
-                    awaitUi("adapter restart into $label", HANG_LIMIT) {
-                        protocol.server().getCurrentProcessId()?.let { it != previous } == true
-                    }
                 }
-                previous = protocol.server().getCurrentProcessId()
-                val status = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+                previous = protocol.awaitRestart("adapter restart into $label", previous)
+                val status = protocol.status()
                 check(status.string("adapter") == expected)
                 check(document.text == unsaved)
-
-                fun names(rows: List<JsonObject>): List<String> =
-                    rows.flatMap { symbol ->
-                        listOf(symbol.string("name")) + symbol["children"]?.let { names(it.rows()) }.orEmpty()
-                    }
-                with(driver) {
-                    awaitUi("unsaved declaration analyzed by $label", HANG_LIMIT) {
-                        "adapterSwitchProof" in names(query("textDocument/documentSymbol", document).rows())
-                    }
+                awaitUi("unsaved declaration analyzed by $label", HANG_LIMIT) {
+                    "adapterSwitchProof" in symbolNames(query("textDocument/documentSymbol", document).rows())
                 }
             }
         } finally {
@@ -260,8 +237,7 @@ internal fun ParityScenarios.platformCases() {
             with(driver) {
                 awaitUi("live Code Style configuration", HANG_LIMIT) {
                     protocol
-                        .query("xtc/languageServiceStatus", emptyMap<String, Any>())
-                        .asJsonObject["formatting"]
+                        .status()["formatting"]
                         ?.takeIf { it.isJsonObject }
                         ?.asJsonObject
                         ?.get("indentSize")
@@ -282,8 +258,7 @@ internal fun ParityScenarios.platformCases() {
                 }
             }
             check(formatted().any { it.string("newText") == data.string("expectedIndent") })
-            val status =
-                protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+            val status = protocol.status()
             check(
                 status["saveHookSupported"].asBoolean && !status["serverSaveFormatting"].asBoolean,
             )
@@ -322,8 +297,7 @@ internal fun ParityScenarios.platformCases() {
                     closed.text == data.string("closedFormatted") + "\n"
                 }
             }
-            val status =
-                protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+            val status = protocol.status()
             check(!status["serverSaveFormatting"].asBoolean)
             // The server owns save formatting once native Actions on Save is off: its willSaveWaitUntil
             // edits apply before the document is written.
@@ -339,15 +313,11 @@ internal fun ParityScenarios.platformCases() {
                     withContext(OnDispatcher.EDT) {
                         utility(LanguageServicePage::class).saveOwner(singleProject(), "server")
                     }
-                    awaitUi("restart with server save formatting", HANG_LIMIT) {
-                        protocol.server().getCurrentProcessId()?.let { it != pid } == true
-                    }
                 }
-                pid = protocol.server().getCurrentProcessId()
+                pid = protocol.awaitRestart("restart with server save formatting", pid)
                 check(
                     protocol
-                        .query("xtc/languageServiceStatus", emptyMap<String, Any>())
-                        .asJsonObject["serverSaveFormatting"]
+                        .status()["serverSaveFormatting"]
                         .asBoolean,
                 )
                 replace(document, data.string("source"))
@@ -369,10 +339,8 @@ internal fun ParityScenarios.platformCases() {
                     withContext(OnDispatcher.EDT) {
                         utility(LanguageServicePage::class).restore(singleProject(), original)
                     }
-                    awaitUi("restart with editor save formatting", HANG_LIMIT) {
-                        protocol.server().getCurrentProcessId()?.let { it != pid } == true
-                    }
                 }
+                protocol.awaitRestart("restart with editor save formatting", pid)
             }
         } finally {
             with(driver) {
@@ -476,17 +444,7 @@ internal fun ParityScenarios.platformCases() {
                     "    class ${data.string("prefix")}$it {}"
                 } +
                 "\n}\n"
-        write(data.string("file"), source)
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(
-                    data.string("module"),
-                    uri(data.string("file")),
-                    emptyList(),
-                ),
-            ),
-        )
-        val document = open(data.string("file"))
+        val document = configuredModule(data, source)
         clean(document)
         query("textDocument/documentSymbol", document)
         val normal =
@@ -519,17 +477,7 @@ internal fun ParityScenarios.platformCases() {
     }
 
     case("X142") { data ->
-        write(data.string("file"), data.string("source"))
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(
-                    data.string("module"),
-                    uri(data.string("file")),
-                    emptyList(),
-                ),
-            ),
-        )
-        val document = open(data.string("file"))
+        val document = configuredModule(data)
         clean(document)
         val offset = document.text.indexOf(data.string("anchor"))
         check(document.text == data.string("source")) {
@@ -1043,17 +991,7 @@ internal fun ParityScenarios.platformCases() {
         }
     }
     case("X131") { data ->
-        write(data.string("file"), data.string("source"))
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(
-                    data.string("module"),
-                    uri(data.string("file")),
-                    emptyList(),
-                ),
-            ),
-        )
-        val document = open(data.string("file"))
+        val document = configuredModule(data)
         clean(document)
         val lens =
             query("textDocument/codeLens", document).rows().single {
@@ -1133,17 +1071,7 @@ internal fun ParityScenarios.platformCases() {
             }
     }
     case("X132") { data ->
-        write(data.string("file"), data.string("source"))
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(
-                    data.string("module"),
-                    uri(data.string("file")),
-                    emptyList(),
-                ),
-            ),
-        )
-        val document = open(data.string("file"))
+        val document = configuredModule(data)
         clean(document)
         val edits =
             query(
@@ -1210,17 +1138,7 @@ internal fun ParityScenarios.platformCases() {
         clean(document)
     }
     case("X133") { data ->
-        write(data.string("file"), data.string("source"))
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(
-                    data.string("module"),
-                    uri(data.string("file")),
-                    emptyList(),
-                ),
-            ),
-        )
-        val document = open(data.string("file"))
+        val document = configuredModule(data)
         clean(document)
 
         fun linked(anchor: String) =
@@ -1363,3 +1281,7 @@ interface LinkedEditingProbe {
 
     fun ranges(editor: Editor): String
 }
+
+/** The names of the document symbols [rows], with their children's. */
+private fun symbolNames(rows: List<JsonObject>): List<String> =
+    rows.flatMap { symbol -> listOf(symbol.string("name")) + symbol["children"]?.let { symbolNames(it.rows()) }.orEmpty() }

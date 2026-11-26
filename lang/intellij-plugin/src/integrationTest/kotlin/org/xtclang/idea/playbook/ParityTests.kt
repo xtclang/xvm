@@ -6,7 +6,6 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
-import com.intellij.driver.sdk.singleProject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
 
@@ -18,71 +17,15 @@ import java.nio.file.Files
  */
 internal fun ParityScenarios.testRunCases() {
     case("X339") { data ->
-        val document = open(data.string("file"), data.string("source"))
-        configure(listOf(SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), emptyList())))
-        clean(document)
-        val project = with(driver) { singleProject() }
-        val tests = with(driver) { utility(TestRunProbe::class) }
-        val debugger = with(driver) { utility(DebugSessionProbe::class) }
+        val document = openModule(data)
+        val console = TestConsole(this)
         val editor = document.editor.editor
-        // a test item's ID, as VS Code's, is its module and selector; IntelliJ's console knows it by its location
-        val location = { id: String -> "xunit://${id.substringAfter('/')}" }
-
-        fun results() = JsonParser.parseString(tests.results()).asJsonObject
-
-        fun icons() = with(driver) { withContext(OnDispatcher.EDT) { tests.icons(editor) } }
-
-        tests.reset(project)
-        awaitUi("Test icons in the gutter", HANG_LIMIT) { icons().containsAll(data.strings("icons")) }
-
-        with(driver) { withContext(OnDispatcher.EDT) { tests.start(editor, data.string("runAll"), false) } }
-        val ran =
-            awaitUi(
-                "Run marks every test",
-                HANG_LIMIT,
-                errorMessage = { it.toString() },
-                getter = ::results,
-                checker = { all -> (data.strings("passed") + data.string("failed")).all { all.finished(location(it)) } },
-            )
-        data.strings("passed").forEach { id ->
-            check(ran.result(location(id)).string("state") == "passed") { "$id did not pass: $ran" }
-        }
-        val failure = ran.result(location(data.string("failed")))
-        check(failure.string("state") == "failed" && data.string("failure") in failure.string("message")) { "Failure: $failure" }
+        val ran = runTests(console, editor, data, data.string("runAll"), "Run marks every test")
         // the console goes to the test's declaration, the line of its name
-        val works = ran.result(location(data.string("debugged")))
+        val works = ran.result(console.location(data.string("debugged")))
         check(works.int("line") == data.int("nameLine") - 1 && works.string("file").endsWith(data.string("file"))) { "works: $works" }
 
-        tests.reset(project)
-        val name = data.string("debugRun")
-        try {
-            tests.breakpoint(project, uri(data.string("file")), data.int("breakpointLine"))
-            with(driver) { withContext(OnDispatcher.EDT) { tests.start(editor, data.string("debugIcon"), true) } }
-            val stopped =
-                awaitUi(
-                    "the debugged test stops at the breakpoint",
-                    HANG_LIMIT,
-                    errorMessage = { it.toString() },
-                    getter = { JsonParser.parseString(tests.debugState(name)).asJsonObject },
-                    checker = { it["suspended"]?.asBoolean == true },
-                )
-            check(stopped.int("line") == data.int("breakpointLine") && stopped.string("file").endsWith(data.string("file"))) {
-                "Stopped at: $stopped"
-            }
-            tests.resume(name)
-            val debugged =
-                awaitUi(
-                    "Resume runs the test to its end, which passes it",
-                    HANG_LIMIT,
-                    errorMessage = { it.toString() },
-                    getter = ::results,
-                    checker = { it.finished(location(data.string("debugged"))) },
-                )
-            check(debugged.result(location(data.string("debugged"))).string("state") == "passed") { "Debugged: $debugged" }
-            check(debugged.keySet() == setOf(location(data.string("debugged")))) { "Debug of the test runs it alone: $debugged" }
-        } finally {
-            debugger.clearBreakpoints(project)
-        }
+        debugTest(console, editor, data, data.string("file"), uri(data.string("file")), "the debugged test stops at the breakpoint")
     }
 }
 
@@ -93,7 +36,7 @@ internal fun ParityScenarios.testRunCases() {
  */
 internal fun ParityScenarios.gradleTestCases() {
     case("X340") { data ->
-        gradleProject("X340", data) { project, _ ->
+        gradleProject("X340", data) { _, _ ->
             val file = projectRoot.resolve(data.string("testFile"))
             Files.writeString(file, data.string("testSource"))
             // the playbook's graph is explicit, so the project's modules join it as the test source set has them
@@ -105,65 +48,93 @@ internal fun ParityScenarios.gradleTestCases() {
                 ),
             )
             val document = open(file, data.string("testFile"))
-            val tests = with(driver) { utility(TestRunProbe::class) }
-            val debugger = with(driver) { utility(DebugSessionProbe::class) }
+            val console = TestConsole(this)
             val editor = document.editor.editor
-            val location = { id: String -> "xunit://${id.substringAfter('/')}" }
+            runTests(console, editor, data, data.string("runIcon"), "testXtc runs the class's tests")
 
-            fun results() = JsonParser.parseString(tests.results()).asJsonObject
-
-            fun icons() = with(driver) { withContext(OnDispatcher.EDT) { tests.icons(editor) } }
-
-            tests.reset(project)
-            awaitUi("Test icons in the gutter", HANG_LIMIT) { icons().containsAll(data.strings("icons")) }
-
-            with(driver) { withContext(OnDispatcher.EDT) { tests.start(editor, data.string("runIcon"), false) } }
-            val ran =
-                awaitUi(
-                    "testXtc runs the class's tests",
-                    HANG_LIMIT,
-                    errorMessage = { it.toString() },
-                    getter = ::results,
-                    checker = { all -> (data.strings("passed") + data.string("failed")).all { all.finished(location(it)) } },
-                )
-            data.strings("passed").forEach { id ->
-                check(ran.result(location(id)).string("state") == "passed") { "$id did not pass: $ran" }
-            }
-            val failure = ran.result(location(data.string("failed")))
-            check(failure.string("state") == "failed" && data.string("failure") in failure.string("message")) { "Failure: $failure" }
-
-            tests.reset(project)
-            val name = data.string("debugRun")
             try {
-                tests.breakpoint(project, file.toUri().toString(), data.int("breakpointLine"))
-                with(driver) { withContext(OnDispatcher.EDT) { tests.start(editor, data.string("debugIcon"), true) } }
-                val stopped =
-                    awaitUi(
-                        "testXtc runs the test under the debugger, which stops at the breakpoint",
-                        HANG_LIMIT,
-                        errorMessage = { it.toString() },
-                        getter = { JsonParser.parseString(tests.debugState(name)).asJsonObject },
-                        checker = { it["suspended"]?.asBoolean == true },
-                    )
-                check(stopped.int("line") == data.int("breakpointLine") && stopped.string("file").endsWith(data.string("testFile"))) {
-                    "Stopped at: $stopped"
-                }
-                tests.resume(name)
-                val debugged =
-                    awaitUi(
-                        "Resume runs the test to its end, which passes it",
-                        HANG_LIMIT,
-                        errorMessage = { it.toString() },
-                        getter = ::results,
-                        checker = { it.finished(location(data.string("debugged"))) },
-                    )
-                check(debugged.result(location(data.string("debugged"))).string("state") == "passed") { "Debugged: $debugged" }
-                check(debugged.keySet() == setOf(location(data.string("debugged")))) { "Debug of the test runs it alone: $debugged" }
+                val stops = "testXtc runs the test under the debugger, which stops at the breakpoint"
+                debugTest(console, editor, data, data.string("testFile"), file.toUri().toString(), stops)
             } finally {
-                debugger.clearBreakpoints(project)
                 closeEditor(document)
             }
         }
+    }
+}
+
+/**
+ * Runs the tests of [editor]'s gutter icon [icon] in IntelliJ's test console, once the case's test icons show, as [what]
+ * says: the case's passed tests pass, and its failed one fails with its message. Answers the console's results.
+ */
+private fun ParityWorkspace.runTests(
+    console: TestConsole,
+    editor: Editor,
+    data: JsonObject,
+    icon: String,
+    what: String,
+): JsonObject {
+    console.tests.reset(console.project)
+    awaitUi("Test icons in the gutter", HANG_LIMIT) {
+        with(driver) { withContext(OnDispatcher.EDT) { console.tests.icons(editor) } }.containsAll(data.strings("icons"))
+    }
+
+    with(driver) { withContext(OnDispatcher.EDT) { console.tests.start(editor, icon, false) } }
+    val ran =
+        awaitUi(
+            what,
+            HANG_LIMIT,
+            errorMessage = { it.toString() },
+            getter = console::results,
+            checker = { all -> (data.strings("passed") + data.string("failed")).all { all.finished(console.location(it)) } },
+        )
+    data.strings("passed").forEach { id ->
+        check(ran.result(console.location(id)).string("state") == "passed") { "$id did not pass: $ran" }
+    }
+    val failure = ran.result(console.location(data.string("failed")))
+    check(failure.string("state") == "failed" && data.string("failure") in failure.string("message")) { "Failure: $failure" }
+    return ran
+}
+
+/**
+ * Debugs the case's debugged test from [editor]'s gutter icon, with a breakpoint on its line of [file], at [uri], where
+ * it stops, as [what] says; Resume runs the test to its end, which passes it alone.
+ */
+private fun ParityWorkspace.debugTest(
+    console: TestConsole,
+    editor: Editor,
+    data: JsonObject,
+    file: String,
+    uri: String,
+    what: String,
+) {
+    console.tests.reset(console.project)
+    val name = data.string("debugRun")
+    val debugged = console.location(data.string("debugged"))
+    try {
+        console.tests.breakpoint(console.project, uri, data.int("breakpointLine"))
+        with(driver) { withContext(OnDispatcher.EDT) { console.tests.start(editor, data.string("debugIcon"), true) } }
+        val stopped =
+            awaitUi(
+                what,
+                HANG_LIMIT,
+                errorMessage = { it.toString() },
+                getter = { JsonParser.parseString(console.tests.debugState(name)).asJsonObject },
+                checker = { it["suspended"]?.asBoolean == true },
+            )
+        checkStoppedAt(stopped, data.int("breakpointLine"), file)
+        console.tests.resume(name)
+        val ended =
+            awaitUi(
+                "Resume runs the test to its end, which passes it",
+                HANG_LIMIT,
+                errorMessage = { it.toString() },
+                getter = console::results,
+                checker = { it.finished(debugged) },
+            )
+        check(ended.result(debugged).string("state") == "passed") { "Debugged: $ended" }
+        check(ended.keySet() == setOf(debugged)) { "Debug of the test runs it alone: $ended" }
+    } finally {
+        with(driver) { utility(DebugSessionProbe::class) }.clearBreakpoints(console.project)
     }
 }
 

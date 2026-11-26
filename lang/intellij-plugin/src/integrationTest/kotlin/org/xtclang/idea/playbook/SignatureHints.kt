@@ -1,12 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.intellij.driver.client.Driver
-import com.intellij.driver.client.service
-import com.intellij.driver.model.LockSemantics
-import com.intellij.driver.model.OnDispatcher
-import com.intellij.driver.sdk.PsiManager
 import com.intellij.driver.sdk.invokeAction
-import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.ui
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
@@ -30,15 +25,7 @@ fun Driver.signature(
     dismissPopups()
     focusEditor(editor)
     val popup = ui.x("//div[@class='ParameterInfoComponent']")
-    val support =
-        withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-            editor.editor.getCaretModel().moveToOffset(at)
-            val file =
-                requireNotNull(
-                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()),
-                )
-            utility(LspFileSupport::class).getSupport(file).getSignatureHelpSupport()
-        }
+    val support = fileSupport(editor, at) { it.getSignatureHelpSupport() }
     editor.scrollToCaretNow()
     val inspection =
         PopupInspection(this, editor) {

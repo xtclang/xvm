@@ -63,7 +63,7 @@ internal class FinalReport(
 
     /** The compiles the server has had submitted, when nothing could change the document's diagnostics; null if not. */
     private fun quiet(): Int? {
-        val status = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+        val status = protocol.status()
         val queue = status["compilerQueue"]?.takeIf { it.isJsonObject }?.asJsonObject
         val compiling = queue != null && listOf("queueSize", "debouncingSize", "runningSize").any { queue[it]?.asInt != 0 }
         val answering = status["openRequests"]?.takeIf { it.isJsonArray }?.asJsonArray?.size() ?: 0

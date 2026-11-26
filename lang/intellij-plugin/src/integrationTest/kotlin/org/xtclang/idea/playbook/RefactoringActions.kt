@@ -193,24 +193,13 @@ fun Driver.partialGraphHierarchy(
         // loading deadline cutting short this asynchronous hierarchy request.
         browser.tree().collectExpandedPaths().any { path -> path.path.last().contains(child) }
     }
-    val path = editor.editor.getVirtualFile().getPath()
-    val views = service<NativeUsageViews>(singleProject())
-    val previous = withContext(OnDispatcher.EDT) { views.getSelectedUsageView() }
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
-    invokeAction("FindUsages", component = editor.component)
-    awaitUi("incomplete graph withholds references while retaining local navigation", HANG_LIMIT) {
-        withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-            val view = views.getSelectedUsageView()
-            if (view == null || view == previous || view.isSearchInProgress()) {
-                return@withContext false
-            }
-            // LSP4IJ combines definitions, implementations, type definitions and references here.
-            // The declaration may remain, but the known extends-use must not masquerade as a
-            // complete workspace reference result beside the broken module.
-            val ranges = view.rangesIn(path)
-            ranges.any { at in it } && ranges.none { referenceAt in it }
-        }
+    awaitFindUsages(editor, "incomplete graph withholds references while retaining local navigation") { ranges ->
+        // LSP4IJ combines definitions, implementations, type definitions and references here.
+        // The declaration may remain, but the known extends-use must not masquerade as a
+        // complete workspace reference result beside the broken module.
+        ranges.any { at in it } && ranges.none { referenceAt in it }
     }
 }
 

@@ -2,13 +2,9 @@ package org.xtclang.idea.playbook
 
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
-import com.intellij.driver.client.service
-import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
-import com.intellij.driver.sdk.PsiManager
 import com.intellij.driver.sdk.getToolWindow
 import com.intellij.driver.sdk.invokeAction
-import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.toolwindows.structureToolWindow
 import com.intellij.driver.sdk.ui.ui
@@ -102,14 +98,9 @@ fun Driver.selectionParents(
 ) {
     val original = editor.text
     val support =
-        withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+        fileSupport(editor, at) {
             editor.editor.getSelectionModel().removeSelection()
-            editor.editor.getCaretModel().moveToOffset(at)
-            val file =
-                requireNotNull(
-                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()),
-                )
-            utility(LspFileSupport::class).getSupport(file).getSelectionRangeSupport()
+            it.getSelectionRangeSupport()
         }
     val previous = support.getValidLSPFuture()
 
@@ -131,18 +122,7 @@ fun Driver.selectionParents(
             return@awaitUi false
         }
 
-        fun offsets(range: SourceRange): IntRange =
-            withContext(OnDispatcher.EDT) {
-                val start =
-                    range.getStart().let {
-                        editor.document.getLineStartOffset(it.getLine()) + it.getCharacter()
-                    }
-                val end =
-                    range.getEnd().let {
-                        editor.document.getLineStartOffset(it.getLine()) + it.getCharacter()
-                    }
-                start until end
-            }
+        fun offsets(range: SourceRange): IntRange = withContext(OnDispatcher.EDT) { editor.offsets(range) }
         future.get().any { selected ->
             val range = offsets(selected.getRange())
             selected.getParent()?.let { parent ->
