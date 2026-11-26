@@ -11115,6 +11115,37 @@
         "limitations": []
       }
     },
+    "X358": {
+      "title": "hover and Quick Documentation of the XDK's own types and methods show their doc comments",
+      "manual": [],
+      "values": {
+        "file": "Documented.x",
+        "module": "Documented",
+        "source": "module Documented {\n    String echo(String text) = text;\n\n    Int size(Map<String, Int> map) = map.getOrDefault(\"a\", 0);\n}\n",
+        "hovers": [
+          {
+            "anchor": "String echo",
+            "offset": 0,
+            "documentation": {
+              "source": "String is a well-known, immutable data type for holding textual information",
+              "flags": ""
+            }
+          },
+          {
+            "anchor": "getOrDefault(",
+            "offset": 0,
+            "documentation": {
+              "source": "Obtain the value associated with the specified key",
+              "flags": ""
+            }
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

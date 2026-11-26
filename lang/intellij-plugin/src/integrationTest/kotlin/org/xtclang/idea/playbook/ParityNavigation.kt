@@ -354,6 +354,16 @@ internal fun ParityScenarios.librarySymbolCases() {
     }
 }
 
+/** X358, registered after X357 in catalog order: Quick Documentation of the XDK's types and methods shows their doc comments. */
+internal fun ParityScenarios.libraryDocumentationCases() {
+    case("X358") { data ->
+        val document = openModule(data)
+        data["hovers"].rows().forEach { hover ->
+            with(driver) { nativeHover(document, document.at(hover.string("anchor"), hover.int("offset")), hover.pattern("documentation")) }
+        }
+    }
+}
+
 /** Whether [uri] is the server's `ecstasy-library:` document of the library source whose path ends with [source]. */
 private fun libraryDocument(
     uri: String,

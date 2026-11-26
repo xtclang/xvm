@@ -4099,6 +4099,15 @@ uses and sorts the rest, in one edit.
 |---|---|---|
 | X357 | Write `Imports.x`, a module that imports `ecstasy.collections.NaturalHasher`, `ecstasy.collections.ReverseList` and `ecstasy.collections.CaseInsensitive`, in that order, and uses the first and the last. Organize Imports. | One Organize Imports action is offered (VS Code); it leaves `CaseInsensitive` and `NaturalHasher`, in that order, without `ReverseList`, and the module compiles. |
 
+### The XDK's documentation (X358)
+
+Hover a name of the XDK, or ask for its documentation (VS Code **Ctrl+K Ctrl+I**; IntelliJ **Quick Documentation**,
+Ctrl+Q), for its declaration and its doc comment, from the XDK's sources.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X358 | Write `Documented.x`, a module with `String echo(String text) = text;` and a method that calls `map.getOrDefault("a", 0)` on a `Map<String, Int>`. Hover the first `String`, then `getOrDefault`. | `String`'s hover has its doc comment, `String is a well-known, immutable data type for holding textual information.`; `getOrDefault`'s has Map's, `Obtain the value associated with the specified key, ...`. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and

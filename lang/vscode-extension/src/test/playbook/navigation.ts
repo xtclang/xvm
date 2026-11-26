@@ -144,6 +144,16 @@ export function librarySymbolCases(): void {
     });
 }
 
+/** X358, registered after X357 in catalog order: hover of the XDK's types and methods shows their doc comments. */
+export function libraryDocumentationCases(): void {
+    playbook('X358', async (workspace, data) => {
+        const document = await workspace.module(data.file, data.source, data.module);
+        for (const { anchor, offset, documentation } of data.hovers) {
+            assert.match(await hover(document, position(document, anchor, offset)), scenarioRegex(documentation), anchor);
+        }
+    });
+}
+
 /** Go to Definition, as F12 runs it, at [at] in [document]; the editor it opens on [source], a path's end. */
 async function revealDefinition(document: vscode.TextDocument, at: vscode.Position, source: string): Promise<vscode.TextEditor> {
     await vscode.window.showTextDocument(document, { selection: new vscode.Range(at, at), preview: false });
