@@ -2,7 +2,12 @@ package org.xtclang.idea
 
 import com.intellij.diagnostic.PluginException
 import com.intellij.openapi.application.AccessToken
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.LoggedErrorProcessor
@@ -11,6 +16,8 @@ import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
 import com.intellij.testFramework.fixtures.impl.LightTempDirTestFixtureImpl
 import com.intellij.testFramework.runInEdtAndGet
 import com.intellij.testFramework.runInEdtAndWait
+import com.intellij.util.ui.UIUtil
+import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.server.definition.extension.ServerExtensionPointBean
 import org.jetbrains.plugins.textmate.TextMateService
@@ -18,6 +25,7 @@ import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
+import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -76,6 +84,47 @@ class LightEditor(
         text: String,
         test: CodeInsightTestFixture.(PsiFile) -> T,
     ): T = runInEdtAndGet { fixture.test(fixture.configureByText(name, text)) }
+
+    /** The language server connection that LSP4IJ started for the project. */
+    fun connection(): LanguageServerWrapper = LanguageServiceAccessor.getInstance(fixture.project).startedServers.single()
+
+    /**
+     * A file at [path] in [directory] on disk, with [text], which the light project's in-memory files are not, so that
+     * LSP4IJ finds it by its URI.
+     */
+    fun file(
+        directory: Path,
+        path: String,
+        text: String,
+    ): VirtualFile {
+        val file = directory.resolve(path)
+        Files.createDirectories(file.parent)
+        Files.writeString(file, text)
+        return checkNotNull(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(file))
+    }
+
+    /**
+     * Opens [file] in the editor, has LSP4IJ connect it to the language server, and waits until the server has its text.
+     */
+    fun openConnected(file: VirtualFile) {
+        runInEdtAndWait { fixture.openFileInEditor(file) }
+        ReadAction.runBlocking<RuntimeException> {
+            val psi = checkNotNull(PsiManager.getInstance(fixture.project).findFile(file))
+            LanguageServiceAccessor.getInstance(fixture.project).getLanguageServers(psi, null, null)
+        }
+        await("LSP4IJ opens ${file.name}") { server.texts.keys.any { it.endsWith("/${file.name}") } }
+    }
+
+    /** Waits until [condition] holds, as [what] says, dispatching the EDT's pending events between its checks. */
+    fun await(
+        what: String,
+        condition: () -> Boolean,
+    ) {
+        awaitUntil(what) { condition() || false.also { runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() } } }
+    }
+
+    /** The text of [file]'s document. */
+    fun document(file: VirtualFile): String = runInEdtAndGet { checkNotNull(FileDocumentManager.getInstance().getDocument(file)).text }
 
     /**
      * The IDE these tests load is IntelliJ IDEA's single distribution, whose licensed part cannot start one of its
