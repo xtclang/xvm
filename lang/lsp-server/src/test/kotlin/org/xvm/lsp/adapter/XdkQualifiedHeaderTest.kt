@@ -162,7 +162,8 @@ class XdkQualifiedHeaderTest {
         CompilerTestSupport.configure()
         val prefix = "module Headers { void damaged(ecstasy.text.Str"
         val text = "$prefix value) {} Int later = 1; }"
-        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
+        val incomplete = analyzeIncomplete(text, URI, prefix.length)
+        val (analysis, errors) = incomplete
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
         val type = site.target as NamedTypeExpression
@@ -173,7 +174,7 @@ class XdkQualifiedHeaderTest {
         assertThat(type.nameBindings.map { it.target() }).containsOnlyNulls()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() })
             .contains("StringBuffer")
-        assertListenersStop(source, cursor)
+        assertListenersStop(incomplete.source, incomplete.cursor)
     }
 
     private companion object {

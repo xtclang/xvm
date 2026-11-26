@@ -145,7 +145,8 @@ class XdkArrayDimensionTest {
         CompilerTestSupport.configure()
         val prefix = HEADER + "new String[nu"
         val text = "$prefix]; } Int later = 42; }"
-        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
+        val incomplete = analyzeIncomplete(text, URI, prefix.length)
+        val (analysis, errors) = incomplete
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
         assertThat(site.isCall).isTrue()
@@ -156,7 +157,7 @@ class XdkArrayDimensionTest {
         assertThat(analysis.cursorBindings()[site]!!.candidates()).hasSize(1)
         assertThat(analysis.cursorBindings()[site]!!.argumentValues().map { it.name() })
             .containsExactly("number")
-        assertListenersStop(source, cursor)
+        assertListenersStop(incomplete.source, incomplete.cursor)
     }
 
     private companion object {
