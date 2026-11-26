@@ -1872,7 +1872,10 @@ object TourUi {
     @JvmStatic
     fun exists(path: String): Boolean = onEdt { LocalFileSystem.getInstance().refreshAndFindFileByNioFile(Path.of(path))?.isValid == true }
 
-    /** The selected editor's file name, its caret's zero-based line, and its selected text, as JSON. */
+    /**
+     * The selected editor's file name and path, its caret's zero-based line and column, that line's text, its selected text,
+     * and whether its document is writable, as JSON.
+     */
     @JvmStatic
     fun editorState(): String =
         onEdt {
@@ -1882,6 +1885,14 @@ object TourUi {
                     addProperty("file", editor?.virtualFile?.name)
                     addProperty("path", editor?.virtualFile?.path)
                     addProperty("line", editor?.caretModel?.logicalPosition?.line)
+                    addProperty("column", editor?.caretModel?.logicalPosition?.column)
+                    addProperty(
+                        "lineText",
+                        editor?.let {
+                            val line = it.caretModel.logicalPosition.line
+                            it.document.getText(TextRange(it.document.getLineStartOffset(line), it.document.getLineEndOffset(line)))
+                        },
+                    )
                     addProperty("selection", editor?.selectionModel?.selectedText)
                     addProperty("writable", editor?.document?.isWritable)
                 }.toString()
