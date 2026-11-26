@@ -20,10 +20,8 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
@@ -94,7 +92,6 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.collections.xTuple;
 
-import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt16;
 
 import org.xvm.runtime.template.text.xString;
@@ -106,6 +103,8 @@ import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.runtime.template._native.web.WebSocketConnection.WebSocketHandle;
 
 import org.xvm.util.Handy;
 
@@ -134,13 +133,11 @@ public class xRTServer
         markNativeMethod("setBodyBytes"    , null, VOID);
         markNativeMethod("closeImpl"       , VOID, VOID);
 
-        markNativeMethod("upgradeWebSocketImpl", null, null);
-        markNativeMethod("receiveWebSocket",     null, null);
-        markNativeMethod("sendWebSocket",        null, VOID);
-        markNativeMethod("isWebSocketOpen",      null, BOOLEAN);
-        markNativeMethod("getWebSocketCloseCode", null, null);
-        markNativeMethod("getWebSocketCloseReason", null, null);
-        markNativeMethod("closeWebSocket",       null, VOID);
+        markNativeMethod("upgradeWebSocketImpl",    null, null);
+        markNativeMethod("connectWebSocket",        null, VOID);
+        markNativeMethod("sendWebSocket",           null, VOID);
+        markNativeMethod("isWebSocketOpen",         null, BOOLEAN);
+        markNativeMethod("closeWebSocket",          null, VOID);
 
         markNativeMethod("getReceivedAtAddress",   null, null);
         markNativeMethod("getReceivedFromAddress", null, null);
@@ -188,14 +185,6 @@ public class xRTServer
         case "isWebSocketOpen":
             return frame.assignValue(iReturn,
                     xBoolean.makeHandle(((WebSocketHandle) hArg).f_connection.isOpen()));
-
-        case "getWebSocketCloseCode":
-            return frame.assignValue(iReturn, xUInt16.INSTANCE.makeJavaLong(
-                    ((WebSocketHandle) hArg).f_connection.getCloseCode()));
-
-        case "getWebSocketCloseReason":
-            return frame.assignValue(iReturn, xString.makeHandle(
-                    ((WebSocketHandle) hArg).f_connection.getCloseReason()));
 
         case "getProtocolString":
             return invokeGetProtocol(frame, (HttpContextHandle) hArg, iReturn);
@@ -248,10 +237,18 @@ public class xRTServer
                     : xRTFunction.makeAsyncNativeHandle(method).
                             call1(frame, hServer, ahArg, iReturn);
 
+        case "connectWebSocket":
+            return invokeWebSocketConnect(frame, ahArg);
+
+        case "upgradeWebSocketImpl":
+            return frame.f_context == hServer.f_context
+                    ? invokeUpgradeWebSocket(frame, ahArg, iReturn)
+                    : xRTFunction.makeAsyncNativeHandle(method).call1(frame, hServer, ahArg, iReturn);
+
         case "sendWebSocket":
         case "closeWebSocket":
             return frame.f_context == hServer.f_context
-                    ? invokeWebSocketWrite(frame, method.getName(), ahArg)
+                    ? invokeWebSocketSend(frame, method.getName(), ahArg)
                     : xRTFunction.makeAsyncNativeHandle(method).
                             call1(frame, hServer, ahArg, iReturn);
 
@@ -267,18 +264,6 @@ public class xRTServer
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                               ObjectHandle[] ahArg, int[] aiReturn) {
         switch (method.getName()) {
-        case "upgradeWebSocketImpl":
-            return frame.f_context == ((ServiceHandle) hTarget).f_context
-                    ? invokeUpgradeWebSocket(frame, ahArg, aiReturn)
-                    : xRTFunction.makeAsyncNativeHandle(method).
-                            callN(frame, hTarget, ahArg, aiReturn);
-
-        case "receiveWebSocket":
-            return frame.f_context == ((ServiceHandle) hTarget).f_context
-                    ? invokeWebSocketReceive(frame, (WebSocketHandle) ahArg[0], aiReturn)
-                    : xRTFunction.makeAsyncNativeHandle(method).
-                            callN(frame, hTarget, ahArg, aiReturn);
-
         case "getReceivedAtAddress":
             return invokeGetReceivedAtAddress(frame, (HttpContextHandle) ahArg[0], aiReturn);
 
@@ -731,68 +716,67 @@ public class xRTServer
         });
     }
 
-    private int invokeUpgradeWebSocket(Frame frame, ObjectHandle[] ahArg, int[] aiReturn) {
+    /**
+     * Implementation of "Object? upgradeWebSocketImpl(RequestContext context,
+     *      String? protocol, Int maxMessageSize, String[] headerNames, String[] headerValues)"
+     * method.
+     *
+     * <p/>Return a {@code Null} context object on failure.
+     */
+    private int invokeUpgradeWebSocket(Frame frame, ObjectHandle[] ahArg, int iReturn) {
         HttpContextHandle hCtx      = (HttpContextHandle) ahArg[0];
-        String            sProtocol = ahArg[1] instanceof StringHandle hString
-                ? hString.getStringValue() : null;
-        long cbMax = ((JavaLong) ahArg[2]).getValue();
-        if (cbMax <= 0 || cbMax > 16 * 1024 * 1024) {
-            return frame.raiseException(xException.illegalArgument(frame,
-                    "Invalid WebSocket message size limit"));
-        }
+        String            sProtocol = ahArg[1] instanceof StringHandle hS ? hS.getStringValue() : null;
+        long              cbMax     = ((JavaLong) ahArg[2]).getValue();
+        String[]          asNames   = getStrings((ArrayHandle) ahArg[3]);
+        String[]          asValues  = getStrings((ArrayHandle) ahArg[4]);
 
-        String[] asNames  = getStrings((ArrayHandle) ahArg[3]);
-        String[] asValues = getStrings((ArrayHandle) ahArg[4]);
-        CompletableFuture<WebSocketConnection> cf = hCtx.upgradeWebSocket(
-                sProtocol, (int) cbMax, asNames, asValues);
+        CompletableFuture<WebSocketHandle> cf = hCtx.upgradeWebSocket(sProtocol, cbMax, asNames, asValues);
         return frame.waitForIO(cf, frameCaller -> {
             try {
-                WebSocketConnection connection = cf.get();
-                return frameCaller.assignValues(aiReturn, connection == null
-                        ? xNullable.NULL : new WebSocketHandle(connection),
-                        xInt64.INSTANCE.makeJavaLong(hCtx.f_response.getStatus()));
+                WebSocketHandle hSocket = cf.get();
+                return frameCaller.assignValue(iReturn, hSocket == null ? xNullable.NULL : hSocket);
             } catch (Exception e) {
                 return raiseIOException(frameCaller, e);
             }
         });
     }
 
-    private int invokeWebSocketReceive(Frame frame, WebSocketHandle hSocket, int[] aiReturn) {
-        CompletableFuture<Object> cf = frame.f_context.f_container.scheduleIO(
-                hSocket.f_connection::receive);
-        return frame.waitForIO(cf, frameCaller -> {
-            try {
-                Object message = cf.get();
-                if (message == null) {
-                    return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
-                }
-                ObjectHandle hValue = message instanceof String sText
-                        ? xString.makeHandle(sText)
-                        : xByteArray.makeByteArrayHandle((byte[]) message, Mutability.Constant);
-                return frameCaller.assignValues(aiReturn, xBoolean.TRUE, hValue);
-            } catch (Exception e) {
-                return raiseIOException(frameCaller, e);
-            }
-        });
+    /**
+     * Implementation of "void connectWebSocket(Object context, WebSocket implementation)" method.
+     * Message delivery starts after the implementation's {@code onConnect()} call completes.
+     */
+    private int invokeWebSocketConnect(Frame frame, ObjectHandle[] ahArg) {
+        WebSocketHandle  hSocket = (WebSocketHandle) ahArg[0];
+        ServiceHandle    hImpl   = (ServiceHandle) ahArg[1];
+        WebSocketHandler handler = new WebSocketHandler(hSocket.f_connection, hImpl.f_context,
+                bindWebSocketCallback(frame, hImpl, "onConnect", 0),
+                bindWebSocketCallback(frame, hImpl, "onMessage", 1),
+                bindWebSocketCallback(frame, hImpl, "onError", 1),
+                bindWebSocketCallback(frame, hImpl, "onDisconnect", 2));
+        hSocket.f_connection.connect(handler);
+        return Op.R_NEXT;
     }
 
-    private int invokeWebSocketWrite(Frame frame, String sMethod, ObjectHandle[] ahArg) {
+    /**
+     * Implementation of "void sendWebSocket(Object context, String|Byte[] message)" and
+     * "void closeWebSocket(Object context, UInt16 code, String reason)" methods.
+     * Suspends the calling fiber until the Jetty send or close callback completes.
+     */
+    private int invokeWebSocketSend(Frame frame, String sMethod, ObjectHandle[] ahArg) {
         WebSocketConnection connection = ((WebSocketHandle) ahArg[0]).f_connection;
         CompletableFuture<Void> cf;
-        if (sMethod.equals("sendWebSocket")) {
-            Object message = ahArg[1] instanceof StringHandle hText ? hText.getStringValue()
-                    : xByteArray.getBytes((ArrayHandle) ahArg[1]);
-            cf = frame.f_context.f_container.scheduleIO(() -> {
-                connection.send(message);
-                return null;
-            });
-        } else {
-            int    nCode   = (int) ((JavaLong) ahArg[1]).getValue();
-            String sReason = ((StringHandle) ahArg[2]).getStringValue();
-            cf = frame.f_context.f_container.scheduleIO(() -> {
-                connection.close(nCode, sReason);
-                return null;
-            });
+        try {
+            if (sMethod.equals("sendWebSocket")) {
+                Object message = ahArg[1] instanceof StringHandle hText ? hText.getStringValue()
+                        : xByteArray.getBytes((ArrayHandle) ahArg[1]);
+                cf = connection.send(message);
+            } else {
+                int    nCode   = (int) ((JavaLong) ahArg[1]).getValue();
+                String sReason = ((StringHandle) ahArg[2]).getStringValue();
+                cf = connection.close(nCode, sReason);
+            }
+        } catch (Exception e) {
+            return raiseIOException(frame, e);
         }
         return frame.waitForIO(cf, frameCaller -> {
             try {
@@ -835,6 +819,16 @@ public class xRTServer
     private static int extractHostPort(HostPortHttpField host, boolean fTls) {
         int nDefaultPort = fTls ? 443 : 80;
         return host == null ? nDefaultPort : host.getPort(nDefaultPort);
+    }
+
+    /**
+     * Bind a callback on the native RTWebSocket service.
+     */
+    private static FunctionHandle bindWebSocketCallback(Frame frame, ServiceHandle hRTSocket,
+                                                        String name, int cParams) {
+        MethodStructure method = hRTSocket.getTemplate().getStructure().
+                findMethodDeep(name, m -> m.getParamCount() == cParams);
+        return xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hRTSocket);
     }
 
     // ----- helper classes ------------------------------------------------------------------------
@@ -1135,17 +1129,6 @@ public class xRTServer
         }
     }
 
-    private static class WebSocketHandle
-            extends ObjectHandle {
-        private WebSocketHandle(WebSocketConnection connection) {
-            super(xObject.INSTANCE.getCanonicalClass());
-
-            f_connection = connection;
-        }
-
-        private final WebSocketConnection f_connection;
-    }
-
     /**
      * Native handle holding the Jetty request and its response completion.
      */
@@ -1164,10 +1147,10 @@ public class xRTServer
             request.addFailureListener(this::complete);
         }
 
-        protected CompletableFuture<WebSocketConnection> upgradeWebSocket(String sProtocol,
-                int cbMax, String[] asNames, String[] asValues) {
-            WebSocketConnection connection = new WebSocketConnection(cbMax);
-            CompletableFuture<WebSocketConnection> cf = connection.getOpenedFuture();
+        protected CompletableFuture<WebSocketHandle> upgradeWebSocket(String sProtocol,
+                long cbMax, String[] asNames, String[] asValues) {
+            WebSocketConnection                conn = new WebSocketConnection((int) cbMax);
+            CompletableFuture<WebSocketHandle> cf   = conn.getOpenedFuture();
             try {
                 synchronized (this) {
                     if (m_stage != Stage.OPEN || m_fReading) {
@@ -1177,65 +1160,37 @@ public class xRTServer
                     m_stage      = Stage.FINAL_WRITE_PENDING;
                 }
 
-                List<String> listKeys = f_request.getHeaders().getValuesList("Sec-WebSocket-Key");
-                try {
-                    if (listKeys.size() != 1 ||
-                            Base64.getDecoder().decode(listKeys.getFirst()).length != 16) {
-                        rejectWebSocket(400, cf);
-                        return cf;
-                    }
-                } catch (IllegalArgumentException e) {
-                    rejectWebSocket(400, cf);
-                    return cf;
-                }
-                for (int i = 0; i < asNames.length; i++) {
-                    String sName = asNames[i];
-                    if (!sName.equalsIgnoreCase("Connection") && !sName.equalsIgnoreCase("Upgrade") &&
-                            !sName.equalsIgnoreCase("Content-Length") &&
-                            !sName.toLowerCase(Locale.ROOT).startsWith("sec-websocket-")) {
-                        f_response.getHeaders().add(sName, asValues[i]);
-                    }
-                }
-
-                Callback callback = Callback.from(() -> {
-                    if (f_response.getStatus() != 101) {
-                        cf.complete(null);
-                    }
-                    complete(null);
-                }, e -> {
+                Callback callback = Callback.from(() -> complete(null), e -> {
                     cf.completeExceptionally(e);
                     complete(e);
                 });
+
                 ServerWebSocketContainer sockets = ServerWebSocketContainer.get(f_request.getContext());
                 boolean fAccepted = sockets.upgrade((request, response, cb) -> {
+                    for (int i = 0; i < asNames.length; i++) {
+                        response.getHeaders().add(asNames[i], asValues[i]);
+                    }
                     if (sProtocol != null) {
-                        if (!request.getSubProtocols().contains(sProtocol)) {
-                            response.setStatus(400);
-                            return null;
-                        }
                         response.setAcceptedSubProtocol(sProtocol);
                     }
-                    return connection;
+                    return conn;
                 }, f_request, f_response, callback);
+
                 if (!fAccepted) {
-                    rejectWebSocket(426, cf);
+                    synchronized (this) {
+                        if (m_stage == Stage.COMPLETED) {
+                            throw new IOException("HTTP exchange already completed");
+                        }
+                        m_stage      = Stage.OPEN;
+                        m_fUpgrading = false;
+                    }
+                    cf.complete(null);
                 }
             } catch (Exception e) {
                 complete(e);
                 cf.completeExceptionally(e);
             }
             return cf;
-        }
-
-        private void rejectWebSocket(int nStatus, CompletableFuture<WebSocketConnection> cf) {
-            f_response.setStatus(nStatus);
-            f_response.write(true, null, Callback.from(() -> {
-                complete(null);
-                cf.complete(null);
-            }, e -> {
-                complete(e);
-                cf.completeExceptionally(e);
-            }));
         }
 
         /**

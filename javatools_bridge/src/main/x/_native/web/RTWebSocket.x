@@ -1,84 +1,120 @@
-import ecstasy.io.IOException;
-
 import libweb.WebSocket;
 
 /**
- * The service boundary for one upgraded connection. Native I/O suspends the calling fiber.
+ * The native WebSocket implementation.
  */
-@Concurrent
 service RTWebSocket<Message extends String|Byte[]>(RTServer server, Object context,
-        String? protocol, WebSocket<Message> endpoint)
-        implements WebSocket<Message> {
-    @Override
-    Boolean open.get() = server.isWebSocketOpen(context);
+        String? protocol, Int maxMessageSize, WebSocket<Message> endpoint)
+        extends WebSocket<Message> {
+    construct(RTServer server, Object context, String? protocol, Int maxMessageSize,
+            WebSocket<Message> endpoint) {
+        construct WebSocket(maxMessageSize, protocol);
 
-    /**
-     * Start delivery after the dispatcher has assigned the application's socket implementation.
-     */
-    @Override
-    void onConnect() {
-        Exception? cause = Null;
-        UInt16     code   = NormalClosure;
-        String     reason = "";
-        try {
-            endpoint.onConnect();
-            while (val message := server.receiveWebSocket(context)) {
-                if (!message.is(Message)) {
-                    code   = UnsupportedData;
-                    reason = "Unexpected WebSocket message type";
-                    cause  = new IOException(reason);
-                    break;
-                }
-                handle(message);
-            }
-            if (cause == Null) {
-                code   = server.getWebSocketCloseCode(context);
-                reason = server.getWebSocketCloseReason(context);
-                if (code != NormalClosure && code != GoingAway) {
-                    cause = new IOException($"WebSocket closed with status {code}");
-                }
-            }
-        } catch (Exception e) {
-            cause  = e;
-            code   = server.getWebSocketCloseCode(context);
-            reason = e.message;
-            if (code == NormalClosure || code == GoingAway) {
-                code = InternalError;
-            }
-        } finally {
-            try {
-                if (open) {
-                    disconnect(code);
-                }
-            } catch (Exception e) {
-                cause  = cause ?: e;
-                code   = InternalError;
-                reason = cause.message;
-            }
-            endpoint.socketImpl = Null;
-            if (cause != Null) {
-                try {
-                    onError(code);
-                } catch (Exception ignore) {}
-            }
-            onDisconnect(code, reason);
-        }
+        this.server   = server;
+        this.context  = context;
+        this.endpoint = endpoint;
     }
 
-    @Override
-    void handle(Message message) = endpoint.handle(message);
+    /**
+     * True once local closure or a transport close event prevents further message delivery and
+     * duplicate close notifications.
+     */
+    private Boolean closed = False;
+
+    /**
+     * True once the disconnect callback has been delivered or is owned by a local disconnect.
+     */
+    private Boolean disconnectNotified = False;
+
+    // ----- WebSocket operation called by the underlying socket -----------------------------------
 
     @Override
-    void onError(UInt16 errorCode) = endpoint.onError(errorCode);
-
-    @Override
-    void onDisconnect(UInt16 code, String reason) = endpoint.onDisconnect(code, reason);
+    Boolean open.get() = !closed && server.isWebSocketOpen(context);
 
     @Override
     void send(Message message) = server.sendWebSocket(context, message);
 
     @Override
+    conditional Message receive() = False;
+
+    @Override
     void disconnect(UInt16 code = WebSocket.NormalClosure, String reason = "") {
+        assert:arg (code >= NormalClosure && code <= UnsupportedData ||
+                code >= InvalidPayload && code <= BadGateway || code >= 3000 && code <= 4999) &&
+                reason.utf8().size <= 123 as "Invalid WebSocket close status or reason";
+
+        // the application's disconnect() invokes its own onDisconnect() callback
+        closed             = True;
+        disconnectNotified = True;
         server.closeWebSocket(context, code, reason);
+    }
+
+    // ----- WebSocket operation called by the native code -----------------------------------------
+
+    @Override
+    void onConnect() {
+        try {
+            endpoint.connect(this);
+        } catch (Exception e) {
+            fail(InternalError, "WebSocket onConnect failed");
+        }
+    }
+
+    @Override
+    void onMessage(String|Byte[] message) {
+        assert !closed;
+        assert message.is(Message);
+
+        try {
+            endpoint.onMessage(message);
+        } catch (Exception e) {
+            fail(InternalError, "WebSocket onMessage failed");
+        }
+    }
+
+    @Override
+    void onError(UInt16 errorCode) {
+        if (disconnectNotified) {
+            return;
+        }
+        closed = True;
+        try {
+            endpoint.onError(errorCode);
+        } catch (Exception ignore) {
+            // allow disconnect notification to proceed if the error callback fails
+        }
+    }
+
+    /**
+     * Report transport closure once, after previously queued message callbacks.
+     */
+    @Override
+    void onDisconnect(UInt16 code, String reason) {
+        if (disconnectNotified) {
+            return;
+        }
+        closed             = True;
+        disconnectNotified = True;
+        try {
+            endpoint.onDisconnect(code, reason);
+        } catch (Exception ignore) {
+            // not our problem anymore
+        }
+    }
+
+    // ----- internal helpers ----------------------------------------------------------------------
+
+    private void fail(UInt16 code, String reason) {
+        if (closed) {
+            return;
+        }
+        closed = True;
+        try {
+            server.closeWebSocket(context, code, reason);
+        } catch (Exception ignore) {}
+        try {
+            onError(code);
+        } catch (Exception ignore) {}
+        onDisconnect(code, reason);
     }
 }

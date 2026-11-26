@@ -3,9 +3,7 @@ package org.xvm.runtime.template._native.web;
 import java.io.IOException;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -14,20 +12,39 @@ import org.eclipse.jetty.websocket.api.Callback;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.StatusCode;
 
-import org.eclipse.jetty.websocket.core.exception.CloseException;
+import org.eclipse.jetty.websocket.api.exceptions.CloseException;
+
+import org.xvm.runtime.ObjectHandle;
+
+import org.xvm.runtime.template.xObject;
 
 /**
- * Demand one complete message at a time so an application that stops receiving applies
- * backpressure instead of accumulating an unbounded queue in the runtime.
+ * Push Jetty events to the application's service; its request queue owns pending messages.
  */
-public final class WebSocketConnection
+public class WebSocketConnection
         implements Session.Listener {
     public WebSocketConnection(int cbMax) {
         f_cbMax = cbMax;
     }
 
-    public CompletableFuture<WebSocketConnection> getOpenedFuture() {
+    public CompletableFuture<WebSocketHandle> getOpenedFuture() {
         return f_cfOpened;
+    }
+
+    public void connect(WebSocketHandler handler) {
+        assert m_handler == null;
+        m_handler = handler;
+
+        handler.onConnect().whenComplete((result, error) -> {
+            m_fReady = true;
+            if (error != null) {
+                fail(StatusCode.SERVER_ERROR, "WebSocket onConnect failed");
+            } else if (f_fClosed.get()) {
+                notifyClosed();
+            } else {
+                demand();
+            }
+        });
     }
 
     @Override
@@ -35,41 +52,42 @@ public final class WebSocketConnection
         m_session = session;
         session.setMaxTextMessageSize(f_cbMax);
         session.setMaxBinaryMessageSize(f_cbMax);
-        f_cfOpened.complete(this);
-        session.demand();
+        f_cfOpened.complete(new WebSocketHandle(this));
     }
 
     @Override
     public void onWebSocketText(String sMessage) {
-        f_queueMessages.add(sMessage);
+        m_handler.onMessage(sMessage);
     }
 
     @Override
     public void onWebSocketBinary(ByteBuffer buffer, Callback callback) {
         byte[] ab = new byte[buffer.remaining()];
         buffer.get(ab);
-        f_queueMessages.add(ab);
+        m_handler.onMessage(ab);
         callback.succeed();
     }
 
     @Override
     public void onWebSocketClose(int nStatus, String sReason, Callback callback) {
-        m_nCloseCode   = nStatus;
-        m_sCloseReason = sReason == null ? "" : sReason;
+        if (!m_fError) {
+            m_nCloseCode   = nStatus;
+            m_sCloseReason = sReason == null ? "" : sReason;
+        }
         f_fClosed.set(true);
-        f_queueMessages.offer(CLOSED);
+        notifyClosed();
         callback.succeed();
     }
 
     @Override
     public void onWebSocketError(Throwable e) {
-        m_exception    = e;
         m_nCloseCode   = e instanceof CloseException exception
                 ? exception.getStatusCode() : StatusCode.SERVER_ERROR;
         m_sCloseReason = e.getMessage() == null ? "" : e.getMessage();
+        m_fError       = true;
         f_cfOpened.completeExceptionally(e);
         f_fClosed.set(true);
-        f_queueMessages.offer(CLOSED);
+        notifyClosed();
     }
 
     public boolean isOpen() {
@@ -77,75 +95,77 @@ public final class WebSocketConnection
         return session != null && session.isOpen() && !f_fClosed.get();
     }
 
-    public int getCloseCode() {
-        return m_nCloseCode;
-    }
-
-    public String getCloseReason() {
-        return m_sCloseReason;
-    }
-
-    public Object receive() throws Exception {
-        Object message = f_queueMessages.poll();
-        if (message == null && !f_fClosed.get()) {
-            message = f_queueMessages.take();
-        }
-        if (message == null || message == CLOSED) {
-            if (m_exception != null) {
-                throw new IOException("WebSocket receive failed", m_exception);
-            }
-            return null;
-        }
+    public void demand() {
         if (isOpen()) {
             m_session.demand();
         }
-        return message;
     }
 
-    public synchronized void send(Object message) throws Exception {
+    public void fail(int nCode, String sReason) {
+        onWebSocketError(new CloseException(nCode, sReason));
+        m_session.close(nCode, sReason, Callback.NOOP);
+    }
+
+    private void notifyClosed() {
+        if (m_fReady && f_fNotified.compareAndSet(false, true)) {
+            m_handler.onClose(m_nCloseCode, m_sCloseReason,
+                    m_fError || m_nCloseCode != StatusCode.NORMAL && m_nCloseCode != StatusCode.SHUTDOWN);
+        }
+    }
+
+    public CompletableFuture<Void> send(Object message)
+                throws IOException {
         if (!isOpen()) {
             throw new IOException("WebSocket is closed");
         }
-        CompletableFuture<Void> cf       = new CompletableFuture<>();
-        Callback                callback = Callback.from(() -> cf.complete(null),
-                                                cf::completeExceptionally);
-        if (message instanceof String sText) {
-            m_session.sendText(sText, callback);
-        } else {
-            m_session.sendBinary(ByteBuffer.wrap((byte[]) message), callback);
-        }
-        cf.get();
+
+        return Callback.Completable.with(callback -> {
+            if (message instanceof String sText) {
+                m_session.sendText(sText, callback);
+            } else {
+                m_session.sendBinary(ByteBuffer.wrap((byte[]) message), callback);
+            }
+        });
     }
 
-    public void close(int nCode, String sReason) throws Exception {
-        if (!(StatusCode.isTransmittable(nCode) ||
-                nCode >= APPLICATION_CODE_MIN && nCode <= APPLICATION_CODE_MAX) ||
-                sReason.getBytes(StandardCharsets.UTF_8).length > 123) {
-            throw new IllegalArgumentException("Invalid WebSocket close status or reason");
-        }
+    public CompletableFuture<Void> close(int nCode, String sReason) {
+        // WebSocket.disconnect() supplies the application's callback and clears its delegate
+        f_fNotified.set(true);
+
         if (f_fClosed.compareAndSet(false, true)) {
             m_nCloseCode   = nCode;
             m_sCloseReason = sReason;
-            f_queueMessages.offer(CLOSED);
-            CompletableFuture<Void> cf = new CompletableFuture<>();
-            m_session.close(nCode, sReason, Callback.from(() -> cf.complete(null),
-                    cf::completeExceptionally));
-            cf.get();
+            return Callback.Completable.with(callback -> m_session.close(nCode, sReason, callback));
         }
+        return CompletableFuture.completedFuture(null);
     }
 
-    private static final int APPLICATION_CODE_MIN = 3000;
-    private static final int APPLICATION_CODE_MAX = 4999;
+    /**
+     * Native handle holding the WebSocketConnection.
+     */
+    static public class WebSocketHandle
+            extends ObjectHandle {
+        public WebSocketHandle(WebSocketConnection connection) {
+            super(xObject.INSTANCE.getCanonicalClass());
 
-    private static final Object CLOSED = new Object();
+            f_connection = connection;
+        }
 
-    private final int                                    f_cbMax;
-    private final CompletableFuture<WebSocketConnection> f_cfOpened = new CompletableFuture<>();
-    private final ArrayBlockingQueue<Object>             f_queueMessages = new ArrayBlockingQueue<>(1);
-    private final AtomicBoolean                          f_fClosed = new AtomicBoolean();
+        final WebSocketConnection f_connection;
+    }
 
-    private volatile Session   m_session;
-    private volatile Throwable m_exception;
-    private volatile int       m_nCloseCode = StatusCode.NORMAL;
-    private volatile String    m_sCloseReason = "";
+    private final int                                f_cbMax;
+    private final CompletableFuture<WebSocketHandle> f_cfOpened  = new CompletableFuture<>();
+    private final AtomicBoolean                      f_fClosed   = new AtomicBoolean();
+    private final AtomicBoolean                      f_fNotified = new AtomicBoolean();
+
+    private WebSocketHandler m_handler;
+    private Session          m_session;
+
+    // close details are published by f_fClosed or m_fError
+    private int    m_nCloseCode = StatusCode.NORMAL;
+    private String m_sCloseReason = "";
+
+    private volatile boolean m_fReady;
+    private volatile boolean m_fError;
 }
