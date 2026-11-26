@@ -19,6 +19,7 @@ import org.xtclang.idea.run.EmbeddedRunSessions
 import org.xtclang.idea.run.RunGutterIcons
 import org.xtclang.idea.run.TestGutterIcons
 import org.xtclang.idea.run.XtcBuildSettings
+import org.xvm.lsp.protocol.ConfigurationSections
 import org.xvm.lsp.protocol.DebugMessageParams
 import org.xvm.lsp.protocol.DebugTaskParams
 import org.xvm.lsp.protocol.DebugTaskResult
@@ -228,7 +229,7 @@ class XtcLanguageClient(
     override fun findSettings(section: String?): Any? =
         when (section) {
             FORMATTING_SECTION -> readFormattingSettings()
-            "xtc.codeLens" -> mapOf("references" to LanguageServiceSettings.validated(project).referenceCodeLens)
+            ConfigurationSections.CODE_LENS -> mapOf("references" to LanguageServiceSettings.validated(project).referenceCodeLens)
             else -> super.findSettings(section)
         }
 
@@ -263,6 +264,6 @@ class XtcLanguageClient(
         private val logger = logger<XtcLanguageClient>()
 
         /** The configuration section name for XTC formatting settings. */
-        const val FORMATTING_SECTION = "xtc.formatting"
+        const val FORMATTING_SECTION = ConfigurationSections.FORMATTING
     }
 }

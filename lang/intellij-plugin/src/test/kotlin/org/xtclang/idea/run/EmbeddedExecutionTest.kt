@@ -9,12 +9,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.awaitUntil
 import org.xtclang.idea.awaited
-import org.xvm.lsp.protocol.BuildDiagnostic
-import org.xvm.lsp.protocol.BuildPosition
-import org.xvm.lsp.protocol.BuildRange
 import org.xvm.lsp.protocol.BuildResponse
 import org.xvm.lsp.protocol.BuiltModule
-import org.xvm.lsp.protocol.DocumentDiagnostics
 import org.xvm.lsp.protocol.RunExitedParams
 import org.xvm.lsp.protocol.RunInputParams
 import org.xvm.lsp.protocol.RunOutputParams
@@ -128,47 +124,6 @@ class EmbeddedExecutionTest {
 
         assertThat(XtcRunConfiguration.embeddedRequest("Mathy", "file:///work/Mathy.x", "", "", tests).tests).isEqualTo(tests)
         assertThat(XtcRunConfiguration.embeddedRequest("Mathy", "", "", "").tests).isNull()
-    }
-
-    @Test
-    fun `build reports list module outcomes and one-based diagnostic locations`(
-        @TempDir root: Path,
-    ) {
-        val source = root.resolve("App.x")
-        val report =
-            EmbeddedExecution.describe(
-                BuildResponse(
-                    succeeded = false,
-                    modules =
-                        listOf(
-                            BuiltModule("Lib", "", succeeded = true, artifact = "/out/Lib.xtc"),
-                            BuiltModule("App", ""),
-                            BuiltModule("Tool", "", skipped = true),
-                        ),
-                    diagnostics =
-                        listOf(
-                            DocumentDiagnostics(
-                                source.toUri().toString(),
-                                listOf(
-                                    BuildDiagnostic(
-                                        BuildRange(BuildPosition(1, 4), BuildPosition(1, 9)),
-                                        1,
-                                        message = "no such name",
-                                        code = "COMPILER-43",
-                                    ),
-                                    BuildDiagnostic(BuildRange(BuildPosition(0, 0), BuildPosition(0, 1)), 2, message = "unused"),
-                                ),
-                            ),
-                        ),
-                ),
-            )
-        assertThat(report).containsExactly(
-            "  ✓ Lib -> /out/Lib.xtc",
-            "  ✗ App",
-            "  - Tool (not built: a dependency failed)",
-            "$source:2:5: error: no such name [COMPILER-43]",
-            "$source:1:1: warning: unused",
-        )
     }
 
     @Test

@@ -2,6 +2,7 @@ package org.xvm.lsp.util
 
 import ch.qos.logback.core.PropertyDefinerBase
 import com.google.gson.GsonBuilder
+import org.xvm.lsp.protocol.ServerProperties
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -244,7 +245,7 @@ internal object ServerLogs {
     val root: Path =
         Path.of(
             System.getProperty(
-                "xtc.logs.directory",
+                ServerProperties.LOGS_DIRECTORY,
             ) ?: System.getenv("XTC_LSP_LOG_DIR") ?: "${System.getProperty("user.home")}/.xtc/logs/lsp",
         )
     val directory: Path = root.resolve("server-$process")
@@ -252,7 +253,7 @@ internal object ServerLogs {
     // this process's lock on its session, held while it runs; the reference keeps its channel open
     private val session: FileLock? = SessionLock.hold(directory)
     val traceDirectory: Path =
-        Path.of(System.getProperty("xtc.trace.directory") ?: System.getenv("XTC_LSP_TRACE_DIR") ?: directory.toString())
+        Path.of(System.getProperty(ServerProperties.TRACE_DIRECTORY) ?: System.getenv("XTC_LSP_TRACE_DIR") ?: directory.toString())
     val retention = LogRetention.read()
     private val sessionName = Regex("server-([0-9]+)-([0-9]+)")
     private val logName = Regex("(?:server(?:\\.[0-9.-]+)?\\.log|lsp-trace-[0-9.-]+\\.jsonl)")

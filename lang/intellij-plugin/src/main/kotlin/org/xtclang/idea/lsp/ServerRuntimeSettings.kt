@@ -7,6 +7,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.util.xmlb.annotations.OptionTag
+import org.xvm.lsp.protocol.ServerProperties
 
 /** How the language server's JVM uses memory, chosen on the Ecstasy › Server Runtime and Logs page. */
 enum class MemoryPolicy(
@@ -83,7 +84,7 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
  * bundled libraries of their names, as the server's `xtc.lsp.compileLibraries` and `xtc.lsp.replaceLibraries` take them.
  */
 internal fun ServerRuntimeSettings.Options.libraryArguments(): List<String> =
-    listOf("-Dxtc.lsp.compileLibraries=$compileLibraries", "-Dxtc.lsp.replaceLibraries=$replaceLibraries")
+    listOf("-D${ServerProperties.COMPILE_LIBRARIES}=$compileLibraries", "-D${ServerProperties.REPLACE_LIBRARIES}=$replaceLibraries")
 
 internal fun ServerRuntimeSettings.Options.logArguments(): List<String> {
     require(logHistoryDays in 1..90 && logMaxFileMb in 1..100 && logTotalSizeMb in logMaxFileMb..1000 && logRetainedSessions in 1..20) {

@@ -85,41 +85,9 @@ internal object EmbeddedExecution {
 
     /** The file a diagnostic URI names, or null for a URI that is not a local file. */
     fun file(uri: String): Path? = runCatching { Path.of(URI(uri)) }.getOrNull()
-
-    /** Module outcomes and diagnostics as `file:line:column` lines, which [DiagnosticLinks] links to sources. */
-    fun describe(build: BuildResponse): List<String> =
-        buildList {
-            build.modules.forEach { module ->
-                add(
-                    when {
-                        module.succeeded -> "  ✓ ${module.name}${module.artifact?.let { " -> $it" }.orEmpty()}"
-                        module.skipped -> "  - ${module.name} (not built: a dependency failed)"
-                        else -> "  ✗ ${module.name}"
-                    },
-                )
-            }
-            build.diagnostics.forEach { document ->
-                val file = file(document.uri)?.toString() ?: document.uri
-                document.diagnostics.forEach { diagnostic ->
-                    val start = diagnostic.range.start
-                    val code = diagnostic.code?.let { " [$it]" }.orEmpty()
-                    add("$file:${start.line + 1}:${start.character + 1}: ${severity(diagnostic.severity)}: ${diagnostic.message}$code")
-                }
-            }
-            if (build.cancelled) add("Build cancelled.")
-        }
-
-    /** LSP severities: 1 error, 2 warning, 3 information, 4 hint. */
-    private fun severity(severity: Int?): String =
-        when (severity) {
-            2 -> "warning"
-            3 -> "info"
-            4 -> "hint"
-            else -> "error"
-        }
 }
 
-/** Links the `file:line:column:` lines of [EmbeddedExecution.describe] in a run console. */
+/** Links the `file:line:column:` lines of a build's [BuildResponse.summary] in a run console. */
 internal class DiagnosticLinks(
     private val project: Project,
 ) : Filter {

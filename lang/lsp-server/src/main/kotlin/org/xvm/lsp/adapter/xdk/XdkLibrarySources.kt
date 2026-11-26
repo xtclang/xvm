@@ -9,6 +9,7 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.MultiMethodConstant
 import org.xvm.lsp.adapter.ReadOnlyDocument
+import org.xvm.lsp.protocol.ServerProperties
 import org.xvm.lsp.util.ProcessDirectories
 import java.io.File
 import java.net.URI
@@ -68,7 +69,7 @@ internal object XdkLibrarySources {
     private val copies = ConcurrentHashMap<String, Path>()
 
     /** The system property that turns off compiling a library source's copy with its whole library. */
-    const val COMPILE_LIBRARIES = "xtc.lsp.compileLibraries"
+    const val COMPILE_LIBRARIES = ServerProperties.COMPILE_LIBRARIES
 
     /**
      * Whether a library source's read-only copy is compiled with its whole library ([libraryRoot]), which answers for

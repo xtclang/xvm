@@ -1,5 +1,8 @@
 package org.xvm.lsp.protocol
 
+import java.net.URI
+import java.nio.file.Path
+
 /**
  * `xtc/build` parameters: a module name or root URI; or when [module] is absent, the source modules of the workspace
  * folder [folder], a URI, or every source module without one. With [rebuild], a module whose sources and dependencies
@@ -33,7 +36,42 @@ data class BuildResponse(
     val modules: List<BuiltModule> = emptyList(),
     val diagnostics: List<DocumentDiagnostics> = emptyList(),
     val outputDirectory: String? = null,
-)
+) {
+    /**
+     * The build as a console shows it: a line for each module's outcome, `  ✓ module -> artifact`, `  - module (not
+     * built: a dependency failed)` or `  ✗ module`; then each diagnostic as `file:line:column: severity: message [code]`,
+     * one-based, with the file's path where its document's URI names a local file; and `Build cancelled.` when it was.
+     */
+    fun summary(): List<String> =
+        buildList {
+            modules.forEach { module ->
+                add(
+                    when {
+                        module.succeeded -> "  ✓ ${module.name}${module.artifact?.let { " -> $it" }.orEmpty()}"
+                        module.skipped -> "  - ${module.name} (not built: a dependency failed)"
+                        else -> "  ✗ ${module.name}"
+                    },
+                )
+            }
+            diagnostics.forEach { document ->
+                val file = runCatching { Path.of(URI(document.uri)).toString() }.getOrDefault(document.uri)
+                document.diagnostics.forEach { diagnostic ->
+                    val start = diagnostic.range.start
+                    val code = diagnostic.code?.let { " [$it]" }.orEmpty()
+                    add("$file:${start.line + 1}:${start.character + 1}: ${severity(diagnostic.severity)}: ${diagnostic.message}$code")
+                }
+            }
+            if (cancelled) add("Build cancelled.")
+        }
+}
+
+private fun severity(severity: Int?): String =
+    when (severity) {
+        BuildDiagnostic.WARNING -> "warning"
+        BuildDiagnostic.INFORMATION -> "info"
+        BuildDiagnostic.HINT -> "hint"
+        else -> "error"
+    }
 
 /**
  * A document's build diagnostics, as `publishDiagnostics` carries them. These mirror LSP's shapes rather than reuse
@@ -57,7 +95,15 @@ data class BuildDiagnostic(
     val message: String = "",
     val tags: List<Int>? = null,
     val relatedInformation: List<BuildRelatedInformation>? = null,
-)
+) {
+    companion object {
+        /** LSP's severities, as [severity] carries them. */
+        const val ERROR = 1
+        const val WARNING = 2
+        const val INFORMATION = 3
+        const val HINT = 4
+    }
+}
 
 data class BuildRange(
     val start: BuildPosition = BuildPosition(),

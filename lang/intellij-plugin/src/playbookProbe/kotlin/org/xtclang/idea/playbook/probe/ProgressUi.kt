@@ -6,6 +6,7 @@ import com.intellij.openapi.ui.panel.ProgressPanel
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.wm.ex.StatusBarEx
 import com.intellij.util.ui.UIUtil
+import org.xvm.lsp.protocol.ServerProperties
 import java.awt.Window
 import javax.swing.JProgressBar
 
@@ -72,8 +73,12 @@ object ProgressUi {
      */
     @JvmStatic
     fun holdReferences(file: String?) {
-        if (file == null) System.clearProperty(HOLD_REFERENCES) else System.setProperty(HOLD_REFERENCES, file)
+        if (file ==
+            null
+        ) {
+            System.clearProperty(ServerProperties.HOLD_REFERENCES)
+        } else {
+            System.setProperty(ServerProperties.HOLD_REFERENCES, file)
+        }
     }
-
-    private const val HOLD_REFERENCES = "xtc.lsp.test.holdReferences"
 }
