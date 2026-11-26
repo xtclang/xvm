@@ -1256,28 +1256,68 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.references
      */
     override fun references(params: ReferenceParams): CompletableFuture<List<Location>> =
-        queryAsync(
-            "textDocument/references",
-            params.textDocument.uri,
-            {
-                if (heldReferences != null && params.textDocument.uri.endsWith("/$heldReferences")) {
-                    // ends only when the client cancels it, or the server stops
-                    CompletableFuture<List<AdapterLocation>>()
-                } else {
-                    adapter.findReferencesAsync(
-                        params.textDocument.uri,
-                        params.position.line,
-                        params.position.character,
-                        params.context.isIncludeDeclaration,
-                    )
-                }
-            },
-            workspace = true,
-            progress = params,
-            partial = PartialResults::list,
-        ) { references ->
-            references.map { it.toLsp() }
+        askedAgain { first ->
+            queryAsync(
+                "textDocument/references",
+                params.textDocument.uri,
+                {
+                    if (heldReferences != null && params.textDocument.uri.endsWith("/$heldReferences")) {
+                        // ends only when the client cancels it, or the server stops
+                        CompletableFuture<List<AdapterLocation>>()
+                    } else {
+                        adapter.findReferencesAsync(
+                            params.textDocument.uri,
+                            params.position.line,
+                            params.position.character,
+                            params.context.isIncludeDeclaration,
+                        )
+                    }
+                },
+                workspace = true,
+                progress = params.takeIf { first },
+                partial = PartialResults::list,
+            ) { references ->
+                references.map { it.toLsp() }
+            }
         }
+
+    /**
+     * What [query] answers, asked again when documents only opened or closed while it ran: a workspace query ends when
+     * any document opens or closes, as when an editor releases a document that no editor shows, some minutes after it
+     * opened it, and so does the compiler's graph query it waits on. The client did not cancel the request, and an answer
+     * that says the content changed, or that the request was cancelled, shows it nothing, as an empty Find References;
+     * an edit of an open document still ends it so. An attempt after the first is asked without the request's progress,
+     * which the first reported. The client's cancellation of the returned future ends the attempt that runs.
+     */
+    private fun <T> askedAgain(query: (first: Boolean) -> CompletableFuture<T>): CompletableFuture<T> {
+        val answer = CompletableFuture<T>()
+
+        fun ask(first: Boolean) {
+            val documents = synchronized(lifecycle) { openDocuments.toMap() }
+            val attempt = query(first)
+            answer.whenComplete { _, _ -> attempt.cancel(false) }
+            attempt.whenCompleteAsync { value, failure ->
+                val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.lastOrNull()
+                val ended =
+                    cause is CancellationException ||
+                        (cause is ResponseErrorException && cause.responseError.code == ResponseErrorCode.ContentModified.value)
+                when {
+                    answer.isDone -> Unit
+                    cause == null -> answer.complete(value)
+                    ended && synchronized(lifecycle) { !closed && onlyOpenedOrClosed(documents) } -> ask(false)
+                    cause is CancellationException -> answer.cancel(false)
+                    else -> answer.completeExceptionally(cause)
+                }
+            }
+        }
+        ask(true)
+        return answer
+    }
+
+    /** Called under lifecycle. Whether, since [then], documents opened or closed, and none of those open then and now changed. */
+    private fun onlyOpenedOrClosed(then: Map<String, Document>): Boolean =
+        then.keys != openDocuments.keys &&
+            then.none { (uri, document) -> openDocuments.containsKey(uri) && changed(document, openDocuments[uri]) }
 
     /**
      * LSP: textDocument/documentSymbol
