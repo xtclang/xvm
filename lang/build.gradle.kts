@@ -144,13 +144,27 @@ val kotlinSources =
 val typeScriptSources = listOf(layout.projectDirectory.dir("vscode-extension/src").asFile)
 val analysisReports = layout.buildDirectory.dir("reports")
 
+// detekt.yml adapts detekt's defaults to this code's style; detekt-baseline.xml holds the findings that were there when
+// it was made, so that a run reports only new ones. After fixing some, or to accept new ones, regenerate it with
+//   ./gradlew :lang:detekt -Pdetekt.createBaseline=true -PincludeBuildLang=true -PincludeBuildAttachLang=true
+val detektConfig = layout.projectDirectory.file("detekt.yml").asFile
+val detektBaseline = layout.projectDirectory.file("detekt-baseline.xml").asFile
+val createDetektBaseline =
+    providers
+        .gradleProperty("detekt.createBaseline")
+        .map(String::toBoolean)
+        .orElse(false)
+        .get()
+
 tasks.register<JavaExec>("detekt") {
     group = "verification"
-    description = "Analyze lang's Kotlin with detekt, default rules; reports in build/reports/detekt"
+    description = "Analyze lang's Kotlin with detekt, detekt.yml's rules; reports new findings in build/reports/detekt"
     classpath = detektTool
     mainClass.set("dev.detekt.cli.Main")
     val out = analysisReports.get().dir("detekt").asFile
     inputs.files(kotlinSources.map { fileTree(it) { include("**/*.kt") } })
+    inputs.file(detektConfig)
+    if (createDetektBaseline) outputs.file(detektBaseline) else inputs.file(detektBaseline)
     outputs.dir(out)
     // detekt fails on its first findings; the reports are what this task is for
     isIgnoreExitValue = true
@@ -163,7 +177,13 @@ tasks.register<JavaExec>("detekt") {
         "html:${out.resolve("detekt.html")}",
         "--report",
         "checkstyle:${out.resolve("detekt.xml")}",
+        "--config",
+        detektConfig.path,
+        "--build-upon-default-config",
+        "--baseline",
+        detektBaseline.path,
     )
+    if (createDetektBaseline) args("--create-baseline")
 }
 
 fun cpd(
