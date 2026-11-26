@@ -63,7 +63,11 @@ class SemanticModelCensusTest {
                 .listFiles { file -> file.isDirectory && file.name.startsWith("lib_") }!!
                 .map { it.resolve("src/main/x") }
                 .filter { it.isDirectory }
-        val project = XdkProject(XdkWorkspaceDiscovery.scan(folders, emptyMap(), emptyList()) { false })
+        // the repository is one workspace folder, in which a replaced ecstasy is a dependency of every other module, and
+        // each library depends on those it imports (XdkLibraryReplacement); scanning each library's folder as a folder
+        // of its own would compile the modules before ecstasy in the build order against the bundled one
+        val modules = XdkWorkspaceDiscovery.Catalog().rescan(folders, emptyMap()) { false }.modules(emptyList(), listOf(root))
+        val project = XdkProject(modules)
         // the 21 libraries hold 22 modules: lib_runner holds runnerClient too
         assertThat(project.buildOrder()).hasSize(22)
         val artifacts = linkedMapOf<String, XdkDependency>()
