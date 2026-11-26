@@ -24,3 +24,7 @@ internal fun String.positionOf(
     val preceding = take(at)
     return Position(preceding.count { it == '\n' }, preceding.substringAfterLast('\n').length)
 }
+
+/** The position just after the marker comment that names [marker] in this text. */
+internal fun String.markedPosition(marker: String): Position =
+    "/*$marker*/".let { comment -> positionOf(comment, "").let { Position(it.line, it.column + comment.length) } }

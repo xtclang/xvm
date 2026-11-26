@@ -23,7 +23,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val read = position(source, "read")
+            val read = source.markedPosition("read")
             val declaration = span(source, "declaration", "count")
             assertThat(adapter.findDefinition(URI, read.line, read.column)).isEqualTo(declaration)
             assertThat(adapter.findReferences(URI, read.line, read.column, false))
@@ -34,7 +34,7 @@ class XdkNavigationTest {
                     span(source, "write", "count"),
                     span(source, "read", "count"),
                 )
-            val atDeclaration = position(source, "declaration")
+            val atDeclaration = source.markedPosition("declaration")
             assertThat(adapter.findReferences(URI, atDeclaration.line, atDeclaration.column, false))
                 .containsExactly(span(source, "write", "count"), span(source, "read", "count"))
         }
@@ -58,7 +58,7 @@ class XdkNavigationTest {
             """.trimIndent()
         withSource(source) { adapter ->
             for (prefix in listOf("first", "second")) {
-                val read = position(source, "${prefix}Read")
+                val read = source.markedPosition("${prefix}Read")
                 val declaration = span(source, "${prefix}Declaration", "value")
                 val use = span(source, "${prefix}Read", "value")
                 assertThat(adapter.findDefinition(URI, read.line, read.column))
@@ -82,7 +82,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val read = position(source, "secondRead")
+            val read = source.markedPosition("secondRead")
             assertThat(adapter.findDefinition(URI, read.line, read.column))
                 .isEqualTo(span(source, "secondDeclaration", "value"))
             assertThat(adapter.findReferences(URI, read.line, read.column, true))
@@ -113,7 +113,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val narrowed = position(source, "narrowed")
+            val narrowed = source.markedPosition("narrowed")
             assertThat(adapter.findDefinition(URI, narrowed.line, narrowed.column))
                 .isEqualTo(span(source, "declaration", "value"))
             assertThat(adapter.findReferences(URI, narrowed.line, narrowed.column, false))
@@ -138,14 +138,14 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val argument = position(source, "argument")
+            val argument = source.markedPosition("argument")
             assertThat(adapter.findDefinition(URI, argument.line, argument.column))
                 .isEqualTo(span(source, "declaration", "value"))
             assertThat(adapter.findReferences(URI, argument.line, argument.column, false))
                 .containsExactly(span(source, "argument", "value"))
-            val call = position(source, "call")
+            val call = source.markedPosition("call")
             assertThat(adapter.findDefinition(URI, call.line, call.column)?.startLine).isEqualTo(1)
-            val literal = position(source, "literal")
+            val literal = source.markedPosition("literal")
             assertThat(adapter.findDefinition(URI, literal.line, literal.column)).isNull()
             assertThat(adapter.findDefinition(URI, argument.line, argument.column + "value".length))
                 .isNull()
@@ -167,7 +167,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val local = position(source, "local")
+            val local = source.markedPosition("local")
             assertThat(adapter.findReferences(URI, local.line, local.column, false))
                 .containsExactly(span(source, "local", "value"))
             assertThat(
@@ -191,7 +191,7 @@ class XdkNavigationTest {
         CompilerTestSupport.configure()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, source).success).isFalse()
-            val unresolved = position(source, "unresolved")
+            val unresolved = source.markedPosition("unresolved")
             assertThat(adapter.findDefinition(URI, unresolved.line, unresolved.column)).isNull()
             assertThat(adapter.findReferences(URI, unresolved.line, unresolved.column, true))
                 .isEmpty()
@@ -216,9 +216,9 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val method = position(source, "methodDeclaration")
+            val method = source.markedPosition("methodDeclaration")
             val callStart =
-                position(source, "call").let { it.copy(column = it.column + "box.".length) }
+                source.markedPosition("call").let { it.copy(column = it.column + "box.".length) }
             val call =
                 Location(
                     URI,
@@ -236,13 +236,13 @@ class XdkNavigationTest {
                 adapter.getDocumentHighlights(URI, method.line, method.column).map { it.range },
             ).containsExactly(range(methodDeclaration), range(call))
 
-            val type = position(source, "typeDeclaration")
+            val type = source.markedPosition("typeDeclaration")
             assertThat(adapter.findReferences(URI, type.line, type.column, false))
                 .containsExactly(
                     span(source, "typeUse", "Box"),
                     span(source, "construction", "Box"),
                 )
-            val property = position(source, "propertyDeclaration")
+            val property = source.markedPosition("propertyDeclaration")
             assertThat(adapter.findReferences(URI, property.line, property.column, false))
                 .containsExactly(span(source, "propertyUse", "value"))
         }
@@ -258,7 +258,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val use = position(source, "firstUse")
+            val use = source.markedPosition("firstUse")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
                 .isEqualTo(span(source, "declaration", "value"))
             assertThat(adapter.findReferences(URI, use.line, use.column, false))
@@ -266,7 +266,7 @@ class XdkNavigationTest {
                     span(source, "firstUse", "value"),
                     span(source, "secondUse", "value"),
                 )
-            val declaration = position(source, "declaration")
+            val declaration = source.markedPosition("declaration")
             assertThat(adapter.findReferences(URI, declaration.line, declaration.column, true))
                 .containsExactly(
                     span(source, "declaration", "value"),
@@ -287,10 +287,10 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val use = position(source, "use")
+            val use = source.markedPosition("use")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
                 .isEqualTo(span(source, "declaration", "value"))
-            val declaration = position(source, "declaration")
+            val declaration = source.markedPosition("declaration")
             assertThat(adapter.findReferences(URI, declaration.line, declaration.column, true))
                 .containsExactly(span(source, "declaration", "value"), span(source, "use", "value"))
         }
@@ -308,7 +308,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val use = position(source, "use")
+            val use = source.markedPosition("use")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
                 .isEqualTo(span(source, "declaration", "value"))
         }
@@ -327,7 +327,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val capture = position(source, "capture")
+            val capture = source.markedPosition("capture")
             assertThat(adapter.findDefinition(URI, capture.line, capture.column))
                 .isEqualTo(span(source, "declaration", "value"))
             assertThat(adapter.findReferences(URI, capture.line, capture.column, true))
@@ -348,7 +348,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val qualifier = position(source, "qualified")
+            val qualifier = source.markedPosition("qualified")
             val inner = qualifier.copy(column = qualifier.column + "Outer.".length)
             val declaration = span(source, "declaration", "Nested")
             assertThat(adapter.findDefinition(URI, inner.line, inner.column)).isEqualTo(declaration)
@@ -376,7 +376,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val use = position(source, "nested")
+            val use = source.markedPosition("nested")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
                 .isEqualTo(span(source, "declaration", "value"))
             assertThat(adapter.findReferences(URI, use.line, use.column, false))
@@ -403,7 +403,7 @@ class XdkNavigationTest {
                 """.trimIndent()
             withSource(source) { adapter ->
                 for (prefix in listOf("first", "second")) {
-                    val use = position(source, "${prefix}Use")
+                    val use = source.markedPosition("${prefix}Use")
                     assertThat(adapter.findDefinition(URI, use.line, use.column))
                         .isEqualTo(span(source, "${prefix}Declaration", "value"))
                     assertThat(adapter.findReferences(URI, use.line, use.column, true))
@@ -429,7 +429,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val use = position(source, "capture")
+            val use = source.markedPosition("capture")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
                 .isEqualTo(span(source, "declaration", "value"))
             assertThat(adapter.findReferences(URI, use.line, use.column, false))
@@ -448,8 +448,8 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val qualifier = position(source, "qualifier")
-            val member = position(source, "member")
+            val qualifier = source.markedPosition("qualifier")
+            val member = source.markedPosition("member")
             assertThat(adapter.findDefinition(URI, qualifier.line, qualifier.column))
                 .isEqualTo(span(source, "qualifierDeclaration", "Derived"))
             assertThat(adapter.findDefinition(URI, member.line, member.column))
@@ -472,7 +472,7 @@ class XdkNavigationTest {
             }
             """.trimIndent()
         withSource(source) { adapter ->
-            val use = position(source, "capture")
+            val use = source.markedPosition("capture")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
                 .isEqualTo(span(source, "declaration", "value"))
             assertThat(adapter.getHoverInfo(URI, use.line, use.column)).contains("String")
@@ -490,26 +490,12 @@ class XdkNavigationTest {
         }
     }
 
-    private fun position(
-        source: String,
-        marker: String,
-    ): Position {
-        val comment = "/*$marker*/"
-        val start = source.indexOf(comment)
-        require(start >= 0) { "Missing marker: $marker" }
-        val offset = start + comment.length
-        return Position(
-            source.take(offset).count { it == '\n' },
-            offset - source.lastIndexOf('\n', offset) - 1,
-        )
-    }
-
     private fun span(
         source: String,
         marker: String,
         name: String,
     ): Location =
-        position(source, marker).let {
+        source.markedPosition(marker).let {
             Location(URI, it.line, it.column, it.line, it.column + name.length)
         }
 
