@@ -44,13 +44,13 @@ import com.intellij.xdebugger.XDebuggerManagerListener
 import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import org.xtclang.idea.lsp.CompilerSettings
-import org.xtclang.idea.lsp.ModuleTests
-import org.xtclang.idea.lsp.RunParams
-import org.xtclang.idea.lsp.ServerTest
-import org.xtclang.idea.lsp.TestLocation
-import org.xtclang.idea.lsp.TestSelector
-import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.ModuleTests
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.ServerTest
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.TestLocation
+import org.xvm.lsp.protocol.TestSelector
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 
@@ -277,7 +277,7 @@ internal object XtcTestCatalog {
                 .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
                 .map { wrapper ->
                     wrapper.initializedServer.thenCompose { server ->
-                        (server as? XtcLanguageServer)?.tests() ?: CompletableFuture.completedFuture(emptyList())
+                        (server as? XtcServerProtocol)?.tests() ?: CompletableFuture.completedFuture(emptyList())
                     }
                 }
         return CompletableFuture

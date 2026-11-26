@@ -35,6 +35,7 @@ import org.xvm.lsp.Heavy
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.awaitAsserted
 import org.xvm.lsp.awaited
+import org.xvm.lsp.protocol.BuildParams
 import java.io.File
 import java.net.URI
 import java.nio.file.Path

@@ -12,6 +12,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.xtclang.idea.run.EmbeddedExecution
+import org.xvm.lsp.protocol.BuildDiagnostic
+import org.xvm.lsp.protocol.BuildResponse
 
 /**
  * The Problems window's Project Errors for Ecstasy files: each file's errors as the newer of its two sources has them,

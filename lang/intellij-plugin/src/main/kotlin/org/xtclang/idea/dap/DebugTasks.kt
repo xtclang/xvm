@@ -9,10 +9,10 @@ import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
-import org.xtclang.idea.lsp.DebugTaskParams
-import org.xtclang.idea.lsp.DebugTaskResult
 import org.xtclang.idea.run.XtcBuildSettings
 import org.xtclang.idea.run.XtcRunConfiguration
+import org.xvm.lsp.protocol.DebugTaskParams
+import org.xvm.lsp.protocol.DebugTaskResult
 import org.xvm.lsp.protocol.TestEvent
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture

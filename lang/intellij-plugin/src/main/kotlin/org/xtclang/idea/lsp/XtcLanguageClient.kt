@@ -12,8 +12,6 @@ import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
 import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
-import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.xtclang.idea.XtcIntelliJLanguage
 import org.xtclang.idea.dap.DebugSessions
 import org.xtclang.idea.dap.DebugTasks
@@ -21,6 +19,16 @@ import org.xtclang.idea.run.EmbeddedRunSessions
 import org.xtclang.idea.run.RunGutterIcons
 import org.xtclang.idea.run.TestGutterIcons
 import org.xtclang.idea.run.XtcBuildSettings
+import org.xvm.lsp.protocol.DebugMessageParams
+import org.xvm.lsp.protocol.DebugTaskParams
+import org.xvm.lsp.protocol.DebugTaskResult
+import org.xvm.lsp.protocol.GradleProjectsParams
+import org.xvm.lsp.protocol.ReplacedLibrariesParams
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.TestEventParams
+import org.xvm.lsp.protocol.XtcClientProtocol
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -38,7 +46,8 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class XtcLanguageClient(
     project: Project,
-) : LanguageClientImpl(project) {
+) : LanguageClientImpl(project),
+    XtcClientProtocol {
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
     private val updateQueued = AtomicBoolean()
     private val settingsStores =
@@ -101,49 +110,42 @@ class XtcLanguageClient(
     }
 
     /** Output of an embedded run, for the console registered under its run ID. */
-    @JsonNotification("xtc/runOutput")
-    fun runOutput(params: RunOutputParams) {
+    override fun runOutput(params: RunOutputParams) {
         if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).output(params)
     }
 
     /** An event of the tests of an embedded run, for the test console registered under its run ID. */
-    @JsonNotification("xtc/testEvent")
-    fun testEvent(params: TestEventParams) {
+    override fun testEvent(params: TestEventParams) {
         if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).tested(params)
     }
 
     /** The bundled libraries this project's own modules replace, which make its builds and runs use Gradle. */
-    @JsonNotification("xtc/replacedLibraries")
-    fun replacedLibraries(params: ReplacedLibrariesParams) {
+    override fun replacedLibraries(params: ReplacedLibrariesParams) {
         if (!project.isDisposed) XtcBuildSettings.getInstance(project).replaced(project, params.libraries)
     }
 
     /** The Gradle project of each of this project's source modules, from its imported Gradle model, where runs run its tasks. */
-    @JsonNotification("xtc/gradleProjects")
-    fun gradleProjects(params: GradleProjectsParams) {
+    override fun gradleProjects(params: GradleProjectsParams) {
         if (!project.isDisposed) XtcBuildSettings.getInstance(project).gradleProjects = params.projects
     }
 
-    @JsonNotification("xtc/runExited")
-    fun runExited(params: RunExitedParams) {
+    override fun runExited(params: RunExitedParams) {
         if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).exited(params)
     }
 
     /** A DAP message of a debug session, for the process its debugger connects through. */
-    @JsonNotification("xtc/debugMessage")
-    fun debugMessage(params: DebugMessageParams) {
+    override fun debugMessage(params: DebugMessageParams) {
         if (!project.isDisposed) DebugSessions.getInstance(project).receive(params)
     }
 
     /** Runs a Gradle-mode debug session's module with its Gradle task, and answers once the task has ended. */
-    @JsonRequest("xtc/debugTask")
-    fun debugTask(params: DebugTaskParams): CompletableFuture<DebugTaskResult> = DebugTasks.run(project, params)
+    override fun debugTask(params: DebugTaskParams): CompletableFuture<DebugTaskResult> = DebugTasks.run(project, params)
 
     /** Once the server has started, record where it logs, which only it can name, for an export after it stops. */
     override fun handleServerStatusChanged(serverStatus: ServerStatus) {
         super.handleServerStatusChanged(serverStatus)
         if (serverStatus == ServerStatus.started && !project.isDisposed) {
-            (languageServer as? XtcLanguageServer)?.languageServiceStatus()?.whenComplete { status, failure ->
+            (languageServer as? XtcServerProtocol)?.languageServiceStatus()?.whenComplete { status, failure ->
                 if (project.isDisposed) return@whenComplete
                 if (failure == null) {
                     project.getService(ServerSupportLogs::class.java).remember(status)
@@ -197,13 +199,13 @@ class XtcLanguageClient(
             if (isDisposed || project.isDisposed) {
                 CompletableFuture.completedFuture(null)
             } else {
-                super.refreshDiagnostics()
+                super<LanguageClientImpl>.refreshDiagnostics()
             }
         }
 
     override fun refreshCodeLenses(): CompletableFuture<Void> {
         refreshRunIcons()
-        return super.refreshCodeLenses()
+        return super<LanguageClientImpl>.refreshCodeLenses()
     }
 
     /** The gutter Run icons follow the Run lenses, from the same analysis, and the test icons its tests. */

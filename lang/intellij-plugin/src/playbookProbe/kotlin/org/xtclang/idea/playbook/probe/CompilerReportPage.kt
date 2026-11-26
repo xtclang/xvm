@@ -4,7 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import org.xtclang.idea.lsp.CompilerProjectConfigurable
-import org.xtclang.idea.lsp.SourceModuleConfiguration
+import org.xvm.lsp.protocol.SourceModuleConfiguration
 import java.awt.Component
 import java.awt.Container
 import java.util.concurrent.CompletableFuture

@@ -52,6 +52,7 @@ import org.eclipse.lsp4j.debug.VariablesArgumentsFilter
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.TestSelector
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage

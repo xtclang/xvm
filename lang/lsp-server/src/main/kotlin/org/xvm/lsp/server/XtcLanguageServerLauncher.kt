@@ -10,6 +10,7 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.util.ServerLogs
 import java.io.InputStream
 import java.io.OutputStream
@@ -209,8 +210,8 @@ fun launchStdio(
     val trace = ProtocolTrace(server.clientTrace, server.openRequests)
     val lifecycle = ProtocolLifecycle()
     try {
-        val launcher: Launcher<XtcLanguageClient> =
-            object : Launcher.Builder<XtcLanguageClient>() {
+        val launcher: Launcher<XtcClientProtocol> =
+            object : Launcher.Builder<XtcClientProtocol>() {
                 override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer =
                     lifecycle.wrap(
                         trace.wrap(
@@ -220,7 +221,7 @@ fun launchStdio(
                         received = consumer is RemoteEndpoint,
                     )
             }.setLocalService(server)
-                .setRemoteInterface(XtcLanguageClient::class.java)
+                .setRemoteInterface(XtcClientProtocol::class.java)
                 .setInput(input)
                 .setOutput(output)
                 .setExecutorService(executor)

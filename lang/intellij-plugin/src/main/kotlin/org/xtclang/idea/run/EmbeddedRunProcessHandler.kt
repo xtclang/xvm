@@ -5,12 +5,12 @@ import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.openapi.vfs.encoding.EncodingManager
-import org.xtclang.idea.lsp.RunInputParams
-import org.xtclang.idea.lsp.RunParams
-import org.xtclang.idea.lsp.RunResponse
-import org.xtclang.idea.lsp.StopRunParams
-import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.RunInputParams
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.RunResponse
+import org.xvm.lsp.protocol.StopRunParams
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 internal class EmbeddedRunProcessHandler(
     private val sessions: EmbeddedRunSessions,
-    private val server: () -> CompletableFuture<XtcLanguageServer>,
+    private val server: () -> CompletableFuture<XtcServerProtocol>,
     request: RunParams,
     private val label: String,
     /** Shown after the first line, e.g. that the project's Gradle settings do not apply. */
@@ -39,13 +39,13 @@ internal class EmbeddedRunProcessHandler(
     EmbeddedRunSessions.Session {
     private val runId = UUID.randomUUID().toString()
     private val request = request.copy(runId = runId)
-    private val connection = AtomicReference<XtcLanguageServer?>()
+    private val connection = AtomicReference<XtcServerProtocol?>()
     private val started = AtomicBoolean()
     private val stopping = AtomicBoolean()
     private val finished = AtomicBoolean()
 
     /** Completes once the run request is sent, so no input can reach the server before its run. */
-    private val runRequested = CompletableFuture<XtcLanguageServer>()
+    private val runRequested = CompletableFuture<XtcServerProtocol>()
     private val inputLock = Any()
     private var inputs: CompletableFuture<*> = runRequested
     private val input by lazy { RunConsoleInput(consoleCharset(), ::sendInput) }

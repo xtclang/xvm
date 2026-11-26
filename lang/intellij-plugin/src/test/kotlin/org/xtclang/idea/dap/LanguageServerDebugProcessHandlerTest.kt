@@ -10,11 +10,11 @@ import com.redhat.devtools.lsp4ij.dap.DAPDebugProcess
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.lsp.DebugMessageParams
-import org.xtclang.idea.lsp.DebugSessionParams
-import org.xtclang.idea.lsp.DebugSessionResponse
-import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.DebugMessageParams
+import org.xvm.lsp.protocol.DebugSessionParams
+import org.xvm.lsp.protocol.DebugSessionResponse
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.io.IOException
 import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
@@ -223,15 +223,15 @@ class LanguageServerDebugProcessHandlerTest {
         val messages = CopyOnWriteArrayList<DebugMessageParams>()
         val ended = CopyOnWriteArrayList<String>()
 
-        val proxy: XtcLanguageServer =
-            Proxy.newProxyInstance(javaClass.classLoader, arrayOf(XtcLanguageServer::class.java)) { _, method, args ->
+        val proxy: XtcServerProtocol =
+            Proxy.newProxyInstance(javaClass.classLoader, arrayOf(XtcServerProtocol::class.java)) { _, method, args ->
                 when (method.name) {
                     "debugStart" -> started.thenApply { DebugSessionResponse("session-1") }
                     "debugMessage" -> messages += args[0] as DebugMessageParams
                     "debugEnd" -> ended += (args[0] as DebugSessionParams).sessionId
                     else -> throw UnsupportedOperationException(method.name)
                 }.let { if (method.returnType == Void.TYPE) null else it }
-            } as XtcLanguageServer
+            } as XtcServerProtocol
     }
 
     /** Records a process's output by type and its exit code. */

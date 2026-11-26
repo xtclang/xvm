@@ -25,6 +25,10 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettings.LanguageServerDefinitionSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
+import org.xvm.lsp.protocol.ConsumerDiscovery
+import org.xvm.lsp.protocol.DiscoverConsumersParams
+import org.xvm.lsp.protocol.SourceModuleConfiguration
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.awt.BorderLayout
 import java.awt.GridLayout
 import java.net.URI
@@ -524,7 +528,7 @@ private fun effectiveModules(project: Project): CompletableFuture<List<SourceMod
             .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
             .map { wrapper ->
                 wrapper.initializedServer.thenCompose { server ->
-                    (server as? XtcLanguageServer)?.compilerSourceModules()
+                    (server as? XtcServerProtocol)?.compilerSourceModules()
                         ?: CompletableFuture.completedFuture(emptyList())
                 }
             }
@@ -545,7 +549,7 @@ private fun discoveredConsumers(
             .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
             .map { wrapper ->
                 wrapper.initializedServer.thenCompose { server ->
-                    (server as? XtcLanguageServer)?.discoverConsumers(DiscoverConsumersParams(roots))
+                    (server as? XtcServerProtocol)?.discoverConsumers(DiscoverConsumersParams(roots))
                         ?: CompletableFuture.completedFuture(ConsumerDiscovery())
                 }
             }

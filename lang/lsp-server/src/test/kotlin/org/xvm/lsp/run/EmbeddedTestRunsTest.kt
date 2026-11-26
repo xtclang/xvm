@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
-import org.xvm.debug.TestSelector
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
@@ -19,16 +18,17 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkTest
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
+import org.xvm.lsp.protocol.DebugSessionParams
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.StopRunParams
 import org.xvm.lsp.protocol.TestEvent
-import org.xvm.lsp.server.DebugSessionParams
+import org.xvm.lsp.protocol.TestEventParams
+import org.xvm.lsp.protocol.TestSelector
+import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.EmbeddedRuns
-import org.xvm.lsp.server.RunExitedParams
-import org.xvm.lsp.server.RunOutputParams
-import org.xvm.lsp.server.RunParams
-import org.xvm.lsp.server.StopRunParams
-import org.xvm.lsp.server.TestEventParams
-import org.xvm.lsp.server.XtcLanguageClient
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.LinkedBlockingQueue
@@ -436,14 +436,14 @@ class EmbeddedTestRunsTest {
 
     /** Records the runs' output, test events and exits. */
     private class RunClient :
-        XtcLanguageClient,
+        XtcClientProtocol,
         LanguageClient by mock(LanguageClient::class.java) {
         val output = StringBuffer()
         val exits = LinkedBlockingQueue<RunExitedParams>()
         private val tested = ConcurrentLinkedQueue<TestEventParams>()
 
         /** The test events of the run [runId], in the order they came. */
-        fun events(runId: String): List<TestEvent> = tested.filter { it.runId == runId }.map { it.event }
+        fun events(runId: String): List<TestEvent> = tested.filter { it.runId == runId }.mapNotNull { it.event }
 
         override fun runOutput(params: RunOutputParams) {
             output.append(params.text)

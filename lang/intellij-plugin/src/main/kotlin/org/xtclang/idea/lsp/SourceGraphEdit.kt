@@ -5,6 +5,8 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.command.undo.UnexpectedUndoException
 import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializerUtil
+import org.xvm.lsp.protocol.SourceGraphReplacement
+import org.xvm.lsp.protocol.SourceModuleConfiguration
 import java.nio.file.Path
 
 /** LSP4IJ server settings join the same global command as source edits and resource moves. */

@@ -2,9 +2,9 @@ package org.xtclang.idea.run
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.lsp.ModuleTests
-import org.xtclang.idea.lsp.ServerTest
-import org.xtclang.idea.lsp.TestSelector
+import org.xvm.lsp.protocol.ModuleTests
+import org.xvm.lsp.protocol.ServerTest
+import org.xvm.lsp.protocol.TestSelector
 
 /**
  * The test console's Rerun Failed Tests, which runs a test run's configuration again with the tests that failed, and,

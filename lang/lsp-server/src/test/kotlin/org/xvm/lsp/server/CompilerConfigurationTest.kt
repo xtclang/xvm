@@ -187,7 +187,7 @@ class CompilerConfigurationTest {
                 listOf(workspace),
             )
         }.isInstanceOf(IllegalArgumentException::class.java)
-        assertThat(SourceModuleConfiguration(module).resourceRoots).isEqualTo(module.resourceRoots)
+        assertThat(module.toProtocol().resourceRoots).isEqualTo(module.resourceRoots)
     }
 
     @Test

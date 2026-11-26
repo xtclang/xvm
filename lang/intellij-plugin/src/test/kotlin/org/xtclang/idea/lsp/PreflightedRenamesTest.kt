@@ -8,6 +8,7 @@ import org.eclipse.lsp4j.jsonrpc.Endpoint
 import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints
 import org.eclipse.lsp4j.services.LanguageServer
 import org.junit.jupiter.api.Test
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
@@ -48,9 +49,9 @@ class PreflightedRenamesTest {
         Executors.newSingleThreadExecutor().use { worker ->
             val server =
                 features
-                    .createLauncherBuilder<XtcLanguageServer>()
+                    .createLauncherBuilder<XtcServerProtocol>()
                     .setLocalService(Any())
-                    .setRemoteInterface(XtcLanguageServer::class.java)
+                    .setRemoteInterface(XtcServerProtocol::class.java)
                     .setInput(ByteArrayInputStream(ByteArray(0)))
                     .setOutput(output)
                     .setExecutorService(worker)

@@ -22,8 +22,8 @@ import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiElement
-import org.xtclang.idea.lsp.ModuleTests
-import org.xtclang.idea.lsp.TestSelector
+import org.xvm.lsp.protocol.ModuleTests
+import org.xvm.lsp.protocol.TestSelector
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean

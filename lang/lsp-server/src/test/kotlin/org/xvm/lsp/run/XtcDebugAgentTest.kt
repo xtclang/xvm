@@ -27,11 +27,11 @@ import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitCall
 import org.xvm.lsp.awaited
+import org.xvm.lsp.protocol.DebugTaskParams
+import org.xvm.lsp.protocol.DebugTaskResult
+import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.server.DebugSessions
-import org.xvm.lsp.server.DebugTaskParams
-import org.xvm.lsp.server.DebugTaskResult
 import org.xvm.lsp.server.EmbeddedRuns
-import org.xvm.lsp.server.XtcLanguageClient
 import org.xvm.lsp.what
 import java.io.File
 import java.io.IOException
@@ -329,7 +329,7 @@ class XtcDebugAgentTest {
     fun `a Gradle launch whose task ends before the program connects fails with the task's exit code`() {
         val messages = DebugClient()
         val client =
-            object : XtcLanguageClient by messages {
+            object : XtcClientProtocol by messages {
                 override fun debugTask(params: DebugTaskParams) = CompletableFuture.completedFuture(DebugTaskResult(3))
             }
         val runs = EmbeddedRuns(mock(Adapter::class.java), { client }, attachLimit = ATTACH_LIMIT)
@@ -412,7 +412,7 @@ class XtcDebugAgentTest {
 
         val messages = DebugClient()
         val ended =
-            object : XtcLanguageClient by messages {
+            object : XtcClientProtocol by messages {
                 override fun debugTask(params: DebugTaskParams) = CompletableFuture.completedFuture(DebugTaskResult(3))
             }
         val runs = EmbeddedRuns(mock(Adapter::class.java), { ended }, attachLimit = ATTACH_LIMIT)
@@ -643,7 +643,7 @@ class XtcDebugAgentTest {
     private inner class TaskClient(
         private val text: String,
         val messages: DebugClient = DebugClient(),
-    ) : XtcLanguageClient by messages,
+    ) : XtcClientProtocol by messages,
         AutoCloseable {
         val tasks = CopyOnWriteArrayList<DebugTaskParams>()
         val programs = CopyOnWriteArrayList<Program>()

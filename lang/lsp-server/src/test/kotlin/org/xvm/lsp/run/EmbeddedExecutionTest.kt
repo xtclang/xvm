@@ -31,16 +31,15 @@ import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
-import org.xvm.lsp.server.DebugMessageParams
-import org.xvm.lsp.server.DebugSessionParams
+import org.xvm.lsp.protocol.DebugSessionParams
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunInputParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.StopRunParams
+import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.EmbeddedRuns
-import org.xvm.lsp.server.RunExitedParams
-import org.xvm.lsp.server.RunInputParams
-import org.xvm.lsp.server.RunOutputParams
-import org.xvm.lsp.server.RunParams
-import org.xvm.lsp.server.StopRunParams
-import org.xvm.lsp.server.XtcLanguageClient
 import org.xvm.lsp.server.XtcLanguageServer
 import org.xvm.lsp.server.launchStdio
 import java.io.ByteArrayInputStream
@@ -640,7 +639,7 @@ class EmbeddedExecutionTest {
         val output = StringBuffer()
         val exited = CompletableFuture<RunExitedParams>()
         val client =
-            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
                 override fun runOutput(params: RunOutputParams) {
                     output.append(params.text)
                 }
@@ -2800,7 +2799,7 @@ class EmbeddedExecutionTest {
         val output = StringBuffer()
         val exited = CompletableFuture<RunExitedParams>()
         val client =
-            object : XtcLanguageClient, LanguageClient by mock(LanguageClient::class.java) {
+            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
                 override fun runOutput(params: RunOutputParams) {
                     output.append(params.text)
                 }
@@ -2833,7 +2832,7 @@ class EmbeddedExecutionTest {
 
     /** Records the run output and exits the server sends its client. */
     private class RunClient :
-        XtcLanguageClient,
+        XtcClientProtocol,
         LanguageClient by mock(LanguageClient::class.java) {
         val output = StringBuffer()
         val exits = LinkedBlockingQueue<RunExitedParams>()
@@ -2850,7 +2849,7 @@ class EmbeddedExecutionTest {
     /** Records each run's output and exit by run ID, and the debug sessions' messages, as [DebugClient] does. */
     private class SoakClient(
         private val debug: DebugClient = DebugClient(),
-    ) : XtcLanguageClient by debug {
+    ) : XtcClientProtocol by debug {
         private val outputs = ConcurrentHashMap<String, StringBuffer>()
         private val exits = ConcurrentHashMap<String, CompletableFuture<RunExitedParams>>()
 

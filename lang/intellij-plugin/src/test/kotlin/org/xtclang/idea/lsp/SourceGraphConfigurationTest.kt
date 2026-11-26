@@ -4,6 +4,7 @@ import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.xvm.lsp.protocol.SourceModuleConfiguration
 import java.net.URI
 
 /**

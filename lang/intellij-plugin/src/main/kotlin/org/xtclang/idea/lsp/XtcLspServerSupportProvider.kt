@@ -20,6 +20,7 @@ import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.XtcFileType
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
@@ -75,7 +76,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 
     override fun createClientFeatures(): LSPClientFeatures = XtcClientFeatures()
 
-    override fun getServerInterface(): Class<out LanguageServer> = XtcLanguageServer::class.java
+    override fun getServerInterface(): Class<out LanguageServer> = XtcServerProtocol::class.java
 }
 
 /**

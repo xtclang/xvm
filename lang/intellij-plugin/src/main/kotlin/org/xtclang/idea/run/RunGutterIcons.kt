@@ -19,8 +19,8 @@ import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.xtclang.idea.XtcFileType
 import org.xtclang.idea.lsp.CompilerSettings
-import org.xtclang.idea.lsp.RunLens
-import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.RunLens
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.util.concurrent.CompletableFuture
 import javax.swing.Icon
 
@@ -78,7 +78,7 @@ internal object RunGutterIcons {
                 .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
                 .map { wrapper ->
                     wrapper.initializedServer.thenCompose { server ->
-                        (server as? XtcLanguageServer)?.runLenses(TextDocumentIdentifier(uri))
+                        (server as? XtcServerProtocol)?.runLenses(TextDocumentIdentifier(uri))
                             ?: CompletableFuture.completedFuture(emptyList())
                     }
                 }

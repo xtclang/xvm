@@ -10,6 +10,7 @@ import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.ServerStatus
 import org.xtclang.idea.XtcProjectAction
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Base64
@@ -60,7 +61,7 @@ class ExportServerLogsAction : XtcProjectAction() {
                     it.serverDefinition.id == CompilerSettings.SERVER_ID && it.serverStatus == ServerStatus.started
                 }
                     ?: return CompletableFuture.runAsync { project.getService(ServerSupportLogs::class.java).export(destination) }
-            return wrapper.initializedServer.thenCompose { (it as XtcLanguageServer).exportLogs() }.thenAcceptAsync { bundle ->
+            return wrapper.initializedServer.thenCompose { (it as XtcServerProtocol).exportLogs() }.thenAcceptAsync { bundle ->
                 Files.write(destination, Base64.getDecoder().decode(requireNotNull(bundle["base64"])))
             }
         }

@@ -36,6 +36,11 @@ import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
 import org.xtclang.idea.awaitUntil
 import org.xtclang.idea.awaited
+import org.xvm.lsp.protocol.BuildDiagnostic
+import org.xvm.lsp.protocol.BuildPosition
+import org.xvm.lsp.protocol.BuildRange
+import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.DocumentDiagnostics
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -385,7 +390,11 @@ class ClosedFileProblemsTest {
         val errors = ProjectErrors.getInstance(editor.fixture.project)
         errors.buildStarted()
         val range = BuildRange(BuildPosition(0, 0), BuildPosition(0, 5))
-        errors.built(BuildResponse(diagnostics = listOf(DocumentDiagnostics(uri(file), listOf(BuildDiagnostic(range, 1, code, code))))))
+        errors.built(
+            BuildResponse(
+                diagnostics = listOf(DocumentDiagnostics(uri(file), listOf(BuildDiagnostic(range, 1, message = code, code = code)))),
+            ),
+        )
     }
 
     /** What the Problems window's Project Errors lists in [file]. */

@@ -1,9 +1,9 @@
 package org.xvm.lsp.run
 
-import org.xvm.debug.TestSelector
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkTest
 import org.xvm.lsp.protocol.TestEvent
+import org.xvm.lsp.protocol.TestSelector
 import org.xvm.tool.Launcher
 import java.io.File
 import java.util.concurrent.CompletableFuture

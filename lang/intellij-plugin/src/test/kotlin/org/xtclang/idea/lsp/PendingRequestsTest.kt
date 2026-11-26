@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageProducer
 import org.junit.jupiter.api.Test
 import org.xtclang.idea.awaited
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.PipedInputStream
@@ -25,9 +26,9 @@ class PendingRequestsTest {
         Executors.newCachedThreadPool().use { workers ->
             val launcher =
                 XtcClientFeatures()
-                    .createLauncherBuilder<XtcLanguageServer>()
+                    .createLauncherBuilder<XtcServerProtocol>()
                     .setLocalService(Any())
-                    .setRemoteInterface(XtcLanguageServer::class.java)
+                    .setRemoteInterface(XtcServerProtocol::class.java)
                     .setInput(input)
                     .setOutput(ByteArrayOutputStream())
                     .setExecutorService(workers)
