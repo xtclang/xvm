@@ -123,6 +123,7 @@
  * | xtc.debug.copyOption                      | step "Attach to a program"                                        |
  * | xtc.showReferences (the reference lens)   | check "A reference lens"                                          |
  * | the language status item (adapter, restart) | step "Open the project"; step "Switch the language adapter"     |
+ * | the client's restart of a server that dies | check "The server comes back when its process dies"               |
  *
  * Extension: settings
  * | xtc.build.mode                            | step "The build mode", and the Gradle steps                       |
@@ -1683,6 +1684,24 @@ async function commands(tour: Tour): Promise<void> {
         await tour.ui.focusEditor();
         await tour.ui.press('Control+Alt+KeyX', 'KeyR');
         await tour.until('A new server runs', () => getClient() !== before && !!getClient()?.isRunning(), () => getClient()?.state);
+        await replace('return drawPile.popCard();', 'return drawPile.popCrd();');
+        await hasError(tour, tour.source('Eights.x'), 'popCrd');
+        await tour.restore();
+        await compiles(tour, tour.source('Eights.x'));
+    });
+    await tour.verify('The server comes back when its process dies', 'closed (CloseAction.Restart)', async () => {
+        const client = getClient()!;
+        const initialized = client.initializeResult;
+        const before = await client.sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+        expect(Number.isSafeInteger(before.pid) && before.pid > 0, () => `The server's process: ${JSON.stringify(before)}`);
+        // ended as a crash or the system's out-of-memory killer would end it: the client starts the server again itself
+        process.kill(before.pid, 'SIGKILL');
+        await tour.until('The server comes back', () => client.isRunning() && client.initializeResult !== initialized, () => client.state);
+        const after = await client.sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+        expect(getClient() === client && after.pid !== before.pid, () => `The server's process: ${before.pid}, then ${after.pid}`);
+        await tour.until('The status bar says the compiler serves', async () => (await tour.ui.text('status:Ecstasy')).includes('Compiler'),
+            () => tour.ui.text('status:Ecstasy'));
+        // and it serves the open editor again: an error as it is typed
         await open(tour.source('Eights.x'));
         await replace('return drawPile.popCard();', 'return drawPile.popCrd();');
         await hasError(tour, tour.source('Eights.x'), 'popCrd');
