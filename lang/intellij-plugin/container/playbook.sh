@@ -21,13 +21,13 @@
 # directories to lang/intellij-plugin/build/reports/compiler-playbook, where a native run puts them, which the
 # container mounts as /out/runs and prunes as a native run's report retention does, and the
 # VS Code extension's reports to lang/vscode-extension/build/reports. The
-# volumes xvm-playbook-gradle, xvm-playbook-work and xvm-playbook-m2 keep Gradle's caches, the build and
-# mavenLocal between runs.
+# volumes xvm-playbook-gradle, xvm-playbook-work (xvm-playbook-work-sN in slot N) and xvm-playbook-m2 keep
+# Gradle's caches, the build and mavenLocal between runs.
 # The container is aarch64 Linux on an Apple machine: its fonts and timing are not macOS's. The export
 # has no .git: its commit and branch are passed in as XTC_COMMIT and XTC_BRANCH, for javatools' build info
-# and the VS Code playbook, with the uncommitted paths. The container may use $XTC_CONTAINER_MEMORY, 7g by
-# default, which an 8 GiB machine holds; the IntelliJ tour, whose Gradle-mode steps start a second Gradle, needs
-# more, such as 14g on a 16 GiB machine.
+# and the VS Code playbook, with the uncommitted paths. A run's container may use $XTC_CONTAINER_MEMORY, 14g by
+# default, which the IntelliJ playbook and tours need (7g let the kernel kill the IDE). As many runs go at once as
+# the engine's memory holds, or $XTC_CONTAINER_SLOTS: on a 32 GiB Podman machine, two.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -93,14 +93,45 @@ commit="$(git -C "$root" rev-parse HEAD)"
 branch="$(git -C "$root" rev-parse --abbrev-ref HEAD)"
 dirty="$(git -C "$root" status --porcelain)"
 
-# one container run at a time on this machine: the runs share the volumes, whichever worktree they start from, so
-# the lock is in the repository's common git directory, which every worktree shares; a lock whose owner has gone
-# is taken over
+# one container run at a time in each slot on this machine: the runs of a slot share its work volume, whichever
+# worktree they start from, so its lock is in the repository's common git directory, which every worktree shares; a
+# lock whose owner has gone is taken over. Slot 1's lock, queue, work volume and container names are the ones runs
+# have always used, so that a run of an older playbook.sh, which knows only those, still takes its turn, and waits
+# for every other slot's container too. A checkout always runs in the same slot, or in $XTC_CONTAINER_SLOT, so that
+# a build and the cases that need it share a work volume, and its runs share no output directory
 common="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)"
-lock="$common/xvm-playbook-container.lock"
-# runs take the lock in the order they asked for it: each waiter holds a ticket, named by the time it asked, and
-# takes the lock only when its ticket is the first of a waiting run's; a ticket whose run has gone is dropped
-queue="$common/xvm-playbook-queue"
+memory="${XTC_CONTAINER_MEMORY:-14g}"
+bytes() {
+    local value="${1%[kKmMgG]}"
+    case "${1: -1}" in
+        g | G) echo $((value * 1073741824)) ;;
+        m | M) echo $((value * 1048576)) ;;
+        k | K) echo $((value * 1024)) ;;
+        *) echo "$1" ;;
+    esac
+}
+slots="${XTC_CONTAINER_SLOTS:-}"
+if [ -z "$slots" ]; then
+    total="$("$engine" info --format '{{.Host.MemTotal}}' 2> /dev/null || "$engine" info --format '{{.MemTotal}}' 2> /dev/null || echo 0)"
+    slots=$((total / $(bytes "$memory")))
+    if [ "$slots" -lt 1 ]; then slots=1; fi
+fi
+slot="${XTC_CONTAINER_SLOT:-$(($(printf '%s' "$root" | cksum | cut -d ' ' -f 1) % slots + 1))}"
+if [ "$slot" -eq 1 ]; then
+    lock="$common/xvm-playbook-container.lock"
+    queue="$common/xvm-playbook-queue"
+    work=xvm-playbook-work
+    prefix=xvm-playbook-
+    running='^xvm-playbook-[0-9]'
+else
+    lock="$common/xvm-playbook-container.lock.s$slot"
+    queue="$common/xvm-playbook-queue.s$slot"
+    work="xvm-playbook-work-s$slot"
+    prefix="xvm-playbook-s$slot-"
+    running="^$prefix"
+fi
+# runs take a slot's lock in the order they asked for it: each waiter holds a ticket, named by the time it asked,
+# and takes the lock only when its ticket is the first of a waiting run's; a ticket whose run has gone is dropped
 mkdir -p "$queue"
 ticket="$queue/$(printf '%010d-%010d' "$(date +%s)" "$$")"
 touch "$ticket"
@@ -122,15 +153,15 @@ until [ "$(first_ticket)" = "$ticket" ] && mkdir "$lock" 2> /dev/null; do
         rm -rf "$lock"
         continue
     fi
-    echo "waiting for an earlier playbook container run (pid ${owner:-queued}) to finish"
+    echo "waiting for an earlier playbook container run in slot $slot of $slots (pid ${owner:-queued}) to finish"
     sleep 15
 done
 locked=true
 echo $$ > "$lock/pid"
 rm -f "$ticket"
 ticket=""
-# a run that took no lock, such as one of an older checkout, shares the volumes as well
-while "$engine" ps --format '{{.Names}}' | grep -q '^xvm-playbook-'; do
+# a run that took no lock, such as one of an older checkout, shares the slot's volumes as well
+while "$engine" ps --format '{{.Names}}' | grep -q "$running"; do
     echo "waiting for the running playbook container to finish"
     sleep 15
 done
@@ -139,12 +170,12 @@ stamp="$(date +%Y%m%d-%H%M%S)"
 status=0
 # --init makes PID 1 reap orphans: without it, a Gradle daemon that exits on a cancel stays a zombie, which Java
 # reports alive (X260 waits for the canceled daemon to exit)
-"$engine" run --rm --init --name "xvm-playbook-$stamp" \
-    --memory "${XTC_CONTAINER_MEMORY:-7g}" --shm-size 1g --security-opt label=disable \
+"$engine" run --rm --init --name "$prefix$stamp" \
+    --memory "$memory" --shm-size 1g --security-opt label=disable \
     -e XTC_COMMIT="$commit" -e XTC_BRANCH="$branch" -e XTC_PLAYBOOK_DIRTY="$dirty" \
     -e XTC_RECORD_VIDEO="${XTC_RECORD_VIDEO:-}" \
     -v xvm-playbook-gradle:/gradle \
-    -v xvm-playbook-work:/work \
+    -v "$work:/work" \
     -v xvm-playbook-m2:/home/playbook/.m2 \
     -v "$source:/src:ro" \
     -v "$container/out:/out" \
