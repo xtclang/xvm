@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter.xdk
 
 import org.slf4j.LoggerFactory
 import org.xvm.asm.Constants.ECSTASY_MODULE
+import org.xvm.lsp.protocol.ServerProperties
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -22,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * workspace that replaces a library: the server's runtime and libraries are the bundled XDK's, not the workspace's.
  */
 internal object XdkLibraryReplacement {
-    const val PROPERTY = "xtc.lsp.replaceLibraries"
+    const val PROPERTY = ServerProperties.REPLACE_LIBRARIES
 
     /** Why a workspace that replaces bundled libraries has no embedded builds or runs. */
     const val NO_EMBEDDED_RUNS =

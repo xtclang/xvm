@@ -17,6 +17,7 @@ import com.intellij.tools.ide.starter.product.idea.ultimate.IdeaUltimate
 import org.kodein.di.DI
 import org.kodein.di.bindSingleton
 import org.xtclang.idea.playbook.probe.HANG_SECONDS
+import org.xvm.lsp.protocol.ServerProperties
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -137,16 +138,16 @@ internal class PlaybookIde(
                         // Prevent trial/license startup from dynamically re-enabling the paid module.
                         addSystemProperty("request.trial", false)
                         addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
-                        addSystemProperty("xtc.lsp.semanticTokens", true)
+                        addSystemProperty(ServerProperties.SEMANTIC_TOKENS, true)
                         // the IDE's probes wait as long as the playbook does
                         addSystemProperty("xtc.playbook.hang", HANG_SECONDS.toString())
-                        addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
+                        addSystemProperty(ServerProperties.TRACE_DIRECTORY, run.resolve("server-trace").toString())
                         // each server's whole trace, for a failure early in a run too: a tour's server writes about
                         // 100 MB in half an hour, of which the logs' cap kept only the last 50 MB
                         addSystemProperty("xtc.trace.totalSizeMb", TRACE_TOTAL_MB.toString())
                         // and its details, such as what each diagnostic pull answered
                         addSystemProperty("xtc.trace.level", "DEBUG")
-                        addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
+                        addSystemProperty(ServerProperties.LOGS_DIRECTORY, run.resolve("server-logs").toString())
                         addSystemProperty("idea.auto.reload.plugins", false)
                         // no Got It tooltip shows in the middle of a case; X286 and the tour turn the plugin's on for
                         // their checks of them (probe/GotItUi.kt)

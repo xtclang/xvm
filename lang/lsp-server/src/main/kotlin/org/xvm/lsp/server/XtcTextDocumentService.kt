@@ -129,6 +129,7 @@ import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.protocol.RenameProposal
 import org.xvm.lsp.protocol.RenameScope
+import org.xvm.lsp.protocol.ServerProperties
 import org.xvm.lsp.protocol.SourceGraphReplacement
 import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.lsp.util.snapshot
@@ -171,7 +172,7 @@ class XtcTextDocumentService(
          * property `xtc.lsp.test.holdReferences`. The IntelliJ playbook's X145 sets it, so that no machine finishes
          * a search before the case shows its progress and cancels it. Unset, as outside that case, every search runs.
          */
-        private val heldReferences: String? = System.getProperty("xtc.lsp.test.holdReferences")
+        private val heldReferences: String? = System.getProperty(ServerProperties.HOLD_REFERENCES)
 
         /** The fields of a query's traced answer that say what it was asked, which a repeated answer keeps. */
         private val ASKED = setOf("previousResultId")

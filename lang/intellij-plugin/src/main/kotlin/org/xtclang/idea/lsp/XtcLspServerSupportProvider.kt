@@ -20,6 +20,7 @@ import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.XtcFileType
+import org.xvm.lsp.protocol.ServerProperties
 import org.xvm.lsp.protocol.XtcServerProtocol
 import java.nio.file.Path
 import java.util.Properties
@@ -103,7 +104,6 @@ class XtcLspConnectionProvider(
     companion object {
         internal const val LSP_SERVER_JAR = "xtc-lsp-server.jar"
         private const val LANGUAGE_SERVER_ID = "xtcLanguageServer"
-        private const val SEMANTIC_TOKENS_SYSTEM_PROPERTY = "xtc.lsp.semanticTokens"
         private const val SEMANTIC_TOKENS_ENV = "XTC_LSP_SEMANTIC_TOKENS"
 
         /** Ensures we only show the "started" notification once per IDE session. */
@@ -151,7 +151,7 @@ class XtcLspConnectionProvider(
                 ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
                 ?: "INFO"
         val semanticTokens =
-            System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
+            System.getProperty(ServerProperties.SEMANTIC_TOKENS)
                 ?: System.getenv(SEMANTIC_TOKENS_ENV)
                 ?: "true"
 
@@ -172,16 +172,16 @@ class XtcLspConnectionProvider(
                     "-Dapple.awt.UIElement=true", // macOS: no dock icon
                     "-Djava.awt.headless=true", // No GUI components
                     "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
-                    "-D$SEMANTIC_TOKENS_SYSTEM_PROPERTY=$semanticTokens",
+                    "-D${ServerProperties.SEMANTIC_TOKENS}=$semanticTokens",
                 ) +
                 // the IDE's trace and log settings, and xtc.lsp.test.holdReferences, a test seam that only the IntelliJ
                 // playbook's X145 sets
                 listOf(
-                    "xtc.trace.directory",
+                    ServerProperties.TRACE_DIRECTORY,
                     "xtc.trace.level",
                     "xtc.trace.totalSizeMb",
-                    "xtc.logs.directory",
-                    "xtc.lsp.test.holdReferences",
+                    ServerProperties.LOGS_DIRECTORY,
+                    ServerProperties.HOLD_REFERENCES,
                 ).mapNotNull { key ->
                     System.getProperty(key)?.let { "-D$key=$it" }
                 },

@@ -144,7 +144,7 @@ internal class EmbeddedBuild(
         progress: BuildProgress<BuildProgressDescriptor>,
         build: BuildResponse,
     ) {
-        EmbeddedExecution.describe(build.copy(diagnostics = emptyList())).forEach { progress.output("$it\n", ProcessOutputType.STDOUT) }
+        build.copy(diagnostics = emptyList()).summary().forEach { progress.output("$it\n", ProcessOutputType.STDOUT) }
         ProjectErrors.getInstance(project).built(build)
         build.diagnostics.forEach { document ->
             val file = EmbeddedExecution.file(document.uri)

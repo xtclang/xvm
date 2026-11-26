@@ -19,7 +19,6 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.XtcDebugServer
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
-import org.xvm.lsp.protocol.BuildResponse
 import org.xvm.lsp.protocol.DebugMessageParams
 import org.xvm.lsp.protocol.DebugSessionParams
 import org.xvm.lsp.protocol.DebugSessionResponse
@@ -29,8 +28,6 @@ import org.xvm.lsp.protocol.StopRunParams
 import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.util.snapshot
 import java.io.Closeable
-import java.net.URI
-import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -123,7 +120,7 @@ internal class DebugSessions(
                     RunParams(target.module, target.method, target.args, target.workingDirectory, runId, target.moduleName, target.tests),
                     events,
                     ready,
-                ).thenApply { LaunchResult(it.runId, describe(it.build)) }
+                ).thenApply { LaunchResult(it.runId, it.build.summary().joinToString("\n")) }
         }
 
         override fun attach(
@@ -292,36 +289,5 @@ internal class DebugSessions(
 
     private companion object {
         val logger = LoggerFactory.getLogger(DebugSessions::class.java)
-
-        /** A build's module outcomes and diagnostics as `file:line:column` lines, as the embedded build task shows them. */
-        fun describe(build: BuildResponse): String =
-            buildList {
-                build.modules.forEach { module ->
-                    add(
-                        when {
-                            module.succeeded -> "  ✓ ${module.name}${module.artifact?.let { " -> $it" }.orEmpty()}"
-                            module.skipped -> "  - ${module.name} (not built: a dependency failed)"
-                            else -> "  ✗ ${module.name}"
-                        },
-                    )
-                }
-                build.diagnostics.forEach { file ->
-                    val path = runCatching { Path.of(URI(file.uri)).toString() }.getOrDefault(file.uri)
-                    file.diagnostics.forEach { diagnostic ->
-                        val start = diagnostic.range.start
-                        // LSP's severities: 1 error, 2 warning, 3 information, 4 hint
-                        val severity =
-                            when (diagnostic.severity) {
-                                2 -> "warning"
-                                3 -> "info"
-                                4 -> "hint"
-                                else -> "error"
-                            }
-                        val code = diagnostic.code?.let { " [$it]" }.orEmpty()
-                        add("$path:${start.line + 1}:${start.character + 1}: $severity: ${diagnostic.message}$code")
-                    }
-                }
-                if (build.cancelled) add("Build cancelled.")
-            }.joinToString("\n")
     }
 }

@@ -78,6 +78,7 @@ import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.protocol.BuildParams
 import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.ConfigurationSections
 import org.xvm.lsp.protocol.ConsumerDiscovery
 import org.xvm.lsp.protocol.DebugMessageParams
 import org.xvm.lsp.protocol.DebugSessionParams
@@ -91,6 +92,7 @@ import org.xvm.lsp.protocol.RunInputParams
 import org.xvm.lsp.protocol.RunLens
 import org.xvm.lsp.protocol.RunParams
 import org.xvm.lsp.protocol.RunResponse
+import org.xvm.lsp.protocol.ServerProperties
 import org.xvm.lsp.protocol.SourceModuleConfiguration
 import org.xvm.lsp.protocol.StopRunParams
 import org.xvm.lsp.protocol.XtcClientProtocol
@@ -414,7 +416,6 @@ class XtcLanguageServer internal constructor(
         private const val MAX_RESCANS = 5
 
         private val logger = LoggerFactory.getLogger(XtcLanguageServer::class.java)
-        private const val SEMANTIC_TOKENS_SYSTEM_PROPERTY = "xtc.lsp.semanticTokens"
         private const val SEMANTIC_TOKENS_ENV = "XTC_LSP_SEMANTIC_TOKENS"
 
         private fun loadBuildInfo(): Properties =
@@ -430,7 +431,7 @@ class XtcLanguageServer internal constructor(
     private val buildTime = buildInfo.getProperty("lsp.build.time", "?")
     private val semanticTokensEnabled =
         (
-            System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
+            System.getProperty(ServerProperties.SEMANTIC_TOKENS)
                 ?: System.getenv(SEMANTIC_TOKENS_ENV)
                 ?: buildInfo.getProperty("lsp.semanticTokens", "true")
         ).toBoolean()
@@ -454,7 +455,7 @@ class XtcLanguageServer internal constructor(
         if (!presentation.workspaceConfiguration || connection == null) return CompletableFuture.completedFuture(true)
         val item =
             ConfigurationItem().apply {
-                section = "xtc.codeLens"
+                section = ConfigurationSections.CODE_LENS
                 scopeUri = uri
             }
         return CompletableFuture
@@ -938,7 +939,7 @@ class XtcLanguageServer internal constructor(
         if (!presentation.workspaceConfiguration || compilerSettings.get().closed) return
         val c = client ?: return
         val revision = formattingState.request()
-        val item = ConfigurationItem().apply { section = "xtc.formatting" }
+        val item = ConfigurationItem().apply { section = ConfigurationSections.FORMATTING }
         c
             .configuration(ConfigurationParams(listOf(item)))
             .thenAccept { results ->
@@ -1123,7 +1124,7 @@ class XtcLanguageServer internal constructor(
             // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if
             // needed.
             val semanticTokensSetting =
-                System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)?.let { "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it" }
+                System.getProperty(ServerProperties.SEMANTIC_TOKENS)?.let { "system property ${ServerProperties.SEMANTIC_TOKENS}=$it" }
                     ?: System.getenv(SEMANTIC_TOKENS_ENV)?.let { "environment $SEMANTIC_TOKENS_ENV=$it" }
                     ?: "build property lsp.semanticTokens=${buildInfo.getProperty("lsp.semanticTokens", "true")}"
             if (

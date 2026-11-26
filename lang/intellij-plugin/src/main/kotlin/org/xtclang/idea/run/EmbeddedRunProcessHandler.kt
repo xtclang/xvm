@@ -93,7 +93,7 @@ internal class EmbeddedRunProcessHandler(
     }
 
     private fun buildFailed(response: RunResponse) {
-        EmbeddedExecution.describe(response.build).forEach { system("$it\n") }
+        response.build.summary().forEach { system("$it\n") }
         exited(null, "Build failed; nothing was run.")
     }
 

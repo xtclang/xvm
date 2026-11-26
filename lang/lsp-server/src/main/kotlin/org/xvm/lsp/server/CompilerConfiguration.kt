@@ -6,13 +6,14 @@ import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkLibraryReplacement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
+import org.xvm.lsp.protocol.ConfigurationSections
 import java.net.URI
 
 /**
  * Strict editor configuration; absent values preserve the host graph and an empty list clears it.
  */
 internal object CompilerConfiguration {
-    const val SECTION = "xtc.compiler"
+    const val SECTION = ConfigurationSections.COMPILER
     const val INITIALIZATION_KEY = "xtcCompiler"
     private val gson = GsonBuilder().serializeNulls().create()
 
