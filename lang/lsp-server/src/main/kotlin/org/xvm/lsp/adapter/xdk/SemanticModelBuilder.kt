@@ -312,6 +312,9 @@ private class SemanticModelBuilder(
 ) {
     private val id = UUID.randomUUID()
     private val captureOrigins = IdentityHashMap<Register, Register>()
+
+    // The register of the method's formal type that each lambda's type parameter captures, by the lambda and the index ([captured]).
+    private val capturedFormals = mutableMapOf<Pair<MethodConstant, Int>, Register>()
     private val capturedProperties = mutableMapOf<PropertyConstant, Register>()
     private val registers = IdentityHashMap<Register, SymbolId>()
 
@@ -551,8 +554,14 @@ private class SemanticModelBuilder(
         }
 
         val lambdas = nodes.filterIsInstance<LambdaExpression>()
-        lambdas.forEach {
-            it.sourceBindings?.let { bindings -> captureOrigins.putAll(bindings.captureOrigins) }
+        lambdas.forEach { lambda ->
+            lambda.sourceBindings?.let { bindings ->
+                captureOrigins.putAll(bindings.captureOrigins)
+                val method = lambda.lambda ?: return@let
+                bindings.captureOrigins.forEach { (capture, origin) ->
+                    if (capture.index in 0 until method.typeParamCount) capturedFormals[method.identityConstant to capture.index] = origin
+                }
+            }
         }
         lambdas.forEach { lambda ->
             lambda.sourceBindings?.parameters?.forEach { binding ->
@@ -1796,7 +1805,7 @@ private class SemanticModelBuilder(
         if (location in occurrences) return
         val symbol = symbol(target, name, kind(target))
         // Failed name validation can leave a required/placeholder type on the expression.
-        val type = if (symbol == null) null else type(expressionType) ?: symbols[symbol]?.type
+        val type = if (symbol == null) null else type(expressionType?.let { capturedType(it) ?: it }) ?: symbols[symbol]?.type
         val access =
             when (symbols[symbol]?.kind) {
                 SymbolKind.VARIABLE,
@@ -1907,7 +1916,7 @@ private class SemanticModelBuilder(
                             parameter is TypeParameterConstant &&
                             parameter.register == register.index
                         ) {
-                            return parameter
+                            return captured(parameter) ?: parameter
                         }
                     }
                     return register
@@ -1943,10 +1952,48 @@ private class SemanticModelBuilder(
                 when (it) {
                     is FormalTypeChildConstant -> constrained(it) ?: it
                     is PropertyConstant -> it.implicitFormal() ?: it
+                    is TypeParameterConstant -> captured(it) ?: it
                     else -> it
                 }
             }
     }
+
+    /**
+     * The type that a name of a formal type has outside a lambda that captures it, where [type], the name's in the lambda,
+     * is its own type parameter's, as Type<->(?)#To, Object> for Type<convert(?)#To, Object> ([captured]): of a method's
+     * formal type, the type of the register that the lambda's captures, through each lambda around it; of a class's, the
+     * type that the lambda takes it as (LambdaExpression). Null for any other type.
+     */
+    private fun capturedType(type: TypeConstant): TypeConstant? {
+        val formal = type.takeIf { it.isTypeOfType && it.isParamsSpecified }?.getParamType(0)
+        val constant = formal?.takeIf { !it.containsUnresolved() && it.isSingleDefiningConstant }?.definingConstant
+        if (constant !is TypeParameterConstant) return null
+        val lambda = capturing(constant) ?: return null
+        val origin = capturedFormals[constant.method to constant.register] ?: return lambda.getParam(constant.register).type
+        val register = generateSequence(origin.originalRegister) { captureOrigins[it]?.originalRegister }.last()
+        return capturedType(register.type) ?: register.type
+    }
+
+    /**
+     * The formal type that [formal], a type parameter of a lambda, captures, as To in `n -> n.toIntN().as(To)`: a lambda
+     * that names a formal type of the method or the class around it, and captures no this, has a type parameter of its
+     * own for it (LambdaExpression), which no source declares, so Go to Definition, highlights and references of the
+     * formal type missed the lambda's names of it. A method's formal type is the one whose register the lambda's captures
+     * ([capturedFormals]); a class's, which the compiler finds by its name, the formal type of that name of the innermost
+     * class around the lambda that has one ([formalNamed]). Null for any other type parameter.
+     */
+    private fun captured(formal: TypeParameterConstant): Argument? {
+        val lambda = capturing(formal) ?: return null
+        capturedFormals[formal.method to formal.register]?.let { return normalized(it) }
+        return generateSequence(lambda.parent) { it.parent }
+            .filterIsInstance<ClassStructure>()
+            .firstNotNullOfOrNull { it.formalNamed(formal.name) }
+            ?.let(::normalized)
+    }
+
+    /** The lambda of which [formal] is a type parameter for a formal type it captures, or null for any other ([captured]). */
+    private fun capturing(formal: TypeParameterConstant): MethodStructure? =
+        (formal.method.component as? MethodStructure)?.takeIf { it.isLambda && formal.register in 0 until it.typeParamCount }
 
     /**
      * The formal type that [child] names, as Element in CompileType.Element, for a CompileType that extends List: the
