@@ -28,9 +28,9 @@ class XdkParameterRenameTest {
                 requireNotNull(adapter.rename(uri("Library"), 0, library.indexOf("input"), "value"))
             assertThat(edit.versioned).isTrue()
             assertThat(edit.changes.keys).containsExactlyInAnyOrder(uri("Library"), uri("Consumer"))
-            assertThat(apply(library, edit, "Library"))
+            assertThat(apply(library, edit, uri("Library")))
                 .contains("Int value", "= value + count", "String pick(String input) = input")
-            assertThat(apply(consumer, edit, "Consumer")).contains("count = 2, value = 1")
+            assertThat(apply(consumer, edit, uri("Consumer"))).contains("count = 2, value = 1")
         }
     }
 
@@ -47,8 +47,8 @@ class XdkParameterRenameTest {
                 requireNotNull(
                     adapter.rename(uri("Consumer"), 0, consumer.indexOf("argument"), "value"),
                 )
-            assertThat(apply(library, edit, "Library")).contains("T map(T value)")
-            assertThat(apply(consumer, edit, "Consumer"))
+            assertThat(apply(library, edit, uri("Library"))).contains("T map(T value)")
+            assertThat(apply(consumer, edit, uri("Consumer")))
                 .contains(
                     "String value) = value",
                     "api.map(value = \"a\")",
@@ -68,9 +68,9 @@ class XdkParameterRenameTest {
             val at = consumer.indexOf("input")
             assertThat(adapter.prepareRename(uri("Consumer"), 0, at)).isNotNull()
             val edit = requireNotNull(adapter.rename(uri("Consumer"), 0, at, "value"))
-            assertThat(apply(library, edit, "Library"))
+            assertThat(apply(library, edit, uri("Library")))
                 .contains("construct(Int value", "total = value + count")
-            assertThat(apply(consumer, edit, "Consumer")).contains("count = 2, value = 1")
+            assertThat(apply(consumer, edit, uri("Consumer"))).contains("count = 2, value = 1")
         }
     }
 
@@ -82,7 +82,7 @@ class XdkParameterRenameTest {
             assertThat(adapter.compile(uri("App"), text).diagnostics).isEmpty()
             val edit =
                 requireNotNull(adapter.rename(uri("App"), 0, text.lastIndexOf("input"), "value"))
-            assertThat(apply(text, edit, "App")).contains("T value", "= value", "value = \"yes\"")
+            assertThat(apply(text, edit, uri("App"))).contains("T value", "= value", "value = \"yes\"")
             assertThat(adapter.rename(uri("App"), 0, text.indexOf("input"), "count")).isNull()
         }
     }
@@ -94,7 +94,7 @@ class XdkParameterRenameTest {
         workspace(mapOf("App" to text)) { adapter ->
             assertThat(adapter.compile(uri("App"), text).diagnostics).isEmpty()
             val edit = requireNotNull(adapter.rename(uri("App"), 0, text.indexOf("input"), "value"))
-            assertThat(apply(text, edit, "App")).isEqualTo(text.replace("input", "value"))
+            assertThat(apply(text, edit, uri("App"))).isEqualTo(text.replace("input", "value"))
         }
     }
 
@@ -122,9 +122,9 @@ class XdkParameterRenameTest {
             assertThat(adapter.compile(uri("Library"), library).diagnostics).isEmpty()
             val edit =
                 requireNotNull(adapter.rename(uri("Library"), 0, library.indexOf("input"), "value"))
-            assertThat(apply(library, edit, "Library"))
+            assertThat(apply(library, edit, uri("Library")))
                 .isEqualTo(library.replace("Int input) = input", "Int value) = value"))
-            assertThat(apply(consumer, edit, "Consumer"))
+            assertThat(apply(consumer, edit, uri("Consumer")))
                 .isEqualTo(consumer.replace("input = 2", "value = 2"))
         }
     }
@@ -144,9 +144,9 @@ class XdkParameterRenameTest {
                 requireNotNull(
                     adapter.rename(uri("Library"), 0, library.indexOf("input"), "number"),
                 )
-            assertThat(apply(library, edit, "Library"))
+            assertThat(apply(library, edit, uri("Library")))
                 .isEqualTo(library.replace("input", "number"))
-            assertThat(apply(consumer, edit, "Consumer"))
+            assertThat(apply(consumer, edit, uri("Consumer")))
                 .isEqualTo(consumer.replace("input", "number").replace("argument", "number"))
         }
     }
@@ -164,22 +164,6 @@ class XdkParameterRenameTest {
             }
         }
     }
-
-    private fun apply(
-        text: String,
-        edit: WorkspaceEdit,
-        module: String,
-    ): String =
-        edit.changes
-            .getValue(uri(module))
-            .sortedByDescending { it.range.start.column }
-            .fold(text) { value, change ->
-                value.replaceRange(
-                    change.range.start.column,
-                    change.range.end.column,
-                    change.newText,
-                )
-            }
 
     private fun uri(module: String): String =
         directory

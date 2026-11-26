@@ -114,20 +114,4 @@ class XdkLambdaRenameTest {
             assertThat(file.readText()).isEqualTo(text)
         }
     }
-
-    private fun apply(
-        text: String,
-        edit: WorkspaceEdit,
-        uri: String,
-    ): String =
-        edit.changes
-            .getValue(uri)
-            .sortedByDescending { it.range.start.column }
-            .fold(text) { value, change ->
-                value.replaceRange(
-                    change.range.start.column,
-                    change.range.end.column,
-                    change.newText,
-                )
-            }
 }

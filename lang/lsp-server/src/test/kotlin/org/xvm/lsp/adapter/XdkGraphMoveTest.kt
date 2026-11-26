@@ -8,7 +8,6 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaited
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -443,28 +442,4 @@ class XdkGraphMoveTest {
             .toURI()
             .toString()
             .removeSuffix("/")
-
-    private fun apply(edit: WorkspaceEdit) {
-        edit.changes.forEach { (uri, changes) ->
-            val path = Path.of(URI(uri))
-            val text = Files.readString(path)
-
-            fun offset(position: Position): Int = text.lineSequence().take(position.line).sumOf { it.length + 1 } + position.column
-            Files.writeString(
-                path,
-                changes
-                    .sortedByDescending { offset(it.range.start) }
-                    .fold(text) { value, change ->
-                        value.replaceRange(
-                            offset(change.range.start),
-                            offset(change.range.end),
-                            change.newText,
-                        )
-                    },
-            )
-        }
-        edit.renames.forEach { (from, to) ->
-            Files.move(Path.of(URI(from)), Path.of(URI(to)))
-        }
-    }
 }

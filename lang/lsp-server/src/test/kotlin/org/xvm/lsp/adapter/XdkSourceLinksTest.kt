@@ -18,11 +18,11 @@ class XdkSourceLinksTest {
 
     @Test
     fun `module and aliased type import links resolve to source without spelling guesses`() {
-        val library = source("Library", "module Library { class Box {} }")
+        val library = directory.source("Library", "module Library { class Box {} }")
         val text =
             "module Consumer {\r\n    package lib import Library;\r\n" +
                 "    import lib.Box as Crate;\r\n    Crate value = new Crate();\r\n}"
-        val uri = source("Consumer", text)
+        val uri = directory.source("Consumer", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -77,7 +77,7 @@ class XdkSourceLinksTest {
 
     @Test
     fun `wildcard imports link resolved containers and unsupported conditional syntax cannot invent links`() {
-        val library = source("Library", "module Library { package tools { class Box {} } }")
+        val library = directory.source("Library", "module Library { package tools { class Box {} } }")
         listOf("import lib.tools.*;", "if (true) { import lib.tools.Box as Crate; }").forEach { statement ->
             val text =
                 """
@@ -86,7 +86,7 @@ class XdkSourceLinksTest {
                     $statement
                 }
                 """.trimIndent().replace("\n", "\r\n")
-            val uri = source("Consumer", text)
+            val uri = directory.source("Consumer", text)
             XdkAdapter().use { adapter ->
                 adapter.initializeWorkspace(listOf(directory.toString()))
                 val result = adapter.compile(uri, text)
@@ -106,18 +106,6 @@ class XdkSourceLinksTest {
             }
         }
     }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory
-            .resolve("$name.x")
-            .toFile()
-            .also { it.writeText(text) }
-            .canonicalFile
-            .toURI()
-            .toString()
 
     private fun spelling(
         text: String,

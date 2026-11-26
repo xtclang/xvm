@@ -17,12 +17,12 @@ class XdkWorkspaceNavigationTest {
     fun `unopened consumers contribute implementations subtype edges and selected incoming calls`() {
         val libraryText =
             "module Library { class Base { Int pick(Int value) = value; String pick(String value) = value; } }"
-        val library = source("Library", libraryText)
+        val library = directory.source("Library", libraryText)
         val consumerText =
             "module Consumer { package lib import Library; class Child extends lib.Base { " +
                 "@Override Int pick(Int value) = value + 1; } Int run(lib.Base box) = box.pick(1); }"
-        val consumer = source("Consumer", consumerText)
-        source("Unrelated", "module Unrelated { class Base { Int pick(Int value) = value; } }")
+        val consumer = directory.source("Consumer", consumerText)
+        directory.source("Unrelated", "module Unrelated { class Base { Int pick(Int value) = value; } }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(library, libraryText).diagnostics).isEmpty()
@@ -66,8 +66,8 @@ class XdkWorkspaceNavigationTest {
     @Test
     fun `hierarchy handles reject closed file edits without relying on watcher timing`() {
         val libraryText = "module Library { class Base {} }"
-        val library = source("Library", libraryText)
-        source(
+        val library = directory.source("Library", libraryText)
+        directory.source(
             "Consumer",
             "module Consumer { package lib import Library; class Child extends lib.Base {} }",
         )
@@ -82,7 +82,7 @@ class XdkWorkspaceNavigationTest {
             assertThat(alias).isNotEqualTo(library)
             val item = adapter.prepareTypeHierarchy(alias, 0, libraryText.indexOf("Base")).single()
             assertThat(adapter.getSubtypes(item)).hasSize(1)
-            source("Consumer", "module Consumer { package lib import Library; class Child {} }")
+            directory.source("Consumer", "module Consumer { package lib import Library; class Child {} }")
             assertThat(adapter.getSubtypes(item)).isEmpty()
             val fresh =
                 adapter.prepareTypeHierarchy(library, 0, libraryText.indexOf("Base")).single()
@@ -90,13 +90,4 @@ class XdkWorkspaceNavigationTest {
             assertThat(adapter.getSubtypes(fresh)).isEmpty()
         }
     }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory.resolve("$name.x").toFile().let {
-            it.writeText(text)
-            it.canonicalFile.toURI().toString()
-        }
 }

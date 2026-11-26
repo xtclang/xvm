@@ -8,7 +8,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -284,29 +283,6 @@ class XdkResourceRenameTest {
             val changed = directory.resolve("Consumer.x").toFile().readText()
             assertThat(adapter.compile(uri("Consumer.x"), changed).diagnostics).isEmpty()
         }
-    }
-
-    private fun apply(edit: WorkspaceEdit) {
-        edit.changes.forEach { (uri, edits) ->
-            val file = Path.of(URI(uri)).toFile()
-            val original = file.readText()
-
-            fun offset(position: Position) =
-                original.lineSequence().take(position.line).sumOf { it.length + 1 } +
-                    position.column
-            file.writeText(
-                edits
-                    .sortedByDescending { offset(it.range.start) }
-                    .fold(original) { text, change ->
-                        text.replaceRange(
-                            offset(change.range.start),
-                            offset(change.range.end),
-                            change.newText,
-                        )
-                    },
-            )
-        }
-        edit.renames.forEach { (from, to) -> Files.move(Path.of(URI(from)), Path.of(URI(to))) }
     }
 
     private fun source(

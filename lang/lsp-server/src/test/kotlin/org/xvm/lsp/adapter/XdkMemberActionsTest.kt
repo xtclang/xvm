@@ -625,18 +625,6 @@ class XdkMemberActionsTest {
             offset - text.lastIndexOf('\n', offset - 1) - 1,
         )
 
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String {
-        fun offset(at: Position): Int = text.split('\n').take(at.line).sumOf { it.length + 1 } + at.column
-        return edits
-            .sortedByDescending { offset(it.range.start) }
-            .fold(text) { result, edit ->
-                result.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
-    }
-
     private fun workspace(
         text: String,
         initiallyValid: Boolean = true,

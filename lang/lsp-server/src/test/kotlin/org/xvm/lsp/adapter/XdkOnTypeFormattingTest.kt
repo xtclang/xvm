@@ -111,18 +111,6 @@ class XdkOnTypeFormattingTest {
             .mapValues { (_, events) -> events.map { it["id"].asLong }.distinct().size }
     }
 
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String {
-        val lineStarts = listOf(0) + text.indices.filter { text[it] == '\n' }.map { it + 1 }
-
-        fun offset(position: Position) = lineStarts[position.line] + position.column
-        return edits.sortedByDescending { offset(it.range.start) }.fold(text) { result, edit ->
-            result.substring(0, offset(edit.range.start)) + edit.newText + result.substring(offset(edit.range.end))
-        }
-    }
-
     companion object {
         const val URI = "untitled:OnType.x"
 

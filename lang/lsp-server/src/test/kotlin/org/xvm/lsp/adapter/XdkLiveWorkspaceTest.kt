@@ -21,9 +21,9 @@ class XdkLiveWorkspaceTest {
 
     @Test
     fun `unsaved imports and new module buffers update the discovered graph and close restores disk`() {
-        val library = source("Library", "module Library { static String answer() = \"ok\"; }")
+        val library = directory.source("Library", "module Library { static String answer() = \"ok\"; }")
         val original = "module App {}"
-        val app = source("App", original)
+        val app = directory.source("App", original)
         val changed = "module App { package lib import Library; String run() = lib.answer(); }"
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
@@ -79,8 +79,8 @@ class XdkLiveWorkspaceTest {
     fun `detached graph results are reused and closed file edits invalidate the cache`() {
         CompilerTestSupport.configure()
         val text = "module Healthy { class Base {} class Child extends Base {} }"
-        val root = source("Healthy", text)
-        source("Neighbor", "module Neighbor {}")
+        val root = directory.source("Healthy", text)
+        directory.source("Neighbor", "module Neighbor {}")
         val attempts = AtomicInteger()
         XdkAdapter(
             { source, errors ->
@@ -98,7 +98,7 @@ class XdkLiveWorkspaceTest {
             assertThat(adapter.findWorkspaceSymbols("Child")).hasSize(1)
             assertThat(adapter.findReferences(root, 0, text.indexOf("Base"), true)).hasSize(2)
             assertThat(attempts.get()).isEqualTo(2)
-            source("Neighbor", "module Neighbor { Missing broken; }")
+            directory.source("Neighbor", "module Neighbor { Missing broken; }")
             assertThat(adapter.getSubtypes(item)).isEmpty()
             val current = adapter.prepareTypeHierarchy(root, 0, text.indexOf("Base")).single()
             assertThat(adapter.getSubtypes(current).single().name).isEqualTo("Child")
@@ -110,8 +110,8 @@ class XdkLiveWorkspaceTest {
 
     @Test
     fun `invalid unsaved graphs clear facts report diagnostics and recover from another file`() {
-        val app = source("App", "module App {}")
-        val library = source("Library", "module Library { class Target {} }")
+        val app = directory.source("App", "module App {}")
+        val library = directory.source("Library", "module Library { class Target {} }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(app, "module App {}").success).isTrue()
@@ -149,9 +149,9 @@ class XdkLiveWorkspaceTest {
                     null,
                     ErrorList(),
                 ).toDependency()
-        val healthy = source("Healthy", "module Healthy { class Visible {} }")
+        val healthy = directory.source("Healthy", "module Healthy { class Visible {} }")
         val consumer =
-            source(
+            directory.source(
                 "Consumer",
                 "module Consumer { package lib import Missing; class Hidden extends lib.Base {} }",
             )
@@ -169,13 +169,4 @@ class XdkLiveWorkspaceTest {
             assertThat(adapter.findWorkspaceSymbols("Hidden")).isEmpty()
         }
     }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory.resolve("$name.x").toFile().let {
-            it.writeText(text)
-            it.canonicalFile.toURI().toString()
-        }
 }

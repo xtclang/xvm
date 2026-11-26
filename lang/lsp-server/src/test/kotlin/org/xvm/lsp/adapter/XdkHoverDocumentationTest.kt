@@ -23,8 +23,8 @@ class XdkHoverDocumentationTest {
     @Test
     fun `hover shows the doc comment of a property or a method declared in another file of the module`() {
         CompilerTestSupport.configure()
-        val module = write("Docs.x", MODULE)
-        val rules = write("Docs/Rules.x", RULES)
+        val module = directory.source("Docs", MODULE)
+        val rules = directory.source("Docs/Rules", RULES)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Docs", module)))
@@ -45,7 +45,7 @@ class XdkHoverDocumentationTest {
     @Test
     fun `hover shows the doc comment of an XDK type, method or property, from the XDK's source`() {
         CompilerTestSupport.configure()
-        val module = write("Scores.x", SCORES)
+        val module = directory.source("Scores", SCORES)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(listOf(XdkSourceModule("Scores", module)))
@@ -86,20 +86,6 @@ class XdkHoverDocumentationTest {
             assertThat(adapter.getHoverInfo(uri, 0, CONSUMER.indexOf("SIDES") + 2))
                 .contains("SIDES", "The number of sides of each die.")
         }
-    }
-
-    private fun write(
-        path: String,
-        text: String,
-    ): String {
-        val file = directory.resolve(path)
-        Files.createDirectories(file.parent)
-        Files.writeString(file, text)
-        return file
-            .toFile()
-            .canonicalFile
-            .toURI()
-            .toString()
     }
 
     private companion object {

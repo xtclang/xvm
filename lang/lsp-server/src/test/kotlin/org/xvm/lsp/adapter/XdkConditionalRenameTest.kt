@@ -17,7 +17,7 @@ class XdkConditionalRenameTest {
     @ValueSource(strings = ["measure", "length"])
     fun `conditional members without host contracts rename within one module`(member: String) {
         val text = library("Int read(Box<String> text) = text.measure() + text.length;")
-        val uri = source("Library", text)
+        val uri = directory.source("Library", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -35,8 +35,8 @@ class XdkConditionalRenameTest {
         val library = library()
         val consumer =
             "module Consumer { package lib import Library; Int read(lib.Box<String> text) = text.measure() + text.length; }"
-        val libraryUri = source("Library", library)
-        val consumerUri = source("Consumer", consumer)
+        val libraryUri = directory.source("Library", library)
+        val consumerUri = directory.source("Consumer", consumer)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.replaceSourceModules(
@@ -71,7 +71,7 @@ class XdkConditionalRenameTest {
                 Int read(Box<String> text, Box<Int> number) = text.measure() + number.measure();
             }
             """.trimIndent()
-        val uri = source("Library", text)
+        val uri = directory.source("Library", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
@@ -99,8 +99,8 @@ class XdkConditionalRenameTest {
             }
             """.trimIndent()
         val consumer = "module Consumer { package lib import Library; lib.Box<String>? saved = Null; }"
-        val libraryUri = source("Library", library)
-        val consumerUri = source("Consumer", consumer)
+        val libraryUri = directory.source("Library", library)
+        val consumerUri = directory.source("Consumer", consumer)
         XdkAdapter().use { adapter ->
             adapter.replaceSourceModules(
                 listOf(
@@ -129,27 +129,4 @@ class XdkConditionalRenameTest {
             $body
         }
         """.trimIndent()
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory
-            .resolve("$name.x")
-            .toFile()
-            .apply { writeText(text) }
-            .canonicalFile
-            .toURI()
-            .toString()
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits
-            .sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
-            .fold(text) { current, edit ->
-                fun offset(position: Position) = current.splitToSequence('\n').take(position.line).sumOf { it.length + 1 } + position.column
-                current.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
-            }
 }

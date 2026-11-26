@@ -228,9 +228,5 @@ class XdkNavigationIndexTest {
         name: String,
         text: String,
         dependencies: Set<String> = emptySet(),
-    ): XdkSourceModule =
-        directory.resolve("$name.x").toFile().let {
-            it.writeText(text)
-            XdkSourceModule(name, it.canonicalFile.toURI().toString(), dependencies)
-        }
+    ): XdkSourceModule = XdkSourceModule(name, directory.source(name, text), dependencies)
 }

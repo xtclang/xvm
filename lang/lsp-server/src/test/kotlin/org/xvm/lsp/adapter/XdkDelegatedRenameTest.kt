@@ -25,8 +25,8 @@ class XdkDelegatedRenameTest {
                 "class Forward(Engine target) delegates lib.Api<String>(target) {} " +
                 "class Outer(Forward target) delegates lib.Api<String>(target) {} " +
                 "String use(Outer box) = box.read() + box.value; }"
-        val libraryUri = source("Library", library)
-        val consumerUri = source("Consumer", consumer)
+        val libraryUri = directory.source("Library", library)
+        val consumerUri = directory.source("Consumer", consumer)
         XdkAdapter().use { adapter ->
             adapter.replaceSourceModules(
                 listOf(
@@ -43,24 +43,4 @@ class XdkDelegatedRenameTest {
             assertThat(directory.resolve("Consumer.x").toFile().readText()).isEqualTo(consumer)
         }
     }
-
-    private fun source(
-        name: String,
-        text: String,
-    ): String =
-        directory
-            .resolve("$name.x")
-            .toFile()
-            .apply { writeText(text) }
-            .canonicalFile
-            .toURI()
-            .toString()
-
-    private fun apply(
-        text: String,
-        edits: List<TextEdit>,
-    ): String =
-        edits.sortedByDescending { it.range.start.column }.fold(text) { current, edit ->
-            current.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)
-        }
 }
