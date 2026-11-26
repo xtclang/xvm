@@ -1054,18 +1054,6 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
             }
         }
     }
-
-    /** Escape a character for C char literal. */
-    private fun escapeForC(c: Char): String =
-        when (c) {
-            '\'' -> "\\'"
-            '\\' -> "\\\\"
-            '\n' -> "\\n"
-            '\r' -> "\\r"
-            '\t' -> "\\t"
-            '"' -> "\\\""
-            else -> c.toString()
-        }
 }
 
 /** Main entry point for CLI - uses DSL-based generator. */

@@ -245,7 +245,7 @@ class CCodeBuilder(
         char: Char,
         init: CCodeBuilder.() -> Unit,
     ) {
-        ifBlock("${peek()} == '${escapeChar(char)}'", init)
+        ifBlock("${peek()} == '${escapeForC(char)}'", init)
     }
 
     fun ifPeekVar(
@@ -285,18 +285,19 @@ class CCodeBuilder(
             advance()
         }
     }
-
-    private fun escapeChar(c: Char): String =
-        when (c) {
-            '\'' -> "\\'"
-            '\\' -> "\\\\"
-            '\n' -> "\\n"
-            '\r' -> "\\r"
-            '\t' -> "\\t"
-            '"' -> "\\\""
-            else -> c.toString()
-        }
 }
+
+/** Escape a character for a C char literal. */
+internal fun escapeForC(c: Char): String =
+    when (c) {
+        '\'' -> "\\'"
+        '\\' -> "\\\\"
+        '\n' -> "\\n"
+        '\r' -> "\\r"
+        '\t' -> "\\t"
+        '"' -> "\\\""
+        else -> c.toString()
+    }
 
 // =============================================================================
 // Top-Level Builders
