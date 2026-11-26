@@ -70,6 +70,26 @@ class ConstructorArgumentsTest {
     }
 
     @Test
+    void contributionArgumentsOfAClassWithoutConstructorsAreUsed() {
+        // with neither a shorthand declaration nor any constructor, the synthetic default
+        // constructor passes the contribution's arguments: a valid one is no error, and one that
+        // names nothing is unresolvable, so that the implicit super constructor call it is in
+        // fails, which shows that they are compiled, not unused
+        assertEquals(List.of(), diagnostics("""
+                module Test {
+                    class Base(Int seed) {}
+                    class Implicit extends Base(1) {}
+                }
+                """));
+        assertEquals(List.of(Compiler.NAME_UNRESOLVABLE, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING), errors("""
+                module Test {
+                    class Base(Int seed) {}
+                    class Implicit extends Base(noSuchName) {}
+                }
+                """));
+    }
+
+    @Test
     void contributionArgumentsThatTheExplicitConstructorPassesAreAllowed() {
         // the same parameter, at the same position even if renamed, the same literal, and the
         // same name that is no parameter
