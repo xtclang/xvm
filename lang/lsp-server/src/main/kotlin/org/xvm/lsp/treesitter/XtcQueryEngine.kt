@@ -357,15 +357,7 @@ class XtcQueryEngine(
     private fun findShorthandProperty(
         declaration: XtcNode,
         name: String,
-    ): XtcNode? =
-        declaration
-            .childByType("constructor_parameters")
-            ?.childByType("parameters")
-            ?.children
-            ?.asSequence()
-            ?.filter { it.type == "parameter" }
-            ?.mapNotNull { it.childByFieldName("name") }
-            ?.firstOrNull { it.text == name }
+    ): XtcNode? = shorthandPropertyNames(declaration).firstOrNull { it.text == name }
 
     /**
      * Enumerate every shorthand constructor parameter of a class-like declaration as a PROPERTY
@@ -375,6 +367,10 @@ class XtcQueryEngine(
         declaration: XtcNode,
         uri: String,
     ): List<SymbolInfo> =
+        shorthandPropertyNames(declaration).map { name -> name.toSymbolInfo(name.text, SymbolKind.PROPERTY, uri) }.toList()
+
+    /** The name nodes of a class-like declaration's shorthand constructor parameters. */
+    private fun shorthandPropertyNames(declaration: XtcNode): Sequence<XtcNode> =
         declaration
             .childByType("constructor_parameters")
             ?.childByType("parameters")
@@ -382,8 +378,6 @@ class XtcQueryEngine(
             ?.asSequence()
             ?.filter { it.type == "parameter" }
             ?.mapNotNull { it.childByFieldName("name") }
-            ?.map { name -> name.toSymbolInfo(name.text, SymbolKind.PROPERTY, uri) }
-            ?.toList()
             .orEmpty()
 
     /**
