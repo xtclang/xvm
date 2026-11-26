@@ -326,6 +326,7 @@ export class Tour implements vscode.Disposable {
             await fs.mkdir(path.join(this.run, 'failures'), { recursive: true });
             await this.ui.capture(path.join(this.run, 'failures', `${String(number).padStart(3, '0')}.png`)).catch(() => undefined);
             await this.lost(failure, `${number} ${step.title}`);
+            await this.closeMenu();
         }
         if (record.image) {
             const checked = Date.now();
@@ -334,6 +335,7 @@ export class Tour implements vscode.Disposable {
             } catch (failure) {
                 record.check = describe(failure);
                 await this.lost(failure, `${number} ${step.title}`);
+                await this.closeMenu();
             }
             this.checks.push({
                 section: this.sectionName, what: step.title, feature: step.feature, framed: true, error: record.check, start: checked, end: Date.now(),
@@ -354,6 +356,11 @@ export class Tour implements vscode.Disposable {
             this.log(`${number} ${step.title}: undoing it failed: ${describe(failure)}`);
             await this.lost(failure, `${number} ${step.title}: undoing it`);
         }
+    }
+
+    /** Closes a context menu that a step or check that failed left open, unless the driver is gone. */
+    private async closeMenu(): Promise<void> {
+        if (!this.driverDead) await this.ui.closeMenu().catch(cause => this.log(`closing a context menu failed: ${describe(cause)}`));
     }
 
     /**
@@ -416,6 +423,7 @@ export class Tour implements vscode.Disposable {
             await fs.mkdir(path.join(this.run, 'failures'), { recursive: true });
             await this.ui.capture(path.join(this.run, 'failures', `check-${this.checks.length + 1}.png`)).catch(() => undefined);
             await this.lost(failure, what);
+            await this.closeMenu();
             // a check that failed may have left its edits, which the next steps must not find; its session stays
             if (!this.driverDead) await this.restoreSources().catch(cause => this.log(`restoring after ${what} failed: ${describe(cause)}`));
         }

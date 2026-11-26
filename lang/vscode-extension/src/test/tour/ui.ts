@@ -53,6 +53,12 @@ function keyLabel(key: string): string {
 /** How long a typed key takes while recording, which a viewer reads, and a pause after each pressed key or chord. */
 const TYPING_MS = 70;
 const KEY_PAUSE_MS = 250;
+/**
+ * How long one try of a Playwright action waits for its target to take it: the tour's waits try again, and report and
+ * fail as they do, where Playwright's own wait, for as long as it is given, would say nothing.
+ */
+const TRY_MS = 2_000;
+
 /** The pointer's moves to what it clicks, while recording: so many steps of so long each. */
 const POINTER_STEPS = 24;
 const POINTER_STEP_MS = 20;
@@ -358,8 +364,9 @@ export class TourUi {
     async click(target: string | Locator, button: 'left' | 'right' = 'left'): Promise<void> {
         const locator = typeof target === 'string' ? this.locator(target) : target;
         if (!locator) throw new Error(`Nothing to click for ${String(target)}`);
-        await this.until(locator, String(typeof target === 'string' ? target : 'What the step clicks'));
-        if (RECORDING) await locator.scrollIntoViewIfNeeded({ timeout: HANG_MS });
+        const what = String(typeof target === 'string' ? target : 'What the step clicks');
+        await this.until(locator, what);
+        if (RECORDING) await this.tries(`${what} scrolls into view`, () => locator.scrollIntoViewIfNeeded({ timeout: TRY_MS }));
         const box = await locator.boundingBox();
         if (box) {
             this.clicked = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -368,7 +375,25 @@ export class TourUi {
         const label = typeof target === 'string' ? target
             : (await locator.innerText({ timeout: 1_000 }).catch(() => '')).split('\n').map(line => line.trim()).find(Boolean)?.slice(0, 80);
         this.note('click', `${button === 'right' ? 'right-click' : 'click'}: ${label ?? ''}`.trim(), this.clicked);
-        await locator.click({ button, timeout: HANG_MS });
+        // as the tour's waits wait: in run-hAoYtv a context menu that a failed step had left open took the pointer, and
+        // the click, which Playwright gave an hour, waited without a word
+        await this.tries(`${what} takes the click`, () => locator.click({ button, timeout: TRY_MS }));
+    }
+
+    /**
+     * Does [action], a Playwright action that waits for its target, again until it succeeds, as [waiter] waits; [what]
+     * names it. An action that times out has not acted, so a try again acts once.
+     */
+    private async tries(what: string, action: () => Promise<unknown>): Promise<void> {
+        await this.waiter(what, () => action().then(() => true, () => false));
+    }
+
+    /** Closes the context menu that shows, as Escape does: a step that failed can leave one over what the next clicks. */
+    async closeMenu(): Promise<void> {
+        const menu = this.page.locator('.context-view .monaco-menu').filter({ visible: true }).first();
+        if (!await menu.isVisible()) return;
+        await this.press('Escape');
+        await this.until(menu, 'The context menu', true);
     }
 
     /** Waits, [waiter]'s way, until [locator] shows, or with [hidden] until it no longer does; [what] names it. */
@@ -446,7 +471,7 @@ export class TourUi {
     /** Gives the keyboard to the text of the active editor, as clicking into it does. */
     async focusEditor(): Promise<void> {
         const input = this.page.locator('.editor-group-container.active .monaco-editor:visible :is(textarea.inputarea, .native-edit-context)');
-        await input.first().focus({ timeout: HANG_MS });
+        await this.tries('The editor takes the keyboard', () => input.first().focus({ timeout: TRY_MS }));
     }
 
     /** Whether the keyboard is in [target], as it is once a box or widget that opens has taken it. */
