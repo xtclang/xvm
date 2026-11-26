@@ -466,6 +466,13 @@ export class TourUi {
             throw new Error(`The menu has no ${label} to choose: ${(await menu.innerText().catch(() => '')).split('\n').filter(Boolean).join(' | ')}`);
         }
         await this.click(item);
+        // a click that chose the item has closed the menu; one that only gave it the keyboard left the menu open, as Set
+        // Value's in run-hAoYtv and Break on Value Change's in run-Snny5m did: Enter chooses it, as a user's would
+        await this.waiter(`The menu takes ${label}`, async () => {
+            if (!await menu.isVisible()) return true;
+            if (await this.focusedIn(item)) await this.press('Enter');
+            return false;
+        });
     }
 
     /** Gives the keyboard to the text of the active editor, as clicking into it does. */
