@@ -5,7 +5,8 @@
 #   playbook.sh image                       build the image, localhost/xvm-playbook; the other modes build it when
 #                                           it is missing
 #   playbook.sh build                       xdk:installDist and publishLocal in the container (X336 runs the XDK's xec,
-#                                           X303 and X337 build with the plugin and XDK from mavenLocal)
+#                                           X303 and X337 build with the plugin and XDK from mavenLocal), which the
+#                                           modes below also run first when the slot's XDK is not of this checkout
 #   playbook.sh playbook X259,X324 [args]   IntelliJ's features playbook for those cases, or all, with Gradle args
 #                                           such as -Plsp4ijChannel=nightly -Plsp4ijVersion=<pinned version>
 #   playbook.sh vscode X259,X324 [args]     VS Code's playbook for those cases, or all, with Gradle args
@@ -93,6 +94,30 @@ mkdir -p "$source" "$reports"
 commit="$(git -C "$root" rev-parse HEAD)"
 branch="$(git -C "$root" rev-parse --abbrev-ref HEAD)"
 dirty="$(git -C "$root" status --porcelain)"
+# the fingerprint of what xdk:installDist and publishLocal build from, which the container compares with the one its
+# XDK was built from, to build it again when they differ: javatools and the XDK's libraries, the XDK, the plugin, the
+# build logic, the version catalog and wrapper, and the root's build scripts and properties. It hashes their trees at
+# HEAD and their uncommitted changes, untracked files too, which takes a fraction of a second
+fingerprint="$(
+    cd "$root"
+    sources=()
+    while IFS= read -r path; do
+        case "$path" in
+            javatools* | lib_* | xdk | plugin | build-logic | gradle | gradlew | *.gradle.kts | *.properties)
+                sources+=("$path")
+                ;;
+        esac
+    done < <(git ls-tree --name-only HEAD)
+    {
+        git ls-tree HEAD -- "${sources[@]}"
+        git diff HEAD --binary --no-color --no-ext-diff --no-textconv -- "${sources[@]}"
+        untracked="$(git ls-files -z --others --exclude-standard -- "${sources[@]}" | tr '\0' '\n')"
+        if [ -n "$untracked" ]; then
+            printf '%s\n' "$untracked"
+            printf '%s\n' "$untracked" | git hash-object --stdin-paths
+        fi
+    } | git hash-object --stdin
+)"
 
 # one container run at a time in each slot on this machine: the runs of a slot share its work volume, whichever
 # worktree they start from, so its lock is in the repository's common git directory, which every worktree shares; a
@@ -193,6 +218,7 @@ status=0
 "$engine" run --rm --init --name "$prefix$stamp" \
     --memory "$memory" --shm-size 1g --security-opt label=disable \
     -e XTC_COMMIT="$commit" -e XTC_BRANCH="$branch" -e XTC_PLAYBOOK_DIRTY="$dirty" \
+    -e XTC_XDK_FINGERPRINT="$fingerprint" \
     -e XTC_RECORD_VIDEO="${XTC_RECORD_VIDEO:-}" \
     -v "xvm-playbook-gradle$volume:/gradle" \
     -v "xvm-playbook-work$volume:/work" \

@@ -4,7 +4,8 @@
 #   in-container.sh playbook <ids>|all [args]  sync, then run the features playbook for <ids>, or all, on Xvfb
 #   in-container.sh gradle <args...>           sync, then run ./gradlew <args> on Xvfb
 # /src is the read-only exported checkout, /out receives the run reports, /work, /gradle and
-# /home/playbook/.m2 are volumes.
+# /home/playbook/.m2 are volumes. The playbook and gradle modes first run xdk:installDist and publishLocal when the
+# XDK in the volumes was built from other sources than the checkout's, as playbook.sh's fingerprint of them says.
 set -euo pipefail
 
 # started as root, which owns the volumes: hand them to the playbook user, once, and run as it
@@ -16,6 +17,7 @@ fi
 
 mode="${1:?mode}"
 shift || true
+: "${XTC_XDK_FINGERPRINT:?playbook.sh passes in the fingerprint of the sources of the XDK}"
 
 mkdir -p /work/xvm /out
 # keep build outputs, caches and the IDE Starter cache (under lang/intellij-plugin/build) between runs
@@ -74,6 +76,39 @@ stop_recording() {
     recorder=""
 }
 
+# the XDK in the work and m2 volumes, which cases such as X303, X336 and X337 run and build with, and which neither
+# playbook builds: its marker holds the fingerprint of the sources it was built from, which playbook.sh passes in as
+# XTC_XDK_FINGERPRINT. A run that tests builds it first when the marker is missing or names other sources, or when
+# the XDK changed after the marker was written, as a build of an older playbook.sh, which writes none, changes it
+xdk_marker=/work/xvm/xdk/build/xdk-fingerprint
+xdk_outputs=(/work/xvm/xdk/build/install/xdk /home/playbook/.m2/repository/org/xtclang/xdk
+    /home/playbook/.m2/repository/org/xtclang/xtc-plugin)
+build_xdk() {
+    rm -f "$xdk_marker"
+    ./gradlew xdk:installDist publishLocal "$@"
+    echo "$XTC_XDK_FINGERPRINT" > "$xdk_marker"
+}
+ensure_xdk() {
+    local built output reason=""
+    built="$(cat "$xdk_marker" 2> /dev/null || true)"
+    for output in "${xdk_outputs[@]}"; do
+        [ -d "$output" ] || reason="the volumes have no $output"
+    done
+    if [ -z "$built" ]; then
+        reason="the volumes have no XDK marked with the sources it was built from"
+    elif [ "$built" != "$XTC_XDK_FINGERPRINT" ]; then
+        reason="the volumes' XDK was built from other sources (${built:0:12}, these are ${XTC_XDK_FINGERPRINT:0:12})"
+    elif [ -z "$reason" ] && [ -n "$(find "${xdk_outputs[@]}" -newer "$xdk_marker" -print -quit)" ]; then
+        reason="the volumes' XDK changed after its marker was written (a build of an older playbook.sh writes none)"
+    fi
+    if [ -z "$reason" ]; then
+        echo "xdk: not rebuilt, as the volumes' XDK was built from these sources (${XTC_XDK_FINGERPRINT:0:12})"
+        return 0
+    fi
+    echo "xdk: rebuilding, as $reason"
+    build_xdk
+}
+
 reports=/work/xvm/lang/intellij-plugin/build/reports/compiler-playbook
 
 # the runs the work volume already has, from earlier containers, which copy_runs leaves alone
@@ -122,7 +157,8 @@ copy_runs() {
 
 case "$mode" in
     build)
-        ./gradlew xdk:installDist publishLocal "$@"
+        echo "xdk: building, as the build mode asks (${XTC_XDK_FINGERPRINT:0:12})"
+        build_xdk "$@"
         ;;
     playbook)
         cases="${1:?case ids, or all}"
@@ -130,6 +166,7 @@ case "$mode" in
         # all cases is the playbook's default, without a selection
         selection=()
         [ "$cases" = "all" ] || selection=("-PintellijPlaybookCases=$cases")
+        ensure_xdk
         start_display
         status=0
         ./gradlew :lang:intellij-plugin:testCompilerPlaybook \
@@ -141,6 +178,7 @@ case "$mode" in
         exit "$status"
         ;;
     gradle)
+        ensure_xdk
         start_display
         status=0
         # the lang build flags, as the header says, so that :lang:* tasks resolve; passing them again is harmless
