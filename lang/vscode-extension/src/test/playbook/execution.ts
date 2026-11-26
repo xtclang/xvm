@@ -6,13 +6,13 @@ import * as path from 'node:path';
 import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import { buildModeStatus } from '../../build-mode-selection';
-import { modelPath } from '../../build-model';
 import { buildMode, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { gradleProjects } from '../../gradle-projects';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
-import { onDidRefreshTests, onDidReportTest, type TestReport } from '../../test-explorer';
+import { onDidRefreshTests, onDidReportTest, onDidStartTest, type TestReport } from '../../test-explorer';
 import { discovered } from './liveWorkspace';
+import { gradleModel, withGradleModel } from './platform';
 import { client, diagnosticCode, eventually, noErrors, playbook, type Workspace } from './support';
 
 /** Records what each embedded build or run terminal shows, keyed by kind and label. */
@@ -34,6 +34,38 @@ class Executions implements vscode.Disposable {
         return update!;
     }
 
+    /** Builds all Ecstasy modules, as Ecstasy: Build does, and waits until the build finishes. */
+    build(message: string): Promise<ExecutionUpdate> {
+        return this.start('build', 'all Ecstasy modules', () => vscode.commands.executeCommand('xtc.build'), finished, message);
+    }
+
+    /** Runs [module] from a task, as one saved in tasks.json runs it, and waits until its terminal shows what [until] expects. */
+    task(module: string, uri: vscode.Uri, message: string,
+         { args, until = finished }: { args?: string[]; until?: (update: ExecutionUpdate) => boolean } = {}): Promise<ExecutionUpdate> {
+        const task = createXtcRunTask({ type: 'xtc', moduleName: module, moduleUri: uri.toString(), args, mode: 'embedded' }, getClient);
+        return this.start('run', module, () => vscode.tasks.executeTask(task), until, message);
+    }
+
+    /** Runs [module] from a task, checks that it exits with [exitCode], and returns what its terminal shows. */
+    async exits(module: string, uri: vscode.Uri, exitCode: number, message: string, args?: string[]): Promise<string> {
+        const run = await this.task(module, uri, message, { args });
+        assert.strictEqual(run.exitCode, exitCode, run.text);
+        return run.text;
+    }
+
+    /** Runs [module] as its Run lens does, and waits until the run finishes. */
+    lens(module: string, uri: vscode.Uri, message: string): Promise<ExecutionUpdate> {
+        return this.start('run', module, () => vscode.commands.executeCommand('xtc.runModule', uri.toString(), module), finished, message);
+    }
+
+    /** Stops the run task of [module], as its terminal's Stop does, and waits until the terminal shows its exit. */
+    async stop(module: string, message: string): Promise<ExecutionUpdate> {
+        const execution = vscode.tasks.taskExecutions.find(item => item.task.name === `Run ${module}`);
+        assert.ok(execution, `The run of ${module} is an active task`);
+        execution.terminate();
+        return this.await('run', module, finished, message);
+    }
+
     dispose(): void {
         this.subscription.dispose();
     }
@@ -53,6 +85,12 @@ async function embedded(body: (executions: Executions) => Promise<void>): Promis
         executions.dispose();
         await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
     }
+}
+
+/** Chooses the folder's build mode, as the command and the status bar choose it, and waits until the status bar shows [status]. */
+async function selectBuildMode(folder: vscode.WorkspaceFolder, mode: 'embedded' | 'gradle', status: string, message: string): Promise<void> {
+    await vscode.commands.executeCommand('xtc.selectBuildMode', mode, folder.uri);
+    await eventually(async () => buildModeStatus(), text => text === status, message);
 }
 
 /** VS Code saves before a task unless told not to; the extension itself saves nothing. */
@@ -88,6 +126,19 @@ export async function configureModules(workspace: Workspace, modules: { name: st
     await workspace.configure(modules.map(module => ({ name: module.name, uri: workspace.uri(module.file).toString(), dependencies: module.dependencies })));
 }
 
+/** A case's one module: its file, its source and its name. */
+interface ModuleValues {
+    file: string;
+    source: string;
+    module: string;
+}
+
+/** Moves the cursor of [editor] to the column [column] of the one-based line [line]. */
+function select(editor: vscode.TextEditor, line: number, column = 0): void {
+    const position = new vscode.Position(line - 1, column);
+    editor.selection = new vscode.Selection(position, position);
+}
+
 export function executionCases(): void {
     playbook('X280', async (workspace, data) => {
         await workspace.write(data.libraryFile, data.librarySource);
@@ -116,8 +167,7 @@ export function executionCases(): void {
         const app = await workspace.open(data.appFile);
         await noErrors(app.uri);
         await embedded(async executions => {
-            const label = 'all Ecstasy modules';
-            const built = await executions.start('build', label, () => vscode.commands.executeCommand('xtc.build'), finished, 'Embedded build finishes');
+            const built = await executions.build('Embedded build finishes');
             assert.strictEqual(built.exitCode, 0, built.text);
             for (const line of data.built) assert.ok(built.text.includes(line), `${line} in ${built.text}`);
             assert.ok(portable(built.text).includes(data.artifact), built.text);
@@ -126,7 +176,7 @@ export function executionCases(): void {
             assert.ok(library.isDirty, 'The broken library is unsaved before the build');
             // the build compiles the editor's text, and only VS Code's task setting would save it
             await withoutSavingBeforeTasks(async () => {
-                const failed = await executions.start('build', label, () => vscode.commands.executeCommand('xtc.build'), finished, 'Failing build finishes');
+                const failed = await executions.build('Failing build finishes');
                 assert.ok(library.isDirty, 'Build leaves the broken library unsaved');
                 assert.strictEqual(failed.exitCode, 1, failed.text);
                 assert.ok(failed.text.includes(data.failed), failed.text);
@@ -137,15 +187,11 @@ export function executionCases(): void {
     });
 
     playbook('X282', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         await embedded(async executions => {
-            const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), args: data.args, mode: 'embedded' }, getClient);
-            const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, 'Embedded run finishes');
-            assert.strictEqual(run.exitCode, data.exitCode, run.text);
-            assert.ok(run.text.includes(data.output), run.text);
-            assert.ok(run.text.includes(`Process finished with exit code ${data.exitCode}`), run.text);
+            const text = await executions.exits(data.module, document.uri, data.exitCode, 'Embedded run finishes', data.args);
+            assert.ok(text.includes(data.output), text);
+            assert.ok(text.includes(`Process finished with exit code ${data.exitCode}`), text);
         });
     });
 
@@ -156,19 +202,14 @@ export function executionCases(): void {
         await noErrors(forever.uri);
         await noErrors(next.uri);
         await embedded(async executions => {
-            const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: forever.uri.toString(), mode: 'embedded' }, getClient);
             const started = (update: ExecutionUpdate) => update.text.includes(data.started) && !finished(update);
-            await executions.start('run', data.module, () => vscode.tasks.executeTask(task), started, 'Long-running program starts');
+            await executions.task(data.module, forever.uri, 'Long-running program starts', { until: started });
             // Tasks: Restart Running Task stops the program, waits for its exit, then runs it again
             await executions.start('run', data.module,
                 () => vscode.commands.executeCommand('workbench.action.tasks.restartTask', `Run ${data.module}`), started, 'Rerun starts a new run');
-            const execution = vscode.tasks.taskExecutions.find(item => item.task.name === `Run ${data.module}`);
-            assert.ok(execution, 'The rerun task is active');
-            execution.terminate();
-            await executions.await('run', data.module, finished, 'Stopped program reports its exit');
+            await executions.stop(data.module, 'Stopped program reports its exit');
             // the worker is free again: the Run lens command runs the next program
-            const result = await executions.start('run', data.nextModule,
-                () => vscode.commands.executeCommand('xtc.runModule', next.uri.toString(), data.nextModule), finished, 'Next program finishes');
+            const result = await executions.lens(data.nextModule, next.uri, 'Next program finishes');
             assert.strictEqual(result.exitCode, data.nextExitCode, result.text);
         });
     });
@@ -177,8 +218,7 @@ export function executionCases(): void {
         const document = await workspace.open(data.file, data.source);
         await configureModules(workspace, [{ name: data.module, file: data.file }]);
         await embedded(async executions => {
-            const run = await executions.start('run', data.module,
-                () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module), finished, 'Failed build ends the run');
+            const run = await executions.lens(data.module, document.uri, 'Failed build ends the run');
             assert.strictEqual(run.exitCode, 1, run.text);
             assert.ok(run.text.includes(data.diagnostic), run.text);
             assert.ok(run.text.includes(data.message), run.text);
@@ -187,47 +227,27 @@ export function executionCases(): void {
     });
 
     playbook('X285', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
+            await debugging(async debug => {
+                await debug.launch(document.uri, data.module);
+                await debug.end('The debug session ends when the program exits');
+                debug.exited(data.exitCode);
+                assert.strictEqual(debug.events('terminated').length, 1, debug.transcript());
+                debug.printed(data.finished);
             });
-            try {
-                const started = await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module });
-                assert.strictEqual(started, true, 'The launch starts a debug session in the language server');
-                await eventually(async () => ended, value => value, 'The debug session ends when the program exits');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.strictEqual(dapEvents(sent, 'terminated').length, 1, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.finished), dapOutput(sent));
 
-                // a line typed in the Debug Console while the program runs is its console input
-                sent.length = 0;
-                ended = false;
-                const ask = await workspace.open(data.inputFile, data.inputSource);
-                await configureModules(workspace, [{ name: data.module, file: data.file }, { name: data.inputModule, file: data.inputFile }]);
-                await noErrors(ask.uri);
-                let session: vscode.DebugSession | undefined;
-                const startedSession = vscode.debug.onDidStartDebugSession(item => { session = item; });
-                try {
-                    assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(ask.uri),
-                        { type: 'xtc', request: 'launch', name: `Debug ${data.inputModule}`, module: data.inputModule }));
-                    await eventually(async () => dapOutput(sent), text => text.includes(data.prompt), 'The program prompts in the Debug Console');
-                    await session!.customRequest('evaluate', { expression: data.input, context: 'repl' });
-                    await eventually(async () => ended, value => value, 'The program reads the line and ends');
-                    assert.ok(dapOutput(sent).includes(data.greeting), dapOutput(sent));
-                } finally {
-                    startedSession.dispose();
-                }
-            } finally {
-                termination.dispose();
-                tracker.dispose();
-            }
+            // a line typed in the Debug Console while the program runs is its console input
+            const ask = await workspace.open(data.inputFile, data.inputSource);
+            await configureModules(workspace, [{ name: data.module, file: data.file }, { name: data.inputModule, file: data.inputFile }]);
+            await noErrors(ask.uri);
+            await debugging(async debug => {
+                await debug.launch(ask.uri, data.inputModule);
+                await eventually(async () => debug.output(), text => text.includes(data.prompt), 'The program prompts in the Debug Console');
+                await debug.request('evaluate', { expression: data.input, context: 'repl' });
+                await debug.end('The program reads the line and ends');
+                debug.printed(data.greeting);
+            });
         });
     });
 }
@@ -238,1030 +258,397 @@ export function executionCases(): void {
  * code that runs with the whole program.
  */
 export function debugSessionCases(): void {
-    playbook('X304', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const installed = dapEvents(sent, 'breakpoint').map(message => message.body?.breakpoint);
-                assert.ok(installed.some(item => item?.verified && item.line === data.breakpointLine), JSON.stringify(installed));
-                assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
+    playbook('X304', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        // VS Code asks for the stopped fiber's stack itself, to show where the program stopped
+        const frames = await debug.atBreakpoint(document.uri, data.breakpointLine, data.frames);
+        // the program's frames are the whole stack, without the runner that hosts it
+        assert.strictEqual(debug.responses('stackTrace')[0]?.body?.totalFrames, data.frames.length, JSON.stringify(frames));
+        debug.printed(data.before);
+        assert.ok(!debug.output().includes(data.after), 'Nothing after the breakpoint has run');
 
-                // VS Code asks for the stopped fiber's stack itself, to show where the program stopped
-                const frames = await eventually(
-                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
-                        .flatMap(message => message.body?.stackFrames ?? []),
-                    values => values.length >= data.frames.length, 'VS Code shows the call stack');
-                assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
-                // the program's frames are the whole stack, without the runner that hosts it
-                assert.strictEqual(sent.find(message => message.type === 'response' && message.command === 'stackTrace')?.body?.totalFrames,
-                    data.frames.length, JSON.stringify(frames));
-                assert.strictEqual(await fs.realpath(frames[0].source!.path!), await fs.realpath(document.uri.fsPath));
-                assert.ok(dapOutput(sent).includes(data.before), dapOutput(sent));
-                assert.ok(!dapOutput(sent).includes(data.after), 'Nothing after the breakpoint has run');
+        await debug.continueToExit(data.exitCode, 'Continue runs the program to its exit');
+        debug.printed(data.after);
+    }));
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.after), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                // a case that fails while its program is stopped leaves no session for the next one
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
+    playbook('X305', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+
+        // the requests the Variables view makes for the top frame, and for each variable it expands
+        const top = await debug.top(stop.threadId);
+        assert.strictEqual(top.line, data.breakpointLine, JSON.stringify(top));
+        const scopes = await debug.scopes(top.id);
+        const locals = scopes.find(scope => scope.name === 'Locals');
+        assert.ok(locals, JSON.stringify(scopes));
+        const shown = await debug.variables(locals.variablesReference);
+        for (const [name, value, type] of data.locals as string[][]) {
+            const variable = shown.find(item => item.name === name);
+            assert.deepStrictEqual([variable?.name, variable?.value, variable?.type], [name, value, type], JSON.stringify(shown));
+        }
+        const children = async (name: string) => {
+            const variable = shown.find(item => item.name === name);
+            assert.ok(variable && variable.variablesReference > 0, `${name} expands: ${JSON.stringify(variable)}`);
+            return (await debug.variables(variable.variablesReference)).map(child => [child.name, child.value]);
+        };
+        assert.deepStrictEqual(await children('point'), data.fields);
+        assert.deepStrictEqual(await children('ints'), data.elements);
+        assert.strictEqual(shown.find(item => item.name === 'sum')?.variablesReference, 0);
+
+        await debug.continueToExit(data.exitCode, 'Continue runs the program to its exit');
+        debug.printed(data.output);
+    }));
+
+    playbook('X306', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        // the frames VS Code selects: a stopped thread's top frame, once the thread's stack has come
+        const selected: vscode.DebugStackFrame[] = [];
+        const selection = vscode.debug.onDidChangeActiveStackItem(item => {
+            if (item instanceof vscode.DebugStackFrame && item.session.type === 'xtc') selected.push(item);
         });
-    });
+        // VS Code shows a stop once it has selected a frame of the stopped thread, after the [since] it had selected
+        //  before, and the stack it asked for then is where the stop is. A step before that steps the thread it had
+        //  selected, or the session's first, which the adapter refuses as not stopped, and the stack VS Code asks
+        //  for the stop before may come after the step's: both failed X306 on 2026-11-22
+        const shown = (stop: DapMessage, since: number, depth: number, message: string) => eventually(
+            async () => selected.slice(since).some(frame => frame.threadId === stop.body?.threadId) ? debug.stackAfter(stop) : [],
+            frames => frames.length >= depth, message);
+        try {
+            await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+            await shown(debug.events('stopped')[0], 0, 1, 'VS Code shows the stop at the breakpoint');
 
-    playbook('X305', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-
-                // the requests the Variables view makes for the top frame, and for each variable it expands
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                const top = stack.stackFrames[0];
-                assert.strictEqual(top.line, data.breakpointLine, JSON.stringify(top));
-                const scopes: { name: string; variablesReference: number }[] = (await session.customRequest('scopes', { frameId: top.id })).scopes;
-                const locals = scopes.find(scope => scope.name === 'Locals');
-                assert.ok(locals, JSON.stringify(scopes));
-                const variables = async (reference: number): Promise<DapVariable[]> =>
-                    (await session.customRequest('variables', { variablesReference: reference })).variables;
-                const shown = await variables(locals.variablesReference);
-                for (const [name, value, type] of data.locals as string[][]) {
-                    const variable = shown.find(item => item.name === name);
-                    assert.deepStrictEqual([variable?.name, variable?.value, variable?.type], [name, value, type], JSON.stringify(shown));
-                }
-                const children = async (name: string) => {
-                    const variable = shown.find(item => item.name === name);
-                    assert.ok(variable && variable.variablesReference > 0, `${name} expands: ${JSON.stringify(variable)}`);
-                    return (await variables(variable.variablesReference)).map(child => [child.name, child.value]);
-                };
-                assert.deepStrictEqual(await children('point'), data.fields);
-                assert.deepStrictEqual(await children('ints'), data.elements);
-                assert.strictEqual(shown.find(item => item.name === 'sum')?.variablesReference, 0);
-
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                // a case that fails while its program is stopped leaves no session for the next one
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
+            for (const [kind, name, line] of data.steps as [string, string, number][]) {
+                const stops = debug.events('stopped').length;
+                const since = selected.length;
+                await vscode.commands.executeCommand(stepCommands[kind]);
+                assert.strictEqual((await debug.stopped(`Step ${kind} stops the program`, stops)).reason, 'step');
+                // VS Code asks for the stack again after each stop, to show where the step ended
+                const frames = await shown(debug.events('stopped')[stops], since, kind === 'into' ? 2 : 1, `VS Code shows where step ${kind} ended`);
+                assert.deepStrictEqual([frames[0].name, frames[0].line], [name, line], `Step ${kind}: ${JSON.stringify(frames)}`);
+                if (kind === 'into') assert.deepStrictEqual([frames[1].name, frames[1].line], data.caller);
             }
-        });
-    });
-    playbook('X306', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            // the messages both ways, in the order they went, so that the stack requests of a stop follow it
-            const messages: DapMessage[] = [];
-            const tracker = trackDebugSessions(messages, messages);
-            // the frames VS Code selects: a stopped thread's top frame, once the thread's stack has come
-            const selected: vscode.DebugStackFrame[] = [];
-            const selection = vscode.debug.onDidChangeActiveStackItem(item => {
-                if (item instanceof vscode.DebugStackFrame && item.session.type === 'xtc') selected.push(item);
-            });
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            // VS Code shows a stop once it has selected a frame of the stopped thread, after the [since] it had selected
-            //  before, and the stack it asked for then is where the stop is. A step before that steps the thread it had
-            //  selected, or the session's first, which the adapter refuses as not stopped, and the stack VS Code asks
-            //  for the stop before may come after the step's: both failed X306 on 2026-11-22
-            const shown = (stop: DapMessage, since: number, depth: number, message: string) => eventually(
-                async () => selected.slice(since).some(frame => frame.threadId === stop.body?.threadId) ? stackAfter(messages, stop) : [],
-                frames => frames.length >= depth, message);
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(messages, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                await shown(dapEvents(messages, 'stopped')[0], 0, 1, 'VS Code shows the stop at the breakpoint');
+            assert.ok(!debug.output().includes(data.output), 'Nothing after line 6 has run');
 
-                for (const [kind, name, line] of data.steps as [string, string, number][]) {
-                    const stops = dapEvents(messages, 'stopped').length;
-                    const since = selected.length;
-                    await vscode.commands.executeCommand(stepCommands[kind]);
-                    await eventually(async () => dapEvents(messages, 'stopped').length, count => count > stops, `Step ${kind} stops the program`);
-                    const stop = dapEvents(messages, 'stopped')[stops];
-                    assert.strictEqual(stop.body?.reason, 'step');
-                    // VS Code asks for the stack again after each stop, to show where the step ended
-                    const frames = await shown(stop, since, kind === 'into' ? 2 : 1, `VS Code shows where step ${kind} ended`);
-                    assert.deepStrictEqual([frames[0].name, frames[0].line], [name, line], `Step ${kind}: ${JSON.stringify(frames)}`);
-                    if (kind === 'into') assert.deepStrictEqual([frames[1].name, frames[1].line], data.caller);
-                }
-                assert.ok(!dapOutput(messages).includes(data.output), 'Nothing after line 6 has run');
+            await debug.continueToExit(data.exitCode, 'Continue runs the program to its exit');
+            debug.printed(data.output);
+        } finally {
+            selection.dispose();
+        }
+    }));
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
-                assert.strictEqual(dapEvents(messages, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(messages));
-                assert.ok(dapOutput(messages).includes(data.output), dapOutput(messages));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                // a case that fails while its program is stopped leaves no session for the next one
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                selection.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X307', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            try {
-                // no breakpoint: VS Code turns the adapter's Uncaught Exceptions filter on, as it is by default
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the exception');
-                const stopped = dapEvents(sent, 'stopped')[0].body;
-                assert.strictEqual(stopped?.reason, 'exception');
-                assert.ok(stopped?.text?.startsWith(data.exception) && stopped.text.includes(data.message), JSON.stringify(stopped));
+    playbook('X307', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        // no breakpoint: VS Code turns the adapter's Uncaught Exceptions filter on, as it is by default
+        await debug.launch(document.uri, data.module);
+        const stop = await debug.stopped('The program stops at the exception');
+        assert.strictEqual(stop.reason, 'exception');
+        assert.ok(stop.text?.startsWith(data.exception) && stop.text.includes(data.message), JSON.stringify(stop));
 
-                const frames = await eventually(
-                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
-                        .flatMap(message => message.body?.stackFrames ?? []),
-                    values => values.length >= data.frames.length, 'VS Code shows where the exception was thrown');
-                assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
-                assert.strictEqual(sent.find(message => message.type === 'response' && message.command === 'stackTrace')?.body?.totalFrames,
-                    data.frames.length, JSON.stringify(frames));
+        const frames = await debug.showsStack(data.frames, 'VS Code shows where the exception was thrown');
+        assert.strictEqual(debug.responses('stackTrace')[0]?.body?.totalFrames, data.frames.length, JSON.stringify(frames));
 
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stack = await session.customRequest('stackTrace', { threadId: stopped?.threadId });
-                const scopes: { variablesReference: number }[] = (await session.customRequest('scopes', { frameId: stack.stackFrames[0].id })).scopes;
-                const variables: DapVariable[] = (await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables;
-                assert.strictEqual(variables[0].name, data.variable, JSON.stringify(variables));
-                assert.ok(variables[0].type?.includes(data.exception), JSON.stringify(variables[0]));
-                const [name, value] = data.argument as string[];
-                assert.strictEqual(variables.find(item => item.name === name)?.value, value, JSON.stringify(variables));
+        const variables = await debug.locals((await debug.top(stop.threadId)).id);
+        assert.strictEqual(variables[0].name, data.variable, JSON.stringify(variables));
+        assert.ok(variables[0].type?.includes(data.exception), JSON.stringify(variables[0]));
+        const [name, value] = data.argument as string[];
+        assert.strictEqual(variables.find(item => item.name === name)?.value, value, JSON.stringify(variables));
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue lets the program fail');
-                assert.strictEqual(dapEvents(sent, 'stopped').length, 1, 'The exception stops the program once');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.message), dapOutput(sent));
-            } finally {
-                // a case that fails while its program is stopped leaves no session for the next one
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X308', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapOutput(sent), output => output.includes(data.started), 'The program runs');
-                const from = sent.length;
-                await vscode.commands.executeCommand('workbench.action.debug.pause');
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'Pause stops the program');
-                assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'pause');
-                const frames = await eventually(
-                    async () => sent.slice(from).filter(message => message.type === 'response' && message.command === 'stackTrace')
-                        .flatMap(message => message.body?.stackFrames ?? []),
-                    values => values.length > 0, 'VS Code shows where the program paused');
-                assert.strictEqual(frames[0].name, data.frame, JSON.stringify(frames));
-                assert.ok((data.lines as number[]).includes(frames[0].line), JSON.stringify(frames[0]));
+        await debug.continueToExit(data.exitCode, 'Continue lets the program fail');
+        assert.strictEqual(debug.events('stopped').length, 1, 'The exception stops the program once');
+        debug.printed(data.message);
+    }));
 
-                // the program never ends on its own: stopping the session ends it
-                assert.ok(started, 'The Ecstasy debug session started');
-                await vscode.debug.stopDebugging(started);
-                await eventually(async () => ended, value => value, 'Stopping the session ends the program');
-            } finally {
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+    playbook('X308', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        await debug.launch(document.uri, data.module);
+        await eventually(async () => debug.output(), output => output.includes(data.started), 'The program runs');
+        await vscode.commands.executeCommand('workbench.action.debug.pause');
+        assert.strictEqual((await debug.stopped('Pause stops the program')).reason, 'pause');
+        const frames = await debug.shownFrames(1, 'VS Code shows where the program paused', debug.events('stopped')[0]);
+        assert.strictEqual(frames[0].name, data.frame, JSON.stringify(frames));
+        assert.ok((data.lines as number[]).includes(frames[0].line), JSON.stringify(frames[0]));
 
-    playbook('X309', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module, stopOnEntry: true }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops on entry');
-                assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'entry');
-                const frames = await eventually(
-                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
-                        .flatMap(message => message.body?.stackFrames ?? []),
-                    values => values.length > 0, 'VS Code shows where the program stopped');
-                assert.strictEqual(frames[0].name, data.frame, JSON.stringify(frames));
-                assert.ok(frames[0].line <= data.lastLine, JSON.stringify(frames[0]));
-                assert.ok(!dapOutput(sent).includes(data.output), 'Nothing has run yet');
+        // the program never ends on its own: stopping the session ends it
+        await vscode.debug.stopDebugging(debug.session);
+        await debug.end('Stopping the session ends the program');
+    }));
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X310', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                const frameId = stack.stackFrames[0].id;
+    playbook('X309', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        await debug.launch(document.uri, data.module, { stopOnEntry: true });
+        assert.strictEqual((await debug.stopped('The program stops on entry')).reason, 'entry');
+        const frames = await debug.shownFrames(1, 'VS Code shows where the program stopped');
+        assert.strictEqual(frames[0].name, data.frame, JSON.stringify(frames));
+        assert.ok(frames[0].line <= data.lastLine, JSON.stringify(frames[0]));
+        assert.ok(!debug.output().includes(data.output), 'Nothing has run yet');
 
-                // the requests VS Code's Watch view and hover send for the focused frame
-                const evaluate = (expression: string, context: string) =>
-                    session.customRequest('evaluate', { expression, frameId, context }) as Thenable<{ result: string; type?: string; variablesReference: number }>;
-                for (const [expression, value, type] of data.watches as string[][]) {
-                    const answer = await evaluate(expression, 'watch');
-                    assert.deepStrictEqual([answer.result, answer.type], [value, type], expression);
-                }
-                assert.ok((await evaluate(data.expands, 'hover')).variablesReference > 0, `${data.expands} expands`);
-                const [refused, reason] = data.refused as string[];
-                await assert.rejects(Promise.resolve(evaluate(refused, 'watch')), (error: Error) => error.message.includes(reason));
+        await debug.continueToExit(data.exitCode, 'Continue runs the program to its exit');
+        debug.printed(data.output);
+    }));
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue runs the program to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X311', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const at = (line: number) => new vscode.Location(document.uri, new vscode.Position(line - 1, 0));
-            const breakpoints = [
-                new vscode.SourceBreakpoint(at(data.breakpointLine), true, data.condition, data.hitCondition),
-                new vscode.SourceBreakpoint(at(data.logLine), true, undefined, undefined, data.logMessage),
-            ];
-            vscode.debug.addBreakpoints(breakpoints);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the hit its conditions name');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stopped = dapEvents(sent, 'stopped')[0].body;
-                assert.strictEqual(stopped?.reason, 'breakpoint');
-                const stack = await session.customRequest('stackTrace', { threadId: stopped?.threadId });
-                const i = await session.customRequest('evaluate', { expression: 'i', frameId: stack.stackFrames[0].id, context: 'watch' }) as { result: string };
-                assert.strictEqual(i.result, data.stopsAt);
+    playbook('X310', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        const frameId = (await debug.top(stop.threadId)).id;
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'The logpoint lets the program run to its exit');
-                assert.strictEqual(dapEvents(sent, 'stopped').length, 1, 'Only the hit the conditions name stops the program');
-                assert.ok(dapOutput(sent).includes(data.logged), dapOutput(sent));
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-            } finally {
-                vscode.debug.removeBreakpoints(breakpoints);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X312', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module, stopOnEntry: true }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops on entry');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
+        // the requests VS Code's Watch view and hover send for the focused frame
+        await checkWatches(debug, frameId, data.watches as string[][], data.refused as string[]);
+        assert.ok((await debug.evaluate(data.expands, frameId, 'hover')).variablesReference > 0, `${data.expands} expands`);
 
-                // the filter's condition, as the Breakpoints view's Edit Condition sends it
-                const answer = await session.customRequest('setExceptionBreakpoints',
-                    { filters: [], filterOptions: [{ filterId: data.filter, condition: data.condition }] }) as { breakpoints?: { verified: boolean }[] };
-                assert.deepStrictEqual(answer.breakpoints?.map(breakpoint => breakpoint.verified), [true]);
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 1, 'The program stops at the exception class the condition names');
-                const stopped = dapEvents(sent, 'stopped')[1].body;
-                assert.strictEqual(stopped?.reason, 'exception');
-                assert.ok(dapOutput(sent).includes(data.caught), `The caught exception did not stop the program: ${dapOutput(sent)}`);
-                const stack = await session.customRequest('stackTrace', { threadId: stopped?.threadId });
-                assert.deepStrictEqual([stack.stackFrames[0].name, stack.stackFrames[0].line], data.frame);
+        await debug.continueToExit(data.exitCode, 'Continue runs the program to its exit');
+    }));
 
-                const info = await session.customRequest('exceptionInfo', { threadId: stopped?.threadId }) as
-                    { exceptionId: string; description?: string; breakMode: string; details?: { stackTrace?: string } };
-                assert.deepStrictEqual([info.exceptionId, info.description, info.breakMode], [data.exception, data.description, data.breakMode]);
-                assert.ok(info.details?.stackTrace?.includes(data.stackTrace), JSON.stringify(info));
+    playbook('X311', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        debug.add(lineBreakpoint(document.uri, data.breakpointLine, data.condition, data.hitCondition),
+            lineBreakpoint(document.uri, data.logLine, undefined, undefined, data.logMessage));
+        await debug.launch(document.uri, data.module);
+        const stop = await debug.stopped('The program stops at the hit its conditions name');
+        assert.strictEqual(stop.reason, 'breakpoint');
+        const i = await debug.evaluate('i', (await debug.top(stop.threadId)).id, 'watch');
+        assert.strictEqual(i.result, data.stopsAt);
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue lets the program fail');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-            } finally {
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X313', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const at = (line: number) => new vscode.Location(document.uri, new vscode.Position(line - 1, 0));
-            const breakpoints = [
-                new vscode.SourceBreakpoint(at(data.breakpointLine), true, data.condition),
-                new vscode.SourceBreakpoint(at(data.logLine), true, undefined, undefined, data.logMessage),
-            ];
-            vscode.debug.addBreakpoints(breakpoints);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                const stops = data.conditionStops as string[];
-                for (let stop = 0; stop < stops.length; stop++) {
-                    await eventually(async () => dapEvents(sent, 'stopped').length, count => count > stop, `The program stops where i is ${stops[stop]}`);
-                    const session = started;
-                    assert.ok(session, 'The Ecstasy debug session started');
-                    const stopped = dapEvents(sent, 'stopped')[stop].body;
-                    assert.strictEqual(stopped?.reason, 'breakpoint');
-                    const stack = await session.customRequest('stackTrace', { threadId: stopped?.threadId });
-                    const frameId: number = stack.stackFrames[0].id;
-                    const evaluate = (expression: string): Thenable<{ result: string; type?: string }> =>
-                        session.customRequest('evaluate', { expression, frameId, context: 'watch' });
-                    assert.strictEqual((await evaluate('i')).result, stops[stop]);
-                    if (stop === 0) {
-                        // the watches and the refusal, at the first stop
-                        for (const [expression, value, type] of data.watches as string[][]) {
-                            const answer = await evaluate(expression);
-                            assert.deepStrictEqual([answer.result, answer.type], [value, type], expression);
-                        }
-                        const [refused, reason] = data.refused as string[];
-                        await assert.rejects(Promise.resolve(evaluate(refused)), (error: Error) => error.message.includes(reason));
-                    }
-                    await vscode.commands.executeCommand('workbench.action.debug.continue');
-                }
-                await eventually(async () => ended, value => value, 'The logpoint lets the program run to its exit');
-                assert.strictEqual(dapEvents(sent, 'stopped').length, stops.length, 'Only the hits whose condition holds stop the program');
-                assert.ok(dapOutput(sent).includes(data.logged), dapOutput(sent));
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-            } finally {
-                vscode.debug.removeBreakpoints(breakpoints);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        await debug.continueToExit(data.exitCode, 'The logpoint lets the program run to its exit');
+        assert.strictEqual(debug.events('stopped').length, 1, 'Only the hit the conditions name stops the program');
+        debug.printed(data.logged);
+    }));
 
-    playbook('X314', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const received: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent, received);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                assert.strictEqual(stack.stackFrames[0].name, data.frame);
-                const frameId: number = stack.stackFrames[0].id;
-                const evaluate = (expression: string, context: string): Thenable<{ result: string }> =>
-                    session.customRequest('evaluate', { expression, frameId, context });
+    playbook('X312', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        await debug.launch(document.uri, data.module, { stopOnEntry: true });
+        await debug.stopped('The program stops on entry');
 
-                // a call typed in the Debug Console runs on the stopped fiber, and VS Code is told to read the variables again
-                const [call, value] = data.call as string[];
-                assert.strictEqual((await evaluate(call, 'repl')).result, value);
-                await eventually(async () => dapEvents(sent, 'invalidated'), events => events.length > 0, 'The run invalidates the variables');
-                assert.deepStrictEqual(dapEvents(sent, 'invalidated')[0].body?.areas, ['variables']);
-                const [watch, watched] = data.watch as string[];
-                assert.strictEqual((await evaluate(watch, 'watch')).result, watched, 'What the call changed stays changed');
+        // the filter's condition, as the Breakpoints view's Edit Condition sends it
+        const answer = await debug.request<{ breakpoints?: { verified: boolean }[] }>('setExceptionBreakpoints',
+            { filters: [], filterOptions: [{ filterId: data.filter, condition: data.condition }] });
+        assert.deepStrictEqual(answer.breakpoints?.map(breakpoint => breakpoint.verified), [true]);
+        await vscode.commands.executeCommand('workbench.action.debug.continue');
+        const stop = await debug.stopped('The program stops at the exception class the condition names', 1);
+        assert.strictEqual(stop.reason, 'exception');
+        assert.ok(debug.output().includes(data.caught), `The caught exception did not stop the program: ${debug.output()}`);
+        const top = await debug.top(stop.threadId);
+        assert.deepStrictEqual([top.name, top.line], data.frame);
 
-                // a run that loops ends when it is cancelled, by its request's seq, and at the console's time limit when it is not
-                // the expected rejection is attached first, since the answer can come before the cancel's own
-                const looping = assert.rejects(Promise.resolve(evaluate(data.loop, 'repl')), (error: Error) => error.message.includes(data.cancelled));
-                const request = await eventually(async () => received.find(message =>
-                    message.command === 'evaluate' && message.arguments?.expression === data.loop), message => message !== undefined,
-                    'VS Code sends the loop to the debug adapter');
-                await session.customRequest('cancel', { requestId: request!.seq });
-                await looping;
-                await assert.rejects(Promise.resolve(evaluate(data.loop, 'repl')), (error: Error) => error.message.includes(data.limited));
+        const info = await debug.request<{ exceptionId: string; description?: string; breakMode: string; details?: { stackTrace?: string } }>(
+            'exceptionInfo', { threadId: stop.threadId });
+        assert.deepStrictEqual([info.exceptionId, info.description, info.breakMode], [data.exception, data.description, data.breakMode]);
+        assert.ok(info.details?.stackTrace?.includes(data.stackTrace), JSON.stringify(info));
 
-                // the program goes on from its stop, with the console's change
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        await debug.continueToExit(data.exitCode, 'Continue lets the program fail');
+    }));
 
-    playbook('X315', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module, evaluationRunsProgram: true }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                assert.strictEqual(stack.stackFrames[0].name, data.frame);
+    playbook('X313', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        debug.add(lineBreakpoint(document.uri, data.breakpointLine, data.condition),
+            lineBreakpoint(document.uri, data.logLine, undefined, undefined, data.logMessage));
+        await debug.launch(document.uri, data.module);
+        const stops = data.conditionStops as string[];
+        for (let stop = 0; stop < stops.length; stop++) {
+            const stopped = await debug.stopped(`The program stops where i is ${stops[stop]}`, stop);
+            assert.strictEqual(stopped.reason, 'breakpoint');
+            const frameId = (await debug.top(stopped.threadId)).id;
+            assert.strictEqual((await debug.evaluate('i', frameId, 'watch')).result, stops[stop]);
+            // the watches and the refusal, at the first stop
+            if (stop === 0) await checkWatches(debug, frameId, data.watches as string[][], data.refused as string[]);
+            await vscode.commands.executeCommand('workbench.action.debug.continue');
+        }
+        await debug.end('The logpoint lets the program run to its exit');
+        assert.strictEqual(debug.events('stopped').length, stops.length, 'Only the hits whose condition holds stop the program');
+        debug.printed(data.logged);
+        debug.exited(data.exitCode);
+    }));
 
-                // the worker's service answers once its fiber, which the stop holds otherwise, has done its work
-                const [call, value] = data.call as string[];
-                const answer: { result: string } = await session.customRequest('evaluate', { expression: call, frameId: stack.stackFrames[0].id, context: 'repl' });
-                assert.strictEqual(answer.result, value);
-                await eventually(async () => dapEvents(sent, 'invalidated'), events => events.length > 0, 'The run invalidates the threads, stacks and variables');
-                assert.deepStrictEqual(dapEvents(sent, 'invalidated')[0].body?.areas, ['all']);
+    playbook('X314', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        const top = await debug.top(stop.threadId);
+        assert.strictEqual(top.name, data.frame);
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X316', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
+        // a call typed in the Debug Console runs on the stopped fiber, and VS Code is told to read the variables again
+        const [call, value] = data.call as string[];
+        assert.strictEqual((await debug.evaluate(call, top.id, 'repl')).result, value);
+        await debug.invalidates(['variables'], 'The run invalidates the variables');
+        const [watch, watched] = data.watch as string[];
+        assert.strictEqual((await debug.evaluate(watch, top.id, 'watch')).result, watched, 'What the call changed stays changed');
 
-                // the requests the Variables view makes as it expands the object, and as each lazy variable is clicked
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                const scopes: { name: string; variablesReference: number }[] = (await session.customRequest('scopes', { frameId: stack.stackFrames[0].id })).scopes;
-                const variables = async (reference: number): Promise<DapVariable[]> =>
-                    (await session.customRequest('variables', { variablesReference: reference })).variables;
-                const locals = await variables(scopes[0].variablesReference);
-                const object = locals.find(item => item.name === data.expands);
-                assert.ok(object && object.variablesReference > 0, JSON.stringify(locals));
-                const fields = await variables(object.variablesReference);
-                assert.deepStrictEqual(fields.map(field => [field.name, field.value]), data.fields);
-                for (const [name, value] of data.lazy as string[][]) {
-                    const lazy = fields.find(field => field.name === name);
-                    assert.strictEqual(lazy?.presentationHint?.lazy, true, JSON.stringify(lazy));
-                    const shown = await variables(lazy.variablesReference);
-                    assert.deepStrictEqual(shown.map(item => [item.name, item.value]), [[name, value]]);
-                }
+        // a run that loops ends when it is cancelled, by its request's seq, and at the console's time limit when it is not
+        // the expected rejection is attached first, since the answer can come before the cancel's own
+        const looping = assert.rejects(debug.evaluate(data.loop, top.id, 'repl'), (error: Error) => error.message.includes(data.cancelled));
+        const request = await eventually(async () => debug.requests('evaluate').find(message => message.arguments?.expression === data.loop),
+            message => message !== undefined, 'VS Code sends the loop to the debug adapter');
+        await debug.request('cancel', { requestId: request!.seq });
+        await looping;
+        await assert.rejects(debug.evaluate(data.loop, top.id, 'repl'), (error: Error) => error.message.includes(data.limited));
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X317', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const received: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent, received);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                const scopes: { name: string; variablesReference: number }[] = (await session.customRequest('scopes', { frameId: stack.stackFrames[0].id })).scopes;
-                // the requests the Variables view makes, which name no format, as VS Code never asks for one
-                const locals = async () => new Map<string, string>(
-                    ((await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables as DapVariable[])
-                        .map(variable => [variable.name, variable.value]));
+        // the program goes on from its stop, with the console's change
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-                const decimal = await locals();
-                for (const [name, value] of data.decimal as string[][]) {
-                    assert.strictEqual(decimal.get(name), value, JSON.stringify([...decimal]));
-                }
-                // two objects with the same fields have different identity codes
-                const identities = (data.identities as string[]).map(name => decimal.get(name) ?? '');
-                for (const text of identities) {
-                    assert.match(text, /^.+ #\d+$/);
-                }
-                assert.notStrictEqual(identities[0], identities[1]);
+    playbook('X315', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint', { evaluationRunsProgram: true });
+        const top = await debug.top(stop.threadId);
+        assert.strictEqual(top.name, data.frame);
 
-                // the Variables view's Show Values as Hexadecimal sets the session's format, and VS Code reads the variables again
-                await vscode.commands.executeCommand('xtc.debug.toggleHexValues');
-                await eventually(async () => received.filter(message => message.command === 'xtc/valueFormat').length, count => count > 0,
-                    'The item sets the session\'s value format');
-                await eventually(async () => dapEvents(sent, 'invalidated').length, count => count > 0, 'The session invalidates the variables');
-                const hex = await locals();
-                for (const [name, value] of data.hex as string[][]) {
-                    assert.strictEqual(hex.get(name), value, JSON.stringify([...hex]));
-                }
-                await vscode.commands.executeCommand('xtc.debug.toggleHexValues');
-                const [name, value] = (data.decimal as string[][])[0];
-                await eventually(async () => (await locals()).get(name), shown => shown === value, 'The item turned off shows decimals again');
+        // the worker's service answers once its fiber, which the stop holds otherwise, has done its work
+        const [call, value] = data.call as string[];
+        assert.strictEqual((await debug.evaluate(call, top.id, 'repl')).result, value);
+        await debug.invalidates(['all'], 'The run invalidates the threads, stacks and variables');
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X318', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                const scopes: { name: string; variablesReference: number }[] = (await session.customRequest('scopes', { frameId: stack.stackFrames[0].id })).scopes;
-                const locals: DapVariable[] = (await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables;
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-                // the array says how many elements it has, so VS Code groups them in ranges, and reads a range when it is expanded
-                const array = locals.find(variable => variable.name === data.expands);
-                assert.ok(array, JSON.stringify(locals));
-                assert.strictEqual(array.indexedVariables, data.elements, JSON.stringify(array));
-                const [first, count] = data.page as number[];
-                const page: DapVariable[] = (await session.customRequest('variables',
-                    { variablesReference: array.variablesReference, filter: 'indexed', start: first, count })).variables;
-                assert.strictEqual(page.length, count);
-                assert.deepStrictEqual([page[0].name, page[0].value], data.first);
-                assert.deepStrictEqual([page[count - 1].name, page[count - 1].value], data.last);
+    playbook('X316', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X319', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                const scopes: { name: string; variablesReference: number }[] = (await session.customRequest('scopes', { frameId: stack.stackFrames[0].id })).scopes;
+        // the requests the Variables view makes as it expands the object, and as each lazy variable is clicked
+        const locals = await debug.locals((await debug.top(stop.threadId)).id);
+        const object = locals.find(item => item.name === data.expands);
+        assert.ok(object && object.variablesReference > 0, JSON.stringify(locals));
+        const fields = await debug.variables(object.variablesReference);
+        assert.deepStrictEqual(fields.map(field => [field.name, field.value]), data.fields);
+        for (const [name, value] of data.lazy as string[][]) {
+            const lazy = fields.find(field => field.name === name);
+            assert.strictEqual(lazy?.presentationHint?.lazy, true, JSON.stringify(lazy));
+            const shown = await debug.variables(lazy.variablesReference);
+            assert.deepStrictEqual(shown.map(item => [item.name, item.value]), [[name, value]]);
+        }
 
-                // the request the Variables view's Set Value makes: a value of another type is refused with the reason
-                const [name, expression, value] = data.set as string[];
-                const [other, reason] = data.refused as string[];
-                await assert.rejects(Promise.resolve(session.customRequest('setVariable',
-                    { variablesReference: scopes[0].variablesReference, name, value: other })), (error: Error) => error.message.includes(reason));
-                const changed: { value: string } = await session.customRequest('setVariable',
-                    { variablesReference: scopes[0].variablesReference, name, value: expression });
-                assert.strictEqual(changed.value, value);
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X320', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const stack = await session.customRequest('stackTrace', { threadId: dapEvents(sent, 'stopped')[0].body?.threadId });
-                const frameId: number = stack.stackFrames[0].id;
-                type Target = { label: string; type?: string; start?: number; length?: number };
-                const complete = async (text: string): Promise<Target[]> =>
-                    (await session.customRequest('completions', { frameId, text, column: text.length + 1 })).targets;
+    playbook('X317', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        const reference = await debug.localsReference((await debug.top(stop.threadId)).id);
+        // the requests the Variables view makes, which name no format, as VS Code never asks for one
+        const locals = async () => new Map<string, string>((await debug.variables(reference)).map(variable => [variable.name, variable.value]));
 
-                // the request the console makes as a name is typed: after a dot, the members of the value before it
-                const [members, ...names] = data.members as string[];
-                const offered = (await complete(members)).map(target => target.label);
-                for (const name of names) assert.ok(offered.includes(name), `${members} offers ${JSON.stringify(offered)}`);
-                // the typed part of the name is replaced, the length before the cursor, as the console replaces it
-                const [typed, name, completed] = data.typed as string[];
-                const target = (await complete(typed)).find(candidate => candidate.label === name);
-                assert.ok(target, `${typed} offers no ${name}`);
-                assert.strictEqual(target.start, undefined, JSON.stringify(target));
-                assert.strictEqual(typed.slice(0, typed.length - (target.length ?? 0)) + target.label, completed);
+        const decimal = await locals();
+        for (const [name, value] of data.decimal as string[][]) {
+            assert.strictEqual(decimal.get(name), value, JSON.stringify([...decimal]));
+        }
+        // two objects with the same fields have different identity codes
+        const identities = (data.identities as string[]).map(name => decimal.get(name) ?? '');
+        for (const text of identities) {
+            assert.match(text, /^.+ #\d+$/);
+        }
+        assert.notStrictEqual(identities[0], identities[1]);
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
-    playbook('X321', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const at = (line: number) => new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(line - 1, 0)));
-            const breakpoints = [at(data.breakpointLine)];
-            vscode.debug.addBreakpoints(breakpoints);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
-                const frames = async () => ((await session.customRequest('stackTrace', { threadId })).stackFrames as { name: string; line: number }[])
-                    .map(frame => [frame.name, frame.line]);
+        // the Variables view's Show Values as Hexadecimal sets the session's format, and VS Code reads the variables again
+        await vscode.commands.executeCommand('xtc.debug.toggleHexValues');
+        await eventually(async () => debug.requests('xtc/valueFormat').length, count => count > 0, 'The item sets the session\'s value format');
+        await eventually(async () => debug.events('invalidated').length, count => count > 0, 'The session invalidates the variables');
+        const hex = await locals();
+        for (const [name, value] of data.hex as string[][]) {
+            assert.strictEqual(hex.get(name), value, JSON.stringify([...hex]));
+        }
+        await vscode.commands.executeCommand('xtc.debug.toggleHexValues');
+        const [name, value] = (data.decimal as string[][])[0];
+        await eventually(async () => (await locals()).get(name), shown => shown === value, 'The item turned off shows decimals again');
 
-                // lines typed above the stop, which the program was not built with; once the server has them, the stop
-                // shows on its line now
-                const edit = new vscode.WorkspaceEdit();
-                edit.insert(document.uri, new vscode.Position(data.insertLine - 1, 0), (data.inserted as string[]).map(line => `${line}\n`).join(''));
-                assert.ok(await vscode.workspace.applyEdit(edit));
-                await eventually(async () => (await frames())[0]?.[1], line => line === data.stoppedNow, 'The stop shows on its line now');
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-                // a breakpoint on a line that moved is placed on the line the program has for it; one on a typed line
-                // is refused with the reason
-                const added = [at(data.moved), at(data.typed)];
-                vscode.debug.addBreakpoints(added);
-                breakpoints.push(...added);
-                const answer = await eventually(async () => sent.filter(message => message.type === 'response' && message.command === 'setBreakpoints')
-                    .map(message => message.body?.breakpoints ?? []).find(items => items.some(item => item.line === data.moved)),
-                found => found !== undefined, 'The new breakpoints are answered');
-                assert.ok(answer!.some(item => item.line === data.moved && item.verified), JSON.stringify(answer));
-                assert.ok(answer!.some(item => item.line === data.typed && !item.verified && item.message === data.reason), JSON.stringify(answer));
+    playbook('X318', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        const locals = await debug.locals((await debug.top(stop.threadId)).id);
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 1, 'The program stops at the moved line');
-                assert.deepStrictEqual(await frames(), data.frames);
+        // the array says how many elements it has, so VS Code groups them in ranges, and reads a range when it is expanded
+        const array = locals.find(variable => variable.name === data.expands);
+        assert.ok(array, JSON.stringify(locals));
+        assert.strictEqual(array.indexedVariables, data.elements, JSON.stringify(array));
+        const [first, count] = data.page as number[];
+        const page = await debug.variables(array.variablesReference, { filter: 'indexed', start: first, count });
+        assert.strictEqual(page.length, count);
+        assert.deepStrictEqual([page[0].name, page[0].value], data.first);
+        assert.deepStrictEqual([page[count - 1].name, page[count - 1].value], data.last);
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints(breakpoints);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
+
+    playbook('X319', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        const variablesReference = await debug.localsReference((await debug.top(stop.threadId)).id);
+
+        // the request the Variables view's Set Value makes: a value of another type is refused with the reason
+        const [name, expression, value] = data.set as string[];
+        const [other, reason] = data.refused as string[];
+        await assert.rejects(debug.request('setVariable', { variablesReference, name, value: other }), (error: Error) => error.message.includes(reason));
+        const changed = await debug.request<{ value: string }>('setVariable', { variablesReference, name, value: expression });
+        assert.strictEqual(changed.value, value);
+
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
+
+    playbook('X320', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        const frameId = (await debug.top(stop.threadId)).id;
+        type Target = { label: string; type?: string; start?: number; length?: number };
+        const complete = async (text: string): Promise<Target[]> =>
+            (await debug.request<{ targets: Target[] }>('completions', { frameId, text, column: text.length + 1 })).targets;
+
+        // the request the console makes as a name is typed: after a dot, the members of the value before it
+        const [members, ...names] = data.members as string[];
+        const offered = (await complete(members)).map(target => target.label);
+        for (const name of names) assert.ok(offered.includes(name), `${members} offers ${JSON.stringify(offered)}`);
+        // the typed part of the name is replaced, the length before the cursor, as the console replaces it
+        const [typed, name, completed] = data.typed as string[];
+        const target = (await complete(typed)).find(candidate => candidate.label === name);
+        assert.ok(target, `${typed} offers no ${name}`);
+        assert.strictEqual(target.start, undefined, JSON.stringify(target));
+        assert.strictEqual(typed.slice(0, typed.length - (target.length ?? 0)) + target.label, completed);
+
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
+
+    playbook('X321', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        const frames = async () => (await debug.frames(stop.threadId)).map(frame => [frame.name, frame.line]);
+
+        // lines typed above the stop, which the program was not built with; once the server has them, the stop
+        // shows on its line now
+        const edit = new vscode.WorkspaceEdit();
+        edit.insert(document.uri, new vscode.Position(data.insertLine - 1, 0), (data.inserted as string[]).map(line => `${line}\n`).join(''));
+        assert.ok(await vscode.workspace.applyEdit(edit));
+        await eventually(async () => (await frames())[0]?.[1], line => line === data.stoppedNow, 'The stop shows on its line now');
+
+        // a breakpoint on a line that moved is placed on the line the program has for it; one on a typed line
+        // is refused with the reason
+        debug.add(lineBreakpoint(document.uri, data.moved), lineBreakpoint(document.uri, data.typed));
+        const answer = await eventually(async () => debug.responses('setBreakpoints')
+            .map(message => message.body?.breakpoints ?? []).find(items => items.some(item => item.line === data.moved)),
+        found => found !== undefined, 'The new breakpoints are answered');
+        assert.ok(answer!.some(item => item.line === data.moved && item.verified), JSON.stringify(answer));
+        assert.ok(answer!.some(item => item.line === data.typed && !item.verified && item.message === data.reason), JSON.stringify(answer));
+
+        await vscode.commands.executeCommand('workbench.action.debug.continue');
+        await debug.stopped('The program stops at the moved line', 1);
+        assert.deepStrictEqual(await frames(), data.frames);
+
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
     playbook('X322', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         await embedded(async executions => {
             const started = (update: ExecutionUpdate) => update.text.includes(data.started) && !finished(update);
             for (let round = 1; round <= data.rounds; round++) {
                 // a run to its exit, from the Run lens command
-                const done = await executions.start('run', data.module,
-                    () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module), finished, `Run ${round} finishes`);
+                const done = await executions.lens(data.module, document.uri, `Run ${round} finishes`);
                 assert.strictEqual(done.exitCode, 0, done.text);
                 assert.ok(done.text.includes(data.done), done.text);
 
                 // a run that loops until Stop ends it
-                const task = createXtcRunTask(
-                    { type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), args: [data.spin], mode: 'embedded' }, getClient);
-                await executions.start('run', data.module, () => vscode.tasks.executeTask(task), started, `Looping run ${round} starts`);
-                const execution = vscode.tasks.taskExecutions.find(item => item.task.name === `Run ${data.module}`);
-                assert.ok(execution, `Looping run ${round} is an active task`);
-                execution.terminate();
-                const stopped = await executions.await('run', data.module, finished, `Stopped run ${round} reports its exit`);
+                await executions.task(data.module, document.uri, `Looping run ${round} starts`, { args: [data.spin], until: started });
+                const stopped = await executions.stop(data.module, `Stopped run ${round} reports its exit`);
                 assert.ok(!stopped.text.includes(data.done), stopped.text);
 
                 // a debug session that stops at a breakpoint and continues to its exit
-                const sent: DapMessage[] = [];
-                const tracker = trackDebugSessions(sent);
-                let ended = false;
-                const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                    if (session.type === 'xtc') ended = true;
-                });
-                const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-                vscode.debug.addBreakpoints([breakpoint]);
-                try {
-                    assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                        { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                    await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, `Debug session ${round} stops at the breakpoint`);
+                await debugging(async debug => {
+                    await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, `Debug session ${round} stops at the breakpoint`);
                     // VS Code focuses the stopped fiber once it has its stack, which Continue then resumes
-                    await eventually(async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace').length,
-                        count => count > 0, `VS Code shows debug session ${round}'s stack`);
+                    await debug.shownFrames(1, `VS Code shows debug session ${round}'s stack`);
                     assert.ok(vscode.debug.activeDebugSession, `Debug session ${round} is open while it is stopped`);
-                    await vscode.commands.executeCommand('workbench.action.debug.continue');
-                    await eventually(async () => ended, value => value, `Debug session ${round} runs to its exit`);
-                    assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, 0, JSON.stringify(sent));
-                    assert.ok(dapOutput(sent).includes(data.done), dapOutput(sent));
-                } finally {
-                    vscode.debug.removeBreakpoints([breakpoint]);
-                    // a round that fails while its program is stopped leaves no session for the next case
-                    const open = vscode.debug.activeDebugSession;
-                    if (!ended && open) await vscode.debug.stopDebugging(open);
-                    termination.dispose();
-                    tracker.dispose();
-                }
+                    await debug.continueToExit(0, `Debug session ${round} runs to its exit`);
+                    debug.printed(data.done);
+                });
 
                 // the round leaves no run task and no debug session open
                 await eventually(async () => vscode.tasks.taskExecutions.filter(item => item.task.definition.type === 'xtc').length,
@@ -1271,509 +658,220 @@ export function debugSessionCases(): void {
         });
     });
 
-    playbook('X323', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-                // VS Code focuses the stopped fiber once it has its stack, which Run to Cursor then continues
-                await eventually(async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace').length,
-                    count => count > 0, 'VS Code shows the stack');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
+    playbook('X323', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the breakpoint');
+        // VS Code focuses the stopped fiber once it has its stack, which Run to Cursor then continues
+        await debug.shownFrames(1, 'VS Code shows the stack');
 
-                // Run to Cursor, from an editor whose cursor is on the line
-                const editor = await vscode.window.showTextDocument(document, { preserveFocus: false });
-                const cursor = new vscode.Position(data.cursorLine - 1, 0);
-                editor.selection = new vscode.Selection(cursor, cursor);
-                await vscode.commands.executeCommand('editor.debug.action.runToCursor');
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 1, 'Run to Cursor stops at the cursor\'s line');
-                const threadId = dapEvents(sent, 'stopped')[1].body?.threadId;
-                const top = ((await session.customRequest('stackTrace', { threadId })).stackFrames as { line: number }[])[0];
-                assert.strictEqual(top.line, data.cursorLine);
-                // the loop's first round, before it prints
-                assert.ok(!dapOutput(sent).includes(data.printed), dapOutput(sent));
+        // Run to Cursor, from an editor whose cursor is on the line
+        select(await vscode.window.showTextDocument(document, { preserveFocus: false }), data.cursorLine);
+        await vscode.commands.executeCommand('editor.debug.action.runToCursor');
+        const stop = await debug.stopped('Run to Cursor stops at the cursor\'s line', 1);
+        assert.strictEqual((await debug.top(stop.threadId)).line, data.cursorLine);
+        // the loop's first round, before it prints
+        assert.ok(!debug.output().includes(data.printed), debug.output());
 
-                // once stopped, VS Code removes the breakpoint it added for the cursor, and the server answers for the
-                // breakpoints left; Continue right after the stop could otherwise reach the server first
-                const stop = sent.indexOf(dapEvents(sent, 'stopped')[1]);
-                await eventually(async () => sent.slice(stop).some(message => message.type === 'response' && message.command === 'setBreakpoints'
-                    && (message.body?.breakpoints ?? []).every(item => item.line !== data.cursorLine)), removed => removed,
-                'VS Code removes the breakpoint it added for the cursor');
+        // once stopped, VS Code removes the breakpoint it added for the cursor, and the server answers for the
+        // breakpoints left; Continue right after the stop could otherwise reach the server first
+        await eventually(async () => debug.responses('setBreakpoints', debug.events('stopped')[1])
+            .some(message => (message.body?.breakpoints ?? []).every(item => item.line !== data.cursorLine)), removed => removed,
+        'VS Code removes the breakpoint it added for the cursor');
 
-                // no breakpoint stays on the cursor's line: Continue runs the loop's other rounds to the exit
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'stopped').length, 2, JSON.stringify(dapEvents(sent, 'stopped')));
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-                assert.deepStrictEqual(vscode.debug.breakpoints.filter(item => item instanceof vscode.SourceBreakpoint
-                    && item.location.uri.toString() === document.uri.toString()).map(item => (item as vscode.SourceBreakpoint).location.range.start.line + 1),
-                [data.breakpointLine]);
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        // no breakpoint stays on the cursor's line: Continue runs the loop's other rounds to the exit
+        await debug.continueToExit(data.exitCode);
+        assert.strictEqual(debug.events('stopped').length, 2, JSON.stringify(debug.events('stopped')));
+        debug.printed(data.output);
+        assert.deepStrictEqual(vscode.debug.breakpoints.filter(item => item instanceof vscode.SourceBreakpoint
+            && item.location.uri.toString() === document.uri.toString()).map(item => (item as vscode.SourceBreakpoint).location.range.start.line + 1),
+        [data.breakpointLine]);
+    }));
 
-    playbook('X324', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops in the lambda');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
-                const frames = (await session.customRequest('stackTrace', { threadId })).stackFrames as { name: string; line: number; source?: { path?: string } }[];
-                assert.deepStrictEqual(frames.map(frame => frame.name), data.frames);
+    playbook('X324', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops in the lambda');
+        const frames = await debug.frames(stop.threadId);
+        assert.deepStrictEqual(frames.map(frame => frame.name), data.frames);
 
-                // the library's frame is in the source bundled with it, not a file of the workspace, and opens at its line
-                const library = frames[1];
-                const file = library.source?.path ?? '';
-                assert.ok(file.replace(/\\/g, '/').endsWith(data.librarySource), JSON.stringify(library));
-                assert.ok(!file.startsWith(vscode.workspace.getWorkspaceFolder(document.uri)!.uri.fsPath), file);
-                const opened = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
-                const text = opened.lineAt(library.line - 1).text;
-                assert.ok(text.includes(data.libraryText), text);
+        // the library's frame is in the source bundled with it, not a file of the workspace, and opens at its line
+        const library = frames[1];
+        const file = library.source?.path ?? '';
+        assert.ok(file.replace(/\\/g, '/').endsWith(data.librarySource), JSON.stringify(library));
+        assert.ok(!file.startsWith(vscode.workspace.getWorkspaceFolder(document.uri)!.uri.fsPath), file);
+        const opened = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+        const text = opened.lineAt(library.line - 1).text;
+        assert.ok(text.includes(data.libraryText), text);
 
-                // the lambda runs once, so Continue runs the program to its exit
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        // the lambda runs once, so Continue runs the program to its exit
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-    playbook('X325', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            // by then, run() has asked the busy worker for its count, and waits for the answer
-            const breakpoint = new vscode.SourceBreakpoint(
-                new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)), true, data.condition);
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The worker stops at its count');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
+    playbook('X325', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        // by then, run() has asked the busy worker for its count, and waits for the answer
+        debug.add(lineBreakpoint(document.uri, data.breakpointLine, data.condition));
+        await debug.launch(document.uri, data.module);
+        const stop = await debug.stopped('The worker stops at its count');
 
-                // the stopped fiber first, then run()'s, which waits for the worker, with its own stack; the worker takes
-                // in the call that run() waits for, as a fiber not started yet, when it next schedules, before the stop
-                // or after it
-                const threads = (await session.customRequest('threads')).threads as { id: number; name: string }[];
-                const names = threads.map(thread => thread.name);
-                assert.ok([JSON.stringify(data.threads), JSON.stringify([...data.threads, data.queuedThread])].includes(JSON.stringify(names)),
-                    JSON.stringify(names));
-                assert.strictEqual(threads[0].id, dapEvents(sent, 'stopped')[0].body?.threadId);
-                const frames = (await session.customRequest('stackTrace', { threadId: threads[1].id })).stackFrames as { name: string; line: number }[];
-                assert.deepStrictEqual(frames.map(frame => [frame.name, frame.line]), data.waitingFrames);
+        // the stopped fiber first, then run()'s, which waits for the worker, with its own stack; the worker takes
+        // in the call that run() waits for, as a fiber not started yet, when it next schedules, before the stop
+        // or after it
+        const threads = (await debug.request<{ threads: { id: number; name: string }[] }>('threads')).threads;
+        const names = threads.map(thread => thread.name);
+        assert.ok([JSON.stringify(data.threads), JSON.stringify([...data.threads, data.queuedThread])].includes(JSON.stringify(names)),
+            JSON.stringify(names));
+        assert.strictEqual(threads[0].id, stop.threadId);
+        const frames = await debug.frames(threads[1].id);
+        assert.deepStrictEqual(frames.map(frame => [frame.name, frame.line]), data.waitingFrames);
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-    playbook('X326', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const received: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent, received);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops in the lambda');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
+    playbook('X326', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops in the lambda');
 
-                // VS Code asks for the loaded sources once its Loaded Scripts view shows
-                await vscode.commands.executeCommand('workbench.debug.loadedScriptsView.focus');
-                const asked = await eventually(async () => received.find(message => message.type === 'request' && message.command === 'loadedSources'),
-                    request => request !== undefined, 'VS Code asks for the loaded sources');
-                const answer = await eventually(async () => sent.find(message => message.type === 'response' && message.command === 'loadedSources'
-                    && message.request_seq === asked!.seq), response => response !== undefined, 'The loaded sources are answered');
-                const paths = (answer!.body?.sources ?? []).map(source => (source.path ?? '').replace(/\\/g, '/'));
-                assert.ok(paths.some(path => path.endsWith(`/${data.file}`)), JSON.stringify(paths));
-                const library = paths.find(path => path.endsWith(`/${data.librarySource}`));
-                assert.ok(library, JSON.stringify(paths));
-                assert.ok(!library.startsWith(vscode.workspace.getWorkspaceFolder(document.uri)!.uri.fsPath.replace(/\\/g, '/')), library);
+        // VS Code asks for the loaded sources once its Loaded Scripts view shows
+        await vscode.commands.executeCommand('workbench.debug.loadedScriptsView.focus');
+        const asked = await eventually(async () => debug.requests('loadedSources')[0], request => request !== undefined, 'VS Code asks for the loaded sources');
+        const answer = await eventually(async () => debug.responses('loadedSources').find(message => message.request_seq === asked!.seq),
+            response => response !== undefined, 'The loaded sources are answered');
+        const paths = (answer!.body?.sources ?? []).map(source => (source.path ?? '').replace(/\\/g, '/'));
+        assert.ok(paths.some(path => path.endsWith(`/${data.file}`)), JSON.stringify(paths));
+        const library = paths.find(path => path.endsWith(`/${data.librarySource}`));
+        assert.ok(library, JSON.stringify(paths));
+        assert.ok(!library.startsWith(vscode.workspace.getWorkspaceFolder(document.uri)!.uri.fsPath.replace(/\\/g, '/')), library);
 
-                // VS Code has no Modules view; the answer says which modules are the program's own
-                const modules = (await session.customRequest('modules', {})).modules as { name: string; isUserCode?: boolean }[];
-                for (const [name, own] of Object.entries(data.modules as Record<string, boolean>)) {
-                    assert.strictEqual(modules.find(module => module.name === name)?.isUserCode, own, JSON.stringify(modules));
-                }
+        // VS Code has no Modules view; the answer says which modules are the program's own
+        const modules = (await debug.request<{ modules: { name: string; isUserCode?: boolean }[] }>('modules', {})).modules;
+        for (const [name, own] of Object.entries(data.modules as Record<string, boolean>)) {
+            assert.strictEqual(modules.find(module => module.name === name)?.isUserCode, own, JSON.stringify(modules));
+        }
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-    playbook('X327', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the line with two calls');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
-                const top = async () => ((await session.customRequest('stackTrace', { threadId })).stackFrames as { id: number; name: string; line: number }[])[0];
+    playbook('X327', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops at the line with two calls');
 
-                // the calls of the line, in the order it makes them, as VS Code's Step Into Target offers them
-                const targets = (await session.customRequest('stepInTargets', { frameId: (await top()).id })).targets as { id: number; label: string }[];
-                assert.deepStrictEqual(targets.map(target => target.label), data.targets);
+        // the calls of the line, in the order it makes them, as VS Code's Step Into Target offers them
+        const targets = (await debug.request<{ targets: { id: number; label: string }[] }>('stepInTargets',
+            { frameId: (await debug.top(stop.threadId)).id })).targets;
+        assert.deepStrictEqual(targets.map(target => target.label), data.targets);
 
-                // into the second call: the first runs without stopping, and the step ends in the chosen one
-                await session.customRequest('stepIn', { threadId, targetId: targets.find(target => target.label === data.into)!.id });
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 1, 'The step stops in the chosen call');
-                assert.strictEqual(dapEvents(sent, 'stopped')[1].body?.reason, 'step');
-                const frame = await top();
-                assert.deepStrictEqual([frame.name, frame.line], data.frame);
+        // into the second call: the first runs without stopping, and the step ends in the chosen one
+        await debug.request('stepIn', { threadId: stop.threadId, targetId: targets.find(target => target.label === data.into)!.id });
+        assert.strictEqual((await debug.stopped('The step stops in the chosen call', 1)).reason, 'step');
+        const frame = await debug.top(stop.threadId);
+        assert.deepStrictEqual([frame.name, frame.line], data.frame);
 
-                vscode.debug.removeBreakpoints([breakpoint]);
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        debug.removeBreakpoints();
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-    playbook('X328', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            // as the Breakpoints view's + adds it, with a condition on the method's parameter
-            const breakpoint = new vscode.FunctionBreakpoint(data.function, true, data.condition);
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops where it enters the method');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
+    playbook('X328', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        // as the Breakpoints view's + adds it, with a condition on the method's parameter
+        debug.add(new vscode.FunctionBreakpoint(data.function, true, data.condition));
+        await debug.launch(document.uri, data.module);
+        const stop = await debug.stopped('The program stops where it enters the method');
 
-                // installed as the program started, at the method's first line
-                const installed = dapEvents(sent, 'breakpoint').map(event => event.body?.breakpoint);
-                assert.ok(installed.some(state => state?.verified && state.line === data.frame[1]), JSON.stringify(installed));
+        // installed as the program started, at the method's first line
+        debug.installed(data.frame[1] as number);
 
-                // the second call, the first whose n is more than 5
-                const stopped = dapEvents(sent, 'stopped')[0].body;
-                assert.strictEqual(stopped?.reason, 'function breakpoint');
-                const frames = (await session.customRequest('stackTrace', { threadId: stopped?.threadId })).stackFrames as { name: string; line: number }[];
-                assert.deepStrictEqual([frames[0].name, frames[0].line], data.frame);
-                assert.deepStrictEqual([frames[1].name, frames[1].line], data.caller);
+        // the second call, the first whose n is more than 5
+        assert.strictEqual(stop.reason, 'function breakpoint');
+        const frames = await debug.frames(stop.threadId);
+        assert.deepStrictEqual([frames[0].name, frames[0].line], data.frame);
+        assert.deepStrictEqual([frames[1].name, frames[1].line], data.caller);
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'stopped').length, 1, JSON.stringify(sent));
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        await debug.continueToExit(data.exitCode);
+        assert.strictEqual(debug.events('stopped').length, 1, debug.transcript());
+        debug.printed(data.output);
+    }));
 
-    playbook('X329', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops in inner()');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
-                const stack = async () => (await session.customRequest('stackTrace', { threadId })).stackFrames as { id: number; name: string; line: number; canRestart?: boolean }[];
+    playbook('X329', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops in inner()');
 
-                // the frames that the Call Stack view offers Restart Frame on: not run(), which the runtime called
-                const frames = await stack();
-                assert.deepStrictEqual(frames.map(frame => frame.name), data.frames);
-                // false is said, since a frame that does not say it cannot restart can
-                assert.deepStrictEqual(frames.map(frame => frame.canRestart), data.canRestart);
+        // the frames that the Call Stack view offers Restart Frame on: not run(), which the runtime called
+        const frames = await debug.frames(stop.threadId);
+        assert.deepStrictEqual(frames.map(frame => frame.name), data.frames);
+        // false is said, since a frame that does not say it cannot restart can
+        assert.deepStrictEqual(frames.map(frame => frame.canRestart), data.canRestart);
 
-                // as Restart Frame does: its caller calls it again, and it stops at its first line
-                vscode.debug.removeBreakpoints([breakpoint]);
-                await session.customRequest('restartFrame', { frameId: frames.find(frame => frame.name === data.restart)!.id });
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 1, 'The restarted frame stops at its first line');
-                assert.strictEqual(dapEvents(sent, 'stopped')[1].body?.reason, 'restart');
-                const top = (await stack())[0];
-                assert.deepStrictEqual([top.name, top.line], data.frame);
+        // as Restart Frame does: its caller calls it again, and it stops at its first line
+        debug.removeBreakpoints();
+        await debug.request('restartFrame', { frameId: frames.find(frame => frame.name === data.restart)!.id });
+        assert.strictEqual((await debug.stopped('The restarted frame stops at its first line', 1)).reason, 'restart');
+        const top = await debug.top(stop.threadId);
+        assert.deepStrictEqual([top.name, top.line], data.frame);
 
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                const output = dapOutput(sent);
-                assert.ok(output.includes(data.output), output);
-                assert.strictEqual(output.split(data.printed).length - 1, 2, output);
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        await debug.continueToExit(data.exitCode);
+        const output = debug.output();
+        assert.ok(output.includes(data.output), output);
+        assert.strictEqual(output.split(data.printed).length - 1, 2, output);
+    }));
 
-    playbook('X330', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops before the first add()');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
-                const top = async () => ((await session.customRequest('stackTrace', { threadId })).stackFrames as { id: number; name: string; line: number }[])[0];
+    playbook('X330', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops before the first add()');
 
-                // the field of the variable's object, as the Variables view's Break on Value Change asks for it
-                const scopes = (await session.customRequest('scopes', { frameId: (await top()).id })).scopes as { variablesReference: number }[];
-                const locals = (await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables as DapVariable[];
-                const object = locals.find(variable => variable.name === data.variable)!;
-                const info = await session.customRequest('dataBreakpointInfo', { variablesReference: object.variablesReference, name: data.field }) as
-                    { dataId: string | null; description: string; accessTypes?: string[] };
-                assert.strictEqual(info.description, data.description);
-                assert.deepStrictEqual(info.accessTypes, ['write']);
-                const set = await session.customRequest('setDataBreakpoints', { breakpoints: [{ dataId: info.dataId, accessType: 'write' }] }) as
-                    { breakpoints: { verified: boolean }[] };
-                assert.ok(set.breakpoints[0].verified, JSON.stringify(set));
+        // the field of the variable's object, as the Variables view's Break on Value Change asks for it
+        const locals = await debug.locals((await debug.top(stop.threadId)).id);
+        const object = locals.find(variable => variable.name === data.variable)!;
+        const info = await debug.request<{ dataId: string | null; description: string; accessTypes?: string[] }>('dataBreakpointInfo',
+            { variablesReference: object.variablesReference, name: data.field });
+        assert.strictEqual(info.description, data.description);
+        assert.deepStrictEqual(info.accessTypes, ['write']);
+        const set = await debug.request<{ breakpoints: { verified: boolean }[] }>('setDataBreakpoints',
+            { breakpoints: [{ dataId: info.dataId, accessType: 'write' }] });
+        assert.ok(set.breakpoints[0].verified, JSON.stringify(set));
 
-                // each add() stops at the line after the one that changed the field, and says how it changed
-                vscode.debug.removeBreakpoints([breakpoint]);
-                for (const [index, change] of (data.changes as string[]).entries()) {
-                    await vscode.commands.executeCommand('workbench.action.debug.continue');
-                    await eventually(async () => dapEvents(sent, 'stopped').length, count => count > index + 1, `The program stops once ${change}`);
-                    const stopped = dapEvents(sent, 'stopped')[index + 1].body;
-                    assert.strictEqual(stopped?.reason, 'data breakpoint');
-                    assert.strictEqual(stopped?.description, change);
-                    const frame = await top();
-                    assert.deepStrictEqual([frame.name, frame.line], data.frame);
-                }
+        // each add() stops at the line after the one that changed the field, and says how it changed
+        debug.removeBreakpoints();
+        for (const [index, change] of (data.changes as string[]).entries()) {
+            await vscode.commands.executeCommand('workbench.action.debug.continue');
+            const stopped = await debug.stopped(`The program stops once ${change}`, index + 1);
+            assert.strictEqual(stopped.reason, 'data breakpoint');
+            assert.strictEqual(stopped.description, change);
+            const frame = await debug.top(stop.threadId);
+            assert.deepStrictEqual([frame.name, frame.line], data.frame);
+        }
 
-                await session.customRequest('setDataBreakpoints', { breakpoints: [] });
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                assert.ok(dapOutput(sent).includes(data.output), dapOutput(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        await debug.request('setDataBreakpoints', { breakpoints: [] });
+        await debug.continueToExit(data.exitCode);
+        debug.printed(data.output);
+    }));
 
-    playbook('X331', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        await embedded(async () => {
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            const start = vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            });
-            const termination = vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            });
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops in add()');
-                const session = started;
-                assert.ok(session, 'The Ecstasy debug session started');
-                const threadId = dapEvents(sent, 'stopped')[0].body?.threadId;
-                const frame = ((await session.customRequest('stackTrace', { threadId })).stackFrames as { id: number; line: number }[])[0];
+    playbook('X331', (workspace, data) => debugModule(workspace, data, async (debug, document) => {
+        const stop = await debug.launchToBreakpoint(document.uri, data.module, data.breakpointLine, 'The program stops in add()');
+        const frame = await debug.top(stop.threadId);
 
-                // what VS Code asks the language server for as it shows the values beside the code
-                const stopped = new vscode.Range(frame.line - 1, 0, frame.line - 1, 0);
-                const all = new vscode.Range(0, 0, document.lineCount, 0);
-                const values = await vscode.commands.executeCommand<vscode.InlineValue[]>('vscode.executeInlineValueProvider',
-                    document.uri, all, { frameId: frame.id, stoppedLocation: stopped });
-                const lookups = values.map(value => value as vscode.InlineValueVariableLookup);
-                assert.deepStrictEqual(lookups.map(lookup => [lookup.variableName, lookup.range.start.line + 1]), data.inlineValues);
-                assert.ok(lookups.every(lookup => lookup.caseSensitiveLookup), JSON.stringify(lookups));
+        // what VS Code asks the language server for as it shows the values beside the code
+        const stopped = new vscode.Range(frame.line - 1, 0, frame.line - 1, 0);
+        const all = new vscode.Range(0, 0, document.lineCount, 0);
+        const values = await vscode.commands.executeCommand<vscode.InlineValue[]>('vscode.executeInlineValueProvider',
+            document.uri, all, { frameId: frame.id, stoppedLocation: stopped });
+        const lookups = values.map(value => value as vscode.InlineValueVariableLookup);
+        assert.deepStrictEqual(lookups.map(lookup => [lookup.variableName, lookup.range.start.line + 1]), data.inlineValues);
+        assert.ok(lookups.every(lookup => lookup.caseSensitiveLookup), JSON.stringify(lookups));
 
-                // each name has its value in the stopped frame, where VS Code looks it up
-                const scopes = (await session.customRequest('scopes', { frameId: frame.id })).scopes as { variablesReference: number }[];
-                const locals = (await session.customRequest('variables', { variablesReference: scopes[0].variablesReference })).variables as DapVariable[];
-                for (const [name, value] of Object.entries(data.frameValues as Record<string, string>)) {
-                    assert.strictEqual(locals.find(variable => variable.name === name)?.value, value, JSON.stringify(locals));
-                }
+        // each name has its value in the stopped frame, where VS Code looks it up
+        const locals = await debug.locals(frame.id);
+        for (const [name, value] of Object.entries(data.frameValues as Record<string, string>)) {
+            assert.strictEqual(locals.find(variable => variable.name === name)?.value, value, JSON.stringify(locals));
+        }
 
-                vscode.debug.removeBreakpoints([breakpoint]);
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, done => done, 'The program runs to its exit');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                start.dispose();
-                termination.dispose();
-                tracker.dispose();
-            }
-        });
-    });
+        debug.removeBreakpoints();
+        await debug.continueToExit(data.exitCode);
+    }));
+}
+
+/** Checks the [watches], each an expression with its value and type, in the frame [frameId], and that the one [refused] names is refused with its reason. */
+async function checkWatches(debug: Debugger, frameId: number, watches: string[][], [refused, reason]: string[]): Promise<void> {
+    for (const [expression, value, type] of watches) {
+        const answer = await debug.evaluate(expression, frameId, 'watch');
+        assert.deepStrictEqual([answer.result, answer.type], [value, type], expression);
+    }
+    await assert.rejects(debug.evaluate(refused, frameId, 'watch'), (error: Error) => error.message.includes(reason));
 }
 
 /** X306's steps, by the commands that VS Code's Step Over, Step Into and Step Out buttons run. */
@@ -1783,39 +881,244 @@ const stepCommands: Record<string, string> = {
     out: 'workbench.action.debug.stepOut',
 };
 
-/** Records every DAP message that Ecstasy debug adapters send VS Code, and, given [received], those VS Code sends them. */
-function trackDebugSessions(sent: DapMessage[], received?: DapMessage[]): vscode.Disposable {
-    return vscode.debug.registerDebugAdapterTrackerFactory('xtc', {
-        createDebugAdapterTracker: () => ({
-            onDidSendMessage: (message: DapMessage) => { sent.push(message); },
-            onWillReceiveMessage: (message: DapMessage) => { received?.push(message); },
-        }),
-    });
+/** The launch configuration of [module] that its Debug lens starts, with [settings] besides. */
+function launchOf(module: string, settings: object = {}): vscode.DebugConfiguration {
+    return { type: 'xtc', request: 'launch', name: `Debug ${module}`, module, ...settings };
 }
 
-function dapEvents(sent: DapMessage[], name: string): DapMessage[] {
-    return sent.filter(message => message.type === 'event' && message.event === name);
-}
-
-function dapOutput(sent: DapMessage[]): string {
-    return dapEvents(sent, 'output').map(message => message.body?.output ?? '').join('');
+/** A breakpoint on the one-based [line] of [uri], as a click in the editor's gutter sets it, and Edit Breakpoint changes it. */
+function lineBreakpoint(uri: vscode.Uri, line: number, condition?: string, hitCondition?: string, logMessage?: string): vscode.SourceBreakpoint {
+    return new vscode.SourceBreakpoint(new vscode.Location(uri, new vscode.Position(line - 1, 0)), true, condition, hitCondition, logMessage);
 }
 
 /**
- * The stack of [stop]'s thread that VS Code asked for after the stop, from its top frame, in [messages] of both
- * directions: each request's frames go where its `startFrame` puts them.
+ * What a case sees of the Ecstasy debug sessions it starts: the Debug Adapter Protocol messages both ways, the session and
+ * whether it ended, and the breakpoints the case set, which [close] removes again.
  */
-function stackAfter(messages: DapMessage[], stop: DapMessage): DapFrame[] {
-    const after = messages.slice(messages.indexOf(stop));
-    const frames: DapFrame[] = [];
-    after.filter(message => message.type === 'request' && message.command === 'stackTrace' && message.arguments?.threadId === stop.body?.threadId)
-        .forEach(request => after.find(message => message.type === 'response' && message.request_seq === request.seq)?.body?.stackFrames
-            ?.forEach((frame, index) => { frames[(request.arguments?.startFrame ?? 0) + index] = frame; }));
-    const gap = frames.findIndex(frame => frame === undefined);
-    return gap < 0 ? frames : frames.slice(0, gap);
+class Debugger {
+    /** The messages the debug adapters send VS Code. */
+    private readonly sent: DapMessage[] = [];
+    /** The messages VS Code sends the debug adapters. */
+    private readonly received: DapMessage[] = [];
+    /** The messages both ways, in the order they went, so that the stack requests of a stop follow it. */
+    private readonly messages: DapMessage[] = [];
+    private readonly breakpoints: vscode.Breakpoint[] = [];
+    private started?: vscode.DebugSession;
+    private done = false;
+    private readonly subscriptions = [
+        vscode.debug.registerDebugAdapterTrackerFactory('xtc', {
+            createDebugAdapterTracker: () => ({
+                onDidSendMessage: (message: DapMessage) => {
+                    this.sent.push(message);
+                    this.messages.push(message);
+                },
+                onWillReceiveMessage: (message: DapMessage) => {
+                    this.received.push(message);
+                    this.messages.push(message);
+                },
+            }),
+        }),
+        vscode.debug.onDidStartDebugSession(session => {
+            if (session.type === 'xtc') this.started = session;
+        }),
+        vscode.debug.onDidTerminateDebugSession(session => {
+            if (session.type === 'xtc') this.done = true;
+        }),
+    ];
+
+    /** The session that started, which the case asks what VS Code's views ask. */
+    get session(): vscode.DebugSession {
+        assert.ok(this.started, 'The Ecstasy debug session started');
+        return this.started;
+    }
+
+    /** Sets [breakpoints], all at once, as VS Code sends them to the adapter. */
+    add(...breakpoints: vscode.Breakpoint[]): void {
+        vscode.debug.addBreakpoints(breakpoints);
+        this.breakpoints.push(...breakpoints);
+    }
+
+    removeBreakpoints(): void {
+        vscode.debug.removeBreakpoints(this.breakpoints);
+    }
+
+    /** Starts a debug session of [module], as its Debug lens does, in the folder of [uri]. */
+    async launch(uri: vscode.Uri, module: string, settings: object = {}): Promise<void> {
+        assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(uri), launchOf(module, settings)),
+            `The launch of ${module} starts a debug session in the language server`);
+    }
+
+    /** Sets a breakpoint on the one-based [line] of [uri], launches [module] with [settings], and waits until the program first stops. */
+    async launchToBreakpoint(uri: vscode.Uri, module: string, line: number, message: string, settings: object = {}): Promise<DapBody> {
+        this.add(lineBreakpoint(uri, line));
+        await this.launch(uri, module, settings);
+        return this.stopped(message);
+    }
+
+    events(name: string): DapMessage[] {
+        return this.sent.filter(message => message.type === 'event' && message.event === name);
+    }
+
+    /** What the program printed, as the Debug Console shows it. */
+    output(): string {
+        return this.events('output').map(message => message.body?.output ?? '').join('');
+    }
+
+    printed(text: string): void {
+        assert.ok(this.output().includes(text), this.output());
+    }
+
+    /** Every message the debug adapters sent, for a failure to show. */
+    transcript(): string {
+        return JSON.stringify(this.sent);
+    }
+
+    /** The adapters' responses to [command], after the message [after], if given. */
+    responses(command: string, after?: DapMessage): DapMessage[] {
+        return this.sent.slice(after ? this.sent.indexOf(after) : 0).filter(message => message.type === 'response' && message.command === command);
+    }
+
+    /** VS Code's requests of [command]. */
+    requests(command: string): DapMessage[] {
+        return this.received.filter(message => message.type === 'request' && message.command === command);
+    }
+
+    /**
+     * Waits until the program has stopped after [index] stops before, and returns what that stop says; a session that ends
+     * first fails at once, with what the adapter sent, instead of the wait running out.
+     */
+    async stopped(message: string, index = 0, timeoutMs?: number): Promise<DapBody> {
+        await eventually(async () => this.events('stopped').length > index || this.done, value => value, message, timeoutMs);
+        const stops = this.events('stopped');
+        assert.ok(stops.length > index, `The session ended without stopping: ${this.transcript()}`);
+        return stops[index].body ?? {};
+    }
+
+    /** Checks that the adapter installed a breakpoint on [line], as its `breakpoint` events say. */
+    installed(line: number): void {
+        const installed = this.events('breakpoint').map(message => message.body?.breakpoint);
+        assert.ok(installed.some(item => item?.verified && item.line === line), JSON.stringify(installed));
+    }
+
+    /** The frames of the stacks VS Code asked for itself, after the message [after], if given, once there are [count]. */
+    shownFrames(count: number, message: string, after?: DapMessage): Promise<DapFrame[]> {
+        return eventually(async () => this.responses('stackTrace', after).flatMap(response => response.body?.stackFrames ?? []),
+            frames => frames.length >= count, message);
+    }
+
+    /** Waits until VS Code has asked for the stack of a stop, as it does to show it, and checks its top frames are [expected]. */
+    async showsStack(expected: readonly unknown[], message: string): Promise<DapFrame[]> {
+        const frames = await this.shownFrames(expected.length, message);
+        assert.deepStrictEqual(frames.slice(0, expected.length).map(frame => [frame.name, frame.line]), expected);
+        return frames;
+    }
+
+    /** Checks the first stop: at the installed breakpoint on [line] of [uri], with the stack VS Code shows [expected] at its top. */
+    async atBreakpoint(uri: vscode.Uri, line: number, expected: readonly unknown[]): Promise<DapFrame[]> {
+        this.installed(line);
+        assert.strictEqual(this.events('stopped')[0].body?.reason, 'breakpoint');
+        const frames = await this.showsStack(expected, 'VS Code shows the call stack');
+        assert.strictEqual(await fs.realpath(frames[0].source!.path!), await fs.realpath(uri.fsPath));
+        return frames;
+    }
+
+    /**
+     * The stack of [stop]'s thread that VS Code asked for after the stop, from its top frame: each request's frames go where
+     * its `startFrame` puts them.
+     */
+    stackAfter(stop: DapMessage): DapFrame[] {
+        const after = this.messages.slice(this.messages.indexOf(stop));
+        const frames: DapFrame[] = [];
+        after.filter(message => message.type === 'request' && message.command === 'stackTrace' && message.arguments?.threadId === stop.body?.threadId)
+            .forEach(request => after.find(message => message.type === 'response' && message.request_seq === request.seq)?.body?.stackFrames
+                ?.forEach((frame, index) => { frames[(request.arguments?.startFrame ?? 0) + index] = frame; }));
+        const gap = frames.findIndex(frame => frame === undefined);
+        return gap < 0 ? frames : frames.slice(0, gap);
+    }
+
+    /** Sends the session the request [command], as one of VS Code's views does. */
+    request<T>(command: string, args?: object): Promise<T> {
+        return Promise.resolve(this.session.customRequest(command, args));
+    }
+
+    async frames(threadId: number | undefined): Promise<DapFrame[]> {
+        return (await this.request<{ stackFrames: DapFrame[] }>('stackTrace', { threadId })).stackFrames;
+    }
+
+    async top(threadId: number | undefined): Promise<DapFrame> {
+        return (await this.frames(threadId))[0];
+    }
+
+    async scopes(frameId: number): Promise<DapScope[]> {
+        return (await this.request<{ scopes: DapScope[] }>('scopes', { frameId })).scopes;
+    }
+
+    /** The reference of the frame's locals, its first scope. */
+    async localsReference(frameId: number): Promise<number> {
+        return (await this.scopes(frameId))[0].variablesReference;
+    }
+
+    async variables(variablesReference: number, paging: object = {}): Promise<DapVariable[]> {
+        return (await this.request<{ variables: DapVariable[] }>('variables', { variablesReference, ...paging })).variables;
+    }
+
+    async locals(frameId: number): Promise<DapVariable[]> {
+        return this.variables(await this.localsReference(frameId));
+    }
+
+    evaluate(expression: string, frameId: number, context: string): Promise<{ result: string; type?: string; variablesReference: number }> {
+        return this.request('evaluate', { expression, frameId, context });
+    }
+
+    /** Waits until the adapter tells VS Code to read [areas] again, as its first `invalidated` event says. */
+    async invalidates(areas: string[], message: string): Promise<void> {
+        await eventually(async () => this.events('invalidated'), events => events.length > 0, message);
+        assert.deepStrictEqual(this.events('invalidated')[0].body?.areas, areas);
+    }
+
+    /** Waits until the session ends. */
+    async end(message: string, timeoutMs?: number): Promise<void> {
+        await eventually(async () => this.done, done => done, message, timeoutMs);
+    }
+
+    /** Checks that the program exited with [exitCode], as the adapter's `exited` event says. */
+    exited(exitCode: number): void {
+        assert.strictEqual(this.events('exited')[0]?.body?.exitCode, exitCode, this.transcript());
+    }
+
+    /** Continues the stopped program, as the Continue button does, and checks that it runs to its exit with [exitCode]. */
+    async continueToExit(exitCode: number, message = 'The program runs to its exit'): Promise<void> {
+        await vscode.commands.executeCommand('workbench.action.debug.continue');
+        await this.end(message);
+        this.exited(exitCode);
+    }
+
+    /** Removes the breakpoints set, stops a session that has not ended, as one a case failed in while it was stopped, and stops listening. */
+    async close(): Promise<void> {
+        vscode.debug.removeBreakpoints(this.breakpoints);
+        if (this.started && !this.done) await vscode.debug.stopDebugging(this.started);
+        this.subscriptions.forEach(each => each.dispose());
+    }
 }
 
-/** The parts of a Debug Adapter Protocol message that the X285, X304-X331 and X336-X338 cases check. */
+/** Runs [body] with a [Debugger], which leaves no session, breakpoint or listener behind, also when [body] fails while the program is stopped. */
+async function debugging(body: (debug: Debugger) => Promise<void>): Promise<void> {
+    const debug = new Debugger();
+    try {
+        await body(debug);
+    } finally {
+        await debug.close();
+    }
+}
+
+/** Opens [data]'s module as the graph's only one, and runs [body] with a [Debugger] in embedded build mode. */
+async function debugModule(workspace: Workspace, data: ModuleValues,
+    body: (debug: Debugger, document: vscode.TextDocument) => Promise<void>): Promise<void> {
+    const document = await workspace.module(data.file, data.source, data.module);
+    await embedded(() => debugging(debug => body(debug, document)));
+}
+
+/** The parts of a Debug Adapter Protocol message that the X285, X304-X331 and X336-X340 cases check. */
 interface DapMessage {
     seq?: number;
     request_seq?: number;
@@ -1841,11 +1144,21 @@ interface DapMessage {
     };
 }
 
+type DapBody = NonNullable<DapMessage['body']>;
+
 /** A frame as a `stackTrace` response gives it. */
 interface DapFrame {
+    id: number;
     name: string;
     line: number;
     source?: { path?: string };
+    canRestart?: boolean;
+}
+
+/** A scope as a `scopes` response gives it. */
+interface DapScope {
+    name: string;
+    variablesReference: number;
 }
 
 /** A variable as a `variables` response gives it. */
@@ -1861,13 +1174,10 @@ interface DapVariable {
 /** Console input for embedded runs; registered after the adapter chooser to keep catalog order. */
 export function executionInputCases(): void {
     playbook('X287', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         await embedded(async executions => {
-            const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), mode: 'embedded' }, getClient);
             const prompted = (update: ExecutionUpdate) => update.text.includes(data.prompt) && !finished(update);
-            await executions.start('run', data.module, () => vscode.tasks.executeTask(task), prompted, 'Program prompts for input');
+            await executions.task(data.module, document.uri, 'Program prompts for input', { until: prompted });
             // the newest terminal for this module is the run's task terminal
             const terminal = vscode.window.terminals.filter(item => item.name.includes(data.module)).pop();
             assert.ok(terminal, `A run terminal for ${data.module}`);
@@ -1918,25 +1228,21 @@ export function buildModeCases(): void {
             await fs.writeFile(root(data.wrapper), data.wrapperSource, { mode: 0o755 });
             await fs.writeFile(root(data.windowsWrapper), data.windowsWrapperSource);
             await settings.update('build.mode', undefined, vscode.ConfigurationTarget.Workspace);
-            const document = await workspace.open(data.file, data.source);
-            await configureModules(workspace, [{ name: data.module, file: data.file }]);
-            await noErrors(document.uri);
+            const document = await workspace.module(data.file, data.source, data.module);
 
             // the default is embedded, also beside a Gradle build, and says which of the build's settings apply
             assert.strictEqual(buildMode(folder), 'embedded');
             await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'Status bar shows the embedded build');
-            const built = await executions.start('build', 'all Ecstasy modules', () => vscode.commands.executeCommand('xtc.build'), finished, 'Embedded build finishes');
+            const built = await executions.build('Embedded build finishes');
             assert.strictEqual(built.exitCode, 0, built.text);
             assert.ok(built.text.includes(data.notice), built.text);
-            const run = await executions.start('run', data.module,
-                () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module), finished, 'Embedded run finishes');
+            const run = await executions.lens(data.module, document.uri, 'Embedded run finishes');
             assert.strictEqual(run.exitCode, 0, run.text);
             assert.ok(run.text.includes(data.output), run.text);
             assert.deepStrictEqual(await invocations(), [], 'Embedded mode does not call Gradle');
 
             // Gradle, chosen the way the command and the status bar choose it
-            await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
-            await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
+            await selectBuildMode(folder, 'gradle', data.statusGradle, 'Status bar shows the Gradle build');
             assert.strictEqual(await shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build')), 0, 'Gradle build exit code');
             assert.deepStrictEqual(await invocations(), [data.gradleBuild], 'Build calls the Gradle wrapper');
             assert.strictEqual(await shellTaskExit(`Run ${data.module}`,
@@ -1946,10 +1252,8 @@ export function buildModeCases(): void {
             assert.ok(calls[1].includes(data.gradleRun), calls.join('\n'));
 
             // and back: Run is embedded again
-            await vscode.commands.executeCommand('xtc.selectBuildMode', 'embedded', folder.uri);
-            await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'Status bar shows the embedded build again');
-            const again = await executions.start('run', data.module,
-                () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module), finished, 'Embedded run after switching back finishes');
+            await selectBuildMode(folder, 'embedded', data.statusEmbedded, 'Status bar shows the embedded build again');
+            const again = await executions.lens(data.module, document.uri, 'Embedded run after switching back finishes');
             assert.strictEqual(again.exitCode, 0, again.text);
             assert.ok(again.text.includes(data.output), again.text);
             assert.strictEqual((await invocations()).length, 2, 'No Gradle call after switching back');
@@ -1961,16 +1265,9 @@ export function buildModeCases(): void {
     });
 
     playbook('X289', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         await embedded(async executions => {
-            const runOnce = async (message: string) => {
-                const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), mode: 'embedded' }, getClient);
-                const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
-                assert.strictEqual(run.exitCode, data.exitCode, run.text);
-                return run.text;
-            };
+            const runOnce = (message: string) => executions.exits(data.module, document.uri, data.exitCode, message);
             assert.ok((await runOnce('First run finishes')).includes(data.first));
             assert.ok((await runOnce('Second run of the unchanged module finishes')).includes(data.first));
             // edited and not saved: the run builds and runs the editor's text, not the earlier build, and
@@ -2000,6 +1297,7 @@ interface GradleProjectValues {
     catalog: string;
     versionPattern: string;
     mavenLocal: readonly string[];
+    statusGradle: string;
 }
 
 /**
@@ -2045,8 +1343,7 @@ async function withGradleProject(id: string, data: GradleProjectValues,
 export function gradleProjectCases(): void {
     playbook('X303', async (_workspace, data) => {
         await withGradleProject('X303', data, async (folder, root) => {
-            await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
-            await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
+            await selectBuildMode(folder, 'gradle', data.statusGradle, 'Status bar shows the Gradle build');
             const build = () => shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build'), GRADLE_WAIT_MS);
             assert.strictEqual(await build(), 0, 'Gradle build exit code');
             for (const artifact of data.artifacts) assert.ok(await exists(root(artifact)), `The Gradle build writes ${artifact}`);
@@ -2075,59 +1372,16 @@ export function gradleDebugCases(): void {
         await withGradleProject('X337', data, async (folder, root) => {
             const module = vscode.Uri.file(root(data.moduleFile));
             await fs.writeFile(module.fsPath, data.source);
-            await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
-            await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
-
-            const sent: DapMessage[] = [];
-            const tracker = trackDebugSessions(sent);
-            let ended = false;
-            let started: vscode.DebugSession | undefined;
-            let taskExit: number | undefined;
-            let taskEnded = false;
-            const subscriptions = [
-                vscode.debug.onDidStartDebugSession(session => {
-                    if (session.type === 'xtc') started = session;
-                }),
-                vscode.debug.onDidTerminateDebugSession(session => {
-                    if (session.type === 'xtc') ended = true;
-                }),
-                vscode.tasks.onDidEndTaskProcess(event => {
-                    if (event.execution.task.name === `Debug ${data.module}`) {
-                        taskEnded = true;
-                        taskExit = event.exitCode;
-                    }
-                }),
-            ];
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(module, new vscode.Position(data.breakpointLine - 1, 0)));
-            vscode.debug.addBreakpoints([breakpoint]);
-            try {
-                assert.ok(await vscode.debug.startDebugging(folder,
-                    { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module }));
-                // a session that ends without stopping says what it did, instead of the wait running out
-                await eventually(async () => dapEvents(sent, 'stopped').length > 0 || ended, value => value,
-                    'Gradle runs the program, which stops at the breakpoint', GRADLE_WAIT_MS);
-                assert.ok(dapEvents(sent, 'stopped').length > 0, `The session ended without stopping: ${JSON.stringify(sent)}`);
-                const installed = dapEvents(sent, 'breakpoint').map(message => message.body?.breakpoint);
-                assert.ok(installed.some(item => item?.verified && item.line === data.breakpointLine), JSON.stringify(installed));
-                assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
-                const frames = await eventually(
-                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
-                        .flatMap(message => message.body?.stackFrames ?? []),
-                    values => values.length >= data.frames.length, 'VS Code shows the call stack');
-                assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
-                assert.strictEqual(await fs.realpath(frames[0].source!.path!), await fs.realpath(module.fsPath));
-
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue runs the program to its exit, which ends the session');
-                assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-                await eventually(async () => taskEnded, value => value, 'The Gradle task ends with its program', GRADLE_WAIT_MS);
-                assert.strictEqual(taskExit, 0, 'Gradle task exit code');
-            } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                subscriptions.forEach(each => each.dispose());
-                tracker.dispose();
-            }
+            await selectBuildMode(folder, 'gradle', data.statusGradle, 'Status bar shows the Gradle build');
+            // the Gradle task ends with its program
+            const exit = await shellTaskExit(`Debug ${data.module}`, () => debugging(async debug => {
+                debug.add(lineBreakpoint(module, data.breakpointLine));
+                await debug.launch(module, data.module);
+                await debug.stopped('Gradle runs the program, which stops at the breakpoint', 0, GRADLE_WAIT_MS);
+                await debug.atBreakpoint(module, data.breakpointLine, data.frames);
+                await debug.continueToExit(data.exitCode, 'Continue runs the program to its exit, which ends the session');
+            }), GRADLE_WAIT_MS);
+            assert.strictEqual(exit, 0, 'Gradle task exit code');
         });
     }, 360_000);
 }
@@ -2138,113 +1392,119 @@ export function gradleDebugCases(): void {
  */
 export function commandLineDebugCases(): void {
     playbook('X338', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        const sent: DapMessage[] = [];
-        const tracker = trackDebugSessions(sent);
-        let ended = false;
-        let started: vscode.DebugSession | undefined;
+        const document = await workspace.module(data.file, data.source, data.module);
         const tasks: string[] = [];
-        const subscriptions = [
-            vscode.debug.onDidStartDebugSession(session => {
-                if (session.type === 'xtc') started = session;
-            }),
-            vscode.debug.onDidTerminateDebugSession(session => {
-                if (session.type === 'xtc') ended = true;
-            }),
-            vscode.tasks.onDidStartTask(event => { tasks.push(event.execution.task.name); }),
-        ];
+        const listener = vscode.tasks.onDidStartTask(event => { tasks.push(event.execution.task.name); });
         try {
-            // VS Code shows a failed launch in a dialog, which its test host refuses, so the start fails either way
-            const start = await Promise.resolve(vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                { type: 'xtc', request: 'launch', name: `Debug ${data.module}`, module: data.module, buildMode: 'commandLine' }))
-                .then(value => String(value), (error: Error) => error.message);
-            assert.ok(start === 'false' || start.includes(data.refused), start);
-            const launch = await eventually(
-                async () => sent.find(message => message.type === 'response' && message.command === 'launch'),
-                value => value !== undefined, 'The command-line launch answers');
-            assert.strictEqual(launch?.success, false, JSON.stringify(launch));
-            assert.ok(launch?.message?.includes(data.refused), JSON.stringify(launch));
-            assert.strictEqual(dapEvents(sent, 'stopped').length, 0, JSON.stringify(sent));
-            assert.deepStrictEqual(tasks, [], 'A command-line launch runs no task');
+            await debugging(async debug => {
+                // VS Code shows a failed launch in a dialog, which its test host refuses, so the start fails either way
+                const start = await Promise.resolve(vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    launchOf(data.module, { buildMode: 'commandLine' }))).then(value => String(value), (error: Error) => error.message);
+                assert.ok(start === 'false' || start.includes(data.refused), start);
+                const launch = await eventually(async () => debug.responses('launch')[0], value => value !== undefined, 'The command-line launch answers');
+                assert.strictEqual(launch?.success, false, JSON.stringify(launch));
+                assert.ok(launch?.message?.includes(data.refused), JSON.stringify(launch));
+                assert.strictEqual(debug.events('stopped').length, 0, debug.transcript());
+                assert.deepStrictEqual(tasks, [], 'A command-line launch runs no task');
+            });
         } finally {
-            if (started && !ended) await vscode.debug.stopDebugging(started);
-            subscriptions.forEach(each => each.dispose());
-            tracker.dispose();
+            listener.dispose();
         }
     });
 }
 
-/**
- * X336, registered after X335 in catalog order: a debug session attaches to a program that the XDK's xec runs with
- * --debug outside the editor, through the agent that the XDK's javatools has.
- */
+/** What the Test Explorer listed, started and reported while a case watched it, until [dispose]. */
+export class TestWatch implements vscode.Disposable {
+    readonly reports: TestReport[] = [];
+    readonly started: string[] = [];
+    listed: readonly string[] = [];
+    private readonly subscriptions = [
+        onDidReportTest(report => this.reports.push(report)),
+        onDidStartTest(id => this.started.push(id)),
+        onDidRefreshTests(ids => { this.listed = ids; }),
+    ];
+
+    /** The latest report of the test [id]. */
+    result(id: string): TestReport | undefined {
+        return this.reports.filter(report => report.id === id).pop();
+    }
+
+    /** Waits until the Test Explorer lists each of [ids], asking it to list the tests again. */
+    async listing(ids: readonly string[], message = 'The Test Explorer lists the module\'s tests', timeoutMs?: number): Promise<void> {
+        await eventually(async () => {
+            await vscode.commands.executeCommand('testing.refreshTests');
+            return this.listed;
+        }, listed => ids.every(id => listed.includes(id)), message, timeoutMs);
+    }
+
+    /** Waits until each of [ids] has a report, and answers the latest of each. */
+    async results(ids: readonly string[], what: string, timeoutMs?: number): Promise<TestReport[]> {
+        return eventually(async () => ids.map(id => this.result(id)!), reports => reports.every(Boolean), what, timeoutMs);
+    }
+
+    /** Waits until [data]'s tests are reported, and checks that the passed ones passed, and the failed one failed where and as it says. */
+    async checkRun(data: { passed: readonly string[]; failed: string; failure: string; failureLine: number }, what: string, timeoutMs?: number): Promise<void> {
+        const [failure, ...passed] = await this.results([data.failed, ...data.passed], what, timeoutMs);
+        for (const report of passed) assert.strictEqual(report.state, 'passed', JSON.stringify(this.reports));
+        assert.strictEqual(failure.state, 'failed', JSON.stringify(this.reports));
+        assert.strictEqual(failure.message, data.failure);
+        assert.strictEqual(failure.line, data.failureLine);
+    }
+
+    /**
+     * Debugs the test whose name is at [data]'s line and column of [editor], as Debug Test at Cursor does, to the breakpoint on
+     * [data]'s line, and on to its end; checks that it alone ran, and passed.
+     */
+    async debugAtCursor(editor: vscode.TextEditor, data: { debugged: string; nameLine: number; nameColumn: number; breakpointLine: number; printed: string },
+        stopMessage: string, timeoutMs?: number): Promise<void> {
+        this.reports.length = 0;
+        await debugging(async debug => {
+            debug.add(lineBreakpoint(editor.document.uri, data.breakpointLine));
+            select(editor, data.nameLine, data.nameColumn);
+            // the command answers once its test run has ended, which waits for the session that the breakpoint stops
+            const running = vscode.commands.executeCommand('testing.debugAtCursor');
+            assert.strictEqual((await debug.stopped(stopMessage, 0, timeoutMs)).reason, 'breakpoint');
+            const frames = await debug.shownFrames(1, 'VS Code shows the call stack');
+            assert.ok(frames[0].name.endsWith('works'), JSON.stringify(frames[0]));
+            assert.strictEqual(frames[0].line, data.breakpointLine);
+
+            await vscode.commands.executeCommand('workbench.action.debug.continue');
+            await debug.end('Continue runs the test to its end', timeoutMs);
+            await running;
+            await eventually(async () => this.result(data.debugged)?.state, state => state === 'passed', 'The debugged test passes');
+            debug.printed(data.printed);
+            assert.deepStrictEqual(this.reports.map(report => report.id), [data.debugged], 'Debug Test at Cursor runs that test alone');
+        });
+    }
+
+    dispose(): void {
+        this.subscriptions.forEach(each => each.dispose());
+    }
+}
+
+/** Runs [body] with a [TestWatch], which stops watching after it. */
+export async function watchTests(body: (tests: TestWatch) => Promise<void>): Promise<void> {
+    const tests = new TestWatch();
+    try {
+        await body(tests);
+    } finally {
+        tests.dispose();
+    }
+}
+
 /**
  * X339, registered after X338 in catalog order: the Test Explorer lists the module's tests, Run All marks each passed
  * or failed, and Debug Test at Cursor stops at a breakpoint in the test and runs it to its end.
  */
 export function testExplorerCases(): void {
     playbook('X339', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
-        const reports: TestReport[] = [];
-        let listed: readonly string[] = [];
-        const sent: DapMessage[] = [];
-        let started: vscode.DebugSession | undefined;
-        let ended = false;
-        const watching = [
-            onDidReportTest(report => reports.push(report)),
-            onDidRefreshTests(ids => { listed = ids; }),
-            trackDebugSessions(sent),
-            vscode.debug.onDidStartDebugSession(session => { if (session.type === 'xtc') started = session; }),
-            vscode.debug.onDidTerminateDebugSession(session => { if (session.type === 'xtc') ended = true; }),
-        ];
-        const result = (id: string) => reports.filter(report => report.id === id).pop();
-        const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-        try {
-            await eventually(async () => {
-                await vscode.commands.executeCommand('testing.refreshTests');
-                return listed;
-            }, ids => data.items.every((id: string) => ids.includes(id)), 'The Test Explorer lists the module\'s tests');
-
+        const document = await workspace.module(data.file, data.source, data.module);
+        await watchTests(async tests => {
+            await tests.listing(data.items);
             await vscode.commands.executeCommand('testing.runAll');
-            await eventually(async () => [...data.passed, data.failed].map(result), states => states.every(state => !!state), 'Run All reports every test');
-            for (const id of data.passed) assert.strictEqual(result(id)?.state, 'passed', JSON.stringify(reports));
-            const failure = result(data.failed);
-            assert.strictEqual(failure?.state, 'failed', JSON.stringify(reports));
-            assert.strictEqual(failure?.message, data.failure);
-            assert.strictEqual(failure?.line, data.failureLine);
-
-            reports.length = 0;
-            vscode.debug.addBreakpoints([breakpoint]);
-            const editor = await vscode.window.showTextDocument(document);
-            const name = new vscode.Position(data.nameLine - 1, data.nameColumn);
-            editor.selection = new vscode.Selection(name, name);
-            // the command answers once its test run has ended, which waits for the session that the breakpoint stops
-            const debugging = vscode.commands.executeCommand('testing.debugAtCursor');
-            await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The debugged test stops at the breakpoint');
-            assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
-            const frames = await eventually(
-                async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
-                    .flatMap(message => message.body?.stackFrames ?? []),
-                values => values.length > 0, 'VS Code shows the call stack');
-            assert.ok(frames[0].name.endsWith('works'), JSON.stringify(frames[0]));
-            assert.strictEqual(frames[0].line, data.breakpointLine);
-
-            await vscode.commands.executeCommand('workbench.action.debug.continue');
-            await eventually(async () => ended, value => value, 'Continue runs the test to its end');
-            await debugging;
-            await eventually(async () => result(data.debugged)?.state, state => state === 'passed', 'The debugged test passes');
-            assert.ok(dapOutput(sent).includes(data.printed), dapOutput(sent));
-            assert.deepStrictEqual(reports.map(report => report.id), [data.debugged], 'Debug Test at Cursor runs that test alone');
-        } finally {
-            vscode.debug.removeBreakpoints([breakpoint]);
-            // a case that fails while its test is stopped leaves no session for the next one
-            if (started && !ended) await vscode.debug.stopDebugging(started);
-            watching.forEach(item => item.dispose());
-        }
+            await tests.checkRun(data, 'Run All reports every test');
+            await tests.debugAtCursor(await vscode.window.showTextDocument(document), data, 'The debugged test stops at the breakpoint');
+        });
     });
 }
 
@@ -2267,7 +1527,6 @@ interface GradleTestValues extends GradleProjectValues {
     nameColumn: number;
     breakpointLine: number;
     printed: string;
-    statusGradle: string;
 }
 
 /**
@@ -2285,79 +1544,30 @@ export function gradleTestCases(): void {
                 { name: data.mainModule, uri: vscode.Uri.file(root(data.mainFile)).toString() },
                 { name: data.module, uri: file.toString(), dependencies: [data.mainModule] },
             ]);
-            await vscode.commands.executeCommand('xtc.selectBuildMode', 'gradle', folder.uri);
-            await eventually(async () => buildModeStatus(), text => text === data.statusGradle, 'Status bar shows the Gradle build');
+            await selectBuildMode(folder, 'gradle', data.statusGradle, 'Status bar shows the Gradle build');
             const editor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
-            const at = (line: number, column: number) => {
-                const position = new vscode.Position(line - 1, column);
-                editor.selection = new vscode.Selection(position, position);
-            };
-            const reports: TestReport[] = [];
-            let listed: readonly string[] = [];
-            const sent: DapMessage[] = [];
-            let started: vscode.DebugSession | undefined;
-            let ended = false;
-            const watching = [
-                onDidReportTest(report => reports.push(report)),
-                onDidRefreshTests(ids => { listed = ids; }),
-                trackDebugSessions(sent),
-                vscode.debug.onDidStartDebugSession(session => { if (session.type === 'xtc') started = session; }),
-                vscode.debug.onDidTerminateDebugSession(session => { if (session.type === 'xtc') ended = true; }),
-            ];
-            const result = (id: string) => reports.filter(report => report.id === id).pop();
-            const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(file, new vscode.Position(data.breakpointLine - 1, 0)));
+            const tests = new TestWatch();
             try {
-                await eventually(async () => {
-                    await vscode.commands.executeCommand('testing.refreshTests');
-                    return listed;
-                }, ids => data.items.every(id => ids.includes(id)), 'The Test Explorer lists the test module\'s tests', GRADLE_WAIT_MS);
-
-                at(data.classLine, data.classColumn);
+                await tests.listing(data.items, 'The Test Explorer lists the test module\'s tests', GRADLE_WAIT_MS);
+                select(editor, data.classLine, data.classColumn);
                 await vscode.commands.executeCommand('testing.runAtCursor');
-                await eventually(async () => [...data.passed, data.failed].map(result), states => states.every(state => !!state),
-                    'testXtc runs the class\'s tests', GRADLE_WAIT_MS);
-                for (const id of data.passed) assert.strictEqual(result(id)?.state, 'passed', JSON.stringify(reports));
-                const failure = result(data.failed);
-                assert.strictEqual(failure?.state, 'failed', JSON.stringify(reports));
-                assert.strictEqual(failure?.message, data.failure);
-                assert.strictEqual(failure?.line, data.failureLine);
-
-                reports.length = 0;
-                vscode.debug.addBreakpoints([breakpoint]);
-                at(data.nameLine, data.nameColumn);
-                // the command answers once its test run has ended, which waits for the session that the breakpoint stops
-                const debugging = vscode.commands.executeCommand('testing.debugAtCursor');
-                await eventually(async () => dapEvents(sent, 'stopped').length > 0 || ended, value => value,
-                    'testXtc runs the test under the debugger, which stops at the breakpoint', GRADLE_WAIT_MS);
-                assert.ok(dapEvents(sent, 'stopped').length > 0, `The session ended without stopping: ${JSON.stringify(sent)}`);
-                const frames = await eventually(
-                    async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
-                        .flatMap(message => message.body?.stackFrames ?? []),
-                    values => values.length > 0, 'VS Code shows the call stack');
-                assert.ok(frames[0].name.endsWith('works'), JSON.stringify(frames[0]));
-                assert.strictEqual(frames[0].line, data.breakpointLine);
-
-                await vscode.commands.executeCommand('workbench.action.debug.continue');
-                await eventually(async () => ended, value => value, 'Continue runs the test to its end', GRADLE_WAIT_MS);
-                await debugging;
-                await eventually(async () => result(data.debugged)?.state, state => state === 'passed', 'The debugged test passes');
-                assert.ok(dapOutput(sent).includes(data.printed), dapOutput(sent));
-                assert.deepStrictEqual(reports.map(report => report.id), [data.debugged], 'Debug Test at Cursor runs that test alone');
+                await tests.checkRun(data, 'testXtc runs the class\'s tests', GRADLE_WAIT_MS);
+                await tests.debugAtCursor(editor, data, 'testXtc runs the test under the debugger, which stops at the breakpoint', GRADLE_WAIT_MS);
             } finally {
-                vscode.debug.removeBreakpoints([breakpoint]);
-                if (started && !ended) await vscode.debug.stopDebugging(started);
-                watching.forEach(item => item.dispose());
+                tests.dispose();
                 await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
             }
         });
     });
 }
 
+/**
+ * X336, registered after X335 in catalog order: a debug session attaches to a program that the XDK's xec runs with
+ * --debug outside the editor, through the agent that the XDK's javatools has.
+ */
 export function attachCases(): void {
     playbook('X336', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         const xec = path.resolve(__dirname, '../../../../../xdk/build/install/xdk/bin', process.platform === 'win32' ? 'xec.bat' : 'xec');
         assert.ok(await exists(xec), `X336 runs its program with ${xec}; run ./gradlew xdk:installDist first`);
         const output = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-attach-'));
@@ -2368,51 +1578,26 @@ export function attachCases(): void {
         program.stderr.on('data', (chunk: Buffer) => { printed += chunk.toString('utf8'); });
         let exitCode: number | null | undefined;
         program.on('exit', code => { exitCode = code; });
-
-        const sent: DapMessage[] = [];
-        const tracker = trackDebugSessions(sent);
-        let ended = false;
-        let started: vscode.DebugSession | undefined;
-        const start = vscode.debug.onDidStartDebugSession(session => {
-            if (session.type === 'xtc') started = session;
-        });
-        const termination = vscode.debug.onDidTerminateDebugSession(session => {
-            if (session.type === 'xtc') ended = true;
-        });
-        const breakpoint = new vscode.SourceBreakpoint(new vscode.Location(document.uri, new vscode.Position(data.breakpointLine - 1, 0)));
-        vscode.debug.addBreakpoints([breakpoint]);
         try {
-            const listening = new RegExp(data.listening);
-            const port = Number(await eventually(async () => listening.exec(printed)?.[1], value => value !== undefined,
-                'The program listens for the debugger'));
-            assert.ok(!printed.includes(data.before), `The program waits for the debugger: ${printed}`);
-            assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
-                { type: 'xtc', request: 'attach', name: `Attach to ${data.module}`, port }));
-            await eventually(async () => dapEvents(sent, 'stopped').length, count => count > 0, 'The program stops at the breakpoint');
-            const installed = dapEvents(sent, 'breakpoint').map(message => message.body?.breakpoint);
-            assert.ok(installed.some(item => item?.verified && item.line === data.breakpointLine), JSON.stringify(installed));
-            assert.strictEqual(dapEvents(sent, 'stopped')[0].body?.reason, 'breakpoint');
-            const frames = await eventually(
-                async () => sent.filter(message => message.type === 'response' && message.command === 'stackTrace')
-                    .flatMap(message => message.body?.stackFrames ?? []),
-                values => values.length >= data.frames.length, 'VS Code shows the call stack');
-            assert.deepStrictEqual(frames.slice(0, data.frames.length).map(frame => [frame.name, frame.line]), data.frames);
-            assert.strictEqual(await fs.realpath(frames[0].source!.path!), await fs.realpath(document.uri.fsPath));
-            assert.ok(printed.includes(data.before) && !printed.includes(data.after), printed);
+            await debugging(async debug => {
+                debug.add(lineBreakpoint(document.uri, data.breakpointLine));
+                const listening = new RegExp(data.listening);
+                const port = Number(await eventually(async () => listening.exec(printed)?.[1], value => value !== undefined,
+                    'The program listens for the debugger'));
+                assert.ok(!printed.includes(data.before), `The program waits for the debugger: ${printed}`);
+                assert.ok(await vscode.debug.startDebugging(vscode.workspace.getWorkspaceFolder(document.uri),
+                    { type: 'xtc', request: 'attach', name: `Attach to ${data.module}`, port }));
+                await debug.stopped('The program stops at the breakpoint');
+                await debug.atBreakpoint(document.uri, data.breakpointLine, data.frames);
+                assert.ok(printed.includes(data.before) && !printed.includes(data.after), printed);
 
-            await vscode.commands.executeCommand('workbench.action.debug.continue');
-            await eventually(async () => ended, value => value, 'Continue runs the program to its exit, which ends the session');
-            assert.strictEqual(dapEvents(sent, 'exited')[0]?.body?.exitCode, data.exitCode, JSON.stringify(sent));
-            await eventually(async () => exitCode, code => code !== undefined, 'The program ends');
-            assert.strictEqual(exitCode, data.exitCode, printed);
-            assert.ok(printed.includes(data.after), printed);
+                await debug.continueToExit(data.exitCode, 'Continue runs the program to its exit, which ends the session');
+                await eventually(async () => exitCode, code => code !== undefined, 'The program ends');
+                assert.strictEqual(exitCode, data.exitCode, printed);
+                assert.ok(printed.includes(data.after), printed);
+            });
         } finally {
-            vscode.debug.removeBreakpoints([breakpoint]);
-            if (started && !ended) await vscode.debug.stopDebugging(started);
             program.kill();
-            start.dispose();
-            termination.dispose();
-            tracker.dispose();
             await fs.rm(output, { recursive: true, force: true });
         }
     });
@@ -2428,10 +1613,8 @@ export function renamedRootCases(ids: readonly ('X291' | 'X301')[]): void {
             await embedded(async executions => {
                 // a task saved with the module's root file, as tasks.json or Rerun keeps it
                 const runSaved = async (message: string) => {
-                    const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: workspace.uri(data.file).toString(), mode: 'embedded' }, getClient);
-                    const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
-                    assert.strictEqual(run.exitCode, data.exitCode, run.text);
-                    assert.ok(run.text.includes(data.output), run.text);
+                    const text = await executions.exits(data.module, workspace.uri(data.file), data.exitCode, message);
+                    assert.ok(text.includes(data.output), text);
                 };
                 await runSaved('Run before the rename finishes');
                 // renamed on disk, as by a terminal
@@ -2448,21 +1631,15 @@ export function renamedRootCases(ids: readonly ('X291' | 'X301')[]): void {
 /** Registered after the renamed-root case, as the catalog orders X292–X294 after X291. */
 export function runEntryCases(): void {
     playbook('X292', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         await embedded(async executions => {
-            const runOnce = async (message: string) => {
-                const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), mode: 'embedded' }, getClient);
-                const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
-                assert.strictEqual(run.exitCode, data.exitCode, run.text);
+            for (const message of ['First run finishes', 'Second run finishes']) {
+                const text = await executions.exits(data.module, document.uri, data.exitCode, message);
                 // the counter keeps its count within a run, and a run that went on from the run before it would
                 // print the counts after that run's
-                assert.ok(run.text.includes(data.output), run.text);
-                assert.ok(!run.text.includes(data.carriedOver), run.text);
-            };
-            await runOnce('First run finishes');
-            await runOnce('Second run finishes');
+                assert.ok(text.includes(data.output), text);
+                assert.ok(!text.includes(data.carriedOver), text);
+            }
         });
     });
 
@@ -2477,14 +1654,12 @@ export function runEntryCases(): void {
         await noErrors(twoArguments.uri);
         await embedded(async executions => {
             // neither module has a Run lens, so each runs from a task, as one saved in tasks.json
-            const refused = async (moduleName: string, uri: vscode.Uri, message: string, expected: string) => {
-                const task = createXtcRunTask({ type: 'xtc', moduleName, moduleUri: uri.toString(), mode: 'embedded' }, getClient);
-                const run = await executions.start('run', moduleName, () => vscode.tasks.executeTask(task), finished, message);
-                assert.strictEqual(run.exitCode, data.exitCode, run.text);
-                assert.ok(run.text.includes(expected), run.text);
+            const refused = async (module: string, uri: vscode.Uri, message: string, expected: string) => {
+                const text = await executions.exits(module, uri, data.exitCode, message);
+                assert.ok(text.includes(expected), text);
                 // the reason alone, as xtc run reports it, not a failure to create the program's container
-                assert.ok(!run.text.includes(data.containerFailure), run.text);
-                return run.text;
+                assert.ok(!text.includes(data.containerFailure), text);
+                return text;
             };
             await refused(data.module, library.uri, 'Run of a module without run is refused', data.message);
             const text = await refused(data.twoArgumentsModule, twoArguments.uri, 'Run of a run method requiring two arguments is refused',
@@ -2494,16 +1669,12 @@ export function runEntryCases(): void {
     });
 
     playbook('X294', async (workspace, data) => {
-        const document = await workspace.open(data.file, data.source);
-        await configureModules(workspace, [{ name: data.module, file: data.file }]);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         await embedded(async executions => {
-            const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), args: data.args, mode: 'embedded' }, getClient);
-            const run = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, 'Run with dropped arguments finishes');
-            assert.strictEqual(run.exitCode, data.exitCode, run.text);
-            assert.ok(run.text.includes(data.warning), run.text);
-            assert.ok(run.text.includes(data.output), run.text);
-            assert.ok(run.text.indexOf(data.warning) < run.text.indexOf(data.output), `The warning comes before the program's output: ${run.text}`);
+            const text = await executions.exits(data.module, document.uri, data.exitCode, 'Run with dropped arguments finishes', data.args);
+            assert.ok(text.includes(data.warning), text);
+            assert.ok(text.includes(data.output), text);
+            assert.ok(text.indexOf(data.warning) < text.indexOf(data.output), `The warning comes before the program's output: ${text}`);
         });
     });
 }
@@ -2514,44 +1685,23 @@ export function runEntryCases(): void {
  * debugger's agent; the run's own arguments win.
  */
 export function gradleRunCases(): void {
-    playbook('X351', async (workspace, data) => {
-        const folder = vscode.workspace.workspaceFolders![0];
-        const report = vscode.Uri.joinPath(folder.uri, modelPath);
-        // Gradle's project cache, which holds the report, as X129's
-        const cache = path.join(folder.uri.fsPath, '.gradle');
-        const made = !await fs.stat(cache).then(() => true, () => false);
-        const model = JSON.stringify(data.model).split('${workspace}').join(vscode.Uri.file(workspace.directory).toString());
-        const settings = vscode.workspace.getConfiguration('xtc.compiler');
-        const previous = settings.get('sourceModules');
-        try {
-            const document = await workspace.open(data.file, data.source);
-            // the model that an import writes, which the extension gives the language server without explicit modules
-            await fs.mkdir(path.dirname(report.fsPath), { recursive: true });
-            await fs.writeFile(report.fsPath, model);
-            await settings.update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
-            await updateCompilerConfiguration();
-            await eventually(async () => gradleProjects()[data.module], project => project === data.project, 'The model\'s Gradle projects');
-            await noErrors(document.uri);
-            await embedded(async executions => {
-                const run = async (args: string[] | undefined, message: string) => {
-                    const task = createXtcRunTask({ type: 'xtc', moduleName: data.module, moduleUri: document.uri.toString(), args, mode: 'embedded' }, getClient);
-                    const update = await executions.start('run', data.module, () => vscode.tasks.executeTask(task), finished, message);
-                    assert.strictEqual(update.exitCode, 0, update.text);
-                    return update.text;
-                };
-                // no method or arguments of its own: Gradle's, its JVM options but the debugger's agent, as it says
-                const taken = await run(undefined, 'The embedded run with Gradle\'s settings finishes');
-                for (const expected of [data.fromGradle, data.leftOut, data.output]) assert.ok(taken.includes(expected), taken);
-                // its own arguments win, with Gradle's method
-                const own = await run(data.args, 'The embedded run with its own arguments finishes');
-                for (const expected of [data.ownFromGradle, data.ownOutput]) assert.ok(own.includes(expected), own);
-                assert.ok(!own.includes(data.output), own);
-            });
-        } finally {
-            await fs.rm(report.fsPath, { force: true });
-            if (made) await fs.rm(cache, { recursive: true, force: true });
-            await settings.update('sourceModules', previous, vscode.ConfigurationTarget.Workspace);
-            await updateCompilerConfiguration();
-        }
-    });
+    playbook('X351', (workspace, data) => withGradleModel(async report => {
+        const document = await workspace.open(data.file, data.source);
+        // the model that an import writes, which the extension gives the language server without explicit modules
+        await fs.mkdir(path.dirname(report.fsPath), { recursive: true });
+        await fs.writeFile(report.fsPath, gradleModel(workspace, data.model));
+        await vscode.workspace.getConfiguration('xtc.compiler').update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
+        await updateCompilerConfiguration();
+        await eventually(async () => gradleProjects()[data.module], project => project === data.project, 'The model\'s Gradle projects');
+        await noErrors(document.uri);
+        await embedded(async executions => {
+            // no method or arguments of its own: Gradle's, its JVM options but the debugger's agent, as it says
+            const taken = await executions.exits(data.module, document.uri, 0, 'The embedded run with Gradle\'s settings finishes');
+            for (const expected of [data.fromGradle, data.leftOut, data.output]) assert.ok(taken.includes(expected), taken);
+            // its own arguments win, with Gradle's method
+            const own = await executions.exits(data.module, document.uri, 0, 'The embedded run with its own arguments finishes', data.args);
+            for (const expected of [data.ownFromGradle, data.ownOutput]) assert.ok(own.includes(expected), own);
+            assert.ok(!own.includes(data.output), own);
+        });
+    }));
 }
