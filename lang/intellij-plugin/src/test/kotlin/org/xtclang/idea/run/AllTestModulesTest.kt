@@ -42,7 +42,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.xtclang.idea.LightEditor
-import org.xtclang.idea.lsp.TestEvent
+import org.xvm.lsp.protocol.TestEvent
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList

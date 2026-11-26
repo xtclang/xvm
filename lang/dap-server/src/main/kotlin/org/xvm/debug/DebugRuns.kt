@@ -1,5 +1,6 @@
 package org.xvm.debug
 
+import org.xvm.lsp.protocol.TestEvent
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import kotlin.time.Duration

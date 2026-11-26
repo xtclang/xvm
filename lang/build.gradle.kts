@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
  *
  * Subprojects:
  * - dsl: Language model DSL and editor support generators
+ * - protocol: What the IntelliJ plugin and the language and debug servers agree on: the xtc/ extension of LSP
  * - lsp-server: Language Server Protocol implementation
  * - intellij-plugin: IntelliJ IDEA plugin
  * - vscode-extension: VS Code extension
@@ -144,7 +145,7 @@ dependencies {
 
 // every source set of the Kotlin projects: main, tests, integration tests and probes
 val kotlinSources =
-    listOf("dsl", "lsp-server", "dap-server", "intellij-plugin").map { layout.projectDirectory.dir("$it/src").asFile }
+    listOf("dsl", "protocol", "lsp-server", "dap-server", "intellij-plugin").map { layout.projectDirectory.dir("$it/src").asFile }
 val typeScriptSources = listOf(layout.projectDirectory.dir("vscode-extension/src").asFile)
 val analysisReports = layout.buildDirectory.dir("reports")
 
@@ -252,6 +253,7 @@ val attachVsCodeExtension =
 val coreProjects =
     listOfNotNull(
         ":dsl",
+        ":protocol",
         ":tree-sitter",
         ":lsp-server",
         ":dap-server",
@@ -261,7 +263,7 @@ val coreProjects =
 
 // clean is cheap and resolves nothing, so it always covers everything that can leave a build dir
 val allProjects =
-    listOf(":dsl", ":tree-sitter", ":lsp-server", ":dap-server", ":intellij-plugin", ":vscode-extension")
+    listOf(":dsl", ":protocol", ":tree-sitter", ":lsp-server", ":dap-server", ":intellij-plugin", ":vscode-extension")
 
 // Map of aggregate task -> subproject task (null means same name)
 val taskMappings =

@@ -6,7 +6,7 @@ import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.openapi.util.Key
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.lsp.TestEvent
+import org.xvm.lsp.protocol.TestEvent
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /** The test events of a debugged test run, as IntelliJ's test console in its Tests tab reads them. */

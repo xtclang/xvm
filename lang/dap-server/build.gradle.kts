@@ -18,6 +18,9 @@ dependencies {
     api(libs.lang.lsp4j.debug)
     implementation(libs.lang.lsp4j.jsonrpc)
 
+    // What the IntelliJ plugin and the servers agree on, xunit's test events among it
+    implementation(project(":protocol"))
+
     // Logging goes through the language server's own logging
     implementation(libs.lang.slf4j.api)
 

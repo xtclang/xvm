@@ -25,7 +25,6 @@ import org.xvm.debug.SourceBreakpoints
 import org.xvm.debug.StepKind
 import org.xvm.debug.StepTargetState
 import org.xvm.debug.StopState
-import org.xvm.debug.TestEvent
 import org.xvm.debug.TestSelector
 import org.xvm.debug.ThreadState
 import org.xvm.debug.VariableState
@@ -38,6 +37,7 @@ import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
 import org.xvm.lsp.model.toLsp
+import org.xvm.lsp.protocol.TestEvent
 import org.xvm.lsp.run.AttachedProgram
 import org.xvm.lsp.run.JvmOptions
 import org.xvm.lsp.run.RunDebugClient

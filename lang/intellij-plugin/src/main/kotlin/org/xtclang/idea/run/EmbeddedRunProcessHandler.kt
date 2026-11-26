@@ -9,8 +9,8 @@ import org.xtclang.idea.lsp.RunInputParams
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.RunResponse
 import org.xtclang.idea.lsp.StopRunParams
-import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.TestEvent
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.nio.charset.Charset

@@ -9,8 +9,8 @@ import com.intellij.execution.process.ProcessOutputTypes
 import com.redhat.devtools.lsp4ij.dap.DAPDebugProcess
 import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.lsp.DebugSessionParams
-import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.TestEvent
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
