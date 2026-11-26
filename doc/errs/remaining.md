@@ -812,6 +812,20 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   into the IDE timed out 9 s after start (DriverIllegalStateException, TimeoutException), before the case ran; X1–X3
   passed in the next run. It came twice more the same evening, in the shared queue's validation runs (one in each
   slot), so it is no rare event: a startup wait that machine load can outlast, to find and fix.
+- [ ] Found 2026-11-26 recording the IntelliJ tour: the settings section's negative check "Choosing the adapter in use
+  restarted the server" (`expect(!within(HANG) { serverState() != same })`) sat about 10 minutes without a word: `within`
+  ends early only when nothing moved for its idle window, the server's periodic trace events kept resetting that, and
+  `within` never reports while it waits. The run passed once it returned. Being fixed on its own branch: `within`
+  reports as `until` does, and negative checks end once the action is processed, not on a hang bound.
+- [ ] Found 2026-11-26 recording the VS Code tour: the new "Breakpoints while you edit" step once found Quick Open not
+  opening `Eights.x` (60 s, nothing under way; it failed fast, as designed); it passed in its other runs.
+- [ ] Found 2026-11-26 in the review of VS Code's rename refusal: the server answers `xtc/rename` with no edit for a
+  refused proof, and also when the project changed during the proof (`XdkProjectQueries`, its `isCurrent()` checks),
+  its base compile failed, discovery has a problem, or the module has not compiled; both editors show the refusal for
+  all of them, where for a changed project a retry would succeed. The server could answer ContentModified there.
+- [ ] Found 2026-11-26 in the same review: `XdkAdapter.renameProposalAsync`'s path for a rename outside a project query
+  maps `renameAsync` with `thenApply`, which does not pass a client's cancel on to the rename's proof, as
+  `plainRenameAsync`'s `mapCancellable` does; it predates the review.
 - [ ] Found 2026-11-26: a checkout's copied-back VS Code reports include every run the slot's work volume keeps,
   other checkouts' too, and since the shared queue from both slots; a script that took the newest copied run as its
   own took another agent's tour run (`run-y0hT9c` in wt-video). Fix: copy back only the runs this container made, as
