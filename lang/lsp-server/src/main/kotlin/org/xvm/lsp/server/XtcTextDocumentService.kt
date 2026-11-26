@@ -84,6 +84,7 @@ import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.TextDocumentEdit
+import org.eclipse.lsp4j.TextDocumentPositionAndWorkDoneProgressAndPartialResultParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.TypeDefinitionParams
 import org.eclipse.lsp4j.TypeHierarchyItem
@@ -895,7 +896,7 @@ class XtcTextDocumentService(
                         tabSize = config.indentSize,
                         insertSpaces = config.insertSpaces,
                     ),
-                ).map { TextEdit(it.range.toLsp(), it.newText) }
+                ).map { it.toLsp() }
         }
 
     override fun didSave(params: DidSaveTextDocumentParams) {
@@ -1122,7 +1123,7 @@ class XtcTextDocumentService(
                         sortText = c.sortText
                         textEdit =
                             c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), insertion(snippet ?: it.newText))) }
-                        additionalTextEdits = c.additionalTextEdits.map { TextEdit(it.range.toLsp(), it.newText) }
+                        additionalTextEdits = c.additionalTextEdits.map { it.toLsp() }
                     }
                 }
             Either.forLeft(items)
@@ -1659,7 +1660,7 @@ class XtcTextDocumentService(
         if (!canConvertEdit(edit)) return null
         val changes =
             edit.changes.mapValues { (_, edits) ->
-                edits.map { TextEdit(it.range.toLsp(), it.newText) }
+                edits.map { it.toLsp() }
             }
         return WorkspaceEdit().apply {
             if (edit.versioned) {
@@ -2007,12 +2008,7 @@ class XtcTextDocumentService(
             val uri = params.textDocument.uri
             val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
             val options = toAdapterFormattingOptions(params.options)
-            adapter.formatDocument(uri, content, options).map { e ->
-                TextEdit().apply {
-                    range = e.range.toLsp()
-                    newText = e.newText
-                }
-            }
+            adapter.formatDocument(uri, content, options).map { it.toLsp() }
         }
 
     /**
@@ -2030,12 +2026,7 @@ class XtcTextDocumentService(
             val uri = params.textDocument.uri
             val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
             val options = toAdapterFormattingOptions(params.options)
-            adapter.formatRange(uri, content, toAdapterRange(params.range), options).map { e ->
-                TextEdit().apply {
-                    this.range = e.range.toLsp()
-                    newText = e.newText
-                }
-            }
+            adapter.formatRange(uri, content, toAdapterRange(params.range), options).map { it.toLsp() }
         }
 
     override fun rangesFormatting(params: DocumentRangesFormattingParams): CompletableFuture<List<TextEdit>> =
@@ -2053,9 +2044,7 @@ class XtcTextDocumentService(
                 val options = toAdapterFormattingOptions(params.options)
                 text.nonOverlapping(
                     params.ranges.flatMap { range ->
-                        adapter.formatRange(uri, content, toAdapterRange(range), options).map {
-                            TextEdit(it.range.toLsp(), it.newText)
-                        }
+                        adapter.formatRange(uri, content, toAdapterRange(range), options).map { it.toLsp() }
                     },
                 )
             } catch (e: IllegalArgumentException) {
@@ -2074,23 +2063,7 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.declaration
      */
     override fun declaration(params: DeclarationParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
-        supplyAsync(
-            "textDocument/declaration",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> if (result.left.isEmpty()) "no result" else "found" },
-            uri = params.textDocument.uri,
-            progress = params,
-            partial = PartialResults::eitherLists,
-        ) {
-            Either.forLeft(
-                adapter
-                    .findDeclarations(
-                        params.textDocument.uri,
-                        params.position.line,
-                        params.position.character,
-                    ).map { it.toLsp() },
-            )
-        }
+        locationsAt("textDocument/declaration", params, adapter::findDeclarations)
 
     /**
      * LSP: textDocument/typeDefinition
@@ -2098,23 +2071,7 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.typeDefinition
      */
     override fun typeDefinition(params: TypeDefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
-        supplyAsync(
-            "textDocument/typeDefinition",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> if (result.left.isEmpty()) "no result" else "found" },
-            uri = params.textDocument.uri,
-            progress = params,
-            partial = PartialResults::eitherLists,
-        ) {
-            Either.forLeft(
-                adapter
-                    .findTypeDefinitions(
-                        params.textDocument.uri,
-                        params.position.line,
-                        params.position.character,
-                    ).map { it.toLsp() },
-            )
-        }
+        locationsAt("textDocument/typeDefinition", params, adapter::findTypeDefinitions)
 
     /**
      * LSP: textDocument/implementation
@@ -2122,22 +2079,26 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.implementation
      */
     override fun implementation(params: ImplementationParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
+        locationsAt("textDocument/implementation", params, adapter::findImplementation) { result -> "${result.left.size} locations" }
+
+    /** A request for the locations that [find] gives at the request's position, sent in parts when the client asks. */
+    private fun locationsAt(
+        method: String,
+        params: TextDocumentPositionAndWorkDoneProgressAndPartialResultParams,
+        find: (uri: String, line: Int, column: Int) -> List<AdapterLocation>,
+        logResult: (Either<List<Location>, List<LocationLink>>) -> String = { result ->
+            if (result.left.isEmpty()) "no result" else "found"
+        },
+    ): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
         supplyAsync(
-            "textDocument/implementation",
+            method,
             "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> "${result.left.size} locations" },
+            logResult,
             uri = params.textDocument.uri,
             progress = params,
             partial = PartialResults::eitherLists,
         ) {
-            Either.forLeft(
-                adapter
-                    .findImplementation(
-                        params.textDocument.uri,
-                        params.position.line,
-                        params.position.character,
-                    ).map { it.toLsp() },
-            )
+            Either.forLeft(find(params.textDocument.uri, params.position.line, params.position.character).map { it.toLsp() })
         }
 
     /**
@@ -2464,12 +2425,7 @@ class XtcTextDocumentService(
                     params.position.character,
                     params.ch,
                     options,
-                ).map { e ->
-                    TextEdit().apply {
-                        range = e.range.toLsp()
-                        newText = e.newText
-                    }
-                }
+                ).map { it.toLsp() }
         }
 
     /**
@@ -2503,6 +2459,8 @@ class XtcTextDocumentService(
 
     private fun AdapterLocation.toLsp(): Location =
         Location(server.readOnlyDocuments.present(uri), Range(Position(startLine, startColumn), Position(endLine, endColumn)))
+
+    private fun AdapterTextEdit.toLsp(): TextEdit = TextEdit(range.toLsp(), newText)
 
     private fun AdapterTypeHierarchyItem.toLsp(defaultUri: String): TypeHierarchyItem {
         val resolvedUri = this.uri.ifEmpty { defaultUri }
