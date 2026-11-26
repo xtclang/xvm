@@ -95,14 +95,20 @@ internal object XdkMemberActions {
             if (module in known) {
                 known
             } else {
-                val base = module.substringBefore('.').replaceFirstChar { it.lowercase() }
-                val alias =
-                    generateSequence(0) { it + 1 }
-                        .map { if (it == 0) base else "$base$it" }
-                        .first { it !in names && it !in known.values && XdkRename.identifier(it) }
-                known + (module to alias)
+                known + (module to moduleAlias(module) { it in names || it in known.values })
             }
         }
+
+    /** The first of [module]'s alias names, its first name in lower case and then numbered, that is an identifier not [taken]. */
+    fun moduleAlias(
+        module: String,
+        taken: (String) -> Boolean,
+    ): String {
+        val base = module.substringBefore('.').replaceFirstChar { it.lowercase() }
+        return generateSequence(0) { it + 1 }
+            .map { if (it == 0) base else "$base$it" }
+            .first { !taken(it) && XdkRename.identifier(it) }
+    }
 
     /** Both member intentions and missing-method fixes apply imports and declarations atomically. */
     fun importEdits(

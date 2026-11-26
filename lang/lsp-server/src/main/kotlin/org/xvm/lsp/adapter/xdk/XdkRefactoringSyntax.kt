@@ -2,8 +2,10 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.CompilerException
+import org.xvm.compiler.Lexer
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
+import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.StatementBlock
 import org.xvm.lsp.adapter.Range
@@ -54,5 +56,28 @@ internal object XdkRefactoringSyntax {
     ): String? {
         val lineStart = maxOf(text.lastIndexOf('\n', offset - 1), text.lastIndexOf('\r', offset - 1)) + 1
         return text.substring(lineStart, offset).takeIf { indent -> indent.all { it == ' ' || it == '\t' } }
+    }
+
+    /**
+     * The edit that removes [text] from [start] to [end], with the whole line when [lineStart], the start of a line
+     * with nothing before [start], is given and a line break follows [end]. Null when what goes does not lex cleanly or
+     * holds a comment, which a removal must never discard.
+     */
+    fun removal(
+        text: String,
+        start: Int,
+        end: Int,
+        lineStart: Int?,
+        operation: String,
+    ): XdkRename.Edit? {
+        val errors = ErrorList()
+        val tokens = ExecutionTrace.api("Lexer.lex($operation)") { Lexer(Source(text.substring(start, end)), errors).asSequence().toList() }
+        if (errors.hasSeriousErrors() || tokens.any { it.id in setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT) }) return null
+        val lineEnd = Regex("[ \t]*(?:\r\n|\r|\n)").find(text, end)?.takeIf { it.range.first == end }
+        return if (lineStart != null && lineEnd != null) {
+            XdkRename.Edit(lineStart, lineEnd.range.last + 1, "")
+        } else {
+            XdkRename.Edit(start, end, "")
+        }
     }
 }
