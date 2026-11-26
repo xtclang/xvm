@@ -129,7 +129,13 @@ internal class Tour(
             } catch (_: TimeoutException) {
                 val stuck = Quiescence.stuck
                 val ping = CompletableFuture.supplyAsync { probe.projectOpen() }
-                if (runCatching { ping.get(HANG.inWholeMilliseconds, TimeUnit.MILLISECONDS) }.isFailure) driverLost = true
+                // waited for as within() waits, which reports every minute and ends once nothing is in progress, not in
+                //  silence up to the hang's bound
+                if (!within(HANG, "the IDE's answer to a ping after ${method.name}") { ping.isDone } ||
+                    runCatching { ping.get() }.isFailure
+                ) {
+                    driverLost = true
+                }
                 throw IllegalStateException(
                     "The IDE did not answer ${method.name}: ${stuck ?: "within $HANG"}${if (driverLost) "; driver connection lost" else ""}",
                 )
@@ -157,11 +163,11 @@ internal class Tour(
     private fun dumpThreads(why: String) {
         val dumps = Files.createDirectories(run.resolve("dumps"))
         val name = "%03d".format(failures.size)
-        runCatching { Files.writeString(dumps.resolve("$name-ide.txt"), "$why\n\n${probe.ideThreads()}") }
+        val threads = dumpAnswer { probe.ideThreads() } ?: "the IDE did not give its threads within $DUMP_ANSWER"
+        runCatching { Files.writeString(dumps.resolve("$name-ide.txt"), "$why\n\n$threads") }
         runCatching {
             val pid =
-                probe
-                    .serverState()
+                requireNotNull(dumpAnswer { probe.serverState() })
                     .substringAfter(' ')
                     .trim()
                     .toLong()
@@ -169,6 +175,13 @@ internal class Tour(
             Files.writeString(dumps.resolve("$name-server.txt"), "$why\n\n${dump.inputStream.bufferedReader().readText()}")
         }
     }
+
+    /**
+     * [call]'s answer for a dump, or none when the IDE does not give it within [DUMP_ANSWER]: a dump is written once a wait
+     * has given up, so its own calls are bounded rather than waited for, and decide no result.
+     */
+    private fun <T> dumpAnswer(call: () -> T): T? =
+        runCatching { CompletableFuture.supplyAsync(call).get(DUMP_ANSWER.inWholeMilliseconds, TimeUnit.MILLISECONDS) }.getOrNull()
 
     private val frames: Path = Files.createDirectories(run.resolve("frames"))
     val steps = mutableListOf<TourStep>()
@@ -408,7 +421,7 @@ internal class Tour(
     /**
      * Closes the dialogs that show, as [TourProbe.closeDialogs] does, and answers whether none shows once that has run:
      * it queues each dialog's Cancel on the EDT, which runs the calls made after it once it has run those, so a dialog
-     * that shows then stays open, but a progress's, which closes once its task ends, as is waited for. A dialog that
+     * that shows then stays open, but a progress's, which closes once its task ends, is waited for. A dialog that
      * stays is not waited on: nothing is to close it, and a wait for that would end only at a hang's bound.
      */
     private fun closeDialogs(): Boolean {
@@ -1109,6 +1122,9 @@ private val IDLE = 60.seconds
 /** How often a wait that has not ended says what it waits for, as the VS Code tour's waits do. */
 private val REPORT = 60.seconds
 
+/** How long a dump waits for each of the IDE's answers it asks for, once a wait has given up. */
+private val DUMP_ANSWER = 60.seconds
+
 /**
  * What a wait that goes on says, about once a minute since it began, as the VS Code tour's waits do: how long it has
  * waited, for [what], and what is in progress, which [Quiescence.report] writes into the run's progress.
@@ -1123,7 +1139,7 @@ private class WaitReport(
     fun due(underWay: () -> String) {
         if (begun.elapsedNow() < next) return
         Quiescence.report("waiting ${begun.elapsedNow().inWholeSeconds} s for: $what; under way: ${underWay().ifEmpty { "nothing" }}")
-        next += REPORT
+        next = begun.elapsedNow() + REPORT
     }
 }
 
