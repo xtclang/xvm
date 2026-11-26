@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
+import org.xvm.testing.awaited
 import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture

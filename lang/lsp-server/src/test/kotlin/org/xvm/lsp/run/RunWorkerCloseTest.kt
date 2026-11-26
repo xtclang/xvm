@@ -3,9 +3,9 @@ package org.xvm.lsp.run
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.LIVELOCK
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
+import org.xvm.testing.LIVELOCK
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger

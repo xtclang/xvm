@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.xvm.testing.awaited
 import java.util.concurrent.CountDownLatch
 
 /**

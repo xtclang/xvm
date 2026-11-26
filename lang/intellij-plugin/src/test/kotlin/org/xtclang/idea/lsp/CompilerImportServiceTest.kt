@@ -7,7 +7,7 @@ import com.intellij.openapi.project.Project
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.awaited
+import org.xvm.testing.awaited
 import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch

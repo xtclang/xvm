@@ -33,9 +33,9 @@ import org.xvm.lsp.adapter.SignatureHelp
 import org.xvm.lsp.adapter.SignatureInfo
 import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Location
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException

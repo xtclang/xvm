@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 

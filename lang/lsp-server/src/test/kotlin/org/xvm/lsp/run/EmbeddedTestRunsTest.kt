@@ -16,8 +16,6 @@ import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkTest
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
 import org.xvm.lsp.protocol.DebugSessionParams
 import org.xvm.lsp.protocol.RunExitedParams
 import org.xvm.lsp.protocol.RunOutputParams
@@ -29,6 +27,8 @@ import org.xvm.lsp.protocol.TestSelector
 import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.EmbeddedRuns
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.LinkedBlockingQueue

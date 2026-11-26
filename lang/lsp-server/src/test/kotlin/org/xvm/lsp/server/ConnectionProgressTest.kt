@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
-import org.xvm.lsp.awaited
-import org.xvm.lsp.awaitedTermination
+import org.xvm.testing.awaited
+import org.xvm.testing.awaitedTermination
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue

@@ -22,7 +22,7 @@ import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LiteralExpression
 import org.xvm.compiler.ast.NameExpression
-import org.xvm.lsp.LIVELOCK_SECONDS
+import org.xvm.testing.LIVELOCK_SECONDS
 import org.xvm.util.PackedInteger
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream

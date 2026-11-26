@@ -39,9 +39,9 @@ import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
 import org.xvm.lsp.util.ProcessDirectories
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path

@@ -18,8 +18,8 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
 import org.xtclang.idea.XtcIntelliJLanguage
-import org.xtclang.idea.awaitUntil
 import org.xtclang.idea.holdingEdits
+import org.xvm.testing.awaitUntil
 
 /** Parameter info pops up as a call's `(` is typed in an Ecstasy file, with the language server's signature. */
 class XtcParameterInfoTest {

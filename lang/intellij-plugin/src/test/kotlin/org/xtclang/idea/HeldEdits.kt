@@ -5,6 +5,7 @@ import com.intellij.testFramework.fixtures.CodeInsightTestFixture
 import com.redhat.devtools.lsp4ij.DocumentContentSynchronizer
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
+import org.xvm.testing.awaited
 
 /** LSP4IJ's synchronizer of [file] with the language server, once the server has the file open. */
 internal fun CodeInsightTestFixture.synchronizer(file: PsiFile): DocumentContentSynchronizer {

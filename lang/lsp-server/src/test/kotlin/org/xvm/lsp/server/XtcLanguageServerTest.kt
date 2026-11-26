@@ -37,7 +37,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaitAsserted
+import org.xvm.testing.awaitAsserted
 
 @DisplayName("XtcLanguageServer")
 class XtcLanguageServerTest {

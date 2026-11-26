@@ -10,8 +10,8 @@ import org.xvm.lsp.Heavy
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
-import org.xvm.lsp.awaited
 import org.xvm.lsp.util.Watched
+import org.xvm.testing.awaited
 import java.io.File
 import java.net.URI
 import java.nio.file.Path

@@ -13,8 +13,8 @@ import org.xvm.lsp.adapter.xdk.XdkAutoImports
 import org.xvm.lsp.adapter.xdk.XdkLibraryReplacement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 

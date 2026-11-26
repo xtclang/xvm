@@ -8,8 +8,8 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Location
+import org.xvm.testing.awaited
 
 /**
  * Verifies diagnostic source ownership and UTF-16 positions for local, foreign and unpositioned reports.

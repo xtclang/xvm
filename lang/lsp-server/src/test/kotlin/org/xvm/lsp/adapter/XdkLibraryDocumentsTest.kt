@@ -4,8 +4,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
-import org.xvm.lsp.awaited
 import org.xvm.lsp.server.TraceRecording
+import org.xvm.testing.awaited
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path

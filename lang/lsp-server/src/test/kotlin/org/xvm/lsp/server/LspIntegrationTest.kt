@@ -39,7 +39,7 @@ import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
-import org.xvm.lsp.awaitAsserted
+import org.xvm.testing.awaitAsserted
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths

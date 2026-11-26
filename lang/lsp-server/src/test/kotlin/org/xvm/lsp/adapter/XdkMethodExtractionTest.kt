@@ -15,9 +15,9 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
-import org.xvm.lsp.awaited
 import org.xvm.lsp.run.LIVELOCK_LIMITS
 import org.xvm.lsp.run.RunWorkerProcess
+import org.xvm.testing.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture

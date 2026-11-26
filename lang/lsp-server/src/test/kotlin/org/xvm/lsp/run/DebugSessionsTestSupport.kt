@@ -4,13 +4,13 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.eclipse.lsp4j.services.LanguageClient
 import org.mockito.Mockito.mock
-import org.xvm.lsp.awaited
 import org.xvm.lsp.protocol.DebugMessageParams
 import org.xvm.lsp.protocol.RunExitedParams
 import org.xvm.lsp.protocol.RunOutputParams
 import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.server.DebugSessions
-import org.xvm.lsp.what
+import org.xvm.testing.awaited
+import org.xvm.testing.what
 import java.nio.file.Path
 import java.util.concurrent.LinkedBlockingQueue
 

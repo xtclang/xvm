@@ -18,7 +18,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.hookedAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 

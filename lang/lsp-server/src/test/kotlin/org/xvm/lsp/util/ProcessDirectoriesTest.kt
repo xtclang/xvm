@@ -3,8 +3,8 @@ package org.xvm.lsp.util
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path

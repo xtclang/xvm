@@ -4,9 +4,9 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xvm.lsp.LIVELOCK_SECONDS
 import org.xvm.lsp.adapter.xdk.XdkLexical
 import org.xvm.lsp.treesitter.SemanticTokenLegend
+import org.xvm.testing.LIVELOCK_SECONDS
 
 /**
  * Checks lexical token projection used alongside semantic highlighting. Preserves documentation modifiers and

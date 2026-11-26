@@ -36,9 +36,6 @@ import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
-import org.xvm.lsp.awaitAsserted
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
 import org.xvm.lsp.logged
 import org.xvm.lsp.protocol.BuildParams
 import org.xvm.lsp.protocol.GradleProjectsParams
@@ -48,6 +45,9 @@ import org.xvm.lsp.protocol.RunOutputParams
 import org.xvm.lsp.protocol.RunParams
 import org.xvm.lsp.protocol.XtcClientProtocol
 import org.xvm.lsp.run.LIVELOCK_LIMITS
+import org.xvm.testing.awaitAsserted
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path

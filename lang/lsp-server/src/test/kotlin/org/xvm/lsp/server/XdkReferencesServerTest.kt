@@ -18,8 +18,8 @@ import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch

@@ -9,7 +9,7 @@ import org.mockito.Mockito.RETURNS_DEFAULTS
 import org.mockito.Mockito.mock
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.nio.channels.FileChannel

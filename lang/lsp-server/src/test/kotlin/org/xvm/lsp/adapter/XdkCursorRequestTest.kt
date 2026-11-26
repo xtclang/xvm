@@ -12,7 +12,7 @@ import org.xvm.asm.FileStructure
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.PartialSemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import org.xvm.tool.ModuleInfo
 import java.net.URI
 import java.nio.file.Path

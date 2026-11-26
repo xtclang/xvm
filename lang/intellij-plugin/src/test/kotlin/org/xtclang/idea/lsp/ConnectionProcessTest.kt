@@ -7,7 +7,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xtclang.idea.awaited
+import org.xvm.testing.awaited
 import java.nio.file.Files
 import java.nio.file.Path
 

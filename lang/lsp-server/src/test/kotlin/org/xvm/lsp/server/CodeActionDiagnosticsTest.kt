@@ -21,8 +21,8 @@ import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.Diagnostic as LspDiagnostic
 import org.xvm.lsp.adapter.Range as AdapterRange

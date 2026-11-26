@@ -16,9 +16,9 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.CompilationResult
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors

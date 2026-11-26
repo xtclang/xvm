@@ -23,9 +23,9 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import org.xvm.lsp.adapter.Range as AdapterRange

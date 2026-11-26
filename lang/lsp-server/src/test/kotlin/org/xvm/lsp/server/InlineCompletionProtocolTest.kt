@@ -24,7 +24,7 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import org.xvm.lsp.adapter.InlineCompletionContext as AdapterContext

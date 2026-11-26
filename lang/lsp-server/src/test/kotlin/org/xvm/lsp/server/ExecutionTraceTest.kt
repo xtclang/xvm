@@ -11,8 +11,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.xdk.CompilerQueueTrace
-import org.xvm.lsp.awaited
 import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList

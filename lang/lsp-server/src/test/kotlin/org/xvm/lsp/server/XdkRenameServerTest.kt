@@ -45,11 +45,11 @@ import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
 import org.xvm.lsp.logged
 import org.xvm.lsp.protocol.DiscoverConsumersParams
 import org.xvm.lsp.protocol.SourceModuleConfiguration
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.io.File
 import java.net.URI
 import java.nio.file.Path

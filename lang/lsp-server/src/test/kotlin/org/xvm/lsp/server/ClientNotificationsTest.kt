@@ -12,8 +12,8 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
-import org.xvm.lsp.awaited
 import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 

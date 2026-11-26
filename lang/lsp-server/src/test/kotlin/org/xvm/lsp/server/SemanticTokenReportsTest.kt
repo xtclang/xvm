@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import java.util.concurrent.Executors
 
 /**

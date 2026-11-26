@@ -8,7 +8,7 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSources
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaited
 import org.xvm.tool.ModuleInfo
 import java.io.File
 import java.nio.file.Path

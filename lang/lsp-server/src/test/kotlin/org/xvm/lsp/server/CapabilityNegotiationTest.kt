@@ -38,8 +38,8 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.ParameterInfo
 import org.xvm.lsp.adapter.SignatureInfo
 import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.awaited
 import org.xvm.lsp.model.Diagnostic
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import org.xvm.lsp.adapter.CodeAction as Action
 import org.xvm.lsp.adapter.DocumentLink as AdapterLink

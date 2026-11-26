@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.xvm.debug.ProgramEvents
 import org.xvm.lsp.Slow
-import org.xvm.lsp.awaitUntil
-import org.xvm.lsp.awaited
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.time.Duration.Companion.milliseconds

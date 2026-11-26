@@ -8,8 +8,8 @@ import org.eclipse.lsp4j.jsonrpc.Endpoint
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageProducer
 import org.junit.jupiter.api.Test
-import org.xtclang.idea.awaited
 import org.xvm.lsp.protocol.XtcServerProtocol
+import org.xvm.testing.awaited
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.PipedInputStream
