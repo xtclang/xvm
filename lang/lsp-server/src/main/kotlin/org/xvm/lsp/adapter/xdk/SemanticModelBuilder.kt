@@ -8,6 +8,7 @@ import org.xvm.asm.Component.Format
 import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
+import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.Op
@@ -28,6 +29,7 @@ import org.xvm.asm.constants.SingletonConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
 import org.xvm.asm.constants.TypedefConstant
+import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotationExpression
@@ -1715,8 +1717,8 @@ private class SemanticModelBuilder(
         if (statements.isEmpty()) return
         val labels = IdentityHashMap<LabeledStatement, SymbolId>()
         statements.forEach { statement ->
+            val at = named(statement.source, statement.startPosition, statement.name) ?: return@forEach
             val symbol = SymbolId(id, symbols.size)
-            val at = named(statement.source, statement.startPosition, statement.name, ending = false)
             symbols[symbol] = Symbol(symbol, statement.name, SymbolKind.VARIABLE, at.range, null, null, at.sourceName, renameable = true)
             labels[statement] = symbol
         }
@@ -1734,7 +1736,7 @@ private class SemanticModelBuilder(
             }
         // every label's variable has the type Label, which a compile has where a name refers to one
         val type = type(variables.firstOrNull()?.type)
-        statements.forEach { statement ->
+        statements.filter(labels::containsKey).forEach { statement ->
             val symbol = labels.getValue(statement)
             val label = symbols.getValue(symbol).copy(type = type)
             symbols[symbol] = label
@@ -1744,23 +1746,28 @@ private class SemanticModelBuilder(
         nodes.filterIsInstance<GotoStatement>().forEach { jump ->
             val name = jump.labeledName ?: return@forEach
             val symbol = label(jump, name)?.let(labels::get) ?: return@forEach
-            val at = named(jump.source, jump.endPosition, name, ending = true)
+            val at = named(jump.source, jump.startPosition, name) ?: return@forEach
             if (at !in occurrences) occurrences[at] = Occurrence(at.range, name, Role.REFERENCE, symbol, symbols[symbol]?.type)
         }
     }
 
-    /** Where [name] is written in [source], starting at [position], or ending there; a name is on one line. */
+    /**
+     * Where the label [name] is written in [source]: the name that the lexer reads at [position], a label's start, or past
+     * the keyword there, a break's or a continue's, so that a name written with \u escapes spans what is written, not the
+     * length of its value; null where the lexer reads no such name.
+     */
     private fun named(
         source: Source?,
         position: Long,
         name: String,
-        ending: Boolean,
-    ): SourceLocation {
-        val line = Source.calculateLine(position)
-        val column = Source.calculateOffset(position)
-        val start = if (ending) column - name.length else column
-        return SourceLocation(source?.fileName, Range(Position(line, start), Position(line, start + name.length)))
-    }
+    ): SourceLocation? =
+        source
+            ?.let { Lexer(it.clone().apply { setPosition(position) }, ErrorList()) }
+            ?.asSequence()
+            ?.filter { it.id != Token.Id.EOL_COMMENT && it.id != Token.Id.ENC_COMMENT }
+            ?.take(2)
+            ?.firstOrNull { it.id == Token.Id.IDENTIFIER && it.valueText == name }
+            ?.let { location(source, it.startPosition, it.endPosition) }
 
     private fun declare(
         token: Token?,

@@ -876,6 +876,41 @@ class XdkOccurrenceBindingTest {
     }
 
     @Test
+    fun `a label written with unicode escapes spans its written name in its declaration, a break and a continue`() {
+        val source =
+            """
+            module Escapes {
+                Int count(Int[] values) {
+                    Int total = 0;
+                    /*declared*/L\u006Fop: for (Int value : values) {
+                        if (/*first*/Loop.first) {
+                            continue /*continued*/Lo\u006Fp;
+                        }
+                        if (value < 0) {
+                            break /*broken*/L\u006F\u006Fp;
+                        }
+                        total += value;
+                    }
+                    return total;
+                }
+            }
+            """.trimIndent()
+        withSource("Escapes", source) { adapter, uri ->
+            // the compiler's positions count what is written, an escape's six characters, not the name's four
+            val written = listOf("declared" to "L\\u006Fop", "first" to "Loop", "continued" to "Lo\\u006Fp", "broken" to "L\\u006F\\u006Fp")
+            val uses = written.map { (marker, name) -> range(source, marker, name) }
+            val at = source.markedPosition("declared")
+            assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactlyElementsOf(uses)
+            assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactlyInAnyOrderElementsOf(uses)
+            val broken = source.markedPosition("broken")
+            assertThat(adapter.findDefinition(uri, broken.line, broken.column)?.let(::range)).isEqualTo(uses.first())
+            assertThat(adapter.getHoverInfo(uri, at.line, at.column)).contains("Label").contains("Loop")
+            // a rename edits only the names written as they are spelled, as for any name written with escapes
+            assertThat(adapter.rename(uri, at.line, at.column, "Each")).isNull()
+        }
+    }
+
+    @Test
     fun `the Referent that the compiler adds to a property with an annotation is proven by the property`() {
         val source =
             """
