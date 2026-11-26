@@ -1552,7 +1552,9 @@ object DebugSessionUi {
 private abstract class ChildrenNode(
     private val failed: (String) -> Unit,
 ) : XCompositeNode {
-    override fun setAlreadySorted(alreadySorted: Boolean) {}
+    override fun setAlreadySorted(alreadySorted: Boolean) {
+        // the probe reads the children by name, so their order doesn't matter
+    }
 
     override fun setErrorMessage(errorMessage: String) = failed(errorMessage)
 
@@ -1566,5 +1568,7 @@ private abstract class ChildrenNode(
         icon: Icon?,
         attributes: SimpleTextAttributes,
         link: XDebuggerTreeNodeHyperlink?,
-    ) {}
+    ) {
+        // a message is neither a child nor an error, which are all the probe waits for
+    }
 }

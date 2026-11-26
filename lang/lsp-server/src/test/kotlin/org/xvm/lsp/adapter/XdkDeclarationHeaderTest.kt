@@ -229,7 +229,8 @@ class XdkDeclarationHeaderTest {
         CompilerTestSupport.configure()
         val prefix = "module Headers { void damaged(Str"
         val text = "$prefix value) { Int hidden = 1; } Int later = 1; }"
-        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
+        val incomplete = analyzeIncomplete(text, URI, prefix.length)
+        val (analysis, errors) = incomplete
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
         assertThat(site.isTypeCompletion).isTrue()
@@ -240,7 +241,7 @@ class XdkDeclarationHeaderTest {
         assertThat(declaration.component.getChild("damaged")).isNull()
         assertThat(declaration.component.getChild("hidden")).isNull()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() }).contains("String")
-        assertListenersStop(source, cursor)
+        assertListenersStop(incomplete.source, incomplete.cursor)
     }
 
     private companion object {

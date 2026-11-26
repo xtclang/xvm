@@ -178,12 +178,13 @@ class XdkDelimiterRecoveryTest {
         CompilerTestSupport.configure()
         val prefix = "$HEADER return use((value.si"
         val text = prefix + suffix
-        val (analysis, errors, _, cursor) = analyzeIncomplete(text, URI, prefix.length)
+        val incomplete = analyzeIncomplete(text, URI, prefix.length)
+        val (analysis, errors) = incomplete
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         assertThat(analysis.pool()).isNotNull()
         val site = analysis.sites().single()
         assertThat(site.source.toRawString()).isEqualTo(text)
-        assertThat(site.endPosition).isEqualTo(cursor)
+        assertThat(site.endPosition).isEqualTo(incomplete.cursor)
         val method =
             generateSequence(site.parent) { it.parent }
                 .filterIsInstance<MethodDeclarationStatement>()

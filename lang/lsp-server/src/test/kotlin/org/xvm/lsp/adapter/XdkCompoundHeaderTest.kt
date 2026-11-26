@@ -91,7 +91,8 @@ class XdkCompoundHeaderTest {
         CompilerTestSupport.configure()
         val prefix = "module Headers { void damaged(Map<Int, List<ecstasy.text.Str"
         val text = "$prefix>> value) { Int hidden = 1; } Int later = 1; }"
-        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
+        val incomplete = analyzeIncomplete(text, URI, prefix.length)
+        val (analysis, errors) = incomplete
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
         val leaf = site.target as NamedTypeExpression
@@ -105,7 +106,7 @@ class XdkCompoundHeaderTest {
         assertThat(declaration.component.getChild("hidden")).isNull()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() })
             .contains("StringBuffer")
-        assertListenersStop(source, cursor)
+        assertListenersStop(incomplete.source, incomplete.cursor)
     }
 
     private companion object {

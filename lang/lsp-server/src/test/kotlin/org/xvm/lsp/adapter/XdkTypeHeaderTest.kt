@@ -38,7 +38,8 @@ class XdkTypeHeaderTest {
         val prefix =
             "module Headers { class Base {} Int BaseValue = 1; " + header.substringBefore('§')
         val text = prefix + header.substringAfter('§') + " { Int inside = 1; } Int later = 2; }"
-        val (analysis, errors, source, cursor) = analyzeIncomplete(text, URI, prefix.length)
+        val incomplete = analyzeIncomplete(text, URI, prefix.length)
+        val (analysis, errors) = incomplete
         assertThat(errors.errors.map { it.code })
             .describedAs(header)
             .containsExactly(Parser.INCOMPLETE_EXPRESSION)
@@ -57,8 +58,8 @@ class XdkTypeHeaderTest {
                 .map { it.name() },
         ).contains(if (header.contains("Str")) "String" else "Base")
             .doesNotContain("BaseValue")
-        assertThat(source.toRawString()).isEqualTo(text)
-        assertListenersStop(source, cursor)
+        assertThat(incomplete.source.toRawString()).isEqualTo(text)
+        assertListenersStop(incomplete.source, incomplete.cursor)
     }
 
     @Test

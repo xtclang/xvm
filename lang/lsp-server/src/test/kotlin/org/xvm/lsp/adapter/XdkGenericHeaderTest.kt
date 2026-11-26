@@ -182,24 +182,25 @@ class XdkGenericHeaderTest {
         val marked =
             "module Headers { class Owner<Element> { typedef Element as Alias; } void damaged(Owner<String>.Ali§ value) {} }"
         val text = marked.replace("§", "")
-        val (analysis, _, source, cursor) = analyzeIncomplete(text, URI, marked.indexOf('§'))
+        val incomplete = analyzeIncomplete(text, URI, marked.indexOf('§'))
+        val analysis = incomplete.analysis
         val site = analysis.sites().single()
         val syntax = site.target as NamedTypeExpression
         assertThat(syntax.isValidated).isFalse()
         assertThat(syntax.nameBindings.map { it.target() }).containsOnlyNulls()
         val candidate = analysis.cursorBindings()[site]!!.types().single { it.name() == "Alias" }
         assertThat(candidate.type().valueString).isEqualTo("String")
-        assertThat(source.toRawString()).isEqualTo(text)
+        assertThat(incomplete.source.toRawString()).isEqualTo(text)
         val stopped =
             EmbeddingSupport
                 .instance()
-                .analyzeIncomplete(source.clone(), cursor, null, ErrorList(1))
+                .analyzeIncomplete(incomplete.source.clone(), incomplete.cursor, null, ErrorList(1))
         assertThat(stopped.cursorBindings()).isEmpty()
         val cancelled = ErrorListener.cancellable(ErrorList()) { true }
         assertThat(
             EmbeddingSupport
                 .instance()
-                .analyzeIncomplete(source.clone(), cursor, null, cancelled)
+                .analyzeIncomplete(incomplete.source.clone(), incomplete.cursor, null, cancelled)
                 .cursorBindings(),
         ).isEmpty()
     }
