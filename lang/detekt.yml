@@ -1,0 +1,85 @@
+# detekt's configuration for lang's Kotlin (the lang root's detekt task, opt-in). It builds upon detekt's default
+# configuration (--build-upon-default-config): only what differs from the defaults is here, each with its reason.
+# detekt-baseline.xml holds the findings that were there when the configuration was made; a run reports only new ones.
+
+complexity:
+  CyclomaticComplexMethod:
+    # A when whose entries are each a single value, such as a token kind mapped to its highlight, reads as a table, not
+    # as branching logic; counting each entry as a path flagged such mappings and nothing to untangle.
+    ignoreSimpleWhenEntries: true
+  LargeClass:
+    # A test class holds one feature's cases, each a scenario of its own; its size is their number, not a class to split.
+    excludes: &tests
+      - '**/test/**'
+      - '**/integrationTest/**'
+      - '**/playbookProbe/**'
+      - '**/starter262/**'
+      - '**/starter263/**'
+  LongMethod:
+    # A test reads as one scenario, step after step, and splitting it hides the steps; main code keeps the limit.
+    excludes: *tests
+  TooManyFunctions:
+    # The default excludes only src/test; the plugin's other test source sets are test code alike. Private functions
+    # are the small helpers this code prefers to long expressions and wrapped lines, and overrides are what the
+    # implemented interface asks for (LSP4J's services, IntelliJ's extension points): neither counts toward the limit.
+    excludes: *tests
+    ignorePrivate: true
+    ignoreOverridden: true
+
+exceptions:
+  InstanceOfCheckForException:
+    # The default excludes only src/test; the plugin's other test source sets are test code alike.
+    excludes: *tests
+  ThrowingExceptionsWithoutMessageOrCause:
+    # The default excludes only src/test; the plugin's other test source sets are test code alike.
+    excludes: *tests
+  TooGenericExceptionCaught:
+    # The default excludes only src/test; the plugin's other test source sets are test code alike.
+    excludes: *tests
+
+naming:
+  FunctionNaming:
+    # The default excludes only src/test; the plugin's integration tests also name their cases in backticks.
+    excludes: *tests
+
+performance:
+  ForEachOnRange:
+    # The default excludes only src/test; the plugin's other test source sets are test code alike.
+    excludes: *tests
+  SpreadOperator:
+    # The default excludes only src/test; the plugin's other test source sets are test code alike.
+    excludes: *tests
+
+potential-bugs:
+  UnsafeCallOnNullableType:
+    # The default excludes only src/test; the plugin's other test source sets are test code alike.
+    excludes: *tests
+
+style:
+  ForbiddenComment:
+    # A TODO is how this code marks known follow-up work, LSP4IJ workarounds tagged with their UP row among them
+    # (`// TODO LSP4IJ: UPxx`), so only FIXME and STOPSHIP stay forbidden.
+    comments:
+      - reason: 'Forbidden FIXME todo marker in comment, please fix the problem.'
+        value: 'FIXME:'
+      - reason: 'Forbidden STOPSHIP todo marker in comment, please address the problem before shipping the code.'
+        value: 'STOPSHIP:'
+  MagicNumber:
+    # The default excludes src/test and build scripts; the plugin's other test source sets are test code alike, where
+    # a number is the case's data.
+    excludes:
+      - '**/test/**'
+      - '**/integrationTest/**'
+      - '**/playbookProbe/**'
+      - '**/starter262/**'
+      - '**/starter263/**'
+      - '**/*.kts'
+  MaxLineLength:
+    # ktlint, through spotless, enforces 140, its ktlint_official default, which lang/.editorconfig leaves in place. As
+    # ktlint does, a line that is only a comment, KDoc included, may be longer.
+    maxLineLength: 140
+    excludeCommentStatements: true
+  ReturnCount:
+    # An early return for a case that is done, `?: return` among them, is this code's way to keep the main path flat;
+    # only returns past the guard clauses count.
+    excludeGuardClauses: true

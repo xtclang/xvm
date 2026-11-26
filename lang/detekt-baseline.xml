@@ -1,0 +1,579 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:CompilerImplementations.kt:errors.isAbortDesired || visited.any { it.first == type &amp;&amp; it.second === method } || visited.size &gt;= 64</ID>
+    <ID>ComplexCondition:CompilerImport.kt:CompilerImport$before.observed != null &amp;&amp; text != null &amp;&amp; importId(text) != null &amp;&amp; text != before.accepted</ID>
+    <ID>ComplexCondition:CompilerMemberAction.kt:declaration.containingClass == structure || declaration.isSynthetic || declaration.isNative || method.isOp || method.isAuto || !info.dispatch(method, errors).supported</ID>
+    <ID>ComplexCondition:CompilerMissingMethod.kt:!qualified &amp;&amp; ( name.name in localNames || declaration.params.any { it.name == name.name } || nodes.filterIsInstance&lt;MethodDeclarationStatement&gt;().any { it !== method &amp;&amp; it.name == name.name &amp;&amp; enclosed(it) } )</ID>
+    <ID>ComplexCondition:CompilerMissingMethod.kt:!receiver.isValidated || !receiver.typeFit.isFit || generateSequence(receiverName) { it.leftExpression as? NameExpression } .any { it.isSuppressDeref || it.hasTrailingTypeParams() }</ID>
+    <ID>ComplexCondition:CompilerMissingMethod.kt:assignment.lValue !== local || assignment.op.id != Token.Id.ASN || !assignment.rValue.isValidated || !assignment.rValue.typeFit.isFit</ID>
+    <ID>ComplexCondition:CompilerMissingMethod.kt:call.isAsync || name.hasTrailingTypeParams() || name.isSuppressDeref || (if (qualified) name.calleeLocation() !in inputs.receivers else !name.isSimpleName) || !XdkRename.identifier(name.name)</ID>
+    <ID>ComplexCondition:CompilerMissingMethod.kt:errors.hasSeriousErrors() || errors.isAbortDesired || info.methods.values.any { it.signature.name == name.name } || info.properties.values.any { it.name == name.name }</ID>
+    <ID>ComplexCondition:CompilerPlaybook.kt:CompilerPlaybook$!continueAfterFailure || unsafeToContinue || (failure !is Exception &amp;&amp; failure !is AssertionError)</ID>
+    <ID>ComplexCondition:CompilerProjectConfigurable.kt:CompilerProjectConfigurable$!project.isDisposed &amp;&amp; reportRevision.get() == revision &amp;&amp; CompilerSettings.content(project) == settings &amp;&amp; LanguageServiceSettings.effective(project) == serviceSettings &amp;&amp; connections.all { (wrapper, server) -&gt; wrapper in accessor.startedServers &amp;&amp; wrapper.languageServer === server }</ID>
+    <ID>ComplexCondition:CompilerRenameFacts.kt:contract !is ProofIdentity.Source &amp;&amp; contract !is ProofIdentity.Binary &amp;&amp; !( contract is ProofIdentity.Method &amp;&amp; contract.parent is ProofIdentity.Binary )</ID>
+    <ID>ComplexCondition:ConnectionProgress.kt:ConnectionProgress$closed.get() || entry.result.isDone || entries[token] !== entry || token !in begun</ID>
+    <ID>ComplexCondition:DebugConsoleLines.kt:DebugConsoleLines$message["command"]?.asString == "stackTrace" &amp;&amp; stopped &amp;&amp; frame == null &amp;&amp; message["success"]?.asBoolean == true</ID>
+    <ID>ComplexCondition:FileMoveTargets.kt:FileMoveTargets$name != null &amp;&amp; ( sources.size != 1 || name.isBlank() || name != name.trim() || name in setOf(".", "..") || name.any { it == '/' || it == '\\' } )</ID>
+    <ID>ComplexCondition:LanguageServiceConfigurable.kt:LanguageServiceConfigurable$!owner.isDisposed &amp;&amp; reportRevision.get() == revision &amp;&amp; LanguageServiceSettings.effective(owner) == savedPreferences &amp;&amp; ServerRuntimeSettings.getInstance().state == savedRuntime &amp;&amp; wrapper in LanguageServiceAccessor.getInstance(owner).startedServers &amp;&amp; wrapper.languageServer === connection</ID>
+    <ID>ComplexCondition:RefreshRequests.kt:RefreshRequests$wrapper === owner &amp;&amp; message is RequestMessage &amp;&amp; message.method.startsWith("workspace/") &amp;&amp; message.method.endsWith("/refresh")</ID>
+    <ID>ComplexCondition:RunWorkerProcess.kt:RunWorkerProcess$worker.worn != null || workers.any { it !== worker &amp;&amp; it.run == null &amp;&amp; it.ended == null }</ID>
+    <ID>ComplexCondition:SemanticModelBuilder.kt:SemanticModelBuilder$!property.isConstant || value is DeferredValueConstant || value.containsUnresolved() || property.initializer != null</ID>
+    <ID>ComplexCondition:SemanticModelBuilder.kt:SemanticModelBuilder$assignment.op.id != Token.Id.ASN || local.hasRefAnnotations() || !assignment.rValue.isConstant || assignment.rValue.hasSideEffects()</ID>
+    <ID>ComplexCondition:SemanticModelBuilder.kt:SemanticModelBuilder$construction &amp;&amp; symbols[target]?.declaration == null &amp;&amp; !(method.isSynthetic &amp;&amp; method.isShorthandConstructor)</ID>
+    <ID>ComplexCondition:SemanticModelBuilder.kt:SemanticModelBuilder$cursor != null &amp;&amp; owner != null &amp;&amp; !site.isTypeCompletion &amp;&amp; (site.isNameCompletion || receiver == null)</ID>
+    <ID>ComplexCondition:SemanticTokenReports.kt:SemanticTokenReports.Companion$line &gt;= range.start.line &amp;&amp; line &lt;= range.end.line &amp;&amp; ( line != range.start.line || column + token[2] &gt; range.start.character ) &amp;&amp; (line != range.end.line || column &lt; range.end.character) &amp;&amp; range.start != range.end</ID>
+    <ID>ComplexCondition:StructureViews.kt:future == null || future == previous || !future.isDone() || future.isCompletedExceptionally()</ID>
+    <ID>ComplexCondition:TreeSitterAdapter.kt:TreeSitterAdapter$ancestor.startLine != prev.startLine || ancestor.startColumn != prev.startColumn || ancestor.endLine != prev.endLine || ancestor.endColumn != prev.endColumn</ID>
+    <ID>ComplexCondition:XdkAdapter.kt:XdkAdapter$!force &amp;&amp; !recovered &amp;&amp; !clearBuildArtifacts &amp;&amp; project.sameConfiguration(replacement)</ID>
+    <ID>ComplexCondition:XdkAdapter.kt:XdkAdapter$!request.preempted || closed || requests[request.scope] !== request || request.result.isDone</ID>
+    <ID>ComplexCondition:XdkAdapter.kt:XdkAdapter$partial != null &amp;&amp; prefix != null &amp;&amp; text != null &amp;&amp; prefix.range.end.column &lt;= text.length</ID>
+    <ID>ComplexCondition:XdkAdapter.kt:XdkAdapter$text == null || site?.kind != PartialSemanticModel.Kind.NAME || prefix == null || prefix.text.length &lt; 2 || !hasProject(uri)</ID>
+    <ID>ComplexCondition:XdkAdapter.kt:XdkAdapter.Companion$cursor.hasNext() &amp;&amp; ( cursor.line &lt; position.line || (cursor.line == position.line &amp;&amp; cursor.offset &lt; position.column) )</ID>
+    <ID>ComplexCondition:XdkAutoImports.kt:XdkAutoImports$identity.path.any { ( it !is ModuleConstant &amp;&amp; it !is PackageConstant &amp;&amp; it !is ClassConstant &amp;&amp; it !is TypedefConstant ) || it.component?.access != Access.PUBLIC }</ID>
+    <ID>ComplexCondition:XdkDocumentation.kt:XdkDocumentation$symbol.declarationSource != model.sourceName || symbol.documentation != null || start &gt;= name.end || end &lt; header</ID>
+    <ID>ComplexCondition:XdkLexical.kt:XdkLexical$host != null &amp;&amp; ( host.id != Token.Id.ENC_COMMENT || lines[host.range.start.line].take(host.range.start.column).isNotBlank() || lines[host.range.end.line].drop(host.range.end.column).isNotBlank() )</ID>
+    <ID>ComplexCondition:XdkLexical.kt:XdkLexical$options.trimTrailingWhitespace &amp;&amp; trimmed &lt; value.length &amp;&amp; host == null &amp;&amp; onLine.none { it.range.end.column &gt; trimmed }</ID>
+    <ID>ComplexCondition:XdkLexical.kt:XdkLexical$range == null &amp;&amp; options.insertFinalNewline &amp;&amp; text.isNotEmpty() &amp;&amp; !text.endsWith('\n') &amp;&amp; !text.endsWith('\r')</ID>
+    <ID>ComplexCondition:XdkMemberInline.kt:XdkMemberInline.Syntax$errors.hasSeriousErrors() || XdkRefactoringSyntax.tree(expression).any { (node, _) -&gt; node is NameExpression &amp;&amp; node.isSuppressDeref } || tokens.any { it.valueText == "super" }</ID>
+    <ID>ComplexCondition:XdkMemberUseTracker.kt:XdkMemberUseTracker.Names$(from == 0 || !identifierPart(text[from - 1])) &amp;&amp; (end == text.length || !identifierPart(text[end]))</ID>
+    <ID>ComplexCondition:XdkMethodExtraction.kt:XdkMethodExtraction$selectedNodes.any { it is LambdaExpression || it is TypeCompositionStatement || (it is InvocationExpression &amp;&amp; it.isAsync) }</ID>
+    <ID>ComplexCondition:XdkMissingDeclarations.kt:XdkMissingDeclarations$!node.isSimpleName || node.hasTrailingTypeParams() || node.isSuppressDeref || !selected(node)</ID>
+    <ID>ComplexCondition:XdkMissingDeclarations.kt:XdkMissingDeclarations$node.isVirtualNew || node.hasSquareBrackets() || node.arguments.isNotEmpty() || node.isComponentNode || node.unregisteredBody.isPresent</ID>
+    <ID>ComplexCondition:XdkMissingDeclarations.kt:XdkMissingDeclarations.Candidate$selected.name != name || selected.kind != kind || selected.declarationSource != source || declarationAt !in insertedAt until insertedAt + edit.text.length</ID>
+    <ID>ComplexCondition:XdkMissingMethods.kt:XdkMissingMethods.Candidate$symbol.kind != SemanticModel.SymbolKind.METHOD || symbol.name != name || symbol.declarationSource != targetSource || (SemanticModel.Modifier.STATIC in symbol.modifiers) != (dispatch == Dispatch.STATIC) || declarationAt !in insertedAt until insertedAt + edit.text.length</ID>
+    <ID>ComplexCondition:XdkMoveOperations.kt:XdkMoveOperations$minimal.values.distinct().size != minimal.size || minimal.any { (source, destination) -&gt; // Incoming paths under a moving source require a temporary staging transaction, // which neither standard client resource edits nor our VFS command can promise. minimal.keys.any { destination.toPath().startsWith(it.toPath()) } || minimal.any { (other, target) -&gt; other != source &amp;&amp; destination.toPath().startsWith(target.toPath()) } }</ID>
+    <ID>ComplexCondition:XdkProjectQueries.kt:XdkProjectQueries$!move.provesDestinations(after) || !preservesBindings(before, after, plan, graph) || !isCurrent() || !movedInputs.isCurrent(cancelled) || resourceSnapshots != captureResources()</ID>
+    <ID>ComplexCondition:XdkProjectQueries.kt:XdkProjectQueries$operations.values.distinct().size != operations.size || operations.any { (from, to) -&gt; !from.exists() || !to.parentFile.isDirectory || to.exists() || Files.isSymbolicLink(from.toPath()) || ( from.isDirectory &amp;&amp; from.walkTopDown().any { Files.isSymbolicLink(it.toPath()) } ) || to.toPath().startsWith(from.toPath()) }</ID>
+    <ID>ComplexCondition:XdkProjectQueries.kt:XdkProjectQueries$prior != null &amp;&amp; edited != null &amp;&amp; (module.uri !in edited || keeps(module))</ID>
+    <ID>ComplexCondition:XdkProjectQueries.kt:XdkProjectQueries$renamedModule != null &amp;&amp; ( (moduleName != renamedModule.name &amp;&amp; moduleName in project.modules) || moduleName in XdkLibraries.moduleNames )</ID>
+    <ID>ComplexCondition:XdkRename.kt:XdkRename$expected.any { (site, target) -&gt; val value = actual[site] val relocatedRead = site.source == source &amp;&amp; !site.call &amp;&amp; site.start &gt;= expressionStart &amp;&amp; site.end &lt;= expressionEnd value != target &amp;&amp; (!relocatedRead || captures[value] != target) }</ID>
+    <ID>ComplexCondition:XdkRename.kt:XdkRename$identity is ProofIdentity.Composed || identity is ProofIdentity.Alternatives || identity is ProofIdentity.Super || identity is ProofIdentity.Receiver || identity is ProofIdentity.PrimaryConstructor || identity is ProofIdentity.Generated || identity is ProofIdentity.Parameter || identity is ProofIdentity.MethodFormal</ID>
+    <ID>ComplexCondition:XdkRename.kt:XdkRename$member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source || member.site.start &lt; insertionStart || member.site.end &gt; insertionStart + insertion.text.length</ID>
+    <ID>ComplexCondition:XdkRename.kt:XdkRename$sourceParameters &amp;&amp; symbol.kind == SemanticModel.SymbolKind.PARAMETER &amp;&amp; symbol.declarationSource in texts &amp;&amp; symbol.declaration != null</ID>
+    <ID>ComplexCondition:XdkResourceMoves.kt:XdkResourceMoves$moves.any { (from, to) -&gt; from !in resources.entries &amp;&amp; from !in incoming &amp;&amp; resources.roots.any { root -&gt; val destination = File(to).toPath() val proposedRoot = path(root).toPath() !root.toPath().startsWith(from) &amp;&amp; (destination.startsWith(proposedRoot) || proposedRoot.startsWith(destination)) } }</ID>
+    <ID>ComplexCondition:XdkSafeDelete.kt:XdkSafeDelete$facts.models.any { view -&gt; view.occurrences.any { occurrence -&gt; occurrence.symbol?.let(facts.constants::get) == identity &amp;&amp; !inside(view.sourceName, occurrence.range) } || view.calls.any { call -&gt; facts.constants[call.method] == identity &amp;&amp; !inside(view.sourceName, call.callee) } }</ID>
+    <ID>ComplexCondition:XdkSourceMoves.kt:XdkSourceMoves.Companion$destination.exists() || destination.path in texts || movedCompanion.exists() || movedCompanion in directories</ID>
+    <ID>ComplexCondition:XdkSyntaxCompletions.kt:XdkSyntaxCompletions$containing != null &amp;&amp; selected == null &amp;&amp; (cursor &lt; offset(containing.endPosition) || containing.id in comments || containing.id.name.startsWith("LIT_"))</ID>
+    <ID>ComplexCondition:XtcDebugServer.kt:XtcDebugServer$module != null &amp;&amp; sourcePath != null &amp;&amp; library != null &amp;&amp; frame.line == 0</ID>
+    <ID>ComplexCondition:XtcEnterHandlerDelegate.kt:XtcEnterHandlerDelegate$!previousText.endsWith("{") || currentText.isEmpty() || currentText.startsWith("}") || nextText.trim() != "}"</ID>
+    <ID>ComplexCondition:XtcRenameEdit.kt:XtcRenameEdit$!snapshot.isCurrent() || graph?.isCurrent() == false || resourceMoves.size != targets.size || resolved.size != targets.size || (targets.isNotEmpty() &amp;&amp; !FileMoveTargets.valid(targets))</ID>
+    <ID>ComplexCondition:XtcRunConfiguration.kt:XtcRunConfiguration$!allTestModules &amp;&amp; effectiveRunMode() == XtcRunMode.EMBEDDED &amp;&amp; moduleName.isBlank() &amp;&amp; moduleUri.isBlank()</ID>
+    <ID>CyclomaticComplexMethod:AdapterFormatter.kt:AdapterFormatter$private fun computeLineIndent: Int</ID>
+    <ID>CyclomaticComplexMethod:AdapterFormatter.kt:AdapterFormatter$private fun handleEnter: List&lt;TextEdit&gt;</ID>
+    <ID>CyclomaticComplexMethod:CompilerAnnotationIdentity.kt:internal fun annotationIdentity: ProofIdentity?</ID>
+    <ID>CyclomaticComplexMethod:CompilerBuildModel.kt:CompilerBuildModel$fun parse: JsonObject</ID>
+    <ID>CyclomaticComplexMethod:CompilerCallableIdentity.kt:internal fun callableIdentity: ProofIdentity?</ID>
+    <ID>CyclomaticComplexMethod:CompilerDispatch.kt:internal fun TypeInfo.dispatch: CompilerDispatch</ID>
+    <ID>CyclomaticComplexMethod:CompilerImplementations.kt:internal fun TypeInfo.methodImplementation: IdentityConstant?</ID>
+    <ID>CyclomaticComplexMethod:CompilerImplementations.kt:internal fun compilerImplementationTargets: Map&lt;IdentityConstant, Set&lt;IdentityConstant&gt;&gt;</ID>
+    <ID>CyclomaticComplexMethod:CompilerImplementations.kt:private fun TypeInfo.accessorImplementation: IdentityConstant?</ID>
+    <ID>CyclomaticComplexMethod:CompilerMemberAction.kt:internal fun compilerMemberActions: List&lt;CompilerMemberAction&gt;</ID>
+    <ID>CyclomaticComplexMethod:CompilerMemberSignature.kt:internal fun TypeConstant.memberSourceType: String?</ID>
+    <ID>CyclomaticComplexMethod:CompilerMemberSignature.kt:internal fun memberSignature: String?</ID>
+    <ID>CyclomaticComplexMethod:CompilerMissingMethod.kt:internal fun EmbeddingSupport.Compilation.missingMethodInputs: CompilerMissingInputs</ID>
+    <ID>CyclomaticComplexMethod:CompilerMissingMethod.kt:internal fun compilerMissingMethods: List&lt;CompilerMissingMethod&gt;</ID>
+    <ID>CyclomaticComplexMethod:CompilerPlaybook.kt:CompilerPlaybook$fun run</ID>
+    <ID>CyclomaticComplexMethod:CompilerPlaybook.kt:CompilerPlaybook$private fun Driver.additionalScenarios</ID>
+    <ID>CyclomaticComplexMethod:CompilerPlaybook.kt:CompilerPlaybook$private fun Driver.case</ID>
+    <ID>CyclomaticComplexMethod:CompilerPlaybook.kt:CompilerPlaybook$private fun Driver.signatureScenarios</ID>
+    <ID>CyclomaticComplexMethod:CompilerPlaybook.kt:CompilerPlaybook$private fun Driver.workspaceScenarios</ID>
+    <ID>CyclomaticComplexMethod:CompilerPlaybookTest.kt:CompilerPlaybookTest$private fun runPlaybook</ID>
+    <ID>CyclomaticComplexMethod:CompilerProjectConfigurable.kt:CompilerProjectConfigurable$override fun createComponent: JComponent</ID>
+    <ID>CyclomaticComplexMethod:CompilerReceiverIdentity.kt:internal fun receiverIdentity: ProofIdentity?</ID>
+    <ID>CyclomaticComplexMethod:CompilerRenameFacts.kt:internal fun captureRenameFacts: CompilerRenameFacts</ID>
+    <ID>CyclomaticComplexMethod:EmbeddedRuns.kt:EmbeddedRuns$private fun start</ID>
+    <ID>CyclomaticComplexMethod:EmbeddedRuns.kt:EmbeddedRuns$private fun startTests: CompletableFuture&lt;Unit&gt;</ID>
+    <ID>CyclomaticComplexMethod:FakeRunWorker.kt:FakeRunWorker$@JvmStatic fun main</ID>
+    <ID>CyclomaticComplexMethod:LibraryConfiguration.kt:LibraryConfiguration$fun configure: String</ID>
+    <ID>CyclomaticComplexMethod:ParityCompilerImports.kt:internal fun ParityScenarios.compilerImportCases</ID>
+    <ID>CyclomaticComplexMethod:ParityExecution.kt:internal fun ParityScenarios.buildModeCases</ID>
+    <ID>CyclomaticComplexMethod:ParityExecution.kt:internal fun ParityScenarios.executionCases</ID>
+    <ID>CyclomaticComplexMethod:ParityExecution.kt:internal fun ParityScenarios.runEntryCases</ID>
+    <ID>CyclomaticComplexMethod:ParityModules.kt:internal fun ParityScenarios.moduleCases</ID>
+    <ID>CyclomaticComplexMethod:ParityNavigation.kt:internal fun ParityScenarios.navigationCases</ID>
+    <ID>CyclomaticComplexMethod:ParityPlatform.kt:internal fun ParityScenarios.platformCases</ID>
+    <ID>CyclomaticComplexMethod:ParityProgress.kt:internal fun ParityScenarios.progressCases</ID>
+    <ID>CyclomaticComplexMethod:ParityReferenceLenses.kt:internal fun ParityScenarios.referenceLensCases</ID>
+    <ID>CyclomaticComplexMethod:ParityReliability.kt:internal fun ParityScenarios.reliabilityCases</ID>
+    <ID>CyclomaticComplexMethod:ParityRuntimeSettings.kt:internal fun ParityScenarios.runtimeSettingsCases</ID>
+    <ID>CyclomaticComplexMethod:ParitySemantics.kt:internal fun ParityScenarios.semanticCases</ID>
+    <ID>CyclomaticComplexMethod:ParityTypeMoves.kt:internal fun ParityScenarios.typeMoveCases</ID>
+    <ID>CyclomaticComplexMethod:ParityXunit.kt:internal fun ParityScenarios.xunitCases</ID>
+    <ID>CyclomaticComplexMethod:ProjectLifecycle.kt:internal fun Driver.projectLifecycle</ID>
+    <ID>CyclomaticComplexMethod:ProtocolLifecycle.kt:ProtocolLifecycle$fun wrap: MessageConsumer</ID>
+    <ID>CyclomaticComplexMethod:ProtocolTrace.kt:ProtocolTrace$fun wrap: MessageConsumer</ID>
+    <ID>CyclomaticComplexMethod:RenameFamilyScenarios.kt:fun Driver.renameFamily</ID>
+    <ID>CyclomaticComplexMethod:RunWorkerProcess.kt:RunWorkerProcess$fun start: Long</ID>
+    <ID>CyclomaticComplexMethod:RunWorkerProcess.kt:RunWorkerProcess$private fun read</ID>
+    <ID>CyclomaticComplexMethod:SemanticModelBuilder.kt:SemanticModelBuilder$fun build: List&lt;SemanticModel&gt;</ID>
+    <ID>CyclomaticComplexMethod:SemanticModelBuilder.kt:SemanticModelBuilder$fun buildPartial: PartialSemanticModel</ID>
+    <ID>CyclomaticComplexMethod:SemanticModelBuilder.kt:SemanticModelBuilder$fun extractionFacts: CompilerExtractionFacts?</ID>
+    <ID>CyclomaticComplexMethod:SemanticModelBuilder.kt:SemanticModelBuilder$private fun bindFinallyParameters</ID>
+    <ID>CyclomaticComplexMethod:SemanticModelBuilder.kt:SemanticModelBuilder$private fun collect</ID>
+    <ID>CyclomaticComplexMethod:SemanticModelBuilder.kt:SemanticModelBuilder$private fun normalized: Argument?</ID>
+    <ID>CyclomaticComplexMethod:SemanticModelBuilder.kt:SemanticModelBuilder$private fun receiverMembers: List&lt;PartialSemanticModel.Member&gt;</ID>
+    <ID>CyclomaticComplexMethod:SignatureHints.kt:fun Driver.signature</ID>
+    <ID>CyclomaticComplexMethod:StructureViews.kt:fun Driver.selectionParents</ID>
+    <ID>CyclomaticComplexMethod:TemplateScanner.kt:TemplateScanner$@Suppress("IntroduceWhenSubject") private fun scanTemplateContent: Step</ID>
+    <ID>CyclomaticComplexMethod:TemplateScanner.kt:TemplateScanner$private fun scanExpression: Step</ID>
+    <ID>CyclomaticComplexMethod:Tour.kt:Tour$fun shot</ID>
+    <ID>CyclomaticComplexMethod:Tour.kt:internal fun TourProbe.undoKey: () -&gt; String</ID>
+    <ID>CyclomaticComplexMethod:Tour.kt:internal fun within: Boolean</ID>
+    <ID>CyclomaticComplexMethod:TourScript.kt:private fun Tour.building</ID>
+    <ID>CyclomaticComplexMethod:TourScript.kt:private fun Tour.debugging</ID>
+    <ID>CyclomaticComplexMethod:TourScript.kt:private fun Tour.navigation</ID>
+    <ID>CyclomaticComplexMethod:TourScript.kt:private fun Tour.refactoring</ID>
+    <ID>CyclomaticComplexMethod:TourScript.kt:private fun Tour.settings</ID>
+    <ID>CyclomaticComplexMethod:TourScript.kt:private fun Tour.testing</ID>
+    <ID>CyclomaticComplexMethod:TreeSitterAdapter.kt:TreeSitterAdapter$override fun getCompletions: List&lt;CompletionItem&gt;</ID>
+    <ID>CyclomaticComplexMethod:TreeSitterAdapter.kt:TreeSitterAdapter$override fun getSignatureHelp: SignatureHelp?</ID>
+    <ID>CyclomaticComplexMethod:TreeSitterGenerator.kt:TreeSitterGenerator$fun generateHighlights: String</ID>
+    <ID>CyclomaticComplexMethod:Watched.kt:Watched.Walk$private fun contents</ID>
+    <ID>CyclomaticComplexMethod:XdkAdapter.kt:XdkAdapter$fun buildAsync: CompletableFuture&lt;XdkBuildResult&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkAdapter.kt:XdkAdapter$override fun getLinkedEditingRanges: LinkedEditingRanges?</ID>
+    <ID>CyclomaticComplexMethod:XdkAdapter.kt:XdkAdapter$private fun &lt;T&gt; projectQuery: CompletableFuture&lt;T&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkAdapter.kt:XdkAdapter$private fun compileOne: ModuleAnalysis</ID>
+    <ID>CyclomaticComplexMethod:XdkAdapter.kt:XdkAdapter$private fun proveRename: WorkspaceEdit?</ID>
+    <ID>CyclomaticComplexMethod:XdkBuildModel.kt:XdkBuildModel.Companion$private fun runs: Runs?</ID>
+    <ID>CyclomaticComplexMethod:XdkCrossModuleMissingMethodsTest.kt:XdkCrossModuleMissingMethodsTest$private fun query</ID>
+    <ID>CyclomaticComplexMethod:XdkCursorQueries.kt:XdkCursorQueries$fun completions: List&lt;CompletionItem&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkCursorQueries.kt:XdkCursorQueries$fun signatureHelp: SignatureHelp?</ID>
+    <ID>CyclomaticComplexMethod:XdkDocumentation.kt:XdkDocumentation$fun actions: List&lt;CodeAction&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkInlineCompletions.kt:XdkInlineCompletions$fun project: List&lt;TextEdit&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkLexical.kt:XdkLexical$private fun formatOrNull: List&lt;TextEdit&gt;?</ID>
+    <ID>CyclomaticComplexMethod:XdkLocalDeclarations.kt:XdkLocalDeclarations$fun initializer: Initializer?</ID>
+    <ID>CyclomaticComplexMethod:XdkLocalExtraction.kt:XdkLocalExtraction$fun candidate: Candidate?</ID>
+    <ID>CyclomaticComplexMethod:XdkLocalInline.kt:XdkLocalInline$private fun adjacent: Candidate?</ID>
+    <ID>CyclomaticComplexMethod:XdkLocalInline.kt:XdkLocalInline$private fun constant: Candidate?</ID>
+    <ID>CyclomaticComplexMethod:XdkLocalRemoval.kt:XdkLocalRemoval$fun candidate: Candidate?</ID>
+    <ID>CyclomaticComplexMethod:XdkMemberInline.kt:XdkMemberInline$fun everyUse: Removal?</ID>
+    <ID>CyclomaticComplexMethod:XdkMemberInline.kt:XdkMemberInline.Syntax$fun copyable: String?</ID>
+    <ID>CyclomaticComplexMethod:XdkMemberInline.kt:XdkMemberInline.Syntax$fun declared: Pair&lt;AstNode, Expression&gt;?</ID>
+    <ID>CyclomaticComplexMethod:XdkMemberUseTracker.kt:XdkMemberUseTracker$fun decide: Decision</ID>
+    <ID>CyclomaticComplexMethod:XdkMethodExtraction.kt:XdkMethodExtraction$fun candidate: Candidate?</ID>
+    <ID>CyclomaticComplexMethod:XdkMissingDeclarations.kt:XdkMissingDeclarations$fun candidates: List&lt;Candidate&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkMissingDeclarations.kt:XdkMissingDeclarations.Candidate$fun proves: Boolean</ID>
+    <ID>CyclomaticComplexMethod:XdkMissingMethods.kt:XdkMissingMethods.Candidate$fun bindsNewMethod: Boolean</ID>
+    <ID>CyclomaticComplexMethod:XdkPresentation.kt:XdkPresentation$fun tokens: SemanticTokens</ID>
+    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$fun diagnostics: List&lt;CompilationResult&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$fun importCompletions: List&lt;CompletionItem&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$fun renameFilesProposal: XdkRenameProposal?</ID>
+    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun answer: List&lt;CodeAction&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun build: XdkCodeActionCache.Base?</ID>
+    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun navigationBuilds: Map&lt;String, XdkNavigationIndex.Build&gt;?</ID>
+    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun renameProposal: XdkRenameProposal?</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$fun plan: Plan?</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$fun preservesBindings: Boolean</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$fun preservesMemberAdditions: Boolean</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$fun preservesMemberInline: Boolean</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$fun preservesMemberRemoval: Boolean</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$fun preservesMethodExtraction: Boolean</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$private fun composedTarget: Target?</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$private fun dispatch: Set&lt;Dispatch&gt;?</ID>
+    <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$private fun edges: Map&lt;Site, Target&gt;?</ID>
+    <ID>CyclomaticComplexMethod:XdkRenameServerTest.kt:XdkRenameServerTest$@ParameterizedTest @CsvSource( "false, false, false, false", "true, false, false, false", "false, true, false, false", "true, true, false, false", "false, true, true, false", "true, true, true, false", "false, true, true, true", "true, true, true, true", ) fun `missing method quick fix targets source destination with its own document version`</ID>
+    <ID>CyclomaticComplexMethod:XdkRetentionTest.kt:XdkRetentionTest$private fun verifyRetention</ID>
+    <ID>CyclomaticComplexMethod:XdkSafeDelete.kt:XdkSafeDelete$fun candidate: Candidate?</ID>
+    <ID>CyclomaticComplexMethod:XdkStdioTest.kt:XdkStdioTest.Session$fun initialize</ID>
+    <ID>CyclomaticComplexMethod:XdkSyntaxCompletions.kt:XdkSyntaxCompletions$fun complete: List&lt;CompletionItem&gt;</ID>
+    <ID>CyclomaticComplexMethod:XdkSyntaxCompletions.kt:XdkSyntaxCompletions$internal fun declarationName: DeclarationName?</ID>
+    <ID>CyclomaticComplexMethod:XdkTypeMoves.kt:XdkTypeMoves$fun plan: Proposal?</ID>
+    <ID>CyclomaticComplexMethod:XtcDebugServer.kt:XtcDebugServer$override fun evaluate: CompletableFuture&lt;EvaluateResponse&gt;</ID>
+    <ID>CyclomaticComplexMethod:XtcDebugServer.kt:XtcDebugServer$override fun launch: CompletableFuture&lt;Void?&gt;</ID>
+    <ID>CyclomaticComplexMethod:XtcImportOptimizer.kt:XtcImportOptimizer$override suspend fun processFileSuspend: Runnable</ID>
+    <ID>CyclomaticComplexMethod:XtcLanguageServer.kt:XtcLanguageServer$override fun initialize: CompletableFuture&lt;InitializeResult&gt;</ID>
+    <ID>CyclomaticComplexMethod:XtcLanguageServer.kt:XtcLanguageServer$private fun buildServerCapabilities: ServerCapabilities</ID>
+    <ID>CyclomaticComplexMethod:XtcLanguageServer.kt:XtcLanguageServer$private fun logClientCapabilities</ID>
+    <ID>CyclomaticComplexMethod:XtcRenameEdit.kt:XtcRenameEdit$fun apply: Boolean</ID>
+    <ID>CyclomaticComplexMethod:XtcTextDocumentService.kt:XtcTextDocumentService$override fun codeAction: CompletableFuture&lt;List&lt;Either&lt;Command, CodeAction&gt;&gt;&gt;</ID>
+    <ID>CyclomaticComplexMethod:XtcTextDocumentService.kt:XtcTextDocumentService$private fun &lt;T, R&gt; startQuery: CompletableFuture&lt;R&gt;</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:ProjectErrorsTest.kt:ProjectErrorsTest$val (title, message, kind, navigatable) = messages.single().second</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:SemanticTokenEncoder.kt:SemanticTokenEncoder$(line, column, length, tokenType, tokenModifiers)</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:TreeSitterAdapter.kt:TreeSitterAdapter$(name, _, kind, location)</ID>
+    <ID>EmptyFunctionBlock:AllTestModulesTest.kt:AllTestModulesTest.Located${}</ID>
+    <ID>EmptyFunctionBlock:DebugSessionUi.kt:DebugSessionUi.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:DebugSessionUi.kt:DebugSessionUi.TextOnly${}</ID>
+    <ID>EmptyFunctionBlock:OutOfSyncDocumentTest.kt:OutOfSyncDocumentTest.Client${}</ID>
+    <ID>EmptyFunctionBlock:PendingRequestsTest.kt:PendingRequestsTest.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:RunWorkerHost.kt:RunWorkerHost.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:TestRunUi.kt:TestRunUi.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:UndoRenameTest.kt:UndoRenameTest.&lt;no name provided&gt;${}</ID>
+    <ID>EmptyFunctionBlock:XdkProjectServerTest.kt:XdkProjectServerTest.&lt;no name provided&gt;${}</ID>
+    <ID>FunctionOnlyReturningConstant:CCodeDsl.kt:CCodeBuilder$fun atEof: String</ID>
+    <ID>FunctionOnlyReturningConstant:CCodeDsl.kt:CCodeBuilder$fun notAtEof: String</ID>
+    <ID>FunctionOnlyReturningConstant:CCodeDsl.kt:CCodeBuilder$fun peek: String</ID>
+    <ID>LargeClass:EmbeddedRuns.kt:EmbeddedRuns : Closeable</ID>
+    <ID>LargeClass:ScannerCGeneratorDsl.kt:ScannerCGeneratorDsl</ID>
+    <ID>LargeClass:SemanticModelBuilder.kt:SemanticModelBuilder</ID>
+    <ID>LargeClass:TreeSitterAdapter.kt:TreeSitterAdapter : AbstractAdapter</ID>
+    <ID>LargeClass:XdkAdapter.kt:XdkAdapter : AbstractAdapter</ID>
+    <ID>LargeClass:XdkProjectQueries.kt:XdkProjectQueries</ID>
+    <ID>LargeClass:XdkRename.kt:XdkRename</ID>
+    <ID>LargeClass:XtcDebugServer.kt:XtcDebugServer : IDebugProtocolServer</ID>
+    <ID>LargeClass:XtcLanguageServer.kt:XtcLanguageServer : LanguageServerLanguageClientAwareAutoCloseable</ID>
+    <ID>LargeClass:XtcTextDocumentService.kt:XtcTextDocumentService : TextDocumentService</ID>
+    <ID>LongMethod:AdapterFormatter.kt:AdapterFormatter$private fun handleEnter: List&lt;TextEdit&gt;</ID>
+    <ID>LongMethod:ClientPresentation.kt:ClientPresentation.Companion$fun read: ClientPresentation</ID>
+    <ID>LongMethod:CompilerBuildModel.kt:CompilerBuildModel$fun parse: JsonObject</ID>
+    <ID>LongMethod:CompilerDispatch.kt:internal fun TypeInfo.dispatch: CompilerDispatch</ID>
+    <ID>LongMethod:CompilerMemberAction.kt:internal fun compilerMemberActions: List&lt;CompilerMemberAction&gt;</ID>
+    <ID>LongMethod:CompilerMemberSignature.kt:internal fun memberSignature: String?</ID>
+    <ID>LongMethod:CompilerMissingMethod.kt:internal fun EmbeddingSupport.Compilation.missingMethodInputs: CompilerMissingInputs</ID>
+    <ID>LongMethod:CompilerMissingMethod.kt:internal fun compilerMissingMethods: List&lt;CompilerMissingMethod&gt;</ID>
+    <ID>LongMethod:CompilerProjectConfigurable.kt:CompilerProjectConfigurable$override fun createComponent: JComponent</ID>
+    <ID>LongMethod:CompilerRenameFacts.kt:fun identity: ProofIdentity</ID>
+    <ID>LongMethod:CompilerRenameFacts.kt:internal fun captureRenameFacts: CompilerRenameFacts</ID>
+    <ID>LongMethod:EmacsGenerator.kt:EmacsGenerator$fun generate: String</ID>
+    <ID>LongMethod:EmbeddedRuns.kt:EmbeddedRuns$private fun start</ID>
+    <ID>LongMethod:EmbeddedRuns.kt:EmbeddedRuns$private fun startTests: CompletableFuture&lt;Unit&gt;</ID>
+    <ID>LongMethod:LanguageModelCli.kt:private fun validateSources</ID>
+    <ID>LongMethod:MockAdapter.kt:MockAdapter$override fun compile: CompilationResult</ID>
+    <ID>LongMethod:ProtocolLifecycle.kt:ProtocolLifecycle$fun wrap: MessageConsumer</ID>
+    <ID>LongMethod:ProtocolTrace.kt:ProtocolTrace$fun wrap: MessageConsumer</ID>
+    <ID>LongMethod:ResourceFileWatchers.kt:ResourceFileWatchers$fun update: CompletableFuture&lt;Map&lt;String, String&gt;&gt;</ID>
+    <ID>LongMethod:RunWorker.kt:RunWorker.Runs$fun start</ID>
+    <ID>LongMethod:RunWorkerProcess.kt:RunWorkerProcess$private fun read</ID>
+    <ID>LongMethod:ScannerCGeneratorDsl.kt:ScannerCGeneratorDsl$private fun generateHelperFunctions: String</ID>
+    <ID>LongMethod:ScannerCGeneratorDsl.kt:ScannerCGeneratorDsl$private fun generateScanFunction: String</ID>
+    <ID>LongMethod:ScannerCGeneratorDsl.kt:ScannerCGeneratorDsl$private fun generateScanStmtBlock: String</ID>
+    <ID>LongMethod:SemanticModel.kt:SemanticModel.Companion$fun joined: List&lt;SemanticModel&gt;</ID>
+    <ID>LongMethod:SemanticModelBuilder.kt:SemanticModelBuilder$fun build: List&lt;SemanticModel&gt;</ID>
+    <ID>LongMethod:SemanticModelBuilder.kt:SemanticModelBuilder$fun buildPartial: PartialSemanticModel</ID>
+    <ID>LongMethod:SemanticModelBuilder.kt:SemanticModelBuilder$private fun collect</ID>
+    <ID>LongMethod:SemanticModelBuilder.kt:SemanticModelBuilder$private fun finish: List&lt;SemanticModel&gt;</ID>
+    <ID>LongMethod:SemanticModelBuilder.kt:SemanticModelBuilder$private fun normalized: Argument?</ID>
+    <ID>LongMethod:SemanticModelBuilder.kt:SemanticModelBuilder$private fun receiverMembers: List&lt;PartialSemanticModel.Member&gt;</ID>
+    <ID>LongMethod:ServerSupportLogs.kt:ServerSupportLogs.Companion$internal fun archive</ID>
+    <ID>LongMethod:TemplateScanner.kt:TemplateScanner$private fun scanExpression: Step</ID>
+    <ID>LongMethod:TextMateGenerator.kt:TextMateGenerator$fun generate: String</ID>
+    <ID>LongMethod:TreeSitterAdapter.kt:TreeSitterAdapter$override fun getCompletions: List&lt;CompletionItem&gt;</ID>
+    <ID>LongMethod:TreeSitterGenerator.kt:TreeSitterGenerator$fun generateGrammar: String</ID>
+    <ID>LongMethod:TreeSitterGenerator.kt:TreeSitterGenerator$fun generateHighlights: String</ID>
+    <ID>LongMethod:VSCodeConfigGenerator.kt:VSCodeConfigGenerator$fun generate: String</ID>
+    <ID>LongMethod:VimGenerator.kt:VimGenerator$fun generate: String</ID>
+    <ID>LongMethod:XdkAdapter.kt:XdkAdapter$fun buildAsync: CompletableFuture&lt;XdkBuildResult&gt;</ID>
+    <ID>LongMethod:XdkAdapter.kt:XdkAdapter$private fun &lt;T&gt; projectQuery: CompletableFuture&lt;T&gt;</ID>
+    <ID>LongMethod:XdkAdapter.kt:XdkAdapter$private fun compileInClosure: Pair&lt;ModuleAnalysis, Boolean&gt;</ID>
+    <ID>LongMethod:XdkAdapter.kt:XdkAdapter$private fun compileOne: ModuleAnalysis</ID>
+    <ID>LongMethod:XdkAttachedSources.kt:XdkAttachedSources$fun read: Index</ID>
+    <ID>LongMethod:XdkCursorQueries.kt:XdkCursorQueries$fun completions: List&lt;CompletionItem&gt;</ID>
+    <ID>LongMethod:XdkCursorQueries.kt:XdkCursorQueries$fun signatureHelp: SignatureHelp?</ID>
+    <ID>LongMethod:XdkLexical.kt:XdkLexical$private fun formatOrNull: List&lt;TextEdit&gt;?</ID>
+    <ID>LongMethod:XdkMemberUseTracker.kt:XdkMemberUseTracker$fun decide: Decision</ID>
+    <ID>LongMethod:XdkMethodExtraction.kt:XdkMethodExtraction$fun candidate: Candidate?</ID>
+    <ID>LongMethod:XdkPresentation.kt:XdkPresentation$fun hints: List&lt;InlayHint&gt;</ID>
+    <ID>LongMethod:XdkPresentation.kt:XdkPresentation$fun tokens: SemanticTokens</ID>
+    <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$fun diagnostics: List&lt;CompilationResult&gt;</ID>
+    <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$fun renameFilesProposal: XdkRenameProposal?</ID>
+    <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun answer: List&lt;CodeAction&gt;</ID>
+    <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun build: XdkCodeActionCache.Base?</ID>
+    <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun renameProposal: XdkRenameProposal?</ID>
+    <ID>LongMethod:XdkRename.kt:XdkRename$fun plan: Plan?</ID>
+    <ID>LongMethod:XdkRename.kt:XdkRename$fun preservesMemberAdditions: Boolean</ID>
+    <ID>LongMethod:XdkRename.kt:XdkRename$fun preservesMethodExtraction: Boolean</ID>
+    <ID>LongMethod:XdkRename.kt:XdkRename$private fun composedTarget: Target?</ID>
+    <ID>LongMethod:XdkSafeDelete.kt:XdkSafeDelete$fun candidate: Candidate?</ID>
+    <ID>LongMethod:XdkSyntaxCompletions.kt:XdkSyntaxCompletions$fun complete: List&lt;CompletionItem&gt;</ID>
+    <ID>LongMethod:XdkTypeMoves.kt:XdkTypeMoves$fun plan: Proposal?</ID>
+    <ID>LongMethod:XtcDebugServer.kt:XtcDebugServer$override fun launch: CompletableFuture&lt;Void?&gt;</ID>
+    <ID>LongMethod:XtcFormattingService.kt:XtcFormattingService.&lt;no name provided&gt;$override fun run</ID>
+    <ID>LongMethod:XtcLanguageServer.kt:XtcLanguageServer$override fun initialize: CompletableFuture&lt;InitializeResult&gt;</ID>
+    <ID>LongMethod:XtcLanguageServer.kt:XtcLanguageServer$private fun buildServerCapabilities: ServerCapabilities</ID>
+    <ID>LongMethod:XtcRenameEdit.kt:XtcRenameEdit$fun apply: Boolean</ID>
+    <ID>LongMethod:XtcTextDocumentService.kt:XtcTextDocumentService$override fun codeAction: CompletableFuture&lt;List&lt;Either&lt;Command, CodeAction&gt;&gt;&gt;</ID>
+    <ID>LongMethod:XtcTextDocumentService.kt:XtcTextDocumentService$private fun &lt;T, R&gt; startQuery: CompletableFuture&lt;R&gt;</ID>
+    <ID>LoopWithTooManyJumpStatements:CompilerImport.kt:CompilerImport$while</ID>
+    <ID>LoopWithTooManyJumpStatements:RunWorker.kt:RunWorker$for</ID>
+    <ID>LoopWithTooManyJumpStatements:SemanticModelBuilder.kt:SemanticModelBuilder$for</ID>
+    <ID>LoopWithTooManyJumpStatements:TemplateScanner.kt:TemplateScanner$while</ID>
+    <ID>LoopWithTooManyJumpStatements:TreeSitterAdapter.kt:TreeSitterAdapter$for</ID>
+    <ID>LoopWithTooManyJumpStatements:XdkModuleApi.kt:XdkModuleApi.Declaration$while</ID>
+    <ID>MagicNumber:AdapterFormatter.kt:AdapterFormatter$80</ID>
+    <ID>MagicNumber:CCodeDsl.kt:CCodeBuilder$77</ID>
+    <ID>MagicNumber:ClientRefresh.kt:ClientRefresh.Slot$10</ID>
+    <ID>MagicNumber:CompilerAnnotationIdentity.kt:64</ID>
+    <ID>MagicNumber:CompilerDispatch.kt:64</ID>
+    <ID>MagicNumber:CompilerImplementations.kt:64</ID>
+    <ID>MagicNumber:CompilerLibrariesPanel.kt:CompilerLibrariesPanel$4</ID>
+    <ID>MagicNumber:CompilerLibrariesPanel.kt:CompilerLibrariesPanel$8</ID>
+    <ID>MagicNumber:CompilerProjectConfigurable.kt:CompilerProjectConfigurable$100</ID>
+    <ID>MagicNumber:CompilerProjectConfigurable.kt:CompilerProjectConfigurable$16</ID>
+    <ID>MagicNumber:CompilerProjectConfigurable.kt:CompilerProjectConfigurable$3</ID>
+    <ID>MagicNumber:CompilerQueueTrace.kt:CompilerQueueTrace$1_000_000</ID>
+    <ID>MagicNumber:CompilerReceiverIdentity.kt:64</ID>
+    <ID>MagicNumber:ConnectionProgress.kt:ConnectionProgress$10</ID>
+    <ID>MagicNumber:ConnectionProgress.kt:ConnectionProgress$100</ID>
+    <ID>MagicNumber:EditorFormattingState.kt:EditorFormattingState.Companion$1000</ID>
+    <ID>MagicNumber:EditorFormattingState.kt:EditorFormattingState.Companion$120</ID>
+    <ID>MagicNumber:EditorFormattingState.kt:EditorFormattingState.Companion$32</ID>
+    <ID>MagicNumber:EditorFormattingState.kt:EditorFormattingState.Companion$4</ID>
+    <ID>MagicNumber:EditorFormattingState.kt:EditorFormattingState.Companion$8</ID>
+    <ID>MagicNumber:EmbeddedExecution.kt:EmbeddedExecution$3</ID>
+    <ID>MagicNumber:EmbeddedExecution.kt:EmbeddedExecution$4</ID>
+    <ID>MagicNumber:ExecutionTrace.kt:ExecutionTrace$1_000_000.0</ID>
+    <ID>MagicNumber:FileChangeSnapshots.kt:FileChangeSnapshots$1_000_000</ID>
+    <ID>MagicNumber:LanguageModelCli.kt:20</ID>
+    <ID>MagicNumber:LanguageModelCli.kt:StatsRenderer$4</ID>
+    <ID>MagicNumber:LanguageModelCli.kt:StatsRenderer$45</ID>
+    <ID>MagicNumber:LanguageModelCli.kt:StatsRenderer$6</ID>
+    <ID>MagicNumber:OrderedPaths.kt:OrderedPaths$4</ID>
+    <ID>MagicNumber:ProgressLabels.kt:ProgressLabels$160</ID>
+    <ID>MagicNumber:ResourceFileWatchers.kt:ResourceFileWatchers$10</ID>
+    <ID>MagicNumber:RunWorker.kt:RunErrors$100</ID>
+    <ID>MagicNumber:RunWorker.kt:RunWorkerIdentity$12</ID>
+    <ID>MagicNumber:RunWorkerProcess.kt:RunWorkerProcess$5</ID>
+    <ID>MagicNumber:RunWorkerProcess.kt:RunWorkerProcess.Limits$512L</ID>
+    <ID>MagicNumber:SemanticTokenEncoder.kt:SemanticTokenEncoder$16</ID>
+    <ID>MagicNumber:SemanticTokenEncoder.kt:SemanticTokenEncoder$32</ID>
+    <ID>MagicNumber:ServerControlEndpoint.kt:ServerControlEndpoint$200</ID>
+    <ID>MagicNumber:ServerControlEndpoint.kt:ServerControlEndpoint$403</ID>
+    <ID>MagicNumber:ServerControlEndpoint.kt:ServerControlEndpoint$404</ID>
+    <ID>MagicNumber:ServerControlEndpoint.kt:ServerControlEndpoint$409</ID>
+    <ID>MagicNumber:ServerControlEndpoint.kt:ServerControlEndpoint$500</ID>
+    <ID>MagicNumber:ServerControlEndpoint.kt:ServerControlEndpoint$60</ID>
+    <ID>MagicNumber:ServerHealth.kt:20</ID>
+    <ID>MagicNumber:ServerHealth.kt:ActivityWatch$1000</ID>
+    <ID>MagicNumber:ServerHealth.kt:ActivityWatch$1_000_000</ID>
+    <ID>MagicNumber:ServerHealth.kt:ActivityWatch$60</ID>
+    <ID>MagicNumber:ServerHealth.kt:ActivityWatch.Companion$1e9</ID>
+    <ID>MagicNumber:ServerHealth.kt:QueueWatch$1000</ID>
+    <ID>MagicNumber:ServerLogs.kt:LogRetention$100</ID>
+    <ID>MagicNumber:ServerLogs.kt:LogRetention$1000</ID>
+    <ID>MagicNumber:ServerLogs.kt:LogRetention$20</ID>
+    <ID>MagicNumber:ServerLogs.kt:LogRetention$90</ID>
+    <ID>MagicNumber:ServerLogs.kt:LogRetention.Companion$10</ID>
+    <ID>MagicNumber:ServerLogs.kt:LogRetention.Companion$5</ID>
+    <ID>MagicNumber:ServerLogs.kt:LogRetention.Companion$50</ID>
+    <ID>MagicNumber:ServerLogs.kt:LogRetention.Companion$7</ID>
+    <ID>MagicNumber:ServerLogs.kt:ServerLogs$86400L</ID>
+    <ID>MagicNumber:ServerRuntimeSettings.kt:100</ID>
+    <ID>MagicNumber:ServerRuntimeSettings.kt:1000</ID>
+    <ID>MagicNumber:ServerRuntimeSettings.kt:20</ID>
+    <ID>MagicNumber:ServerRuntimeSettings.kt:90</ID>
+    <ID>MagicNumber:TreeSitterAdapter.kt:TreeSitterAdapter$10</ID>
+    <ID>MagicNumber:TreeSitterAdapter.kt:TreeSitterAdapter$5</ID>
+    <ID>MagicNumber:TreeSitterAdapter.kt:TreeSitterAdapter$60</ID>
+    <ID>MagicNumber:TreeSitterGenerator.kt:TreeSitterGenerator$3</ID>
+    <ID>MagicNumber:WorkspaceIndexer.kt:WorkspaceIndexer$100</ID>
+    <ID>MagicNumber:WorkspaceIndexer.kt:WorkspaceIndexer$5</ID>
+    <ID>MagicNumber:WorkspaceIndexer.kt:WorkspaceIndexer$50</ID>
+    <ID>MagicNumber:XdkAdapter.kt:XdkAdapter$100</ID>
+    <ID>MagicNumber:XdkAdapter.kt:XdkAdapter$20</ID>
+    <ID>MagicNumber:XdkImports.kt:XdkImports$32</ID>
+    <ID>MagicNumber:XdkLibraryReplacement.kt:XdkLibraryReplacement$20</ID>
+    <ID>MagicNumber:XdkMemberActions.kt:XdkMemberActions$32</ID>
+    <ID>MagicNumber:XdkModuleApi.kt:16</ID>
+    <ID>MagicNumber:XdkPresentation.kt:XdkPresentation$3</ID>
+    <ID>MagicNumber:XdkPresentation.kt:XdkPresentation$4</ID>
+    <ID>MagicNumber:XdkProjectQueries.kt:1e9</ID>
+    <ID>MagicNumber:XdkProjectQueries.kt:20</ID>
+    <ID>MagicNumber:XdkProjectQueries.kt:XdkProjectQueries$20</ID>
+    <ID>MagicNumber:XtcAttachConfiguration.kt:XtcAttachConfiguration$65535</ID>
+    <ID>MagicNumber:XtcFileMoveHandler.kt:XtcFileMoveHandler.MoveDialog$4</ID>
+    <ID>MagicNumber:XtcLanguageCodeStyleSettingsProvider.kt:XtcLanguageCodeStyleSettingsProvider$120</ID>
+    <ID>MagicNumber:XtcLanguageCodeStyleSettingsProvider.kt:XtcLanguageCodeStyleSettingsProvider$4</ID>
+    <ID>MagicNumber:XtcLanguageCodeStyleSettingsProvider.kt:XtcLanguageCodeStyleSettingsProvider$8</ID>
+    <ID>MagicNumber:XtcLanguageServer.kt:XtcLanguageServer$10</ID>
+    <ID>MagicNumber:XtcLspServerSupportProvider.kt:XtcLspConnectionProvider.&lt;no name provided&gt;$8_000</ID>
+    <ID>MagicNumber:XtcProjectTaskRunner.kt:EmbeddedBuild$3</ID>
+    <ID>MagicNumber:XtcProjectTaskRunner.kt:EmbeddedBuild$4</ID>
+    <ID>MagicNumber:XtcTextDocumentService.kt:XtcTextDocumentService$10</ID>
+    <ID>MagicNumber:XtcTextDocumentService.kt:XtcTextDocumentService$5</ID>
+    <ID>MatchingDeclarationName:DebugSessionsTestSupport.kt:DebugClient : XtcLanguageClientLanguageClient</ID>
+    <ID>MatchingDeclarationName:LibraryReferences.kt:LibraryReference</ID>
+    <ID>MatchingDeclarationName:PlaybookFailure.kt:PlaybookCleanupFailure : IllegalStateException</ID>
+    <ID>MatchingDeclarationName:SignatureHints.kt:Signature</ID>
+    <ID>MaxLineLength:CodeActionLogTest.kt:CodeActionLogTest$"code actions: uri=App.x range=9:15-9:24 trigger=invoked only=[] outcome=answered actions=6 compiles=base 0 + proofs 0 cached-base=true"</ID>
+    <ID>MaxLineLength:CodeActionLogTest.kt:CodeActionLogTest$"code actions: uri=App.x range=9:15-9:24 trigger=invoked only=[] outcome=answered actions=6 compiles=base 1 + proofs 6 cached-base=false"</ID>
+    <ID>MaxLineLength:CompilerPlaybookTest.kt:CompilerPlaybookTest$"Native IntelliJ actions with Ultimate disabled. Partial and unimplemented cases are explicit; manual visual checks remain separate."</ID>
+    <ID>MaxLineLength:CompilerProjectConfigurable.kt:CompilerProjectConfigurable$"${it.name}: ${it.uri}\n Resources: ${it.resourceRoots.orEmpty().joinToString()}\n Dependencies: ${it.dependencies.joinToString()}"</ID>
+    <ID>MaxLineLength:ScannerCGeneratorDsl.kt:ScannerCGeneratorDsl$"!at_eof(lexer) &amp;&amp; (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\n' || peek(lexer) == '\\r')"</ID>
+    <ID>MaxLineLength:ScannerCGeneratorDsl.kt:ScannerCGeneratorDsl$"""fprintf(stderr, "[SCANNER] char='%c'(0x%02x) single=%d multi=%d expr=%d todo_text=%d todo_until_semi=%d type_gt=%d\n","""</ID>
+    <ID>MaxLineLength:ScannerCGeneratorDsl.kt:ScannerCGeneratorDsl$"valid_symbols[MULTILINE_CONTINUATION] &amp;&amp; peek(lexer) == '\\n' &amp;&amp; state-&gt;ml_interp_depth &gt; 0 &amp;&amp; !in_singleline &amp;&amp; !in_multiline"</ID>
+    <ID>MaxLineLength:ScannerCGeneratorDsl.kt:ScannerCGeneratorDsl$"valid_symbols[TUPLE_ASSIGN_LPAREN] &amp;&amp; !in_singleline &amp;&amp; !in_multiline &amp;&amp; !valid_symbols[TEMPLATE_EXPR_END] &amp;&amp; !valid_symbols[TODO_FREEFORM_TEXT] &amp;&amp; !valid_symbols[TODO_FREEFORM_UNTIL_SEMI]"</ID>
+    <ID>MaxLineLength:SemanticTokensVsTextMateTest.kt:SemanticTokensVsTextMateTest.IdentifierDisambiguation$"TextMate sees property 'name' as @variable.member; semantic tokens classify it as 'property' with 'declaration' modifier"</ID>
+    <ID>MaxLineLength:SemanticTokensVsTextMateTest.kt:SemanticTokensVsTextMateTest.TypeReferenceClassification$"String (property type), Int (return type), Boolean (param type) should all be 'type' -- TextMate may lose this to catch-all @variable"</ID>
+    <ID>MaxLineLength:ServerHealth.kt:QueueWatch$"The compile queue is backing up: $queued jobs queued, the oldest for ${oldestWait / 1000} s; running: ${running ?: "none"}"</ID>
+    <ID>MaxLineLength:ServerJvmOptions.kt:ServerJvmOptions$"Unsupported JVM option: $option. Use heap/stack sizes, MaxMetaspaceSize, ReservedCodeCacheSize, ActiveProcessorCount or a supported collector."</ID>
+    <ID>MaxLineLength:ServerLogs.kt:ServerLogs$"Recent server logs and execution traces; IDE protocol consoles are separate. Each file is a bounded tail and may start mid-line."</ID>
+    <ID>MaxLineLength:Tour.kt:Tour$"The IDE did not answer ${method.name}: ${stuck ?: "within $HANG"}${if (driverLost) "; driver connection lost" else ""}"</ID>
+    <ID>MaxLineLength:XdkAdapter.kt:XdkAdapter$"XDK sources compile each on their own: a library's whole compile needs a maximum heap of 1 GB, and this server has {} MB"</ID>
+    <ID>MaxLineLength:XdkDiagnosticIndexTest.kt:XdkDiagnosticIndexTest$"Closed diagnostic graph: roots=21, cold=$coldTime, warm=$warmTime, initialCompiles=21, unchangedCompiles=0, editedClosureCompiles=2"</ID>
+    <ID>MaxLineLength:XdkFileOperationsTest.kt:XdkFileOperationsTest$"module Consumer { package app import App; package lib import Library; app.Box make() = new app.Box(); Int number() = lib.number(); }"</ID>
+    <ID>MaxLineLength:XdkNavigationIndexTest.kt:XdkNavigationIndexTest$"Navigation graph: roots=${count + 1}, cold=$coldTime, warm=$warmTime, initialCompiles=${count + 1}, unchangedCompiles=0, editedClosureCompiles=2"</ID>
+    <ID>MaxLineLength:XdkOnTypeFormattingTest.kt:XdkOnTypeFormattingTest.Companion$"module OnType {\n class Point {\n void run() {\n if (True) {\n §\n }\n }\n }\n}\n"</ID>
+    <ID>MaxLineLength:XdkOnTypeFormattingTest.kt:XdkOnTypeFormattingTest.Companion$"module OnType {\n void run(Int x) {\n switch (x) {\n case 1:\n return;\n }§\n }\n}\n"</ID>
+    <ID>MaxLineLength:XdkProjectProofMemoryTest.kt:XdkProjectProofMemoryTest$"24-root $outcome property proof: ${watched.size} compiler objects released, walked in ${(System.nanoTime() - started) / 1_000_000} ms"</ID>
+    <ID>MaxLineLength:XdkPullDiagnosticsTest.kt:XdkPullDiagnosticsTest$"module Uses { package api import Contracts; class Mapper implements api.Mapper&lt;String&gt; { @Override String map(String value) = value; } String run(api.Mapper&lt;String&gt; mapper) = mapper.map(\"a\"); }"</ID>
+    <ID>MaxLineLength:XdkRenameServerTest.kt:XdkRenameServerTest$"Ecstasy: modules outside the workspace that use 'pick' are not changed by this rename. To include them, $ADD_CONSUMERS."</ID>
+    <ID>MaxLineLength:XdkSpecializedConstructorTest.kt:XdkSpecializedConstructorTest$"module Editing { class Box { construct(String first, String second) {} } &lt;T extends Box&gt; void run(String text, Int textNumber) { new T(\"x\", te"</ID>
+    <ID>MaxLineLength:XdkSpecializedConstructorTest.kt:XdkSpecializedConstructorTest$"module Editing { class Box&lt;T&gt; { construct(T first, T second) {} } Box&lt;String&gt; run(String text, Int textNumber) { return new Box(\"x\", te"</ID>
+    <ID>MaxLineLength:XdkSpecializedConstructorTest.kt:XdkSpecializedConstructorTest$"module Editing { class Outer&lt;T&gt; { class Part { construct(T first, T second) {} } void run(T text, Int textNumber) { new Part(text, te"</ID>
+    <ID>MayBeConstant:XdkHoverDocumentationTest.kt:XdkHoverDocumentationTest.Companion$val CONSUMER = "module Consumer { package lib import Library; Int run() = lib.Dice.roll() + lib.Dice.SIDES; }"</ID>
+    <ID>MayBeConstant:XdkRenameReachTest.kt:XdkRenameReachTest.Companion$/** A call of foo, on a line of its own, below Uses' method. */ val USES = "module Uses {\n package lib import Lib;\n\n Int run() {\n return new lib.C().foo();\n }\n}\n"</ID>
+    <ID>MayBeConstant:XdkRenameReachTest.kt:XdkRenameReachTest.Companion$val FAR = "module Far {\n package lib import Lib;\n\n Int run() = lib.other();\n}\n"</ID>
+    <ID>MayBeConstant:XdkRenameReachTest.kt:XdkRenameReachTest.Companion$val HAS_FOO = "module Iface {\n interface HasFoo {\n Int foo();\n }\n}\n"</ID>
+    <ID>MayBeConstant:XdkRenameReachTest.kt:XdkRenameReachTest.Companion$val LIB = "module Lib {\n class C {\n Int foo() = 1;\n }\n\n static Int other() = 2;\n}\n"</ID>
+    <ID>MayBeConstant:XdkRenameReachTest.kt:XdkRenameReachTest.Companion$val TOP = "module Top {\n package uses import Uses;\n\n Int go() = uses.run();\n}\n"</ID>
+    <ID>NestedBlockDepth:BoundedEdt.kt:internal fun &lt;T&gt; awaitEdt: T</ID>
+    <ID>NestedBlockDepth:CapabilityNegotiationTest.kt:CapabilityNegotiationTest$@Test fun `link tooltips honor missing false and true support on eager and resolved results`</ID>
+    <ID>NestedBlockDepth:CapabilityNegotiationTest.kt:CapabilityNegotiationTest$@Test fun `signature metadata is negotiated while legacy active parameter follows selected overload`</ID>
+    <ID>NestedBlockDepth:ClientCapabilitiesTest.kt:ClientCapabilitiesTest$@Test fun `negotiate lazy action edits and completion documentation resolve`</ID>
+    <ID>NestedBlockDepth:ClientPresentationTest.kt:internal fun editorInitializeParams</ID>
+    <ID>NestedBlockDepth:ClientProtocol.kt:ClientProtocol$fun await: JsonElement</ID>
+    <ID>NestedBlockDepth:SemanticModelBuilder.kt:SemanticModelBuilder$private fun collect</ID>
+    <ID>NestedBlockDepth:SemanticModelBuilder.kt:SemanticModelBuilder$private fun normalized: Argument?</ID>
+    <ID>NestedBlockDepth:StartupRegistrationTest.kt:StartupRegistrationTest$@Test fun `watcher requests wait for initialized and require negotiated dynamic registration`</ID>
+    <ID>NestedBlockDepth:XdkMemberUseTracker.kt:XdkMemberUseTracker$fun decide: Decision</ID>
+    <ID>NestedBlockDepth:XdkRename.kt:XdkRename$private fun edges: Map&lt;Site, Target&gt;?</ID>
+    <ID>NestedBlockDepth:XdkSources.kt:XdkSources.Companion$fun capture: XdkSources</ID>
+    <ID>NestedBlockDepth:XdkStdioTest.kt:XdkStdioTest$@Test fun `an invalid packaged backend setting fails startup explicitly`</ID>
+    <ID>NestedBlockDepth:XdkSyntaxCompletionProtocolTest.kt:XdkSyntaxCompletionProtocolTest$private fun params</ID>
+    <ID>NestedBlockDepth:XtcLanguageServer.kt:XtcLanguageServer$private fun buildServerCapabilities: ServerCapabilities</ID>
+    <ID>ReturnCount:AdapterFormatter.kt:AdapterFormatter$private fun computeLineIndent: Int</ID>
+    <ID>ReturnCount:CompilerAnnotationIdentity.kt:internal fun annotationIdentity: ProofIdentity?</ID>
+    <ID>ReturnCount:CompilerCallableIdentity.kt:internal fun callableIdentity: ProofIdentity?</ID>
+    <ID>ReturnCount:CompilerDispatch.kt:private fun MethodInfo.closingContracts: List&lt;MethodConstant&gt;?</ID>
+    <ID>ReturnCount:CompilerImplementations.kt:internal fun TypeInfo.methodImplementation: IdentityConstant?</ID>
+    <ID>ReturnCount:CompilerImplementations.kt:internal fun compilerImplementationTargets: Map&lt;IdentityConstant, Set&lt;IdentityConstant&gt;&gt;</ID>
+    <ID>ReturnCount:CompilerImport.kt:CompilerImport$fun current: String?</ID>
+    <ID>ReturnCount:CompilerMemberSignature.kt:internal fun TypeConstant.memberSourceType: String?</ID>
+    <ID>ReturnCount:CompilerMemberSignature.kt:internal fun memberSignature: String?</ID>
+    <ID>ReturnCount:CompilerReceiverIdentity.kt:internal fun receiverIdentity: ProofIdentity?</ID>
+    <ID>ReturnCount:CompilerResourceValues.kt:fun append: Boolean</ID>
+    <ID>ReturnCount:DapFrames.kt:DapFrames.Decoder$@Synchronized fun write</ID>
+    <ID>ReturnCount:DslPowerShowcaseTest.kt:DslPowerShowcaseTest$private fun findXvmRoot: File?</ID>
+    <ID>ReturnCount:EmbeddedRuns.kt:EmbeddedRuns$fun input: Boolean</ID>
+    <ID>ReturnCount:EmbeddedRuns.kt:EmbeddedRuns$fun stop: Boolean</ID>
+    <ID>ReturnCount:EmbeddedRuns.kt:EmbeddedRuns$private fun startTests: CompletableFuture&lt;Unit&gt;</ID>
+    <ID>ReturnCount:EmbeddedRuns.kt:EmbeddedRuns$private fun taskModule: String</ID>
+    <ID>ReturnCount:LanguageModelTest.kt:LanguageModelTest$private fun findXvmRoot: File?</ID>
+    <ID>ReturnCount:PopupChoices.kt:PopupChoices$@JvmStatic fun chooseListRow: Boolean</ID>
+    <ID>ReturnCount:PopupChoices.kt:PopupChoices$@JvmStatic fun chooseTableRowContaining: Boolean</ID>
+    <ID>ReturnCount:RunWorkerProcess.kt:RunWorkerProcess$private fun firstLine: String?</ID>
+    <ID>ReturnCount:SemanticModel.kt:SemanticModel$fun declarationLocationsAt: List&lt;SourceLocation&gt;</ID>
+    <ID>ReturnCount:SemanticModelBuilder.kt:SemanticModelBuilder$private fun copyableType: Boolean</ID>
+    <ID>ReturnCount:SemanticModelBuilder.kt:SemanticModelBuilder$private fun functionSignature: Signature?</ID>
+    <ID>ReturnCount:SemanticModelBuilder.kt:SemanticModelBuilder$private fun normalized: Argument?</ID>
+    <ID>ReturnCount:SemanticModelBuilder.kt:SemanticModelBuilder$private fun parameter: SymbolId?</ID>
+    <ID>ReturnCount:TemplateScanner.kt:TemplateScanner$@Suppress("IntroduceWhenSubject") private fun scanTemplateContent: Step</ID>
+    <ID>ReturnCount:TemplateScanner.kt:TemplateScanner$private fun scanExpression: Step</ID>
+    <ID>ReturnCount:Tour.kt:internal fun within: Boolean</ID>
+    <ID>ReturnCount:TourUi.kt:TourUi$private fun labeled: Component?</ID>
+    <ID>ReturnCount:TreeSitterAdapter.kt:TreeSitterAdapter$private fun classifyCompletionContext: CompletionContext</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$fun applyFileEvents: Set&lt;String&gt;?</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$fun linkedAt: LinkedEditingRanges?</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$override fun renameAsync: CompletableFuture&lt;WorkspaceEdit?&gt;</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$private fun &lt;T&gt; projectQuery: CompletableFuture&lt;T&gt;</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$private fun analyzeAtAsync: CompletableFuture&lt;PartialSemanticModel?&gt;</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$private fun compileNow: ModuleAnalysis</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$private fun installSourceModules: Set&lt;String&gt;</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$private fun proveRename: WorkspaceEdit?</ID>
+    <ID>ReturnCount:XdkAdapter.kt:XdkAdapter$private fun renameRange: PrepareRenameResult?</ID>
+    <ID>ReturnCount:XdkAst.kt:XdkAst$fun memberInsertion: SemanticModel.Position?</ID>
+    <ID>ReturnCount:XdkLibrarySources.kt:XdkLibrarySources$fun definition: SemanticModel.SourceLocation?</ID>
+    <ID>ReturnCount:XdkLocalDeclarations.kt:XdkLocalDeclarations$fun initializer: Initializer?</ID>
+    <ID>ReturnCount:XdkLocalExtraction.kt:XdkLocalExtraction$fun candidate: Candidate?</ID>
+    <ID>ReturnCount:XdkLocalExtraction.kt:XdkLocalExtraction$fun writtenReturnType: String?</ID>
+    <ID>ReturnCount:XdkLocalInline.kt:XdkLocalInline$private fun adjacent: Candidate?</ID>
+    <ID>ReturnCount:XdkLocalInline.kt:XdkLocalInline$private fun constant: Candidate?</ID>
+    <ID>ReturnCount:XdkLocalRemoval.kt:XdkLocalRemoval$fun candidate: Candidate?</ID>
+    <ID>ReturnCount:XdkMemberActions.kt:XdkMemberActions$fun importEdits: List&lt;XdkRename.Edit&gt;?</ID>
+    <ID>ReturnCount:XdkMemberInline.kt:XdkMemberInline$fun everyUse: Removal?</ID>
+    <ID>ReturnCount:XdkMemberInline.kt:XdkMemberInline.Syntax$fun copyable: String?</ID>
+    <ID>ReturnCount:XdkMemberInline.kt:XdkMemberInline.Syntax$fun declared: Pair&lt;AstNode, Expression&gt;?</ID>
+    <ID>ReturnCount:XdkMemberUseTracker.kt:XdkMemberUseTracker$fun decide: Decision</ID>
+    <ID>ReturnCount:XdkMethodExtraction.kt:XdkMethodExtraction$fun candidate: Candidate?</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$fun navigation: XdkWorkspaceNavigation?</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$fun proved: CodeAction?</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$fun renameFilesProposal: XdkRenameProposal?</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun answer: List&lt;CodeAction&gt;</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun build: XdkCodeActionCache.Base?</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun methodFamily: Set&lt;ProofIdentity&gt;?</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun propertyFamily: Set&lt;ProofIdentity&gt;?</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun renameProposal: XdkRenameProposal?</ID>
+    <ID>ReturnCount:XdkRename.kt:XdkRename$fun preservesMemberAdditions: Boolean</ID>
+    <ID>ReturnCount:XdkRename.kt:XdkRename$fun preservesMemberInline: Boolean</ID>
+    <ID>ReturnCount:XdkRename.kt:XdkRename$fun preservesMemberRemoval: Boolean</ID>
+    <ID>ReturnCount:XdkRename.kt:XdkRename$fun preservesMethodExtraction: Boolean</ID>
+    <ID>ReturnCount:XdkRename.kt:XdkRename$private fun composedTarget: Target?</ID>
+    <ID>ReturnCount:XdkRename.kt:XdkRename$private fun dispatch: Set&lt;Dispatch&gt;?</ID>
+    <ID>ReturnCount:XdkRename.kt:XdkRename.Plan$fun map: Int?</ID>
+    <ID>ReturnCount:XdkSafeDelete.kt:XdkSafeDelete$fun candidate: Candidate?</ID>
+    <ID>ReturnCount:XdkSafeDelete.kt:XdkSafeDelete$fun removal: XdkRename.Edit?</ID>
+    <ID>ReturnCount:XdkTypeMoves.kt:XdkTypeMoves$fun plan: Proposal?</ID>
+    <ID>ReturnCount:XtcDebugServer.kt:XtcDebugServer$override fun attach: CompletableFuture&lt;Void&gt;</ID>
+    <ID>ReturnCount:XtcDebugServer.kt:XtcDebugServer$override fun continue_: CompletableFuture&lt;ContinueResponse&gt;</ID>
+    <ID>ReturnCount:XtcDebugServer.kt:XtcDebugServer$override fun launch: CompletableFuture&lt;Void?&gt;</ID>
+    <ID>ReturnCount:XtcImportOptimizer.kt:XtcImportOptimizer$override suspend fun processFileSuspend: Runnable</ID>
+    <ID>ReturnCount:XtcLanguageServer.kt:XtcLanguageServer$override fun initialize: CompletableFuture&lt;InitializeResult&gt;</ID>
+    <ID>ReturnCount:XtcLanguageServer.kt:XtcLanguageServer$private fun rediscover</ID>
+    <ID>ReturnCount:XtcQueryEngine.kt:XtcQueryEngine$fun findDeclarationAt: SymbolInfo?</ID>
+    <ID>ReturnCount:XtcTextDocumentService.kt:XtcTextDocumentService$override fun didChange</ID>
+    <ID>ReturnCount:XtcTextDocumentService.kt:XtcTextDocumentService$private fun &lt;T, R&gt; startQuery: CompletableFuture&lt;R&gt;</ID>
+    <ID>ReturnCount:XtcTextMateBundleProvider.kt:XtcTextMateBundleProvider$override fun getBundles: List&lt;TextMateBundleProvider.PluginBundle&gt;</ID>
+    <ID>SwallowedException:XtcTextDocumentService.kt:XtcTextDocumentService$e: IllegalArgumentException</ID>
+    <ID>ThrowsCount:AttachedProgram.kt:AttachedProgram.Companion$private fun answer: AttachedProgram</ID>
+    <ID>ThrowsCount:XdkAdapter.kt:XdkAdapter$private fun &lt;T&gt; projectQuery: CompletableFuture&lt;T&gt;</ID>
+    <ID>ThrowsCount:XdkAdapter.kt:XdkAdapter$private fun compileOne: ModuleAnalysis</ID>
+    <ID>ThrowsCount:XdkAdapter.kt:XdkAdapter$private fun runCompilation</ID>
+    <ID>ThrowsCount:XdkAdapter.kt:XdkAdapter$private fun runCursorAnalysis</ID>
+    <ID>ThrowsCount:XtcTextDocumentService.kt:XtcTextDocumentService$private fun &lt;T, R&gt; startQuery: CompletableFuture&lt;R&gt;</ID>
+    <ID>TooGenericExceptionCaught:Adapter.kt:Adapter$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Adapter.kt:Adapter$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:AdapterFutures.kt:error: Throwable</ID>
+    <ID>TooGenericExceptionCaught:CoalescingTask.kt:CoalescingTask$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:CompilerBuildModel.kt:CompilerBuildModel$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:CompilerBuildModel.kt:CompilerBuildModel.&lt;no name provided&gt;$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:CompilerLibraries.kt:CompilerLibraries$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:ExecutionTrace.kt:ExecutionTrace$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:ExecutionTrace.kt:ExecutionTrace$failure: Throwable</ID>
+    <ID>TooGenericExceptionCaught:PartialResults.kt:PartialResults$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:ProtocolTrace.kt:ProtocolTrace$failure: Throwable</ID>
+    <ID>TooGenericExceptionCaught:ResourceFileWatchers.kt:ResourceFileWatchers.Companion$failure: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:RunWorker.kt:RunWorker.Runs$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:ServerControlEndpoint.kt:ServerControlEndpoint$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:ServerControlStartup.kt:ServerControlStartup$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:WorkspaceIndexer.kt:WorkspaceIndexer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:XdkAdapter.kt:XdkAdapter$e: Error</ID>
+    <ID>TooGenericExceptionCaught:XdkAdapter.kt:XdkAdapter$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:XdkAdapter.kt:XdkAdapter$failure: Error</ID>
+    <ID>TooGenericExceptionCaught:XdkAdapter.kt:XdkAdapter$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:XdkAdapter.kt:XdkAdapter$failure: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:XdkDependency.kt:XdkDependency$failure: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:XdkWorkspaceDiscovery.kt:XdkWorkspaceDiscovery$failure: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:XtcClientFeatures.kt:XtcClientFeatures$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:XtcDebugServer.kt:XtcDebugServer$e: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:XtcFormattingService.kt:XtcFormattingService.&lt;no name provided&gt;$failure: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:XtcImportOptimizer.kt:XtcImportOptimizer$failure: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:XtcLanguageServer.kt:XtcLanguageServer$failure: Throwable</ID>
+    <ID>TooGenericExceptionCaught:XtcLanguageServerLauncher.kt:e: Exception</ID>
+    <ID>TooGenericExceptionCaught:XtcLspServerSupportProvider.kt:XtcLspConnectionProvider$failure: Exception</ID>
+    <ID>TooGenericExceptionCaught:XtcParser.kt:XtcParser.Companion$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:XtcTextDocumentService.kt:XtcTextDocumentService$e: Error</ID>
+    <ID>TooGenericExceptionCaught:XtcTextDocumentService.kt:XtcTextDocumentService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:XtcTextDocumentService.kt:XtcTextDocumentService$error: Exception</ID>
+    <ID>TooManyFunctions:Adapter.kt:Adapter : Closeable</ID>
+    <ID>TooManyFunctions:CCodeDsl.kt:CCodeBuilder</ID>
+    <ID>TooManyFunctions:DebugRecords.kt:org.xvm.lsp.run.DebugRecords.kt</ID>
+    <ID>TooManyFunctions:DebugRuns.kt:DebugRuns</ID>
+    <ID>TooManyFunctions:EmbeddedRuns.kt:EmbeddedRuns : Closeable</ID>
+    <ID>TooManyFunctions:LanguageModel.kt:LanguageModelBuilder</ID>
+    <ID>TooManyFunctions:Lsp4jConversions.kt:org.xvm.lsp.model.Lsp4jConversions.kt</ID>
+    <ID>TooManyFunctions:RunDebugClient.kt:RunDebugClient</ID>
+    <ID>TooManyFunctions:SemanticModel.kt:SemanticModel</ID>
+    <ID>TooManyFunctions:SemanticModelBuilder.kt:SemanticModelBuilder</ID>
+    <ID>TooManyFunctions:XdkAdapter.kt:XdkAdapter : AbstractAdapter</ID>
+    <ID>TooManyFunctions:XdkLibrarySources.kt:XdkLibrarySources</ID>
+    <ID>TooManyFunctions:XdkProjectQueries.kt:XdkProjectQueries</ID>
+    <ID>TooManyFunctions:XdkRename.kt:XdkRename</ID>
+    <ID>TooManyFunctions:XdkWorkspaceNavigation.kt:XdkWorkspaceNavigation</ID>
+    <ID>TooManyFunctions:XtcLanguageServer.kt:XtcLanguageServer : LanguageServer</ID>
+    <ID>TooManyFunctions:XtcLanguageServer.kt:XtcLanguageServer : LanguageServerLanguageClientAwareAutoCloseable</ID>
+    <ID>UnusedParameter:DebugSessionUi.kt:DebugSessionUi$project: Project</ID>
+    <ID>UtilityClassWithPublicConstructor:WatchedTest.kt:WatchedTest$Cached</ID>
+    <ID>VariableNaming:XtcCodeStyleSettings.kt:XtcCodeStyleSettings$/** * Continuation indent for `extends`, `implements`, `incorporates`, `delegates` lines. XTC * convention: double the normal indent (8 spaces by default). */ @JvmField @Suppress("ktlint:standard:property-naming") // IntelliJ settings serialization convention. var CONTINUATION_INDENT_SIZE: Int = 8</ID>
+  </CurrentIssues>
+</SmellBaseline>
