@@ -659,9 +659,21 @@ class XdkAdapter
         /**
          * The tests of each source module, as [tests] lists them, once the workspace pull's compile is that of the
          * modules' sources as they are now: the one a pull makes, which this makes too if no pull has since they
-         * changed, and which compiles no module whose inputs are those of its last.
+         * changed, and which compiles no module whose inputs are those of its last. A change of the sources while that
+         * compile waits or runs, such as a document's close, retires it, which no client asked for: the listing then
+         * waits for the compile of the sources as they are after the change, as a client pulls again after a canceled
+         * pull. Off the thread that retired it, which can be the one that dispatches the client's messages.
          */
-        fun testsAsync(): CompletableFuture<List<XdkModuleTests>> = workspaceDiagnosticsAsync().thenApply { tests() }
+        fun testsAsync(): CompletableFuture<List<XdkModuleTests>> =
+            workspaceDiagnosticsAsync()
+                .handleAsync { _, failure -> failure }
+                .thenCompose { failure ->
+                    when (failure) {
+                        null -> CompletableFuture.completedFuture(tests())
+                        is CancellationException -> testsAsync()
+                        else -> CompletableFuture.failedFuture(failure)
+                    }
+                }
 
         /** The tests of each source module's root document, as [tests] has them, or null for a module with none. */
         fun testsByRoot(): Map<String, XdkTest?> = testsByModule().associate { (source, tests) -> source.uri to tests }
