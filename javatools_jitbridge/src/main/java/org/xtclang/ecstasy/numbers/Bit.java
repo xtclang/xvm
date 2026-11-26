@@ -7,9 +7,13 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * Native Bit wrapper.
  */
+@JitGenerated
 public class Bit extends nConst {
     /**
      * Construct an Ecstasy Bit object.
@@ -76,6 +80,7 @@ public class Bit extends nConst {
     /**
      * The optimized native implementation of "Bit and(Bit! that)".
      */
+    @JitName
     public static int and$p(int thi$, Ctx ctx, int that) {
         return thi$ & that;
     }
@@ -83,6 +88,7 @@ public class Bit extends nConst {
     /**
      * The optimized native implementation of "Bit or(Bit! that)".
      */
+    @JitName
     public static int or$p(int thi$, Ctx ctx, int that) {
         return thi$ | that;
     }
@@ -90,6 +96,7 @@ public class Bit extends nConst {
     /**
      * The optimized native implementation of "Bit xor(Bit! that)".
      */
+    @JitName
     public static int xor$p(int thi$, Ctx ctx, int that) {
         return thi$ ^ that;
     }
@@ -97,6 +104,7 @@ public class Bit extends nConst {
     /**
      * The optimized native implementation of "Bit not()".
      */
+    @JitName
     public static int not$p(int thi$, Ctx ctx) {
         return thi$ == 0 ? 1 : 0;
     }

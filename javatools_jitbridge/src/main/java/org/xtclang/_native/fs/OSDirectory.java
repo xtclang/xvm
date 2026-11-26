@@ -9,21 +9,40 @@ import java.nio.file.SimpleFileVisitor;
 
 import java.nio.file.attribute.BasicFileAttributes;
 
+import org.xtclang.ecstasy.Iterator;
+
 import org.xtclang.ecstasy.fs.Directory;
 
 import org.xvm.javajit.Ctx;
+
+import org.xvm.javajit.annotations.JitFromNatural;
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
 
 import static org.xtclang.ecstasy.Exception.$io;
 
 /**
  * Native implementation for {@code _native.fs.OSDirectory}.
  */
+@JitGenerated
 public class OSDirectory
         extends OSFileNode
         implements Directory {
 
     public OSDirectory(Ctx ctx, OSFileStore store, java.nio.file.Path path) {
         super(ctx, store, path);
+    }
+
+    @JitName
+    @JitFromNatural
+    public Iterator dirs(Ctx ctx) {
+        return null;
+    }
+
+    @JitName
+    @JitFromNatural
+    public Iterator files(Ctx ctx) {
+        return null;
     }
 
     /**

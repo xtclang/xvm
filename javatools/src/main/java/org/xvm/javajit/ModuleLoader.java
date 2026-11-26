@@ -25,7 +25,10 @@ import java.util.function.Predicate;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import static java.util.Collections.unmodifiableSet;
 import static org.xvm.javajit.TypeSystem.getJitSuffix;
@@ -262,6 +265,15 @@ public class ModuleLoader
             }
         }
         return sb == null ? s : sb.toString();
+    }
+
+    public String findReservedJitName(IdentityConstant classId, MethodConstant methodId) {
+        TypeConstant type = classId.getType();
+        if (type.isSingleUnderlyingClass(true) && !type.isInnerChildClass()) {
+            String className = prefix + classId.getClassJitName(typeSystem);
+            return typeSystem.findReservedJitName(className, classId.getType(), methodId);
+        }
+        return null;
     }
 
     private Map<String, byte[]> loadedClasses = new HashMap<>();

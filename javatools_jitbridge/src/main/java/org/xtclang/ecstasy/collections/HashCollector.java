@@ -6,9 +6,13 @@ import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * A native implementation of the HashCollector service.
  */
+@JitGenerated
 public interface HashCollector extends Object {
 
     /**
@@ -23,11 +27,13 @@ public interface HashCollector extends Object {
      * This is the primitive implementation of:
      *     Int compute();
      */
+    @JitName
     long compute$p(Ctx ctx);
 
     /**
      * This is the native implementation of:
      *     HashCollector reset();
      */
+    @JitName
     HashCollector reset(Ctx ctx);
 }

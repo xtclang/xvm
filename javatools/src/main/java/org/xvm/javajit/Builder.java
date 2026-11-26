@@ -1465,6 +1465,26 @@ public abstract class Builder {
     }
 
     /**
+     * @return the {@link Class} represented by the specified {@link ClassDesc}
+     */
+    public static <C> Class<? extends C> toClass(ClassDesc cd) {
+        return toClass(cd, null);
+    }
+
+    /**
+     * @return the {@link Class} represented by the specified {@link ClassDesc}
+     */
+    @SuppressWarnings("unchecked")
+    public static <C> Class<? extends C> toClass(ClassDesc cd, Class<C> clz) {
+        try {
+            String name = cd.packageName() + "." + cd.displayName();
+            return (Class<? extends C>) Class.forName(name);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * Generate a value "load" for the specified Java class.
      */
     public static CodeBuilder load(CodeBuilder code, ClassDesc cd, int slot) {

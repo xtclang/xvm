@@ -49,6 +49,7 @@ public class nTuple
      *     Object getElement(Int index)
      * }</pre>
      */
+    @Override
     public Object getElement$p(Ctx ctx, long index) {
         return $values[checkIndex(ctx, index)];
     }
@@ -60,6 +61,7 @@ public class nTuple
      *     Ref<Object> elementAt(Int index)
      * }</pre>
      */
+    @Override
     public nRef elementAt$p(Ctx ctx, long index) {
         int            i     = checkIndex(ctx, index);
         TypeConstant[] types = $type.getParamTypesArray();
@@ -76,6 +78,7 @@ public class nTuple
      *     <Element> Tuple!<> add(Element value)
      * }</pre>
      */
+    @Override
     public nTuple add(Ctx ctx, nType elementType, Object value) {
         int       count     = $values.length;
         nObject[] valuesNew = Arrays.copyOf($values, count + 1);
@@ -99,6 +102,7 @@ public class nTuple
      *     Tuple!<> addAll(Tuple!<> that)
      * }</pre>
      */
+    @Override
     public nTuple addAll(Ctx ctx, nTuple that) {
         int countThis = $values.length;
         int countThat = that.$values.length;
@@ -131,6 +135,7 @@ public class nTuple
      *     Tuple replace(Int index, Object value)
      * }</pre>
      */
+    @Override
     public nTuple replace$p(Ctx ctx, long index, Object value) {
         int            i     = checkIndex(ctx, index);
         TypeConstant[] types = $type.getParamTypesArray();
@@ -155,6 +160,7 @@ public class nTuple
      *     Tuple!<> slice(Range<Int> interval)
      * }</pre>
      */
+    @Override
     public nTuple slice(Ctx ctx, RangeᐸInt64ᐳ interval) {
         long lower = interval.$lowerBound + (interval.$lowerExclusive ? 1 : 0);
         long upper = interval.$upperBound + (interval.$upperExclusive ? 0 : 1);
@@ -203,6 +209,7 @@ public class nTuple
      *     Tuple!<> remove(Int index)
      * }</pre>
      */
+    @Override
     public nTuple remove$p(Ctx ctx, long index) {
         throw Exception.$unsupported(ctx, "Tuple.remove()");
     }
@@ -214,6 +221,7 @@ public class nTuple
      *     Tuple!<> removeAll(Interval<Int> interval)
      * }</pre>
      */
+    @Override
     public nTuple removeAll(Ctx ctx, RangeᐸInt64ᐳ interval) {
         throw Exception.$unsupported(ctx, "Tuple.removeAll()");
     }
@@ -225,6 +233,7 @@ public class nTuple
      *     immutable Tuple freeze(Boolean inPlace = False)
      * }</pre>
      */
+    @Override
     public nTuple freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
         throw Exception.$unsupported(ctx, "Tuple.freeze()");
     }

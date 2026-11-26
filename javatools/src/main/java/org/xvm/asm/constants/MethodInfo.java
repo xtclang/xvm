@@ -1593,7 +1593,7 @@ public class MethodInfo
     public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
         ConstantPool pool = builder.pool();
         if (typeContainer.isA(pool.typeRef()) &&
-                NativeNames.findReservedJitName(getJitIdentity()) != null) {
+                builder.typeSystem.findReservedJitName(getJitIdentity()) != null) {
             // all Ref and Var specializations share the native interfaces' erased signatures
             TypeConstant typeBase = typeContainer.isA(pool.typeVar())
                     ? pool.typeVar()

@@ -4,9 +4,13 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * Native representation for "ecstasy.Boolean".
  */
+@JitGenerated
 public abstract class Boolean
         extends nEnum {
 
@@ -57,26 +61,32 @@ public abstract class Boolean
         return thi$ ? 1 : 0;
     }
 
+    @JitName
     public static boolean and$p(boolean thi$, Ctx ctx, boolean that) {
         return thi$  & that;
     }
 
+    @JitName
     public static boolean or$p(boolean thi$, Ctx ctx, boolean that) {
         return thi$;
     }
 
+    @JitName
     public static boolean xor$p(boolean thi$, Ctx ctx, boolean that) {
         return thi$ ^ that;
     }
 
+    @JitName
     public static boolean not$p(boolean thi$, Ctx ctx) {
         return !thi$;
     }
 
+    @JitName
     public static int toBit$p(boolean thi$, Ctx ctx) {
         return thi$ ? 1 : 0;
     }
 
+    @JitName
     public static int toByte$p(boolean thi$, Ctx ctx) {
         return thi$ ? (byte) 1 : (byte) 0;
     }

@@ -15,9 +15,13 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * Native shell for "ecstasy.numbers.UIntN".
  */
+@JitGenerated
 public class UIntN extends UIntNumber {
 
     /**
@@ -147,6 +151,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN add(UIntN n);
      */
+    @JitName
     public UIntN add(Ctx ctx, UIntN n) {
         return new UIntN($value.add(n.$value));
     }
@@ -155,6 +160,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN sub(UIntN n);
      */
+    @JitName
     public UIntN sub(Ctx ctx, UIntN n) {
         if (n.$value.equals(BigInteger.ZERO)) {
             return this;
@@ -171,6 +177,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN mul(UIntN n);
      */
+    @JitName
     public UIntN mul(Ctx ctx, UIntN n) {
         return new UIntN($value.multiply(n.$value));
     }
@@ -179,6 +186,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN div(UIntN n);
      */
+    @JitName
     public UIntN div(Ctx ctx, UIntN n) {
         return new UIntN($value.divide(n.$value));
     }
@@ -187,6 +195,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN mod(UIntN n);
      */
+    @JitName
     public UIntN mod(Ctx ctx, UIntN n) {
         return new UIntN($value.mod(n.$value));
     }
@@ -195,6 +204,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN divrem(UIntN n);
      */
+    @JitName
     public UIntN divrem(Ctx ctx, UIntN n) {
         BigInteger[] results = $value.divideAndRemainder(n.$value);
         ctx.o0 = new UIntN(results[1]);
@@ -205,6 +215,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN remainder(UIntN n);
      */
+    @JitName
     public UIntN remainder(Ctx ctx, UIntN n) {
         return new UIntN($value.remainder(n.$value));
     }
@@ -213,6 +224,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN abs();
      */
+    @JitName
     public UIntN abs(Ctx ctx) {
         return this;
     }
@@ -221,6 +233,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    UIntN pow(UIntN n);
      */
+    @JitName
     public UIntN pow(Ctx ctx, UIntN n) {
         if (n.$value.bitLength() > 32) {
             OutOfBounds oob = new OutOfBounds(ctx);
@@ -313,6 +326,8 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    IntNumber and(UIntN n);
      */
+    @JitName
+    @Override
     public IntNumber and(Ctx ctx, IntNumber that) {
         return new UIntN($value.and(((UIntN) that).$value));
     }
@@ -321,6 +336,8 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    IntNumber or(UIntN n);
      */
+    @JitName
+    @Override
     public IntNumber or(Ctx ctx, IntNumber that) {
         return new UIntN($value.or(((UIntN) that).$value));
     }
@@ -329,6 +346,8 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    IntNumber xor(UIntN n);
      */
+    @JitName
+    @Override
     public IntNumber xor(Ctx ctx, IntNumber that) {
         return new UIntN($value.xor(((UIntN) that).$value));
     }
@@ -337,6 +356,8 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *    IntNumber not();
      */
+    @JitName
+    @Override
     public IntNumber not(Ctx ctx) {
         if ($value.signum() == 0) {
             return ONE;
@@ -360,6 +381,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *    IntNumber shiftLeft(Int n);
      */
+    @JitName
     public IntNumber shiftLeft$p(Ctx ctx, long n) {
         if (n == 0) {
             return this;
@@ -371,6 +393,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *    IntNumber shiftRight(Int n);
      */
+    @JitName
     public IntNumber shiftRight$p(Ctx ctx, long n) {
         if (n == 0) {
             return this;
@@ -382,6 +405,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *    UIntN shiftAllRight(Int n);
      */
+    @JitName
     public IntNumber shiftAllRight$p(Ctx ctx, long n) {
         if (n == 0 || $value.signum() == 0) {
             return this;
@@ -393,6 +417,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *    IntNumber rotateLeft(Int n);
      */
+    @JitName
     public IntNumber rotateLeft$p(Ctx ctx, long n) {
         // Handle distances larger than bitLength
         int bitLength = $value.bitLength();
@@ -418,6 +443,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *    IntNumber rotateRight(Int n);
      */
+    @JitName
     public IntNumber rotateRight$p(Ctx ctx, long n) {
         // Handle distances larger than bitLength
         int bitLength = $value.bitLength();
@@ -445,6 +471,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *    IntNumber retainLSBits(Int count)
      */
+    @JitName
     public IntNumber retainLSBits$p(Ctx ctx, long count) {
         // Handle edge cases for zero or negative boundaries
         if ($value.signum() == 0 || count <= 0) {
@@ -464,6 +491,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *    IntNumber retainMSBits(Int count)
      */
+    @JitName
     public IntNumber retainMSBits$p(Ctx ctx, long count) {
         // Handle edge cases for zero or negative boundaries
         if ($value.signum() == 0 || count <= 0) {
@@ -487,6 +515,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *     (Boolean, IntN) next()
      */
+    @JitName
     public boolean next$p(Ctx ctx) {
         ctx.o0 = new UIntN($value.add(BigInteger.ONE));
         return true;
@@ -496,6 +525,8 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *     IntN nextValue()
      */
+    @JitName
+    @Override
     public UIntN nextValue(Ctx ctx) {
         return new UIntN($value.add(BigInteger.ONE));
     }
@@ -504,6 +535,7 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *     (Boolean, IntN) prev()
      */
+    @JitName
     public boolean prev$p(Ctx ctx) {
         if ($value.equals(BigInteger.ZERO)) {
             return false;
@@ -516,6 +548,8 @@ public class UIntN extends UIntNumber {
      * The native implementation of:
      *     IntN prevValue()
      */
+    @JitName
+    @Override
     public UIntN prevValue(Ctx ctx) {
         if ($value.equals(BigInteger.ZERO)) {
             OutOfBounds oob = new OutOfBounds(ctx);
@@ -528,6 +562,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *     Int stepsTo(IntNumber that)
      */
+    @JitName
     public long stepsTo$p(Ctx ctx, IntNumber that) {
         return ((UIntN) that).$value.subtract(this.$value).longValue();
     }
@@ -536,6 +571,7 @@ public class UIntN extends UIntNumber {
      * The primitive implementation of:
      *     IntNumber skip(Int steps)
      */
+    @JitName
     public IntNumber skip$p(Ctx ctx, long steps) {
         return steps == 0 ? this : new UIntN($value.add(BigInteger.valueOf(steps)));
     }

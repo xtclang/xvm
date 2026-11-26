@@ -700,7 +700,7 @@ public abstract class IdentityConstant
     /**
      * @return a dot or '$'-delimited string that represents the corresponding Jit class name
      */
-    protected String getClassJitName(TypeSystem ts) {
+    public String getClassJitName(TypeSystem ts) {
         return buildJitClassName(ts).substring(1);
     }
 

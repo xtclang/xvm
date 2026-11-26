@@ -16,7 +16,6 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 
-import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Hash;
@@ -297,7 +296,7 @@ public class MethodConstant
             return sJitName;
         }
 
-        sJitName = NativeNames.findReservedJitName(this);
+        sJitName = ts.findReservedJitName(this);
         if (sJitName == null) {
             if (isFunction() || (isConstructor() && !isVirtualConstructor())) {
                 // function names don't have to be unique across the type system, but they may need

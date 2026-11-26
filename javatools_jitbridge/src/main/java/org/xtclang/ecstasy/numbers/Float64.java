@@ -171,11 +171,11 @@ public class Float64 extends BinaryFPNumber {
     }
 
     public static IntN toIntN$FP$p(double thi$, Ctx ctx, Rounding direction) {
-        return $box(thi$).toIntN$FP$p(ctx, direction);
+        return $box(thi$).toIntN$FP(ctx, direction);
     }
 
     public static UIntN toUIntN$FP$p(double thi$, Ctx ctx, Rounding direction) {
-        return $box(thi$).toUIntN$FP$p(ctx, direction);
+        return $box(thi$).toUIntN$FP(ctx, direction);
     }
 
     public static int toDec32$p(double thi$, Ctx ctx) {

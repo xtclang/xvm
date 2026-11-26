@@ -15,9 +15,13 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * Native shell for "ecstasy.numbers.IntN".
  */
+@JitGenerated
 public class IntN extends IntNumber {
 
     /**
@@ -100,6 +104,7 @@ public class IntN extends IntNumber {
      *     static conditional Range<Numeric> range();
      * }</pre>
      */
+    @JitName
     public static Boolean range(Ctx ctx) {
         return Boolean.False.$INSTANCE;
     }
@@ -111,6 +116,7 @@ public class IntN extends IntNumber {
      *     static conditional Range<Numeric> range();
      * }</pre>
      */
+    @JitName
     public static boolean range$p(Ctx ctx) {
         return false;
     }
@@ -147,6 +153,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    Number neg();
      */
+    @JitName
     public IntN neg(Ctx ctx) {
         return new IntN($value.negate());
     }
@@ -155,6 +162,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN add(IntN n);
      */
+    @JitName
     public IntN add(Ctx ctx, IntN n) {
         return new IntN($value.add(n.$value));
     }
@@ -163,6 +171,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN sub(IntN n);
      */
+    @JitName
     public IntN sub(Ctx ctx, IntN n) {
         return new IntN($value.subtract(n.$value));
     }
@@ -171,6 +180,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN mul(IntN n);
      */
+    @JitName
     public IntN mul(Ctx ctx, IntN n) {
         return new IntN($value.multiply(n.$value));
     }
@@ -179,6 +189,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN div(IntN n);
      */
+    @JitName
     public IntN div(Ctx ctx, IntN n) {
         return new IntN($value.divide(n.$value));
     }
@@ -187,6 +198,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN mod(IntN n);
      */
+    @JitName
     public IntN mod(Ctx ctx, IntN n) {
         return new IntN($value.mod(n.$value));
     }
@@ -195,6 +207,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN divrem(IntN n);
      */
+    @JitName
     public IntN divrem(Ctx ctx, IntN n) {
         BigInteger[] results = $value.divideAndRemainder(n.$value);
         ctx.o0 = new IntN(results[1]);
@@ -205,6 +218,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN remainder(IntN n);
      */
+    @JitName
     public IntN remainder(Ctx ctx, IntN n) {
         return new IntN($value.remainder(n.$value));
     }
@@ -213,6 +227,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN abs();
      */
+    @JitName
     public IntN abs(Ctx ctx) {
         if ($value.signum() >= 0) {
             return this;
@@ -224,6 +239,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntN pow(IntN n);
      */
+    @JitName
     public IntN pow(Ctx ctx, IntN n) {
         if (n.$value.bitLength() > 32) {
             OutOfBounds oob = new OutOfBounds(ctx);
@@ -316,6 +332,8 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntNumber and(IntN n);
      */
+    @JitName
+    @Override
     public IntNumber and(Ctx ctx, IntNumber that) {
         return new IntN($value.and(((IntN) that).$value));
     }
@@ -324,6 +342,8 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntNumber or(IntN n);
      */
+    @JitName
+    @Override
     public IntNumber or(Ctx ctx, IntNumber that) {
         return new IntN($value.or(((IntN) that).$value));
     }
@@ -332,6 +352,8 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntNumber xor(IntN n);
      */
+    @JitName
+    @Override
     public IntNumber xor(Ctx ctx, IntNumber that) {
         return new IntN($value.xor(((IntN) that).$value));
     }
@@ -340,6 +362,8 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *    IntNumber not();
      */
+    @JitName
+    @Override
     public IntNumber not(Ctx ctx) {
         return new IntN($value.not());
     }
@@ -348,6 +372,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber shiftLeft(Int n);
      */
+    @JitName
     public IntNumber shiftLeft$p(Ctx ctx, long n) {
         if (n == 0) {
             return this;
@@ -359,6 +384,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber shiftRight(Int n);
      */
+    @JitName
     public IntNumber shiftRight$p(Ctx ctx, long n) {
         if (n == 0) {
             return this;
@@ -370,6 +396,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber shiftAllRight(Int n);
      */
+    @JitName
     public IntNumber shiftAllRight$p(Ctx ctx, long n) {
         if (n == 0) {
             return this;
@@ -385,6 +412,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber rotateLeft(Int n);
      */
+    @JitName
     public IntNumber rotateLeft$p(Ctx ctx, long n) {
         // Handle distances larger than bitLength
         int bitLength = $value.bitLength();
@@ -410,6 +438,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber rotateRight(Int n);
      */
+    @JitName
     public IntNumber rotateRight$p(Ctx ctx, long n) {
         // Handle distances larger than bitLength
         int bitLength = $value.bitLength();
@@ -437,6 +466,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber retainLSBits(Int count)
      */
+    @JitName
     public IntNumber retainLSBits$p(Ctx ctx, long count) {
         // Handle edge cases for zero or negative boundaries
         if ($value.signum() == 0 || count <= 0) {
@@ -456,6 +486,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *    IntNumber retainMSBits(Int count)
      */
+    @JitName
     public IntNumber retainMSBits$p(Ctx ctx, long count) {
         // Handle edge cases for zero or negative boundaries
         if ($value.signum() == 0 || count <= 0) {
@@ -479,6 +510,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     (Boolean, IntN) next()
      */
+    @JitName
     public boolean next$p(Ctx ctx) {
         ctx.o0 = new IntN($value.add(BigInteger.ONE));
         return true;
@@ -488,6 +520,8 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntN nextValue()
      */
+    @JitName
+    @Override
     public IntN nextValue(Ctx ctx) {
         return new IntN($value.add(BigInteger.ONE));
     }
@@ -496,6 +530,7 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     (Boolean, IntN) prev()
      */
+    @JitName
     public boolean prev$p(Ctx ctx) {
         ctx.o0 = new IntN($value.subtract(BigInteger.ONE));
         return true;
@@ -505,6 +540,8 @@ public class IntN extends IntNumber {
      * The native implementation of:
      *     IntN prevValue()
      */
+    @JitName
+    @Override
     public IntN prevValue(Ctx ctx) {
         return new IntN($value.subtract(BigInteger.ONE));
     }
@@ -513,6 +550,7 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *     Int stepsTo(IntNumber that)
      */
+    @JitName
     public long stepsTo$p(Ctx ctx, IntNumber that) {
         return ((IntN) that).$value.subtract(this.$value).longValue();
     }
@@ -521,6 +559,8 @@ public class IntN extends IntNumber {
      * The primitive implementation of:
      *     IntNumber skip(Int steps)
      */
+    @JitName
+    @Override
     public IntNumber skip$p(Ctx ctx, long steps) {
         return steps == 0 ? this : new IntN($value.add(BigInteger.valueOf(steps)));
     }

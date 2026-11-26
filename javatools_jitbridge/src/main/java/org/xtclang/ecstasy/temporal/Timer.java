@@ -1,18 +1,25 @@
 package org.xtclang.ecstasy.temporal;
 
+import org.xtclang.ecstasy.Boolean;
 import org.xtclang.ecstasy.nFunction;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitFromNatural;
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * The native implementation of {@code ecstasy.temporal.Timer}.
  */
+@JitGenerated
 public interface Timer {
     /**
      * The native implementation of Timer method:
      *
      * <p>{@code    Timer start();}
      */
+    @JitName
     Timer start(Ctx ctx);
 
     /**
@@ -20,6 +27,7 @@ public interface Timer {
      *
      * <p>{@code    Timer stop();}
      */
+    @JitName
     Timer stop(Ctx ctx);
 
     /**
@@ -27,7 +35,14 @@ public interface Timer {
      *
      * <p>{@code    Timer reset();}
      */
+    @JitName
     Timer reset(Ctx ctx);
+
+    @JitName
+    @JitFromNatural
+    default nFunction schedule(Ctx ctx, Duration delay, nFunction function, Boolean keepAlive) {
+        return null;
+    }
 
     /**
      * The native implementation of Timer method:

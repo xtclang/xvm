@@ -7,12 +7,14 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.ClassHierarchyResolver.ClassHierarchyInfo;
 import java.lang.classfile.ClassModel;
+import java.lang.classfile.ClassTransform;
 import java.lang.classfile.Interfaces;
 import java.lang.classfile.MethodModel;
 import java.lang.classfile.Superclass;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
+import java.lang.constant.MethodTypeDesc;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -25,17 +27,26 @@ import java.nio.file.Paths;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
+
 import java.util.concurrent.ConcurrentHashMap;
+
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.builders.ArrayBuilder;
 import org.xvm.javajit.builders.AugmentingBuilder;
@@ -144,7 +155,7 @@ public class NativeTypeSystem
     /**
      * A cache of parsed native class models keyed by their JVM class descriptor.
      */
-    private final Map<ClassDesc, ClassModel> nativeModels = new ConcurrentHashMap<>();
+    private final Map<String, NativeModelInfo> nativeModels = new ConcurrentHashMap<>();
 
     /**
      * A cache of native class names keyed by class id.
@@ -155,6 +166,9 @@ public class NativeTypeSystem
      * A cache of native class names keyed by the type.
      */
     private final Map<TypeConstant, String> nativeByType = new ConcurrentHashMap<>();
+
+    private static final String N_Number = "org.xtclang.ecstasy.numbers.Number";
+    private static final String N_FPNumber = "org.xtclang.ecstasy.numbers.FPNumber";
 
     /**
      * @return a reserved class name for the specified type, or null if it's not reserved
@@ -168,64 +182,154 @@ public class NativeTypeSystem
     }
 
     @Override
-    public byte[] genClass(ModuleLoader moduleLoader, String name) {
-        String className = moduleLoader.prefix + name;
-        String classPath = className.replace('.', '/') + ".class";
-        try (InputStream in = bridgeLoader.getResourceAsStream(classPath)) {
-            if (in != null) {
-                byte[] classBytes = in.readAllBytes();
-                String simpleName = name.substring(name.lastIndexOf('.') + 1);
-                       simpleName = simpleName.substring(simpleName.lastIndexOf('$') + 1);
-                if (simpleName.codePointAt(0) == NO_MOD
-                        || className.equals(Builder.N_Function)) {
-                    // by convention the classes that start with the NO_MOD character are
-                    // "no-modification" classes that we use "as is" (they must not be augmented)
-                    return classBytes;
+    public String findReservedJitName(String className, TypeConstant type, MethodConstant methodId) {
+        String jitName = findJitName(type, className, methodId);
+        if (jitName == null) {
+            ConstantPool pool = this.pool();
+            if (type.isArray()) {
+                // TODO Array does not work - needs long arms?
+                return NativeNames.findReservedJitName(methodId);
+            } else if (type.isA(pool.typeNumber())
+                || type.isA(pool.typeIntConvertible())
+                || type.isA(pool.typeFPConvertible())) {
+
+                if (type.isA(pool.typeFPNumber())) {
+                    jitName = findJitName(pool.typeFPNumber(), N_FPNumber, methodId);
+                }
+                if (jitName == null) {
+                    jitName = findJitName(pool.typeNumber(), N_Number, methodId);
                 }
 
-                String         path       = className.substring(moduleLoader.prefix.length()).replace('$', '.');
-                TypeConstant[] params     = null;
-                int            paramStart = path.indexOf(L_ANGLE) ;     // looks like: '<'
-                if (paramStart > 0) {
-                    // assumes only a single type parameter for augmented native types
-                    int paramEnd = path.length() - 1;
-                    assert path.charAt(paramEnd) == R_ANGLE;
-                    String typeName = path.substring(paramStart + 1, paramEnd);
-                    assert typeName.indexOf('.') < 0;         // simple names only
-                    assert typeName.indexOf(COMMA) < 0;       // exactly one formal
-                    assert typeName.indexOf(L_ANGLE) < 0;     // no nesting etc.
-                    assert typeName.indexOf(R_ANGLE) < 0;     // no nesting etc.
-                    TypeConstant typeParam = pool().getImplicitlyImportedIdentity(typeName).getType();
-                    if (typeParam == null) {
-                        throw new RuntimeException("Invalid Ecstasy core type: " + typeName);
-                    }
-                    assert typeParam != null;
-                    params = new TypeConstant[] {typeParam};
-                    path   = path.substring(0, paramStart);
+                String methodName = methodId.getName();
+                if (jitName == null &&
+                        (methodName.startsWith("toInt")    || methodName.startsWith("toUInt") ||
+                         methodName.startsWith("toDec")    || methodName.startsWith("toFloat") ||
+                         methodName.startsWith("toNibble") || methodName.startsWith("toByte"))) {
+                    jitName = methodName;
                 }
-
-                ClassStructure struct = (ClassStructure) moduleLoader.module.getChildByPath(path);
-                if (struct == null) {
-                    throw new RuntimeException("Missing Ecstasy core type: " + moduleLoader.prefix + name);
-                }
-                TypeConstant type = struct.getFormalType();
-                if (params != null) {
-                    type = type.adoptParameters(pool(), params);
-                }
-                return augmentNativeClass(ClassFile.of().parse(classBytes), className, type);
             }
-        } catch (IOException ignore) {}
+        }
+
+        // TODO remove this assertion error checking after Arrays are fixed and we know this code
+        //  returns the same as the original NativeNames code
+        String test = NativeNames.findReservedJitName(methodId);
+        if (!Objects.equals(test, jitName)) {
+            TypeInfo        typeInfo  = type.ensureTypeInfo();
+            MethodInfo      method    = typeInfo.getMethodById(methodId);
+            MethodStructure structure = method != null
+                                                ? method.getTopmostMethodStructure(typeInfo)
+                                                : (MethodStructure) methodId.getComponent();
+            String message;
+            if (structure != null) {
+                int               flags      = JitMethodDesc.flagsFor(structure);
+                SignatureConstant signature  = methodId.getSignature();
+                TypeConstant[]    params     = signature.getRawParams();
+                TypeConstant[]    returns    = signature.getRawReturns();
+                int               paramCount = structure.getRequiredParamCount();
+                JitMethodDesc     jmd        = JitMethodDesc.of(this, type, flags,
+                                                        params, returns, paramCount);
+
+                if (jmd.isOptimized) {
+                    message = className
+                            + " test: " + test + ", " + "jitName: " + jitName
+                            + " standard: "
+                            + debugMethodDesc(test, jmd.standardMD)
+                            + " optimized: "
+                            + debugMethodDesc(test + Builder.OPT, jmd.optimizedMD);
+                } else {
+                    message = className
+                            + " test: " + test + ", " + "jitName: " + jitName
+                            + " standard: "
+                            + debugMethodDesc(test, jmd.standardMD);
+                }
+            } else {
+                message = className
+                        + " test: " + test + ", " + "jitName: " + jitName
+                        + " " + className + " " + methodId;
+            }
+            throw new AssertionError("NativeNames mismatch for: " + message);
+        }
+
+        return jitName;
+    }
+
+    private String findJitName(TypeConstant type, String className, MethodConstant methodId) {
+        NativeModelInfo info = getNativeModelInfo(className);
+
+        if (info != null) {
+            return info.findReservedJitName(this, type, methodId);
+        }
+        return null;
+    }
+
+    private String debugMethodDesc(String name, MethodTypeDesc md) {
+        return md.returnType().displayName() +
+                " " +
+                name +
+                "(" +
+                md.parameterList().stream()
+                        .map(cd -> cd.displayName() + " _")
+                        .collect(Collectors.joining(", ")) +
+                ")";
+    }
+
+    @Override
+    public byte[] genClass(ModuleLoader moduleLoader, String name) {
+        String          className = moduleLoader.prefix + name;
+        NativeModelInfo info      = getNativeModelInfo(className);
+        if (info != null) {
+            String simpleName = name.substring(name.lastIndexOf('.') + 1);
+            simpleName = simpleName.substring(simpleName.lastIndexOf('$') + 1);
+            if (simpleName.codePointAt(0) == NO_MOD || className.equals(Builder.N_Function)) {
+                // by convention the classes that start with the NO_MOD character are
+                // "no-modification" classes that we use "as is" (they must not be augmented)
+                return ClassFile.of().transformClass(info.model, ClassTransform.ACCEPT_ALL);
+            }
+            TypeConstant type = computeType(moduleLoader, className);
+            return augmentNativeClass(info.model, className, type);
+        }
 
         // there is no native class, but there must be a corresponding Ecstasy component
         return super.genClass(moduleLoader, name);
+    }
+
+    private TypeConstant computeType(ModuleLoader moduleLoader, String className) {
+        String         path       = className.substring(moduleLoader.prefix.length()).replace('$', '.');
+        TypeConstant[] params     = null;
+        int            paramStart = path.indexOf(L_ANGLE) ;     // looks like: '<'
+        if (paramStart > 0) {
+            // assumes only a single type parameter for augmented native types
+            int paramEnd = path.length() - 1;
+            assert path.charAt(paramEnd) == R_ANGLE;
+            String typeName = path.substring(paramStart + 1, paramEnd);
+            assert typeName.indexOf('.') < 0;         // simple names only
+            assert typeName.indexOf(COMMA) < 0;       // exactly one formal
+            assert typeName.indexOf(L_ANGLE) < 0;     // no nesting etc.
+            assert typeName.indexOf(R_ANGLE) < 0;     // no nesting etc.
+            TypeConstant typeParam = pool().getImplicitlyImportedIdentity(typeName).getType();
+            if (typeParam == null) {
+                throw new RuntimeException("Invalid Ecstasy core type: " + typeName);
+            }
+            assert typeParam != null;
+            params = new TypeConstant[] {typeParam};
+            path   = path.substring(0, paramStart);
+        }
+
+        ClassStructure struct = (ClassStructure) moduleLoader.module.getChildByPath(path);
+        if (struct == null) {
+            throw new RuntimeException("Missing Ecstasy core type: " + moduleLoader.prefix + name);
+        }
+        TypeConstant type = struct.getFormalType();
+        if (params != null) {
+            type = type.adoptParameters(pool(), params);
+        }
+        return type;
     }
 
     /**
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
-        nativeModels.put(model.thisClass().asSymbol(), model);
-
         IdentityConstant id     = type.getSingleUnderlyingClass(true);
         ClassStructure   struct = (ClassStructure) id.getComponent();
         Artifact         art    = new Artifact(type, struct, ClassfileShape.Impl, className);
@@ -282,23 +386,41 @@ public class NativeTypeSystem
      *
      * @return the parsed native class model, or null if the class is not a bridge class
      */
-    public ClassModel getNativeClassModel(ClassDesc classDesc) {
-        ClassModel model = nativeModels.get(classDesc);
-        if (model != null) {
-            return model;
+    public ClassModel getNativeClassModel(ClassDesc cd) {
+        return getNativeClassModel(cd.packageName() + "." + cd.displayName());
+    }
+
+    /**
+     * Find the native class model for the specified JVM class name.
+     *
+     * @return the parsed native class model, or null if the class is not a bridge class
+     */
+    public ClassModel getNativeClassModel(String className) {
+        NativeModelInfo modelInfo = getNativeModelInfo(className);
+        if (modelInfo != null) {
+            return modelInfo.model;
+        }
+        return null;
+    }
+
+    /**
+     * Find the native class model for the specified JVM class descriptor.
+     *
+     * @return the {@link NativeModelInfo}, or {@code null} if the class is not a bridge class
+     */
+    protected NativeModelInfo getNativeModelInfo(String className) {
+        NativeModelInfo modelInfo = nativeModels.get(className);
+        if (modelInfo != null) {
+            return modelInfo;
         }
 
-        String descriptor = classDesc.descriptorString();
-        if (descriptor.length() < 2 || descriptor.charAt(0) != 'L') {
-            return null;
-        }
-
-        String classPath = descriptor.substring(1, descriptor.length() - 1) + ".class";
+        String classPath = className.replace(".", "/") + ".class";
         try (InputStream in = bridgeLoader.getResourceAsStream(classPath)) {
             if (in != null) {
-                model = ClassFile.of().parse(in.readAllBytes());
-                nativeModels.put(classDesc, model);
-                return model;
+                ClassModel model = ClassFile.of().parse(in.readAllBytes());
+                NativeModelInfo  info  = new NativeModelInfo(model);
+                nativeModels.put(className, info);
+                return info;
             }
         } catch (IOException ignore) {}
         return null;

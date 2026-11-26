@@ -17,6 +17,7 @@ import org.xtclang.ecstasy.text.String;
 import org.xvm.javajit.Ctx;
 
 import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
 
 import org.xvm.javajit.builders.generators.OSStorageGenerator;
 
@@ -81,6 +82,7 @@ public class OSStorage extends nService {
      * The native implementation of the method
      * {@code conditional Directory|File find(OSFileStore store, String pathString)}.
      */
+    @JitName
     public boolean find$p(Ctx ctx, OSFileStore store, String pathString) {
         Path path = OSFileNode.$toOsPath(ctx, pathString);
         if (Files.exists(path)) {
@@ -93,6 +95,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code String[] names(String pathString)}.
      */
+    @JitName
     public ArrayᐸObjectᐳ names(Ctx ctx, String pathString)      {
         Path               path = OSFileNode.$toOsPath(ctx, pathString);
         java.lang.String[] list = path.toFile().list();
@@ -109,6 +112,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code Boolean createDir(String pathString)}.
      */
+    @JitName
     public boolean  createDir$p(Ctx ctx, String pathString)  {
         java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
         if (Files.exists(path) && Files.isDirectory(path)) {
@@ -120,6 +124,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code Boolean createFile(String pathString)}.
      */
+    @JitName
     public boolean createFile$p(Ctx ctx, String pathString) {
         java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
         if (Files.exists(path) && !Files.isDirectory(path)) {
@@ -143,6 +148,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code Boolean delete(String pathString)}.
      */
+    @JitName
     public boolean delete$p(Ctx ctx, String pathString) {
         Path path = OSFileNode.$toOsPath(ctx, pathString);
         if (Files.exists(path)) {
@@ -154,6 +160,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code void watch(String pathStringDir)}.
      */
+    @JitName
     void watch(Ctx ctx, String pathStringDir) {
         throw new UnsupportedOperationException("TODO");
     }
@@ -161,6 +168,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code void unwatch(String pathStringDir)}.
      */
+    @JitName
     void unwatch(Ctx ctx, String pathStringDir) {
         throw new UnsupportedOperationException("TODO");
     }
@@ -168,6 +176,7 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code static OSStorage instance()}.
      */
+    @JitName
     @JitGenerated(OSStorageGenerator.class)
     public static OSStorage instance(Ctx ctx) {
         // the JIT will generate the following code for this method:

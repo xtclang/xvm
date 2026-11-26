@@ -20,6 +20,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -579,6 +581,30 @@ public class TypeSystem {
         return type.isVirtualChildClass()
                 ? new VirtualChildBuilder(this, art)
                 : new CommonBuilder(this, art);
+    }
+
+    /**
+     * @return the name reserved by the JIT for the specified method or {@code null} if the JIT
+     *         has no reserved name for the method
+     */
+    public String findReservedJitName(MethodConstant methodId) {
+        IdentityConstant classId   = methodId.getNamespace();
+        TypeConstant     classType = classId.getType();
+        String           jitName   = null;
+
+        if (classType.isSingleUnderlyingClass(true)) {
+            ModuleLoader loader = findOwnerLoader(classType);
+            jitName = loader.findReservedJitName(classId, methodId);
+        }
+        return jitName;
+    }
+
+    /**
+     * @return the name reserved by the JIT for the specified method or {@code null} if the JIT
+     *         has no reserved name for the method
+     */
+    public String findReservedJitName(String className, TypeConstant type, MethodConstant methodId) {
+        return null;
     }
 
     /**

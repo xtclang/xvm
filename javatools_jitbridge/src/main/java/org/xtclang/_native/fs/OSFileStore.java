@@ -14,6 +14,7 @@ import org.xtclang.ecstasy.nObject;
 import org.xtclang.ecstasy.Object;
 
 import org.xtclang.ecstasy.fs.AccessDenied;
+import org.xtclang.ecstasy.fs.File;
 import org.xtclang.ecstasy.fs.FileAlreadyExists;
 import org.xtclang.ecstasy.fs.FileNotFound;
 import org.xtclang.ecstasy.fs.Path;
@@ -26,6 +27,7 @@ import org.xvm.javajit.Ctx;
 
 import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
 
 /**
  * The native implementation of {@code _native.fs.OSFileStore}.
@@ -88,9 +90,34 @@ public class OSFileStore
         return $ROOT.getFreeSpace();
     }
 
+    @Override
+    @JitFromNatural
+    public boolean find$p(Ctx ctx, Path path) {
+        return false;
+    }
+
+    @Override
+    @JitFromNatural
+    public Object copy(Ctx ctx, Path source, Path dest) {
+        return null;
+    }
+
+    @Override
+    @JitFromNatural
+    public Object move(Ctx ctx, Path source, Path dest) {
+        return null;
+    }
+
+    @Override
+    @JitFromNatural
+    public FileStore ensureReadOnly(Ctx ctx) {
+        return null;
+    }
+
     /**
      * The native implementation of {@code Directory dirFor(Path path);}.
      */
+    @Override
     public Directory dirFor(Ctx ctx, Path path) {
         return dirFor(ctx, path.toString(ctx));
     }
@@ -98,6 +125,7 @@ public class OSFileStore
     /**
      * The native implementation of {@code Directory dirFor(Path path);}.
      */
+    @JitName
     public OSDirectory dirFor(Ctx ctx, String pathString) {
         java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
         return new OSDirectory(ctx, this, path);
@@ -106,6 +134,15 @@ public class OSFileStore
     /**
      * The native implementation of {@code File fileFor(Path path);}.
      */
+    @Override
+    public File fileFor(Ctx ctx, Path path) {
+        return fileFor(ctx, path.toString(ctx));
+    }
+
+    /**
+     * The native implementation of {@code File fileFor(Path path);}.
+     */
+    @JitName
     public OSFile fileFor(Ctx ctx, String pathString) {
         java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
         return new OSFile(ctx, this, path);
@@ -116,6 +153,7 @@ public class OSFileStore
      * {@code OSDirectory|OSFile copyOrMove(Path sourcePath, String sourceStr, Path destPath,
      *                                      String destStr, Boolean move)}.
      */
+    @JitName
     public Object copyOrMove$p(Ctx ctx, Path sourcePath, String sourceStr, Path destPath,
                                String destStr, boolean move) {
 
@@ -148,11 +186,18 @@ public class OSFileStore
         }
     }
 
+    @JitName
+    @JitFromNatural
+    public boolean linkAsFile$p(Ctx ctx, OSFileNode pathString) {
+        return false;
+    }
+
     /**
      * The native implementation of the OSFileStore.x method:
      * {@code conditional OSFile linkAsFile(String pathString)}.
      */
-    public boolean linkFileAs$p(Ctx ctx, String pathString) {
+    @JitName
+    public boolean linkAsFile$p(Ctx ctx, String pathString) {
         java.nio.file.Path pathSrc = OSFileNode.$toOsPath(ctx, pathString);
         // TODO implement native support for link files
         return false;

@@ -9,9 +9,13 @@ import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * The native implementation of {@code _native.io.RawChannel}.
  */
+@JitGenerated
 public class RawChannel extends nService {
 
     public RawChannel(Ctx ctx) {
@@ -32,6 +36,7 @@ public class RawChannel extends nService {
     /**
      * The primitive property getter for {@code void close();}.
      */
+    @JitName
     public void close(Ctx ctx) {
     }
 

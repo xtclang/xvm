@@ -11,9 +11,13 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * Native FPNumber wrapper.
  */
+@JitGenerated
 public abstract class FPNumber extends Number {
 
     // ----- JIT methods ---------------------------------------------------------------------------
@@ -104,6 +108,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Int8 value inside a Java {@code int}
      */
+    @JitName("toInt8")
     public int toInt8$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
@@ -130,6 +135,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Int16 value inside a Java {@code int}
      */
+    @JitName("toInt16")
     public int toInt16$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
@@ -156,6 +162,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Int32 value inside a Java {@code int}
      */
+    @JitName("toInt32")
     public int toInt32$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds, Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
         int        bits = bi.bitLength();
@@ -182,6 +189,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Int64 value inside a Java {@code long}
      */
+    @JitName("toInt64")
     public long toInt64$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
         BigInteger bi   = $toBigInteger(direction);
@@ -213,6 +221,7 @@ public abstract class FPNumber extends Number {
      * @return the low 64-bits of this FPNumber value converted to an Int128 value inside a
      *         Java {@code long}
      */
+    @JitName("toInt128")
     public long toInt128$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                               Rounding direction) {
 
@@ -241,6 +250,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an Nibble value inside a Java {@code int}
      */
+    @JitName("toNibble")
     public int toNibble$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                             Rounding direction) {
         if ($isSigned()) {
@@ -273,6 +283,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an UInt8 value inside a Java {@code int}
      */
+    @JitName("toUInt8")
     public int toUInt8$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                             Rounding direction) {
         if ($isSigned()) {
@@ -305,6 +316,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an UInt16 value inside a Java {@code int}
      */
+    @JitName("toUInt16")
     public int toUInt16$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
         if ($isSigned()) {
@@ -337,6 +349,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an UInt32 value inside a Java {@code int}
      */
+    @JitName("toUInt32")
     public int toUInt32$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                              Rounding direction) {
         if ($isSigned()) {
@@ -369,6 +382,7 @@ public abstract class FPNumber extends Number {
      *
      * @return this FPNumber value converted to an UInt64 value inside a Java {@code long}
      */
+    @JitName("toUInt64")
     public long toUInt64$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                               Rounding direction) {
         if ($isSigned()) {
@@ -405,6 +419,7 @@ public abstract class FPNumber extends Number {
      * @return the low 64-bits of this FPNumber value converted to an UInt128 value inside a
      *         Java {@code long}
      */
+    @JitName("toUInt128")
     public long toUInt128$FP$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds,
                                Rounding direction) {
         if ($isSigned()) {
@@ -423,12 +438,14 @@ public abstract class FPNumber extends Number {
         return UInt128.$fromBigInteger(ctx, bi);
     }
 
-    public IntN toIntN$FP$p(Ctx ctx, Rounding direction) {
+    @JitName("toIntN")
+    public IntN toIntN$FP(Ctx ctx, Rounding direction) {
         BigInteger bi = $toBigInteger(direction);
         return IntN.$box(bi);
     }
 
-    public UIntN toUIntN$FP$p(Ctx ctx, Rounding direction) {
+    @JitName("toUIntN")
+    public UIntN toUIntN$FP(Ctx ctx, Rounding direction) {
         if ($isSigned()) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "FPNumber value " + $toBigDecimal().toEngineeringString()

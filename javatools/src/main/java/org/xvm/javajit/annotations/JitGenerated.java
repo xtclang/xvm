@@ -4,6 +4,7 @@ import java.lang.annotation.Retention;
 
 import java.lang.annotation.RetentionPolicy;
 
+import java.lang.classfile.Annotation;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
 
@@ -64,6 +65,29 @@ public @interface JitGenerated {
 
         @Override
         public void generate(AugmentingBuilder builder, ClassElement element, ClassBuilder classBuilder) {
+        }
+    }
+
+    /**
+     * An implementation of the {@link JitGenerated} annotation used to create annotations at
+     * runtime from a Java class file API {@link Annotation}.
+     */
+    class Literal
+            extends JitAnnotation
+            implements JitGenerated {
+
+        public Literal(Annotation annotation) {
+            super(annotation);
+        }
+
+        @Override
+        public Class<? extends java.lang.annotation.Annotation> annotationType() {
+            return JitGenerated.class;
+        }
+
+        @Override
+        public Class<? extends Generator<?>> value() {
+            return getValue("value", NaturalCode.class);
         }
     }
 }

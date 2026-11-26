@@ -26,7 +26,7 @@ public class NativeNames {
 
         reservedMethodName.put("Freezable/freeze/1", "freeze");
 
-        reservedMethodName.put("Object/equals/2", "equals");
+        reservedMethodName.put("Object/equals/3", "equals");
 
         reservedMethodName.put("reflect.Ref/get/0", "get");
         reservedMethodName.put("reflect.Ref/peek/0", "peek");
@@ -38,6 +38,7 @@ public class NativeNames {
         reservedMethodName.put("Boolean/and/1",    "and");
         reservedMethodName.put("Boolean/or/1",     "or");
         reservedMethodName.put("Boolean/xor/1",    "xor");
+        reservedMethodName.put("Boolean/toBit/0",  "toBit");
         reservedMethodName.put("Boolean/toByte/0", "toByte");
 
         reservedMethodName.put("Sequential/next/0",    "next");
@@ -56,19 +57,29 @@ public class NativeNames {
 
         reservedMethodName.put("numbers.Random/bit/0",     "bit");
         reservedMethodName.put("numbers.Random/bits/1",    "bits");
+        reservedMethodName.put("numbers.Random/boolean/0", "boolean");
         reservedMethodName.put("numbers.Random/bytes/1",   "bytes");
         reservedMethodName.put("numbers.Random/int/1",     "int");
         reservedMethodName.put("numbers.Random/int8/0",    "int8");
         reservedMethodName.put("numbers.Random/int16/0",   "int16");
         reservedMethodName.put("numbers.Random/int32/0",   "int32");
         reservedMethodName.put("numbers.Random/int64/0",   "int64");
+        reservedMethodName.put("numbers.Random/int128/0",  "int128");
         reservedMethodName.put("numbers.Random/uint8/0",   "uint8");
         reservedMethodName.put("numbers.Random/uint16/0",  "uint16");
         reservedMethodName.put("numbers.Random/uint32/0",  "uint32");
         reservedMethodName.put("numbers.Random/uint64/0",  "uint64");
+        reservedMethodName.put("numbers.Random/uint128/0", "uint128");
+        reservedMethodName.put("numbers.Random/dec/0",     "dec");
+        reservedMethodName.put("numbers.Random/dec32/0",   "dec32");
         reservedMethodName.put("numbers.Random/dec64/0",   "dec64");
+        reservedMethodName.put("numbers.Random/dec128/0",  "dec128");
+        reservedMethodName.put("numbers.Random/float16/0", "float16");
         reservedMethodName.put("numbers.Random/float32/0", "float32");
         reservedMethodName.put("numbers.Random/float64/0", "float64");
+        reservedMethodName.put("numbers.Random/bfloat16/0","bfloat16");
+        reservedMethodName.put("numbers.Random/float8e4/0","float8e4");
+        reservedMethodName.put("numbers.Random/float8e5/0","float8e5");
 
         reservedMethodName.put("collections.Array/add/1",                   "add");
         reservedMethodName.put("collections.Array/addAll/1",                "addAll");
@@ -89,7 +100,7 @@ public class NativeNames {
         reservedMethodName.put("collections.Tuple/add/2",                    "add");
         reservedMethodName.put("collections.Tuple/addAll/1",                 "addAll");
         reservedMethodName.put("collections.Tuple/elementAt/1",              "elementAt");
-        reservedMethodName.put("collections.Tuple/equals/2",                 "equals");
+        reservedMethodName.put("collections.Tuple/equals/3",                 "equals");
         reservedMethodName.put("collections.Tuple/freeze/1",                 "freeze");
         reservedMethodName.put("collections.Tuple/getElement/1",             "getElement");
         reservedMethodName.put("collections.Tuple/remove/1",                 "remove");
@@ -98,7 +109,7 @@ public class NativeNames {
         reservedMethodName.put("collections.Tuple/slice/1",                  "slice");
         reservedMethodName.put("collections.UniformIndexed/getElement/1",    "getElement");
 
-        reservedMethodName.put("Range/getElement/1",                         "getElement");
+        reservedMethodName.put("Interval/getElement/1",                      "getElement");
         reservedMethodName.put("text.Destringable/construct/1",              "construct");
         reservedMethodName.put("text.String/getElement/1",                   "getElement");
 

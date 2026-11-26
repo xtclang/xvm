@@ -232,11 +232,11 @@ public class Dec128 extends DecimalFPNumber {
     }
 
     public static IntN toIntN$FP$p(long thi$Lo, long thi$Hi, Ctx ctx, Rounding direction) {
-        return $box(thi$Lo, thi$Hi).toIntN$FP$p(ctx, direction);
+        return $box(thi$Lo, thi$Hi).toIntN$FP(ctx, direction);
     }
 
     public static UIntN toUIntN$FP$p(long thi$Lo, long thi$Hi, Ctx ctx, Rounding direction) {
-        return $box(thi$Lo, thi$Hi).toUIntN$FP$p(ctx, direction);
+        return $box(thi$Lo, thi$Hi).toUIntN$FP(ctx, direction);
     }
 
     // ----- Op methods ----------------------------------------------------------------------------

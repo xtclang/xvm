@@ -3,8 +3,6 @@ package org.xvm.javajit.builders;
 import java.lang.classfile.Annotation;
 import java.lang.classfile.AnnotationElement;
 import java.lang.classfile.AnnotationValue;
-import java.lang.classfile.AttributedElement;
-import java.lang.classfile.Attributes;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
 import java.lang.classfile.ClassFile;
@@ -14,8 +12,6 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.Label;
 import java.lang.classfile.MethodModel;
-
-import java.lang.classfile.attribute.RuntimeVisibleAnnotationsAttribute;
 
 import java.lang.classfile.instruction.ReturnInstruction;
 
@@ -50,6 +46,9 @@ import org.xvm.javajit.builders.AnnotationHelper.AnnotationConstructor;
 
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static java.lang.constant.ConstantDescs.MTD_void;
+
+import static org.xvm.javajit.annotations.JitAnnotation.findAnnotation;
+import static org.xvm.javajit.annotations.JitAnnotation.isAnnotated;
 
 /**
  * The builder for native types that uses an existing Java class to augment with the Ecstasy natural
@@ -359,6 +358,7 @@ public class AugmentingBuilder extends CommonBuilder {
      * @param element       the {@link ClassFileElement} to customize
      * @param classBuilder  the {@link ClassBuilder} to use to generate code
      */
+    @SuppressWarnings("unchecked")
     public void processElement(ClassElement element, ClassBuilder classBuilder) {
         if (isJitGenerated) {
             if (isAnnotated(element, CD_JitFromNatural)) {
@@ -369,10 +369,9 @@ public class AugmentingBuilder extends CommonBuilder {
             Annotation generated = findAnnotation(element, CD_JitGenerated);
             if (generated != null) {
                 // element has a JitGenerated annotation; execute its generator
-                ClassDesc genCD = getGeneratorClass(generated);
+                ClassDesc  genCD = getGeneratorClass(generated);
+                var        clz   = Builder.toClass(genCD, Generator.class);
                 try {
-                    var className   = genCD.packageName() + "." + genCD.displayName();
-                    var clz         = (Class<Generator>) Class.forName(className);
                     var constructor = clz.getDeclaredConstructor();
                     var generator   = constructor.newInstance();
                     generator.generate(this, element, classBuilder);
@@ -411,9 +410,10 @@ public class AugmentingBuilder extends CommonBuilder {
             return method;
         }
 
-        ClassModel declaringModel = model;
+        ClassModel       declaringModel = model;
+        NativeTypeSystem typeSystem     = getTypeSystem();
         while (declaringModel.superclass().isPresent()) {
-            declaringModel = getTypeSystem().getNativeClassModel(
+            declaringModel = typeSystem.getNativeClassModel(
                     declaringModel.superclass().orElseThrow().asSymbol());
             if (declaringModel == null) {
                 return null;
@@ -516,34 +516,6 @@ public class AugmentingBuilder extends CommonBuilder {
             }
         }
         throw new IllegalStateException("generator value not found");
-    }
-
-    /**
-     * @return {@code true} if the specified element is annotated with the specified annotation
-     */
-    public static boolean isAnnotated(ClassFileElement element, ClassDesc annotation) {
-        return findAnnotation(element, annotation) != null;
-    }
-
-    /**
-     * @return if the element is annotated with the specified annotation, then return it, otherwise
-     *         return {@code null}
-     */
-    public static Annotation findAnnotation(ClassFileElement element, ClassDesc annotation) {
-        if (element instanceof AttributedElement attributedElement) {
-            List<Annotation> annotations = attributedElement
-                    .findAttribute(Attributes.runtimeVisibleAnnotations())
-                    .map(RuntimeVisibleAnnotationsAttribute::annotations)
-                    .orElse(null);
-
-            if (annotations != null) {
-                return annotations.stream()
-                        .filter(ann -> ann.classSymbol().equals(annotation))
-                        .findFirst()
-                        .orElse(null);
-            }
-        }
-        return null;
     }
 
     // ----- inner record: NativeKey ---------------------------------------------------------------

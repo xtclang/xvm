@@ -305,6 +305,41 @@ public class JitMethodDesc {
             TypeConstant[] paramTypes,
             TypeConstant[] returnTypes,
             int            reqParamCount) {
+        return JitMethodDesc.of(builder, builder.typeSystem, targetType, flags, paramTypes,
+                returnTypes, reqParamCount);
+    }
+
+    /**
+     *
+     * @param typeSystem  the TypeSystem that is creating a call to the specified target
+     * @param targetType  the target type on which the method if located (may be null in the case
+     *                    of a function that exists only at runtime)
+     * @param flags       JMD_VIRTUAL or a mask of JMD_STATIC, JMD_CONSTRUCTOR, and JMD_FINALIZER
+     *
+     * @return the JitMethodDesc for the method associated with this signature for the specified
+     *         container
+     */
+    public static JitMethodDesc of(
+            TypeSystem     typeSystem,
+            TypeConstant   targetType,
+            int            flags,
+            TypeConstant[] paramTypes,
+            TypeConstant[] returnTypes,
+            int            reqParamCount) {
+        return JitMethodDesc.of(null, typeSystem, targetType, flags, paramTypes, returnTypes,
+                reqParamCount);
+    }
+
+    // TODO we should be able to change this and not require a Builder parameter once the overrides
+    //   for methods like getCCDesc have been removed from ArrayBuilder
+    private static JitMethodDesc of(
+            Builder          builder,
+            TypeSystem       typeSystem,
+            TypeConstant     targetType,
+            int              flags,
+            TypeConstant[]   paramTypes,
+            TypeConstant[]   returnTypes,
+            int              reqParamCount) {
 
         boolean isConstructor = (flags & JMD_CONSTRUCTOR) == JMD_CONSTRUCTOR;
         boolean isStatic      = (flags & JMD_STATIC) != 0;
@@ -315,7 +350,7 @@ public class JitMethodDesc {
         // methods and constructors require a target type
         assert (!isConstructor && isStatic) || targetType != null;
 
-        ConstantPool       pool         = builder.typeSystem.pool();
+        ConstantPool       pool         = typeSystem.pool();
         List<JitParamDesc> stdParamList = new ArrayList<>();
         List<JitParamDesc> optParamList = new ArrayList<>();
         boolean            isPrimitive  = !isStatic && targetType.isJitPrimitive();
@@ -333,7 +368,7 @@ public class JitMethodDesc {
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
                 if (iOrig >= 0) {
                     JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
-                    ClassDesc cdStd     = builder.getCCDesc(type);
+                    ClassDesc cdStd     = builder != null ? builder.getCCDesc(type) : type.getJitCCDesc(typeSystem);
                     stdParamList.add(new JitParamDesc(type, stdFlavor, cdStd, iOrig, iStd++, false));
                 }
 
@@ -404,7 +439,7 @@ public class JitMethodDesc {
                     optParamList.add(
                             new JitParamDesc(type, NullableXvmPrimitive, CD_boolean, iOrig, iOpt++, true));
                 }
-            } else if ((cd = JitTypeDesc.getWidenedClass(builder.typeSystem, type)) != null) {
+            } else if ((cd = JitTypeDesc.getWidenedClass(typeSystem, type)) != null) {
                 JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
 
                 if (iOrig >= 0) {
@@ -417,7 +452,7 @@ public class JitMethodDesc {
 
                 type = resolveMixinAutoNarrowing(type, targetType, pool);
 
-                cd = builder.getCCDesc(type);
+                cd = builder != null ? builder.getCCDesc(type) : type.getJitCCDesc(typeSystem);
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
                 if (iOrig >= 0) {
@@ -449,7 +484,7 @@ public class JitMethodDesc {
             }
 
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
-                ClassDesc cdStd = builder.getCCDesc(type);
+                ClassDesc cdStd = builder != null ? builder.getCCDesc(type) : type.getJitCCDesc(typeSystem);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Primitive, cd,   iOrig, ixLong++, false));
@@ -479,14 +514,14 @@ public class JitMethodDesc {
                 }
                 optParamList.add(new JitParamDesc(pool.typeBoolean(),
                         NullableXvmPrimitive, CD_boolean, iOrig, ixLong++, true));
-            } else if ((cd = JitTypeDesc.getWidenedClass(builder.typeSystem, type)) != null) {
+            } else if ((cd = JitTypeDesc.getWidenedClass(typeSystem, type)) != null) {
                 stdParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixOptObj++, false));
             } else {
                 assert type.isSingleUnderlyingClass(true);
 
                 type = resolveMixinAutoNarrowing(type, targetType, pool);
-                cd   = builder.getCCDesc(type);
+                cd   = builder != null ? builder.getCCDesc(type) : type.getJitCCDesc(typeSystem);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));
@@ -507,9 +542,16 @@ public class JitMethodDesc {
                 : null;
 
         if (isConstructor) {
-            ClassDesc targetCd = targetType.isAnnotated()
-                    ? builder.getICDesc(targetType)
-                    : builder.getCCDesc(targetType);
+            ClassDesc targetCd;
+            if (builder != null) {
+                targetCd = targetType.isAnnotated()
+                        ? builder.getICDesc(targetType)
+                        : builder.getCCDesc(targetType);
+            } else {
+                targetCd = targetType.isAnnotated()
+                        ? targetType.getJitICDesc(typeSystem)
+                        : targetType.getJitCCDesc(typeSystem);
+            }
 
             return new JitCtorDesc(targetType, targetCd,
                     hasFinalizer, /*fAddType*/ false, /*fAddOuter*/ false,

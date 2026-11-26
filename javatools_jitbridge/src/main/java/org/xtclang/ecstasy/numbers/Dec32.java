@@ -185,11 +185,11 @@ public class Dec32 extends DecimalFPNumber {
     }
 
     public static IntN toIntN$FP$p(int thi$, Ctx ctx, Rounding direction) {
-        return $box(thi$).toIntN$FP$p(ctx, direction);
+        return $box(thi$).toIntN$FP(ctx, direction);
     }
 
     public static UIntN toUIntN$FP$p(int thi$, Ctx ctx, Rounding direction) {
-        return $box(thi$).toUIntN$FP$p(ctx, direction);
+        return $box(thi$).toUIntN$FP(ctx, direction);
     }
 
     // ----- Op methods ----------------------------------------------------------------------------

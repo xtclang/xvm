@@ -10,9 +10,13 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
+
 /**
  * Native Nibble wrapper.
  */
+@JitGenerated
 public class Nibble extends UIntNumber {
     /**
      * Construct an Ecstasy Nibble object.
@@ -116,6 +120,7 @@ public class Nibble extends UIntNumber {
      * <p>The naturally compiled initializer currently erases the array literal's element type to
      * Object, resulting in an invalid attempt to pass an optimized Nibble value to Array.add(Object).
      */
+    @JitName("values")
     public static ArrayᐸNibbleᐳ values$init(Ctx ctx) {
         return ArrayᐸNibbleᐳ.$fromLongs(ctx, Array.Mutability.Constant.$INSTANCE, 64,
                 0x0123_4567_89AB_CDEFL);

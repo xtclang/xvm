@@ -4,11 +4,14 @@ import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.nEnum;
+import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nType;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.ReadOnly;
+
+import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -22,6 +25,10 @@ import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nObject;
 
 import org.xtclang.ecstasy.reflect.Var;
+
+import org.xvm.javajit.annotations.JitFromNatural;
+import org.xvm.javajit.annotations.JitGenerated;
+import org.xvm.javajit.annotations.JitName;
 
 /**
  * Abstract native base class implementation for all types of `ecstasy.collections.Array`. Actual
@@ -41,6 +48,7 @@ import org.xtclang.ecstasy.reflect.Var;
  * thing that matters from a performance perspective, and making sure that there are no virtual
  * calls involved in either of those two operations is the goal.
  */
+@JitGenerated
 public abstract class Array
         extends nObject {
 
@@ -81,6 +89,33 @@ public abstract class Array
      * Otherwise, if storage is not allocated, the lower 48 bits are the configured capacity.
      */
     protected long $hashEtc;
+
+    // ---- inner enum FreezableArray --------------------------------------------------------------
+
+    /**
+     * The native implementation of the inner mixin type:
+     *
+     * <pre>{@code
+     *     private static mixin FreezableArray<Element extends Shareable>
+     * }</pre>
+     */
+    @JitGenerated
+    public static class FreezableArray {
+        /**
+         * Native implementation of:
+         *
+         * <pre>{@code
+         *     immutable Array freeze(Boolean inPlace = False)
+         * }</pre>
+         */
+        @JitName
+        @JitFromNatural
+        public Array freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+
+    // ---- inner enum Mutability ------------------------------------------------------------------
 
     public static class Mutability extends nEnum {
         private Mutability(long ordinal, String name) {
@@ -349,9 +384,23 @@ public abstract class Array
      *
      * @return a Var object representing the storage for the element in the array
      */
+    @JitName
     public Var elementAt$p(Ctx ctx, long index) {
         // TODO need a Var<T> impl, possibly a child class of Array
         throw $oob(ctx, index);
+    }
+
+    /**
+     * The native implementation of:
+     *
+     * <pre>{@code
+     *     Object getElement(Int index)
+     * }</pre>
+     */
+    @JitName
+    @JitFromNatural
+    public Object getElement(Ctx ctx, Int64 index) {
+        return null;
     }
 
     /**
@@ -361,6 +410,7 @@ public abstract class Array
      *     immutable Array freeze(Boolean inPlace = False)
      * }</pre>
      */
+    @JitName
     public Array freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
         throw new UnsupportedOperationException("TODO");
     }
@@ -372,6 +422,7 @@ public abstract class Array
      *     immutable Array makeImmutable()
      * }</pre>
      */
+    @JitName
     public Array makeImmutable(Ctx ctx) {
         $mut($CONSTANT);
         return this;
@@ -384,6 +435,7 @@ public abstract class Array
      *     Array add(Element element)
      * }</pre>
      */
+    @JitName
     public Array add(Ctx ctx, Object element) {
         throw new UnsupportedOperationException("TODO");
     }
@@ -396,6 +448,7 @@ public abstract class Array
      * }</pre>
      *
      */
+    @JitName
     public Array addAll(Ctx ctx, Iterable values) {
         throw new UnsupportedOperationException("Should never be called");
     }
@@ -407,8 +460,22 @@ public abstract class Array
      *     Array insert(Int index, Element value)
      * }</pre>
      */
+    @JitName
     public Array insert$p(Ctx ctx, long index, Object element) {
         throw new UnsupportedOperationException("TODO");
+    }
+
+    /**
+     * The native implementation of:
+     *
+     * <pre>{@code
+     *     Array insertAll(Int index, Iterable<Element> values)
+     * }</pre>
+     */
+    @JitName
+    @JitFromNatural
+    public Array insertAll$p(Ctx ctx, long index, Iterable values) {
+        return null;
     }
 
     /**
@@ -418,8 +485,22 @@ public abstract class Array
      *     Array delete(Int index)
      * }</pre>
      */
+    @JitName
     public Array delete$p(Ctx ctx, long index) {
         throw new UnsupportedOperationException("TODO");
+    }
+
+    /**
+     * Native implementation of:
+     *
+     * <pre>{@code
+     *     (Array, Int) removeAll(function Boolean(Element) shouldRemove)
+     * }</pre>
+     */
+    @JitName
+    @JitFromNatural
+    public Array removeAll(Ctx ctx, nFunction shouldRemove) {
+        return null;
     }
 
     /**
@@ -447,6 +528,7 @@ public abstract class Array
      *
      * @return a reified array
      */
+    @JitName
     public Array reify(Ctx ctx, Object mutability) {
         throw new UnsupportedOperationException("TODO");
     }
@@ -465,6 +547,7 @@ public abstract class Array
      *
      * @return the specified array slice
      */
+    @JitName
     public Array slice(Ctx ctx, RangeᐸInt64ᐳ range) {
         if (range.$rangeTo128(ctx)) {
             return slice$p(ctx, ctx.i0, ctx.i1);
