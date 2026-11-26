@@ -137,9 +137,9 @@ The build mode applies to tests as to runs:
 
 ## When tests don't show or don't run
 
-- **No test icons in a test module**: the module doesn't compile, and its errors are in the Problems
-  view; or its tests are where xunit can't run them, in a non-static inner class or a special class
-  such as an enum.
+- **No test icons in a test module**: the module doesn't parse, and its syntax errors are in the
+  Problems view (a type error alone still lists its tests); or its tests are where xunit can't run
+  them, in a non-static inner class or a special class such as an enum.
 - **`Dependencies unavailable` on a test module**: the module it tests has errors; fix those first.
 - **The XVM repository's own tests** run with Gradle, as builds and runs do there, since its modules
   replace the bundled libraries.
