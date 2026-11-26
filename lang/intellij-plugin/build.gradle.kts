@@ -485,9 +485,12 @@ intellijPlatform {
 
     // Plugin Verifier statically analyses the built plugin against real IDE
     // distributions to catch binary-incompat regressions (removed APIs, missing
-    // classes, signature changes) before users hit them. It checks a single IDE: the
-    // latest stable IntelliJ IDEA release at or above the plugin's since-build, which
-    // JetBrains' release feed resolves on each run. The plugin compiles against the
+    // classes, signature changes) before users hit them. It checks two IDEs: the latest
+    // stable IntelliJ IDEA and PyCharm releases at or above the plugin's since-build,
+    // which JetBrains' release feed resolves on each run. PyCharm has neither the Java
+    // nor the Gradle plugin, so a dependency on either, which would take the plugin out
+    // of every JetBrains IDE but IntelliJ IDEA, Android Studio and MPS on the
+    // Marketplace, fails here as a missing dependency. The plugin compiles against the
     // minimum (lang-intellij-ide), so this pairs the oldest API with the newest stable
     // one. Verifying every build in range (`recommended()`) also downloaded EAPs and
     // cost ~1 GB and a verification per IDE. failureLevel is explicit so the build fails
@@ -503,7 +506,7 @@ intellijPlatform {
     pluginVerification {
         ides {
             latest {
-                types = listOf(IntelliJPlatformType.IntellijIdea)
+                types = listOf(IntelliJPlatformType.IntellijIdea, IntelliJPlatformType.PyCharm)
                 channels = listOf(ProductRelease.Channel.RELEASE)
                 sinceBuild = intellijSinceBuild
             }
