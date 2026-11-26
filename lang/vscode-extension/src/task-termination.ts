@@ -6,6 +6,8 @@ import * as vscode from 'vscode';
  * found"), and the API's terminate() gives nothing back that says so (VS Code 1.140); the task then runs on. So the
  * task is terminated again as it starts, unless it has ended by then.
  */
+// TODO VS Code: UP91 — an early terminate() is dropped (microsoft/vscode#350588); once VS Code keeps it for the task's
+// start, or reports it, this can call terminate() once
 export function terminateTask(execution: vscode.TaskExecution): void {
     const subscriptions: vscode.Disposable[] = [];
     const done = () => subscriptions.splice(0).forEach(subscription => subscription.dispose());
