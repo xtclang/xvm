@@ -183,9 +183,18 @@ internal object XdkLexical {
         val newline = newlines.find(text)?.value ?: "\n"
         val start = range?.start?.line ?: 0
         val end = range?.end?.let { if (it.column == 0 && it.line > start) it.line - 1 else it.line } ?: lines.lastIndex
+        val refills =
+            if (wrapLines && config.wrapComments) refills(tokens, lines, nesting, start..end, config, options) else emptyMap()
+        val refilled = refills.values.flatten()
         val edits =
             buildList {
-                for (line in start..minOf(end, lines.lastIndex)) {
+                // a refilled paragraph replaces its lines at once, margins included
+                refilled.forEach { refill ->
+                    val replaced = Range(Position(refill.first, 0), Position(refill.last, lines[refill.last].length))
+                    add(TextEdit(replaced, refill.lines.joinToString(newline)))
+                }
+                val kept = (start..minOf(end, lines.lastIndex)).filterNot { line -> refilled.any { line in it.first..it.last } }
+                for (line in kept) {
                     val value = lines[line]
                     val host = multiline[line]
                     // Literal bytes (including multiline/template indentation) are never reformatted.
@@ -254,19 +263,56 @@ internal object XdkLexical {
                     result.replaceRange(offset(text, edit.range.start), offset(text, edit.range.end), edit.newText)
                 }
 
-        // Comment margins may move as a unit. Every other token, including every literal, must
-        // have identical spelling and tokenization; whitespace can be language-significant.
+        // Comment margins may move as a unit, and a refilled comment keeps its words in order. Every other token,
+        // including every literal, must have identical spelling and tokenization; whitespace can be language-significant.
         fun signature(items: List<Span>) =
-            items.map {
-                it.id to
-                    if (it.id == Token.Id.ENC_COMMENT) {
-                        it.text.split(newlines).map { line -> line.trimStart(' ', '\t') }
-                    } else {
-                        listOf(it.text)
+            items.mapIndexed { index, item ->
+                item.id to
+                    when {
+                        index in refills -> {
+                            item.text
+                                .split(newlines)
+                                .mapIndexed { number, line -> if (number == 0) line else line.trimStart(' ', '\t').removePrefix("*") }
+                                .flatMap { line -> line.split(' ', '\t') }
+                                .filter(String::isNotEmpty)
+                        }
+
+                        item.id == Token.Id.ENC_COMMENT -> {
+                            item.text.split(newlines).map { line -> line.trimStart(' ', '\t') }
+                        }
+
+                        else -> {
+                            listOf(item.text)
+                        }
                     }
             }
         return if (lex(proposed)?.let(::signature) == signature(tokens)) edits else emptyList()
     }
+
+    /**
+     * The refilled paragraphs of each doc and block comment, by the comment's index in [tokens], when the paragraph is
+     * on [lines] in [range]; comments with none are left out.
+     */
+    private fun refills(
+        tokens: List<Span>,
+        lines: List<String>,
+        nesting: List<Nesting>,
+        range: IntRange,
+        config: FormattingConfig,
+        options: FormattingOptions,
+    ): Map<Int, List<XdkCommentReflow.Refill>> =
+        tokens
+            .withIndex()
+            .filter { (_, token) -> token.id == Token.Id.ENC_COMMENT && token.range.end.line > token.range.start.line }
+            .associate { (index, host) ->
+                // a comment's lines after its first keep their place relative to it, as format moves its margin
+                val shift = nesting[host.range.start.line].braces * config.indentSize - host.range.start.column
+                index to
+                    XdkCommentReflow
+                        .refills(lines, host.range.start.line, host.range.end.line, config.maxLineWidth, shift) {
+                            indentation(it, config, options)
+                        }.filter { it.first in range && it.last in range }
+            }.filterValues { it.isNotEmpty() }
 
     private fun indentation(
         size: Int,

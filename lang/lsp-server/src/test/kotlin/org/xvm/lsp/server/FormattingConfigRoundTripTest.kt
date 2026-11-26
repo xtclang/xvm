@@ -180,6 +180,7 @@ class FormattingConfigRoundTripTest {
                     addProperty("tabSize", 2)
                     addProperty("insertSpaces", true)
                     addProperty("maxLineWidth", 96)
+                    addProperty("wrapComments", true)
                 }
             val server = initializedServer(mockClient(customConfig))
 
@@ -187,6 +188,7 @@ class FormattingConfigRoundTripTest {
             assertThat(server.editorFormattingConfig!!.indentSize).isEqualTo(2)
             assertThat(server.editorFormattingConfig!!.continuationIndentSize).isEqualTo(6)
             assertThat(server.editorFormattingConfig!!.maxLineWidth).isEqualTo(96)
+            assertThat(server.editorFormattingConfig!!.wrapComments).isTrue()
         }
 
         @Test

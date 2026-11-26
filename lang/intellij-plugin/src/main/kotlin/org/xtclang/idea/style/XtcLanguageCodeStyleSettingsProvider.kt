@@ -25,8 +25,9 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * - No tab characters
  * - 120-character right margin
  *
- * The compiler formatter uses the right margin for token-boundary expression/list wrapping.
- * Literal/comment reflow and `xtc-format.toml` configuration are not implemented.
+ * The compiler formatter uses the right margin for token-boundary expression/list wrapping, and,
+ * with "Comments: Wrap at right margin", off by default, to refill doc and block comment paragraphs.
+ * Literal splitting and `xtc-format.toml` configuration are not implemented.
  */
 class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider() {
     override fun getLanguage(): Language = XtcIntelliJLanguage
@@ -54,7 +55,7 @@ class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider()
                 "USE_TAB_CHARACTER",
             )
         } else if (settingsType == SettingsType.WRAPPING_AND_BRACES_SETTINGS) {
-            consumer.showStandardOptions("RIGHT_MARGIN")
+            consumer.showStandardOptions("RIGHT_MARGIN", "WRAP_COMMENTS")
         }
     }
 

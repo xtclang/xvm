@@ -791,8 +791,9 @@ Compiler mode uses the Java compiler lexer to indent blocks and delimiter/operat
 trim trailing whitespace and optionally insert the final newline. It wraps expressions/lists at safe
 token boundaries using the configured margin and shifts standalone block-comment margins together.
 Literal/template contents and relative comment layout are preserved. Failed lexing or changed
-code/literal tokens refuse the edit. Operator-spacing normalization, declaration alignment, literal
-splitting, comment reflow and brace relocation are not implemented. Range and save-time requests use
+code/literal tokens refuse the edit. With `xtc.formatting.wrapComments`, doc and block comment paragraphs
+past the margin are refilled. Operator-spacing normalization, declaration alignment, literal
+splitting and brace relocation are not implemented. Range and save-time requests use
 these rules; on-type formatting only indents and cleans whitespace. See X102/X107/X132/X249/X250.
 
 **How to trigger (full document):**

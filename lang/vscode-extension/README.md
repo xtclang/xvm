@@ -410,6 +410,7 @@ All settings live under the `xtc` namespace (`Cmd+,` / `Ctrl+,`):
 | `xtc.formatting.tabSize`               | integer   | `4`     | Deprecated and unread: the formatter uses `indentSize`; `editor.tabSize` sets the visual tab width. |
 | `xtc.formatting.insertSpaces`          | boolean   | `true`  | Insert spaces instead of tabs.                                                                           |
 | `xtc.formatting.maxLineWidth`          | integer   | `120`   | Right-margin column.                                                                                     |
+| `xtc.formatting.wrapComments`          | boolean   | `false` | Refill doc and block comment paragraphs that run past the right margin.                                  |
 
 ### Pointing at a specific Java
 

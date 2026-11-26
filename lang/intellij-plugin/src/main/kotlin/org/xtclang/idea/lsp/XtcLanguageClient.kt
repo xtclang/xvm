@@ -246,6 +246,7 @@ class XtcLanguageClient(
                     "tabSize" to indentOptions.TAB_SIZE,
                     "insertSpaces" to !indentOptions.USE_TAB_CHARACTER,
                     "maxLineWidth" to commonSettings.RIGHT_MARGIN,
+                    "wrapComments" to commonSettings.WRAP_COMMENTS,
                 )
             } else {
                 mapOf(
@@ -254,6 +255,7 @@ class XtcLanguageClient(
                     "tabSize" to 4,
                     "insertSpaces" to true,
                     "maxLineWidth" to 120,
+                    "wrapComments" to false,
                 )
             }
         logger.info("workspace/configuration: returning formatting config: $config")

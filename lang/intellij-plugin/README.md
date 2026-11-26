@@ -963,8 +963,8 @@ unsaved buffers. Inlay changes and Code Style settings apply live. The read-only
 includes PID, runtime, capabilities, bundled read-only XDK libraries and compiler queue names/count.
 The editor formats on save through native **Actions on Save → Reformat code**, or the server does,
 through LSP4IJ's `willSaveWaitUntil`, while Actions on Save doesn't reformat Ecstasy files. Compiler
-mode wraps expressions/lists at safe token boundaries using the Code Style right margin; literal
-splitting and comment reflow are not supported.
+mode wraps expressions/lists at safe token boundaries using the Code Style right margin, and with
+**Comments: Wrap at right margin** refills doc and block comment paragraphs; literal splitting is not supported.
 
 X142 verifies constant-initializer navigation and rename/Undo. X143 compares partial
 workspace-symbol batches with the ordinary response. These checks complement the protocol

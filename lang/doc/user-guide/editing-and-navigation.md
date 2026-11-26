@@ -117,6 +117,11 @@ Reformat a file or a selection with <kbd>Ctrl+Alt+L</kbd> (IntelliJ) or <kbd>Shi
 indent as you type, and typing `{` and <kbd>Enter</kbd> closes the block. To format on save, use IntelliJ's
 **Actions on Save | Reformat code**, or VS Code's `editor.formatOnSave`.
 
+Formatting wraps long lines of code at the right margin. To have it refill the paragraphs of doc and block comments
+that run past the margin too, turn on IntelliJ's **Wrapping and Braces | Comments | Wrap at right margin**, or VS
+Code's `xtc.formatting.wrapComments`. Paragraphs, `@param` and `@return` lines, list items and indented or fenced
+code keep their layout, a paragraph that fits stays as it is, and a word or URL is never broken.
+
 <kbd>Ctrl+/</kbd> comments out the selected lines with `//`; in IntelliJ, <kbd>Ctrl+Shift+/</kbd> wraps a selection in
 `/* */`.
 

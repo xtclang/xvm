@@ -15,6 +15,8 @@ data class FormattingConfig(
     val continuationIndentSize: Int = 8,
     val insertSpaces: Boolean = true,
     val maxLineWidth: Int = 120,
+    /** Whether formatting refills a doc or block comment's paragraphs that run past [maxLineWidth]. */
+    val wrapComments: Boolean = false,
 ) {
     companion object {
         /** XTC's opinionated defaults, matching lib_ecstasy conventions. */
