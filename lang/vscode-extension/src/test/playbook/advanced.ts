@@ -2,7 +2,7 @@ import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { CallHierarchyItem, CallHierarchyOutgoingCall, SemanticTokens, DocumentDiagnosticReport } from 'vscode-languageclient/node';
 import { scenarioRegex, scenarioText } from './shared';
-import { client, diagnostics, fixture, label, noErrors, playbook, position, symbolNames, symbols, targets } from './support';
+import { client, diagnostics, fixture, label, noErrors, playbook, position, symbolNames, symbols, targets, type Workspace } from './support';
 
 async function assertTokenRanges(document: vscode.TextDocument): Promise<void> {
     const tokens = await client().sendRequest<SemanticTokens | null>('textDocument/semanticTokens/full', { textDocument: { uri: document.uri.toString() } });
@@ -154,10 +154,10 @@ export function advancedCases(): void {
             await workspace.replace(document, fixture(data.file).replace(original, scenarioText(data.replaceWith, prefix)));
             await diagnostics(document.uri, values => values.length > 0, 'Missing argument diagnostics');
             const at = position(document, prefix, prefix.length, true);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            const items = await nameCompletion(workspace, document, at);
             assert.deepStrictEqual(items.map(item => item.label).sort(), data.labels, prefix);
             const selected = items.find(item => item.label === data.label)!;
-            assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at, at)));
+            replaces(selected, at, at);
             await workspace.accept(document, selected);
             await noErrors(document.uri);
         }
@@ -169,12 +169,7 @@ export function advancedCases(): void {
         const document = await workspace.open(data.file);
         await noErrors(document.uri);
         for (const selected of data.selections) {
-            await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, data.anchor));
-            await diagnostics(document.uri, values => values.length > 0, 'Missing overloaded argument diagnostics');
-            const at = position(document, data.anchor, data.offset);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
-            assert.deepStrictEqual(items.map(item => item.label).sort(), data.labels);
-            assert.strictEqual((await workspace.signature(document, at))?.signatures.length, data.signatureCount);
+            const { items } = await overloadedArgument(workspace, document, data, 'Missing overloaded argument diagnostics');
             await workspace.accept(document, items.find(item => item.label === selected)!);
             await noErrors(document.uri);
         }
@@ -189,9 +184,9 @@ export function advancedCases(): void {
             await workspace.replace(document, fixture(data.file).replace(original, scenarioText(data.replaceFrom, prefix)));
             await diagnostics(document.uri, values => values.length > 0, 'Unresolved argument prefix diagnostics');
             const at = position(document, prefix, prefix.length, true);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            const items = await nameCompletion(workspace, document, at);
             assert.deepStrictEqual(items.map(item => item.label), data.labels, prefix);
-            assert.ok(items[0].range instanceof vscode.Range && items[0].range.isEqual(new vscode.Range(at.translate(0, data.replacementStartDelta), at)));
+            replaces(items[0], at.translate(0, data.replacementStartDelta), at);
             const before = document.getText();
             await workspace.accept(document, items[0]);
             assert.strictEqual(document.getText(), before.replace(scenarioText(data.replaceFrom, prefix), scenarioText(data.replaceWith, prefix.slice(0, -data.prefixLength))));
@@ -205,14 +200,9 @@ export function advancedCases(): void {
         const document = await workspace.open(data.file);
         await noErrors(document.uri);
         for (const selected of data.labels) {
-            await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, data.anchor));
-            await diagnostics(document.uri, values => values.length > 0, 'Unresolved overloaded prefix diagnostics');
-            const at = position(document, data.anchor, data.offset);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
-            assert.deepStrictEqual(items.map(item => item.label).sort(), data.labels);
-            assert.strictEqual((await workspace.signature(document, at))?.signatures.length, data.signatureCount);
+            const { at, items } = await overloadedArgument(workspace, document, data, 'Unresolved overloaded prefix diagnostics');
             const chosen = items.find(item => item.label === selected)!;
-            assert.ok(chosen.range instanceof vscode.Range && chosen.range.isEqual(new vscode.Range(at.translate(0, data.replacementStartDelta), at)));
+            replaces(chosen, at.translate(0, data.replacementStartDelta), at);
             await workspace.accept(document, chosen);
             assert.ok(document.getText().includes(scenarioText(data.acceptedCall, selected)));
             await noErrors(document.uri);
@@ -227,12 +217,12 @@ export function advancedCases(): void {
             await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, scenarioText(data.replaceWith, prefix)));
             await diagnostics(document.uri, values => values.length > 0, 'Unresolved property argument prefix');
             const at = position(document, prefix, prefix.length);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            const items = await nameCompletion(workspace, document, at);
             assert.deepStrictEqual(items.map(label).sort(), data.labels);
             const selected = items.find(item => label(item) === data.label)!;
             assert.strictEqual(selected.kind, vscode.CompletionItemKind.Property);
             assert.match(selected.detail ?? '', scenarioRegex(data.type));
-            assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, data.replacementStartDelta), at)));
+            replaces(selected, at.translate(0, data.replacementStartDelta), at);
             await workspace.accept(document, selected);
             await noErrors(document.uri);
         }
@@ -245,7 +235,7 @@ export function advancedCases(): void {
         await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, data.anchor));
         await diagnostics(document.uri, values => values.length > 0, 'Unresolved constant argument prefix');
         const at = position(document, data.anchor, data.offset);
-        const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+        const items = await nameCompletion(workspace, document, at);
         assert.deepStrictEqual(items.map(label), data.labels);
         assert.strictEqual(items[0].kind, vscode.CompletionItemKind.Property);
         await workspace.accept(document, items[0]);
@@ -263,7 +253,7 @@ export function advancedCases(): void {
             const help = await workspace.signature(document, at);
             assert.match(help?.signatures[0].label ?? '', scenarioRegex(data.signature));
             assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, data.activeParameter);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            const items = await nameCompletion(workspace, document, at);
             assert.deepStrictEqual(items.map(label), data.labels);
             await workspace.accept(document, items[0]);
             assert.strictEqual(document.getText(), fixture(data.file));
@@ -279,7 +269,7 @@ export function advancedCases(): void {
             await diagnostics(document.uri, values => values.length > 0, 'Unresolved inferred constructor prefix');
             const at = position(document, prefix, prefix.length);
             assert.match((await workspace.signature(document, at))?.signatures[0].label ?? '', scenarioRegex(data.signature));
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            const items = await nameCompletion(workspace, document, at);
             assert.deepStrictEqual(items.map(label).sort(), original.includes(data.requiredContext) ? data.requiredLabels : data.provisionalLabels);
             await workspace.accept(document, items.find(item => label(item) === data.label)!);
             await noErrors(document.uri);
@@ -296,7 +286,7 @@ export function advancedCases(): void {
             const help = await workspace.signature(document, at);
             assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, data.activeParameter);
             assert.match(help?.signatures[0].label ?? '', scenarioRegex(data.parameter));
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            const items = await nameCompletion(workspace, document, at);
             assert.deepStrictEqual(items.map(label), data.labels);
             await workspace.accept(document, items[0]);
             await noErrors(document.uri);
@@ -312,7 +302,7 @@ export function advancedCases(): void {
             const at = position(document, expression, expression.length);
             const item = (await workspace.completion(document, at)).find(item => label(item) === data.label);
             assert.ok(item);
-            assert.ok(item.range instanceof vscode.Range && item.range.isEqual(new vscode.Range(at.translate(0, data.replacementStartDelta), at)));
+            replaces(item, at.translate(0, data.replacementStartDelta), at);
             await workspace.accept(document, item);
             await diagnostics(document.uri, values => values.length > 0, 'Accepting a member must not repair delimiters');
             await workspace.replace(document, fixture(data.file));
@@ -344,10 +334,8 @@ export function advancedCases(): void {
         await workspace.replace(document, fixture(data.file).replace(original, scenarioText(data.replaceWith, prefix)));
         await diagnostics(document.uri, values => values.length > 0, 'Unresolved anonymous constructor argument');
         const at = position(document, prefix, prefix.length);
-        const help = await workspace.signature(document, at);
-        assert.strictEqual(help?.signatures[0].label, data.signature);
-        assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, data.activeParameter);
-        const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+        await checkSignature(workspace, document, at, data.signature, data.activeParameter);
+        const items = await nameCompletion(workspace, document, at);
         assert.deepStrictEqual(items.map(label), data.labels);
         await workspace.accept(document, items[0]);
         assert.strictEqual(document.getText(), fixture(data.file));
@@ -362,12 +350,10 @@ export function advancedCases(): void {
             await workspace.replace(document, fixture(data.file).replace(original, prefix + closer));
             await diagnostics(document.uri, values => values.length > 0, 'Incomplete anonymous interface construction');
             const at = position(document, prefix, prefix.length);
-            const help = await workspace.signature(document, at);
-            assert.strictEqual(help?.signatures[0].label, data.signature);
-            assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, data.activeParameter);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            await checkSignature(workspace, document, at, data.signature, data.activeParameter);
+            const items = await nameCompletion(workspace, document, at);
             assert.deepStrictEqual(items.map(label), data.labels);
-            assert.ok(items[0].range instanceof vscode.Range && items[0].range.isEqual(new vscode.Range(at.translate(0, data.replacementStartDelta), at)));
+            replaces(items[0], at.translate(0, data.replacementStartDelta), at);
             await workspace.accept(document, items[0]);
             if (closer) await noErrors(document.uri);
             else await diagnostics(document.uri, values => values.length > 0, 'Missing constructor closer remains a diagnostic');
@@ -383,12 +369,10 @@ export function advancedCases(): void {
             await workspace.replace(document, text);
             await diagnostics(document.uri, values => values.length > 0, 'Incomplete array size');
             const at = position(document, data.prefix, data.prefix.length);
-            const help = await workspace.signature(document, at);
-            assert.strictEqual(help?.signatures[0].label, data.signature);
-            assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, data.activeParameter);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            await checkSignature(workspace, document, at, data.signature, data.activeParameter);
+            const items = await nameCompletion(workspace, document, at);
             assert.deepStrictEqual(items.map(label), data.labels);
-            assert.ok(items[0].range instanceof vscode.Range && items[0].range.isEqual(new vscode.Range(at.translate(0, data.replacementStartDelta), at)));
+            replaces(items[0], at.translate(0, data.replacementStartDelta), at);
             await workspace.accept(document, items[0]);
             const accepted = data.prefix.slice(0, data.replacementStartDelta) + data.labels[0];
             assert.strictEqual(document.getText(), fixture(data.file).replace(data.original, accepted + variant.suffix));
@@ -403,22 +387,7 @@ export function advancedCases(): void {
 
     playbook('X91', async (workspace, data) => {
         const document = await workspace.open(data.file);
-        for (const variant of data.variants) {
-            const marked = scenarioText(data.source, variant);
-            const cursor = marked.indexOf('|');
-            await workspace.replace(document, marked.replace('|', ''));
-            await diagnostics(document.uri, values => values.length > 0, 'Unresolved declaration type');
-            const at = document.positionAt(cursor);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
-            assert.ok(data.include.every(name => items.some(item => label(item) === name)));
-            assert.ok(data.exclude.every(name => items.every(item => label(item) !== name)));
-            assert.ok(!(await workspace.signature(document, at))?.signatures.length);
-            const selected = items.find(item => label(item) === data.selected)!;
-            assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -data.prefixLength), at)));
-            await workspace.accept(document, selected);
-            assert.strictEqual(document.getText(), marked.slice(0, cursor - data.prefixLength) + data.selected + marked.slice(cursor + 1));
-            await noErrors(document.uri);
-        }
+        for (const variant of data.variants) await completeDeclarationType(workspace, document, scenarioText(data.source, variant), data);
     });
 
     playbook('X92', async (workspace, data) => {
@@ -439,20 +408,8 @@ export function advancedCases(): void {
     playbook('X93', async (workspace, data) => {
         const document = await workspace.open(data.file);
         for (const variant of data.variants) {
-            const marked = scenarioText(data.source, variant.declaration);
-            const cursor = marked.indexOf('|');
-            await workspace.replace(document, marked.replace('|', ''));
-            await diagnostics(document.uri, values => values.length > 0, 'Unresolved declaration type');
-            const at = document.positionAt(cursor);
-            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
-            assert.ok(variant.include.every(name => items.some(item => label(item) === name)));
-            assert.ok(data.exclude.every(name => items.every(item => label(item) !== name)));
-            assert.ok(!(await workspace.signature(document, at))?.signatures.length);
-            const selected = items.find(item => label(item) === variant.selected)!;
-            assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -data.prefixLength), at)));
-            await workspace.accept(document, selected);
-            assert.strictEqual(document.getText(), marked.slice(0, cursor - data.prefixLength) + variant.selected + marked.slice(cursor + 1));
-            await noErrors(document.uri);
+            await completeDeclarationType(workspace, document, scenarioText(data.source, variant.declaration),
+                { ...variant, exclude: data.exclude, prefixLength: data.prefixLength });
         }
     });
 
@@ -472,7 +429,7 @@ export function typeHeaderCases(ids: readonly ('X94' | 'X95' | 'X96' | 'X97' | '
                 if ('initiallyValid' in variant && variant.initiallyValid) await noErrors(document.uri);
                 else await diagnostics(document.uri, values => values.length > 0, 'Unresolved nested declaration type');
                 const at = document.positionAt(cursor);
-                const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+                const items = await nameCompletion(workspace, document, at);
                 assert.ok(variant.include.every(name => items.some(item => label(item) === name)));
                 const excluded = ('exclude' in variant ? variant.exclude : undefined) ?? data.exclude;
                 assert.ok(excluded.every(name => items.every(item => label(item) !== name)));
@@ -492,7 +449,7 @@ export function typeHeaderCases(ids: readonly ('X94' | 'X95' | 'X96' | 'X97' | '
                     if ('kind' in metadata && typeof metadata.kind === 'number') assert.strictEqual(selected.kind, metadata.kind - 1); // VS Code's enum is zero-based; LSP is one-based.
                     if (metadata.sorted) assert.ok(selected.sortText?.length);
                 }
-                assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -before), at.translate(0, after))));
+                replaces(selected, at.translate(0, -before), at.translate(0, after));
                 await workspace.accept(document, selected);
                 assert.strictEqual(document.getText(), marked.slice(0, cursor - before) + variant.selected + marked.slice(cursor + data.marker.length + after));
                 if (variant.validAfterAcceptance) await noErrors(document.uri);
@@ -502,6 +459,62 @@ export function typeHeaderCases(ids: readonly ('X94' | 'X95' | 'X96' | 'X97' | '
             }
         });
     }
+}
+
+/** The completions at [at] other than snippets: the names the argument and declaration cases check. */
+async function nameCompletion(workspace: Workspace, document: vscode.TextDocument, at: vscode.Position): Promise<vscode.CompletionItem[]> {
+    return (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+}
+
+/** Checks that accepting [item] replaces the text from [start] to [end]. */
+function replaces(item: vscode.CompletionItem, start: vscode.Position, end: vscode.Position): void {
+    assert.ok(item.range instanceof vscode.Range && item.range.isEqual(new vscode.Range(start, end)));
+}
+
+/** Checks that the signature help at [at] shows [signature] first, with its parameter [activeParameter] active. */
+async function checkSignature(workspace: Workspace, document: vscode.TextDocument, at: vscode.Position, signature: string,
+    activeParameter: number): Promise<void> {
+    const help = await workspace.signature(document, at);
+    assert.strictEqual(help?.signatures[0].label, signature);
+    assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, activeParameter);
+}
+
+/**
+ * Puts the unresolved overloaded call [data]'s anchor in its file, and checks the names offered at the anchor's offset,
+ * [data]'s labels, and that the signature help shows its overloads; returns the names and where they are offered.
+ */
+async function overloadedArgument(workspace: Workspace, document: vscode.TextDocument,
+    data: { file: string; replaceFrom: string; anchor: string; offset: number; labels: readonly string[]; signatureCount: number },
+    message: string): Promise<{ at: vscode.Position; items: vscode.CompletionItem[] }> {
+    await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, data.anchor));
+    await diagnostics(document.uri, values => values.length > 0, message);
+    const at = position(document, data.anchor, data.offset);
+    const items = await nameCompletion(workspace, document, at);
+    assert.deepStrictEqual(items.map(item => item.label).sort(), data.labels);
+    assert.strictEqual((await workspace.signature(document, at))?.signatures.length, data.signatureCount);
+    return { at, items };
+}
+
+/**
+ * Makes [marked], whose cursor marker '|' follows an unresolved declaration type, the document's text, and completes the
+ * type: [include] are offered, none of [exclude], and no signature, and [selected] replaces the [prefixLength]
+ * characters typed before the cursor.
+ */
+async function completeDeclarationType(workspace: Workspace, document: vscode.TextDocument, marked: string,
+    { include, exclude, selected, prefixLength }: { include: readonly string[]; exclude: readonly string[]; selected: string; prefixLength: number }): Promise<void> {
+    const cursor = marked.indexOf('|');
+    await workspace.replace(document, marked.replace('|', ''));
+    await diagnostics(document.uri, values => values.length > 0, 'Unresolved declaration type');
+    const at = document.positionAt(cursor);
+    const items = await nameCompletion(workspace, document, at);
+    assert.ok(include.every(name => items.some(item => label(item) === name)));
+    assert.ok(exclude.every(name => items.every(item => label(item) !== name)));
+    assert.ok(!(await workspace.signature(document, at))?.signatures.length);
+    const item = items.find(each => label(each) === selected)!;
+    replaces(item, at.translate(0, -prefixLength), at);
+    await workspace.accept(document, item);
+    assert.strictEqual(document.getText(), marked.slice(0, cursor - prefixLength) + selected + marked.slice(cursor + 1));
+    await noErrors(document.uri);
 }
 
 export function pullDiagnosticCases(): void {

@@ -282,6 +282,13 @@ export class Workspace {
         await symbols(document);
     }
 
+    /** Accepts the completion [name], which must be offered at [at]. */
+    async acceptNamed(document: vscode.TextDocument, at: vscode.Position, name: string): Promise<void> {
+        const item = (await this.completion(document, at)).find(value => label(value) === name);
+        assert.ok(item, `${name} is offered`);
+        await this.accept(document, item);
+    }
+
     async signature(document: vscode.TextDocument, at: vscode.Position): Promise<vscode.SignatureHelp | undefined> {
         return vscode.commands.executeCommand<vscode.SignatureHelp>('vscode.executeSignatureHelpProvider', document.uri, at);
     }
