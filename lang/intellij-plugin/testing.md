@@ -300,7 +300,9 @@ lang/intellij-plugin/container/playbook.sh gradle :lang:vscode-extension:testVsc
 
 Each run exports the checkout as it is, uncommitted changes included, and copies its run
 directories to `build/reports/compiler-playbook`, as a native run does, where the same cleanup
-prunes them. The container is
+prunes them. A run that tests first does what `containerPlaybookBuild` does when the XDK in its
+slot's volumes was built from other sources than the checkout's, and says so in its log
+(`xdk: rebuilding, as ...`, or `xdk: not rebuilt, ...`). The container is
 aarch64 Linux on an Apple machine, with its own fonts and timing; every case IntelliJ implements
 has passed there (2026-10-29). Pin an LSP4IJ nightly's version: the latest may not compile against
 the plugin.

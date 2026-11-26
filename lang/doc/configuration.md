@@ -465,7 +465,7 @@ properties of the Starter test JVM. All are `providers` properties.
 | none | `xtc.playbook.scenarios`, `xtc.playbook.manual`, `xtc.playbook.reports`, `allure.results.directory` | from the build | `lang/test-fixtures/compiler-playbook/scenarios.json`, `lang/doc/manual-test-plan.md`, and `build/reports/compiler-playbook` | `ideaIt/CompilerPlaybookTest.kt:33`, `:36`, `:39` |
 | `playbookRetainedRuns` | none | `5` | Completed run directories kept under `build/reports/compiler-playbook`; also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1056`, `lang/vscode-extension/build.gradle.kts:339` |
 | `playbookRetainedFailedRuns` | none | `10` | The newest failed runs, which keep their payloads and traces also when they are not among the `playbookRetainedRuns` newest; older failed runs keep their results only. Also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1057`, `lang/vscode-extension/build.gradle.kts:340` |
-| `playbookReports` | none | `build/reports/compiler-playbook` | The directory of runs that `pruneCompilerPlaybookReports` prunes; the playbook container passes its copies'. | `lang/intellij-plugin/build.gradle.kts:1053`, `lang/intellij-plugin/container/in-container.sh:119` |
+| `playbookReports` | none | `build/reports/compiler-playbook` | The directory of runs that `pruneCompilerPlaybookReports` prunes; the playbook container passes its copies'. | `lang/intellij-plugin/build.gradle.kts:1053`, `lang/intellij-plugin/container/in-container.sh:153` |
 
 | Name | Kind | What it does | Read at |
 |------|------|--------------|---------|
@@ -510,7 +510,7 @@ The runners hand these environment variables to the test code in VS Code:
 | `XTC_LIFECYCLE_ROLE`, `XTC_LIFECYCLE_REPORT`, `XTC_LIFECYCLE_SHARED_PROCESS` | `vsc/test/runLifecycle.ts:68` | `vsc/test/lifecycle/index.ts:21`, `:11`, `:12` |
 | `XTC_EXPLORER_PROBE_REPORT`, `XTC_EXPLORER_PROBE_REFRESH` | `vsc/test/runTest.ts:133` | `vsc/test/explorer-probe/index.ts:14`, `:16` |
 | `XTC_SETTINGS_PHASE` | `vsc/test/runTest.ts:134` | `vsc/test/settings-persistence/index.ts:11` |
-| `XTC_VSCODE_TEST_CACHE` | The user, or the container (`lang/intellij-plugin/container/in-container.sh:28`) | `vsc/test/vscodeCache.ts:42`; without it, `$XDG_CACHE_HOME`, `~/Library/Caches` or `%LOCALAPPDATA%`, then `xtclang/vscode-test` |
+| `XTC_VSCODE_TEST_CACHE` | The user, or the container (`lang/intellij-plugin/container/in-container.sh:30`) | `vsc/test/vscodeCache.ts:42`; without it, `$XDG_CACHE_HOME`, `~/Library/Caches` or `%LOCALAPPDATA%`, then `xtclang/vscode-test` |
 
 ### 6.4 The playbook container
 
@@ -522,22 +522,23 @@ The root build's `containerPlaybook`, `containerPlaybookImage`, `containerPlaybo
 |------|---------------|--------------|---------|
 | `playbookCases` | Gradle property (`providers`), `all` | Cases for the IntelliJ and VS Code container tasks. | `build.gradle.kts:233` |
 | `org.xtclang.docker.command` | `xdkProperties`, `docker` (`xdk.properties:17`) | The container engine, such as `podman`; passed as `XTC_CONTAINER_COMMAND`. | `build.gradle.kts:232`, `:240` |
-| `XTC_CONTAINER_COMMAND` | environment; else `docker`, or `podman` when `docker` is not installed | The engine `playbook.sh` runs. | `lang/intellij-plugin/container/playbook.sh:38` |
-| `XTC_CONTAINER_MEMORY` | environment; else `14g`, or on a smaller machine its memory less 1 GiB, with a warning | A run's container memory limit; the IntelliJ playbook and tours need `14g` (with `7g` the kernel killed the IDE). | `lang/intellij-plugin/container/playbook.sh:116`, `:188` |
-| `XTC_CONTAINER_SLOTS` | environment; else the fewer of the engine's memory over a run's and its CPUs over 4, at least 1 | How many container runs go at once: two on a 32 GiB, 8-CPU Podman machine with `14g` runs, one on a 16 GiB one. | `lang/intellij-plugin/container/playbook.sh:125` |
-| `XTC_CONTAINER_SLOT` | environment; else fixed by the checkout's path | The slot a checkout's runs take, so that a build and the cases that need it share a work volume. | `lang/intellij-plugin/container/playbook.sh:131` |
-| `XTC_RECORD_VIDEO` | environment, empty | `1` records the virtual display to `/out/screen.mp4`; passed into the container. | `lang/intellij-plugin/container/playbook.sh:190`, `lang/intellij-plugin/container/in-container.sh:61` |
-| `XTC_COMMIT`, `XTC_BRANCH`, `XTC_PLAYBOOK_DIRTY` | set by `playbook.sh` from git, since the export has no `.git` | The commit, branch and uncommitted paths, for javatools' build information and the VS Code playbook. | `lang/intellij-plugin/container/playbook.sh:189`, `javatools/build.gradle.kts:172`, `:174` |
-| `XTC_VSCODE_TEST_CACHE`, `XTC_RECORDING_START_FILE` | set inside the container | The VS Code download cache on the Gradle volume; the recording's start file. | `lang/intellij-plugin/container/in-container.sh:28`, `:66` |
-| `PLAYBOOK_WM` | environment inside the container, `openbox` | Window manager on Xvfb; `playbook.sh` does not pass it in, so it stays `openbox`. | `lang/intellij-plugin/container/in-container.sh:47` |
+| `XTC_CONTAINER_COMMAND` | environment; else `docker`, or `podman` when `docker` is not installed | The engine `playbook.sh` runs. | `lang/intellij-plugin/container/playbook.sh:40` |
+| `XTC_CONTAINER_MEMORY` | environment; else `14g`, or on a smaller machine its memory less 1 GiB, with a warning | A run's container memory limit; the IntelliJ playbook and tours need `14g` (with `7g` the kernel killed the IDE). | `lang/intellij-plugin/container/playbook.sh:142`, `:219` |
+| `XTC_CONTAINER_SLOTS` | environment; else the fewer of the engine's memory over a run's and its CPUs over 4, at least 1 | How many container runs go at once: two on a 32 GiB, 8-CPU Podman machine with `14g` runs, one on a 16 GiB one. | `lang/intellij-plugin/container/playbook.sh:151` |
+| `XTC_CONTAINER_SLOT` | environment; else fixed by the checkout's path | The slot a checkout's runs take, so that a build and the cases that need it share a work volume. | `lang/intellij-plugin/container/playbook.sh:157` |
+| `XTC_RECORD_VIDEO` | environment, empty | `1` records the virtual display to `/out/screen.mp4`; passed into the container. | `lang/intellij-plugin/container/playbook.sh:222`, `lang/intellij-plugin/container/in-container.sh:63` |
+| `XTC_COMMIT`, `XTC_BRANCH`, `XTC_PLAYBOOK_DIRTY` | set by `playbook.sh` from git, since the export has no `.git` | The commit, branch and uncommitted paths, for javatools' build information and the VS Code playbook. | `lang/intellij-plugin/container/playbook.sh:220`, `javatools/build.gradle.kts:172`, `:174` |
+| `XTC_XDK_FINGERPRINT` | set by `playbook.sh` from git: the tree hashes at `HEAD` of what `xdk:installDist` and `publishLocal` build from (javatools, the XDK's libraries, the XDK, the plugin, the build logic, `gradle/` and the root's build scripts and properties) and a hash of their uncommitted changes | Compared in the container with `xdk/build/xdk-fingerprint`, which the last build wrote in the work volume: a run that tests builds the XDK first when they differ, the marker is missing, or the XDK changed after it, and logs `xdk: rebuilding, as ...` or `xdk: not rebuilt, ...`. | `lang/intellij-plugin/container/playbook.sh:101`, `:221`, `lang/intellij-plugin/container/in-container.sh:83`, `:91` |
+| `XTC_VSCODE_TEST_CACHE`, `XTC_RECORDING_START_FILE` | set inside the container | The VS Code download cache on the Gradle volume; the recording's start file. | `lang/intellij-plugin/container/in-container.sh:30`, `:68` |
+| `PLAYBOOK_WM` | environment inside the container, `openbox` | Window manager on Xvfb; `playbook.sh` does not pass it in, so it stays `openbox`. | `lang/intellij-plugin/container/in-container.sh:49` |
 
 Inside the container, Gradle runs with `/gradle/gradle.properties`: `org.gradle.jvmargs=-Xmx2g
 -XX:MaxMetaspaceSize=768m`, `kotlin.daemon.jvmargs=-Xmx1g`, `org.gradle.workers.max=4`, no file
-watching (`lang/intellij-plugin/container/in-container.sh:31`). The volumes `xvm-playbook-gradle`,
+watching (`lang/intellij-plugin/container/in-container.sh:33`). The volumes `xvm-playbook-gradle`,
 `xvm-playbook-work` and `xvm-playbook-m2`, each with `-sN` in slot N, keep caches between runs (a slot can't share
 another's Gradle user home); one run at a
 time in each slot holds its lock, `xvm-playbook-container.lock` for slot 1 and `xvm-playbook-container.lock.sN` for
-slot N, in the repository's common git directory (`lang/intellij-plugin/container/playbook.sh:133`). `playbook.sh playbook` and `playbook.sh vscode`
+slot N, in the repository's common git directory (`lang/intellij-plugin/container/playbook.sh:158`). `playbook.sh playbook` and `playbook.sh vscode`
 take further Gradle arguments, such as `-Plsp4ijChannel`; the root tasks pass none.
 
 ## Stale in other docs
