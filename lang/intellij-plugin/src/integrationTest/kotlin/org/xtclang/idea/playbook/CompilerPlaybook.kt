@@ -23,6 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeSource
 
 /** Selects the harness workload, including feature checks and focused lifecycle or responsiveness runs. */
@@ -57,6 +58,9 @@ class CompilerPlaybook(
     )
 
     private val completed = mutableListOf<Result>()
+
+    /** When a line last said how far the run is, which one does at most every two minutes. */
+    private var summarized = TimeSource.Monotonic.markNow()
     val results: List<Result>
         get() =
             completed.filter { it.id.startsWith("START") } +
@@ -1376,6 +1380,7 @@ class CompilerPlaybook(
                     .also(onResult)
             val outcome = if (shared.scenarios[id]?.intellij?.coverage == "partial") "partial" else "passed"
             playbookLine("$id $description: $outcome")
+            summary()
             progress(id, "passed", description)
         } catch (failure: Throwable) {
             val unsafeToContinue = failure.mustStopPlaybook()
@@ -1402,6 +1407,7 @@ class CompilerPlaybook(
                 ).also(onResult)
             val reason = failure.message?.lineSequence()?.firstOrNull { it.isNotBlank() } ?: failure.javaClass.simpleName
             playbookLine("$id $description: failed — ${reason.trim().take(120)}")
+            summary()
             if (!unsafeToContinue) runCatching { progress(id, "failed", description) }.onFailure(failure::addSuppressed)
             if (
                 !continueAfterFailure ||
@@ -1415,6 +1421,17 @@ class CompilerPlaybook(
 
     /** A line of the run's progress in the build's output, in the format the VS Code playbook prints. */
     private fun playbookLine(line: String) = println("[playbook] ${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)} $line")
+
+    /** At most every two minutes, a line of how many of the selected cases have run, are left, passed and failed. */
+    private fun summary() {
+        if (summarized.elapsedNow() < 2.minutes) return
+        summarized = TimeSource.Monotonic.markNow()
+        val run = completed.filter { it.id in selectedIds }
+        playbookLine(
+            "${run.size}/${selectedIds.size} cases run, ${selectedIds.size - run.size} left: " +
+                "${run.count { it.status == "passed" }} passed, ${run.count { it.status == "failed" }} failed",
+        )
+    }
 
     private fun Driver.progress(
         id: String,

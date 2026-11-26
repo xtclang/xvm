@@ -37,6 +37,15 @@ export async function run(): Promise<void> {
     mocha.grep(new RegExp(`(?:^| )(?:${ids}):`));
     mocha.addFile(path.join(__dirname, 'playbook.test.js'));
     const results: { id: string; title: string; status: string; durationMs?: number; error?: string }[] = [];
+    // at most every two minutes, a line of how many of the selected cases have run, are left, passed and failed
+    let summarized = Date.now();
+    const summary = (): void => {
+        if (Date.now() - summarized < 120_000) return;
+        summarized = Date.now();
+        const run = results.filter(result => selected.some(value => value === result.id));
+        const count = (status: string) => run.filter(result => result.status === status).length;
+        progress(`${run.length}/${selected.length} cases run, ${selected.length - run.length} left: ${count('passed')} passed, ${count('failed')} failed`);
+    };
     const failures = await new Promise<number>(resolve => {
         const runner = mocha.run(resolve);
         stopOnUnsafeFailure(runner);
@@ -45,15 +54,18 @@ export async function run(): Promise<void> {
         runner.on('pass', test => {
             progress(`${test.title.replace(':', '')}: passed`);
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'passed', durationMs: test.duration });
+            summary();
         });
         runner.on('fail', (test, error) => {
             progress(`${test.title.replace(':', '')}: failed — ${(error.message ?? '').split('\n').find((line: string) => line.trim())?.trim().slice(0, 120) ?? error.name}`);
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'failed', error: error.stack });
+            summary();
             console.error(`${test.title}\n${error.stack}`);
         });
         runner.on('pending', test => {
             progress(`${test.title.replace(':', '')}: not-run`);
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'not-run' });
+            summary();
         });
     });
     const report = {
