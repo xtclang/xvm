@@ -17,12 +17,12 @@ A run recorded with XTC_RECORD_VIDEO=1 has screen.mp4, the whole display with it
 recording's start ("screen": {"start": epoch ms, "frame": "x,y,w,h"}), each step's "start", "shot" and "end" times,
 and the "actions" the tour pressed, clicked and typed. Each step of such a run is then a clip, from its start to its
 captured frame, cropped to the IDE's window: the stretches where the screen does not change are dropped, as a
-time-lapse of waits, what is left plays at --speed, half its own speed unless given, for a viewer to follow, and is
+time-lapse of waits, what is left plays at --speed, about a third of its own speed unless given, for a viewer to follow, and is
 sped up when it would still run longer than CLIP_MAX seconds; the step's keys and clicks are a badge, and each click is
-a ring where the pointer clicked. Its frame then holds, for its caption to be read. The deck keeps the frames and links
+a ring where the pointer clicked. Its frame then holds for --hold seconds, for its caption to be read. The deck keeps the frames and links
 each step's clip.
 
-Usage: compose.py [--speed <factor>] [--editor intellij|vscode] <run directory>... <out directory>
+Usage: compose.py [--speed <factor>] [--hold <seconds>] [--editor intellij|vscode] <run directory>... <out directory>
 
 <editor> is the editor the runs toured, intellij or vscode, as their tour.json's "editor" names it, so that the two
 tours' files keep apart; --editor gives it for runs recorded before tour.json named it. Runs of both are refused.
@@ -34,7 +34,8 @@ is not shown. A step that failed, or was not captured, in all of them is left ou
 no error; failures.md lists each failure, with its section, its run and its error, and whether the step was shown from
 an older run or left out, and the failed checks of the newest run of each section. A run is as new as its recording,
 or its first timed step, or else its results.json. --speed is how fast a recording's clips play, against the speed it
-was recorded at: 0.5, the default, is half speed, and 1 plays them as recorded.
+was recorded at: 0.35, the default, is about a third of it, and 1 plays them as recorded. --hold is how long a clip's last
+frame stays, 7 seconds unless given.
 
 Needs Pillow and python-pptx (pip install pillow python-pptx) and ffmpeg on the PATH.
 """
@@ -215,12 +216,12 @@ def compose(step, total):
 
 
 # how fast a step's clip plays, against the recording, unless --speed says otherwise: slow enough to follow
-SPEED = 0.5
+SPEED = 0.35
 # a step's clip runs at most this long, sped up when its recording is longer, at SPEED, once the unchanged stretches
 # are dropped
-CLIP_MAX = 40.0
+CLIP_MAX = 75.0
 # how long a step's frame holds after its clip, for its caption to be read
-HOLD = 4.0
+HOLD = 7.0
 
 
 def badge_labels(step):
@@ -251,10 +252,10 @@ def length(video_file):
     return float(probe.stdout.strip() or 0)
 
 
-def clip(step, still, out, speed):
+def clip(step, still, out, speed, hold):
     """
     The step's clip from its run's screen recording, at [speed] and at most CLIP_MAX seconds, with its band, then its
-    frame held; None without one.
+    frame held for [hold] seconds; None without one.
     """
     screen = step.get("screen")
     if not (screen and step.get("start") and step.get("shot")) or step["shot"] <= step["start"]:
@@ -286,7 +287,7 @@ def clip(step, still, out, speed):
     still.save(held)
     segment = out / "clips" / f"{step['number']:03d}.mp4"
     subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-i", str(lapse), "-i", str(band), "-loop", "1", "-t", f"{HOLD}", "-i", str(held),
+        ["ffmpeg", "-v", "error", "-y", "-i", str(lapse), "-i", str(band), "-loop", "1", "-t", f"{hold}", "-i", str(held),
          "-filter_complex",
          f"[0:v]setpts=PTS*{stretch:.4f},pad={WIDTH}:{HEIGHT}:0:0:color=0x0E141E[c];[c][1:v]overlay=0:{SCREEN}[v];"
          f"[2:v]scale={WIDTH}:{HEIGHT},setpts=PTS-STARTPTS[s];[v][s]concat=n=2:v=1:a=0,fps=15,format=yuv420p[o]",
@@ -326,7 +327,7 @@ def clips_video(segments, out, movie):
 def seconds(step):
     """How long the video holds a step: long enough to read its caption, as a viewer would."""
     words = len(step["caption"].split()) + (8 if step.get("card") else 0)
-    return min(max(6.0 + words * 0.32, 9.0), 16.0)
+    return min(max(8.0 + words * 0.42, 12.0), 22.0)
 
 
 def video(frames, steps, out, movie):
@@ -491,11 +492,12 @@ def failures_report(failures, checks, out):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--speed", type=float, default=SPEED, help="how fast clips play against the recording")
+    parser.add_argument("--hold", type=float, default=HOLD, help="how long, in seconds, a clip's last frame stays")
     parser.add_argument("--editor", choices=EDITORS,
                         help="the editor the runs toured, for runs whose tour.json does not name it")
     parser.add_argument("paths", nargs="+", metavar="directory", help="the run directories, then the out directory")
     arguments = parser.parse_args()
-    if len(arguments.paths) < 2 or arguments.speed <= 0:
+    if len(arguments.paths) < 2 or arguments.speed <= 0 or arguments.hold <= 0:
         sys.exit(__doc__)
     runs, out = [Path(arg) for arg in arguments.paths[:-1]], Path(arguments.paths[-1])
     tours = []
@@ -546,7 +548,7 @@ def main():
         still.save(path)
         frames.append(path)
         if recorded:
-            step["clip"] = clip(step, still, out, arguments.speed)
+            step["clip"] = clip(step, still, out, arguments.speed, arguments.hold)
             segments.append(step["clip"] or held(step, still, out))
     if recorded:
         clips_video(segments, out, movie)
