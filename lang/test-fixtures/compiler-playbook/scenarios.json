@@ -10919,6 +10919,46 @@
         "limitations": []
       }
     },
+    "X352": {
+      "title": "a loop's label: hover, highlights, Find References and Go to Definition reach its declaration and each use, a rename changes them all, and a rename to the name of a property that the loop reads is refused",
+      "manual": [
+        "F2's input box, its preview and Undo are checked manually, as for X53."
+      ],
+      "values": {
+        "file": "Labels.x",
+        "module": "Labels",
+        "source": "module Labels {\n    Range<Int> span = 0 ..< 3;\n\n    String count(Int[] values) {\n        String text = \"\";\n        Loop: for (Int value : values) {\n            if (Loop.first) {\n                text = span.first.toString();\n                continue Loop;\n            }\n            if (value < 0) {\n                break Loop;\n            }\n            text += value.toString();\n        }\n        return text;\n    }\n}\n",
+        "name": "Loop",
+        "uses": [
+          {
+            "anchor": "Loop: for",
+            "offset": 0
+          },
+          {
+            "anchor": "(Loop.first)",
+            "offset": 1
+          },
+          {
+            "anchor": "continue Loop",
+            "offset": 9
+          },
+          {
+            "anchor": "break Loop",
+            "offset": 6
+          }
+        ],
+        "hover": {
+          "source": "\\bLabel Loop\\b",
+          "flags": ""
+        },
+        "newName": "Each",
+        "refusedName": "span"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

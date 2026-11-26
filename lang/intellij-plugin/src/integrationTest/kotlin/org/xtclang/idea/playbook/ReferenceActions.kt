@@ -17,26 +17,32 @@ fun Driver.referencesAndHighlights(
     editor: JEditorUiComponent,
     at: Int,
     excluded: Int,
+) = usagesAndHighlights(editor, at, "contain this use and exclude its shadowed namesake") { ranges ->
+    ranges.any { at in it } && ranges.none { excluded in it }
+}
+
+/**
+ * Invokes Find Usages and then Highlight Usages at [at] in [editor], natively, and waits until [usages] takes the usage
+ * view's ranges, and [highlights], unless it is null, the highlights', as [what] says of each.
+ */
+fun Driver.usagesAndHighlights(
+    editor: JEditorUiComponent,
+    at: Int,
+    what: String,
+    highlights: ((List<IntRange>) -> Boolean)? = null,
+    usages: (List<IntRange>) -> Boolean,
 ) {
     val support = fileSupport(editor, at) { it }
-
-    fun contains(
-        range: SourceRange,
-        offset: Int,
-    ): Boolean = offset in editor.offsets(range)
-    awaitFindUsages(editor, "native references contain this use and exclude its shadowed namesake") { ranges ->
-        ranges.any { at in it } && ranges.none { excluded in it }
-    }
+    awaitFindUsages(editor, "native references $what", usages)
+    val highlighted = highlights ?: usages
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("HighlightUsagesInFile", component = editor.component)
-    awaitUi("native highlights contain this use and exclude its shadowed namesake", HANG_LIMIT) {
+    awaitUi("native highlights $what", HANG_LIMIT) {
         val future = support.getHighlightSupport().getValidLSPFuture()
         if (future == null || !future.isDone() || future.isCompletedExceptionally()) {
             return@awaitUi false
         }
-        val highlights = future.get()
-        highlights.any { contains(it.getRange(), at) } &&
-            highlights.none { contains(it.getRange(), excluded) }
+        highlighted(future.get().map { editor.offsets(it.getRange()) })
     }
     invokeAction("EditorEscape", component = editor.component)
 }

@@ -4,13 +4,13 @@ import { TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
 import { scenarioRegex } from './shared';
 import { client, diagnostics, fixture, noErrors, playbook, position, symbols } from './support';
 
-async function rename(document: vscode.TextDocument, at: vscode.Position, newName: string): Promise<WorkspaceEdit | null> {
+export async function rename(document: vscode.TextDocument, at: vscode.Position, newName: string): Promise<WorkspaceEdit | null> {
     return client().sendRequest<WorkspaceEdit | null>('textDocument/rename', {
         textDocument: { uri: document.uri.toString() }, position: at, newName
     });
 }
 
-async function applyRename(document: vscode.TextDocument, at: vscode.Position, newName: string): Promise<void> {
+export async function applyRename(document: vscode.TextDocument, at: vscode.Position, newName: string): Promise<void> {
     const edit = await vscode.commands.executeCommand<vscode.WorkspaceEdit>('vscode.executeDocumentRenameProvider', document.uri, at, newName);
     assert.ok(edit?.size, 'Rename must produce a workspace edit');
     assert.ok(await vscode.workspace.applyEdit(edit));

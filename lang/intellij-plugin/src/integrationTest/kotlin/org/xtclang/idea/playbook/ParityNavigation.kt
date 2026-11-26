@@ -338,7 +338,7 @@ private fun libraryDocument(
     source: String,
 ): Boolean = URI(uri).let { it.scheme == "ecstasy-library" && it.path.endsWith("/$source") }
 
-private fun assertRanges(
+internal fun assertRanges(
     actual: List<JsonElement>,
     expected: List<JsonElement>,
 ) {

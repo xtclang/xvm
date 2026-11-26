@@ -18,6 +18,7 @@ import { liveWorkspaceCases } from './liveWorkspace';
 import { localRefactoringCases, memberActionCases } from './memberActions';
 import { closedMemberCases, moduleCases } from './modules';
 import { libraryNavigationCases, navigationCases } from './navigation';
+import { labelCases } from './occurrences';
 import { onTypeCases } from './onType';
 import { platformCases } from './platform';
 import { progressCases } from './progress';
@@ -115,6 +116,7 @@ suite('XdkAdapter playbook', function () {
     xunitCases();
     libraryNavigationCases();
     gradleRunCases();
+    labelCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
