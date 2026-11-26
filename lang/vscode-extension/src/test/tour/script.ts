@@ -30,8 +30,8 @@
  * | textDocument/documentHighlight            | step "Highlight occurrences"                                      |
  * | textDocument/selectionRange               | step "Expand the selection"                                       |
  * | textDocument/foldingRange                 | step "Folding"                                                    |
- * | textDocument/prepareRename, rename        | step "Rename a method"                                            |
- * | experimental xtcRenameProposal, xtc/rename| steps "Renamed everywhere", "Undo the rename", "Undone everywhere", "Rename a class" |
+ * | textDocument/prepareRename, rename        | steps "Rename a method", "A rename it refuses" (prepareRename's reason) |
+ * | experimental xtcRenameProposal, xtc/rename| steps "Renamed everywhere", "Undo the rename", "Undone everywhere", "Rename a class"; check "A rename that would change what the code means" (no edit) |
  * | textDocument/codeAction, codeAction/resolve | steps "Quick fixes", "Create a method", "Add an import", "Refactorings", "Extracted to a local", "Extract a method"; checks "Undo a quick fix", "Safe delete", "Generate a doc comment" |
  * | source.organizeImports                    | step "Organize imports"                                           |
  * | executeCommandProvider: xtc.outsideUses   | - check "Safe delete" lists the action without applying it; applying a public member's runs it (playbook X334) |
@@ -1337,6 +1337,47 @@ async function refactoring(tour: Tour): Promise<void> {
             await compiles(tour, eights);
         },
         after: async () => { await tour.restore(); },
+    });
+    // VS Code shows prepareRename's refusal at the caret, a message that closes as the caret or the editor's focus moves
+    const refusal = 'css:.monaco-editor-overlaymessage';
+    let refused = '';
+    await tour.shot({
+        title: 'A rename it refuses',
+        caption: "F2 on a name the XDK declares, as Console, is refused before anything changes, with the server's reason.",
+        feature: 'textDocument/prepareRename',
+        focus: refusal,
+        settleMs: 500,
+        act: async () => {
+            await open(player, 'Console console;', 2);
+            await tour.ui.focusEditor();
+            await launch('editor.action.rename');
+        },
+        until: async () => {
+            refused = await tour.ui.text(refusal);
+            return refused.length > 0;
+        },
+        check: async () => {
+            expect(refused.includes('Rename not allowed at this position'), () => `The message: ${refused}`);
+            expect(!await tour.ui.showing('css:.rename-box'), () => 'A rename box opened');
+            expect(await text(player) === (await tour.originals()).get(player), () => 'Player.x changed');
+        },
+        after: async () => { await tour.ui.press('Escape'); },
+    });
+    await tour.verify('A rename that would change what the code means', 'xtc/rename', async () => {
+        // the card drawn, named name, would print in place of the player's name: the server's proof finds that use's
+        // binding changed, as the playbook's X55 does, and answers no edit, which VS Code says it got no result for
+        await open(player, 'card := eights.drawCard()', 1);
+        await tour.ui.focusEditor();
+        await launch('editor.action.rename');
+        await renameBox(tour);
+        await tour.ui.press('Control+a');
+        await tour.ui.type('name');
+        await tour.ui.press('Enter');
+        await tour.until('VS Code says the rename has no edit', async () => (await tour.ui.text('notification')).includes('No result'),
+            () => tour.ui.text('notification'));
+        expect(await text(player) === (await tour.originals()).get(player), () => 'Player.x changed');
+        await compiles(tour, player);
+        await command('notifications.clearAll');
     });
     const hand = tour.source('Hand.x');
     await tour.shot({
