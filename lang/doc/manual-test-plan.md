@@ -4050,6 +4050,16 @@ is refused where the new name would hide another from the code in the label's sc
 |---|---|---|
 | X352 | Write `Labels.x`, a module with a property `span` and a method whose `for` loop is labeled `Loop`, reads `Loop.first` and `span.first`, and has a `continue Loop` and a `break Loop`. Hover `Loop` in `Loop.first`; on the label's declaration, highlight its uses and Find References; Go to Definition from `break Loop`. Rename the label to `span`, then to `Each`. | The hover shows `Label Loop`. The highlights and the references are the declaration and its three uses, exactly. Go to Definition goes to the declaration. The rename to `span` is refused: the loop's `span.first` would read the label's variable. The rename to `Each` changes all four, and the module compiles. |
 
+### A parameter of a constructor with a finally block (X353)
+
+The compiler compiles a constructor's `finally` block as a method of its own over the constructor's parameters. A
+parameter is still one declaration, whose uses in the body, in the block and in a named argument of a call of the
+constructor each reach it.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X353 | Write `Finals.x`, a module with a class `Holder` whose constructor `construct(Int[] keys, Boolean inPlace = False)` reads `inPlace` in its body and in its `finally` block, and a method that calls `new Holder([1], inPlace=True)`. Find References on `inPlace` in the body, and rename it there to `fresh`; restore the source, and do the same from the named argument `inPlace=True`. | From either, the references are the declaration, the body's use, the block's and the named argument, exactly, and the rename changes all four; the module compiles. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and
