@@ -481,14 +481,14 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
     method and name, which the artifact's revision and the member-use tracker's places cover, so a
     parameter that moves alone compiles the modules whose named arguments go to it. Definition only:
     references and highlights hold the workspace's sources, and a library's source is read-only (119
-    undeclared; 06299e71d3);
+    undeclared; 6fade151a2);
   - [x] a formal type named in a lambda, `To` in `n -> n.toIntN().as(To)`, binds to the method's or the
     class's formal type that the lambda's own type parameter captures, through each lambda around it:
     hover, definition, references and highlights as outside a lambda (61 undeclared, and `Element` as a
-    value in `Service.passableAs(e, Element)`; 9fba0e5773);
+    value in `Service.passableAs(e, Element)`; fd5516b81c);
   - [x] a parameter of a constructor with a `finally` block that only lambdas in its body name binds to
-    its declaration, through each capture's origin (e6ccba3277), and a label written with `\u` escapes,
-    `L\u006Fop`, spans what is written in its declaration, a `break` and a `continue` (d0498aec46); no
+    its declaration, through each capture's origin (f5b40ff2b4), and a label written with `\u` escapes,
+    `L\u006Fop`, spans what is written in its declaration, a `break` and a `continue` (6a5e3e96c8); no
     library has either.
 
   After: rename facts unchanged, 0 unbound, 0 unplaceable, 40 unproven; editor unrecorded 2511,
@@ -739,17 +739,59 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   `-7223607507479699437`, `-1077955297390743273`, `-10947987415425839701`, `-1471102060868252773`); in the last
   the same registry update came during an `incomingCalls` request, LSP4IJ canceled it 5 ms later, and IntelliJ
   asked again 3 ms after that and showed the callers.
-- [ ] Found 2026-11-26 in VS Code's full playbook in the container (`run-Rf8Tt8`, at `d7e27f6a03`), not in the 3 full
+- [x] Found 2026-11-26 in VS Code's full playbook in the container (`run-Rf8Tt8`, at `d7e27f6a03`), not in the 3 full
   runs before it nor in 3 runs of the case alone after it: X342 failed with "The request (id: 721, method:
   'xtc/tests') has been cancelled". The server answered that `xtc/tests` with RequestCancelled after 21 ms, its
   `project-DIAGNOSTICS` job `cancel-or-failure-signalled`, with no `$/cancelRequest` from the client for it; the
-  extension's Test Explorer refresh takes the error as a failure. To find: what cancels the job, and whether the
-  refresh should ask again.
-- [ ] Found 2026-11-26 in VS Code's full tour in the container (`run-UcTGyc`, at `d7e27f6a03`): Refactoring's
+  extension's Test Explorer refresh takes the error as a failure. The server's fault, which a user's Test Explorer
+  could hit too: 19 ms into that compile came the `didClose` of the previous case's `X297/Extract.x`, and a close, as
+  any source change, retires every project query (`retireProjectQueries`) and cancels its future, which
+  `testsAsync` answered with. Fixed (2026-11-26, `7de5908d63`): `testsAsync` asks again when that compile ends canceled,
+  which is always the server's own doing, and answers from the compile of the sources after the change.
+  `XdkPullDiagnosticsTest` reproduces it by ordering: the graph's compile holds until a document of the graph has
+  closed; without the fix the listing ends canceled. On the stack, X342 passed in VS Code's full playbook in the container (`run-LgTm8x`).
+- [x] Found 2026-11-26 in VS Code's full tour in the container (`run-UcTGyc`, at `d7e27f6a03`): Refactoring's
   "Extracted to a local" did not happen, and its check failed with "No local in nextPlayer". The step clicked the
-  action widget's "Extract expression to local variable" row at 10:17:02.071; the server got no `codeAction/resolve`
-  after it, and the file's code lenses were resolved again 11 ms after the click, a race like IntelliJ's Warnings and
-  Parameter info steps', which `lensesInPlace` fixed there.
+  action widget's "Extract expression to local variable" row at 10:17:02.071. Not a lens race, and the server's
+  fault, not the tour's: the click brought a `codeAction/resolve` for that action at 10:17:02.104, which the server
+  rejected with ContentModified, and VS Code's language client takes that as a cancel and applies nothing. Between the
+  list (10:16:58.658) and the click, VS Code had released `CardCollection.x`, 3 minutes after the tour opened it, as
+  it releases a model no editor shows, and every `didOpen` and `didClose` expired every resolve handle; the code lens
+  resolves after the click came from that close's refresh. Fixed (2026-11-26, `47d92e0ded`): resolve handles have a
+  revision of their own, which an open or a close that leaves the document's text as its file has it does not
+  change. `XdkResolveProtocolTest` reproduces it: an action listed before a member's close resolves after it, and
+  failed with "Result expired or changed" without the fix. On the stack, the step passed in both runs of the tour's refactoring section
+  (`run-JvRfPu`, `run-MSVwhR`).
+- [x] Found 2026-11-26 in the plugin suite under load, in the stack's gate: ClosedFileProblemsTest's "a closed file's
+  error is in Project Errors once after a build" saw the report's error, not the build's, after the build. LSP4IJ pulls
+  the workspace's diagnostics twice before the build (for the open and for the test's refresh), and the test waited
+  for the first report only; the second, answered after the build, replaced the build's error. Fixed (`3cafd89776`):
+  the stub server can hold workspace pulls, and the test holds the later ones until its next refresh.
+- [x] Found 2026-11-26 in the playbook container, where `playbook.sh vscode all` runs the server's suite first:
+  XdkPullDiagnosticsTest's trace test failed with a NullPointerException, as it read the queries' end entries in the
+  order the trace wrote them, which a query that ends after its caller heard the answer reorders. Fixed
+  (`6e7a0884d6`): ordered by span ID. Its failure stopped that VS Code playbook run before its cases.
+- [x] Found 2026-11-26: one checkout's container runs in two slots (`$XTC_CONTAINER_SLOT`) shared `/out`, and a run
+  removes `/out/screen.mp4` as it starts, so a VS Code run could have deleted an IntelliJ tour's recording in the
+  other slot; the progress monitor also read the other slot's log. Fixed (`3286daadb1`): each slot has its own `/out`.
+- [ ] Found 2026-11-26 in VS Code's tour (`run-JvRfPu`): Refactoring's "Rename a file" waited 60 s for the Explorer's
+  name box, which never opened, with Hand.x selected and the Explorer list focused; passed in `run-MSVwhR` and before.
+  `reveal` waits for the row to be selected, and `renameFile` acts on the tree's focused element; or something took
+  focus and the inline box closed. The tour-steps branch makes it wait for the focused row and ask again.
+- [ ] Found 2026-11-26 in VS Code's full playbook (`run-LgTm8x`): X251's first Find References gave 0 instead of 2,
+  right after the case configured its graph and opened its file; it passed in the runs before and twice alone after.
+  The server's fault, which a user could hit too: the references request queued behind the graph's diagnostics, and
+  the `didClose` of a document VS Code had released (X207's leftover `Extract.x`, outside the graph) ended it as
+  canceled, which VS Code shows as no references; a workspace query ended on any open or close, the client never
+  canceled it. Fixed on the playbook deduplication branch (`05ac217c8d`), not yet on errs: Find References asks again
+  when documents only opened or closed while it ran, and an edit still refuses it; `XdkReferencesServerTest`
+  reproduces it by ordering.
+- [ ] Found 2026-11-26 in VS Code's full playbook (`run-InIBIg`, on the playbook deduplication branch): X216 timed out
+  in "Move applied: all sources and resources agree" (30 s), and the runner stopped there with 135 cases unrun. It
+  passed in `run-LgTm8x`; the branch did not change its path. Unknown.
+- [ ] Found 2026-11-26 in a one-case IntelliJ run (X1, with another container running): the test Driver's first call
+  into the IDE timed out 9 s after start (DriverIllegalStateException, TimeoutException), before the case ran; X1–X3
+  passed in the next run. A startup wait that machine load can outlast.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
