@@ -17,7 +17,7 @@ import { librarySettingsCases } from './librarySettings';
 import { liveWorkspaceCases } from './liveWorkspace';
 import { localRefactoringCases, memberActionCases } from './memberActions';
 import { closedMemberCases, moduleCases } from './modules';
-import { libraryNavigationCases, navigationCases } from './navigation';
+import { libraryNavigationCases, librarySymbolCases, navigationCases } from './navigation';
 import { constructorFinallyCases, labelCases } from './occurrences';
 import { onTypeCases } from './onType';
 import { platformCases } from './platform';
@@ -120,6 +120,7 @@ suite('XdkAdapter playbook', function () {
     constructorFinallyCases();
     automaticBuildModeCases();
     hiddenTestCases();
+    librarySymbolCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

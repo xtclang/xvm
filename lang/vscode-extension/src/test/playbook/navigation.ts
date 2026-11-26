@@ -131,6 +131,19 @@ export function libraryNavigationCases(): void {
     });
 }
 
+/** X356, registered after X355 in catalog order: Go to Symbol in Workspace finds the XDK's declarations. */
+export function librarySymbolCases(): void {
+    playbook('X356', async (workspace, data) => {
+        await workspace.module(data.file, data.source, data.module);
+        const found = await vscode.commands.executeCommand<vscode.SymbolInformation[]>('vscode.executeWorkspaceSymbolProvider', data.query) ?? [];
+        const declared = found.filter(symbol => symbol.name === data.query && symbol.location.uri.path.endsWith(`/${data.librarySource}`));
+        assert.strictEqual(declared.length, 1, `${data.query} in ${data.librarySource}: ${JSON.stringify(found.map(symbol => `${symbol.name} ${symbol.location.uri}`))}`);
+        assert.strictEqual(declared[0].location.uri.scheme, 'ecstasy-library', 'The declaration is in the read-only library source');
+        const library = await vscode.workspace.openTextDocument(declared[0].location.uri);
+        assert.ok(library.getText().includes(data.declaration), `${data.declaration} in ${library.uri}`);
+    });
+}
+
 /** Go to Definition, as F12 runs it, at [at] in [document]; the editor it opens on [source], a path's end. */
 async function revealDefinition(document: vscode.TextDocument, at: vscode.Position, source: string): Promise<vscode.TextEditor> {
     await vscode.window.showTextDocument(document, { selection: new vscode.Range(at, at), preview: false });

@@ -8,6 +8,7 @@ import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.codeInsight.hints.declarative.impl.inlayRenderer.DeclarativeInlayRenderer
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.ide.DataManager
+import com.intellij.ide.util.gotoByName.ChooseByNamePopup
 import com.intellij.navigation.ChooseByNameContributor
 import com.intellij.navigation.NavigationItem
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -26,6 +27,7 @@ import com.intellij.openapi.wm.IdeFrame
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.codeStyle.CodeStyleManager
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.ui.AppIcon
 import com.intellij.util.indexing.FindSymbolParameters
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
@@ -199,22 +201,36 @@ object EditorUi {
     /**
      * Opens the workspace symbol [name] as Go to Symbol does once it is chosen: the item that LSP4IJ's contributor gives
      * for it navigates, and resolves the symbol's range first when its location has none (#1788). Answers whether the
-     * item had a `range` before, and the selected editor's `path` and caret `offset` after it.
+     * item had a `range` before, and the selected editor's `path` and caret `offset` after it. With [nonProject], the
+     * scope is Search Everywhere's All Places, whose items include files outside the project, as the libraries' sources
+     * are. The contributor asks the server for the pattern that the popup keeps in the project, as its search does, and
+     * answers every later lookup of a name from that answer, so the pattern is set first and restored after.
      */
     @JvmStatic
     fun goToSymbol(
         project: Project,
         name: String,
+        nonProject: Boolean,
     ): String {
         val contributor =
             ChooseByNameContributor.SYMBOL_EP_NAME.extensionList
                 .filterIsInstance<LSPWorkspaceGotoSymbolContributor>()
                 .single()
         val items = mutableListOf<NavigationItem>()
-        ProgressManager.getInstance().runProcess(
-            { contributor.processElementsWithName(name, { items.add(it) }, FindSymbolParameters.wrap(name, project, false)) },
-            EmptyProgressIndicator(),
-        )
+        val pattern = project.getUserData(ChooseByNamePopup.CURRENT_SEARCH_PATTERN)
+        project.putUserData(ChooseByNamePopup.CURRENT_SEARCH_PATTERN, name)
+        try {
+            val scope = if (nonProject) GlobalSearchScope.everythingScope(project) else GlobalSearchScope.projectScope(project)
+            ProgressManager.getInstance().runProcess(
+                {
+                    contributor.processNames({ true }, scope, null)
+                    contributor.processElementsWithName(name, { items.add(it) }, FindSymbolParameters.wrap(name, scope))
+                },
+                EmptyProgressIndicator(),
+            )
+        } finally {
+            project.putUserData(ChooseByNamePopup.CURRENT_SEARCH_PATTERN, pattern)
+        }
         val item = checkNotNull(items.filterIsInstance<WorkspaceSymbolData>().firstOrNull { it.name == name }) { "No symbol $name: $items" }
         val state = JsonObject().apply { addProperty("range", item.textRange != null) }
         ApplicationManager.getApplication().invokeAndWait {

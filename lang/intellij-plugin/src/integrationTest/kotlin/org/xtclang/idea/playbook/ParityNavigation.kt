@@ -3,6 +3,8 @@ package org.xtclang.idea.playbook
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.intellij.driver.sdk.singleProject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.net.URI
 import java.nio.file.Files
@@ -329,6 +331,26 @@ internal fun ParityScenarios.libraryNavigationCases() {
         // hover, which also needs the whole compile: the copy on its own describes only its own declarations
         val hover = query("textDocument/hover", library, call)
         check(hover.toString().contains(data.string("hover"))) { "Hover of ${data.string("target")}: $hover" }
+    }
+}
+
+/** X356, registered after X355 in catalog order: Go to Symbol finds the XDK's declarations. */
+internal fun ParityScenarios.librarySymbolCases() {
+    case("X356") { data ->
+        openModule(data)
+        val query = data.string("query")
+        val source = data.string("librarySource")
+        val symbols = protocol.query("workspace/symbol", mapOf("query" to query)).rows()
+        check(symbols.count { it.string("name") == query && libraryDocument(it.getAsJsonObject("location").string("uri"), source) } == 1) {
+            "$query in $source: $symbols"
+        }
+        // as Go to Symbol's popup opens its item, in Search Everywhere's All Places, which lists the libraries'
+        val opened =
+            with(driver) { JsonParser.parseString(utility(NativeEditorUi::class).goToSymbol(singleProject(), query, true)).asJsonObject }
+        check(opened.string("path").endsWith("/$source")) { "Go to Symbol opened $opened" }
+        val library = selected(source)
+        check(!library.writable) { "Not the read-only library view: ${library.uri}" }
+        check(data.string("declaration") in library.text) { "${data.string("declaration")} in ${library.uri}" }
     }
 }
 

@@ -11083,6 +11083,22 @@
         ]
       }
     },
+    "X356": {
+      "title": "Go to Symbol in Workspace finds the XDK's declarations, as a method of Map, in its read-only source",
+      "manual": [],
+      "values": {
+        "file": "Symbols.x",
+        "module": "Symbols",
+        "source": "module Symbols {\n    Int size(Map<String, Int> map) = map.size;\n}\n",
+        "query": "getOrDefault",
+        "librarySource": "ecstasy/maps/Map.x",
+        "declaration": "Value getOrDefault(Key key"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

@@ -1034,7 +1034,10 @@ internal fun ParityScenarios.platformCases() {
         val resolved = resolvedSymbol["location"].asJsonObject
         val opened =
             with(driver) {
-                JsonParser.parseString(utility(NativeEditorUi::class).goToSymbol(singleProject(), data.string("module"))).asJsonObject
+                JsonParser
+                    .parseString(
+                        utility(NativeEditorUi::class).goToSymbol(singleProject(), data.string("module"), false),
+                    ).asJsonObject
             }
         check(!opened["range"].asBoolean && opened.string("path") == Path.of(URI(resolved.string("uri"))).toString()) {
             "Go to Symbol opened $opened, not $resolved"
