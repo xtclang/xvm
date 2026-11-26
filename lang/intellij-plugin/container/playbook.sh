@@ -26,8 +26,9 @@
 # The container is aarch64 Linux on an Apple machine: its fonts and timing are not macOS's. The export
 # has no .git: its commit and branch are passed in as XTC_COMMIT and XTC_BRANCH, for javatools' build info
 # and the VS Code playbook, with the uncommitted paths. A run's container may use $XTC_CONTAINER_MEMORY, 14g by
-# default, which the IntelliJ playbook and tours need (7g let the kernel kill the IDE). As many runs go at once as
-# the engine's memory holds, or $XTC_CONTAINER_SLOTS: on a 32 GiB Podman machine, two.
+# default, which the IntelliJ playbook and tours need (7g let the kernel kill the IDE), or less on a smaller machine.
+# As many runs go at once as the engine's memory and CPUs hold, or $XTC_CONTAINER_SLOTS: on a 32 GiB, 8-CPU Podman
+# machine, two; on a 16 GiB one, one.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -100,7 +101,6 @@ dirty="$(git -C "$root" status --porcelain)"
 # for every other slot's container too. A checkout always runs in the same slot, or in $XTC_CONTAINER_SLOT, so that
 # a build and the cases that need it share a work volume, and its runs share no output directory
 common="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)"
-memory="${XTC_CONTAINER_MEMORY:-14g}"
 bytes() {
     local value="${1%[kKmMgG]}"
     case "${1: -1}" in
@@ -110,10 +110,23 @@ bytes() {
         *) echo "$1" ;;
     esac
 }
+# what the engine has: Podman's format first, then Docker's
+total="$("$engine" info --format '{{.Host.MemTotal}}' 2> /dev/null || "$engine" info --format '{{.MemTotal}}' 2> /dev/null || echo 0)"
+cpus="$("$engine" info --format '{{.Host.CPUs}}' 2> /dev/null || "$engine" info --format '{{.NCPU}}' 2> /dev/null || echo 0)"
+# a run's memory: 14g, which the IntelliJ playbook needs, or on a smaller machine what it has short of 1 GiB
+memory="${XTC_CONTAINER_MEMORY:-}"
+if [ -z "$memory" ]; then
+    memory=14g
+    if [ "$total" -gt 0 ] && [ "$total" -lt $(($(bytes 14g) + 1073741824)) ]; then
+        memory="$((total / 1048576 - 1024))m"
+        echo "warning: the container engine has $((total / 1048576)) MiB, so a run gets $memory; the IntelliJ playbook needs 14g" >&2
+    fi
+fi
+# as many runs at once as both the memory and the CPUs hold, four CPUs a run, and at least one
 slots="${XTC_CONTAINER_SLOTS:-}"
 if [ -z "$slots" ]; then
-    total="$("$engine" info --format '{{.Host.MemTotal}}' 2> /dev/null || "$engine" info --format '{{.MemTotal}}' 2> /dev/null || echo 0)"
     slots=$((total / $(bytes "$memory")))
+    if [ "$((cpus / 4))" -lt "$slots" ]; then slots=$((cpus / 4)); fi
     if [ "$slots" -lt 1 ]; then slots=1; fi
 fi
 slot="${XTC_CONTAINER_SLOT:-$(($(printf '%s' "$root" | cksum | cut -d ' ' -f 1) % slots + 1))}"
