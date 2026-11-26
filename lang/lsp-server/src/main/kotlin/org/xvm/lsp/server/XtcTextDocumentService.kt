@@ -1588,16 +1588,7 @@ class XtcTextDocumentService(
                 (
                     compiler?.plainRenameAsync(uri, line, column, params.newName)
                         ?: adapter.renameAsync(uri, line, column, params.newName).mapCancellable { it?.let(::XdkRenameProposal) }
-                ).mapFailureCancellable { failure ->
-                    // a refusal the client shows, instead of an edit-less answer after prepareRename accepted it; a
-                    // client's cancellation still reaches the adapter's future, and stops the proof's compiles
-                    val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.last()
-                    if (cause is RenameRefused) {
-                        ResponseErrorException(ResponseError(ResponseErrorCode.RequestFailed, cause.message, null))
-                    } else {
-                        failure
-                    }
-                }
+                ).mapFailureCancellable(RenameRefused::asResponseError)
             },
             workspace = true,
             progress = params,
@@ -1617,12 +1608,14 @@ class XtcTextDocumentService(
             "xtc/rename",
             params.textDocument.uri,
             {
-                compiler.renameProposalAsync(
-                    params.textDocument.uri,
-                    params.position.line,
-                    params.position.character,
-                    params.newName,
-                )
+                // a refusal reaches the client with its reason, as textDocument/rename's does, not as an internal error
+                compiler
+                    .renameProposalAsync(
+                        params.textDocument.uri,
+                        params.position.line,
+                        params.position.character,
+                        params.newName,
+                    ).mapFailureCancellable(RenameRefused::asResponseError)
             },
             workspace = true,
         ) { proposal -> proposal?.let { protocolProposal(it)?.to(it) } }.mapCancellable { answer ->
