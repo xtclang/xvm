@@ -37,9 +37,11 @@ import org.xvm.compiler.ast.ComponentStatement
 import org.xvm.compiler.ast.CompositionNode
 import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.FunctionTypeExpression
+import org.xvm.compiler.ast.GotoStatement
 import org.xvm.compiler.ast.IgnoredNameExpression
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LabeledExpression
+import org.xvm.compiler.ast.LabeledStatement
 import org.xvm.compiler.ast.LambdaExpression
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NameExpression
@@ -649,6 +651,7 @@ private class SemanticModelBuilder(
             }
         }
         bindFinallyParameters(nodes)
+        bindLabels(nodes)
         nodes.forEach { node ->
             when (node) {
                 is VariableDeclarationStatement -> {
@@ -1657,6 +1660,66 @@ private class SemanticModelBuilder(
             if (parameter.name != register.name) return@forEach
             parameters[method.identityConstant to (register.index - method.typeParamCount)]?.let { registers[register] = it }
         }
+    }
+
+    /**
+     * Declares each label, as Loop in Loop: for (...), and binds the names that refer to it: a break or continue that
+     * names it, and its variable, as Loop in Loop.first, which the compiler registers anew each time it validates the
+     * statement (LabeledStatement.LabelVar). No occurrence held a label, and its variable had a symbol of its own with
+     * no declaration: hover, highlights, Find References, Go to Definition and a rename missed it. The compiler refuses
+     * a label of a name that a variable or an enclosing label has, so the label that a name refers to is the innermost
+     * one of its name around it.
+     */
+    private fun bindLabels(nodes: List<AstNode>) {
+        val statements = nodes.filterIsInstance<LabeledStatement>()
+        if (statements.isEmpty()) return
+        val labels = IdentityHashMap<LabeledStatement, SymbolId>()
+        statements.forEach { statement ->
+            val symbol = SymbolId(id, symbols.size)
+            val at = named(statement.source, statement.startPosition, statement.name, ending = false)
+            symbols[symbol] = Symbol(symbol, statement.name, SymbolKind.VARIABLE, at.range, null, null, at.sourceName, renameable = true)
+            labels[statement] = symbol
+        }
+
+        fun label(
+            node: AstNode,
+            name: String,
+        ) = generateSequence(node.parent) { it.parent }.filterIsInstance<LabeledStatement>().firstOrNull { it.name == name }
+        val variables =
+            nodes.filterIsInstance<NameExpression>().mapNotNull { name ->
+                val variable = name.resolvedTarget as? LabeledStatement.LabelVar ?: return@mapNotNull null
+                // a label that the walked tree does not hold, as one of a copy the compiler validated, has no symbol
+                registers[variable] = label(name, name.name)?.let(labels::get) ?: return@mapNotNull null
+                variable
+            }
+        // every label's variable has the type Label, which a compile has where a name refers to one
+        val type = type(variables.firstOrNull()?.type)
+        statements.forEach { statement ->
+            val symbol = labels.getValue(statement)
+            val label = symbols.getValue(symbol).copy(type = type)
+            symbols[symbol] = label
+            val at = SourceLocation(label.declarationSource, requireNotNull(label.declaration))
+            if (at !in occurrences) occurrences[at] = Occurrence(at.range, statement.name, Role.DECLARATION, symbol, type)
+        }
+        nodes.filterIsInstance<GotoStatement>().forEach { jump ->
+            val name = jump.labeledName ?: return@forEach
+            val symbol = label(jump, name)?.let(labels::get) ?: return@forEach
+            val at = named(jump.source, jump.endPosition, name, ending = true)
+            if (at !in occurrences) occurrences[at] = Occurrence(at.range, name, Role.REFERENCE, symbol, symbols[symbol]?.type)
+        }
+    }
+
+    /** Where [name] is written in [source], starting at [position], or ending there; a name is on one line. */
+    private fun named(
+        source: Source?,
+        position: Long,
+        name: String,
+        ending: Boolean,
+    ): SourceLocation {
+        val line = Source.calculateLine(position)
+        val column = Source.calculateOffset(position)
+        val start = if (ending) column - name.length else column
+        return SourceLocation(source?.fileName, Range(Position(line, start), Position(line, start + name.length)))
     }
 
     private fun declare(
