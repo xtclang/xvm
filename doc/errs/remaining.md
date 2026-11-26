@@ -812,11 +812,13 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   into the IDE timed out 9 s after start (DriverIllegalStateException, TimeoutException), before the case ran; X1–X3
   passed in the next run. It came twice more the same evening, in the shared queue's validation runs (one in each
   slot), so it is no rare event: a startup wait that machine load can outlast, to find and fix.
-- [ ] Found 2026-11-26 recording the IntelliJ tour: the settings section's negative check "Choosing the adapter in use
+- [x] Found 2026-11-26 recording the IntelliJ tour: the settings section's negative check "Choosing the adapter in use
   restarted the server" (`expect(!within(HANG) { serverState() != same })`) sat about 10 minutes without a word: `within`
   ends early only when nothing moved for its idle window, the server's periodic trace events kept resetting that, and
-  `within` never reports while it waits. The run passed once it returned. Being fixed on its own branch: `within`
-  reports as `until` does, and negative checks end once the action is processed, not on a hang bound.
+  `within` never reports while it waits. The run passed once it returned. Fixed: `within`, the start-up waits and the wait after a
+  probe timeout report every minute (`c96fa574fd`, `279df1b59f`, `b20330b23a`), and the
+  negative checks read the server's settled state once the choice has run (`db629c91bf`): the section
+  takes 50 s instead of 10 minutes or the hour bound.
 - [ ] Found 2026-11-26 recording the VS Code tour: the new "Breakpoints while you edit" step once found Quick Open not
   opening `Eights.x` (60 s, nothing under way; it failed fast, as designed); it passed in its other runs.
 - [ ] Found 2026-11-26 in the review of VS Code's rename refusal: the server answers `xtc/rename` with no edit for a
