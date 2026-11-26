@@ -1398,7 +1398,8 @@ IntelliJ's UP24, and UP07's waits for a baseline. UP13 is LSP4IJ's extension poi
 - [ ] UP07 (#1730, #1735): remove `DiagnosticResultMessages` and the quick-fix data revision; gate:
   X181–X185, X202, X213 and diagnostic/action Undo/Redo. On the 0.30.0 branch: `9afed877da`.
   **On 0.30.1:** `a41465a51e` removes the `previousResultId` part, and `DiagnosticResultMessages`
-  stays as the playbook's report record. Still open: the playbook's three UP07 waits
+  stays as the playbook's report record, and since 2026-11-25 as the UP86 bridge's (`markConnected` waits for the
+  connected document's own report through it): it cannot go before LSP4IJ 0.30.2 retires UP86. Still open: the playbook's three UP07 waits
   (`CompilerPlaybook`, `RefactoringActions`, `Tour`); on 2026-11-23 its removal gate ran on 0.30.1
   with the bridge off, on an experiment branch: X181–X185 and X201–X215 pass, but only after 53
   reopened intention lists, so a baseline with the waits on decides. Decided 2026-11-23: the baseline,
