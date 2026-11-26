@@ -26,7 +26,6 @@ import org.xtclang.ecstasy.nObject;
 
 import org.xtclang.ecstasy.reflect.Var;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -109,7 +108,7 @@ public abstract class Array
          * }</pre>
          */
         @JitName
-        @JitFromNatural
+        @JitGenerated
         public Array freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
             throw new UnsupportedOperationException("TODO");
         }
@@ -398,7 +397,7 @@ public abstract class Array
      * }</pre>
      */
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public Object getElement(Ctx ctx, Int64 index) {
         return null;
     }
@@ -473,7 +472,7 @@ public abstract class Array
      * }</pre>
      */
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public Array insertAll$p(Ctx ctx, long index, Iterable values) {
         return null;
     }
@@ -498,7 +497,7 @@ public abstract class Array
      * }</pre>
      */
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public Array removeAll(Ctx ctx, nFunction shouldRemove) {
         return null;
     }

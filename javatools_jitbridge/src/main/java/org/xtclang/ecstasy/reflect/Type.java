@@ -8,7 +8,6 @@ import org.xtclang.ecstasy.nType;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -24,13 +23,13 @@ public interface Type extends Const {
     Boolean structConstructor(Ctx ctx, Type OuterType, Object outer);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     static Boolean equals(Ctx ctx, nType CompileType, Type value1, Type value2) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     default Boolean hashed(Ctx ctx) {
         return null;
     }

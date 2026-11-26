@@ -4,34 +4,27 @@ import java.lang.annotation.Retention;
 
 import java.lang.annotation.RetentionPolicy;
 
-import java.lang.classfile.Annotation;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
 
 import org.xvm.javajit.builders.AugmentingBuilder;
 
 /**
- * An annotation to indicate that the annotated source element is handled as a special case by
- * the {@link AugmentingBuilder}.
+ * Marks a bridge class with JIT member annotations or a member whose code the JIT generates.
  * <p>
- * A class that contains elements annotated with {@link JitGenerated} elements must itself be
- * annotated with the {@link JitGenerated} annotation. Any generator class specified for the
- * class level annotation is ignored.
+ * Use bare {@code @JitGenerated} on a class or interface so the {@link AugmentingBuilder} knows
+ * to look for member annotations. A class with JIT member annotations must have this marker.
  * <p>
- * The default generator class {@link #value()} is the {@link NaturalCode} generator, which
- * indicates that the JIT will produce code using the corresponding natural Ecstasy code for the
- * annotated element.
+ * On a method, bare {@code @JitGenerated} compiles the corresponding Ecstasy body. Use
+ * {@code @JitGenerated(MyGenerator.class)} to supply a custom generator instead.
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JitGenerated {
     /**
-     * The {@link Class} of the {@link Generator} to use to generate custom code.
-     * <p>
-     * The default value is the {@link NaturalCode} generator, which indicates that the JIT will
-     * produce code using the corresponding natural Ecstasy code for the annotated element.
+     * The default {@link NaturalCode} tells the JIT to compile the corresponding Ecstasy body.
+     * The value is ignored on a class-level marker.
      *
-     * @return the {@link Class} of the {@link Generator} to use to generate custom code for the
-     * annotated element.
+     * @return the generator class for the annotated member
      */
     Class<? extends Generator<?>> value() default NaturalCode.class;
 
@@ -54,40 +47,16 @@ public @interface JitGenerated {
     }
 
     /**
-     * A no-op generator to indicate that the code should be produced from the natural code for
-     * the annotated element.
+     * The default generator sentinel. The JIT should compile the Ecstasy body.
      */
     class NaturalCode implements Generator<ClassElement> {
         /**
-         * A singleton instance of the {@link NaturalCode} generator.
+         * A singleton instance of the {@link NaturalCode} sentinel.
          */
         public static final NaturalCode INSTANCE = new NaturalCode();
 
         @Override
         public void generate(AugmentingBuilder builder, ClassElement element, ClassBuilder classBuilder) {
-        }
-    }
-
-    /**
-     * An implementation of the {@link JitGenerated} annotation used to create annotations at
-     * runtime from a Java class file API {@link Annotation}.
-     */
-    class Literal
-            extends JitAnnotation
-            implements JitGenerated {
-
-        public Literal(Annotation annotation) {
-            super(annotation);
-        }
-
-        @Override
-        public Class<? extends java.lang.annotation.Annotation> annotationType() {
-            return JitGenerated.class;
-        }
-
-        @Override
-        public Class<? extends Generator<?>> value() {
-            return getValue("value", NaturalCode.class);
         }
     }
 }

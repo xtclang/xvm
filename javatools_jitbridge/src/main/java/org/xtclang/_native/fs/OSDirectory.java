@@ -15,7 +15,6 @@ import org.xtclang.ecstasy.fs.Directory;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -34,13 +33,13 @@ public class OSDirectory
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public Iterator dirs(Ctx ctx) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public Iterator files(Ctx ctx) {
         return null;
     }

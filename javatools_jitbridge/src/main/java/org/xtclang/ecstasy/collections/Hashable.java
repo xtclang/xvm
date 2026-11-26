@@ -7,7 +7,6 @@ import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -21,7 +20,7 @@ public interface Hashable extends Object {
      * {@code static <CompileType extends Hashable> Int hashCode(CompileType value);}.
      */
     @JitName
-    @JitFromNatural
+    @JitGenerated
     default Int64 hashCode(Ctx ctx, nType type, Hashable hashable) {
         // this method will be implemented by the JIT from natural code
         return null;

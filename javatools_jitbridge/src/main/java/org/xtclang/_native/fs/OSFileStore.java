@@ -25,7 +25,6 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -45,7 +44,7 @@ public class OSFileStore
      * The primitive constructor
      * {@code construct(OSStorage storage, Boolean readOnly)}
      */
-    @JitFromNatural
+    @JitGenerated
     public static OSFileStore $new$p(Ctx ctx, OSStorage storage, boolean readOnly) {
         // this method is declared so that other native code can call the constructor
         // the JIT will generate the code for this method from the natural code in
@@ -61,7 +60,7 @@ public class OSFileStore
     /**
      * The native implementation of {@code @Lazy Directory root.calc()}.
      */
-    @JitFromNatural
+    @JitGenerated
     public Directory root$get(Ctx ctx) {
         // this method is declared so that other native code can access the root directory property
         // the JIT will generate the code for this method from the natural code in
@@ -91,25 +90,25 @@ public class OSFileStore
     }
 
     @Override
-    @JitFromNatural
+    @JitGenerated
     public boolean find$p(Ctx ctx, Path path) {
         return false;
     }
 
     @Override
-    @JitFromNatural
+    @JitGenerated
     public Object copy(Ctx ctx, Path source, Path dest) {
         return null;
     }
 
     @Override
-    @JitFromNatural
+    @JitGenerated
     public Object move(Ctx ctx, Path source, Path dest) {
         return null;
     }
 
     @Override
-    @JitFromNatural
+    @JitGenerated
     public FileStore ensureReadOnly(Ctx ctx) {
         return null;
     }
@@ -187,7 +186,7 @@ public class OSFileStore
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public boolean linkAsFile$p(Ctx ctx, OSFileNode pathString) {
         return false;
     }

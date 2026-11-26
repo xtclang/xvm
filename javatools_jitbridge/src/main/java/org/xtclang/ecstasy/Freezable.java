@@ -2,7 +2,6 @@ package org.xtclang.ecstasy;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -13,6 +12,6 @@ import org.xvm.javajit.annotations.JitName;
 public interface Freezable extends Object {
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     Freezable freeze(Ctx ctx, Boolean inPlace);
 }

@@ -3,9 +3,7 @@ package org.xvm.javajit.annotations;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-
 import java.lang.annotation.Target;
-import java.lang.classfile.Annotation;
 
 import org.xvm.asm.constants.MethodConstant;
 
@@ -26,27 +24,4 @@ public @interface JitName {
      *         empty string if the natural name is the same as the annotated method's name.
      */
     String value() default "";
-
-    /**
-     * An implementation of the JitName annotation used to create annotations at runtime from a
-     * Java class file API {@link Annotation}.
-     */
-    class Literal
-            extends JitAnnotation
-            implements JitName {
-
-        public Literal(Annotation annotation) {
-            super(annotation);
-        }
-
-        @Override
-        public Class<? extends java.lang.annotation.Annotation> annotationType() {
-            return JitName.class;
-        }
-
-        @Override
-        public String value() {
-            return stringValue("value", "");
-        }
-    }
 }

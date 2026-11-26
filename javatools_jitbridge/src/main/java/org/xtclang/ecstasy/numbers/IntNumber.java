@@ -4,7 +4,6 @@ import org.xtclang.ecstasy.Sequential;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -17,91 +16,91 @@ public abstract class IntNumber
         implements Sequential {
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber add(Ctx ctx, IntNumber that) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber and(Ctx ctx, IntNumber that) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber not(Ctx ctx) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber or(Ctx ctx, IntNumber that) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber nextValue(Ctx ctx) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber prevValue(Ctx ctx) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber shiftAllRight(Ctx ctx, Int64 count) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber shiftLeft(Ctx ctx, Int64 count) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber shiftRight(Ctx ctx, Int64 count) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public Sequential skip$p(Ctx ctx, long steps) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber skip(Ctx ctx, Int64 steps) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public Int64 stepsTo(Ctx ctx, Sequential that) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public Int64 stepsTo(Ctx ctx, IntNumber that) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber sub(Ctx ctx, IntNumber that) {
         return null;
     }
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     public IntNumber xor(Ctx ctx, IntNumber that) {
         return null;
     }

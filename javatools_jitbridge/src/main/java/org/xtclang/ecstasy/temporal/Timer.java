@@ -5,7 +5,6 @@ import org.xtclang.ecstasy.nFunction;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -39,7 +38,7 @@ public interface Timer {
     Timer reset(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     default nFunction schedule(Ctx ctx, Duration delay, nFunction function, Boolean keepAlive) {
         return null;
     }

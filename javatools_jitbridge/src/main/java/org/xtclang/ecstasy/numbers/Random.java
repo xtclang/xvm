@@ -8,7 +8,6 @@ import org.xtclang.ecstasy.collections.ArrayᐸUInt8ᐳ;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -19,114 +18,114 @@ import org.xvm.javajit.annotations.JitName;
 public interface Random extends Object {
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     boolean boolean$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int bit$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int dec32$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long dec64$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long dec$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long dec128$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int int8$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int int16$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int int32$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long int64$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long int$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long int$p(Ctx ctx, long max);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long int$p(Ctx ctx, RangeᐸInt64ᐳ range);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long int128$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int uint8$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int uint16$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int uint32$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long uint$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long uint64$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     long uint128$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int float8e4$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     int float8e5$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     float bfloat16$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     float float16$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     float float32$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     double float64$p(Ctx ctx);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     ArrayᐸBitᐳ bits$p(Ctx ctx, long size);
 
     @JitName
-    @JitFromNatural
+    @JitGenerated
     ArrayᐸUInt8ᐳ bytes$p(Ctx ctx, long size);
 }

@@ -4,7 +4,6 @@ import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -18,7 +17,7 @@ public interface Interval extends Object {
      * {@code @Op("[]") Element getElement(Int index)}.
      */
     @JitName
-    @JitFromNatural
+    @JitGenerated
     default Sequential getElement(Ctx ctx, Int64 index) {
         return null;
     }

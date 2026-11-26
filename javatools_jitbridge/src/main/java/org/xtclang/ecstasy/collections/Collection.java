@@ -4,7 +4,6 @@ import org.xtclang.ecstasy.Object;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -21,6 +20,6 @@ public interface Collection extends Object {
      * }</pre>
      */
     @JitName
-    @JitFromNatural
+    @JitGenerated
     Collection reify(Ctx ctx);
 }

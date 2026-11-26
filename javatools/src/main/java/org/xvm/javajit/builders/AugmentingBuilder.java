@@ -1,7 +1,6 @@
 package org.xvm.javajit.builders;
 
 import java.lang.classfile.Annotation;
-import java.lang.classfile.AnnotationElement;
 import java.lang.classfile.AnnotationValue;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassElement;
@@ -29,7 +28,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.javajit.annotations.JitFromNatural;
+import org.xvm.javajit.annotations.JitAnnotation;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitGenerated.Generator;
 
@@ -47,9 +46,6 @@ import org.xvm.javajit.builders.AnnotationHelper.AnnotationConstructor;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 import static java.lang.constant.ConstantDescs.MTD_void;
 
-import static org.xvm.javajit.annotations.JitAnnotation.findAnnotation;
-import static org.xvm.javajit.annotations.JitAnnotation.isAnnotated;
-
 /**
  * The builder for native types that uses an existing Java class to augment with the Ecstasy natural
  * code.
@@ -60,7 +56,7 @@ public class AugmentingBuilder extends CommonBuilder {
         super(typeSystem, art);
 
         this.model          = model;
-        this.isJitGenerated = isAnnotated(model, CD_JitGenerated);
+        this.isJitGenerated = JitAnnotation.isAnnotated(model, CD_JitGenerated);
     }
 
     /**
@@ -80,7 +76,7 @@ public class AugmentingBuilder extends CommonBuilder {
     private final Map<NativeKey, Boolean> nativeElements = new HashMap<>();
 
     private static final ClassDesc CD_JitGenerated = ClassDesc.of(JitGenerated.class.getName());
-    private static final ClassDesc CD_JitFromNatural = ClassDesc.of(JitFromNatural.class.getName());
+    private static final ClassDesc CD_NaturalCode  = ClassDesc.of(JitGenerated.NaturalCode.class.getName());
 
     protected NativeTypeSystem getTypeSystem() {
         return (NativeTypeSystem) typeSystem;
@@ -360,16 +356,16 @@ public class AugmentingBuilder extends CommonBuilder {
      */
     public void processElement(ClassElement element, ClassBuilder classBuilder) {
         if (isJitGenerated) {
-            if (isAnnotated(element, CD_JitFromNatural)) {
-                // the element is annotated with JitFromNatural, let the JIT compile it
-                return;
-            }
-
-            Annotation generated = findAnnotation(element, CD_JitGenerated);
+            Annotation generated = JitAnnotation.findAnnotation(element, CD_JitGenerated);
             if (generated != null) {
-                // element has a JitGenerated annotation; execute its generator
                 ClassDesc genCD = getGeneratorClass(generated);
-                var       clz   = Builder.toClass(genCD, Generator.class);
+                if (CD_NaturalCode.equals(genCD)) {
+                    // skip the Java stub; the JIT compiles the Ecstasy body
+                    return;
+                }
+
+                // element has a JitGenerated annotation; execute its generator
+                var clz = Builder.toClass(genCD, Generator.class);
                 try {
                     var constructor = clz.getDeclaredConstructor();
                     var generator   = constructor.newInstance();
@@ -473,12 +469,11 @@ public class AugmentingBuilder extends CommonBuilder {
      * Determine whether the specified element is coded natively.
      * <ul>
      *   <li>If the element is {@code null} it is not native.
-     *   <li>If the element is annotated with {@link JitFromNatural} it is not native.
-     *   <li>If the element is annotated with {@link JitGenerated} then the annotation's generator
-     *       class is checked. If the generator class is {@link JitGenerated.NaturalCode}, then the
-     *       element is not native, otherwise for all other generator classes the element is native.
-     *   <li>Otherwise if the element is not {@code null} and has neither {@link JitFromNatural} nor
-     *       {@link JitGenerated} annotations then it is native.
+     *   <li>If the element uses the default {@link JitGenerated.NaturalCode} generator,
+     *       it is not native.
+     *   <li>If the element specifies a custom generator via {@link JitGenerated}, the element
+     *       is treated as native because that generator supplies its implementation.
+     *   <li>If an existing element has no {@link JitGenerated} annotation, it is native.
      * </ul>
      *
      * @param element  the {@link ClassFileElement} to test
@@ -489,32 +484,16 @@ public class AugmentingBuilder extends CommonBuilder {
         if (element == null) {
             return false;
         }
-        if (isAnnotated(element, CD_JitFromNatural)) {
-            return false;
-        }
-        Annotation an = findAnnotation(element, CD_JitGenerated);
-        if (an != null) {
-            ClassDesc cd = getGeneratorClass(an);
-            return !CD_JitFromNatural.equals(cd);
-        }
-        return true;
+        Annotation an = JitAnnotation.findAnnotation(element, CD_JitGenerated);
+        return an == null || !CD_NaturalCode.equals(getGeneratorClass(an));
     }
 
     /**
-     * @return the {@link Generator} class for the specified {@link JitGenerated} annotation.
+     * @return the explicit {@link Generator} class, or {@link JitGenerated.NaturalCode} if omitted
      */
     protected ClassDesc getGeneratorClass(Annotation annotation) {
-        List<AnnotationElement> elements = annotation.elements();
-        if (elements.isEmpty()) {
-            return CD_JitFromNatural;
-        }
-
-        for (AnnotationElement annotationElement : elements) {
-            if (annotationElement.name().equalsString("value")) {
-                return ((AnnotationValue.OfClass) annotationElement.value()).classSymbol();
-            }
-        }
-        throw new IllegalStateException("generator value not found");
+        AnnotationValue value = JitAnnotation.findValue(annotation);
+        return value == null ? CD_NaturalCode : ((AnnotationValue.OfClass) value).classSymbol();
     }
 
     // ----- inner record: NativeKey ---------------------------------------------------------------

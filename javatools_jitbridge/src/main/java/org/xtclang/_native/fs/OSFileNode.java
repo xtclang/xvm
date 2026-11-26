@@ -17,7 +17,6 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 
 import org.xvm.runtime.template._native.fs.xOSFileNode;
@@ -59,7 +58,7 @@ public class OSFileNode
     /**
      * The native property getter for {@code @Lazy Path path.calc()}
      */
-    @JitFromNatural
+    @JitGenerated
     public Path path$get(Ctx ctx) {
         // the JIT will generate the code for this method from the natural code in
         // _native.fs.OSFileNode.x

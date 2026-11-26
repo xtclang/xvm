@@ -2,7 +2,6 @@ package org.xtclang.ecstasy.text;
 
 import org.xvm.javajit.Ctx;
 
-import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 import org.xvm.javajit.annotations.JitName;
 
@@ -16,7 +15,7 @@ public interface Destringable extends org.xtclang.ecstasy.Object {
      * {@code construct(String text);}
      */
     @JitName
-    @JitFromNatural
+    @JitGenerated
     default void construct(Ctx ctx, Destringable instance, String value) {
     }
 }
