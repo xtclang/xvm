@@ -1,7 +1,7 @@
 /**
  * A `Writer` that streams the information to a `Console`.
  */
-class ConsoleAppender(Console console, Boolean flushAlways)
+class ConsoleAppender(Console console, Boolean flushAlways = False)
         implements Writer {
     /**
      * Construct a ConsoleAppender.
