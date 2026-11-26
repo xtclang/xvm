@@ -154,4 +154,19 @@ class PluginManifestTest {
             .withFailMessage("Ecstasy file type must claim the x extension.")
             .contains("x")
     }
+
+    @Test
+    @DisplayName("requires only plugins that every JetBrains IDE has, so that the Marketplace offers it for all of them")
+    fun requiresOnlyPluginsOfEveryIde() {
+        val elements = pluginXml.getElementsByTagName("depends")
+        val required =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .filter { it.getAttribute("optional") != "true" }
+                .map { it.textContent.trim() }
+        // the Marketplace derives the supported products from these: a required com.intellij.modules.java or
+        // com.intellij.gradle leaves only IntelliJ IDEA, Android Studio and MPS
+        assertThat(required)
+            .containsExactlyInAnyOrder("com.intellij.modules.platform", "org.jetbrains.plugins.textmate", "com.redhat.devtools.lsp4ij")
+    }
 }
