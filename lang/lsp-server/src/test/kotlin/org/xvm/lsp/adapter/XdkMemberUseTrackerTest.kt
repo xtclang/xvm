@@ -43,14 +43,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to LIB, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to LIB.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(LIB, duck)
     }
 
     @Test
@@ -483,14 +476,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to CHILD, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to CHILD.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(CHILD, duck)
     }
 
     @Test
@@ -507,14 +493,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to CHILD, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to CHILD.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(CHILD, duck)
     }
 
     @Test
@@ -532,14 +511,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to lib, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(lib, duck)
     }
 
     @Test
@@ -574,14 +546,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to CHILD, "Mid" to mid, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Mid" to setOf("Lib"), "Duck" to setOf("Mid", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to CHILD.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Mid", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(CHILD, duck, mid)
     }
 
     @Test
@@ -617,14 +582,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to lib, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(lib, duck)
     }
 
     @Test
@@ -674,14 +632,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to lib, "Mid" to mid, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Mid" to setOf("Lib"), "Duck" to setOf("Mid", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Mid", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(lib, duck, mid)
     }
 
     @Test
@@ -712,14 +663,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to lib, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(lib, duck)
     }
 
     @Test
@@ -747,14 +691,7 @@ class XdkMemberUseTrackerTest {
                 }
             }
             """.trimIndent()
-        val outcome =
-            edit(
-                mapOf("Lib" to CHILD, "Mid" to mid, "Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR),
-                mapOf("Mid" to setOf("Lib"), "Duck" to setOf("Mid", "Iface"), "Far" to setOf("Lib")),
-                "Lib" to CHILD.replace("Int foo() = 1;", "Int renamed() = 1;"),
-            )
-        assertThat(outcome.compiled).containsExactly("Lib", "Mid", "Duck")
-        assertThat(outcome.errors("Duck")).isNotEmpty()
+        assertFooRenameBreaksDuck(CHILD, duck, mid)
     }
 
     @Test
@@ -998,6 +935,33 @@ class XdkMemberUseTrackerTest {
         val after: XdkCodeActionCache.Base,
     ) {
         fun errors(module: String): List<String> = after.errors[module].orEmpty().filter { it.startsWith("ERROR") }
+    }
+
+    /**
+     * Renames foo in [lib], which Far imports and matches nothing in, and checks that the edit compiles Lib, then [mid], which
+     * imports Lib, if there is one, and [duck], which imports Iface and Mid or Lib, alone, and that Duck no longer compiles.
+     */
+    private fun assertFooRenameBreaksDuck(
+        lib: String,
+        duck: String,
+        mid: String? = null,
+    ) {
+        val outcome =
+            edit(
+                buildMap {
+                    put("Lib", lib)
+                    mid?.let { put("Mid", it) }
+                    putAll(mapOf("Iface" to HAS_FOO, "Duck" to duck, "Far" to FAR))
+                },
+                if (mid == null) {
+                    mapOf("Duck" to setOf("Lib", "Iface"), "Far" to setOf("Lib"))
+                } else {
+                    mapOf("Mid" to setOf("Lib"), "Duck" to setOf("Mid", "Iface"), "Far" to setOf("Lib"))
+                },
+                "Lib" to lib.replace("Int foo() = 1;", "Int renamed() = 1;"),
+            )
+        assertThat(outcome.compiled).containsExactlyElementsOf(listOfNotNull("Lib", mid?.let { "Mid" }, "Duck"))
+        assertThat(outcome.errors("Duck")).isNotEmpty()
     }
 
     /**
