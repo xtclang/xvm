@@ -216,8 +216,7 @@ export class Tour implements vscode.Disposable {
             onDidRefreshTests(ids => { this.testItems = ids; }),
             vscode.tasks.onDidEndTaskProcess(event => this.taskExits.push({ name: event.execution.task.name, exitCode: event.exitCode })),
         ];
-        this.activity = new Activity(process.env.XTC_LSP_LOG_DIR, this.dap, () => [...this.executions.values()]
-            .filter(each => each.exitCode === undefined).map(each => `the embedded ${each.kind} ${each.label}`));
+        this.activity = new Activity(process.env.XTC_LSP_LOG_DIR, this.dap);
         this.subscriptions.push(this.activity, onDidUpdateExecution(update => this.activity.happened(`the embedded ${update.kind}'s output`)),
             onDidReportTest(report => this.activity.happened(`the test ${report.id}'s result`)),
             onDidRefreshTests(() => this.activity.happened('the tests were listed')));
