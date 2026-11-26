@@ -120,7 +120,9 @@ val updateGeneratedExamples =
 // Static analysis, opt-in
 // =============================================================================
 // detekt over lang's Kotlin, and CPD, PMD's copy-paste detector, over its Kotlin and TypeScript.
-// They are not part of check: each writes its reports under build/reports, for review.
+// They are not part of check: each writes its reports under build/reports, for review. CPD finds duplicates as
+// IntelliJ's "Duplicated code fragment" inspection does: blocks of 50 tokens or more that are alike up to their
+// identifiers, literals and annotations, not only verbatim copies.
 //
 //   ./gradlew :lang:detekt :lang:cpdKotlin :lang:cpdTypeScript -PincludeBuildLang=true -PincludeBuildAttachLang=true
 
@@ -192,7 +194,7 @@ fun cpd(
     sources: List<File>,
 ) = tasks.register<JavaExec>(name) {
     group = "verification"
-    description = "Find duplicated $language code in lang with CPD; report in build/reports/cpd/$language.xml"
+    description = "Find duplicated $language code in lang with CPD, renamed copies too; report in build/reports/cpd/$language.xml"
     classpath = pmdTool
     mainClass.set("net.sourceforge.pmd.cli.PmdCli")
     val report = analysisReports.get().file("cpd/$language.xml").asFile
@@ -200,8 +202,9 @@ fun cpd(
     outputs.file(report)
     doFirst(CreateParentDirectory(report))
     args(
-        listOf("cpd", "--minimum-tokens", "100", "--language", language, "--format", "xml", "--report-file", report.path) +
-            listOf("--no-fail-on-violation") + sources.flatMap { listOf("--dir", it.path) },
+        listOf("cpd", "--minimum-tokens", "50", "--ignore-identifiers", "--ignore-literals", "--ignore-annotations") +
+            listOf("--language", language, "--format", "xml", "--report-file", report.path, "--no-fail-on-violation") +
+            sources.flatMap { listOf("--dir", it.path) },
     )
 }
 
