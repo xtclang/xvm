@@ -416,6 +416,10 @@ class ParityWorkspace(
         return open(data.string("file"))
     }
 
+    /** Refreshes the build model, as the Compiler settings page's Refresh does. */
+    fun refreshBuildModel() =
+        with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).refreshBuildModel(singleProject()) } }
+
     fun configure(modules: JsonElement) =
         configure(
             modules.asJsonArray.map {
@@ -569,6 +573,12 @@ class ParityWorkspace(
                 position.int("character")
     }
 }
+
+/** The Gradle model [model] as an import writes it for the project at [root], whose URI its `${workspace}` stands for. */
+internal fun workspaceModel(
+    model: JsonElement,
+    root: Path,
+): String = model.toString().replace("\${workspace}", root.toUri().toString().trimEnd('/'))
 
 /** Gives the language server the settings [content], with LSP4IJ's trace of it verbose. */
 internal fun Driver.configure(content: String) =

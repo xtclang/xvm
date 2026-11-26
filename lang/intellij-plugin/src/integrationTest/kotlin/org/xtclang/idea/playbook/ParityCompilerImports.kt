@@ -42,11 +42,7 @@ internal fun ParityScenarios.compilerImportCases() {
             val previousReport = report.takeIf(Files::exists)?.let(Files::readAllBytes)
             val aggregate = root.resolve(".gradle/xtc/lsp-workspace.json")
             val previousAggregate = aggregate.takeIf(Files::exists)?.let(Files::readAllBytes)
-            val model =
-                JsonParser
-                    .parseString(
-                        fixture["model"].toString().replace("\${workspace}", directory.toUri().toString().trimEnd('/')),
-                    ).asJsonObject
+            val model = JsonParser.parseString(workspaceModel(fixture["model"], directory)).asJsonObject
             val replacement =
                 model.deepCopy().apply {
                     getAsJsonArray(
@@ -54,11 +50,6 @@ internal fun ParityScenarios.compilerImportCases() {
                     )[0].asJsonObject.getAsJsonArray("resourceRoots").asList().clear()
                 }
             val steps = data["steps"].rows()
-
-            fun refresh() =
-                with(driver) {
-                    withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).refreshBuildModel(singleProject()) }
-                }
 
             try {
                 Files.deleteIfExists(aggregate)
@@ -88,11 +79,7 @@ internal fun ParityScenarios.compilerImportCases() {
                         "rootProject.name = \"${build.string("module")}\"\n" +
                             if (build.string("folder") == "included") "includeBuild(\"nested\")\n" else "",
                     )
-                    val nested =
-                        fixture["model"]
-                            .toString()
-                            .replace("\${workspace}", target.toUri().toString().trimEnd('/'))
-                            .replace(fixture.string("module"), build.string("module"))
+                    val nested = workspaceModel(fixture["model"], target).replace(fixture.string("module"), build.string("module"))
                     Files.writeString(
                         target.resolve("${build.string("module")}.x"),
                         fixture.string("source").replace(fixture.string("module"), build.string("module")),
@@ -146,7 +133,7 @@ internal fun ParityScenarios.compilerImportCases() {
                             control.resolve("$operation.started").takeIf(Files::exists)?.let(Files::readString) ==
                                 if (prepare) "prepareXtcLspModel" else "exportXtcLspModel"
                         }
-                        refresh()
+                        refreshBuildModel()
                         check(page.accepted() == baseline) { "Pending output replaced the accepted report" }
                         clean(document)
                         if (step["duplicate"].asBoolean) {
@@ -184,7 +171,7 @@ internal fun ParityScenarios.compilerImportCases() {
                                             .not()
                                 )
                         }
-                        refresh()
+                        refreshBuildModel()
                         with(driver) { withContext(OnDispatcher.EDT) { page.resetPage() } }
                         awaitUi("$id settings page displays the last outcome", HANG_LIMIT) {
                             text().contains("Last import:") && text().contains(step.string("expected"), ignoreCase = true)
@@ -235,7 +222,7 @@ internal fun ParityScenarios.compilerImportCases() {
                     changed(it)
                 }
                 with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).clearProjectGraph(singleProject()) } }
-                refresh()
+                refreshBuildModel()
             }
         }
     }
@@ -266,7 +253,7 @@ internal fun ParityScenarios.compilerImportCases() {
             )
         }
         if (!System.getProperty("os.name").startsWith("Windows")) check(root.resolve("gradlew").toFile().setExecutable(true))
-        val model = fixture["model"].toString().replace("\${workspace}", root.toUri().toString().trimEnd('/'))
+        val model = workspaceModel(fixture["model"], root)
         Files.writeString(root.resolve(fixture.string("file")), fixture.string("source"))
         Files.createDirectories(root.resolve("processed"))
         Files.writeString(root.resolve(fixture.string("resource")), fixture.string("contents"))
