@@ -21,7 +21,7 @@
  * | textDocument/completion (. : <)           | step "Member completion"                                          |
  * | completionItem/resolve                    | step "Accept a completion"                                        |
  * | textDocument/inlineCompletion             | check "Inline completion"                                         |
- * | textDocument/definition                   | steps "Go to definition", "The XDK's sources"                     |
+ * | textDocument/definition                   | steps "Go to definition", "The XDK's sources", "A named argument's parameter" |
  * | textDocument/declaration                  | check "Go to declaration"                                         |
  * | textDocument/typeDefinition               | step "Go to type definition"                                      |
  * | textDocument/implementation               | step "Go to implementations"                                      |
@@ -318,6 +318,18 @@ async function renameInExplorer(tour: Tour, uri: vscode.Uri): Promise<void> {
         return false;
     }, async () => `the focused rows: ${(await focusedRows()).join(', ') || 'none'}; the tree has the keyboard: ${await tour.ui.focusedIn(tree)}; `
         + `a box shows: ${await box.isVisible()}`);
+}
+
+/** Fails unless [document], which the active editor shows, refuses a key typed into it, as VS Code says of a read-only editor. */
+async function refusesEdits(tour: Tour, document: vscode.TextDocument): Promise<void> {
+    const before = { text: document.getText(), version: document.version };
+    // a key typed into a read-only editor makes VS Code say so, after it has refused the edit
+    await tour.ui.focusEditor();
+    await tour.ui.type('x');
+    await tour.until('VS Code refuses the edit', async () => /read-only/i.test(await tour.ui.text('css:.monaco-editor-overlaymessage')),
+        () => `${document.uri.scheme}: ${document.getText() === before.text ? 'unchanged' : 'edited'}`);
+    expect(document.getText() === before.text && document.version === before.version && !document.isDirty,
+        () => `${path.basename(document.uri.path)} (${document.uri.scheme}) took an edit`);
 }
 
 /** The Explorer's view of the project's folder, by its title. */
@@ -995,14 +1007,38 @@ async function navigation(tour: Tour): Promise<void> {
         check: async () => {
             const document = active().document;
             expect(path.basename(document.uri.path) === 'HashMap.x', () => `In ${document.uri.toString()}`);
-            const before = { text: document.getText(), version: document.version };
-            // a key typed into a read-only editor makes VS Code say so, after it has refused the edit
-            await tour.ui.focusEditor();
-            await tour.ui.type('x');
-            await tour.until('VS Code refuses the edit', async () => /read-only/i.test(await tour.ui.text('css:.monaco-editor-overlaymessage')),
-                () => `${document.uri.scheme}: ${document.getText() === before.text ? 'unchanged' : 'edited'}`);
-            expect(document.getText() === before.text && document.version === before.version && !document.isDirty,
-                () => `HashMap.x (${document.uri.scheme}) took an edit`);
+            await refusesEdits(tour, document);
+        },
+    });
+    const collection = tour.source('CardCollection.x');
+    await tour.shot({
+        title: "A named argument's parameter",
+        caption: "From a named argument, as inPlace in freeze(inPlace=False), Go to Definition opens the parameter in the XDK's source, read-only.",
+        feature: 'textDocument/definition',
+        focus: 'editor',
+        settleMs: 3_000,
+        act: async () => {
+            // a method that calls Array's freeze with its argument named, which the project's code does nowhere
+            await open(collection);
+            await replace('    Int size() = cards.size;', '    Int size() = cards.size;\n\n    Card[] snapshot() = cards.freeze(inPlace=False);');
+            await compiles(tour, collection);
+            await at('inPlace=False', 'inPl'.length);
+            await command('editor.action.revealDefinition');
+        },
+        until: async () => path.basename(vscode.window.activeTextEditor?.document.uri.path ?? '') === 'Array.x',
+        check: async () => {
+            // the caret on the parameter's name, in the declaration of the method that the call selects
+            const document = active().document;
+            const caret = active().selection.start;
+            const word = document.getWordRangeAtPosition(caret);
+            const line = document.lineAt(caret.line).text;
+            expect(path.basename(document.uri.path) === 'Array.x' && line.includes('freeze(Boolean inPlace') && !!word
+                && document.getText(word) === 'inPlace', () => `In ${document.uri.toString()} at ${caret.line + 1}:${caret.character + 1}: ${line.trim()}`);
+            await refusesEdits(tour, document);
+        },
+        after: async () => {
+            await command('workbench.action.closeActiveEditor');
+            await tour.restore();
         },
     });
     await command('workbench.action.closeAllEditors');

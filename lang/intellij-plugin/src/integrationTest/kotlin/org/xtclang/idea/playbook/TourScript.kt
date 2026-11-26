@@ -23,7 +23,7 @@
  *   completion: additionalTextEdits                 check completing a type of another module adds its import
  *   completionItem/resolve                          check a completion item's documentation shows beside the list
  *   inlineCompletionProvider                        check inline completion suggests a name in scope as it is typed
- *   definitionProvider                              steps Go to declaration, The XDK's sources
+ *   definitionProvider                              steps Go to declaration, The XDK's sources, A named argument's parameter
  *   declarationProvider                             check LSP's Go to declaration goes to the method's declaration too
  *   typeDefinitionProvider                          step Go to type declaration
  *   implementationProvider                          step Go to implementation
@@ -719,6 +719,32 @@ private fun Tour.navigation() {
     ) {
         open(source("Scoreboard.x"), 0)
         at("new HashMap", delta = "new Hash".length)
+        action("GotoDeclaration")
+    }
+    shot(
+        "A named argument's parameter",
+        "From a named argument, as inPlace in freeze(inPlace=False), Go to declaration opens the parameter in the XDK's source, read-only.",
+        feature = "textDocument/definition",
+        focus = "editor",
+        until = { editor()["file"].asString == "Array.x" },
+        check = {
+            editor().let {
+                // the caret on the parameter's name, in the declaration of the method that the call selects
+                val line = it["lineText"].asString
+                expect(
+                    it["file"].asString == "Array.x" && !it["writable"].asBoolean && "freeze(Boolean inPlace" in line &&
+                        line.indexOf("inPlace") == it["column"].asInt,
+                ) { "In $it" }
+            }
+        },
+        settle = 3.seconds,
+        after = { restore() },
+    ) {
+        open(source("CardCollection.x"), 0)
+        // a method that calls Array's freeze with its argument named, which the project's code does nowhere
+        replace("    Int size() = cards.size;", 0, "    Int size() = cards.size;\n\n    Card[] snapshot() = cards.freeze(inPlace=False);")
+        compilesCleanly(source("CardCollection.x"))
+        at("inPlace=False", delta = "inPl".length)
         action("GotoDeclaration")
     }
 }
