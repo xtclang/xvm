@@ -228,8 +228,9 @@ export function activate(context: vscode.ExtensionContext): void {
                     outputChannel.info('Connection settings changed; restarting Ecstasy and resynchronizing open buffers.');
                     void restartLanguageClient(context, serverJar, outputChannel).catch(error => outputChannel.error(`Ecstasy restart failed: ${error}`));
                 } catch (error) {
-                    outputChannel.error(`Invalid Ecstasy settings; previous connection retained: ${error}`);
-                    serviceFailure(`Invalid Ecstasy settings; previous connection retained: ${error}`);
+                    const message = `Invalid Ecstasy settings; previous connection retained: ${error}`;
+                    outputChannel.error(message);
+                    serviceFailure(message);
                 }
             }
         })
