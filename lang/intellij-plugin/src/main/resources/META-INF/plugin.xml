@@ -149,8 +149,9 @@
             implementationClass="com.redhat.devtools.lsp4ij.features.codeBlockProvider.LSPCodeBlockProvider"/>
         <typeHierarchyProvider language="Ecstasy"
             implementationClass="com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyProvider"/>
+        <!-- TODO LSP4IJ: UP88 — LSP4IJ's, whose callers IntelliJ computes again after a write action interrupts them -->
         <callHierarchyProvider language="Ecstasy"
-            implementationClass="com.redhat.devtools.lsp4ij.features.callHierarchy.LSPCallHierarchyProvider"/>
+            implementationClass="org.xtclang.idea.lsp.XtcCallHierarchyProvider"/>
 
         <!-- Project Generator for New Project wizard (IntelliJ IDEA) -->
         <newProjectWizard.generator
