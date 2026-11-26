@@ -165,6 +165,41 @@ class XdkMemberUseTrackerTest {
     }
 
     @Test
+    fun `a parameter that moves compiles the module whose named argument goes to it, and not one that only calls its function`() {
+        val lib =
+            """
+            module Lib {
+                static Int other() = 2;
+
+                static Int scaled(Int factor = 1) = factor * 2;
+            }
+            """.trimIndent()
+        val named =
+            """
+            module Named {
+                package lib import Lib;
+
+                Int run() = lib.scaled(factor = 3);
+            }
+            """.trimIndent()
+        val called =
+            """
+            module Called {
+                package lib import Lib;
+
+                Int run() = lib.scaled(3);
+            }
+            """.trimIndent()
+        val outcome =
+            edit(
+                mapOf("Lib" to lib, "Named" to named, "Called" to called),
+                mapOf("Named" to setOf("Lib"), "Called" to setOf("Lib")),
+                "Lib" to lib.replace("(Int factor = 1)", "(Int  factor = 1)"),
+            )
+        assertThat(outcome.compiled).containsExactly("Lib", "Named")
+    }
+
+    @Test
     fun `an abstract method added to an interface compiles the module whose class implements it, which writes no name of it`() {
         val lib =
             """

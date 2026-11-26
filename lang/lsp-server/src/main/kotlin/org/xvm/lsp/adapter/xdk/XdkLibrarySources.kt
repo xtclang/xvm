@@ -424,6 +424,7 @@ internal object XdkLibrarySources {
                 ),
                 SemanticModel.SourceLocation(source.uri, it.range),
                 it.documentation,
+                it.parameters,
             )
         }
     }

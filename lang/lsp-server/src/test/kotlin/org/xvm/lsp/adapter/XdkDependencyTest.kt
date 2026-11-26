@@ -16,6 +16,7 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.lsp.awaited
 import org.xvm.tool.ModuleInfo
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CountDownLatch
@@ -309,6 +310,39 @@ class XdkDependencyTest {
                 release.countDown()
             }
         }
+    }
+
+    @Test
+    fun `a named argument goes to the parameter of the selected overload in an emitted artifact's and an attached source`() {
+        val text =
+            """
+            module Library {
+                static Int pick(Int n) = n;
+                static String pick(String n) = n;
+            }
+            """.trimIndent()
+        val sources = Files.createDirectories(directory.resolve("sources"))
+        Files.writeString(sources.resolve("Library.x"), text)
+        val emitted = dependency(text)
+        val attached = XdkDependency.fromBinary(dependency(text, "Library.x").bytes()).withSources(listOf(sources.toFile()))
+        val source = "module Consumer { package lib import Library; Int run() = lib.pick(n=1); String text() = lib.pick(n=\"x\"); }"
+        val (number, string) = Regex("n=").findAll(source).map { it.range.first }.toList()
+        val lines = text.lines()
+
+        // each named argument's definition, and the read-only document that the editor opens there, if any
+        fun definitions(library: XdkDependency): List<Pair<String, String?>> =
+            XdkAdapter().use { adapter ->
+                adapter.replaceDependencies(listOf(library))
+                assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
+                val targets = listOf(number, string).map { requireNotNull(adapter.findDefinition(CONSUMER, 0, it)) }
+                assertThat(targets.map { Triple(it.startLine, it.startColumn, it.endColumn - it.startColumn) })
+                    .containsExactly(Triple(1, lines[1].indexOf("Int n") + 4, 1), Triple(2, lines[2].indexOf("String n") + 7, 1))
+                // the dependency's source is read-only: the parameter is renamed nowhere from here
+                assertThat(adapter.prepareRename(CONSUMER, 0, number)).isNull()
+                targets.map { it.uri to adapter.readOnlyDocument(it.uri)?.text }
+            }
+        assertThat(definitions(emitted)).containsOnly(LIBRARY_URI to null)
+        assertThat(definitions(attached).map { it.second }).containsOnly(text)
     }
 
     @Test

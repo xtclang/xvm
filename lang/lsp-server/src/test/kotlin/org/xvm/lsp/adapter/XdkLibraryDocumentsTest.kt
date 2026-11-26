@@ -66,6 +66,20 @@ class XdkLibraryDocumentsTest {
     }
 
     @Test
+    fun `a named argument of a library method goes to its parameter in the library's source`() {
+        XdkAdapter().use { adapter ->
+            val text = "module App { Int[] frozen(Int[] values) = values.freeze(inPlace=True); }"
+            assertThat(adapter.compile("file:///App.x", text).diagnostics).isEmpty()
+            val location = requireNotNull(adapter.findDefinition("file:///App.x", 0, text.indexOf("inPlace")))
+            val declared = Files.readAllLines(Path.of(URI(location.uri)))[location.startLine]
+            assertThat(declared.substring(location.startColumn, location.endColumn)).isEqualTo("inPlace")
+            assertThat(declared).contains("freeze(Boolean inPlace")
+            // the library's source is read-only: the parameter is renamed nowhere from here
+            assertThat(adapter.prepareRename("file:///App.x", 0, text.indexOf("inPlace"))).isNull()
+        }
+    }
+
+    @Test
     fun `a library source's imports and type names go to their declarations in the library`() {
         compiledAlone {
             // the copy that navigation or a stack frame opens, which is compiled on its own here

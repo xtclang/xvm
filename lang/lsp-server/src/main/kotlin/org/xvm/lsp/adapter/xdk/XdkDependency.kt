@@ -31,6 +31,7 @@ class XdkDependency
         declarations: Map<Int, SemanticModel.SourceLocation>,
         documents: Map<String, ReadOnlyDocument> = emptyMap(),
         documentation: Map<Int, String> = emptyMap(),
+        parameters: Map<Int, Map<String, SemanticModel.Range>> = emptyMap(),
         /** Emitted by the server's compiler from a source module, not read from a binary on disk. */
         internal val fromSource: Boolean = false,
         /**
@@ -48,9 +49,25 @@ class XdkDependency
          */
         internal val documentation: Map<Int, String> = immutableMap(documentation)
 
+        /**
+         * Where the parameters of the methods of [declarations] are, by the method's constant index and the parameter's
+         * name, in the source of the method's declaration, which Go to Definition of a named argument goes to; the
+         * artifact keeps no locations. The revision covers them.
+         */
+        internal val parameters: Map<Int, Map<String, SemanticModel.Range>> = immutableMap(parameters.mapValues { immutableMap(it.value) })
+
         internal fun withSources(roots: List<File>): XdkDependency {
             val index = XdkAttachedSources.read(this, roots)
-            return XdkDependency(module, artifact, index.declarations, index.documents, index.documentation, fromSource, imports)
+            return XdkDependency(
+                module,
+                artifact,
+                index.declarations,
+                index.documents,
+                index.documentation,
+                index.parameters,
+                fromSource,
+                imports,
+            )
         }
 
         val declarations: Map<Int, SemanticModel.SourceLocation> = immutableMap(declarations)
@@ -70,6 +87,16 @@ class XdkDependency
                             output.writeInt(location.range.end.line)
                             output.writeInt(location.range.end.column)
                         }
+                        parameters.toSortedMap().forEach { (index, names) ->
+                            names.toSortedMap().forEach { (name, range) ->
+                                output.writeInt(index)
+                                output.writeUTF(name)
+                                output.writeInt(range.start.line)
+                                output.writeInt(range.start.column)
+                                output.writeInt(range.end.line)
+                                output.writeInt(range.end.column)
+                            }
+                        }
                     }
                 }.toByteArray()
                 .let { HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(it)) }
@@ -85,13 +112,13 @@ class XdkDependency
                 ExecutionTrace.api("FileStructure.api", module) {
                     val file = FileStructure(ByteArrayInputStream(artifact))
                     // each declaration's identity, read before writing the API renumbers the constants
-                    val located =
+                    val (located, parameterPlaces) =
                         ConstantPool.withPool(file.constantPool).use {
-                            declarations.entries.associate { (index, location) ->
-                                file.constantPool.getConstant(index) as IdentityConstant to location
-                            }
+                            fun identity(index: Int) = file.constantPool.getConstant(index) as IdentityConstant
+                            declarations.entries.associate { (index, location) -> identity(index) to location } to
+                                parameters.entries.associate { (index, names) -> identity(index) to names }
                         }
-                    XdkModuleApi.of(file, located)
+                    XdkModuleApi.of(file, located, parameterPlaces)
                 }
             }
         }
@@ -158,6 +185,7 @@ class XdkDependency
             internal fun capture(
                 compilation: EmbeddingSupport.Compilation,
                 locations: Map<IdentityConstant, SemanticModel.SourceLocation>,
+                parameters: Map<IdentityConstant, Map<String, SemanticModel.Range>>,
             ): XdkDependency {
                 val artifact =
                     ByteArrayOutputStream()
@@ -180,6 +208,16 @@ class XdkDependency
                                 ?.position
                                 ?.let { it to location }
                         }.toMap()
+                // a method's parameters are where the source of its declaration has them
+                val parameterRanges =
+                    parameters.entries
+                        .filter { (method, _) -> method in locations }
+                        .mapNotNull { (method, names) ->
+                            file.constantPool
+                                .getConstant(method)
+                                ?.position
+                                ?.let { it to names }
+                        }.toMap()
                 // a workspace module of a bundled library's name replaces the bundle's import suggestions with its own
                 val imports =
                     if (file.module.name in XdkLibraries.moduleNames) {
@@ -190,19 +228,28 @@ class XdkDependency
                     } else {
                         emptyList()
                     }
-                return XdkDependency(file.module.name, artifact, declarations, fromSource = true, imports = imports)
+                return XdkDependency(
+                    file.module.name,
+                    artifact,
+                    declarations,
+                    parameters = parameterRanges,
+                    fromSource = true,
+                    imports = imports,
+                )
             }
         }
     }
 
 /**
  * Worker-only join; compiler equality handles overloads and foreign pools, never display strings. The documentation
- * is the declaration's doc comment from its source, which a compiled module does not keep.
+ * is the declaration's doc comment from its source, which a compiled module does not keep; the parameters, of a method,
+ * are where its parameters' names are in the source of [location], by name.
  */
 internal data class DependencyDeclaration(
     val key: XdkDependency.SymbolKey,
     val location: SemanticModel.SourceLocation,
     val documentation: String?,
+    val parameters: Map<String, SemanticModel.Range>,
 )
 
 /**
@@ -243,6 +290,7 @@ internal class XdkDependencies(
                                 XdkDependency.SymbolKey(name, dependency.revision, index),
                                 location,
                                 dependency.documentation[index],
+                                dependency.parameters[index].orEmpty(),
                             ),
                         )
                     }

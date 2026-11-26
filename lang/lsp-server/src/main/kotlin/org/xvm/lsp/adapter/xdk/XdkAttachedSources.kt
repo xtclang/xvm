@@ -22,12 +22,13 @@ internal object XdkAttachedSources {
 
     /**
      * Mapping from dependency symbols to attached source locations and doc comments, and the read-only source
-     * documents.
+     * documents; and from methods to their parameters' locations by name, in the source of the method's.
      */
     data class Index(
         val declarations: Map<Int, SemanticModel.SourceLocation>,
         val documents: Map<String, ReadOnlyDocument>,
         val documentation: Map<Int, String>,
+        val parameters: Map<Int, Map<String, SemanticModel.Range>>,
     )
 
     fun read(
@@ -109,13 +110,16 @@ internal object XdkAttachedSources {
                             candidates,
                             method?.takeIf { it.sourceText != null }?.sourceLineNumber,
                         ) { it.firstLine..it.lastLine }
-                            ?.let { Triple(identity.position, SemanticModel.SourceLocation(source.first, it.range), it.documentation) }
+                            ?.let { Triple(identity.position, SemanticModel.SourceLocation(source.first, it.range), it) }
                     }
             require(declarations.isNotEmpty()) { "No matching artifact declarations in attached sources for ${dependency.module}" }
             Index(
                 declarations.associate { (index, location) -> index to location },
                 files.values.associate { it.first to it.second },
-                declarations.mapNotNull { (index, _, documentation) -> documentation?.let { index to it } }.toMap(),
+                declarations.mapNotNull { (index, _, declaration) -> declaration.documentation?.let { index to it } }.toMap(),
+                declarations
+                    .filter { (_, _, declaration) -> declaration.parameters.isNotEmpty() }
+                    .associate { (index, _, declaration) -> index to declaration.parameters },
             )
         }
     }
