@@ -12,7 +12,6 @@ import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.editor.ex.DocumentEx
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.problems.ProblemListener
 import com.intellij.problems.WolfTheProblemSolver
@@ -34,14 +33,12 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
-import org.xtclang.idea.awaitUntil
 import org.xtclang.idea.awaited
 import org.xvm.lsp.protocol.BuildDiagnostic
 import org.xvm.lsp.protocol.BuildPosition
 import org.xvm.lsp.protocol.BuildRange
 import org.xvm.lsp.protocol.BuildResponse
 import org.xvm.lsp.protocol.DocumentDiagnostics
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
@@ -75,12 +72,12 @@ class ClosedFileProblemsTest {
         refresh()
         // asked for before the refresh was answered: LSP4IJ itself asks for no workspace report
         assertThat(server.requests).contains("workspace/diagnostic")
-        await("Child.x is a problem file") { problems.isProblemFile(child) }
+        editor.await("Child.x is a problem file") { problems.isProblemFile(child) }
         assertThat(closedCodes(child)).containsExactly("unknown-type")
 
         server.reported[uri(child)] = emptyList()
         refresh()
-        await("Child.x is no problem file") { !problems.isProblemFile(child) }
+        editor.await("Child.x is no problem file") { !problems.isProblemFile(child) }
         assertThat(closedCodes(child)).isEmpty()
     }
 
@@ -95,38 +92,30 @@ class ClosedFileProblemsTest {
         open(root)
         refresh()
         // the report has Root.x before Root/Child.x, so a publication of Root.x would have come first
-        await("Child.x is a problem file") { problems.isProblemFile(child) }
-        await("Root.x has its pulled diagnostics") { "pulled" in openCodes(root) }
+        editor.await("Child.x is a problem file") { problems.isProblemFile(child) }
+        editor.await("Root.x has its pulled diagnostics") { "pulled" in openCodes(root) }
         assertThat(openCodes(root)).containsExactly("pulled")
     }
 
     @Test
     fun `a file that opens with its error fixed is no problem file`() {
         val problems = problemFiles()
-        val root = file("Root.x", "module Root {}\n")
-        val child = file("Root/Child.x", "class Child extends Base {}\n")
-        server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
-        refresh()
-        await("Child.x is a problem file") { problems.isProblemFile(child) }
+        val child = closedChildWithError()
+        editor.await("Child.x is a problem file") { problems.isProblemFile(child) }
 
         // fixed by an edit elsewhere, and opened before a report says so: LSP4IJ drops its published error and pulls none
         server.reported[uri(child)] = emptyList()
         open(child)
         refresh()
-        await("Child.x is no problem file") { !problems.isProblemFile(child) }
+        editor.await("Child.x is no problem file") { !problems.isProblemFile(child) }
         assertThat(openCodes(child)).isEmpty()
     }
 
     @Test
     fun `a closed file stays a problem file when LSP4IJ clears its mark last`() {
         val problems = problemFiles()
-        val root = file("Root.x", "module Root {}\n")
-        val child = file("Root/Child.x", "class Child extends Base {}\n")
-        server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
-        refresh()
-        await("Child.x is a problem file") { problems.isProblemFile(child) }
+        val child = closedChildWithError()
+        editor.await("Child.x is a problem file") { problems.isProblemFile(child) }
 
         // as a file closes, LSP4IJ clears its mark in a task of its own, which can run after the report of the errors
         // then published for it; run that clear now, after the report. LSP4IJ clears a file by reporting it from the
@@ -146,7 +135,7 @@ class ClosedFileProblemsTest {
                     }
                 },
             )
-        val features = connection().clientFeatures
+        val features = editor.connection().clientFeatures
         LSPDiagnosticUtils.clearProblem(setOf(checkNotNull(features.getFileUri(child))), features, editor.fixture.project)
         assertThat(reported.awaited()).isEqualTo("changed")
         assertThat(problems.isProblemFile(child)).isTrue()
@@ -156,40 +145,28 @@ class ClosedFileProblemsTest {
     @Test
     fun `a file the report no longer has is no problem file`() {
         val problems = problemFiles()
-        val root = file("Root.x", "module Root {}\n")
-        val child = file("Root/Child.x", "class Child extends Base {}\n")
-        server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
-        refresh()
-        await("Child.x is a problem file") { problems.isProblemFile(child) }
+        val child = closedChildWithError()
+        editor.await("Child.x is a problem file") { problems.isProblemFile(child) }
 
         // as when its module is no longer analyzed
         server.reported.remove(uri(child))
         refresh()
-        await("Child.x is no problem file") { !problems.isProblemFile(child) }
+        editor.await("Child.x is no problem file") { !problems.isProblemFile(child) }
         assertThat(closedCodes(child)).isEmpty()
     }
 
     @Test
     fun `a closed file's error is in Project Errors without a build`() {
-        val root = file("Root.x", "module Root {}\n")
-        val child = file("Root/Child.x", "class Child extends Base {}\n")
-        server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
-        refresh()
-        await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
+        val child = closedChildWithError()
+        editor.await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
         assertThat(projectErrors(child).map { it.text }).containsExactly("unknown-type")
         assertThat(projectErrors(child).map { it.line to it.column }).containsExactly(0 to 0)
     }
 
     @Test
     fun `a closed file's error is in Project Errors once after a build`() {
-        val root = file("Root.x", "module Root {}\n")
-        val child = file("Root/Child.x", "class Child extends Base {}\n")
-        server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
-        refresh()
-        await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
+        val child = closedChildWithError()
+        editor.await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
 
         // the build reports the error the report has, which takes its place
         build(child, "unknown-type")
@@ -198,26 +175,22 @@ class ClosedFileProblemsTest {
 
         // and the next report's takes the build's
         refresh()
-        await("Child.x's error is the report's") { projectErrors(child).none { it is HighlightingDuplicateProblem } }
+        editor.await("Child.x's error is the report's") { projectErrors(child).none { it is HighlightingDuplicateProblem } }
         assertThat(projectErrors(child).map { it.text }).containsExactly("unknown-type")
     }
 
     @Test
     fun `a report that clears a closed file's error takes it out of Project Errors, the build's copy too`() {
         val problems = problemFiles()
-        val root = file("Root.x", "module Root {}\n")
-        val child = file("Root/Child.x", "class Child extends Base {}\n")
-        server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
-        refresh()
-        await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
+        val child = closedChildWithError()
+        editor.await("Child.x's error is in Project Errors") { projectErrors(child).isNotEmpty() }
         build(child, "unknown-type")
         assertThat(projectErrors(child).single()).isInstanceOf(HighlightingDuplicateProblem::class.java)
 
         server.reported[uri(child)] = emptyList()
         refresh()
-        await("Child.x has no error in Project Errors") { projectErrors(child).isEmpty() }
-        await("Child.x is no problem file") { !problems.isProblemFile(child) }
+        editor.await("Child.x has no error in Project Errors") { projectErrors(child).isEmpty() }
+        editor.await("Child.x is no problem file") { !problems.isProblemFile(child) }
     }
 
     @Test
@@ -228,7 +201,7 @@ class ClosedFileProblemsTest {
         // fixed by the time LSP4IJ has connected the file, whose own pulls report none
         server.pulled[uri(child)] = emptyList()
         openMarkedBeforeConnection(child, "unknown-type")
-        await("Child.x's editor no longer marks the error") { "unknown-type" !in marks(child) }
+        editor.await("Child.x's editor no longer marks the error") { "unknown-type" !in marks(child) }
     }
 
     @Test
@@ -246,7 +219,7 @@ class ClosedFileProblemsTest {
             if (it == uri(child) && asked.complete(Unit)) answer else CompletableFuture.completedFuture(null)
         }
         openMarkedBeforeConnection(child, "unknown-type")
-        await("LSP4IJ pulls Child.x") { asked.isDone }
+        editor.await("LSP4IJ pulls Child.x") { asked.isDone }
         // the document changes for the plugin's record of reports while its first report comes, and not for LSP4IJ, which
         //  applies that report: as with an edit that LSP4IJ sends once the document is committed (X71,
         //  run-4165373714699057152), which here changes no text
@@ -257,10 +230,10 @@ class ClosedFileProblemsTest {
             }
         }
         answer.complete(Unit)
-        await("LSP4IJ applies Child.x's first report") { pullResultId(child) == "fixed" }
+        editor.await("LSP4IJ applies Child.x's first report") { pullResultId(child) == "fixed" }
         // its next pull names that report, and the server answers it as unchanged
         refresh()
-        await("Child.x's editor no longer marks the error") { "unknown-type" !in marks(child) }
+        editor.await("Child.x's editor no longer marks the error") { "unknown-type" !in marks(child) }
         assertThat(server.unchangedPulls).contains(uri(child))
     }
 
@@ -271,7 +244,8 @@ class ClosedFileProblemsTest {
      *  nothing else tells that LSP4IJ has applied a report that changed nothing
      */
     private fun pullResultId(file: VirtualFile): String? {
-        val synchronizer = connection().getOpenedDocument(connection().clientFeatures.getFileUri(file))?.synchronizer ?: return null
+        val synchronizer =
+            editor.connection().getOpenedDocument(editor.connection().clientFeatures.getFileUri(file))?.synchronizer ?: return null
         return synchronizer.javaClass
             .getDeclaredMethod("getPullResultId")
             .apply { isAccessible = true }
@@ -287,15 +261,15 @@ class ClosedFileProblemsTest {
     fun `an error that reaches a file's editor before LSP4IJ connects it stays marked through an update LSP4IJ rejects`() {
         // as a report for another version of the document, which LSP4IJ rejects, and still tells the plugin of
         staysMarkedUntilOwnReport { child ->
-            val document = checkNotNull(connection().getOpenedDocument(connection().clientFeatures.getFileUri(child)))
-            connection().updateDiagnostics(child, "stub", emptyList(), checkNotNull(document.synchronizer).version + 1)
+            val document = checkNotNull(editor.connection().getOpenedDocument(editor.connection().clientFeatures.getFileUri(child)))
+            editor.connection().updateDiagnostics(child, "stub", emptyList(), checkNotNull(document.synchronizer).version + 1)
         }
     }
 
     @Test
     fun `an error that reaches a file's editor before LSP4IJ connects it stays marked through another document's report`() {
         // as a report of the document in another document's pull, or in the workspace's, which is not its own pull's
-        staysMarkedUntilOwnReport { child -> connection().updateDiagnostics(child, "stub", emptyList(), null) }
+        staysMarkedUntilOwnReport { child -> editor.connection().updateDiagnostics(child, "stub", emptyList(), null) }
     }
 
     /**
@@ -312,19 +286,19 @@ class ClosedFileProblemsTest {
         val answer = CompletableFuture<Unit>()
         server.pulls = { if (it == uri(child)) answer.also { asked.complete(Unit) } else CompletableFuture.completedFuture(null) }
         openMarkedBeforeConnection(child, "unknown-type")
-        await("LSP4IJ pulls Child.x") { asked.isDone }
-        val fileUri = checkNotNull(connection().clientFeatures.getFileUri(child))
+        editor.await("LSP4IJ pulls Child.x") { asked.isDone }
+        val fileUri = checkNotNull(editor.connection().clientFeatures.getFileUri(child))
         val applier = LSPDiagnosticsApplier.getInstance(editor.fixture.project)
-        await("LSP4IJ has connected Child.x, whose report has not come") {
-            connection().getOpenedDocument(fileUri)?.synchronizer != null && !applier.isRefreshPending(child)
+        editor.await("LSP4IJ has connected Child.x, whose report has not come") {
+            editor.connection().getOpenedDocument(fileUri)?.synchronizer != null && !applier.isRefreshPending(child)
         }
         beforeReport(child)
-        await("LSP4IJ has nothing more to mark in Child.x's editor") { !applier.isRefreshPending(child) }
+        editor.await("LSP4IJ has nothing more to mark in Child.x's editor") { !applier.isRefreshPending(child) }
         runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() }
         assertThat(marks(child)).contains("unknown-type")
 
         answer.complete(Unit)
-        await("LSP4IJ has Child.x's report, and nothing more to mark in its editor") {
+        editor.await("LSP4IJ has Child.x's report, and nothing more to mark in its editor") {
             "unknown-type" in openCodes(child) && !applier.isRefreshPending(child)
         }
         runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() }
@@ -355,14 +329,14 @@ class ClosedFileProblemsTest {
             runInEdtAndWait { editor.fixture.openFileInEditor(file) }
             // on a thread of its own, which the connection holds
             CompletableFuture.runAsync { connect(file) }
-            await("LSP4IJ connects ${file.name}") { connecting.count == 0L }
-            connection().updateDiagnostics(file, "stub", listOf(error(code)), null)
-            await("${file.name}'s editor marks the error") { code in marks(file) }
+            editor.await("LSP4IJ connects ${file.name}") { connecting.count == 0L }
+            editor.connection().updateDiagnostics(file, "stub", listOf(error(code)), null)
+            editor.await("${file.name}'s editor marks the error") { code in marks(file) }
         } finally {
             setBeforeRegistration(null)
             marked.countDown()
         }
-        await("LSP4IJ opens ${file.name}") { opened(file) }
+        editor.await("LSP4IJ opens ${file.name}") { opened(file) }
     }
 
     /** Runs [hook] as LSP4IJ connects a document, before it registers the document's connection; null runs nothing. */
@@ -370,7 +344,7 @@ class ClosedFileProblemsTest {
         LanguageServerWrapper::class.java
             .getDeclaredMethod("setBeforeRegistration", Runnable::class.java)
             .apply { isAccessible = true }
-            .invoke(connection(), hook)
+            .invoke(editor.connection(), hook)
     }
 
     /** The descriptions of the errors and warnings that the editor of [file] marks. */
@@ -401,6 +375,16 @@ class ClosedFileProblemsTest {
     private fun projectErrors(file: VirtualFile): List<FileProblem> =
         ProblemsCollector.getInstance(editor.fixture.project).getFileProblems(file).filterIsInstance<FileProblem>()
 
+    /** Opens Root.x, beside the closed Root/Child.x, which the next report has with an unknown-type error; answers Child.x. */
+    private fun closedChildWithError(): VirtualFile {
+        val root = file("Root.x", "module Root {}\n")
+        val child = file("Root/Child.x", "class Child extends Base {}\n")
+        server.reported[uri(child)] = listOf(error("unknown-type"))
+        open(root)
+        refresh()
+        return child
+    }
+
     /** The project's problem files: a test application's ignores every report unless it has a real one behind it. */
     private fun problemFiles(): WolfTheProblemSolver {
         val project = editor.fixture.project
@@ -412,16 +396,10 @@ class ClosedFileProblemsTest {
         return problems
     }
 
-    /** A file on disk, which the light project's in-memory files are not, so that LSP4IJ finds it by its URI. */
     private fun file(
         path: String,
         text: String,
-    ): VirtualFile {
-        val file = directory.resolve(path)
-        Files.createDirectories(file.parent)
-        Files.writeString(file, text)
-        return checkNotNull(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(file))
-    }
+    ): VirtualFile = editor.file(directory, path, text)
 
     private fun uri(file: VirtualFile): String = LSPIJUtils.toUriAsString(file)
 
@@ -430,7 +408,7 @@ class ClosedFileProblemsTest {
     private fun open(file: VirtualFile) {
         runInEdtAndWait { editor.fixture.openFileInEditor(file) }
         connect(file)
-        await("LSP4IJ opens ${file.name}") { opened(file) }
+        editor.await("LSP4IJ opens ${file.name}") { opened(file) }
     }
 
     /** Asks LSP4IJ to connect [file], whose editor is open, to the server. */
@@ -451,26 +429,19 @@ class ClosedFileProblemsTest {
         server.languageClient.refreshDiagnostics().awaited()
     }
 
-    private fun connection(): LanguageServerWrapper = LanguageServiceAccessor.getInstance(editor.fixture.project).startedServers.single()
-
     private fun closedCodes(file: VirtualFile): List<String?> =
-        connection()
+        editor
+            .connection()
             .let { it.getClosedDocument(it.clientFeatures.getFileUri(file), false) }
             ?.diagnostics
             .orEmpty()
             .map { it.code?.left }
 
     private fun openCodes(file: VirtualFile): List<String?> =
-        connection()
+        editor
+            .connection()
             .let { it.getOpenedDocument(it.clientFeatures.getFileUri(file)) }
             ?.diagnostics
             .orEmpty()
             .map { it.code?.left }
-
-    private fun await(
-        what: String,
-        condition: () -> Boolean,
-    ) {
-        awaitUntil(what) { condition() || false.also { runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() } } }
-    }
 }
