@@ -835,6 +835,55 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `the Referent that the compiler adds to a property with an annotation is proven by the property`() {
+        val source =
+            """
+            module Tracking {
+                annotation /*annotation*/Tracked<Referent> into Var<Referent> {
+                    @Override
+                    void set(Referent value) {
+                        super(value);
+                    }
+                }
+                class Counter {
+                    @Tracked Int /*count*/count = 0;
+                    @Unassigned Int other = 1;
+                }
+                class Spare {
+                    Int unused() {
+                        return 1;
+                    }
+                }
+            }
+            """.trimIndent()
+        // the compiler treats count, which an annotation into Var has, as a class of its own, and adds it a formal type
+        // Referent, which no source declares: the chain of count's Referent holds it with Tracked's, Var's and Ref's
+        val facts = facts("Tracking", source)
+        val count = declared(facts, "count").single()
+        val added =
+            facts.properties.chains
+                .filter { (it.owner as? ProofIdentity.Source)?.name == "Counter" }
+                .flatMap { it.members }
+                .filterIsInstance<ProofIdentity.Generated>()
+        assertThat(added).containsExactly(ProofIdentity.Generated(count, emptyList()))
+        // renamed to Unassigned, Tracked would capture other's annotation, ecstasy's Unassigned: that compiles, so the
+        // rename's refusal is the proof's
+        assertCompiles("Tracking", source.replace("Tracked", "Unassigned"))
+        withSource("Tracking", source) { adapter, uri ->
+            // the chain held an unproven identity, which refused every proof but a rename's in the module
+            val at = source.positionOf("unused()")
+            assertThat(adapter.getCodeActions(uri, Range(at, at), emptyList()).map { it.title })
+                .contains("Safely delete member 'unused', unused in Tracking")
+            // a rename of count places its Referent by count's declaration, through the edit
+            val property = position(source, "count")
+            val renamed = requireNotNull(adapter.rename(uri, property.line, property.column, "total")) { "No rename of count" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("count = 0", "total = 0"))
+            val annotation = position(source, "annotation")
+            assertThat(adapter.rename(uri, annotation.line, annotation.column, "Unassigned")).isNull()
+        }
+    }
+
     /** The identities of the declarations of [name] in [facts]' sources, in the order they declare them. */
     private fun declared(
         facts: CompilerRenameFacts,

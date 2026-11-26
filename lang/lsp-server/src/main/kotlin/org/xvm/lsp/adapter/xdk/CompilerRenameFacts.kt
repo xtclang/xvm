@@ -63,8 +63,10 @@ internal sealed interface ProofIdentity {
     ) : ProofIdentity
 
     /**
-     * A method the compiler adds to a written class, such as the appendTo and estimateStringLength of a const that
-     * declares toString. It has no declaration, so its class and the contracts it implements identify it.
+     * A member the compiler adds to a written declaration, which has no declaration of its own: a method of a class,
+     * such as the appendTo and estimateStringLength of a const that declares toString, which its class and the
+     * contracts it implements identify, or the formal type Referent of a property that the compiler treats as a class
+     * of its own, which its property identifies, with no contracts ([referentOf]).
      */
     data class Generated(
         val owner: ProofIdentity,
@@ -320,10 +322,13 @@ internal fun captureRenameFacts(
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             // a mixin's formal type that the compiler adds for its contribution's is that contribution's
             val implicit = (constant as? PropertyConstant)?.implicitFormal()
+            val referent = (constant as? PropertyConstant)?.referentOf()
             when {
                 constant is TypeParameterConstant -> ProofIdentity.MethodFormal(identity(constant.method), constant.register)
 
                 implicit != null -> identity(implicit)
+
+                referent != null -> ProofIdentity.Generated(identity(referent), emptyList())
 
                 // a method that the compiler merges over a union, as a mixin into Box | Bag takes size, is proven by the
                 // union's route through each leg, as a call on such a receiver is
@@ -681,6 +686,19 @@ private fun anonymousConstructor(
     return passed?.let { ProofIdentity.Composed(owner, listOf(identity(it.identityConstant)), emptyList()) }
         ?: ProofIdentity.PrimaryConstructor(owner)
 }
+
+/**
+ * The property that the compiler adds this formal type to, as Referent, when it treats a property with code of its own or
+ * a Ref annotation, as `@Lazy Int hash.calc()`, as a class of its own, whose formal type it is (TypeConstant's exploded
+ * properties); null for any other. The compiler makes it a constant alone, with no structure, which no source declares,
+ * and the dispatch chain of the property's Referent holds it with the Referent of each of Ref, Var and the property's
+ * annotations, so an unproven identity of it refused every proof but a rename's in a module that declares one of those,
+ * as ecstasy declares Ref's and Var's. Each property has one, which the compiler always names Referent.
+ */
+internal fun PropertyConstant.referentOf(): PropertyConstant? =
+    (parentConstant as? PropertyConstant)?.takeIf { property ->
+        name == "Referent" && property.component != null && component == null
+    }
 
 /**
  * The formats that a class of another module can extend or implement, and so name the protected members of: a module, a
