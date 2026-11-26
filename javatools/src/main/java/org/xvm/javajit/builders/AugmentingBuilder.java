@@ -220,7 +220,7 @@ public class AugmentingBuilder extends CommonBuilder {
         String        jitName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmd     = prop.getGetterJitDesc(this, thisType);
 
-        if (jmd.isOptimized && findMethod(jitName + OPT, jmd.optimizedMD) != null) {
+        if (jmd.isOptimized && isNativeMethod(jitName + OPT, jmd.optimizedMD)) {
             // the native optimized getter still needs its boxed entry point
             if (!isNativeMethod(jitName, jmd.standardMD)) {
                 assembleMethodWrapper(classBuilder, jitName, jmd);
