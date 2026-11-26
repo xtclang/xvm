@@ -795,6 +795,46 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a label declares a symbol, which a break, a continue and its variable, as Loop in Loop first, refer to`() {
+        val source =
+            """
+            module Labels {
+                Range<Int> span = 0 ..< 3;
+                String count(Int[] values) {
+                    String text = "";
+                    /*declared*/Loop: for (Int value : values) {
+                        if (/*first*/Loop.first) {
+                            text = span.first.toString();
+                            continue /*continued*/Loop;
+                        }
+                        if (value < 0) {
+                            break /*broken*/Loop;
+                        }
+                        text += value.toString();
+                    }
+                    return text;
+                }
+            }
+            """.trimIndent()
+        // renamed to span, the loop's read of the property span would read the label's variable: that compiles, so the
+        // rename's refusal is the proof's
+        assertCompiles("Labels", source.replace("Loop", "span"))
+        withSource("Labels", source) { adapter, uri ->
+            val uses = listOf("declared", "first", "continued", "broken").map { range(source, it, "Loop") }
+            val at = position(source, "declared")
+            assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactlyElementsOf(uses)
+            assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactlyInAnyOrderElementsOf(uses)
+            val broken = position(source, "broken")
+            assertThat(adapter.findDefinition(uri, broken.line, broken.column)?.let(::range)).isEqualTo(range(source, "declared", "Loop"))
+            val first = position(source, "first")
+            assertThat(adapter.getHoverInfo(uri, first.line, first.column)).contains("Label").contains("Loop")
+            val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "Each")) { "No rename of Loop" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("Loop", "Each"))
+            assertThat(adapter.rename(uri, at.line, at.column, "span")).isNull()
+        }
+    }
+
     /** The identities of the declarations of [name] in [facts]' sources, in the order they declare them. */
     private fun declared(
         facts: CompilerRenameFacts,
