@@ -152,7 +152,11 @@ internal fun ParityScenarios.indexingCases() {
                 mapOf("context" to mapOf("includeDeclaration" to true)),
             ).rows()
 
-        fun search(value: String) = protocol.query("workspace/symbol", mapOf("query" to value)).rows()
+        // the workspace's own symbols, not the libraries' that follow them
+        fun search(value: String) =
+            protocol.query("workspace/symbol", mapOf("query" to value)).rows().filter {
+                it.getAsJsonObject("location").string("uri").startsWith("file:")
+            }
         check(refs().size == data.int("referenceCount"))
         check(
             protocol.server().getOpenedDocuments().none { it.getFile().getPath() == directory.resolve(consumer.string("uri")).toString() },

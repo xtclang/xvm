@@ -10,12 +10,13 @@ import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.util.ExecutionTrace
 
 /**
  * Declaration located in attached library source, with the source range used for navigation and its doc comment, which
  * a compiled module does not keep, and of a method the range of each of its parameters' names, by name, which Go to
- * Definition of a named argument goes to.
+ * Definition of a named argument goes to; and what it declares, as Go to Symbol lists it.
  */
 internal data class LibraryDeclaration(
     val path: List<String>,
@@ -24,7 +25,16 @@ internal data class LibraryDeclaration(
     val lastLine: Int,
     val documentation: String?,
     val parameters: Map<String, SemanticModel.Range>,
-)
+    val kind: SymbolInfo.SymbolKind,
+) {
+    /** The declaration's own name; a module's declaration is under none, as its path is its sources' folders. */
+    val name: String
+        get() = path.lastOrNull().orEmpty()
+}
+
+/** The declarations of [declarations] that Go to Symbol finds by name: not the modules', which have none of their own. */
+internal fun symbolic(declarations: List<LibraryDeclaration>): List<LibraryDeclaration> =
+    declarations.filter { it.kind != SymbolInfo.SymbolKind.MODULE && it.path.isNotEmpty() }
 
 /** Parse declaration spans and doc comments shared by bundled and explicitly attached library sources. */
 internal fun libraryDeclarations(
@@ -84,6 +94,7 @@ internal fun libraryDeclarations(
                         Source.calculateLine(node.endPosition),
                         documentation?.trim()?.takeIf { it.isNotEmpty() },
                         parameters,
+                        kindOf(node),
                     ),
                 )
             }
@@ -94,3 +105,11 @@ internal fun libraryDeclarations(
         }
     }
 }
+
+/** What [node], a declaration that [libraryDeclarations] takes, declares, as Go to Symbol lists it. */
+private fun kindOf(node: AstNode): SymbolInfo.SymbolKind =
+    when (node) {
+        is TypeCompositionStatement -> XdkSymbols.kindOf(node)
+        is MethodDeclarationStatement -> SymbolInfo.SymbolKind.METHOD
+        else -> SymbolInfo.SymbolKind.PROPERTY
+    }

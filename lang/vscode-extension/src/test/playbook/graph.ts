@@ -117,7 +117,9 @@ export function indexingCases(): void {
         const document = await workspace.open(data.file);
         await noErrors(document.uri);
         const refs = async () => await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeReferenceProvider', document.uri, position(document, data.anchor)) ?? [];
-        const search = async (query: string) => await vscode.commands.executeCommand<vscode.SymbolInformation[]>('vscode.executeWorkspaceSymbolProvider', query) ?? [];
+        // the workspace's own symbols, not the libraries' that follow them
+        const search = async (query: string) => (await vscode.commands.executeCommand<vscode.SymbolInformation[]>('vscode.executeWorkspaceSymbolProvider', query) ?? [])
+            .filter(item => item.location.uri.scheme === 'file');
         assert.strictEqual((await refs()).length, data.referenceCount);
         assert.ok(!vscode.workspace.textDocuments.some(item => item.uri.toString() === workspace.uri(data.consumer.uri).toString()), 'Consumer remains closed');
         assert.strictEqual((await search(data.symbol)).length, data.roots);

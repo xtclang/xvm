@@ -9,6 +9,8 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.MultiMethodConstant
 import org.xvm.lsp.adapter.ReadOnlyDocument
+import org.xvm.lsp.model.Location
+import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.protocol.ServerProperties
 import org.xvm.lsp.util.ProcessDirectories
 import java.io.File
@@ -190,6 +192,57 @@ internal object XdkLibrarySources {
     }
 
     fun document(uri: String): ReadOnlyDocument? = source(uri)?.document
+
+    /**
+     * The most library declarations that Go to Symbol lists for a query, after the workspace's own: ecstasy alone has
+     * thousands, of which a two-letter query, as "to", matches more than a thousand; a hundred is more than a list shows
+     * at once, while each source of one is written as its read-only copy, and every one goes to the client.
+     */
+    const val SYMBOL_LIMIT = 100
+
+    /** The shortest query that Go to Symbol finds library declarations for: a letter matches most of them. */
+    const val SYMBOL_QUERY = 2
+
+    /** A declaration of a bundled source, as Go to Symbol finds it, by its library and the source's path. */
+    private data class Symbol(
+        val module: String,
+        val path: String,
+        val declaration: LibraryDeclaration,
+    )
+
+    /**
+     * The declarations of every bundled source, but the modules', parsed once, at the first search: some 760 sources, of
+     * which ecstasy has most, and no compiler objects. A library's sources are under the folder of its module's simple
+     * name.
+     */
+    private val symbols by lazy {
+        val modules = XdkLibraries.moduleNames.associateBy { it.substringBefore('.') }
+        entries.flatMap { (path, entry) ->
+            val module = modules[path.substringBefore('/').removeSuffix(".x")] ?: return@flatMap emptyList()
+            symbolic(libraryDeclarations(entry.text, path)).map { Symbol(module, path, it) }
+        }
+    }
+
+    /**
+     * The bundled libraries' types, methods and properties whose names contain [query], ignoring case, as Go to Symbol
+     * finds a name, but those of the libraries [excluded]: the declarations named [query] first, then those whose names
+     * start with it, then the rest, each by name and source, at most [limit]. Each is where Go to Definition opens it, in
+     * the read-only copy of its source, which this writes for each source it finds a declaration in.
+     */
+    fun symbols(
+        query: String,
+        limit: Int,
+        excluded: Set<String>,
+    ): List<SymbolInfo> =
+        symbols
+            .filter { it.module !in excluded && it.declaration.name.contains(query, ignoreCase = true) }
+            .sortedWith(compareBy({ matchRank(it.declaration.name, query) }, { it.declaration.name }, { it.path }))
+            .take(limit)
+            .map { (module, path, declaration) ->
+                val entry = entries.getValue(path)
+                val source = sources.computeIfAbsent(path) { parse(module, path, entry) }
+                SymbolInfo.of(declaration.name, declaration.kind, declaration.range.location(source.uri))
+            }
 
     /**
      * What hover shows of the artifact declaration whose name is at this source position, from the library's binary: its
@@ -460,3 +513,17 @@ internal fun <T> selectLibraryDeclaration(
     sourceLine: Int?,
     lines: (T) -> IntRange,
 ): T? = candidates.singleOrNull() ?: sourceLine?.let { line -> candidates.singleOrNull { line in lines(it) } }
+
+/** How [name] matches [query], as Go to Symbol ranks library declarations: 0 when it is [query], 1 when it starts with it, else 2. */
+internal fun matchRank(
+    name: String,
+    query: String,
+): Int =
+    when {
+        name.equals(query, ignoreCase = true) -> 0
+        name.startsWith(query, ignoreCase = true) -> 1
+        else -> 2
+    }
+
+/** The location of this range in the document [uri]. */
+internal fun SemanticModel.Range.location(uri: String): Location = Location(uri, start.line, start.column, end.line, end.column)

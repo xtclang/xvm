@@ -822,6 +822,22 @@ interface Adapter : Closeable {
      */
     fun findWorkspaceSymbols(query: String): List<SymbolInfo>
 
+    /**
+     * The libraries' declarations whose names contain [query], ignoring case, which Go to Symbol in Workspace lists after
+     * the workspace's own ([findWorkspaceSymbols]), where Go to Definition opens them: in the read-only library
+     * documents ([readOnlyDocument]).
+     *
+     * **Adapter implementations:**
+     * - *Mock, TreeSitter:* none; AbstractAdapter's fallback.
+     * - *Compiler:* the bundled libraries' types, methods and properties, but those of libraries the workspace's own
+     *   modules replace, and those of the dependencies' attached sources; at most a cap, and none for an empty or
+     *   one-letter query.
+     *
+     * @param query search query string
+     * @return the matching library declarations, the closest matches first
+     */
+    fun findLibrarySymbols(query: String): List<SymbolInfo>
+
     // ========================================================================
     // Planned features (not yet implemented)
     // ========================================================================

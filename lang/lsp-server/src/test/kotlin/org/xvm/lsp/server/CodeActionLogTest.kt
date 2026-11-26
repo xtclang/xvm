@@ -31,6 +31,7 @@ import org.mockito.Mockito.mock
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.awaited
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
@@ -72,7 +73,8 @@ class CodeActionLogTest {
                     // nothing, then a rename of run, which starts from the revision's compile that the code actions
                     // made, and compiles the project as renamed
                     val symbols = server.workspaceService.symbol(WorkspaceSymbolParams("run")).awaited()
-                    assertThat(symbols.left.map { it.name }).containsExactly("run")
+                    // the workspace's own, and then the libraries' of the name
+                    assertThat(symbols.left.filterNot { XdkLibrarySources.owns(it.location.uri) }.map { it.name }).containsExactly("run")
                     service.rename(RenameParams(TextDocumentIdentifier(uri), Position(7, 9), "go")).awaited()
                 }
             }

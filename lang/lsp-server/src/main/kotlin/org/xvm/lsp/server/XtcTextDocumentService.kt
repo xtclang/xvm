@@ -2398,7 +2398,8 @@ class XtcTextDocumentService(
             progress = params,
             partial = PartialResults::eitherLists,
         ) {
-            val symbols = adapter.findWorkspaceSymbols(params.query)
+            // the workspace's own first, then the libraries'
+            val symbols = adapter.findWorkspaceSymbols(params.query) + adapter.findLibrarySymbols(params.query)
             if (!server.resolvesWorkspaceSymbolRange) {
                 return@supplyAsync Either.forLeft(
                     symbols.map {
@@ -2429,7 +2430,7 @@ class XtcTextDocumentService(
                         if (handle == null) {
                             location = Either.forLeft(symbol.location.toLsp())
                         } else {
-                            location = Either.forRight(WorkspaceSymbolLocation(symbol.location.uri))
+                            location = Either.forRight(WorkspaceSymbolLocation(server.readOnlyDocuments.present(symbol.location.uri)))
                             data = handle
                         }
                     }
