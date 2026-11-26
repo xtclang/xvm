@@ -43,6 +43,33 @@ internal fun ParityScenarios.constructorFinallyCases() {
     }
 }
 
+/**
+ * X360, registered after X359 in catalog order: a method's type parameter named in a lambda, which the compiler gives a
+ * type parameter of its own, is the method's.
+ */
+internal fun ParityScenarios.lambdaTypeParameterCases() {
+    case("X360") { data ->
+        val document = openModule(data)
+        val name = data.string("name")
+        val (declaration, inside, outside) =
+            listOf("declaration", "lambda", "outside").map {
+                data.getAsJsonObject(it).let { use ->
+                    document.at(use.string("anchor"), use.int("offset"))
+                }
+            }
+        check(targets(document, "definition", inside).map { it["range"] } == listOf(sourceRange(document, declaration, name.length))) {
+            "Go to Definition from the lambda"
+        }
+        checkUses(document, inside, Regex("\\b$name\\b").findAll(document.text).map { it.range.first }.toList(), name, highlights = true)
+        // hover shows it as at a use outside the lambda
+        val hover = query("textDocument/hover", document, inside).asJsonObject["contents"]
+        check(
+            name in hover.toString() && hover == query("textDocument/hover", document, outside).asJsonObject["contents"],
+        ) { "Hover: $hover" }
+        with(driver) { nativeHover(document, inside, Regex("\\b$name\\b")) }
+    }
+}
+
 /** The offsets of the case's name at each of its uses, an anchor and the name's offset in it. */
 private fun ParityWorkspace.Document.uses(data: JsonObject): List<Int> =
     data["uses"].rows().map { at(it.string("anchor"), it.int("offset")) }

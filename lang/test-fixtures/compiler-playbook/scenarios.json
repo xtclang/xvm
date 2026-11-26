@@ -11163,6 +11163,32 @@
         "limitations": []
       }
     },
+    "X360": {
+      "title": "a method's type parameter named in a lambda: Go to Definition, Find References and highlights reach the method's declaration and every use, and hover shows it as outside the lambda",
+      "manual": [],
+      "values": {
+        "file": "Lambdas.x",
+        "module": "Lambdas",
+        "source": "module Lambdas {\n    class Box<Element> {\n        Element[] items = [];\n        <To extends Number> To[] convert(function To(Element) each) {\n            function To(Int) cast = n -> n.toInt64().as(To);\n            @Volatile To[] result = new To[];\n            items.forEach(e -> {\n                result += each(e).as(To);\n                function Element() same = () -> e.as(Element);\n            });\n            return result;\n        }\n        class Inner {\n            void check(Element[] values) {\n                Element first = values[0].as(Element);\n                values.forEach(v -> {\n                    Element same = v.as(Element);\n                });\n            }\n        }\n    }\n}\n",
+        "name": "To",
+        "declaration": {
+          "anchor": "<To extends",
+          "offset": 1
+        },
+        "lambda": {
+          "anchor": "n.toInt64().as(To)",
+          "offset": 15
+        },
+        "outside": {
+          "anchor": "new To[]",
+          "offset": 4
+        }
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [

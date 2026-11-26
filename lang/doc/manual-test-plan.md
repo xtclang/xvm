@@ -4117,6 +4117,16 @@ source: for a bundled library, its read-only source.
 |---|---|---|
 | X359 | Write `Frozen.x`, a module with `Int[] frozen(Int[] values) = values.freeze(inPlace=True);`. Go to Definition on `inPlace`. | It goes to `inPlace` in `freeze(Boolean inPlace` of `ecstasy/collections/Array.x`, which opens read-only (VS Code: the server's `ecstasy-library` content), at the parameter. |
 
+### A method's type parameter named in a lambda (X360)
+
+A lambda that names a formal type of the method around it has a type parameter of its own for it, which no source
+declares; its name is still the method's type parameter, for Go to Definition, Find References, highlights and
+hover.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X360 | Write `Lambdas.x`, a module with a class `Box<Element>` whose method `<To extends Number> To[] convert(...)` has the lambda `n -> n.toInt64().as(To)`, and a `new To[]` outside any lambda. On `To` in the lambda, Go to Definition, Find References and highlight its uses, and hover it and the `To` of `new To[]`. | Go to Definition goes to `To` in `<To extends`. The references and the highlights are each `To` of the module, exactly, in and out of the lambdas. The hover names `To`, and is the one of `new To[]`. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and
