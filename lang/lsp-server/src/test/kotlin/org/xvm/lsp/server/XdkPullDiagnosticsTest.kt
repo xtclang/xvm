@@ -772,12 +772,13 @@ class XdkPullDiagnosticsTest {
                 session.workspace()
                 session.workspace()
 
+                // in the order the queries came, by their spans' IDs, which they take as they start: a query's end,
+                // which has its answer, is written once its result is complete, which the pull's caller can hear of
+                // first, so the next query's end can come before it
                 fun answers() =
-                    trace.entries.filter {
-                        it["kind"].asString == "lsp-query" && it["event"].asString == "end"
-                    }
-                // a query's end, which has its answer, is written once its result is complete, which the pull's caller
-                //  can hear of first
+                    trace.entries
+                        .filter { it["kind"].asString == "lsp-query" && it["event"].asString == "end" }
+                        .sortedBy { it["id"].asLong }
                 awaitUntil("the pulls' queries have ended in the trace") { answers().size == 5 }
                 val answers = answers()
                 val pulls = answers.filter { it["operation"].asString == "textDocument/diagnostic" }
