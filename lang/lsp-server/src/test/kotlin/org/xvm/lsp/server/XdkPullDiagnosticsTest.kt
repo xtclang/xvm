@@ -50,6 +50,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.FutureTask
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -563,6 +564,58 @@ class XdkPullDiagnosticsTest {
                     .tests.children
                     .map { it.selector },
             ).containsExactly("adds", "subtracts")
+        }
+    }
+
+    @Test
+    fun `a listing of the tests whose compile a document's close retires answers from the compile after it`() {
+        CompilerTestSupport.configure()
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {\n    Int one() = 1;\n}\n") }
+        val tests = directory.resolve("LibTest.x").toFile().apply { writeText(libTest("adds")) }
+        val uri = lib.toURI().toString()
+        // the graph's compile for the listing holds until the close has come, which VS Code's X342 had in run-Rf8Tt8
+        val hold = AtomicBoolean()
+        val held = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> EmbeddingSupport.instance().compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    if (hold.compareAndSet(true, false)) {
+                        held.countDown()
+                        check(release.awaited())
+                    }
+                    EmbeddingSupport.instance().compileModule(sources, repository, errors)
+                },
+                { _, _, _, _, _ -> error("No cursor analysis") },
+            )
+        try {
+            Session(adapter = adapter).use { session ->
+                session.server.replaceCompilerSourceModules(
+                    listOf(
+                        XdkSourceModule("Lib", uri),
+                        XdkSourceModule("LibTest", tests.toURI().toString(), setOf("Lib")),
+                    ),
+                )
+                session.open(uri, lib.readText(), 1)
+                assertThat(session.pull(uri).left.items).isEmpty()
+                hold.set(true)
+                val listing = session.server.tests()
+                assertThat(held.awaited()).isTrue()
+                assertThat(adapter.compilerQueueSnapshot()["runningJobs"].toString()).contains("project-DIAGNOSTICS")
+                // the close retires the graph's compile, which the listing waits for and which no client canceled
+                session.server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri)))
+                release.countDown()
+                assertThat(
+                    listing
+                        .awaited()
+                        .single()
+                        .tests.children
+                        .map { it.selector },
+                ).containsExactly("adds")
+            }
+        } finally {
+            release.countDown()
         }
     }
 
