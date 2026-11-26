@@ -206,16 +206,7 @@ internal fun ParityScenarios.executionInputCases() {
 /** Build modes beside a Gradle build and repeated runs; registered after console input to keep catalog order. */
 internal fun ParityScenarios.buildModeCases() {
     case("X288") { data ->
-        // a Gradle build at the project root, with a wrapper that records what it is asked to do
-        val rootFiles = listOf("gradleFile", "wrapper", "windowsWrapper", "invocations").map { projectRoot.resolve(data.string(it)) }
-        val invocations = projectRoot.resolve(data.string("invocations"))
-
-        fun calls() = if (Files.exists(invocations)) Files.readAllLines(invocations).filter { it.isNotBlank() } else emptyList()
-        val project = with(driver) { singleProject() }
-        val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
-        val previous = mode(execution, project, "EMBEDDED")
-        try {
-            writeGradleWrapper(data)
+        withGradleWrapper(data, "EMBEDDED") { execution, project, calls ->
             openModule(data)
             val module = data.string("module")
 
@@ -242,19 +233,12 @@ internal fun ParityScenarios.buildModeCases() {
 
             // Gradle: Build Project is left to the IDE's builder, and Run calls the Gradle wrapper
             mode(execution, project, "GRADLE")
-            val gradleBuild = execution.build(project).string("text")
-            check(EMBEDDED_BUILD !in gradleBuild) { "The embedded compiler must not take a Gradle-mode build: $gradleBuild" }
-            val gradleRun = runToEnd("Gradle run finishes")
-            check(data.string("gradleRun") in gradleRun) { gradleRun }
-            check(calls().size == 1 && data.string("gradleRun") in calls().single()) { "Run calls the Gradle wrapper once: ${calls()}" }
+            gradleBuildAndRun(execution, project, data, calls)
 
             // and back: Run is embedded again
             mode(execution, project, "EMBEDDED")
             runToEnd("embedded run after switching back finishes").let { check(data.string("output") in it) { it } }
             check(calls().size == 1) { "No Gradle call after switching back: ${calls()}" }
-        } finally {
-            mode(execution, project, previous)
-            rootFiles.forEach(Files::deleteIfExists)
         }
     }
 
@@ -273,6 +257,63 @@ internal fun ParityScenarios.buildModeCases() {
             val edited = runOnce("run of the edited module finishes")
             check(data.string("second") in edited && data.string("first") !in edited) { edited }
             check(Files.readString(file) == data.string("edited")) { "IntelliJ saved the edit before the run" }
+        }
+    }
+}
+
+/**
+ * Writes [data]'s Gradle build at the project root, with a wrapper that records what it is asked to do, and runs [body]
+ * in the build mode [initial] with the wrapper's calls so far; then removes the build, with the project's build mode as it
+ * was.
+ */
+private fun ParityWorkspace.withGradleWrapper(
+    data: JsonObject,
+    initial: String,
+    body: (EmbeddedExecutionProbe, Project, () -> List<String>) -> Unit,
+) {
+    val rootFiles = listOf("gradleFile", "wrapper", "windowsWrapper", "invocations").map { projectRoot.resolve(data.string(it)) }
+    val invocations = projectRoot.resolve(data.string("invocations"))
+
+    fun calls() = if (Files.exists(invocations)) Files.readAllLines(invocations).filter { it.isNotBlank() } else emptyList()
+    val project = with(driver) { singleProject() }
+    val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
+    val previous = mode(execution, project, initial)
+    try {
+        writeGradleWrapper(data)
+        body(execution, project, ::calls)
+    } finally {
+        mode(execution, project, previous)
+        rootFiles.forEach(Files::deleteIfExists)
+    }
+}
+
+/** Build Project and Run of [data]'s module in Gradle mode: the IDE's builder takes the build, and Run calls the wrapper once. */
+private fun ParityWorkspace.gradleBuildAndRun(
+    execution: EmbeddedExecutionProbe,
+    project: Project,
+    data: JsonObject,
+    calls: () -> List<String>,
+) {
+    val gradleBuild = execution.build(project).string("text")
+    check(EMBEDDED_BUILD !in gradleBuild) { "The embedded compiler must not take a Gradle-mode build: $gradleBuild" }
+    val gradleRun = execution.runToExit(project, data.string("module"), uri(data.string("file")), "", "Gradle run finishes", 0)
+    check(data.string("gradleRun") in gradleRun) { gradleRun }
+    check(calls().size == 1 && data.string("gradleRun") in calls().single()) { "Run calls the Gradle wrapper once: ${calls()}" }
+}
+
+/** X354, registered after X353 in catalog order: Build and Run in the automatic build mode, beside a Gradle build and without one. */
+internal fun ParityScenarios.automaticBuildModeCases() {
+    case("X354") { data ->
+        withGradleWrapper(data, "AUTOMATIC") { execution, project, calls ->
+            openModule(data)
+            // automatic: Gradle while the project has a Gradle build
+            gradleBuildAndRun(execution, project, data, calls)
+
+            // and the embedded compiler once the project has none, with no choice made again
+            Files.delete(projectRoot.resolve(data.string("gradleFile")))
+            val output = execution.runToExit(project, data.string("module"), uri(data.string("file")), "", "embedded run finishes", 0)
+            check(data.string("output") in output) { output }
+            check(calls().size == 1) { "No Gradle call without a Gradle build: ${calls()}" }
         }
     }
 }

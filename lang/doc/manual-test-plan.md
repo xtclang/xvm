@@ -4061,6 +4061,15 @@ constructor each reach it.
 |---|---|---|
 | X353 | Write `Finals.x`, a module with a class `Holder` whose constructor `construct(Int[] keys, Boolean inPlace = False)` reads `inPlace` in its body and in its `finally` block, and a method that calls `new Holder([1], inPlace=True)`. Find References on `inPlace` in the body, and rename it there to `fresh`; restore the source, and do the same from the named argument `inPlace=True`. | From either, the references are the declaration, the body's use, the block's and the named argument, exactly, and the rename changes all four; the module compiles. |
 
+### Automatic build mode (X354)
+
+The automatic build mode builds and runs with Gradle in a folder (VS Code) or project (IntelliJ) that has a Gradle
+build, and with the embedded compiler in one that has none, as the build's files are when Build or Run starts.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X354 | As in X288, write a Gradle build at the root, whose wrapper records what it is asked to do, and `AutoModes.x`. Choose **Automatic** (VS Code **Ecstasy: Select Build Mode**; IntelliJ Settings › Languages & Frameworks › Ecstasy › Build and Run), Build, then Run AutoModes. Delete the root's `settings.gradle.kts`, and Run AutoModes again. | Beside the Gradle build, VS Code's status bar shows **Gradle build**; Build calls `./gradlew build` (IntelliJ: Build Project goes to the IDE's builder, not the embedded compiler) and Run calls `./gradlew -q runXtc --module=AutoModes`. Without it, Run uses the embedded compiler, prints `run embedded`, and the wrapper records nothing more. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and

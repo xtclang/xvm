@@ -49,6 +49,7 @@ class ParityScenarios(
         gradleRunCases()
         labelCases()
         constructorFinallyCases()
+        automaticBuildModeCases()
     }
 
     internal fun case(
