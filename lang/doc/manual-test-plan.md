@@ -4109,6 +4109,15 @@ Ctrl+Q), for its declaration and its doc comment, from the XDK's sources.
 |---|---|---|
 | X358 | Write `Documented.x`, a module with `String echo(String text) = text;` and a method that calls `map.getOrDefault("a", 0)` on a `Map<String, Int>`. Hover the first `String`, then `getOrDefault`. | `String`'s hover has its doc comment, `String is a well-known, immutable data type for holding textual information.`; `getOrDefault`'s has Map's, `Obtain the value associated with the specified key, ...`. |
 
+### A named argument of an XDK method (X359)
+
+A named argument of a method that another module declares, the XDK's too, goes to its parameter in that module's
+source: for a bundled library, its read-only source.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X359 | Write `Frozen.x`, a module with `Int[] frozen(Int[] values) = values.freeze(inPlace=True);`. Go to Definition on `inPlace`. | It goes to `inPlace` in `freeze(Boolean inPlace` of `ecstasy/collections/Array.x`, which opens read-only (VS Code: the server's `ecstasy-library` content), at the parameter. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and

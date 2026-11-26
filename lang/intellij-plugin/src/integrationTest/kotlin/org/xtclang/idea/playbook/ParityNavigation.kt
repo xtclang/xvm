@@ -364,6 +364,23 @@ internal fun ParityScenarios.libraryDocumentationCases() {
     }
 }
 
+/**
+ * X359, registered after X358 in catalog order: Go to Definition on a named argument of a method of the XDK opens its
+ * parameter in the library's read-only source.
+ */
+internal fun ParityScenarios.libraryArgumentCases() {
+    case("X359") { data ->
+        val document = openModule(data)
+        val source = data.string("librarySource")
+        val target = targets(document, "definition", document.at(data.string("anchor"))).single()
+        check(libraryDocument(target.string("uri"), source)) { "Not the library's document: $target" }
+        check(names(listOf(target)) == listOf(data.string("name")))
+        val library = selected(source)
+        check(library.uri == target.string("uri") && !library.writable) { "Not the read-only library view: ${library.uri}" }
+        check(data.string("declaration") in library.text.lines()[target.line()]) { "Not the parameter's declaration: $target" }
+    }
+}
+
 /** Whether [uri] is the server's `ecstasy-library:` document of the library source whose path ends with [source]. */
 private fun libraryDocument(
     uri: String,

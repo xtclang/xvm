@@ -54,6 +54,7 @@ class ParityScenarios(
         librarySymbolCases()
         organizeImportsCases()
         libraryDocumentationCases()
+        libraryArgumentCases()
     }
 
     internal fun case(

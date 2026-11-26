@@ -154,6 +154,27 @@ export function libraryDocumentationCases(): void {
     });
 }
 
+/**
+ * X359, registered after X358 in catalog order: Go to Definition on a named argument of a method of the XDK opens its
+ * parameter in the library's read-only source.
+ */
+export function libraryArgumentCases(): void {
+    playbook('X359', async (workspace, data) => {
+        const document = await workspace.module(data.file, data.source, data.module);
+        const at = position(document, data.anchor);
+        const found = await targets(document, 'Definition', at);
+        assert.strictEqual(found.length, 1, JSON.stringify(found));
+        assert.strictEqual(found[0].uri.scheme, 'ecstasy-library', 'The parameter is in the library source, read-only');
+        assert.ok(found[0].uri.path.endsWith(`/${data.librarySource}`), found[0].uri.toString());
+        assert.deepStrictEqual(await targetNames(found), [data.name]);
+        const library = await revealDefinition(document, at, data.librarySource);
+        const declared = library.document.lineAt(library.selection.start.line).text;
+        assert.ok(declared.includes(data.declaration), declared);
+        assert.deepStrictEqual([library.selection.start.line, library.selection.start.character],
+            [found[0].range.start.line, found[0].range.start.character], 'Go to Definition opens the parameter');
+    });
+}
+
 /** Go to Definition, as F12 runs it, at [at] in [document]; the editor it opens on [source], a path's end. */
 async function revealDefinition(document: vscode.TextDocument, at: vscode.Position, source: string): Promise<vscode.TextEditor> {
     await vscode.window.showTextDocument(document, { selection: new vscode.Range(at, at), preview: false });

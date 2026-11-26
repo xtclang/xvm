@@ -11146,6 +11146,23 @@
         "limitations": []
       }
     },
+    "X359": {
+      "title": "Go to Definition on a named argument of a method of the XDK opens its parameter in the library's read-only source",
+      "manual": [],
+      "values": {
+        "file": "Frozen.x",
+        "module": "Frozen",
+        "source": "module Frozen {\n    Int[] frozen(Int[] values) = values.freeze(inPlace=True);\n}\n",
+        "anchor": "inPlace=True",
+        "name": "inPlace",
+        "librarySource": "ecstasy/collections/Array.x",
+        "declaration": "freeze(Boolean inPlace"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
