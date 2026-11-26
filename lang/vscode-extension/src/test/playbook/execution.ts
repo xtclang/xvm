@@ -73,22 +73,64 @@ class Executions implements vscode.Disposable {
 
 const finished = (update: ExecutionUpdate) => update.exitCode !== undefined;
 
-/** Runs [body] with the workspace in embedded build mode, whatever the folder's Gradle files say. */
-async function embedded(body: (executions: Executions) => Promise<void>): Promise<void> {
-    const settings = vscode.workspace.getConfiguration('xtc');
-    const original = settings.inspect<string>('build.mode')?.workspaceValue;
+/** Runs [body] with [Executions], which stops recording after it. */
+async function executing(body: (executions: Executions) => Promise<void>): Promise<void> {
     const executions = new Executions();
-    await settings.update('build.mode', 'embedded', vscode.ConfigurationTarget.Workspace);
     try {
         await body(executions);
     } finally {
         executions.dispose();
+    }
+}
+
+/** Runs [body] with the workspace in embedded build mode, whatever the folder's Gradle files say. */
+async function embedded(body: (executions: Executions) => Promise<void>): Promise<void> {
+    const settings = vscode.workspace.getConfiguration('xtc');
+    const original = settings.inspect<string>('build.mode')?.workspaceValue;
+    await settings.update('build.mode', 'embedded', vscode.ConfigurationTarget.Workspace);
+    try {
+        await executing(body);
+    } finally {
         await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
     }
 }
 
+/** The Gradle build that X288 and X354 write at the folder root, with a wrapper that records what it is asked to do. */
+interface GradleWrapperValues {
+    gradleFile: string;
+    gradleSource: string;
+    wrapper: string;
+    wrapperSource: string;
+    windowsWrapper: string;
+    windowsWrapperSource: string;
+    invocations: string;
+}
+
+/**
+ * Writes [data]'s Gradle build at the folder root, runs [body] with the folder and the wrapper's calls so far, and removes
+ * the build again, with the folder's build mode as it was.
+ */
+async function withGradleWrapper(data: GradleWrapperValues,
+    body: (folder: vscode.WorkspaceFolder, invocations: () => Promise<string[]>) => Promise<void>): Promise<void> {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    assert.ok(folder, 'The playbook opens a folder');
+    const root = (file: string) => path.join(folder.uri.fsPath, file);
+    const invocations = async () => (await fs.readFile(root(data.invocations), 'utf8').catch(() => '')).split('\n').filter(line => line);
+    const settings = vscode.workspace.getConfiguration('xtc');
+    const original = settings.inspect<string>('build.mode')?.workspaceValue;
+    try {
+        await fs.writeFile(root(data.gradleFile), data.gradleSource);
+        await fs.writeFile(root(data.wrapper), data.wrapperSource, { mode: 0o755 });
+        await fs.writeFile(root(data.windowsWrapper), data.windowsWrapperSource);
+        await body(folder, invocations);
+    } finally {
+        await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
+        await Promise.all([data.gradleFile, data.wrapper, data.windowsWrapper, data.invocations].map(file => fs.rm(root(file), { force: true })));
+    }
+}
+
 /** Chooses the folder's build mode, as the command and the status bar choose it, and waits until the status bar shows [status]. */
-async function selectBuildMode(folder: vscode.WorkspaceFolder, mode: 'embedded' | 'gradle', status: string, message: string): Promise<void> {
+async function selectBuildMode(folder: vscode.WorkspaceFolder, mode: 'auto' | 'embedded' | 'gradle', status: string, message: string): Promise<void> {
     await vscode.commands.executeCommand('xtc.selectBuildMode', mode, folder.uri);
     await eventually(async () => buildModeStatus(), text => text === status, message);
 }
@@ -1211,58 +1253,46 @@ async function shellTaskExit(name: string, action: () => Thenable<unknown>, time
     }
 }
 
+/** Builds and runs [data]'s module in Gradle mode, and checks that the wrapper was asked to build, then to run it. */
+async function gradleBuildAndRun(document: vscode.TextDocument, data: { module: string; gradleBuild: string; gradleRun: string },
+    invocations: () => Promise<string[]>): Promise<void> {
+    assert.strictEqual(await shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build')), 0, 'Gradle build exit code');
+    assert.deepStrictEqual(await invocations(), [data.gradleBuild], 'Build calls the Gradle wrapper');
+    assert.strictEqual(await shellTaskExit(`Run ${data.module}`,
+        () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module)), 0, 'Gradle run exit code');
+    const calls = await invocations();
+    assert.strictEqual(calls.length, 2, calls.join('\n'));
+    assert.ok(calls[1].includes(data.gradleRun), calls.join('\n'));
+}
+
 /** Build modes beside a Gradle build and repeated runs; registered after console input to keep catalog order. */
 export function buildModeCases(): void {
-    playbook('X288', async (workspace, data) => {
-        const folder = vscode.workspace.workspaceFolders?.[0];
-        assert.ok(folder, 'The playbook opens a folder');
-        // a Gradle build at the folder root, with a wrapper that records what it is asked to do
-        const root = (file: string) => path.join(folder.uri.fsPath, file);
-        const rootFiles = [data.gradleFile, data.wrapper, data.windowsWrapper, data.invocations].map(root);
-        const invocations = async () => (await fs.readFile(root(data.invocations), 'utf8').catch(() => '')).split('\n').filter(line => line);
-        const settings = vscode.workspace.getConfiguration('xtc');
-        const original = settings.inspect<string>('build.mode')?.workspaceValue;
-        const executions = new Executions();
-        try {
-            await fs.writeFile(root(data.gradleFile), data.gradleSource);
-            await fs.writeFile(root(data.wrapper), data.wrapperSource, { mode: 0o755 });
-            await fs.writeFile(root(data.windowsWrapper), data.windowsWrapperSource);
-            await settings.update('build.mode', undefined, vscode.ConfigurationTarget.Workspace);
-            const document = await workspace.module(data.file, data.source, data.module);
+    playbook('X288', (workspace, data) => withGradleWrapper(data, (folder, invocations) => executing(async executions => {
+        await vscode.workspace.getConfiguration('xtc').update('build.mode', undefined, vscode.ConfigurationTarget.Workspace);
+        const document = await workspace.module(data.file, data.source, data.module);
 
-            // the default is embedded, also beside a Gradle build, and says which of the build's settings apply
-            assert.strictEqual(buildMode(folder), 'embedded');
-            await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'Status bar shows the embedded build');
-            const built = await executions.build('Embedded build finishes');
-            assert.strictEqual(built.exitCode, 0, built.text);
-            assert.ok(built.text.includes(data.notice), built.text);
-            const run = await executions.lens(data.module, document.uri, 'Embedded run finishes');
-            assert.strictEqual(run.exitCode, 0, run.text);
-            assert.ok(run.text.includes(data.output), run.text);
-            assert.deepStrictEqual(await invocations(), [], 'Embedded mode does not call Gradle');
+        // the default is embedded, also beside a Gradle build, and says which of the build's settings apply
+        assert.strictEqual(buildMode(folder), 'embedded');
+        await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'Status bar shows the embedded build');
+        const built = await executions.build('Embedded build finishes');
+        assert.strictEqual(built.exitCode, 0, built.text);
+        assert.ok(built.text.includes(data.notice), built.text);
+        const run = await executions.lens(data.module, document.uri, 'Embedded run finishes');
+        assert.strictEqual(run.exitCode, 0, run.text);
+        assert.ok(run.text.includes(data.output), run.text);
+        assert.deepStrictEqual(await invocations(), [], 'Embedded mode does not call Gradle');
 
-            // Gradle, chosen the way the command and the status bar choose it
-            await selectBuildMode(folder, 'gradle', data.statusGradle, 'Status bar shows the Gradle build');
-            assert.strictEqual(await shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build')), 0, 'Gradle build exit code');
-            assert.deepStrictEqual(await invocations(), [data.gradleBuild], 'Build calls the Gradle wrapper');
-            assert.strictEqual(await shellTaskExit(`Run ${data.module}`,
-                () => vscode.commands.executeCommand('xtc.runModule', document.uri.toString(), data.module)), 0, 'Gradle run exit code');
-            const calls = await invocations();
-            assert.strictEqual(calls.length, 2, calls.join('\n'));
-            assert.ok(calls[1].includes(data.gradleRun), calls.join('\n'));
+        // Gradle, chosen the way the command and the status bar choose it
+        await selectBuildMode(folder, 'gradle', data.statusGradle, 'Status bar shows the Gradle build');
+        await gradleBuildAndRun(document, data, invocations);
 
-            // and back: Run is embedded again
-            await selectBuildMode(folder, 'embedded', data.statusEmbedded, 'Status bar shows the embedded build again');
-            const again = await executions.lens(data.module, document.uri, 'Embedded run after switching back finishes');
-            assert.strictEqual(again.exitCode, 0, again.text);
-            assert.ok(again.text.includes(data.output), again.text);
-            assert.strictEqual((await invocations()).length, 2, 'No Gradle call after switching back');
-        } finally {
-            executions.dispose();
-            await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
-            await Promise.all(rootFiles.map(file => fs.rm(file, { force: true })));
-        }
-    });
+        // and back: Run is embedded again
+        await selectBuildMode(folder, 'embedded', data.statusEmbedded, 'Status bar shows the embedded build again');
+        const again = await executions.lens(data.module, document.uri, 'Embedded run after switching back finishes');
+        assert.strictEqual(again.exitCode, 0, again.text);
+        assert.ok(again.text.includes(data.output), again.text);
+        assert.strictEqual((await invocations()).length, 2, 'No Gradle call after switching back');
+    })));
 
     playbook('X289', async (workspace, data) => {
         const document = await workspace.module(data.file, data.source, data.module);
@@ -1282,6 +1312,25 @@ export function buildModeCases(): void {
             });
         });
     });
+}
+
+/** X354, registered after X353 in catalog order: Build and Run in the automatic build mode, beside a Gradle build and without one. */
+export function automaticBuildModeCases(): void {
+    playbook('X354', (workspace, data) => withGradleWrapper(data, (folder, invocations) => executing(async executions => {
+        // automatic: Gradle while the folder has a Gradle build
+        await selectBuildMode(folder, 'auto', data.statusGradle, 'Status bar shows the Gradle build');
+        const document = await workspace.module(data.file, data.source, data.module);
+        assert.strictEqual(buildMode(folder), 'gradle');
+        await gradleBuildAndRun(document, data, invocations);
+
+        // and the embedded compiler once the folder has none, with no choice made again
+        await fs.rm(path.join(folder.uri.fsPath, data.gradleFile));
+        assert.strictEqual(buildMode(folder), 'embedded');
+        const run = await executions.lens(data.module, document.uri, 'Embedded run without a Gradle build finishes');
+        assert.strictEqual(run.exitCode, 0, run.text);
+        assert.ok(run.text.includes(data.output), run.text);
+        assert.strictEqual((await invocations()).length, 2, 'No Gradle call without a Gradle build');
+    })));
 }
 
 /** A real Gradle build starts its own daemon, so its tasks get longer than the usual wait. */

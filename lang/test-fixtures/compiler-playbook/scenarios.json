@@ -10996,6 +10996,34 @@
         "limitations": []
       }
     },
+    "X354": {
+      "title": "Build and Run in the automatic build mode: Gradle beside a Gradle build, the embedded compiler once the folder has none",
+      "manual": [
+        "Choosing Automatic in the VS Code quick pick or in IntelliJ's Build and run using choices is checked manually (18a.14), as for X288."
+      ],
+      "values": {
+        "file": "AutoModes.x",
+        "module": "AutoModes",
+        "source": "module AutoModes {\n    void run() {\n        @Inject Console console;\n        console.print(\"run embedded\");\n    }\n}\n",
+        "gradleFile": "settings.gradle.kts",
+        "gradleSource": "rootProject.name = \"playbook\"\n",
+        "wrapper": "gradlew",
+        "wrapperSource": "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/gradle-invocations.txt\"\necho \"stub Gradle: $*\"\n",
+        "windowsWrapper": "gradlew.bat",
+        "windowsWrapperSource": "@echo off\r\necho %*>> \"%~dp0gradle-invocations.txt\"\r\necho stub Gradle: %*\r\n",
+        "invocations": "gradle-invocations.txt",
+        "output": "run embedded",
+        "gradleBuild": "build",
+        "gradleRun": "runXtc --module=AutoModes",
+        "statusGradle": "$(tools) Gradle build"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "The mode is set through the project's build settings, as X288 sets it. Beside a Gradle build Build Project goes to the IDE's own builder, so the case checks only that the embedded compiler does not take it; Run goes through the Gradle wrapper."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
