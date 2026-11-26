@@ -9,6 +9,10 @@ import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.definition.extension.ServerExtensionPointBean
+import org.eclipse.lsp4j.CallHierarchyIncomingCall
+import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
+import org.eclipse.lsp4j.CallHierarchyItem
+import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionOptions
 import org.eclipse.lsp4j.CodeActionParams
@@ -41,6 +45,7 @@ import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.SignatureHelpParams
+import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
@@ -75,10 +80,11 @@ import java.util.concurrent.Future
  * workspace report, as the real server does: a document's pull reports its [pulled] diagnostics, and the workspace
  * report has the [reported] ones. With [codeActions] it has a code action provider that resolves actions, as the real
  * server does, and offers none of its own: a test gives LSP4IJ the action that it resolves. With [hover] it has a hover
- * provider, which answers as [hovers] says. The client it connects to is the [client] that LSP4IJ makes, by default LSP4IJ's
- * own. Each connection runs [connecting] as it starts, on LSP4IJ's thread, where a test can hold it. [LightEditor]
- * connects it as the Ecstasy server, with the plugin's own client features, so LSP4IJ's code runs as it does against
- * the real server.
+ * provider, which answers as [hovers] says. With [callHierarchy] it has a call hierarchy provider, which prepares the
+ * word at the position as a method, and answers its callers as [incomingCalls] says. The client it connects to is the
+ * [client] that LSP4IJ makes, by default LSP4IJ's own. Each connection runs [connecting] as it starts, on LSP4IJ's
+ * thread, where a test can hold it. [LightEditor] connects it as the Ecstasy server, with the plugin's own client
+ * features, so LSP4IJ's code runs as it does against the real server.
  */
 class StubLanguageServer(
     val completions: List<String> = emptyList(),
@@ -88,6 +94,7 @@ class StubLanguageServer(
     val diagnostics: Boolean = false,
     val codeActions: Boolean = false,
     val hover: Boolean = false,
+    val callHierarchy: Boolean = false,
     val client: (Project) -> LanguageClientImpl = ::LanguageClientImpl,
     val connecting: () -> Unit = {},
 ) : LanguageServer,
@@ -142,6 +149,12 @@ class StubLanguageServer(
     @Volatile
     var hovers: (HoverParams) -> CompletableFuture<Hover?> = { CompletableFuture.completedFuture(null) }
 
+    /** How the server answers callHierarchy/incomingCalls, which a test can answer when it chooses: by default, with none. */
+    @Volatile
+    var incomingCalls: (CallHierarchyIncomingCallsParams) -> CompletableFuture<List<CallHierarchyIncomingCall>> = {
+        CompletableFuture.completedFuture(emptyList())
+    }
+
     /** How the server answers textDocument/rename: by default, with no edit. */
     @Volatile
     var renameEdit: (RenameParams) -> WorkspaceEdit? = { null }
@@ -168,6 +181,9 @@ class StubLanguageServer(
                     }
                     if (hover) {
                         setHoverProvider(true)
+                    }
+                    if (callHierarchy) {
+                        setCallHierarchyProvider(true)
                     }
                 },
             ),
@@ -221,6 +237,29 @@ class StubLanguageServer(
     override fun hover(params: HoverParams): CompletableFuture<Hover?> {
         requests += "textDocument/hover"
         return hovers(params)
+    }
+
+    override fun prepareCallHierarchy(params: CallHierarchyPrepareParams): CompletableFuture<List<CallHierarchyItem>> {
+        requests += "textDocument/prepareCallHierarchy"
+        val uri = params.textDocument.uri
+        val start = params.position
+        // the word that starts at the position, which LSP4IJ gives as the start of the word at the caret
+        val name =
+            texts[uri]
+                ?.lines()
+                ?.getOrNull(start.line)
+                .orEmpty()
+                .drop(start.character)
+                .takeWhile { it.isLetterOrDigit() || it == '_' }
+        val range = Range(start, Position(start.line, start.character + name.length))
+        return CompletableFuture.completedFuture(
+            if (name.isEmpty()) emptyList() else listOf(CallHierarchyItem(name, SymbolKind.Method, uri, range, range)),
+        )
+    }
+
+    override fun callHierarchyIncomingCalls(params: CallHierarchyIncomingCallsParams): CompletableFuture<List<CallHierarchyIncomingCall>> {
+        requests += "callHierarchy/incomingCalls"
+        return incomingCalls(params)
     }
 
     override fun diagnostic(params: DocumentDiagnosticParams): CompletableFuture<DocumentDiagnosticReport> {
