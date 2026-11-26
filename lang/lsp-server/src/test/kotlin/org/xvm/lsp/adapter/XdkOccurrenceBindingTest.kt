@@ -884,6 +884,64 @@ class XdkOccurrenceBindingTest {
         }
     }
 
+    @Test
+    fun `a formal type that a lambda names, as To in a cast to it, is an occurrence of the method's or the class's formal type`() {
+        val source =
+            """
+            module Lambdas {
+                class Box</*element*/Element> {
+                    Element[] items = [];
+                    </*declared*/To extends Number> To[] convert(function To(Element) each) {
+                        function To(Int) cast = n -> n.toInt64().as(/*lambda*/To);
+                        @Volatile To[] result = new /*body*/To[];
+                        items.forEach(e -> {
+                            result += each(e).as(/*captured*/To);
+                            function Element() same = () -> e.as(/*nested*/Element);
+                        });
+                        return result;
+                    }
+                    class Inner {
+                        void check(Element[] values) {
+                            Element first = values[0].as(/*plain*/Element);
+                            values.forEach(v -> {
+                                Element same = v.as(/*outer*/Element);
+                            });
+                        }
+                    }
+                }
+            }
+            """.trimIndent()
+        // a lambda that names a formal type, and captures no this, has a type parameter of its own for it, which no source
+        // declares: in a lambda in the method, in a lambda in that one, and in a lambda in a method of a virtual child
+        withSource("Lambdas", source) { adapter, uri ->
+            fun uses(name: String) =
+                Regex("\\b$name\\b")
+                    .findAll(source)
+                    .map { match ->
+                        val line = source.take(match.range.first).count { it == '\n' }
+                        val column = match.range.first - (source.lastIndexOf('\n', match.range.first - 1) + 1)
+                        Range(Position(line, column), Position(line, column + name.length))
+                    }.toList()
+            listOf("lambda" to "To", "captured" to "To", "nested" to "Element", "outer" to "Element").forEach { (marker, name) ->
+                val at = source.markedPosition(marker)
+                val declared = range(source, if (name == "To") "declared" else "element", name)
+                assertThat(adapter.findDefinition(uri, at.line, at.column)?.let(::range)).describedAs(marker).isEqualTo(declared)
+                assertThat(
+                    adapter.findReferences(uri, at.line, at.column, true).map(::range),
+                ).describedAs(marker).containsExactlyElementsOf(uses(name))
+                assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range })
+                    .describedAs(marker)
+                    .containsExactlyInAnyOrderElementsOf(uses(name))
+                // hover shows the formal type as it does outside the lambda
+                val outside = source.markedPosition(if (name == "To") "body" else "plain")
+                assertThat(adapter.getHoverInfo(uri, at.line, at.column))
+                    .describedAs(marker)
+                    .contains(name)
+                    .isEqualTo(adapter.getHoverInfo(uri, outside.line, outside.column))
+            }
+        }
+    }
+
     /** The identities of the declarations of [name] in [facts]' sources, in the order they declare them. */
     private fun declared(
         facts: CompilerRenameFacts,
