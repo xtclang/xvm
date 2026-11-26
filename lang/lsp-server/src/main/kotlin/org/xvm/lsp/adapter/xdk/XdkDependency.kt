@@ -8,6 +8,7 @@ import org.xvm.asm.ModuleRepository
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.compiler.BuildRepository
 import org.xvm.lsp.adapter.ReadOnlyDocument
+import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.util.ExecutionTrace
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -55,6 +56,17 @@ class XdkDependency
          * artifact keeps no locations. The revision covers them.
          */
         internal val parameters: Map<Int, Map<String, SemanticModel.Range>> = immutableMap(parameters.mapValues { immutableMap(it.value) })
+
+        /**
+         * The types, methods and properties of the attached sources, as Go to Symbol finds them, where Go to Definition
+         * opens them: in the read-only snapshots of [documents]; none for an artifact without attached sources. Parsed at
+         * the first search.
+         */
+        internal val symbols: List<SymbolInfo> by lazy {
+            documents.flatMap { (uri, document) ->
+                symbolic(libraryDeclarations(document.text, "")).map { SymbolInfo.of(it.name, it.kind, it.range.location(uri)) }
+            }
+        }
 
         internal fun withSources(roots: List<File>): XdkDependency {
             val index = XdkAttachedSources.read(this, roots)

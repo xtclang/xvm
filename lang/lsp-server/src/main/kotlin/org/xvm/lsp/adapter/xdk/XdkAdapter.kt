@@ -2520,6 +2520,27 @@ class XdkAdapter
         }
 
         /**
+         * The libraries' declarations named like [query]: the dependencies' attached sources' first, then the bundled
+         * libraries', but those that the workspace's own modules replace, whose declarations the workspace's are, each the
+         * closest matches first, at most [XdkLibrarySources.SYMBOL_LIMIT] of them all. None for a query shorter than
+         * [XdkLibrarySources.SYMBOL_QUERY], which would take most of the libraries' declarations: Go to Symbol asks with
+         * each letter typed, and needs no library's for the first.
+         */
+        override fun findLibrarySymbols(query: String): List<SymbolInfo> {
+            if (query.length < XdkLibrarySources.SYMBOL_QUERY) return emptyList()
+            val (replaced, artifacts) = synchronized(lifecycle) { project.replaced to dependencies.modules.values.toList() }
+            val attached =
+                artifacts
+                    .asSequence()
+                    .flatMap { it.symbols }
+                    .filter { it.name.contains(query, ignoreCase = true) }
+                    .sortedWith(compareBy({ matchRank(it.name, query) }, { it.name }, { it.location.uri }))
+                    .take(XdkLibrarySources.SYMBOL_LIMIT)
+                    .toList()
+            return attached + XdkLibrarySources.symbols(query, XdkLibrarySources.SYMBOL_LIMIT - attached.size, replaced)
+        }
+
+        /**
          * Detached current diagnostics for every configured/discovered root, including closed files.
          */
         fun workspaceDiagnosticsAsync(): CompletableFuture<List<CompilationResult>> {

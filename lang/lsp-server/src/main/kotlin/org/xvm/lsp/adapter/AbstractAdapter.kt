@@ -260,6 +260,9 @@ abstract class AbstractAdapter : Adapter {
         return emptyList()
     }
 
+    /** No libraries, so none of their declarations. */
+    override fun findLibrarySymbols(query: String): List<SymbolInfo> = emptyList()
+
     // ========================================================================
     // Default implementations -- planned features
     // ========================================================================

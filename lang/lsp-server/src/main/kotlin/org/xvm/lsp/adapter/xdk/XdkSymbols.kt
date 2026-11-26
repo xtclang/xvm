@@ -125,7 +125,7 @@ internal object XdkSymbols {
      * The category token is what the author wrote - `class`, `mixin`, `service` - so it is what the
      * outline should say.
      */
-    private fun kindOf(node: TypeCompositionStatement): SymbolKind =
+    internal fun kindOf(node: TypeCompositionStatement): SymbolKind =
         when (node.category.id) {
             Token.Id.MODULE -> SymbolKind.MODULE
 
