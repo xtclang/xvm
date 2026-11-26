@@ -4069,6 +4069,17 @@ build, and with the embedded compiler in one that has none, as the build's files
 |---|---|---|
 | X354 | As in X288, write a Gradle build at the root, whose wrapper records what it is asked to do, and `AutoModes.x`. Choose **Automatic** (VS Code **Ecstasy: Select Build Mode**; IntelliJ Settings › Languages & Frameworks › Ecstasy › Build and Run), Build, then Run AutoModes. Delete the root's `settings.gradle.kts`, and Run AutoModes again. | Beside the Gradle build, VS Code's status bar shows **Gradle build**; Build calls `./gradlew build` (IntelliJ: Build Project goes to the IDE's builder, not the embedded compiler) and Run calls `./gradlew -q runXtc --module=AutoModes`. Without it, Run uses the embedded compiler, prints `run embedded`, and the wrapper records nothing more. |
 
+### Tests that don't show (X355)
+
+As the user guide's *When tests don't show or don't run* says: a test module that doesn't compile shows no tests, its
+errors are in Problems; and a test module whose dependency has errors shows none either, and says `Dependencies
+unavailable`. Each shows its tests once the error is fixed. A module that doesn't parse has no tests; one with only a
+type error still lists them, as its structure declares them.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X355 | Write and configure `Fine.x`, a module with a test `works`; `Untestable.x`, a module with a test `adds` and the syntax error `Int broken( = 1;`; `Shelf.x`, a module whose `count()` returns `"none"` as an `Int`; and `ShelfTest.x`, a module that imports `Shelf` and tests it with `counts`. Open `Untestable.x` and `ShelfTest.x`, and list the tests (VS Code: the Test Explorer's Refresh; IntelliJ: the gutter). Fix `Untestable.x`'s error, and `Shelf.x`'s. | `Untestable.x` has its error, and `ShelfTest.x` the diagnostic `Dependencies unavailable: Shelf`. `Fine/works` is listed, but not `Untestable/adds` or `ShelfTest/counts` (IntelliJ: they are not in the server's `xtc/tests`, which the gutter icons are drawn from). Once both are fixed, both are listed, and IntelliJ's gutter shows `adds`'s and `counts`'s icons. |
+
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and

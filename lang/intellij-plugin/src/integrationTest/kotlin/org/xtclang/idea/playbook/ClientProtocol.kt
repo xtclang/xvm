@@ -144,6 +144,7 @@ class ClientProtocol(
                 "textDocument/prepareCallHierarchy",
                 "callHierarchy/incomingCalls",
                 "callHierarchy/outgoingCalls",
+                "xtc/tests",
             )
     }
 }

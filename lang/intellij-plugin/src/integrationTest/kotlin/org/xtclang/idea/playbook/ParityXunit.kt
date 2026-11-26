@@ -328,3 +328,67 @@ internal fun ParityScenarios.xunitCases() {
         }
     }
 }
+
+/**
+ * X355, registered after X354 in catalog order: tests that don't show, of a module that has an error and of one whose
+ * dependency has one, which says its dependencies are unavailable, until the errors are fixed.
+ */
+internal fun ParityScenarios.hiddenTestCases() {
+    case("X355") { data ->
+        val modules = data["modules"].rows()
+        modules.forEach { write(it.string("file"), it.string("source")) }
+        configure(
+            modules.map {
+                SharedScenarios.SourceModule(
+                    it.string("module"),
+                    uri(it.string("file")),
+                    it["dependencies"]
+                        ?.asJsonArray
+                        ?.map { name ->
+                            name.asString
+                        }.orEmpty(),
+                )
+            },
+        )
+
+        fun source(file: String) = modules.single { it.string("file") == file }.string("source")
+        val (broken, blocked, dependency) = listOf("broken", "blocked", "dependency").map { data.getAsJsonObject(it) }
+        val brokenDocument = open(broken.string("file"))
+        val blockedDocument = open(blocked.string("file"))
+        errors(brokenDocument)
+        diagnostics(blockedDocument) { shown -> shown.any { it.code == blocked.string("code") } }
+        // the server's list of tests, which the gutter's test icons are drawn from: the module that compiles has its
+        // tests, the other two none
+        testItems().let { listed ->
+            check(
+                data.string("listed") in listed && broken.string("item") !in listed && blocked.string("item") !in listed,
+            ) { "Tests: $listed" }
+        }
+
+        replace(brokenDocument, source(broken.string("file")).replace(broken.string("replaceFrom"), broken.string("replaceWith")))
+        val dependencyDocument = open(dependency.string("file"))
+        replace(
+            dependencyDocument,
+            source(dependency.string("file")).replace(dependency.string("replaceFrom"), dependency.string("replaceWith")),
+        )
+        clean(brokenDocument)
+        clean(blockedDocument)
+        // once fixed, each module's tests show in its gutter
+        val console = TestConsole(this)
+        listOf(brokenDocument to broken, blockedDocument to blocked).forEach { (document, item) ->
+            awaitUi("the test icon ${item.string("icon")}", HANG_LIMIT) {
+                with(driver) { withContext(OnDispatcher.EDT) { console.tests.icons(document.editor.editor) } }.contains(item.string("icon"))
+            }
+        }
+        testItems().let { listed -> check(broken.string("item") in listed && blocked.string("item") in listed) { "Tests: $listed" } }
+    }
+}
+
+/** The tests that the server lists (`xtc/tests`), by their IDs as VS Code's Test Explorer has them: the module and the selector. */
+private fun ParityWorkspace.testItems(): List<String> =
+    protocol.query("xtc/tests", emptyMap<String, Any>()).rows().flatMap { module ->
+        fun tests(test: JsonObject): List<String> =
+            listOfNotNull("${module.string("module")}/${test.string("selector")}".takeIf { test.string("kind") == "test" }) +
+                test["children"].rows().flatMap(::tests)
+        tests(module.getAsJsonObject("tests"))
+    }
