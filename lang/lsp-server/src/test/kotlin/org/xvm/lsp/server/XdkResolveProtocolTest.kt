@@ -69,8 +69,17 @@ class XdkResolveProtocolTest {
             val resolved = service.resolveCompletionItem(item).awaited()
             assertThat(resolved.documentation.left).contains("Reads a value")
             assertThat(resolved.textEdit).isEqualTo(insertion)
+            // a close and an open with the file's text leave the text that the item was made from as it was
             service.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri)))
             service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)))
+            assertThat(
+                service
+                    .resolveCompletionItem(item)
+                    .awaited()
+                    .documentation.left,
+            ).contains("Reads a value")
+            service.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri)))
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 2, source.replace("a value", "the value"))))
             assertThatThrownBy { service.resolveCompletionItem(item).awaited() }
                 .hasMessageContaining("expired or changed")
         }
@@ -132,6 +141,50 @@ class XdkResolveProtocolTest {
                 ),
             )
             assertThatThrownBy { service.resolveCodeAction(action).awaited() }
+                .hasMessageContaining("expired or changed")
+        }
+    }
+
+    @Test
+    fun `a code action listed before another document's close, which leaves its text as on disk, still resolves`() {
+        val source = "module Resolve { import ecstasy.text.StringBuffer; }"
+        val member = "class Member {}\n"
+        directory.resolve("Resolve").toFile().mkdirs()
+        directory.resolve("Resolve/Member.x").toFile().writeText(member)
+        session(true, source) { server ->
+            val service = server.textDocumentService
+            val memberUri = directory.resolve("Resolve/Member.x").toUri().toString()
+
+            fun listed() =
+                service
+                    .codeAction(
+                        CodeActionParams(
+                            TextDocumentIdentifier(uri),
+                            Range(Position(0, 0), Position(0, source.length)),
+                            CodeActionContext(emptyList()),
+                        ),
+                    ).awaited()
+                    .single { it.right.title == "Remove unused import 'StringBuffer'" }
+                    .right
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, source)))
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(memberUri, "xtc", 1, member)))
+            val action = listed()
+            // as VS Code releases a member's document that no editor shows, three minutes after it opened, while the
+            // action's list is open (the VS Code tour's "Extracted to a local", run-UcTGyc): the click still applies it
+            service.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(memberUri)))
+            assertThat(
+                service
+                    .resolveCodeAction(action)
+                    .awaited()
+                    .edit.documentChanges
+                    .single()
+                    .left.textDocument.version,
+            ).isEqualTo(7)
+            // a close of a document whose text is not the file's changes the text the module compiles, as an edit does
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(memberUri, "xtc", 2, "class Member {\n    Int size = 0;\n}\n")))
+            val again = listed()
+            service.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(memberUri)))
+            assertThatThrownBy { service.resolveCodeAction(again).awaited() }
                 .hasMessageContaining("expired or changed")
         }
     }
