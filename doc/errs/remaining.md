@@ -431,21 +431,21 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   `editor`). Its elsewhere count found the census compiling 5 libraries against the bundled ecstasy,
   and 3 against those: it scanned each library as a workspace folder of its own, under which no module
   depends on the workspace's ecstasy; it scans them as one folder now, as an editor that opens the
-  repository does (835e5d44a0). At f835e4003f: unrecorded 2798, undeclared 588, untyped 1, unjoined 0, elsewhere 0.
+  repository does (e044853262). At f835e4003f: unrecorded 2798, undeclared 588, untyped 1, unjoined 0, elsewhere 0.
   Fixed, one commit each, each with an `XdkOccurrenceBindingTest` case that fails without it and a
   rename that compiles and stays refused, all in `lang/`, no compiler change:
   - [x] the parameters of a constructor with a `finally` block bind to their declarations in its body
     and in a call's named argument: the block is a method of its own over the same written parameters,
     whose nodes keep the block's registers, so Find References and highlights of such a parameter missed
     its uses in the body, and its rename was refused, as `ListMap`'s `inPlace` (185 locals, 6 named
-    arguments; 0828362316);
+    arguments; 2f1c4dcdb7);
   - [x] a label declares a symbol, which `break`, `continue` and its variable, `Loop` in `Loop.first`,
     refer to: hover, highlights, references, definition and rename of a label (287 unrecorded, 145
-    undeclared; 06abeb0327);
+    undeclared; 3b2c0482dd);
   - [x] the `Referent` that the compiler adds to a property with code or a Ref annotation, which it
     treats as a class of its own, is proven by its property, `Generated(property)`: its 173 chains in
     ecstasy refused every proof but a rename's there, and in a module of an annotation into `Var`
-    (bfba79979d).
+    (f7bafb8809).
 
   After: rename facts 0 unbound, 0 unplaceable, 40 unproven (4 occurrences, 36 chains); editor
   unrecorded 2511, undeclared 251, untyped 5, unjoined 0, elsewhere 0. Left, not worth it now:
