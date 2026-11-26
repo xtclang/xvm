@@ -1663,7 +1663,8 @@ private class SemanticModelBuilder(
      * register (StatementBlock.RootContext): the body's names, which the constructor's registers resolve, and a named
      * argument of the constructor had symbols of their own with no declaration. Find References and highlights of a
      * parameter missed them, Go to Definition went nowhere from them, and a rename of the parameter was refused. The
-     * constructor's slot of each parameter is registered after the block's, so the parameter is the constructor's.
+     * constructor's slot of each parameter is registered after the block's, so the parameter is the constructor's. A name
+     * in a lambda in the body is the lambda's capture of the constructor's register, through each lambda around it.
      */
     private fun bindFinallyParameters(nodes: List<AstNode>) {
         val constructors =
@@ -1679,13 +1680,19 @@ private class SemanticModelBuilder(
                 }.toCollection(Collections.newSetFromMap(IdentityHashMap()))
         if (constructors.isEmpty()) return
         nodes.filterIsInstance<NameExpression>().forEach { name ->
-            val register = normalized(name.resolvedTarget) as? Register ?: return@forEach
+            // the methods, lambdas and classes whose bodies the name is in, innermost first; a class's registers are its
+            // own, and so are a lambda's, but for its captures, whose origins are registers of the body around it
+            val scopes =
+                generateSequence(name.parent) { it.parent }
+                    .filter { it is MethodDeclarationStatement || it is LambdaExpression || it is TypeCompositionStatement }
+                    .toList()
+            val lambdas = scopes.takeWhile { it is LambdaExpression }
+            val register =
+                lambdas.fold((name.resolvedTarget as? Register)?.originalRegister) { capture, _ ->
+                    capture?.let { captureOrigins[it]?.originalRegister }
+                } ?: return@forEach
             if (register in registers) return@forEach
-            // the method, lambda or class whose body the name is in; a lambda's captures and a class's are their own
-            val scope =
-                generateSequence(name.parent) { it.parent }.firstOrNull {
-                    it is MethodDeclarationStatement || it is LambdaExpression || it is TypeCompositionStatement
-                }
+            val scope = scopes.getOrNull(lambdas.size)
             if (scope !in constructors) return@forEach
             val method = (scope as MethodDeclarationStatement).component as MethodStructure
             // the constructor's register of each of its parameters has the parameter's name and index

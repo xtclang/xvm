@@ -796,6 +796,46 @@ class XdkOccurrenceBindingTest {
     }
 
     @Test
+    fun `a parameter of a constructor with a finally block, named only in lambdas in its body, is an occurrence of it`() {
+        val source =
+            """
+            module Finals {
+                class Holder {
+                    Int seed;
+                    Int step = 1;
+                    construct(Int /*declared*/base) {
+                        function Int() next = () -> /*lambda*/base + step;
+                        function Int() later = () -> {
+                            function Int() inner = () -> /*nested*/base;
+                            return inner();
+                        };
+                        seed = next() + later();
+                    } finally {
+                        seed += /*finally*/base;
+                    }
+                }
+                Holder make() = new Holder(/*named*/base=1);
+            }
+            """.trimIndent()
+        // renamed to step, the first lambda's read of the property step would read the parameter: that compiles, so the
+        // rename's refusal is the proof's
+        assertCompiles("Finals", source.replace("base", "step"))
+        withSource("Finals", source) { adapter, uri ->
+            // the body names the parameter only in lambdas, whose captures' origin is the constructor's register
+            val uses = listOf("declared", "lambda", "nested", "finally", "named").map { range(source, it, "base") }
+            val at = source.markedPosition("declared")
+            assertThat(adapter.findReferences(uri, at.line, at.column, true).map(::range)).containsExactlyElementsOf(uses)
+            assertThat(adapter.getDocumentHighlights(uri, at.line, at.column).map { it.range }).containsExactlyInAnyOrderElementsOf(uses)
+            listOf("lambda", "nested").map { source.markedPosition(it) }.forEach { use ->
+                assertThat(adapter.findDefinition(uri, use.line, use.column)?.let(::range)).isEqualTo(range(source, "declared", "base"))
+            }
+            val renamed = requireNotNull(adapter.rename(uri, at.line, at.column, "start")) { "No rename of base" }
+            assertThat(apply(source, renamed.changes.getValue(uri))).isEqualTo(source.replace("base", "start"))
+            assertThat(adapter.rename(uri, at.line, at.column, "step")).isNull()
+        }
+    }
+
+    @Test
     fun `a label declares a symbol, which a break, a continue and its variable, as Loop in Loop first, refer to`() {
         val source =
             """
