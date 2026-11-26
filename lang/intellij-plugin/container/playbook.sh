@@ -79,7 +79,7 @@ cleanup() {
 trap cleanup EXIT
 # where a native run's reports are, so that the same tools read them, and the same retention prunes them
 reports="$root/lang/intellij-plugin/build/reports/compiler-playbook"
-mkdir -p "$source" "$container/out" "$reports"
+mkdir -p "$source" "$reports"
 # the checkout's files, tracked or not, without what git ignores, such as build outputs, and without
 # tracked files deleted from the working tree
 (
@@ -145,6 +145,11 @@ else
     prefix="xvm-playbook-s$slot-"
     running="^$prefix"
 fi
+# each slot's own /out: a run removes the screen recording there as it starts, so that it never takes an earlier
+# run's for its own, and with $XTC_CONTAINER_SLOT one checkout's runs go in two slots at once, which a shared /out
+# would let one run's start delete the other's recording from
+out="$container/out$volume"
+mkdir -p "$out"
 # runs take a slot's lock in the order they asked for it: each waiter holds a ticket, named by the time it asked,
 # and takes the lock only when its ticket is the first of a waiting run's; a ticket whose run has gone is dropped
 mkdir -p "$queue"
@@ -193,14 +198,14 @@ status=0
     -v "xvm-playbook-work$volume:/work" \
     -v "xvm-playbook-m2$volume:/home/playbook/.m2" \
     -v "$source:/src:ro" \
-    -v "$container/out:/out" \
+    -v "$out:/out" \
     -v "$reports:/out/runs" \
     -v "$here/in-container.sh:/in-container.sh:ro" \
     "$image" \
-    bash /in-container.sh "${args[@]}" 2>&1 | tee "$container/out/$mode-$stamp.log" || status=$?
+    bash /in-container.sh "${args[@]}" 2>&1 | tee "$out/$mode-$stamp.log" || status=$?
 
-if [ -d "$container/out/vscode-reports" ]; then
+if [ -d "$out/vscode-reports" ]; then
     mkdir -p "$root/lang/vscode-extension/build/reports"
-    rsync -a "$container/out/vscode-reports/" "$root/lang/vscode-extension/build/reports/"
+    rsync -a "$out/vscode-reports/" "$root/lang/vscode-extension/build/reports/"
 fi
 exit "$status"
