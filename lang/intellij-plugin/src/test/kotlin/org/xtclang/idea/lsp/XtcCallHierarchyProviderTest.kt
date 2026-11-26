@@ -24,6 +24,7 @@ import org.xtclang.idea.LightEditor
 import org.xtclang.idea.StubLanguageServer
 import org.xtclang.idea.XtcIntelliJLanguage
 import org.xtclang.idea.awaitUntil
+import org.xtclang.idea.synchronizer
 import org.xtclang.idea.what
 import java.nio.file.Files
 import java.nio.file.Path
@@ -64,6 +65,8 @@ class XtcCallHierarchyProviderTest {
             runInEdtAndGet {
                 with(editor.fixture) {
                     openFileInEditor(file)
+                    // LSP4IJ offers a call hierarchy only once the file's server has connected it and said it has one
+                    synchronizer(this.file)
                     editor.caretModel.moveToOffset(SOURCE.indexOf("cardMatches"))
                     val context =
                         SimpleDataContext
