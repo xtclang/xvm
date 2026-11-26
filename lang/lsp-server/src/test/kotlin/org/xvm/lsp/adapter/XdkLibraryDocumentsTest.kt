@@ -2,7 +2,6 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.awaited
@@ -168,22 +167,16 @@ class XdkLibraryDocumentsTest {
      */
     private fun preemptible(body: (adapter: XdkAdapter, compiles: AtomicInteger, held: CountDownLatch) -> Unit) {
         CompilerTestSupport.configure()
-        val support = EmbeddingSupport.instance()
         val compiles = AtomicInteger()
         val held = CountDownLatch(1)
         val preempted = CountDownLatch(1)
         TraceRecording { if (it["event"]?.asString == "preempted") preempted.countDown() }.use {
-            XdkAdapter(
-                { source, repository, errors -> support.compileModule(source, repository, errors) },
-                { sources, repository, errors ->
-                    if (sources.sourceFile.name == "ecstasy.x" && compiles.incrementAndGet() == 1) {
-                        held.countDown()
-                        preempted.awaited()
-                    }
-                    support.compileModule(sources, repository, errors)
-                },
-                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
-            ).use { body(it, compiles, held) }
+            hookedAdapter { sources ->
+                if (sources.sourceFile.name == "ecstasy.x" && compiles.incrementAndGet() == 1) {
+                    held.countDown()
+                    preempted.awaited()
+                }
+            }.use { body(it, compiles, held) }
         }
     }
 

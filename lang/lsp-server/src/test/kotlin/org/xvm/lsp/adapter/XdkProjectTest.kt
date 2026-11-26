@@ -29,19 +29,11 @@ class XdkProjectTest {
     fun `source artifacts are reused only when captured sources and dependency revisions match`() {
         val (library, consumer) = fixture()
         val calls = ConcurrentHashMap<String, AtomicInteger>()
-        val support = EmbeddingSupport.instance()
-        XdkAdapter(
-            { source, repository, errors -> support.compileModule(source, repository, errors) },
-            { sources, repository, errors ->
-                calls
-                    .computeIfAbsent(sources.sourceFile.name) { AtomicInteger() }
-                    .incrementAndGet()
-                support.compileModule(sources, repository, errors)
-            },
-            { source, _, cursor, repository, errors ->
-                support.analyzeIncomplete(source, cursor, repository, errors)
-            },
-        ).use { adapter ->
+        hookedAdapter { sources ->
+            calls
+                .computeIfAbsent(sources.sourceFile.name) { AtomicInteger() }
+                .incrementAndGet()
+        }.use { adapter ->
             configure(adapter, library, consumer)
             assertThat(adapter.compile(consumer.toURI().toString(), CONSUMER).success).isTrue()
             assertThat(adapter.compile(consumer.toURI().toString(), "\n$CONSUMER").success)
@@ -103,20 +95,12 @@ class XdkProjectTest {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         val held = AtomicBoolean()
-        val support = EmbeddingSupport.instance()
-        XdkAdapter(
-            { source, repository, errors -> support.compileModule(source, repository, errors) },
-            { sources, repository, errors ->
-                if (!held.getAndSet(true)) {
-                    entered.countDown()
-                    check(release.awaited())
-                }
-                support.compileModule(sources, repository, errors)
-            },
-            { source, _, cursor, repository, errors ->
-                support.analyzeIncomplete(source, cursor, repository, errors)
-            },
-        ).use { adapter ->
+        hookedAdapter {
+            if (!held.getAndSet(true)) {
+                entered.countDown()
+                check(release.awaited())
+            }
+        }.use { adapter ->
             configure(adapter, library, consumer)
             val first = adapter.compileAsync(consumer.toURI().toString(), CONSUMER)
             try {

@@ -3,8 +3,6 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.xvm.api.EmbeddingSupport
-import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.awaited
 import java.nio.file.Path
@@ -29,18 +27,12 @@ class EmbeddedBuildInputsTest {
         val sources = workspace.resolve("src/main/x")
         val app = sources.resolve("App.x").apply { parent.createDirectories() }.apply { writeText(APP) }
         val part = sources.resolve("App/Part.x").apply { parent.createDirectories() }.apply { writeText(PART) }
-        val support = EmbeddingSupport.instance()
         val compiles = AtomicInteger()
         val adapter =
-            XdkAdapter(
-                { source, repository, errors -> support.compileModule(source, repository, errors) },
-                { tree, repository, errors ->
-                    // the editor saves Part.x once the build's first compile has read the module's files
-                    if (compiles.incrementAndGet() == 1) part.writeText(SAVED)
-                    support.compileModule(tree, repository, errors)
-                },
-                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
-            )
+            hookedAdapter {
+                // the editor saves Part.x once the build's first compile has read the module's files
+                if (compiles.incrementAndGet() == 1) part.writeText(SAVED)
+            }
         adapter.use {
             it.initializeWorkspace(listOf(workspace.toString()))
             it.replaceSourceModules(listOf(XdkSourceModule("App", app.toUri().toString())))
