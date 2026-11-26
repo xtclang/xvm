@@ -240,7 +240,7 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   and compiles the same modules or fewer: `XdkRenameReach` is removed, and `XdkRenameReachTest`'s cases
   keep their outcomes and modules; its rename to a name that is not a plain identifier compiles 2
   modules where it compiled 4, as the tracker reads a name of any letters.
-- [ ] Found 2026-11-24: what a rename's proof cannot see. It proves that every name binds to the same
+- [x] Found 2026-11-24: what a rename's proof cannot see. It proves that every name binds to the same
   declaration in compiled code, as compiling every dependent would; behavior that no binding carries is outside
   it, for any rename: a method or property found by a string at runtime (reflection by name), a runtime check
   against an interface whose matching depends on member names (`x.is(Duck)`, which the compiler checks only where
@@ -250,7 +250,12 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   that they are not changed, as IntelliJ's search in comments and strings does (half a day to a day); (2) the user
   guide's known limitations say what a rename does not change: names in strings or computed at runtime, runtime
   type checks by member name, and serialized property names. (2) is done 2026-11-24, in the guide's known
-  limitations.
+  limitations. (1) is done 2026-11-26 (`lagergren/reflow-and-rename-note`, `XdkRenameSpellings`): a rename's
+  answer shows, after K6b's note, how many comments and string literals of the modules whose sources it
+  changes spell the old name as a word, outside a template's expressions and its own edits, and the first
+  three by file and line, "and N more", saying they are not changed; `XdkRenameSpellingsTest`, a case of
+  `XdkRenameServerTest`, and playbook X109 in both editors. Not for a move, a file rename, a safe delete
+  or a local's rename.
 - [x] Track the members each module uses from its dependencies, and compile a dependent again only when
   something it uses changes, not on any change of its dependency's API (queued 2026-11-24). This is the
   generic case, which subsumes the rename reach rule (`XdkRenameReach`, 28d1c73e51) and the whole-API rule.
@@ -2588,7 +2593,7 @@ change shows in them. In the order worth doing:
 | K6b | Rename and safe delete miss consumers the server does not know of | Done | Yes, as a note: done 2026-11-24; automatic discovery is not |
 | K3 | Embedded mode ignores the project's Gradle settings | 2–3 days | Done 2026-11-25: `xtcRun`'s method, arguments and JVM options, `xtcTest`'s JVM options; never the XDK version |
 | K1 | VS Code has no `xtc` command-line build mode | 1.5–2 days | When a VS Code user asks |
-| K7 | The formatter does not reflow comments or split strings | 1.5–2 days for comments | Comments later; strings never |
+| K7 | The formatter does not reflow comments or split strings | 1.5–2 days for comments | Comments done 2026-11-26, with `wrapComments` on; strings never |
 | K2b | IntelliJ's Run 'All Ecstasy Tests' has no Debug | 2–3 days, after a check of xunit | Later: one module's tests already debug |
 | K5b | IntelliJ cannot cancel an evaluation | upstream | Ours is done; waits on IJPL-260358, LSP4J #1009 and LSP4IJ (UP41) |
 | K4 | A debugged program keeps the code it was built from | weeks, in the runtime | No, not here: a runtime feature |
@@ -2789,10 +2794,22 @@ change shows in them. In the order worth doing:
   (`debug-adapter.ts`). The same shell tasks as its Gradle mode, with `xtc` on the PATH or a setting
   naming it: 1.5–2 days. Worth it only for checking a program against an installed XDK of another
   version than the server's, which no one has asked for.
-- [ ] K7: comment reflow. The compiler adapter's formatter wraps code at `maxLineWidth` and moves a comment
+- [x] K7: comment reflow. The compiler adapter's formatter wraps code at `maxLineWidth` and moves a comment
   only as a whole, and never changes a literal (`XdkLexical.kt`). Reflowing doc and block comments to the
   margin, keeping paragraphs, `@param` lines, lists and indented code: 1.5–2 days with fixtures. Splitting
-  string literals changes tokens, and in a template `$"…"` what it means: not worth it.
+  string literals changes tokens, and in a template `$"…"` what it means: not worth it. Done 2026-11-26
+  (`lagergren/reflow-and-rename-note`, `XdkCommentReflow`), for comments, with the new formatting setting
+  `wrapComments`, off by default as IntelliJ's **Comments: Wrap at right margin** is, which the plugin
+  shows and sends; VS Code's `xtc.formatting.wrapComments`. A comment of the XDK's shape, its opening and
+  closing alone on their lines and a star starting each line between, has each paragraph that runs past
+  the margin filled again, word by word, never breaking a word; a tag or a list item starts a paragraph,
+  whose lines after the first align with its second, or with a tag's description or an item's text; blank
+  lines, indented and fenced code, `<pre>`, tables, headings, quotes and HTML stay as they are, and so
+  does a paragraph that fits. Range formatting refills only the paragraphs it holds whole; on-type
+  formatting never. `XdkCommentReflowTest`, 11 cases. Over the XDK's 466 library sources, at 120 columns
+  one paragraph is refilled, at 80 columns 393 files change, and formatting again changes nothing. Not
+  refilled: a comment of another shape (one line, text on its opening or closing line, a line without a
+  star, as commented-out code) and runs of `//` comments.
 - [ ] K4: no hot code replace. The runtime loads a module's compiled form once per container and has no
   redefinition of a loaded type; the debugger steps against that code (`SessionDebugger`). Replacing
   method bodies in a running container, as the JVM's HotSwap does, is runtime work of weeks across the
