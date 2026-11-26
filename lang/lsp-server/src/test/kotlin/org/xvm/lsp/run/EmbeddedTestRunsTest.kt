@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
-import org.xvm.debug.TestEvent
 import org.xvm.debug.TestSelector
 import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
@@ -20,6 +19,7 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkTest
 import org.xvm.lsp.awaitUntil
 import org.xvm.lsp.awaited
+import org.xvm.lsp.protocol.TestEvent
 import org.xvm.lsp.server.DebugSessionParams
 import org.xvm.lsp.server.DebugSessions
 import org.xvm.lsp.server.EmbeddedRuns

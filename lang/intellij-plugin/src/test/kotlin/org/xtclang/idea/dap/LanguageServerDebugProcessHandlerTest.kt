@@ -13,8 +13,8 @@ import org.junit.jupiter.api.Test
 import org.xtclang.idea.lsp.DebugMessageParams
 import org.xtclang.idea.lsp.DebugSessionParams
 import org.xtclang.idea.lsp.DebugSessionResponse
-import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.TestEvent
 import java.io.IOException
 import java.lang.reflect.Proxy
 import java.util.concurrent.CompletableFuture

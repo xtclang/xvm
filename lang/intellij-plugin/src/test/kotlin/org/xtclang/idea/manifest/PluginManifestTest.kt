@@ -1,13 +1,19 @@
 package org.xtclang.idea.manifest
 
+import com.google.gson.Gson
 import com.intellij.refactoring.move.MoveHandlerDelegate
 import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Element
 import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.lsp.EcstasyConfigurable
+import org.xvm.lsp.protocol.TestEvent
 import java.io.InputStream
+import java.net.URI
+import java.nio.file.Path
+import java.util.jar.JarFile
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -332,6 +338,30 @@ class PluginManifestTest {
             .withFailMessage("LSP fileNamePatternMapping patterns must include *.x")
             .contains("*.x")
     }
+
+    @Test
+    @DisplayName("takes the protocol it shares with the server from a jar of its own, which holds no lsp4j, Gson or Kotlin")
+    fun sharedProtocolJar() {
+        // the plugin's lib/ has the protocol's jar, as buildPlugin checks; lsp4j and Gson are LSP4IJ's and the IDE's
+        val protocol = archive(TestEvent::class.java)
+        assertThat(protocol.substringAfterLast('/')).startsWith("protocol-").endsWith(".jar")
+        val bundled =
+            JarFile(Path.of(URI(protocol.removePrefix("jar:"))).toFile()).use { jar ->
+                jar
+                    .entries()
+                    .asSequence()
+                    .map { it.name }
+                    .filter { name -> listOf("org/eclipse/lsp4j/", "com/google/gson/", "kotlin/").any { name.startsWith(it) } }
+                    .toList()
+            }
+        assertThat(bundled).isEmpty()
+        assertThat(archive(JsonRequest::class.java)).isNotEqualTo(protocol)
+        assertThat(archive(Gson::class.java)).isNotEqualTo(protocol)
+    }
+
+    /** The jar that [type] was loaded from, as a `jar:` URL: IntelliJ's test class loader gives a class no code source. */
+    private fun archive(type: Class<*>): String =
+        requireNotNull(type.getResource("${type.simpleName}.class")) { "no class file for $type" }.toString().substringBefore("!/")
 
     @Test
     @DisplayName("registers .x as the Ecstasy file type")

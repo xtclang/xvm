@@ -11,6 +11,7 @@ rootProject.name = "xtc-lang"
 
 // Subprojects
 include("dsl")
+include("protocol")
 include("tree-sitter")
 include("lsp-server")
 include("dap-server")

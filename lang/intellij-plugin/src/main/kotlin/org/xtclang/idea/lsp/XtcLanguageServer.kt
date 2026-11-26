@@ -8,6 +8,7 @@ import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageServer
+import org.xvm.lsp.protocol.TestEvent
 import java.util.concurrent.CompletableFuture
 
 /** Standard Rename remains available to clients that cannot persist compiler graph changes. */

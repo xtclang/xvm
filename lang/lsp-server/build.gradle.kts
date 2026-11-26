@@ -169,6 +169,9 @@ dependencies {
     // The Debug Adapter Protocol sessions the server hosts for its clients
     implementation(project(":dap-server"))
 
+    // What the IntelliJ plugin and the servers agree on: the xtc/ extension of LSP and the types it carries
+    implementation(project(":protocol"))
+
     // The language model the grammars are generated from: completion takes its keywords and built-in types
     implementation(project(":dsl"))
 

@@ -15,10 +15,10 @@ import org.xtclang.idea.lsp.CompilerSettings
 import org.xtclang.idea.lsp.RunExitedParams
 import org.xtclang.idea.lsp.RunOutputParams
 import org.xtclang.idea.lsp.RunParams
-import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.TestEventParams
 import org.xtclang.idea.lsp.XtcLanguageServer
 import org.xtclang.idea.snapshot
+import org.xvm.lsp.protocol.TestEvent
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture

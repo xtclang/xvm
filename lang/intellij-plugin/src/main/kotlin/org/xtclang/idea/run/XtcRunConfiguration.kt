@@ -29,9 +29,9 @@ import org.jdom.Element
 import org.xtclang.idea.dap.XtcDebugAdapterFactory
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.ServerTest
-import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.TestSelector
 import org.xtclang.idea.run.EvaluationLimits.limitRows
+import org.xvm.lsp.protocol.TestEvent
 import kotlin.io.path.Path
 
 /** What a run configuration runs with; [PROJECT] follows the project's [XtcBuildSettings]. */

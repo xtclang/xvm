@@ -12,6 +12,8 @@ import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
+import java.util.jar.JarInputStream
+import java.util.zip.ZipFile
 
 // Build-classpath security constraints: the IntelliJ Platform Gradle Plugin drags vulnerable
 // transitive dependencies onto this project's build classpath. The Jackson BOM raises all
@@ -474,6 +476,11 @@ dependencies {
     // (the actual server runs out-of-process via the fat JAR above)
     compileOnly(project(":lsp-server"))
 
+    // What the plugin and the servers agree on, the xtc/ extension of LSP and its types, shared with the server rather
+    // than copied: a small jar in the plugin's lib/, which holds no lsp4j or Gson, as the plugin uses LSP4IJ's and the
+    // IDE's (buildPlugin checks the zip for it)
+    implementation(project(":protocol"))
+
     intellijPlatform {
         intellijIdea(
             libs.versions.lang.intellij.ide
@@ -688,6 +695,43 @@ val buildPlugin =
         doLastTask {
             distDir.get().asFile.listFiles { f -> f.extension == "zip" }.orEmpty().forEach { zip ->
                 requireArchivedCopy(zip, "intellij-plugin/bin/xtc-lsp-server.jar", serverJar.get().asFile, "The plugin's distribution zip")
+            }
+        }
+        // the protocol it shares with the server is a jar of its own in lib/, on the plugin's classpath, which holds no
+        // lsp4j, Gson or Kotlin: the plugin uses LSP4IJ's and the IDE's, and a copy of either beside them would clash
+        doLastTask {
+            distDir.get().asFile.listFiles { f -> f.extension == "zip" }.orEmpty().forEach { zip ->
+                ZipFile(zip).use { archive ->
+                    val libs =
+                        archive
+                            .entries()
+                            .asSequence()
+                            .map { it.name }
+                            .filter { it.startsWith("intellij-plugin/lib/") && it.endsWith(".jar") }
+                            .toList()
+                    val protocol = libs.filter { it.substringAfterLast('/').startsWith("protocol-") }
+                    val clashing =
+                        libs.filter { lib ->
+                            listOf("org.eclipse.lsp4j", "lsp4j", "gson", "kotlin-").any { lib.substringAfterLast('/').startsWith(it) }
+                        }
+                    if (protocol.size != 1 || clashing.isNotEmpty()) {
+                        throw GradleException(
+                            "The plugin's distribution zip, $zip, must hold the protocol's jar in lib/, and no lsp4j, Gson or Kotlin: lib/ has $libs",
+                        )
+                    }
+                    val bundled =
+                        JarInputStream(archive.getInputStream(archive.getEntry(protocol.single()))).use { jar ->
+                            generateSequence { jar.nextJarEntry }
+                                .map { it.name }
+                                .filter { name -> listOf("org/eclipse/lsp4j/", "com/google/gson/", "kotlin/").any { name.startsWith(it) } }
+                                .toList()
+                        }
+                    if (bundled.isNotEmpty()) {
+                        throw GradleException(
+                            "The protocol's jar in $zip, ${protocol.single()}, bundles lsp4j, Gson or Kotlin: ${bundled.take(5)}",
+                        )
+                    }
+                }
             }
         }
         doLastTask {

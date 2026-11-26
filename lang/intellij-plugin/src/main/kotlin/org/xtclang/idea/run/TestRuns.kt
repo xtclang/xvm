@@ -47,10 +47,10 @@ import org.xtclang.idea.lsp.CompilerSettings
 import org.xtclang.idea.lsp.ModuleTests
 import org.xtclang.idea.lsp.RunParams
 import org.xtclang.idea.lsp.ServerTest
-import org.xtclang.idea.lsp.TestEvent
 import org.xtclang.idea.lsp.TestLocation
 import org.xtclang.idea.lsp.TestSelector
 import org.xtclang.idea.lsp.XtcLanguageServer
+import org.xvm.lsp.protocol.TestEvent
 import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 

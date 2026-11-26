@@ -11,7 +11,7 @@ import com.intellij.execution.testframework.sm.runner.events.TestStartedEvent
 import com.intellij.execution.testframework.sm.runner.events.TestSuiteFinishedEvent
 import com.intellij.execution.testframework.sm.runner.events.TestSuiteStartedEvent
 import com.intellij.openapi.util.Key
-import org.xtclang.idea.lsp.TestEvent
+import org.xvm.lsp.protocol.TestEvent
 
 /**
  * Reads a test run's output for IntelliJ's test console: each line of its standard output that is one of xunit's
