@@ -229,7 +229,7 @@ class SharedScenarios(
             // X252 and X253 tested the removed monikers, X273-X275 the removed L77 color prototype; their IDs are not
             // reused
             val retired = setOf("X252", "X253", "X273", "X274", "X275")
-            val expected = (1..356).map { "X$it" }.filterNot { it in retired } + listOf("CFG1", "CFG2", "CFG3", "7a.8", "7a.9")
+            val expected = (1..357).map { "X$it" }.filterNot { it in retired } + listOf("CFG1", "CFG2", "CFG3", "7a.8", "7a.9")
             require(scenarios.keys.toList() == expected) {
                 "The catalog must describe the complete playbook in order"
             }
