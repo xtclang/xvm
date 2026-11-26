@@ -1320,7 +1320,7 @@ public class Compiler {
     public static final String TYPE_MATCHES_NEVER                  = "COMPILER-187";
     /**
      * The specified arguments for the constructor of the contribution are unused because an
-     * explicit constructor is present.
+     * explicit constructor is present, and they differ from the arguments that it passes.
      */
     public static final String CONTRIBUTION_PARAMS_UNEXPECTED      = "COMPILER-188";
     /**
@@ -1413,9 +1413,10 @@ public class Compiler {
     public static final String INVALID_CONSTRUCT_CALL              = "COMPILER-209";
     /**
      * The default value of the constructor parameter "{0}" is unused because an explicit
-     * constructor replaces the shorthand one, and the class declares the property itself.
+     * constructor replaces the shorthand one, and the class declares the property itself; it
+     * differs from the default value of the explicit constructor's parameter.
      */
-    public static final String CONSTRUCTOR_PARAM_DEFAULT_UNUSED    = "COMPILER-210";
+    public static final String CONSTRUCTOR_PARAM_DEFAULT_MISMATCH  = "COMPILER-210";
     /**
      * {0} is not yet implemented.
      */
