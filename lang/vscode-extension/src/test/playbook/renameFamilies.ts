@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { compilerSettingsLocation, compilerSourceModules, renameWithConfiguration } from '../../rename-proposal';
 import { focusTestWindow } from '../native-focus';
 import { discovered } from './liveWorkspace';
-import { client, eventually, noErrors, playbook, position, symbols, Workspace } from './support';
+import { client, eventually, noErrors, outsideUsesMessage, playbook, position, symbols, Workspace } from './support';
 
 /** Inspect edits to closed consumers without opening their editor tabs before Undo. */
 async function contents(workspace: Workspace, file: string): Promise<string> {
@@ -65,6 +65,12 @@ async function configurationGuards(document: vscode.TextDocument, at: vscode.Pos
         assert.ok(await vscode.workspace.applyEdit(restore));
         assert.ok(await settings.save());
     }
+}
+
+/** Checks that the compiler's source modules name [module], not [other], and keep their resource roots. */
+function sourceModulesName(module: string, other: string): void {
+    const modules = JSON.stringify(compilerSourceModules());
+    assert.ok(modules.includes(module) && modules.includes('assets') && modules.includes('fallback') && !modules.includes(other), modules);
 }
 
 const renameCases = ['X109', 'X110', 'X111', 'X112', 'X113', 'X114', 'X115', 'X116', 'X117', 'X118', 'X119', 'X120', 'X121'] as const;
@@ -132,7 +138,7 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                         const notes = shown.filter(message => message.includes('modules outside the workspace'));
                         if (data.outsideUses === null) assert.deepStrictEqual(notes, [], 'A local\'s rename has no message');
                         else {
-                            const message = `Ecstasy: ${data.outsideUses}. To include them, run Ecstasy: Configure Compiler Paths and choose Add consumers from folders.`;
+                            const message = outsideUsesMessage(String(data.outsideUses));
                             // a proof that the project overtook and that ran again says it again
                             assert.ok(notes.length > 0 && notes.every(note => note === message), JSON.stringify(notes));
                         }
@@ -150,9 +156,7 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                 await symbols(renamed);
                 await noErrors(renamed.uri);
                 if ('sourceModules' in data) {
-                    assert.ok(JSON.stringify(compilerSourceModules()).includes('Renamed.example.org'));
-                    assert.ok(JSON.stringify(compilerSourceModules()).includes('assets') && JSON.stringify(compilerSourceModules()).includes('fallback'));
-                    assert.ok(!JSON.stringify(compilerSourceModules()).includes('Library.example.org'));
+                    sourceModulesName('Renamed.example.org', 'Library.example.org');
                     assert.ok(await vscode.workspace.saveAll());
                 }
                 await focusTestWindow();
@@ -168,9 +172,7 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                 await symbols(restored);
                 await noErrors(restored.uri);
                 if ('sourceModules' in data) {
-                    assert.ok(JSON.stringify(compilerSourceModules()).includes('Library.example.org'));
-                    assert.ok(JSON.stringify(compilerSourceModules()).includes('assets') && JSON.stringify(compilerSourceModules()).includes('fallback'));
-                    assert.ok(!JSON.stringify(compilerSourceModules()).includes('Renamed.example.org'));
+                    sourceModulesName('Library.example.org', 'Renamed.example.org');
                     await focusTestWindow();
                     await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                     await vscode.commands.executeCommand('redo');

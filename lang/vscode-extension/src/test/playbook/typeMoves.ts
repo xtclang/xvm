@@ -6,7 +6,7 @@ import { SourceModule, sourceGraphKey } from '../../source-graph-configuration';
 import { focusTestWindow } from '../native-focus';
 import { PlaybookTimeout, withPlaybookCleanup } from '../wait';
 import { discovered } from './liveWorkspace';
-import { client, eventually, noErrors, playbook, symbols } from './support';
+import { client, eventually, noErrors, outsideUsesMessage, playbook, symbols } from './support';
 
 export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172' | 'X173' | 'X174' | 'X175' | 'X176' | 'X216' | 'X217' | 'X218' | 'X219' | 'X335')[] = ['X161', 'X162', 'X163']): void {
     ids.forEach(id => playbook(id, async (workspace, data) => {
@@ -62,7 +62,7 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
             try { assert.ok(await vscode.workspace.applyEdit(move, explorer ? undefined : { isRefactoring: true })); }
             finally { observer?.dispose(); }
             if ('outsideUses' in data) {
-                const message = `Ecstasy: ${data.outsideUses}. To include them, run Ecstasy: Configure Compiler Paths and choose Add consumers from folders.`;
+                const message = outsideUsesMessage(data.outsideUses);
                 const notes = shown.filter(note => note.includes('modules outside the workspace'));
                 // a proof that a change of the project overtook and that ran again says it again
                 assert.ok(notes.length > 0 && notes.every(note => note === message), JSON.stringify(notes));

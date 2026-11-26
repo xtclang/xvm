@@ -2,18 +2,23 @@ import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { WorkbenchUi } from '../workbenchUi';
 import { CloseAction } from 'vscode-languageclient/node';
-import { client, eventually, noErrors, playbook } from './support';
+import { client, eventually, noErrors, playbook, type Workspace } from './support';
+
+/** Writes [data]'s library and the module that depends on it, configures both, and opens them. */
+async function openLibraryAndConsumer(workspace: Workspace,
+    data: { library: string; original: string; libraryModule: string; consumer: string; source: string; consumerModule: string }) {
+    await workspace.write(data.library, data.original);
+    await workspace.write(data.consumer, data.source);
+    await workspace.configure([
+        { name: data.libraryModule, uri: workspace.uri(data.library).toString() },
+        { name: data.consumerModule, uri: workspace.uri(data.consumer).toString(), dependencies: [data.libraryModule] }
+    ]);
+    return { library: await workspace.open(data.library), consumer: await workspace.open(data.consumer) };
+}
 
 export function reliabilityCases(): void {
     playbook('X146', async (workspace, data) => {
-        await workspace.write(data.library, data.original);
-        await workspace.write(data.consumer, data.source);
-        await workspace.configure([
-            { name: data.libraryModule, uri: workspace.uri(data.library).toString() },
-            { name: data.consumerModule, uri: workspace.uri(data.consumer).toString(), dependencies: [data.libraryModule] }
-        ]);
-        const library = await workspace.open(data.library);
-        const consumer = await workspace.open(data.consumer);
+        const { library, consumer } = await openLibraryAndConsumer(workspace, data);
         const version = consumer.version;
         const connection = client();
         const hints = connection.getFeature('textDocument/inlayHint').getProvider(consumer)!;
@@ -53,10 +58,7 @@ export function reliabilityCases(): void {
     });
 
     playbook('X147', async (workspace, data) => {
-        await workspace.write(data.file, data.source);
-        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
-        const document = await workspace.open(data.file);
-        await noErrors(document.uri);
+        const document = await workspace.module(data.file, data.source, data.module);
         const config = vscode.workspace.getConfiguration('xtc');
         const originalSettings = config.inspect('inlayHints.enabled')?.workspaceValue;
         const connection = client();
@@ -108,14 +110,7 @@ export function reliabilityCases(): void {
 
 export function refreshOverlapCases(): void {
     playbook('X259', async (workspace, data) => {
-        await workspace.write(data.library, data.original);
-        await workspace.write(data.consumer, data.source);
-        await workspace.configure([
-            { name: data.libraryModule, uri: workspace.uri(data.library).toString() },
-            { name: data.consumerModule, uri: workspace.uri(data.consumer).toString(), dependencies: [data.libraryModule] }
-        ]);
-        const library = await workspace.open(data.library);
-        const consumer = await workspace.open(data.consumer);
+        const { library, consumer } = await openLibraryAndConsumer(workspace, data);
         const version = consumer.version;
         const config = vscode.workspace.getConfiguration('xtc');
         const original = config.inspect('inlayHints.enabled')?.workspaceValue;
