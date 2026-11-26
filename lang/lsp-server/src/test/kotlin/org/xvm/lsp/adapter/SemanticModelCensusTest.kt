@@ -43,8 +43,9 @@ import java.util.IdentityHashMap
  *
  * The same compiles take the editor's census, of what hover, Go to Definition, Find References and highlights miss at a
  * name, which no proof judges: an identifier that no occurrence holds (unrecorded), a reference whose symbol has no
- * declaration (undeclared), a variable, parameter or property without a type (untyped), and a reference that the
- * workspace's navigation joins apart from the declaration it names (unjoined). They are counted only, by construct and
+ * declaration (undeclared), a variable, parameter or property without a type (untyped), a reference that the
+ * workspace's navigation joins apart from the declaration it names (unjoined), and one whose declaration is in no
+ * source of the workspace, which holds every library's (elsewhere). They are counted only, by construct and
  * by library with examples, in `lang/lsp-server/build/semantic-model-editor-census.txt`, whose summary lines start with
  * `editor`. Heavy: it compiles every library from source once.
  *
@@ -86,7 +87,7 @@ class SemanticModelCensusTest {
         val report = report(gaps)
         File("build").mkdirs()
         File("build/semantic-model-census.txt").writeText(report.joinToString("\n", postfix = "\n"))
-        val editorReport = editorReport(misses + EditorCensus.unjoined(editor))
+        val editorReport = editorReport(misses + EditorCensus.workspace(editor))
         File("build/semantic-model-editor-census.txt").writeText(editorReport.joinToString("\n", postfix = "\n"))
         editorReport.filter { it.startsWith("editor") }.forEach(::println)
         report.filter { it.startsWith("census") }.forEach(::println)
@@ -345,6 +346,9 @@ class SemanticModelCensusTest {
 
         /** A reference that the workspace joins to another symbol than the declaration it names: Find References misses it. */
         UNJOINED,
+
+        /** A reference whose declaration is in no source of the workspace, as a bundled library's: Go to Definition opens that. */
+        ELSEWHERE,
     }
 
     /** An AST node and its span, which a node that the parser left incomplete has none of. */
@@ -519,9 +523,10 @@ class SemanticModelCensusTest {
 
             /**
              * The references that the workspace's navigation joins apart from the declaration they name, as
-             * XdkProjectQueries.navigation joins the modules' symbols: by proof identity, else by declaration.
+             * XdkProjectQueries.navigation joins the modules' symbols: by proof identity, else by declaration; and the
+             * references whose declaration is in no source of the workspace, which holds every library's.
              */
-            fun unjoined(censuses: List<EditorCensus>): List<Miss> {
+            fun workspace(censuses: List<EditorCensus>): List<Miss> {
                 val models = censuses.flatMap { census -> census.models.map { census to it } }
                 val constants = censuses.flatMap { it.constants.entries }.associate { it.toPair() }
                 val declared = models.associate { (_, model) -> model.sourceName to model.id }
@@ -543,7 +548,12 @@ class SemanticModelCensusTest {
                         .filter { it.role == SemanticModel.Role.REFERENCE }
                         .mapNotNull { occurrence ->
                             val symbol = occurrence.symbol?.let(model::symbol) ?: return@mapNotNull null
-                            val declaration = location(symbol)?.let(declarations::get) ?: return@mapNotNull null
+                            val place = location(symbol) ?: return@mapNotNull null
+                            if (place.sourceName !in declared) {
+                                val construct = "${symbol.kind} ${kind(constants[symbol.id])}"
+                                return@mapNotNull census.miss(source, occurrence.range.start, occurrence.name, Loss.ELSEWHERE, construct)
+                            }
+                            val declaration = declarations[place] ?: return@mapNotNull null
                             if (canonical[declaration] == canonical[symbol.id]) return@mapNotNull null
                             val construct = "${symbol.kind} ${kind(constants[symbol.id])} of ${kind(constants[declaration])}"
                             census.miss(source, occurrence.range.start, occurrence.name, Loss.UNJOINED, construct)
