@@ -37,15 +37,23 @@ data class LibrarySettings(
         /** The key of the settings in the compiler's section. */
         const val KEY = "libraries"
 
+        /** The keys of the settings under [KEY]. */
+        private val SETTINGS = setOf("modulePath", "sourceAttachments")
+
         /**
          * The settings that [libraries], the value of [KEY] in the compiler's section, holds, or null for none, as an
          * absent or null value is. Fails with an [IllegalArgumentException] on a value that does not have their shape.
+         * Keys that are no setting go to [unknown], which refuses them unless given, as the server does; the IntelliJ
+         * plugin's settings page logs them instead and reads the rest, so that a stray key never keeps it from opening.
          */
-        fun read(libraries: JsonElement?): LibrarySettings? {
+        fun read(
+            libraries: JsonElement?,
+            unknown: (Set<String>) -> Unit = { keys -> require(keys.isEmpty()) { "Unknown library setting: ${keys.joinToString()}" } },
+        ): LibrarySettings? {
             val value = libraries?.takeUnless { it.isJsonNull } ?: return null
             require(value.isJsonObject) { "libraries must be an object" }
             val settings = value.asJsonObject
-            require(settings.keySet().all { it in setOf("modulePath", "sourceAttachments") }) { "Unknown library setting" }
+            (settings.keySet() - SETTINGS).takeIf { it.isNotEmpty() }?.let(unknown)
             val attachments =
                 settings["sourceAttachments"]?.let { entries ->
                     require(entries.isJsonArray) { "sourceAttachments must be an array" }
