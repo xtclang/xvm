@@ -302,11 +302,8 @@ object DebugSessionUi {
         module: String,
         path: String,
     ): String {
-        val names = path.split('/').filter { it.isNotEmpty() }
-        var shown = locals(checkNotNull(session(project, module)) { "No debug session of $module" })
-        names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
         val link = CompletableFuture<XFullValueEvaluator>()
-        named(shown, names.last(), path).computePresentation(
+        valueAt(checkNotNull(session(project, module)) { "No debug session of $module" }, path).computePresentation(
             object : XValueNode {
                 override fun setPresentation(
                     icon: Icon?,
@@ -381,15 +378,13 @@ object DebugSessionUi {
         path: String,
         pages: Int,
     ): String {
-        val names = path.split('/').filter { it.isNotEmpty() }
-        var shown = locals(checkNotNull(session(project, module)) { "No debug session of $module" })
-        names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
+        val value = valueAt(checkNotNull(session(project, module)) { "No debug session of $module" }, path)
         val collected = XValueChildrenList()
         var left = 0
         var next: Runnable? = null
         var batch = CompletableFuture<Unit>()
         val node =
-            object : XCompositeNode {
+            object : ChildrenNode({ batch.completeExceptionally(IllegalStateException(it)) }) {
                 override fun addChildren(
                     children: XValueChildrenList,
                     last: Boolean,
@@ -412,26 +407,8 @@ object DebugSessionUi {
                     next = addNextChildren
                     batch.complete(Unit)
                 }
-
-                override fun setAlreadySorted(alreadySorted: Boolean) {}
-
-                override fun setErrorMessage(errorMessage: String) {
-                    batch.completeExceptionally(IllegalStateException(errorMessage))
-                }
-
-                override fun setErrorMessage(
-                    errorMessage: String,
-                    link: XDebuggerTreeNodeHyperlink?,
-                ) = setErrorMessage(errorMessage)
-
-                override fun setMessage(
-                    message: String,
-                    icon: Icon?,
-                    attributes: SimpleTextAttributes,
-                    link: XDebuggerTreeNodeHyperlink?,
-                ) {}
             }
-        named(shown, names.last(), path).computeChildren(node)
+        value.computeChildren(node)
         batch.get(HANG_SECONDS, TimeUnit.SECONDS)
         repeat(pages) {
             val open = next ?: return@repeat
@@ -472,10 +449,7 @@ object DebugSessionUi {
         path: String,
         expression: String,
     ): String {
-        val names = path.split('/').filter { it.isNotEmpty() }
-        var shown = locals(session)
-        names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
-        val modifier = checkNotNull(named(shown, names.last(), path).modifier) { "${names.last()} has no Set Value" }
+        val modifier = checkNotNull(valueAt(session, path).modifier) { "${path.split('/').last { it.isNotEmpty() }} has no Set Value" }
         val result = CompletableFuture<String>()
         modifier.setValue(
             XExpressionImpl.fromText(expression),
@@ -607,6 +581,17 @@ object DebugSessionUi {
         val frame = checkNotNull(session.currentStackFrame) { "The debug session ${session.sessionName} is not paused" }
         val groups = children(frame).bottomGroups
         return children(checkNotNull(groups.firstOrNull { it.name == "Locals" }) { "No Locals in ${groups.map { it.name }}" })
+    }
+
+    /** The value at the `/`-separated [path] from the paused session's Locals, as the Variables view shows it. */
+    private fun valueAt(
+        session: XDebugSession,
+        path: String,
+    ): XValue {
+        val names = path.split('/').filter { it.isNotEmpty() }
+        var shown = locals(session)
+        names.dropLast(1).forEach { name -> shown = children(named(shown, name, path)) }
+        return named(shown, names.last(), path)
     }
 
     private fun named(
@@ -1131,19 +1116,10 @@ object DebugSessionUi {
                 .filter { it.fileUrl == file.url }
                 .sortedBy { it.line }
                 .forEach { breakpoint ->
-                    val shown = session.getBreakpointPresentation(breakpoint)
                     states.add(
                         JsonObject().apply {
                             addProperty("line", breakpoint.line + 1)
-                            addProperty(
-                                "state",
-                                when {
-                                    shown == null -> "pending"
-                                    shown.errorMessage != null -> "invalid"
-                                    else -> "verified"
-                                },
-                            )
-                            shown?.errorMessage?.let { addProperty("message", it) }
+                            addState(session, breakpoint)
                         },
                     )
                 }
@@ -1192,22 +1168,7 @@ object DebugSessionUi {
                 .getInstance(project)
                 .breakpointManager.allBreakpoints
                 .filter { it.type.id == FUNCTION_BREAKPOINT }
-                .forEach { breakpoint ->
-                    val shown = session.getBreakpointPresentation(breakpoint)
-                    states.add(
-                        JsonObject().apply {
-                            addProperty(
-                                "state",
-                                when {
-                                    shown == null -> "pending"
-                                    shown.errorMessage != null -> "invalid"
-                                    else -> "verified"
-                                },
-                            )
-                            shown?.errorMessage?.let { addProperty("message", it) }
-                        },
-                    )
-                }
+                .forEach { breakpoint -> states.add(JsonObject().apply { addState(session, breakpoint) }) }
         }
         return states.toString()
     }
@@ -1300,24 +1261,35 @@ object DebugSessionUi {
                 .forEach { breakpoint ->
                     @Suppress("UNCHECKED_CAST")
                     val type = breakpoint.type as XBreakpointType<XBreakpoint<*>, *>
-                    val shown = session?.getBreakpointPresentation(breakpoint)
                     states.add(
                         JsonObject().apply {
                             addProperty("text", type.getDisplayText(breakpoint))
-                            addProperty(
-                                "state",
-                                when {
-                                    shown == null -> "pending"
-                                    shown.errorMessage != null -> "invalid"
-                                    else -> "verified"
-                                },
-                            )
-                            shown?.errorMessage?.let { addProperty("message", it) }
+                            addState(session, breakpoint)
                         },
                     )
                 }
         }
         return states.toString()
+    }
+
+    /**
+     * Adds the [breakpoint]'s state as [session] shows it: `verified` once the debug adapter installed it, `invalid` with
+     * the `message` it gave if it did not, or `pending` before it says either.
+     */
+    private fun JsonObject.addState(
+        session: XDebugSessionImpl?,
+        breakpoint: XBreakpoint<*>,
+    ) {
+        val shown = session?.getBreakpointPresentation(breakpoint)
+        addProperty(
+            "state",
+            when {
+                shown == null -> "pending"
+                shown.errorMessage != null -> "invalid"
+                else -> "verified"
+            },
+        )
+        shown?.errorMessage?.let { addProperty("message", it) }
     }
 
     /** Removes the line breakpoints, as the gutter does, and leaves the others. */
@@ -1419,7 +1391,7 @@ object DebugSessionUi {
         val done = CompletableFuture<XValueChildrenList>()
         val collected = XValueChildrenList()
         container.computeChildren(
-            object : XCompositeNode {
+            object : ChildrenNode({ done.completeExceptionally(IllegalStateException(it)) }) {
                 override fun addChildren(
                     children: XValueChildrenList,
                     last: Boolean,
@@ -1434,24 +1406,6 @@ object DebugSessionUi {
                 override fun tooManyChildren(remaining: Int) {
                     done.complete(collected)
                 }
-
-                override fun setAlreadySorted(alreadySorted: Boolean) {}
-
-                override fun setErrorMessage(errorMessage: String) {
-                    done.completeExceptionally(IllegalStateException(errorMessage))
-                }
-
-                override fun setErrorMessage(
-                    errorMessage: String,
-                    link: XDebuggerTreeNodeHyperlink?,
-                ) = setErrorMessage(errorMessage)
-
-                override fun setMessage(
-                    message: String,
-                    icon: Icon?,
-                    attributes: SimpleTextAttributes,
-                    link: XDebuggerTreeNodeHyperlink?,
-                ) {}
             },
         )
         return done.get(HANG_SECONDS, TimeUnit.SECONDS)
@@ -1592,4 +1546,25 @@ object DebugSessionUi {
         )
         return frames.get(HANG_SECONDS, TimeUnit.SECONDS)
     }
+}
+
+/** A node that takes a container's children, sorted or not, and gives an error message to [failed]. */
+private abstract class ChildrenNode(
+    private val failed: (String) -> Unit,
+) : XCompositeNode {
+    override fun setAlreadySorted(alreadySorted: Boolean) {}
+
+    override fun setErrorMessage(errorMessage: String) = failed(errorMessage)
+
+    override fun setErrorMessage(
+        errorMessage: String,
+        link: XDebuggerTreeNodeHyperlink?,
+    ) = failed(errorMessage)
+
+    override fun setMessage(
+        message: String,
+        icon: Icon?,
+        attributes: SimpleTextAttributes,
+        link: XDebuggerTreeNodeHyperlink?,
+    ) {}
 }
