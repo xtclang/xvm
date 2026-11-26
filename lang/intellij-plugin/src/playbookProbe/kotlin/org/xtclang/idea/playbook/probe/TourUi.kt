@@ -1143,12 +1143,7 @@ object TourUi {
     /** Clicks the showing button labeled [text], such as a settings page's Restart, with real input; false if none shows. */
     @JvmStatic
     fun realClick(text: String): Boolean {
-        val button =
-            anyEdt {
-                Window.getWindows().filter { it.isShowing }.reversed().firstNotNullOfOrNull { window ->
-                    descendants(window).filterIsInstance<AbstractButton>().firstOrNull { it.isShowing && it.isEnabled && it.text == text }
-                }
-            } ?: return false
+        val button = showingButton { it.text == text } ?: return false
         val at =
             anyEdt {
                 // a button below a scrolled page's visible part comes into view first, as a user scrolls to it
@@ -1551,18 +1546,7 @@ object TourUi {
 
     /** Selects the completion lookup's item [item], by its lookup string, as the arrow keys do; false if it lists none. */
     @JvmStatic
-    fun selectLookup(item: String): Boolean =
-        onEdt {
-            val lookup =
-                FileEditorManager
-                    .getInstance(
-                        project(),
-                    ).selectedTextEditor
-                    ?.let { LookupManager.getActiveLookup(it) as? LookupImpl }
-            val chosen = lookup?.items?.firstOrNull { it.lookupString == item } ?: return@onEdt false
-            lookup.currentItem = chosen
-            true
-        }
+    fun selectLookup(item: String): Boolean = onEdt { activeLookup().select(item) }
 
     /**
      * How the completion lookup's current item stands, for a failure's message: its lookup string and class, whether it
@@ -1572,11 +1556,7 @@ object TourUi {
     @JvmStatic
     fun lookupState(): String =
         onEdt {
-            val lookup =
-                FileEditorManager
-                    .getInstance(project())
-                    .selectedTextEditor
-                    ?.let { LookupManager.getActiveLookup(it) as? LookupImpl } ?: return@onEdt "no lookup"
+            val lookup = activeLookup() ?: return@onEdt "no lookup"
             val item = lookup.currentItem ?: return@onEdt "a lookup with no current item"
             val proposal = item as? LSPCompletionProposal
             listOfNotNull(
@@ -1594,17 +1574,20 @@ object TourUi {
     @JvmStatic
     fun pickLookup(item: String): Boolean =
         onEdt {
-            val lookup =
-                FileEditorManager
-                    .getInstance(
-                        project(),
-                    ).selectedTextEditor
-                    ?.let { LookupManager.getActiveLookup(it) as? LookupImpl }
-            val chosen = lookup?.items?.firstOrNull { it.lookupString == item } ?: return@onEdt false
-            lookup.currentItem = chosen
-            lookup.finishLookup(Lookup.NORMAL_SELECT_CHAR)
-            true
+            val lookup = activeLookup()
+            lookup.select(item).also { if (it) lookup?.finishLookup(Lookup.NORMAL_SELECT_CHAR) }
         }
+
+    /** The completion lookup of the selected editor, if it shows one. */
+    private fun activeLookup(): LookupImpl? =
+        FileEditorManager.getInstance(project()).selectedTextEditor?.let { LookupManager.getActiveLookup(it) as? LookupImpl }
+
+    /** Makes the lookup's item [item], by its lookup string, its current one, as the arrow keys do; false if it lists none. */
+    private fun LookupImpl?.select(item: String): Boolean {
+        val chosen = this?.items?.firstOrNull { it.lookupString == item } ?: return false
+        currentItem = chosen
+        return true
+    }
 
     /** The text that the tool window [id] shows: its trees' rows, lists, tables, consoles and labels. */
     @JvmStatic
@@ -1629,8 +1612,7 @@ object TourUi {
         row: String,
     ): Unit =
         onEdt {
-            val window = checkNotNull(ToolWindowManager.getInstance(project()).getToolWindow(id)?.component) { "No tool window $id" }
-            descendants(window).filterIsInstance<JTree>().filter { it.isShowing }.forEach { tree ->
+            showingTrees(id).forEach { tree ->
                 var index = 0
                 while (index < tree.rowCount) {
                     if (row in treeRow(tree, index) && !tree.isExpanded(index)) tree.expandRow(index)
@@ -1649,8 +1631,7 @@ object TourUi {
         row: String,
     ): Boolean =
         onEdt {
-            val window = checkNotNull(ToolWindowManager.getInstance(project()).getToolWindow(id)?.component) { "No tool window $id" }
-            descendants(window).filterIsInstance<JTree>().filter { it.isShowing }.firstNotNullOfOrNull { tree ->
+            showingTrees(id).firstNotNullOfOrNull { tree ->
                 (0 until tree.rowCount).firstOrNull { row in treeRow(tree, it) }?.let { index ->
                     tree.setSelectionRow(index)
                     tree.scrollRowToVisible(index)
@@ -1989,15 +1970,7 @@ object TourUi {
         return textOf(renderer.getListCellRendererComponent(list, value, index, false, false), rendered = true).ifBlank { value.toString() }
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun comboText(combo: JComboBox<*>): String? {
-        val item = combo.selectedItem ?: return null
-        val renderer = (combo as JComboBox<Any?>).renderer ?: return item.toString()
-        return textOf(
-            renderer.getListCellRendererComponent(JList<Any?>(), item, -1, false, false),
-            rendered = true,
-        ).ifBlank { item.toString() }
-    }
+    private fun comboText(combo: JComboBox<*>): String? = combo.selectedItem?.let { itemText(combo, it) }
 
     private fun htmlText(pane: JEditorPane): String =
         runCatching { pane.document.getText(0, pane.document.length) }.getOrElse { stripHtml(pane.text.orEmpty()) }
@@ -2264,22 +2237,25 @@ object TourUi {
     /** Presses the button labeled [text] in the newest window that shows one, such as a dialog's OK. */
     @JvmStatic
     fun click(text: String) {
-        val button =
-            anyEdt {
-                Window
-                    .getWindows()
-                    .filter { it.isShowing }
-                    .reversed()
-                    .firstNotNullOfOrNull { window ->
-                        descendants(window).filterIsInstance<AbstractButton>().firstOrNull {
-                            it.isShowing && it.isEnabled && it.text?.replace("_", "") == text
-                        }
-                    }
-            }
+        val button = showingButton { it.text?.replace("_", "") == text }
         checkNotNull(button) { "No button $text" }
         val at = anyEdt { center(button) }
         logAction("click", "click: $text", at)
         if (visible) robotClick(at) else later(ModalityState.stateForComponent(button)) { button.doClick() }
+    }
+
+    /** The showing, enabled button that [accept] takes in the newest window that shows one. */
+    private fun showingButton(accept: (AbstractButton) -> Boolean): AbstractButton? =
+        anyEdt {
+            Window.getWindows().filter { it.isShowing }.reversed().firstNotNullOfOrNull { window ->
+                descendants(window).filterIsInstance<AbstractButton>().firstOrNull { it.isShowing && it.isEnabled && accept(it) }
+            }
+        }
+
+    /** The showing trees of the tool window [id]. */
+    private fun showingTrees(id: String): Sequence<JTree> {
+        val window = checkNotNull(ToolWindowManager.getInstance(project()).getToolWindow(id)?.component) { "No tool window $id" }
+        return descendants(window).filterIsInstance<JTree>().filter { it.isShowing }
     }
 
     private fun descendants(component: Component): Sequence<Component> =

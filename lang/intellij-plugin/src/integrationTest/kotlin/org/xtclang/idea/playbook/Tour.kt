@@ -474,6 +474,16 @@ internal class Tour(
     fun program(vararg command: String): Program =
         Program(ProcessBuilder(*command).directory(project.toFile()).redirectErrorStream(true).start())
 
+    /** Runs the card game with xtc run, as a terminal would, waiting for a debugger to attach on the port [body] gets. */
+    fun gameAwaitingDebugger(body: (Program, Int) -> Unit) {
+        val xtc = PlaybookIde.XDK_BIN.resolve("xtc").toString()
+        program(xtc, "run", "--debug", "listen:127.0.0.1:0,suspend", "--deduce", "cardGame").use { game ->
+            val listening = Regex("Listening for the debugger at [^ ]+:(\\d+)")
+            expect(within(HANG) { listening.containsMatchIn(game.output) }) { "The program: ${game.output.takeLast(400)}" }
+            body(game, listening.find(game.output)!!.groupValues[1].toInt())
+        }
+    }
+
     /** Waits up to [timeout] for the project to open in its window. */
     fun awaitProject(timeout: Duration = HANG) = awaitUi("the project opens", timeout) { ui.projectOpen() }
 
@@ -1375,6 +1385,19 @@ internal fun TourProbe.hasError(
         "No error${if (text.isEmpty()) "" else " with $text"} in ${Path.of(path).fileName}: ${diagnostics(path)}; " +
             "LSP4IJ holds: ${heldDiagnostics(path)}"
     }
+}
+
+/** Runs the tests of the gutter icon [tooltip] on [line] with its menu's Run, watched, and answers the run before it. */
+internal fun TourProbe.runTests(
+    line: Int,
+    tooltip: String,
+): String {
+    gutter(line, tooltip)
+    expect(within(HANG) { "Run" in rows() }) { "No test choices: ${rows()}" }
+    watchTests()
+    val before = runId()
+    check(choose("Run")) { "No Run: ${rows()}" }
+    return before
 }
 
 /** The selected editor's state, as [TourProbe.editorState] answers it. */
