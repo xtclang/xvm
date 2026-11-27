@@ -166,6 +166,33 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   (`RunWorkerProcess.kt:523` starts them from the server's classpath today; their identity check
   takes only the bundled XDK). Not needed for the XVM repository, whose core developers change
   javatools with the libraries and build, run and debug with Gradle.
+  Step taken 2026-11-27 (`lagergren/foreign-xdk`): a project on another XDK now means Gradle mode
+  rather than a silent build and run with the bundled one. `d2b9f93f39`: the XTC plugin's model
+  names each project's XDK in every source set (`xdk`: `version`, from its `xdkDistribution` or
+  `xdk` dependency, `libraries`, where it extracts the core modules, and, read from the
+  distribution of a repository XDK or a file dependency without extracting it, the SHA-256 of each
+  module file, `modules`, and a revision of its `javatools.jar` that leaves out the commit and
+  branch it was built at, `javatools`; or `project`, for an XDK that the build tree makes, which
+  the export neither builds nor reads, or `problem`, for one the import could not resolve or fetch,
+  which never fails the export and leaves a token that makes the next import resolve it again,
+  also with the configuration cache); `extractXdk` syncs instead of copying. It goes to master as
+  its own pull request. `39879558e1`: the server compares those with its bundled module files and
+  the revision of the javatools jar it bundles, which its build records (`XdkLibraries.bundles`),
+  reading no file; another XDK, one of the build tree, an unread one and the modules that depend on
+  one, which say so, have no embedded build, run, test run or debug session
+  (`XdkProject.gradleOnly`, refused in `buildAsync` with the asked scope's reason), and
+  `xtc/replacedLibraries` gives every such folder with a reason, such as "builds with XDK 0.5.0, not
+  the bundled XDK 0.4.4", a replaced library's before another XDK's (`XdkProject.noEmbedded`). In
+  the XVM repository the reason stays the replaced libraries, and `manualTests`, on the repository's
+  own XDK, keeps it on Gradle also with replacement off. `d4f90e968d`: both editors take those
+  folders to Gradle through the per-folder switch that replaced libraries had; VS Code also for a run
+  of no folder, a task of a folder's `tasks.json` and Run Module for a typed-in module; and the
+  notices, the Build and Run page, the popup, the picker and the status bar name the XDK.
+  `4a16ce329f`: the user guide and configuration.md. A project without an `xdk` in its model (no
+  model, an older plugin) still builds and runs embedded with the bundled XDK. Still open here:
+  embedded builds, runs and debug sessions with the project's own XDK (run workers started from it,
+  `RunWorkerProcess.defaultCommand` and `RunWorkerIdentity`, which take only the bundled XDK), and
+  telling a build tree's own XDK apart from the bundled one, which the import does not build.
 - [x] Renames of an XDK library's symbols in such a workspace are still proven against the bundled
   library (`CompilerRenameFacts.kt:358`), so they treat the repository's `ecstasy` as the bundle.
   Done 2026-11-24: the rename facts prove a replaced library as sources (`XdkReplacedLibraryTest`),
@@ -853,14 +880,59 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   X5 passed. Fixed (`f8aaa1a549`): a pull of a workspace document waits only for the analyses of documents that are
   not a library's. A library source's analysis reports on no workspace document. A test in `XdkPullDiagnosticsTest`
   covers it.
-- [ ] Found 2026-11-27 with the release fix: a close that leaves a member of the graph with its file's text still
-  retires its module's analyses and the graph's queries, and still overtakes workspace queries, though that close
+- [x] Found 2026-11-27 with the release fix: a close that leaves a member of the graph with its file's text still
+  retired its module's analyses and the graph's queries, and still overtook workspace queries, though that close
   changes no text either. With a discovered graph rather than a configured one, an earlier case's file can be such a
-  member. The adapter would need to skip retirement for such a close (`closeDocumentAndRefresh`), and the server would
-  need to skip the module's analysis and its diagnostics' republication. Also still open: a document that opens
-  overtakes a workspace query, and work that the server retires for a real change answers RequestCancelled where the
-  client did not cancel. ContentModified would say what happened, except for diagnostic pulls, which VS Code's client
-  asks again only after a cancellation.
+  member. Also: a document that opened overtook a workspace query, and work that the server retired for a real change
+  answered RequestCancelled where the client did not cancel. Fixed:
+  - `f68eed85c7`: a member of the graph that closes or opens with its file's text is unchanged. The adapter retires
+    nothing (`closeDocumentAndRefresh(uri, unchanged)`, `compileAsync(uri, content, unchanged)`). Its module's analysis
+    stays for the module's other open documents, and goes with the last of them without retiring a graph query. The
+    server makes no new diagnostic revision, publishes no empty diagnostics for the document while another document of
+    its module publishes them, sends no refresh and analyzes nothing again. A pending workspace query keeps such a
+    document by its basis (`released`, and `opened` for an open), also through a second release after such an open,
+    and so does one that starts after such an open. A member whose file changed on disk since its module's analyses
+    read it, which no watcher has reported, opens as any open does (`XdkAdapter.opensUnchanged`), and an analysis under
+    way as a member closes unchanged publishes for the module's other documents. A
+    diagnostic pull, which joins the open documents' analyses under the server's lock, still takes any open as a change.
+    A released document stands for its text: a watcher's report that its file changed, or its open with other text,
+    ends the release, and a graph query checks its sources against the editors' documents as they are now
+    (`XdkProjectQueries.isCurrent`), so a released file's later change on disk overtakes it. An unchanged open ends the
+    compile it replaces, which a query of a closed member can wait on (`closedSettled`). A close with unsaved text, of a
+    file that changed on disk or out of sync, and an open with other text, still overtake.
+  - `95879f5d32`: work that the server retires answers ContentModified, except a document's diagnostic pull, which stays
+    RequestCancelled: VS Code's client pulls a document again after a cancellation, and takes ContentModified as an
+    empty report. The workspace's pull answers ContentModified too, unlike what this entry said: VS Code's client pulls
+    it again after ContentModified, and counts a cancellation as a failure, pulling again only while it has counted
+    five or fewer, so after the sixth it stops for the session (`workspaceErrorCounter`); LSP4IJ 0.30.1 stops its
+    workspace pull after a cancellation until the server's next refresh (`shouldRetrigger`). Both clients show a
+    feature's ContentModified as they showed its cancellation: nothing.
+
+  `XdkReleaseServerTest` reproduces them by ordering (64 cases): the release of a member while its module's root stays
+  open, which submits no compile and publishes nothing; the release of a module's last open document; the open of a
+  member with its file's text, its release and open again, and a request asked after the open; eleven cases of what
+  still overtakes, a released member whose file then changes among them; and a new graph that retires the requests'
+  graph queries, which then answer ContentModified. `XdkPullDiagnosticsTest` has the pulls, `RequestsBeforeOpenTest` a
+  closed member's hover across another member's open, and a consumer analyzed again after such an open. An independent
+  review of the first version found four faults, each fixed with a test that fails without its fix: a query that started
+  after an unchanged open was stale; a released member's later change on disk went unseen by pending graph queries,
+  whose edits would apply at the old offsets; a pull joined an analysis that it had not waited for under the server's
+  lock; a superseded compile in its debounce never ended, nor the hover that waited for it. A second review found three
+  more, each with a failing test without its fix: a second release dropped the first one's basis; an open of a member
+  whose file had changed unreported left its consumers' analyses stale; an analysis under way as a member closed
+  unchanged published nothing. On the final tree, X5, X143, X172, X216, X352 and X357 passed in both editors, and X146
+  in VS Code (VS Code `run-cL0u5W`, IntelliJ `run-2826386146099526655`); X145 passed in both on the first version
+  (`run-d3bmjz`, `run-7607434108416040343`).
+
+
+New open entry, after the one above:
+
+- [ ] Found 2026-11-27 with the above: the open or the close of a document still ends that document's own pending
+  requests (`invalidateQueries`), a workspace query asked of it among them, as a move of the file that opens. A document
+  query that a closed file answered ends as the document opens, also with its file's text. An unchanged open still
+  replaces its module's compile, so a cursor query of another document of the module that runs on the replaced compile
+  ends, as with any open. A request whose work the server retires answers "Document changed during analysis",
+  whatever the change was.
 - [x] Found 2026-11-27 in `run-M6gUDp` (lagergren/analysis-races): X130 pressed Redo as soon as the folders were back on
   disk, 9 ms before the Undo's didRenameFiles, and Redo found nothing to redo. Fixed (`aec8651e10`): Undo and Redo each
   wait for their own didRenameFiles from the case's ExplorerMoveTrace, progress-based; four runs had Redo after it each
@@ -970,11 +1042,29 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   `renameAsync` with `thenApply`, so a client's cancel did not reach the proof. Done 2026-11-27 (`4da6bc57c2`):
   `mapCancellable`; XdkRenameTest's `a cancel of a rename proposal outside a project query reaches its proof` counts 3
   compiles, where `thenApply` let the proof go on to 4.
-- [ ] Found 2026-11-27 with the above: file moves (`xtc/renameFiles`, `workspace/willRenameFiles`) still answer no edit
-  for a changed project or a failed base compile; the plain rename's proof checks a closed member's change only before
-  an edit, so its refusal of a changed member is still no edit. VS Code's textDocument/rename (sent only to a server
-  without `xtcRenameProposal`) says "No result." for ContentModified, and LSP4IJ 0.30.1's own rename "The element can't
-  be renamed."; the plugin turns LSP4IJ's rename off for Ecstasy files.
+- [x] Found 2026-11-27 with the above: file moves (`xtc/renameFiles`, `workspace/willRenameFiles`) answered no edit for
+  a changed project or a failed base compile; the plain rename's proof checked a closed member's change only before an
+  edit, so its refusal of a changed member was still no edit. Fixed (`0d9f7a1799`), as the rename answers since
+  `4da6bc57c2`: a move whose base compile fails answers RequestFailed with `unproven` as its data and its reason, named
+  for the operation ("This move can't be proven while Consumer does not compile: fix the errors, then move again"). A
+  move whose sources changed while it was proven answers ContentModified: `renameFilesProposal` checks `isCurrent()`
+  once, before any answer, and a moved input's or a resource's change is `RenameOvertaken`. A move that its proof
+  refuses is still no edit. The plain rename's proof checks a closed member after any answer, so its refusal of a
+  changed one is `RenameOvertaken`. VS Code's move participant takes a RequestFailed answer as a refusal with the
+  server's reason, where the language client's handling threw and VS Code moved the files without the edits and said
+  nothing. Its warning then names the moved files and folders that hold an Ecstasy source, and the reason, whatever the
+  server's references find, as they find no use in a module that does not compile; the server proves only moves within
+  a module of the graph (its sources, its folders, which are packages and hold its resources) or of a folder that holds
+  a module, and answers any other with no edit. IntelliJ's notification says "<title>
+  failed: <reason>", and for ContentModified "<title> failed: the project changed while the language server proved it;
+  invoke it again." VS Code's textDocument/rename (sent only to a server without `xtcRenameProposal`) still says "No
+  result." for ContentModified. LSP4IJ 0.30.1's own rename, "The element can't be renamed.", stays off for Ecstasy
+  files, and its own willRenameFiles, which the plugin's handlers replace, takes any failure as no edit.
+  `XdkTypeMoveTest`'s destination below a class had been refused as no edit only because its folder keeps App from
+  compiling; it is checked as unproven now. X103, X109, X128-X131, X166 and X214-X219 passed in both editors (VS Code
+  `run-OoM7NE`, X130 and X218 as UP16 and UP23 record; IntelliJ `run-3820338383841682940`); the extension suite, 108
+  passing (`run-TN8btV`, and on the final tree `run-QFC5eS`). Still open: a move while discovery has a problem, or of a
+  file in no module of the graph, answers no edit.
 - [x] Found 2026-11-27 in the review of the rename answers: cancelling IntelliJ's "Renaming ..." progress showed
   "Rename failed: null", from the CancellationException LSP4IJ's wait gives the rename's future, in the rename's hint
   and the prepare step's. Fixed (`3408f07efc`): `renameFailure` shows nothing for a failure with a cancellation among
