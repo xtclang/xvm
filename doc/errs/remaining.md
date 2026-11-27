@@ -1665,7 +1665,7 @@ IntelliJ's UP24, and UP07's waits for a baseline. UP13 is LSP4IJ's extension poi
 - [x] UP05 (#1742): remove `CompilerRootWatches`; gate: changes under external roots observed while
   focused, watchers released on disposal, X124. On the 0.30.0 branch: `26e2f7440e`.
   **On 0.30.1:** `a6077c9942`.
-- [ ] UP07 (#1730, #1735): remove `DiagnosticResultMessages` and the quick-fix data revision; gate:
+- [x] UP07 (#1730, #1735): remove `DiagnosticResultMessages` and the quick-fix data revision; gate:
   X181–X185, X202, X213 and diagnostic/action Undo/Redo. On the 0.30.0 branch: `9afed877da`.
   **On 0.30.1:** `a41465a51e` removes the `previousResultId` part, and `DiagnosticResultMessages`
   stays as the playbook's report record, and since 2026-11-25 as the UP86 bridge's (`markConnected` waits for the
@@ -1676,6 +1676,10 @@ IntelliJ's UP24, and UP07's waits for a baseline. UP13 is LSP4IJ's extension poi
   errs with the bridge and the waits, reopened none over the same cases (`run-1061357732916096379`), so both stay on
   0.30.1. The experiment turned off the bridge and the fixture isolation together, so which of them the
   reopens need is still open; that decides whether an LSP4IJ issue is left to file.
+  **2026-11-27:** no LSP4IJ defect left: the reopens came only without the fixture isolation (7, against 0 with it,
+  with or without the bridge), and the client canceled no code action; they were retries for answers that took up to
+  9.7 s while LSP4IJ pulled 25 open broken fixtures' diagnostics. Nothing to file; the playbook's three UP07 comments are
+  corrected on the IntelliJ harness branch, and `choosePopup`'s fixed 2 s menu wait becomes progress-based there.
 - [x] UP08 (#1710): remove `ConfigurationJson`'s null handling; gate: X266, X268, CFG1–CFG3.
   On the 0.30.0 branch: `d8ad697b7f`.
   **On 0.30.1:** `fca2ed0b85`.
@@ -1715,12 +1719,14 @@ IntelliJ's UP24, and UP07's waits for a baseline. UP13 is LSP4IJ's extension poi
 - [x] UP19 (#1708): remove `DirectoryDocumentMoves`; gate: X118, X161, X162, X163 and the
   connection lifecycle tests. On the 0.30.0 branch: `4d7a8a361a`.
   **On 0.30.1:** `592538e145`.
-- [ ] UP21 (#1726, #1731): remove `ClosedRefactoringDocuments`; gate: X169 (exact disk text and
+- [x] UP21 (#1726, #1731): remove `ClosedRefactoringDocuments`; gate: X169 (exact disk text and
   current diagnostics). On the 0.30.0 branch: `1172c649d8`; `XtcRenameEdit` still refuses an unsaved
   closed target.
   **On 0.30.1:** `bb2cb51ba4` lets LSP4IJ save the documents a rename changes.
   `ClosedRefactoringDocuments` stays for a rename that also moves its directory (`e1fa5fd017`,
   X116), so this stays open.
+  **2026-11-27:** done (`269a7e883f`): with the save off, X109-X116 passed 10 of 10 and X116, X161-X163 and X169 3 of
+  3 on 0.30.1; the save is dropped, its guard against a closed target with unsaved changes kept (`UnsavedClosedTargets`).
 - [x] UP22 (#1699): no workaround to remove; gate: native reconnect and typing acceptance.
   **On 0.30.1:** released in 0.30.1, with nothing to remove.
 - [x] UP25 (#1749): advertise `workspace/textDocumentContent` to IntelliJ; gate: X254 without the
