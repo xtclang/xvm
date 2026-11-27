@@ -158,10 +158,10 @@
     <ID>CyclomaticComplexMethod:XdkPresentation.kt:XdkPresentation$fun tokens: SemanticTokens</ID>
     <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$fun diagnostics: List&lt;CompilationResult&gt;</ID>
     <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$fun importCompletions: List&lt;CompletionItem&gt;</ID>
-    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$fun renameFilesProposal: XdkRenameProposal?</ID>
     <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun answer: List&lt;CodeAction&gt;</ID>
     <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun build: XdkCodeActionCache.Base?</ID>
     <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun navigationBuilds: Map&lt;String, XdkNavigationIndex.Build&gt;?</ID>
+    <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun renameFilesProposal: XdkRenameProposal?</ID>
     <ID>CyclomaticComplexMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun renameProposal: XdkRenameProposal?</ID>
     <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$fun plan: Plan?</ID>
     <ID>CyclomaticComplexMethod:XdkRename.kt:XdkRename$fun preservesBindings: Boolean</ID>
@@ -265,9 +265,9 @@
     <ID>LongMethod:XdkPresentation.kt:XdkPresentation$fun hints: List&lt;InlayHint&gt;</ID>
     <ID>LongMethod:XdkPresentation.kt:XdkPresentation$fun tokens: SemanticTokens</ID>
     <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$fun diagnostics: List&lt;CompilationResult&gt;</ID>
-    <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$fun renameFilesProposal: XdkRenameProposal?</ID>
     <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun answer: List&lt;CodeAction&gt;</ID>
     <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun build: XdkCodeActionCache.Base?</ID>
+    <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun renameFilesProposal: XdkRenameProposal?</ID>
     <ID>LongMethod:XdkProjectQueries.kt:XdkProjectQueries$private fun renameProposal: XdkRenameProposal?</ID>
     <ID>LongMethod:XdkRename.kt:XdkRename$fun plan: Plan?</ID>
     <ID>LongMethod:XdkRename.kt:XdkRename$fun preservesMemberAdditions: Boolean</ID>
@@ -484,11 +484,11 @@
     <ID>ReturnCount:XdkMethodExtraction.kt:XdkMethodExtraction$fun candidate: Candidate?</ID>
     <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$fun navigation: XdkWorkspaceNavigation?</ID>
     <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$fun proved: CodeAction?</ID>
-    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$fun renameFilesProposal: XdkRenameProposal?</ID>
     <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun answer: List&lt;CodeAction&gt;</ID>
     <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun build: XdkCodeActionCache.Base?</ID>
     <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun methodFamily: Set&lt;ProofIdentity&gt;?</ID>
     <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun propertyFamily: Set&lt;ProofIdentity&gt;?</ID>
+    <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun renameFilesProposal: XdkRenameProposal?</ID>
     <ID>ReturnCount:XdkProjectQueries.kt:XdkProjectQueries$private fun renameProposal: XdkRenameProposal?</ID>
     <ID>ReturnCount:XdkRename.kt:XdkRename$fun preservesMemberAdditions: Boolean</ID>
     <ID>ReturnCount:XdkRename.kt:XdkRename$fun preservesMemberInline: Boolean</ID>

@@ -3173,20 +3173,31 @@ class XdkAdapter
                     null
                 }
             }
-            val source = module.document(request.uri)?.semantics?.sourceName ?: return null
-            val before = compile(module.sourceTexts) ?: return null
-            val plan =
-                XdkRename.plan(
-                    before,
-                    module.sourceTexts,
-                    source,
-                    request.position.line,
-                    request.position.column,
-                    request.name,
-                ) ?: return null
-            val after = compile(plan.proposed) ?: return null
-            if (!XdkRename.preservesBindings(before, after, plan)) return null
-            // A closed file can change without a watcher event. An edit against that old snapshot is overtaken.
+
+            fun proven(): WorkspaceEdit? {
+                val source = module.document(request.uri)?.semantics?.sourceName ?: return null
+                val before = compile(module.sourceTexts) ?: return null
+                val plan =
+                    XdkRename.plan(
+                        before,
+                        module.sourceTexts,
+                        source,
+                        request.position.line,
+                        request.position.column,
+                        request.name,
+                    ) ?: return null
+                val after = compile(plan.proposed) ?: return null
+                if (!XdkRename.preservesBindings(before, after, plan)) return null
+                return WorkspaceEdit(
+                    plan.edits.keys.associate { name ->
+                        (module.sourceUri(name) ?: return null) to plan.textEdits(name)
+                    },
+                    versioned = true,
+                )
+            }
+            val edit = proven()
+            // A closed file can change without a watcher event. An answer of that old snapshot, an edit or a refusal, is
+            // overtaken.
             if (module.sourceInputs != null) {
                 val current =
                     try {
@@ -3196,12 +3207,7 @@ class XdkAdapter
                     }
                 if (current != module.sourceInputs) throw RenameOvertaken()
             }
-            return WorkspaceEdit(
-                plan.edits.keys.associate { name ->
-                    (module.sourceUri(name) ?: return null) to plan.textEdits(name)
-                },
-                versioned = true,
-            )
+            return edit
         }
 
         /** Whether [uri] is a source of a module of the graph, which the graph's queries read. */

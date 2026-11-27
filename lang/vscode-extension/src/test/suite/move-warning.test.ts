@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { LSPErrorCodes, ResponseError, type LanguageClient } from 'vscode-languageclient/node';
+import { BaseLanguageClient, LSPErrorCodes, ResponseError, type LanguageClient, type MessageSignature } from 'vscode-languageclient/node';
 import { moveWithConfiguration } from '../../rename-proposal';
 
 suite('File moves', () => {
@@ -64,6 +64,30 @@ suite('File moves', () => {
             move(suit, vscode.Uri.joinPath(folder(), 'cardGame', 'cards', 'Suit.x')), async moved => [...moved], message => warnings.push(message));
         assert.strictEqual(failed, null);
         assert.ok(warnings[1]?.includes('the destination package is shadowed'), warnings[1]);
+    });
+
+    test("a move that the server can't prove says the server's reason, also where its references find no use", async () => {
+        const suit = vscode.Uri.joinPath(folder(), 'cardGame', 'Suit.x');
+        const reason = "This move can't be proven while Library does not compile: fix the errors, then move again";
+        const logger = { error: () => undefined } as unknown as BaseLanguageClient;
+        // the language client's own handling of a failed request, which throws a request failure on
+        const client = {
+            sendRequest: async () => { throw new ResponseError(LSPErrorCodes.RequestFailed, reason, 'unproven'); },
+            handleFailedRequest: (type: MessageSignature, token: vscode.CancellationToken, error: unknown, value: null, notify: boolean) =>
+                BaseLanguageClient.prototype.handleFailedRequest.call(logger, type, token, error, value, notify),
+        } as unknown as LanguageClient;
+        const warnings: string[] = [];
+        // the uses of a module that does not compile are where the server's references can't find them
+        const edit = await moveWithConfiguration(client, move(suit, vscode.Uri.joinPath(folder(), 'cardGame', 'cards', 'Suit.x')),
+            async () => [], message => warnings.push(message));
+        assert.strictEqual(edit, null);
+        assert.strictEqual(warnings.length, 1);
+        assert.ok(warnings[0].includes('Suit.x') && warnings[0].includes(reason), warnings[0]);
+        // the server proves only a move within a module, as of a folder of resources, whose literals name them
+        await moveWithConfiguration(client, move(vscode.Uri.joinPath(folder(), 'cardGame', 'artwork'), vscode.Uri.joinPath(folder(), 'artwork')),
+            async () => [], message => warnings.push(message));
+        assert.strictEqual(warnings.length, 2, warnings.join('\n'));
+        assert.ok(warnings[1].includes('artwork') && warnings[1].includes(reason), warnings[1]);
     });
 
     test('a move that a change of the project overtook asks the server again, and gets its edits', async () => {
