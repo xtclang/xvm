@@ -398,19 +398,23 @@ The [configuration reference](../doc/configuration.md) lists all 19 settings, wh
 
 All settings live under the `xtc` namespace (`Cmd+,` / `Ctrl+,`):
 
-| Setting                                | Type      | Default | Description                                                                                              |
-|----------------------------------------|-----------|---------|----------------------------------------------------------------------------------------------------------|
-| `xtc.java.home`                        | string    | `""`    | Java 25+ install path. Overrides automatic discovery.                                                    |
-| `xtc.build.mode`                       | enum      | `"embedded"`| How Build, Run and Rebuild work: `embedded`, `auto` or `gradle`. See [Building and running](#building-and-running). |
-| `xtc.trace.server`                     | enum      | `"off"` | LSP wire tracing: `off`, `messages`, `verbose`.                                                          |
-| `xtc.inlayHints.enabled`               | boolean   | `true`  | Show inlay hints from the language server.                                                               |
-| `xtc.sourceRoots`                      | string[]  | `[]`    | Extra absolute directories indexed by the language server (e.g. XDK standard-library sources).           |
-| `xtc.formatting.indentSize`            | integer   | `4`     | Spaces per indentation level.                                                                            |
-| `xtc.formatting.continuationIndentSize`| integer   | `8`     | Spaces for continuation lines.                                                                           |
-| `xtc.formatting.tabSize`               | integer   | `4`     | Deprecated and unread: the formatter uses `indentSize`; `editor.tabSize` sets the visual tab width. |
-| `xtc.formatting.insertSpaces`          | boolean   | `true`  | Insert spaces instead of tabs.                                                                           |
-| `xtc.formatting.maxLineWidth`          | integer   | `120`   | Right-margin column.                                                                                     |
-| `xtc.formatting.wrapComments`          | boolean   | `false` | Refill doc and block comment paragraphs that run past the right margin.                                  |
+| Setting                                    | Type     | Default          | Description                                                                                                         |
+|--------------------------------------------|----------|------------------|---------------------------------------------------------------------------------------------------------------------|
+| `xtc.java.home`                            | string   | `""`             | Java 25+ install path. Overrides automatic discovery.                                                               |
+| `xtc.build.mode`                           | enum     | `"embedded"`     | How Build, Run and Rebuild work: `embedded`, `auto` or `gradle`. See [Building and running](#building-and-running). |
+| `xtc.trace.server`                         | enum     | `"off"`          | LSP wire tracing: `off`, `messages`, `verbose`.                                                                     |
+| `xtc.inlayHints.enabled`                   | boolean  | `true`           | Show inlay hints from the language server.                                                                          |
+| `xtc.sourceRoots`                          | string[] | `[]`             | Extra absolute directories indexed by the language server (e.g. XDK standard-library sources).                      |
+| `xtc.formatting.indentSize`                | integer  | `4`              | Spaces per indentation level.                                                                                       |
+| `xtc.formatting.continuationIndentSize`    | integer  | `8`              | Spaces for continuation lines.                                                                                      |
+| `xtc.formatting.tabSize`                   | integer  | `4`              | Deprecated and unread: the formatter uses `indentSize`; `editor.tabSize` sets the visual tab width.                 |
+| `xtc.formatting.insertSpaces`              | boolean  | `true`           | Insert spaces instead of tabs.                                                                                      |
+| `xtc.formatting.maxLineWidth`              | integer  | `120`            | Right-margin column.                                                                                                |
+| `xtc.formatting.wrapComments`              | boolean  | `false`          | Refill doc and block comment paragraphs that run past the right margin.                                             |
+| `xtc.formatting.formatterTagsEnabled`      | boolean  | `false`          | Leave the lines between a comment with the off tag and one with the on tag as they are.                             |
+| `xtc.formatting.formatterOffTag`           | string   | `@formatter:off` | The text in a comment that turns formatting off.                                                                    |
+| `xtc.formatting.formatterOnTag`            | string   | `@formatter:on`  | The text in a comment that turns formatting on again.                                                               |
+| `xtc.formatting.formatterTagsAcceptRegexp` | boolean  | `false`          | Take the two tags as regular expressions.                                                                           |
 
 ### Pointing at a specific Java
 

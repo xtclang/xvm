@@ -7,6 +7,7 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.lsp.adapter.DocumentLink
 import org.xvm.lsp.adapter.FoldingRange
+import org.xvm.lsp.adapter.FormatterTags
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
 import org.xvm.lsp.adapter.Position
@@ -496,6 +497,21 @@ internal object XdkLexical {
                 }
         return (blocks + lines).sortedBy { it.startLine }
     }
+
+    /**
+     * The comments of [text], with their lines, for the formatter markers ([FormatterTags]); where the lexer refuses the
+     * text, each line's part from where its first line or block comment opens stands in.
+     */
+    fun commentsOf(text: String): List<FormatterTags.Comment> =
+        lex(text)
+            ?.filter { it.id in comments }
+            ?.map { FormatterTags.Comment(it.range.start.line..it.range.end.line, it.text) }
+            ?: text.lines().mapIndexedNotNull { line, content ->
+                listOf("//", "/*")
+                    .mapNotNull { marker -> content.indexOf(marker).takeIf { it >= 0 } }
+                    .minOrNull()
+                    ?.let { FormatterTags.Comment(line..line, content.substring(it)) }
+            }
 
     private fun lex(text: String): List<Span>? {
         val errors = ErrorList()
