@@ -5,6 +5,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, createEmbeddedBuildTask, createEmbeddedRunTask, type BuildMode } from './embedded-execution';
 import { gradleProjects, gradleTask, gradleTasks } from './gradle-projects';
+import { gradleRoot } from './gradle-root';
 
 export interface XtcTaskDefinition extends vscode.TaskDefinition {
     moduleName: string;
@@ -105,6 +106,23 @@ function runMode(definition: XtcTaskDefinition, scope?: vscode.WorkspaceFolder):
     return buildMode(runFolder(definition.moduleUri, scope));
 }
 
+/**
+ * Ecstasy: Run Module's task, from a Run lens, an editor or the command: the module [moduleName] of the source [source],
+ * in [mode]. An embedded run takes the source itself; every run takes the folder of the source ([folderOf], by default
+ * [runFolder]) as its task's, where it runs, as a module's name alone does not tell it in a window of several folders.
+ */
+export function runModuleTask(client: ClientAccess, source: string | undefined, moduleName: string, mode: BuildMode,
+    folderOf: (uri: string | undefined) => vscode.WorkspaceFolder | undefined = uri => runFolder(uri)): vscode.Task {
+    const definition: XtcTaskDefinition = {
+        type: XtcTaskProvider.type,
+        moduleName,
+        moduleUri: mode === 'embedded' ? source : undefined,
+        mode,
+        quietMode: true,
+    };
+    return createXtcRunTask(definition, client, folderOf(source));
+}
+
 /** The task that runs [definition]'s module, in the build mode of its folder, or of [scope], the folder its task is of. */
 export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAccess, scope?: vscode.WorkspaceFolder): vscode.Task {
     const mode = runMode(definition, scope);
@@ -123,13 +141,16 @@ export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAc
     const { command, args } = mode === 'gradle'
         ? gradleRunCommand(definition)
         : directRunCommand(definition);
+    // where the module's folder's Gradle build is: a task of the window's runs where VS Code's terminal starts, which in
+    // a window of several folders need not be that folder
+    const folder = runFolder(definition.moduleUri, scope);
 
     const task = new vscode.Task(
         definition,
         vscode.TaskScope.Workspace,
         `Run ${definition.moduleName}`,
         'xtc',
-        new vscode.ShellExecution(command, args),
+        new vscode.ShellExecution(command, args, folder ? { cwd: gradleRoot(folder) } : undefined),
         []
     );
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Shared };

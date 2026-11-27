@@ -5,6 +5,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { gradleTestArgs, gradleWrapper, runTestProcess } from './debug-adapter';
 import { buildMode, describeBuild, type RunResponse, trackRun } from './embedded-execution';
+import { gradleRoot } from './gradle-root';
 import { failureLine, isTestEvent, LineSplitter, parseTestEvent, type TestEvent } from './test-events';
 
 /**
@@ -278,7 +279,7 @@ async function runGradleTests(selection: Selection, tests: { selector: string; k
     }
     const args = gradleTestArgs(selection.module, tests);
     results.note(`${gradleWrapper()} ${args.join(' ')}`);
-    const exitCode = await runTestProcess(gradleWrapper(), args, folder.uri.fsPath, line => results.output(`${line}\n`), token);
+    const exitCode = await runTestProcess(gradleWrapper(), args, gradleRoot(folder), line => results.output(`${line}\n`), token);
     results.note(`Tests finished with exit code ${exitCode ?? 1}`);
 }
 

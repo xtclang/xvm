@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 import type { LanguageClient, Location, Position } from 'vscode-languageclient/node';
 
 import { buildMode, createEmbeddedBuildTask } from './embedded-execution';
-import { createXtcRunTask, runFolder, XtcTaskDefinition, XtcTaskProvider } from './task-provider';
+import { gradleRoot } from './gradle-root';
+import { runFolder, runModuleTask, XtcTaskDefinition, XtcTaskProvider } from './task-provider';
 
 const MODULE_NAME_REGEX = /^[a-zA-Z_]\w*$/;
 
@@ -43,7 +44,7 @@ async function runBuild(client: () => LanguageClient | undefined, rebuild: boole
     const task = new vscode.Task(
         { type: XtcTaskProvider.type, moduleName: '_lifecycle_build', mode: 'gradle' } as XtcTaskDefinition,
         folder, rebuild ? 'Rebuild' : 'Build', 'xtc',
-        new vscode.ShellExecution(rebuild ? `${gradlew} clean build` : `${gradlew} build`), ['$xtc']);
+        new vscode.ShellExecution(rebuild ? `${gradlew} clean build` : `${gradlew} build`, { cwd: gradleRoot(folder) }), ['$xtc']);
     task.group = vscode.TaskGroup.Build;
     await vscode.tasks.executeTask(task);
 }
@@ -81,14 +82,7 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
                 }
             }
 
-            const definition: XtcTaskDefinition = {
-                type: XtcTaskProvider.type,
-                moduleName: moduleName ?? path.basename(vscode.Uri.parse(source!).fsPath, '.x'),
-                moduleUri: mode === 'embedded' ? source : undefined,
-                mode,
-                quietMode: true,
-            };
-            await vscode.tasks.executeTask(createXtcRunTask(definition, client));
+            await vscode.tasks.executeTask(runModuleTask(client, source, moduleName ?? path.basename(vscode.Uri.parse(source!).fsPath, '.x'), mode));
         }),
 
         vscode.commands.registerCommand('xtc.build', () => runBuild(client, false)),
