@@ -119,7 +119,7 @@ The build mode applies to tests as to runs:
 
 | Build mode | How tests run |
 |------------|---------------|
-| Embedded | With xunit in a process of the language server's own, against the XDK and xunit that the server comes with, not a version that the project's Gradle build may choose. Its compiled test modules are under `build/xtc/embedded/xunit`. |
+| Embedded | With xunit in a process of the language server's own, against the XDK and xunit that the server comes with. A project whose Gradle build chooses another XDK runs its tests with Gradle instead ([When builds and runs use Gradle whatever the mode](building-and-running.md#when-builds-and-runs-use-gradle-whatever-the-mode)). Its compiled test modules are under `build/xtc/embedded/xunit`. |
 | Gradle | The XTC plugin's `testXtc` for the chosen tests, with the build's own XDK and xunit; xunit's results come back to the same views. |
 | Command line (IntelliJ) | `xtc test`, for the module's tests. |
 
