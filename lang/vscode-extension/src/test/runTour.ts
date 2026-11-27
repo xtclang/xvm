@@ -69,6 +69,8 @@ export async function runTour(extensionRoot: string, args: readonly string[]): P
                 XTC_RECORD_VIDEO: process.env.XTC_RECORD_VIDEO ?? '',
                 XTC_RECORDING_START_FILE: process.env.XTC_RECORDING_START_FILE ?? '',
                 XTC_LSP_LOG_DIR: path.join(run, 'server-logs'),
+                // the user's settings, which the harness's test of a playbook case's cleanup puts back as it found them
+                XTC_TEST_USER_SETTINGS: path.join(profile, 'User', 'settings.json'),
                 // A checkout exported without .git, such as the container's, gets it from its caller.
                 XTC_COMMIT: process.env.XTC_COMMIT ?? await git(extensionRoot, 'rev-parse', 'HEAD'),
                 // the XDK's launchers are on the PATH, as an installed XDK's are, for the terminal and Create Project

@@ -11,6 +11,8 @@ import { gradleProjects } from '../../gradle-projects';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
 import { onDidRefreshTests, onDidReportTest, onDidStartTest, type TestReport } from '../../test-explorer';
+import { watchProcess } from '../uiWait';
+import { caseSignal } from '../wait';
 import { discovered } from './liveWorkspace';
 import { gradleModel, withGradleModel } from './platform';
 import { client, diagnosticCode, eventually, noErrors, playbook, type Workspace } from './support';
@@ -1029,8 +1031,8 @@ class Debugger {
      * Waits until the program has stopped after [index] stops before, and returns what that stop says; a session that ends
      * first fails at once, with what the adapter sent, instead of the wait running out.
      */
-    async stopped(message: string, index = 0, timeoutMs?: number): Promise<DapBody> {
-        await eventually(async () => this.events('stopped').length > index || this.done, value => value, message, timeoutMs);
+    async stopped(message: string, index = 0): Promise<DapBody> {
+        await eventually(async () => this.events('stopped').length > index || this.done, value => value, message);
         const stops = this.events('stopped');
         assert.ok(stops.length > index, `The session ended without stopping: ${this.transcript()}`);
         return stops[index].body ?? {};
@@ -1119,8 +1121,8 @@ class Debugger {
     }
 
     /** Waits until the session ends. */
-    async end(message: string, timeoutMs?: number): Promise<void> {
-        await eventually(async () => this.done, done => done, message, timeoutMs);
+    async end(message: string): Promise<void> {
+        await eventually(async () => this.done, done => done, message);
     }
 
     /** Checks that the program exited with [exitCode], as the adapter's `exited` event says. */
@@ -1235,7 +1237,7 @@ export function executionInputCases(): void {
 }
 
 /** Runs [action], which starts the shell task called [name], and returns that task process's exit code. */
-async function shellTaskExit(name: string, action: () => Thenable<unknown>, timeoutMs?: number): Promise<number | undefined> {
+async function shellTaskExit(name: string, action: () => Thenable<unknown>): Promise<number | undefined> {
     let ended = false;
     let exitCode: number | undefined;
     const listener = vscode.tasks.onDidEndTaskProcess(event => {
@@ -1246,7 +1248,7 @@ async function shellTaskExit(name: string, action: () => Thenable<unknown>, time
     });
     try {
         await action();
-        await eventually(async () => ended, value => value, `${name} task ends`, timeoutMs);
+        await eventually(async () => ended, value => value, `${name} task ends`);
         return exitCode;
     } finally {
         listener.dispose();
@@ -1334,8 +1336,6 @@ export function automaticBuildModeCases(): void {
 }
 
 /** A real Gradle build starts its own daemon, so its tasks get longer than the usual wait. */
-const GRADLE_WAIT_MS = 120_000;
-
 const exists = (file: string) => fs.access(file).then(() => true, () => false);
 
 /** The values of a case whose project xtc init makes at the folder root: X303 and X337. */
@@ -1368,8 +1368,11 @@ async function withGradleProject(id: string, data: GradleProjectValues,
     const original = settings.inspect<string>('build.mode')?.workspaceValue;
     const generated = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-init-'));
     try {
-        await promisify(execFile)(xtc, ['init', data.project, '--type', 'application', '--dir', generated],
-            { shell: process.platform === 'win32' });
+        const init = promisify(execFile)(xtc, ['init', data.project, '--type', 'application', '--dir', generated],
+            { shell: process.platform === 'win32', signal: caseSignal() });
+        // under way while it prints or computes, and ended with the case once that is given up on
+        watchProcess(init.child, 'xtc init');
+        await init;
         await fs.cp(path.join(generated, data.project), folder.uri.fsPath, { recursive: true });
         await fs.chmod(root('gradlew'), 0o755);
         const version = new RegExp(data.versionPattern, 'm').exec(await fs.readFile(root(data.catalog), 'utf8'))?.[1];
@@ -1393,12 +1396,12 @@ export function gradleProjectCases(): void {
     playbook('X303', async (_workspace, data) => {
         await withGradleProject('X303', data, async (folder, root) => {
             await selectBuildMode(folder, 'gradle', data.statusGradle, 'Status bar shows the Gradle build');
-            const build = () => shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build'), GRADLE_WAIT_MS);
+            const build = () => shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build'));
             assert.strictEqual(await build(), 0, 'Gradle build exit code');
             for (const artifact of data.artifacts) assert.ok(await exists(root(artifact)), `The Gradle build writes ${artifact}`);
             const module = vscode.Uri.file(root(data.moduleFile));
             assert.strictEqual(await shellTaskExit(`Run ${data.module}`,
-                () => vscode.commands.executeCommand('xtc.runModule', module.toString(), data.module), GRADLE_WAIT_MS), 0, 'Gradle run exit code');
+                () => vscode.commands.executeCommand('xtc.runModule', module.toString(), data.module)), 0, 'Gradle run exit code');
 
             // the build compiles the saved module: a type error fails it, and the Build task's problem matcher shows
             // it in Problems (the file is never opened, so the language server reports nothing for it)
@@ -1409,7 +1412,7 @@ export function gradleProjectCases(): void {
                 values => values.some(item => diagnosticCode(item) === data.brokenCode && item.range.start.line === data.brokenLine),
                 'The build error in Problems');
         });
-    }, 360_000);
+    });
 }
 
 /**
@@ -1426,13 +1429,13 @@ export function gradleDebugCases(): void {
             const exit = await shellTaskExit(`Debug ${data.module}`, () => debugging(async debug => {
                 debug.add(lineBreakpoint(module, data.breakpointLine));
                 await debug.launch(module, data.module);
-                await debug.stopped('Gradle runs the program, which stops at the breakpoint', 0, GRADLE_WAIT_MS);
+                await debug.stopped('Gradle runs the program, which stops at the breakpoint');
                 await debug.atBreakpoint(module, data.breakpointLine, data.frames);
                 await debug.continueToExit(data.exitCode, 'Continue runs the program to its exit, which ends the session');
-            }), GRADLE_WAIT_MS);
+            }));
             assert.strictEqual(exit, 0, 'Gradle task exit code');
         });
-    }, 360_000);
+    });
 }
 
 /**
@@ -1479,21 +1482,21 @@ export class TestWatch implements vscode.Disposable {
     }
 
     /** Waits until the Test Explorer lists each of [ids], asking it to list the tests again. */
-    async listing(ids: readonly string[], message = 'The Test Explorer lists the module\'s tests', timeoutMs?: number): Promise<void> {
+    async listing(ids: readonly string[], message = 'The Test Explorer lists the module\'s tests'): Promise<void> {
         await eventually(async () => {
             await vscode.commands.executeCommand('testing.refreshTests');
             return this.listed;
-        }, listed => ids.every(id => listed.includes(id)), message, timeoutMs);
+        }, listed => ids.every(id => listed.includes(id)), message);
     }
 
     /** Waits until each of [ids] has a report, and answers the latest of each. */
-    async results(ids: readonly string[], what: string, timeoutMs?: number): Promise<TestReport[]> {
-        return eventually(async () => ids.map(id => this.result(id)!), reports => reports.every(Boolean), what, timeoutMs);
+    async results(ids: readonly string[], what: string): Promise<TestReport[]> {
+        return eventually(async () => ids.map(id => this.result(id)!), reports => reports.every(Boolean), what);
     }
 
     /** Waits until [data]'s tests are reported, and checks that the passed ones passed, and the failed one failed where and as it says. */
-    async checkRun(data: { passed: readonly string[]; failed: string; failure: string; failureLine: number }, what: string, timeoutMs?: number): Promise<void> {
-        const [failure, ...passed] = await this.results([data.failed, ...data.passed], what, timeoutMs);
+    async checkRun(data: { passed: readonly string[]; failed: string; failure: string; failureLine: number }, what: string): Promise<void> {
+        const [failure, ...passed] = await this.results([data.failed, ...data.passed], what);
         for (const report of passed) assert.strictEqual(report.state, 'passed', JSON.stringify(this.reports));
         assert.strictEqual(failure.state, 'failed', JSON.stringify(this.reports));
         assert.strictEqual(failure.message, data.failure);
@@ -1505,20 +1508,20 @@ export class TestWatch implements vscode.Disposable {
      * [data]'s line, and on to its end; checks that it alone ran, and passed.
      */
     async debugAtCursor(editor: vscode.TextEditor, data: { debugged: string; nameLine: number; nameColumn: number; breakpointLine: number; printed: string },
-        stopMessage: string, timeoutMs?: number): Promise<void> {
+        stopMessage: string): Promise<void> {
         this.reports.length = 0;
         await debugging(async debug => {
             debug.add(lineBreakpoint(editor.document.uri, data.breakpointLine));
             select(editor, data.nameLine, data.nameColumn);
             // the command answers once its test run has ended, which waits for the session that the breakpoint stops
             const running = vscode.commands.executeCommand('testing.debugAtCursor');
-            assert.strictEqual((await debug.stopped(stopMessage, 0, timeoutMs)).reason, 'breakpoint');
+            assert.strictEqual((await debug.stopped(stopMessage)).reason, 'breakpoint');
             const frames = await debug.shownFrames(1, 'VS Code shows the call stack');
             assert.ok(frames[0].name.endsWith('works'), JSON.stringify(frames[0]));
             assert.strictEqual(frames[0].line, data.breakpointLine);
 
             await vscode.commands.executeCommand('workbench.action.debug.continue');
-            await debug.end('Continue runs the test to its end', timeoutMs);
+            await debug.end('Continue runs the test to its end');
             await running;
             await eventually(async () => this.result(data.debugged)?.state, state => state === 'passed', 'The debugged test passes');
             debug.printed(data.printed);
@@ -1597,11 +1600,11 @@ export function gradleTestCases(): void {
             const editor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
             const tests = new TestWatch();
             try {
-                await tests.listing(data.items, 'The Test Explorer lists the test module\'s tests', GRADLE_WAIT_MS);
+                await tests.listing(data.items, 'The Test Explorer lists the test module\'s tests');
                 select(editor, data.classLine, data.classColumn);
                 await vscode.commands.executeCommand('testing.runAtCursor');
-                await tests.checkRun(data, 'testXtc runs the class\'s tests', GRADLE_WAIT_MS);
-                await tests.debugAtCursor(editor, data, 'testXtc runs the test under the debugger, which stops at the breakpoint', GRADLE_WAIT_MS);
+                await tests.checkRun(data, 'testXtc runs the class\'s tests');
+                await tests.debugAtCursor(editor, data, 'testXtc runs the test under the debugger, which stops at the breakpoint');
             } finally {
                 tests.dispose();
                 await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
@@ -1621,7 +1624,9 @@ export function attachCases(): void {
         assert.ok(await exists(xec), `X336 runs its program with ${xec}; run ./gradlew xdk:installDist first`);
         const output = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-attach-'));
         const program = spawn(xec, ['-o', output, '--debug', 'listen:127.0.0.1:0,suspend', document.uri.fsPath],
-            { shell: process.platform === 'win32' });
+            { shell: process.platform === 'win32', signal: caseSignal() });
+        // under way while it prints or computes, and ended with the case once that is given up on
+        watchProcess(program, 'xec');
         let printed = '';
         program.stdout.on('data', (chunk: Buffer) => { printed += chunk.toString('utf8'); });
         program.stderr.on('data', (chunk: Buffer) => { printed += chunk.toString('utf8'); });

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { chromium, Browser, Locator, Page } from 'playwright-core';
-import { answered, TRY_MS, untilTakes, type UnderWay } from './uiWait';
+import { answered, TRY_MS, untilTakes, whileUnderWay, type UnderWay } from './uiWait';
 
 /** Test-only attachment to the isolated Electron renderer; never controls the desktop pointer. */
 export class WorkbenchUi {
@@ -10,7 +10,9 @@ export class WorkbenchUi {
     static async connect(): Promise<WorkbenchUi> {
         const port = Number(process.env.XTC_PLAYBOOK_UI_PORT);
         assert.ok(Number.isInteger(port) && port > 0, 'UI assertions require the isolated launcher endpoint');
-        const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 15_000 });
+        // one connection, as long as it has not answered, or anything else is under way, and the hang's bound at most
+        const connecting = chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 0 });
+        const browser = await whileUnderWay(() => connecting, () => true, "The window's DevTools connection");
         try {
             const pages = browser.contexts().flatMap(context => context.pages())
                 .filter(page => page.url().includes('/workbench/'));
