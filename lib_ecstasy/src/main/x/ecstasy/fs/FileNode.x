@@ -127,16 +127,18 @@ interface FileNode
     Boolean delete();
 
     /**
-     * Attempt to rename the file-node. This operation will fail if the destination name already
-     * exists (unless the name is the same as this file's, in which case it's a no-op). This
-     * operation is atomic.
+     * Attempt to rename the file-node. Renaming an existing node to its own name succeeds without
+     * changing it. By default, the rename fails if another node already has the destination name.
      *
-     * @param name  the new name for the file-node
+     * @param name            the new name for the file-node within its current directory
+     * @param allowOverwrite  (optional) if `True`, attempt to replace an existing file atomically.
+     *                        The rename fails if atomic replacement is unavailable. Existing
+     *                        directories are never replaced.
      *
      * @return True iff the rename was successful
      * @return (conditional) the new FileNode
      */
-    conditional FileNode renameTo(String name);
+    conditional FileNode renameTo(String name, Boolean allowOverwrite = False);
 
     typedef function void () as Cancellable;
 

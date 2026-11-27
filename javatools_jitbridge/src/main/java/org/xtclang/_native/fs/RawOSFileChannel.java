@@ -23,6 +23,9 @@ import org.xvm.javajit.Ctx;
 
 import static org.xtclang.ecstasy.Exception.$io;
 
+import static org.xvm.util.Files.CHANNEL_READ_SIZE;
+import static org.xvm.util.Files.readChunk;
+
 /**
  * The native implementation of {@code _native.fsRawOSFileChannel}.
  */
@@ -145,16 +148,12 @@ public class RawOSFileChannel extends RawChannel {
      */
     public Object take(Ctx ctx) {
         try {
-            ByteBuffer buffer = ByteBuffer.allocate(8192);
-            int read = $channel.read(buffer);
+            ByteBuffer buffer = ByteBuffer.allocate(CHANNEL_READ_SIZE);
+            int read = readChunk($channel, buffer);
             if (read < 0) {
-                return Int64.$box(-1L);
+                return Int64.$box(read);
             }
             return ArrayᐸUInt8ᐳ.$makeArray(ctx, read, buffer);
-        } catch (NonReadableChannelException e) {
-            return Int64.$box(-2L); // InputShutdown
-        } catch (ClosedChannelException e) {
-            return Int64.$box(-3L); // closed
         } catch (IOException e) {
             throw $io(ctx, e);
         }

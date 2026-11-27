@@ -4,7 +4,6 @@ package org.xvm.util;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.UTFDataFormatException;
@@ -1589,24 +1588,7 @@ public final class Handy {
      */
     public static byte[] readFileBytes(File file)
             throws IOException {
-        if (file == null) {
-            throw new IllegalArgumentException("file required");
-        }
-
-        if (!file.exists() || !file.isFile()) {
-            throw new FileNotFoundException(file.toString());
-        }
-
-        long lcb = file.length();
-        if (lcb == 0L) {
-            return EMPTY_BYTE_ARRAY;
-        } else if (lcb > Integer.MAX_VALUE - 1024) {
-            // assume a maximum byte array size just under 2GB
-            throw new IOException("file exceeds max supported length (2GB): "
-                                          + file + "=" + lcb + " bytes");
-        }
-
-        return Files.readAllBytes(file.toPath());
+        return org.xvm.util.Files.readFileBytes(file);
     }
 
     /**

@@ -33,11 +33,11 @@ class OSFileStore
 
     @Override
     Directory|File copy(Path source, Path dest) =
-            copyOrMove(source, source.toString(), dest, dest.toString(), False);
+            copyOrMove(source, source.toString(), dest, dest.toString(), Copy, False);
 
     @Override
     Directory|File move(Path source, Path dest) =
-            copyOrMove(source, source.toString(), dest, dest.toString(), True);
+            copyOrMove(source, source.toString(), dest, dest.toString(), Move, False);
 
     @Override
     FileStore ensureReadOnly() {
@@ -99,6 +99,11 @@ class OSFileStore
 
     conditional OSFile linkAsFile(String pathString) { TODO("native"); }
 
+    static Int Copy    = 0;
+    static Int Move    = 1;
+    static Int Replace = 2;
+
     OSDirectory|OSFile copyOrMove(Path sourcePath, String sourceStr,
-                                  Path destPath,   String destStr, Boolean move) { TODO("native"); }
+                                 Path destPath, String destStr,
+                                 Int operation, Boolean requireMissingDest) { TODO("native"); }
 }

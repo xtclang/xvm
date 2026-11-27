@@ -187,7 +187,7 @@ public class NativeNames {
         reservedMethodName.put("fs.OSStorage/names/1",              "names");
         reservedMethodName.put("fs.OSStorage/unwatch/1",            "unwatch");
         reservedMethodName.put("fs.OSStorage/watch/1",              "watch");
-        reservedMethodName.put("fs.OSFileStore/copyOrMove/5",       "copyOrMove");
+        reservedMethodName.put("fs.OSFileStore/copyOrMove/6",       "copyOrMove");
         reservedMethodName.put("fs.OSFileStore/linkAsFile/1",       "linkAsFile");
         reservedMethodName.put("fs.OSDirectory/dirs/0",             "dirs");
         reservedMethodName.put("fs.OSDirectory/files/0",            "files");

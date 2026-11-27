@@ -1,4 +1,6 @@
 module TestFiles {
+    import ecstasy.fs.AccessDenied;
+    import ecstasy.fs.DirectoryFileStore;
     import ecstasy.fs.FileWatcher;
 
     @Inject            Console   console;
@@ -9,6 +11,7 @@ module TestFiles {
         testInject();
         testModify();
         testListing();
+        testWrappedFind();
     }
 
     void testPaths() {
@@ -184,5 +187,62 @@ module TestFiles {
 
         probe.deleteRecursively();
         assert !probe.exists;
+    }
+
+    void testWrappedFind() {
+        @Inject Directory tmpDir;
+
+        Directory probe = tmpDir.dirFor("xvm_wrapped_find_probe");
+        if (probe.exists) {
+            probe.deleteRecursively();
+        }
+        probe.ensure();
+
+        try {
+            probe.fileFor("outside").contents = [2];
+            Directory wrapped = probe.dirFor("wrapped").ensure();
+            wrapped.fileFor("inside").contents = [1];
+            wrapped.dirFor("child").ensure();
+
+            Directory root  = new DirectoryFileStore(wrapped).root;
+            Directory child = root.dirFor("child");
+
+            assert Directory|File same := root.find(".");
+            assert same.is(Directory);
+            assert same.path == Path.ROOT;
+            assert !root.renameTo("renamed");
+            assert !root.find("..");
+            assert !root.find("../outside");
+
+            assert Directory|File parent := child.find("..");
+            assert parent.is(Directory);
+            assert parent.path == Path.ROOT;
+            assert parent.parent == Null;
+            assert !parent.renameTo("renamed", allowOverwrite=True);
+            assert Directory|File inside := child.find("../inside");
+            assert inside.is(File);
+            assert inside.as(File).contents[0] == 1;
+            assert child.fileFor("../inside").path == inside.path;
+            assert child.dirFor("..").path == root.path;
+            assert !child.find("../../outside");
+            assert !child.find("../child/../../outside");
+
+            try {
+                root.dirFor("..");
+                assert;
+            } catch (AccessDenied e) {}
+            try {
+                child.fileFor("../../outside");
+                assert;
+            } catch (AccessDenied e) {}
+
+            root.fileFor("target").contents = [2];
+            assert File replacement := inside.as(File).renameTo("target", allowOverwrite=True);
+            assert replacement.path == new Path("/target");
+            assert replacement.contents[0] == 1;
+            assert !inside.exists;
+        } finally {
+            probe.deleteRecursively();
+        }
     }
 }

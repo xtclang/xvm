@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 
-import java.nio.file.attribute.BasicFileAttributes;
-
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.nConst;
 
@@ -20,9 +18,12 @@ import org.xvm.javajit.Ctx;
 import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
 
-import org.xvm.runtime.template._native.fs.xOSFileNode;
-
 import static org.xtclang.ecstasy.Exception.$io;
+
+import static org.xvm.util.Files.accessedMillis;
+import static org.xvm.util.Files.createdMillis;
+import static org.xvm.util.Files.modifiedMillis;
+import static org.xvm.util.Files.toOsPath;
 
 /**
  * Native implementation for {@code _native.fs.OSFileNode}.
@@ -118,12 +119,7 @@ public class OSFileNode
     public long createdMillis$get$p(Ctx ctx) {
         try {
             java.nio.file.Path path = $getJavaPath(ctx);
-            if (Files.exists(path)) {
-                BasicFileAttributes attr = Files.readAttributes($getJavaPath(ctx), BasicFileAttributes.class);
-                return attr.creationTime().toMillis();
-            } else {
-                return 0L;
-            }
+            return Files.exists(path) ? createdMillis(path) : 0L;
         } catch (IOException e) {
             throw $io(ctx, e);
         }
@@ -135,12 +131,7 @@ public class OSFileNode
     public long accessedMillis$get$p(Ctx ctx) {
         try {
             java.nio.file.Path path = $getJavaPath(ctx);
-            if (Files.exists(path)) {
-                BasicFileAttributes attr = Files.readAttributes($getJavaPath(ctx), BasicFileAttributes.class);
-                return attr.lastAccessTime().toMillis();
-            } else {
-                return 0L;
-            }
+            return Files.exists(path) ? accessedMillis(path) : 0L;
         } catch (IOException e) {
             throw $io(ctx, e);
         }
@@ -152,12 +143,7 @@ public class OSFileNode
     public long modifiedMillis$get$p(Ctx ctx) {
         try {
             java.nio.file.Path path = $getJavaPath(ctx);
-            if (Files.exists(path)) {
-                BasicFileAttributes attr = Files.readAttributes($getJavaPath(ctx), BasicFileAttributes.class);
-                return attr.lastModifiedTime().toMillis();
-            } else {
-                return 0L;
-            }
+            return Files.exists(path) ? modifiedMillis(path) : 0L;
         } catch (IOException e) {
             throw $io(ctx, e);
         }
@@ -181,7 +167,7 @@ public class OSFileNode
      */
     public static java.nio.file.Path $toOsPath(Ctx ctx, String pathString) {
         try {
-            return xOSFileNode.toOsPath(pathString.toString()).toAbsolutePath();
+            return toOsPath(pathString.toString()).toAbsolutePath();
         } catch (InvalidPathException e) {
             throw $io(ctx, e.getMessage());
         }

@@ -1,10 +1,8 @@
 package org.xvm.runtime.template._native.fs;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 import java.nio.ByteBuffer;
@@ -44,7 +42,12 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 
-import org.xvm.util.Handy;
+import org.xvm.util.Files;
+
+import static org.xvm.util.Files.NO_ACCESS;
+import static org.xvm.util.Files.READ_ONLY;
+import static org.xvm.util.Files.READ_WRITE;
+import static org.xvm.util.Files.WRITE_ONLY;
 
 /**
  * Native OSFile implementation.
@@ -187,7 +190,7 @@ public class xOSFile
     private int getPropertyContents(Frame frame, NodeHandle hFile, int iReturn) {
         Path path = hFile.f_path;
 
-        Callable<byte[]> task = () -> Handy.readFileBytes(path.toFile());
+        Callable<byte[]> task = () -> Files.readFileBytes(path.toFile());
 
         CompletableFuture<byte[]> cfRead = frame.f_context.f_container.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
@@ -244,11 +247,7 @@ public class xOSFile
         int        cbCapacity = (int) (ixTo - ixFrom + 1);
         ByteBuffer buffer     = ByteBuffer.allocate(cbCapacity);
 
-        Callable<Integer> task = () -> {
-            try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)) {
-                return channel.read(buffer, ixFrom);
-            }
-        };
+        Callable<Integer> task = () -> Files.readAt(path, buffer, ixFrom);
 
         CompletableFuture<Integer> cfRead = frame.f_context.f_container.scheduleIO(task);
 
@@ -288,14 +287,8 @@ public class xOSFile
 
         long cTruncate = cNew;
         Callable<Void> task = () -> {
-            try (FileChannel channel = cTruncate == 0
-                    ? FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
-                    : FileChannel.open(path, StandardOpenOption.WRITE)) {
-                if (cTruncate > 0) {
-                    channel.truncate(cTruncate);
-                }
-                return null;
-            }
+            Files.truncate(path, cTruncate);
+            return null;
         };
 
         CompletableFuture cfTruncate = frame.f_context.f_container.scheduleIO(task);
@@ -320,7 +313,7 @@ public class xOSFile
         byte[] ab   = xByteArray.getBytes(hContents);
 
         Callable<Void> task = () -> {
-            try (OutputStream out = new FileOutputStream(path.toFile(), /*append*/ true)) {
+            try (OutputStream out = Files.openAppendStream(path)) {
                 out.write(ab);
                 return null;
             }
@@ -348,15 +341,8 @@ public class xOSFile
         Path pathThat = hFileThat.f_path;
 
         Callable<Void> task = () -> {
-            try (InputStream  in  = new FileInputStream(pathThat.toFile());
-                 OutputStream out = new FileOutputStream(pathThis.toFile(), /*append*/ true)) {
-                byte[] ab = new byte[1024];
-                int    cb;
-                while ((cb = in.read(ab)) != -1) {
-                    out.write(ab, 0, cb);
-                }
-                return null;
-            }
+            Files.appendFile(pathThat, pathThis);
+            return null;
         };
 
         CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
@@ -493,11 +479,6 @@ public class xOSFile
 
     private enum ReadOption  {NoRead, Read, Exclusive}
     private enum WriteOption {Write, Ensure, Create, Sparse, Temp, Truncate, Append, Exclusive, SyncData, SyncAll}
-
-    private static final Set<OpenOption> NO_ACCESS  = Set.of();
-    private static final Set<OpenOption> READ_ONLY  = Set.of(StandardOpenOption.READ);
-    private static final Set<OpenOption> WRITE_ONLY = Set.of(StandardOpenOption.WRITE);
-    private static final Set<OpenOption> READ_WRITE = Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE);
 
     private static MethodStructure s_constructor;
 }

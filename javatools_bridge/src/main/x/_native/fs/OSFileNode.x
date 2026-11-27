@@ -57,11 +57,23 @@ const OSFileNode
     Boolean delete() = exists && store.delete(this:protected);
 
     @Override
-    conditional FileNode renameTo(String name) {
+    conditional FileNode renameTo(String name, Boolean allowOverwrite = False) {
+        if (name == this.name) {
+            return exists ? (True, this) : False;
+        }
+
         Path src = path;
-        Path dst = new Path(src.parent?, name) : new Path(name);
+        if (store.readOnly || src.form == Root || name == "" || name == "." || name == ".." ||
+                name.indexOf('/') || name.indexOf('\\')) {
+            return False;
+        }
+
+        Path dst = new Path(src.parent, name);
         try {
-            return True, store.copyOrMove(src, src.toString(), dst, dst.toString(), move=True);
+            Boolean replaceFile = allowOverwrite && this.is(OSFile);
+            Int     operation   = replaceFile ? OSFileStore.Replace : OSFileStore.Move;
+            return True, store.copyOrMove(src, src.toString(), dst, dst.toString(),
+                    operation, requireMissingDest=!replaceFile);
         } catch (IOException e) {
             return False;
         }
