@@ -21,6 +21,7 @@ import { LibraryOptions } from './library-configuration';
 import { libraryOptions } from './library-settings';
 import { attachDebugSessions, endAllDebugSessions } from './debug-adapter';
 import { attachEmbeddedExecution, endAllRuns, forgetReplacedLibraries } from './embedded-execution';
+import { endOfLineEdit } from './end-of-line';
 import { attachGradleProjects, forgetGradleProjects } from './gradle-projects';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
@@ -229,6 +230,15 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                     diagnosticReports.set(key, { version, items, pulls: [...(latest?.pulls ?? []), `${version}: ${outcome}`].slice(-5) });
                 }
                 return report;
+            },
+            // the line ending the file's .editorconfig files ask for, which no text edit can set
+            provideDocumentFormattingEdits: async (document, options, token, next) => {
+                const edits = await next(document, options, token);
+                if (client !== connection || token.isCancellationRequested) return edits;
+                const wanted = await connection.sendRequest('xtc/endOfLine', { uri: connection.code2ProtocolConverter.asUri(document.uri) }, token)
+                    .catch(error => outputChannel.warn(`Could not read the line ending of ${document.uri.fsPath}: ${error}`));
+                const eol = endOfLineEdit(document.eol, wanted);
+                return eol ? [...(edits ?? []), eol] : edits;
             },
             provideCodeLenses: (document, token, next) => {
                 // the server's refresh, after which VS Code fetches the lenses again once its delay has passed

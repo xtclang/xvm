@@ -265,6 +265,9 @@ one with `root = true`, and sets what they give over `xtc.formatting` and the re
 `indent_size`, `tab_width`, `max_line_length` (`off` wraps nothing), `trim_trailing_whitespace`, `insert_final_newline`,
 `ij_ecstasy_continuation_indent_size` (or `ij_continuation_indent_size`) and `ij_ecstasy_wrap_comments`; `unset` keeps
 the editor's value, and a value out of range is skipped with a warning (`lsp/adapter/EditorConfig.kt:61`).
+`xtc/endOfLine` (`{ "uri": ... }`) answers the file's `end_of_line`, `lf`, `crlf` or `cr`, or null, for the client to
+apply, as a text edit cannot change a document's line endings: VS Code's extension adds `TextEdit.setEndOfLine` to
+Format Document (`vsc/end-of-line.ts`); IntelliJ applies `end_of_line` itself.
 
 On `workspace/didChangeConfiguration` the server asks for `xtc.formatting` again, refreshes inlay
 hints and lenses, and takes `settings.xtc.compiler` as given; when the notification has only
