@@ -1,25 +1,18 @@
 package org.xvm.util;
 
-import java.util.concurrent.atomic.AtomicReferenceArray;
-
 /**
- * A pooled {@link HasherReference} intended for use in short-lived operations.
+ * A reusable {@link HasherReference} intended for use in short-lived operations.
  *
- * <p>{@link TransientHasherReference} are obtained from the pool via {@link #of} and returned to the pool via
- * {@link #close}.
+ * <p>{@link TransientHasherReference}s are obtained via {@link #of} and given back via {@link #close}. Each thread
+ * keeps one spare reference, which only that thread takes and gives back, so a reference is never held by two threads
+ * at once: one thread's close() would reset the key of the other's map operation under it.
  */
 public class TransientHasherReference<T>
         extends HasherReference<T> implements AutoCloseable {
     /**
-     * Stacks of {@link TransientHasherReference}s.
+     * Each thread's spare {@link TransientHasherReference}, if it has one.
      */
-    private static final AtomicReferenceArray<TransientHasherReference<?>> HEADS =
-            new AtomicReferenceArray<>(Integer.highestOneBit(Runtime.getRuntime().availableProcessors()) << 1);
-
-    /**
-     * The next in our stack
-     */
-    private TransientHasherReference<?> next;
+    private static final ThreadLocal<TransientHasherReference<?>> SPARE = new ThreadLocal<>();
 
     /**
      * Construct a {@link TransientHasherReference}.
@@ -32,40 +25,33 @@ public class TransientHasherReference<T>
     }
 
     /**
-     * Return a {@link TransientHasherReference}.
+     * Return a {@link TransientHasherReference}: the calling thread's spare one, or a new one if it is in use.
      *
      * @param referent the referent
      * @return the reference
      */
     public static <T> TransientHasherReference<T> of(T referent, Hasher<? super T> hasher) {
-        int slot = Thread.currentThread().hashCode() & (HEADS.length() - 1);
-        TransientHasherReference<?> ref = HEADS.get(slot);
-        while (ref != null && !HEADS.compareAndSet(slot, ref, ref.next)) {
-            ref = HEADS.get(slot);
-        }
-
-        if (ref == null) {
+        TransientHasherReference<?> spare = SPARE.get();
+        if (spare == null) {
             return new TransientHasherReference<>(referent, hasher);
         }
+        SPARE.set(null);
 
         @SuppressWarnings("unchecked")
-        TransientHasherReference<T> keyRef = (TransientHasherReference<T>) ref;
+        TransientHasherReference<T> keyRef = (TransientHasherReference<T>) spare;
 
-        keyRef.next = null;
         keyRef.reset(referent, hasher);
         return keyRef;
     }
 
     /**
-     * Recycle this ref.
+     * Recycle this ref, as the calling thread's spare one unless it already has one.
      */
     @Override
     public void close() {
         reset(null, null);
-        int slot = Thread.currentThread().hashCode() & (HEADS.length() - 1);
-        next = HEADS.get(slot);
-        while (!HEADS.compareAndSet(slot, next, this)) {
-            next = HEADS.get(slot);
+        if (SPARE.get() == null) {
+            SPARE.set(this);
         }
     }
 }
