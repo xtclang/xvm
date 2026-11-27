@@ -323,6 +323,10 @@ class XtcTextDocumentService(
      * A semantic query owns its backend future, while the module analysis remains shared. Only a request that
      * [reportsOutOfSync], such as a diagnostic pull, runs for a document that is out of sync. A [workspace] query waits
      * for the analyses of the open documents that it [waitsFor], each of them by default, and their changes overtake it.
+     * Backend work that the server retires for a change of what it reads, as the compiler retires a graph query when a
+     * member's text changes, answers ContentModified, as a change that the query's own checks find does; one that
+     * [cancelsWhenRetired], a document's diagnostic pull, answers RequestCancelled, after which VS Code's client pulls
+     * again, where it takes ContentModified as an empty report.
      */
     private fun <T, R> queryAsync(
         method: String,
@@ -331,6 +335,7 @@ class XtcTextDocumentService(
         workspace: Boolean = false,
         reportsOutOfSync: Boolean = false,
         waitsFor: (String) -> Boolean = { true },
+        cancelsWhenRetired: Boolean = false,
         sourceOnly: Boolean = false,
         progress: WorkDoneProgressParams? = null,
         partial: ((R) -> PartialResults.Plan<R>)? = null,
@@ -345,7 +350,20 @@ class XtcTextDocumentService(
             folders.whenComplete { _, _ ->
                 if (deferred.isDone) return@whenComplete
                 val query =
-                    startQuery(method, uri, request, true, reportsOutOfSync, waitsFor, sourceOnly, progress, partial, traced, convert)
+                    startQuery(
+                        method,
+                        uri,
+                        request,
+                        true,
+                        reportsOutOfSync,
+                        waitsFor,
+                        cancelsWhenRetired,
+                        sourceOnly,
+                        progress,
+                        partial,
+                        traced,
+                        convert,
+                    )
                 // a client cancellation of the deferred request reaches the query
                 deferred.whenComplete { _, _ -> query.cancel(false) }
                 query.whenComplete { value, failure ->
@@ -354,14 +372,27 @@ class XtcTextDocumentService(
             }
             return deferred
         }
-        return startQuery(method, uri, request, workspace, reportsOutOfSync, waitsFor, sourceOnly, progress, partial, traced, convert)
+        return startQuery(
+            method,
+            uri,
+            request,
+            workspace,
+            reportsOutOfSync,
+            waitsFor,
+            cancelsWhenRetired,
+            sourceOnly,
+            progress,
+            partial,
+            traced,
+            convert,
+        )
     }
 
     /**
      * Called under lifecycle. Analyzes again each open document whose analysis was retired, as the compiler
      * retires the analyses of the modules a change elsewhere affects, and that nothing replaced: a query waiting
-     * on it would end as canceled, and so would every later one, while a client that pulls diagnostics asks
-     * again at once, without end. A replacement installs its analysis before it retires the old one, under this
+     * on it would end as retired work does ([queryAsync]), and so would every later one, while a client that pulls
+     * diagnostics asks again at once, without end. A replacement installs its analysis before it retires the old one, under this
      * lock, so a query never finds a retired analysis that is about to be replaced.
      */
     private fun reanalyzeRetired() {
@@ -400,6 +431,7 @@ class XtcTextDocumentService(
         workspace: Boolean,
         reportsOutOfSync: Boolean,
         waitsFor: (String) -> Boolean,
+        cancelsWhenRetired: Boolean,
         sourceOnly: Boolean,
         progress: WorkDoneProgressParams?,
         partial: ((R) -> PartialResults.Plan<R>)?,
@@ -407,6 +439,9 @@ class XtcTextDocumentService(
         convert: (T) -> R,
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
+
+        // work that the server retired, not the client, whose cancel completes the result first ([queryAsync])
+        fun retired() = if (cancelsWhenRetired) result.cancel(false) else result.completeExceptionally(contentModified())
         val trace = ExecutionTrace.span("lsp-query", method, uri)
         // the query's start, and one end that says how long each phase took and what it answered at DEBUG
         val phases = ExecutionTrace.Phases(trace)
@@ -517,7 +552,7 @@ class XtcTextDocumentService(
                                             (it as? CompletionException)?.cause
                                         }.last()
                                     if (cause is CancellationException) {
-                                        result.cancel(false)
+                                        retired()
                                     } else {
                                         result.completeExceptionally(cause)
                                     }
@@ -530,7 +565,8 @@ class XtcTextDocumentService(
                                         answer.set(repeated(method, uri, ExecutionTrace.details { traced(converted) }))
                                         result.complete(converted)
                                     } catch (e: Exception) {
-                                        result.completeExceptionally(e)
+                                        // as a pull's join of an analysis that the compiler retired
+                                        if (cancellation(e)) retired() else result.completeExceptionally(e)
                                     } catch (e: Error) {
                                         result.completeExceptionally(e)
                                         throw e
@@ -541,7 +577,9 @@ class XtcTextDocumentService(
                     }
                 }
             }.whenComplete { _, failure ->
-                if (failure != null) result.completeExceptionally(failure)
+                if (failure != null) {
+                    if (cancellation(failure)) retired() else result.completeExceptionally(failure)
+                }
             }
         val publication =
             if (partial == null) {
@@ -572,6 +610,10 @@ class XtcTextDocumentService(
         }
         return server.observeQuery(method, progress, publication, uri)
     }
+
+    /** Whether [failure] is a cancellation, also in the completions that carry it. */
+    private fun cancellation(failure: Throwable): Boolean =
+        generateSequence(failure) { (it as? CompletionException)?.cause }.last() is CancellationException
 
     /**
      * Whether a document, [now], no longer answers for what a query started with, [then]: it was opened, closed or
@@ -1182,6 +1224,11 @@ class XtcTextDocumentService(
             uri,
             reportsOutOfSync = true,
             waitsFor = waitsFor,
+            // VS Code's client pulls a document's diagnostics again after a cancellation, and takes ContentModified as an
+            // empty report; it pulls the workspace's again after ContentModified, and counts a cancellation as a failure:
+            // it pulls again while it has counted five or fewer, so after the sixth it pulls no more; LSP4IJ 0.30.1 pulls
+            // the workspace's no more after one until a refresh
+            cancelsWhenRetired = !workspace,
             request = {
                 val open = openDocuments[uri]
                 if (!workspace && open != null) {
