@@ -32,6 +32,13 @@ public abstract class XtcLspSourceSetTask extends DefaultTask {
     @Input
     public abstract Property<String> getProjectPath();
 
+    /**
+     * The project's path in the whole build tree, such as {@code :xdk:lib-json} for a project of an included build, which
+     * names its tasks from the root of a composite build: a bare task name reaches no included build.
+     */
+    @Input
+    public abstract Property<String> getBuildTreePath();
+
     @Input
     public abstract Property<String> getProjectDirectory();
 
@@ -72,6 +79,7 @@ public abstract class XtcLspSourceSetTask extends DefaultTask {
         final var model = new LinkedHashMap<String, Object>();
         model.put("projectId", getProjectId().get());
         model.put("projectPath", getProjectPath().get());
+        model.put("buildTreePath", getBuildTreePath().get());
         model.put("projectDirectory", getProjectDirectory().get());
         model.put("buildFile", getBuildFile().get());
         model.put("sourceSet", getSourceSetName().get());

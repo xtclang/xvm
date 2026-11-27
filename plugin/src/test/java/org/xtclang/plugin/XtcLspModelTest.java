@@ -102,6 +102,9 @@ class XtcLspModelTest {
         final var app = model.stream().filter(entry -> entry.get("projectPath").equals(":app") && entry.get("sourceSet").equals("main")).findFirst().orElseThrow();
         assertEquals(List.of(library.get("projectId")), app.get("projectDependencies"));
         assertTrue(((List<?>) app.get("modulePath")).isEmpty());
+        // in a build of its own, a project's path in the build tree is its path
+        assertEquals(":library", library.get("buildTreePath"));
+        assertEquals(":app", app.get("buildTreePath"));
         write("settings.gradle.kts", "rootProject.name = \"model-test\"\ninclude(\"library\")\n");
         run("exportXtcLspModel");
         assertEquals(2, sourceSets().size());
@@ -150,6 +153,12 @@ class XtcLspModelTest {
             .filter(entry -> entry.get("projectId").equals(uri("application") + "#:"))
             .filter(entry -> entry.get("sourceSet").equals("main")).findFirst().orElseThrow();
         assertEquals(List.of(uri("library") + "#:"), application.get("projectDependencies"));
+        // an included build's project is named from the composite's root, where a bare task name reaches no included build
+        assertEquals(":application", application.get("buildTreePath"));
+        final var library = ((List<?>) model.get("sourceSets")).stream().map(value -> (Map<?, ?>) value)
+            .filter(entry -> entry.get("projectId").equals(uri("library") + "#:"))
+            .filter(entry -> entry.get("sourceSet").equals("main")).findFirst().orElseThrow();
+        assertEquals(":library", library.get("buildTreePath"));
         assertTrue(runWorkspace("second-import").getOutput().contains("Configuration cache entry reused"));
         final var accepted = Files.readString(report);
         assertEquals("second-import", ((Map<?, ?>) new JsonSlurper().parseText(accepted)).get("importId"));
