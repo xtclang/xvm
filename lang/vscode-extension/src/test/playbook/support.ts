@@ -1,14 +1,16 @@
 import * as assert from 'node:assert';
 import { realpathSync } from 'node:fs';
 import * as path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
 import * as vscode from 'vscode';
 import { ResponseError } from 'vscode-languageclient/node';
 import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type DiagnosticReport } from '../../lsp-client';
 import { RENAME_OVERTAKEN, RENAME_REFUSED } from '../../rename-proposal';
 import { focusTestEditor } from '../native-focus';
 import { waitsUnderWay, withTestWait } from '../progress';
-import { caseRuns, PLAYBOOK_WAIT_MS, PlaybookCleanupFailure, PlaybookTimeout, progress, runCase, waitFor, waitReport, waitWhile } from '../wait';
+import { recordSettings, restoreSettings, type RecordedSettings } from '../settings';
+import { terminateTask } from '../../task-termination';
+import { leftOver, liveSessions, playbookWork, whileUnderWay } from '../uiWait';
+import { caseRuns, PlaybookCleanupFailure, PlaybookLeftRunning, progress, runCase, waitReport, waitWhile } from '../wait';
 import * as fs from './disk';
 import { knownHostFailure, seemsFixed } from './knownHostFailures';
 import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
@@ -54,8 +56,13 @@ export async function renameOrNone<T>(rename: T | Thenable<T>): Promise<T | unde
 
 export { progress };
 
-export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string, timeoutMs?: number): Promise<T> {
-    return withTestWait(message, () => waitFor(read, accept, message, timeoutMs), `${(timeoutMs ?? PLAYBOOK_WAIT_MS) / 1000}s`);
+/**
+ * Waits until [read]'s value satisfies [accept], for as long as anything that could make it is under way, or [read] has
+ * not answered, and fails at once once the value is final ([whileUnderWay]); it says every minute in the run's progress
+ * what it waits for.
+ */
+export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string): Promise<T> {
+    return whileUnderWay(read, accept, message);
 }
 
 /**
@@ -420,24 +427,28 @@ export class Workspace {
     }
 }
 
-export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspace, data: ScenarioValues<K>) => Promise<void>, timeoutMs = 90_000): void {
+export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspace, data: ScenarioValues<K>) => Promise<void>): void {
     const scenario = catalog.cases[id];
     assert.ok(scenario, `Case ${id} is missing from the shared catalog`);
     const { title, manual } = scenario;
     assert.ok(!cases.has(id), `Duplicate playbook case ${id}`);
     cases.set(id, { title, manual, tags: scenarioTags(id) });
     test(`${id}: ${title}`, async function (this: Mocha.Context) {
-        // the case's bound is [runCase]'s: Mocha's would start the next case while this one still runs
+        // the case goes on while it progresses, as [runCase] has it: Mocha's bound would start the next case while this
+        // one still runs
         this.timeout(0);
         const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
         assert.ok(root);
         const workspace = new Workspace(path.join(root, id));
+        // every setting as the case finds it, which its cleanup puts back
+        const recorded = await recordSettings();
         fs.forgetChanges();
         caseRuns(id);
         // one case's failure, a timeout too, fails that case only: once it has ended, the editor is restored for the next
-        const error = await runCase(() => body(workspace, scenario.values), timeoutMs, line => progress(`${id} ${line}`), waitsUnderWay,
-            async () => vscode.commands.executeCommand('xtc.restartServer'));
+        const error = await runCase(() => body(workspace, scenario.values), line => progress(`${id} ${line}`), waitsUnderWay, playbookWork,
+            restartServer);
         caseRuns(undefined);
+        reportLeftOver(id);
         if (error !== undefined) {
             const report = process.env.XTC_PLAYBOOK_REPORT_DIR;
             if (report) {
@@ -448,7 +459,9 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
                 }
             }
         }
-        const failures = await cleanUp(workspace, timeoutMs);
+        // a case left to itself still acts on the editor: no cleanup races it, and the runner runs no other case
+        if (error instanceof PlaybookLeftRunning) throw error;
+        const failures = await cleanUp(workspace, recorded, error !== undefined);
         if (failures.length) throw new PlaybookCleanupFailure(error === undefined ? failures : [error, ...failures]);
         // a known host bug's exact symptom is no failure of the run, nor a pass: Mocha has it as pending, by a title that
         // says so, and the runner reports it apart; any other failure fails
@@ -465,44 +478,85 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
     });
 }
 
-/**
- * Disposes of what the case [workspace] made, and, should that fail or not end within [boundMs], the case's bound,
- * restores the editor as a case finds it: no quick input, unsaved changes reverted, no editors, no source graph, and a
- * language server that runs, whose restart also ends a request that the disposal waits for. Answers what failed.
- */
-async function cleanUp(workspace: Workspace, boundMs: number): Promise<unknown[]> {
-    const disposed = await bounded(() => workspace.dispose(), boundMs, "The case's cleanup");
-    if (disposed === undefined) return [];
-    progress(`${path.basename(workspace.directory)} cleanup failed, restoring the editor: ${disposed instanceof Error ? disposed.message : String(disposed)}`);
-    const failures: unknown[] = [disposed];
-    const step = async (what: string, action: () => Thenable<unknown>) => {
-        const failure = await bounded(action, boundMs, what);
-        if (failure !== undefined) failures.push(failure);
-    };
-    await step('Closing the quick input', () => vscode.commands.executeCommand('workbench.action.closeQuickOpen'));
-    for (const document of vscode.workspace.textDocuments.filter(each => each.isDirty)) {
-        await step(`Reverting ${document.uri.fsPath}`, async () => {
-            await vscode.window.showTextDocument(document, { preview: false });
-            await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
-        });
-    }
-    await step('Closing the editors', () => vscode.commands.executeCommand('workbench.action.closeAllEditors'));
-    await step('Emptying the source graph', () => vscode.workspace.getConfiguration('xtc.compiler').update('sourceModules', [], vscode.ConfigurationTarget.Workspace));
-    await step('Restarting the language server', async () => {
-        await vscode.commands.executeCommand('xtc.restartServer');
-        await eventually(async () => getClient()?.isRunning(), value => value === true, 'The language server runs after the restore');
-        await client().sendRequest('xtc/healthCheck');
-    });
-    return failures;
+/** Restarts the language server, which also ends a request of the server's that a case is stuck in. */
+async function restartServer(): Promise<unknown> {
+    return vscode.commands.executeCommand('xtc.restartServer');
 }
 
-/** What [work] fails with, or undefined once it has done, or a [PlaybookTimeout] once it has not ended within [boundMs]. */
-async function bounded(work: () => Thenable<unknown>, boundMs: number, what: string): Promise<unknown> {
-    const timer = new AbortController();
-    try {
-        return await Promise.race([
-            Promise.resolve().then(work).then(() => undefined, (error: unknown) => error ?? new Error(`${what} failed`)),
-            delay(boundMs, undefined, { signal: timer.signal }).then(() => new PlaybookTimeout(`${what} did not end within ${boundMs / 1000} s`), () => undefined),
-        ]);
-    } finally { timer.abort(); }
+/** Says in the run's progress what the case or step [what] left under way, which no later one counts ([leftOver]). */
+function reportLeftOver(what: string): void {
+    const left = leftOver();
+    if (left.length) progress(`${what} left calls that have not answered, which count for no later case: ${left.join('; ')}`);
+}
+
+/**
+ * Restarts the language server and waits until it runs and answers: the extension's restart, which one that is under
+ * way joins, ends only once each change that came while it ran is applied.
+ */
+async function restartAndRun(): Promise<void> {
+    await restartServer();
+    await eventually(async () => getClient()?.isRunning(), value => value === true, 'The language server runs after the restart');
+    await client().sendRequest('xtc/healthCheck');
+}
+
+/**
+ * Ends the debug sessions and tasks that the case left running, whose output would be a later case's to count, and
+ * disposes of what the case [workspace] made; then puts back every setting that the case changed, as [recorded] has it
+ * at its start, but the source graph, which the disposal empties, and restarts the server when one of them applies
+ * only on restart, or changed in a case that [failed], or waits for the extension's own restart for one of the
+ * connection's. Should the disposal fail, it restores the editor as a case finds it: no quick input, unsaved changes
+ * reverted, no editors, every setting as recorded, the source graph too, and a language server that runs, whose
+ * restart also ends a request that the disposal waits for. Each step goes on while it progresses ([runCase]); one that
+ * is left to itself ends the cleanup, and what does not end, as a session whose stop does not take, is its failure.
+ * Answers what failed.
+ */
+export async function cleanUp(workspace: Pick<Workspace, 'directory' | 'dispose'>, recorded: RecordedSettings, failed: boolean): Promise<unknown[]> {
+    const id = path.basename(workspace.directory);
+    const failures: unknown[] = [];
+    const step = async (what: string, action: () => Thenable<unknown>) => {
+        if (failures.some(failure => failure instanceof PlaybookLeftRunning)) return;
+        const failure = await runCase(async () => { await action(); }, line => progress(`${id} cleanup: ${what}: ${line}`), waitsUnderWay,
+            playbookWork, restartServer);
+        reportLeftOver(`${id} cleanup: ${what}`);
+        if (failure !== undefined) failures.push(failure);
+    };
+    await step("Ending the case's debug sessions and tasks", async () => {
+        const running = () => [...liveSessions().map(session => `the debug session ${session.name}`),
+            ...vscode.tasks.taskExecutions.map(execution => `the task ${execution.task.name}`)];
+        if (running().length === 0) return;
+        progress(`${id} cleanup ends what the case left running: ${running().join(', ')}`);
+        await vscode.debug.stopDebugging();
+        vscode.tasks.taskExecutions.forEach(terminateTask);
+        await eventually(async () => running(), left => left.length === 0, "The case's debug sessions and tasks end");
+    });
+    const before = failures.length;
+    await step('Disposing of the case', () => workspace.dispose());
+    const disposed = failures.length === before;
+    if (!disposed) {
+        const failure = failures[failures.length - 1];
+        progress(`${id} cleanup failed, restoring the editor: ${failure instanceof Error ? failure.message : String(failure)}`);
+        await step('Closing the quick input', () => vscode.commands.executeCommand('workbench.action.closeQuickOpen'));
+        for (const document of vscode.workspace.textDocuments.filter(each => each.isDirty)) {
+            await step(`Reverting ${document.uri.fsPath}`, async () => {
+                await vscode.window.showTextDocument(document, { preview: false });
+                await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+            });
+        }
+        await step('Closing the editors', () => vscode.commands.executeCommand('workbench.action.closeAllEditors'));
+    }
+    let restored: string[] = [];
+    await step('Restoring the settings', async () => {
+        // the server's restart, after a failed disposal, is the next step's
+        restored = await restoreSettings(recorded, { kept: key => disposed && key === 'xtc.compiler.sourceModules', failed,
+            restart: disposed ? restartAndRun : undefined });
+    });
+    if (restored.length) progress(`${id} cleanup put back the settings the case left changed: ${restored.join(', ')}`);
+    if (!disposed) {
+        await step('Restarting the language server', async () => {
+            await restartAndRun();
+            // and the notice of the runtime's settings that the restore may have brought
+            await vscode.commands.executeCommand('notifications.clearAll');
+        });
+    }
+    return failures;
 }

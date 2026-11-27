@@ -1,6 +1,9 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
+import { waitsUnderWay } from '../progress';
+import { playbookWork } from '../uiWait';
+import { runCase } from '../wait';
 import { adapterChooserCases } from './adapters';
 import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced';
 import { compilerImportCases } from './compilerImports';
@@ -32,19 +35,23 @@ import { semanticCases, semanticClosureCases } from './semantics';
 import { syntaxCompletionCases } from './syntaxCompletion';
 import { discoveredRootMoveCases, typeMoveCases } from './typeMoves';
 import { hiddenTestCases, xunitCases } from './xunit';
-import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
+import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook, progress } from './support';
 
 suite('XdkAdapter playbook', function () {
     suiteSetup(async function () {
-        this.timeout(60_000);
-        await loadFixtures();
-        const extension = vscode.extensions.all.find(item => item.packageJSON.name === 'xtc-language');
-        assert.ok(extension, 'Development extension loaded');
-        await extension.activate();
-        await eventually(async () => !!getClient()?.initializeResult, Boolean, 'Language server initialization');
-        const health = await client().sendRequest<{ healthy: boolean; adapter: string }>('xtc/healthCheck');
-        assert.ok(health.healthy);
-        assert.strictEqual(health.adapter, 'XDK', 'Build this suite with -Plsp.adapter=compiler; another backend must not silently skip tests');
+        // as long as the setup progresses, as a case goes on ([runCase]), and the hang's bound at most
+        this.timeout(0);
+        const failure = await runCase(async () => {
+            await loadFixtures();
+            const extension = vscode.extensions.all.find(item => item.packageJSON.name === 'xtc-language');
+            assert.ok(extension, 'Development extension loaded');
+            await extension.activate();
+            await eventually(async () => !!getClient()?.initializeResult, Boolean, 'Language server initialization');
+            const health = await client().sendRequest<{ healthy: boolean; adapter: string }>('xtc/healthCheck');
+            assert.ok(health.healthy);
+            assert.strictEqual(health.adapter, 'XDK', 'Build this suite with -Plsp.adapter=compiler; another backend must not silently skip tests');
+        }, line => progress(`the playbook's setup ${line}`), waitsUnderWay, playbookWork, async () => vscode.commands.executeCommand('xtc.restartServer'));
+        if (failure !== undefined) throw failure;
     });
 
     navigationCases();

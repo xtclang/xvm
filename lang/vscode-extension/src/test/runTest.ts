@@ -85,9 +85,10 @@ async function main(): Promise<void> {
     // Seed the profile before Electron creates the first workbench: no live theme transitions. VS Code's AI
     // features are off, as master's test profile has them: they look for a GitHub account the test instance
     // does not have and log every miss ("[AgentHost] No signed-in session resolved ...").
+    // The terminal draws in the page, whose rows the playbook's waits read a task's output from, as the tour's do.
     await fs.mkdir(path.join(profile, 'User'), { recursive: true });
     await fs.writeFile(path.join(profile, 'User', 'settings.json'),
-        JSON.stringify({ 'workbench.colorTheme': theme, 'chat.disableAIFeatures': true }, null, 2));
+        JSON.stringify({ 'workbench.colorTheme': theme, 'chat.disableAIFeatures': true, 'terminal.integrated.gpuAcceleration': 'off' }, null, 2));
     const fixturesPath = path.join(runDirectory, 'workspace');
     if (!playbook && !explorerProbe) {
         await fs.cp(path.join(extensionDevelopmentPath, 'src', 'test', 'fixtures'), fixturesPath, {
@@ -126,18 +127,24 @@ async function main(): Promise<void> {
                 `--user-data-dir=${profile}`, '--skip-welcome', '--skip-release-notes',
                 `--remote-debugging-port=${uiPort}`, '--remote-debugging-address=127.0.0.1'
             ],
-            extensionTestsEnv: playbook ? {
-                XTC_PLAYBOOK_REPORT_DIR: runDirectory,
-                XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'),
-                XTC_PLAYBOOK_CASES: selected.join(','),
-                XTC_PLAYBOOK_CANCEL_UI: String(cancelUi),
-                XTC_PLAYBOOK_HOST_CHECKS: String(hostChecks),
-                XTC_PLAYBOOK_UI_PORT: String(uiPort),
-                // A checkout exported without .git, such as the container's, gets them from its caller.
-                XTC_COMMIT: process.env.XTC_COMMIT ?? git(extensionDevelopmentPath, 'rev-parse', 'HEAD'),
-                XTC_PLAYBOOK_DIRTY: process.env.XTC_PLAYBOOK_DIRTY ?? git(extensionDevelopmentPath, 'status', '--porcelain')
-            } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory,
-                XTC_EXPLORER_PROBE_REFRESH: String(refreshDuringMove) } : { XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'), XTC_SETTINGS_PHASE: phase },
+            extensionTestsEnv: {
+                // the user's settings, which a playbook case's cleanup, and the harness's test of it, puts back as it found them
+                XTC_TEST_USER_SETTINGS: path.join(profile, 'User', 'settings.json'),
+                ...playbook ? {
+                    XTC_PLAYBOOK_REPORT_DIR: runDirectory,
+                    XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'),
+                    XTC_PLAYBOOK_CASES: selected.join(','),
+                    XTC_PLAYBOOK_CANCEL_UI: String(cancelUi),
+                    XTC_PLAYBOOK_HOST_CHECKS: String(hostChecks),
+                    XTC_PLAYBOOK_UI_PORT: String(uiPort),
+                    // A checkout exported without .git, such as the container's, gets them from its caller.
+                    XTC_COMMIT: process.env.XTC_COMMIT ?? git(extensionDevelopmentPath, 'rev-parse', 'HEAD'),
+                    XTC_PLAYBOOK_DIRTY: process.env.XTC_PLAYBOOK_DIRTY ?? git(extensionDevelopmentPath, 'status', '--porcelain')
+                } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory,
+                    XTC_EXPLORER_PROBE_REFRESH: String(refreshDuringMove) } : { XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'), XTC_SETTINGS_PHASE: phase,
+                    // the harness's test of reading a task's terminal reads it through the window's DevTools
+                    ...harness ? { XTC_PLAYBOOK_UI_PORT: String(uiPort) } : {} },
+            },
         });
     } catch (error) {
         await fs.writeFile(path.join(runDirectory, 'launcher-error.txt'), String(error) + '\n');

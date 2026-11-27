@@ -5,6 +5,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { testLocation } from '../../test-explorer';
+import { watchProcess } from '../uiWait';
+import { caseSignal } from '../wait';
 import { configureModules, TestWatch, watchTests } from './execution';
 import { client, diagnosticCode, diagnostics, eventually, noErrors, playbook } from './support';
 
@@ -140,7 +142,9 @@ export function xunitCases(): void {
             // the command line's xunit events: each started test's selector, and its finished status and message
             const printed = await new Promise<string>((resolve, reject) => {
                 const program = spawn(xtc, ['test', '-o', output, '-I', 'xvm.xunit.report=json', document.uri.fsPath],
-                    { cwd: path.dirname(document.uri.fsPath), shell: process.platform === 'win32' });
+                    { cwd: path.dirname(document.uri.fsPath), shell: process.platform === 'win32', signal: caseSignal() });
+                // under way while it prints or computes, and ended with the case once that is given up on
+                watchProcess(program, 'xtc test');
                 let text = '';
                 program.stdout.on('data', (chunk: Buffer) => { text += chunk.toString('utf8'); });
                 program.stderr.on('data', (chunk: Buffer) => { text += chunk.toString('utf8'); });

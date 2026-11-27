@@ -4,8 +4,10 @@ import * as path from 'node:path';
 import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import { LSPErrorCodes, ProgressType, WorkDoneProgressBegin, WorkDoneProgressEnd, WorkDoneProgressReport } from 'vscode-languageclient/node';
-import { client, eventually, hover, noErrors, playbook } from './support';
+import { happenedCount } from '../uiWait';
+import { caseSignal } from '../wait';
 import { WorkbenchUi } from '../workbenchUi';
+import { client, eventually, hover, noErrors, playbook } from './support';
 
 export function progressCases(): void {
     playbook('X145', async (workspace, data) => {
@@ -48,7 +50,9 @@ export function progressCases(): void {
         async function start(text: string) {
             await workspace.replace(document, text, false);
             let completed = false;
-            const deadline = Date.now() + 20_000;
+            // ContentModified answers in a row with nothing that happened between them, and how much had happened at the last.
+            let modified = 0;
+            let seen = happenedCount();
             async function references(): Promise<unknown> {
                 assert.strictEqual(document.getText(), text, 'Progress workload was not externally edited');
                 try {
@@ -57,9 +61,14 @@ export function progressCases(): void {
                         context: { includeDeclaration: true }
                     });
                 } catch (error) {
-                    // A delayed fixture-create watch can retire this read. Re-request only;
-                    // never replay the edit, cancel, restart or an already completed mutation.
-                    if ((error as { code?: number }).code === LSPErrorCodes.ContentModified && Date.now() < deadline) { return references(); }
+                    // A delayed fixture-create watch can retire this read. Re-request only, while something changed
+                    // between the answers; three with nothing between are final. Never replay the edit, cancel,
+                    // restart or an already completed mutation.
+                    if ((error as { code?: number }).code === LSPErrorCodes.ContentModified) {
+                        modified = happenedCount() === seen ? modified + 1 : 1;
+                        seen = happenedCount();
+                        if (modified < 3) { return references(); }
+                    }
                     throw error;
                 }
             }
@@ -100,8 +109,10 @@ export function progressCases(): void {
             const before = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus', {});
             const pending = await start(large + '// unsaved restart\n');
             const script = path.resolve(__dirname, '../../../../scripts/xtc-lsp');
+            // As long as the case goes on, which the server's restart keeps under way; a case given up on ends it.
+            // The script waits for the restart's answer at most its longest, 600 s, as a last resort.
             await promisify(execFile)('python3', [script, 'restart', '--project', vscode.workspace.workspaceFolders![0].uri.fsPath,
-                '--ide', 'vscode'], { timeout: 70000 });
+                '--ide', 'vscode', '--timeout', '600'], { signal: caseSignal() });
             assert.ok((await pending.outcome).error, 'Restart retires the pending reader');
             await eventually(async () => { try { process.kill(before.pid, 0); return false; } catch { return true; } },
                 value => value, 'Old server process exits');

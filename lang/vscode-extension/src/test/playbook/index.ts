@@ -5,6 +5,7 @@ import Mocha from 'mocha';
 import * as vscode from 'vscode';
 import { runHarness } from '../harness';
 import { showTestProgress } from '../progress';
+import { leftRunning } from '../wait';
 import { selectedScenarioIds, sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
 import { cases, knownFailures, progress } from './support';
 
@@ -51,9 +52,12 @@ export async function run(): Promise<void> {
         progress(`${run.length}/${selected.length} cases run, ${selected.length - run.length} left: ${count('passed')} passed, ${count('failed')} failed`
             + `, ${count('known-host-failure')} known host failures`);
     };
+    // the case left to itself, which still acts on the editor, after which no other case runs
+    let stopped: { id: string; error: string } | undefined;
     const failures = await new Promise<number>(resolve => {
         // a case that fails, a timeout or a failed cleanup too, fails alone: each case ends and restores the editor
-        // before the next starts, so that the run goes on with every case it selected
+        // before the next starts, so that the run goes on with every case it selected; but one left to itself would
+        // act on the next one, so the run stops after it
         const runner = mocha.run(resolve);
         showTestProgress(runner, 'Ecstasy playbook', test => test.title,
             test => knownFailures.has(test.title.split(':')[0]) ? `known host failure: ${knownFailures.get(test.title.split(':')[0])!.up}` : undefined);
@@ -68,6 +72,12 @@ export async function run(): Promise<void> {
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'failed', error: error.stack });
             summary();
             console.error(`${test.title}\n${error.stack}`);
+            const left = leftRunning(error);
+            if (left) {
+                stopped = { id: test.title.split(':')[0], error: left.message };
+                progress(`${stopped.id} is left to itself, still running: no other case runs — ${left.message.slice(0, 200)}`);
+                runner.abort();
+            }
         });
         runner.on('pending', test => {
             const id = test.title.split(':')[0];
@@ -89,6 +99,8 @@ export async function run(): Promise<void> {
     const report = {
         commit: process.env.XTC_COMMIT, dirtyPaths: process.env.XTC_PLAYBOOK_DIRTY,
         vscode: vscode.version, finished: new Date().toISOString(), failures,
+        // the case left to itself, after which the selected cases that had not run did not
+        ...(stopped && { stopped }),
         progressCancellation: process.env.XTC_PLAYBOOK_CANCEL_UI === 'true' ? 'visible-control' : 'native-token',
         sharedScenarios: { file: sharedScenarioPath, sha256: sharedScenarioHash, ids: sharedScenarioIds },
         selection: { mode: selected.length === sharedScenarioIds.length ? 'full' : 'focused', ids: selected },
@@ -120,6 +132,7 @@ export async function run(): Promise<void> {
     await fs.writeFile(path.join(directory, 'results.txt'), [
         `Compiler playbook at ${report.commit}; VS Code ${report.vscode}`,
         `Selection: ${report.selection.mode} (${selected.join(', ')})`,
+        ...(stopped ? [`Stopped: ${stopped.id} was left to itself, still running, so no other case ran: ${stopped.error}`] : []),
         ...report.cases.map(item => `${item.id}: ${item.status}${'knownHost' in item && item.knownHost ? ` (${item.knownHost})` : ''} — ${item.title}${'error' in item && item.error ? `\n  ${item.error}` : ''}${item.manual.length ? `\n  Manual: ${item.manual.join('; ')}` : ''}`),
         `Known host failures: ${report.knownHostFailures.map(item => `${item.id} (${item.up})`).join(', ') || 'none'}`,
         ...report.hostChecks.map(item => `Host ${item.task}: ${item.status} (${item.suites.reduce((sum, suite) => sum + suite.tests, 0)} XDK tests; XML timestamps in results.json)`),
