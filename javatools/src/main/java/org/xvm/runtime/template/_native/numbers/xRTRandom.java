@@ -1,5 +1,7 @@
 package org.xvm.runtime.template._native.numbers;
 
+import java.security.SecureRandom;
+
 import java.util.Random;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -13,6 +15,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
@@ -40,6 +43,8 @@ import org.xvm.runtime.template.numbers.xUInt8;
 import org.xvm.runtime.template.numbers.xUInt16;
 import org.xvm.runtime.template.numbers.xUInt32;
 import org.xvm.runtime.template.numbers.xUInt64;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 /**
  * An injectable "Random" number generator.
@@ -191,9 +196,24 @@ public class xRTRandom
     }
 
     /**
-     * Injection support.
+     * Injection support. The {@code "secure"} option selects a cryptographically secure generator.
      */
     public ObjectHandle ensureDefaultRandom(Frame frame, ObjectHandle hOpts) {
+        if (hOpts instanceof StringHandle hMode) {
+            if (!hMode.getStringValue().equals("secure")) {
+                return new DeferredCallHandle(
+                        xException.illegalArgument(frame, "Random string option must be \"secure\""));
+            }
+
+            synchronized (this) {
+                if (m_hSecureRandom == null) {
+                    m_hSecureRandom = createRandomHandle(f_container.createServiceContext("SecureRandom"),
+                            getCanonicalClass(), getCanonicalType(), new SecureRandom());
+                }
+                return m_hSecureRandom;
+            }
+        }
+
         long lSeed = hOpts instanceof JavaLong   hInt  ? hInt.getValue() :
                      hOpts instanceof IntNHandle hIntN ? hIntN.getValue().getLong() :
                      0;
@@ -202,32 +222,27 @@ public class xRTRandom
                     getCanonicalClass(), getCanonicalType(), lSeed);
         }
 
-        ObjectHandle hRnd = m_hRandom;
-        if (hRnd == null) {
-            m_hRandom = hRnd = createRandomHandle(
-                f_container.createServiceContext("Random"),
-                    getCanonicalClass(), getCanonicalType(), 0L);
+        synchronized (this) {
+            if (m_hRandom == null) {
+                m_hRandom = createRandomHandle(f_container.createServiceContext("Random"),
+                        getCanonicalClass(), getCanonicalType(), 0L);
+            }
+            return m_hRandom;
         }
-
-        return hRnd;
     }
 
     /**
-     * Native implementation of "Int&nbsp;int(Int max)".
+     * Native implementation of {@code Int int(Int max)}.
      */
     protected int invokeInt(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
-        boolean  fSmall = false;
-        long     lMax   = 0;
-        LongLong llMax  = null;
+        long lMax;
 
         if (hArg instanceof JavaLong hL) {
-            fSmall = true;
-            lMax   = hL.getValue();
+            lMax = hL.getValue();
         } else {
-            llMax = ((LongLongHandle) hArg).getValue();
+            LongLong llMax = ((LongLongHandle) hArg).getValue();
             if (llMax.isSmall(true)) {
-                fSmall = true;
-                lMax   = llMax.getLowValue();
+                lMax = llMax.getLowValue();
             } else {
                 throw new IllegalStateException();
             }
@@ -264,8 +279,12 @@ public class xRTRandom
 
     public ServiceHandle createRandomHandle(ServiceContext context,
                                             ClassComposition clz, TypeConstant typeMask, long lSeed) {
-        RandomHandle hService = new RandomHandle(clz.maskAs(typeMask), context,
-                                        lSeed == 0 ? null : new Random(lSeed));
+        return createRandomHandle(context, clz, typeMask, lSeed == 0 ? null : new Random(lSeed));
+    }
+
+    private ServiceHandle createRandomHandle(ServiceContext context,
+                                             ClassComposition clz, TypeConstant typeMask, Random random) {
+        RandomHandle hService = new RandomHandle(clz.maskAs(typeMask), context, random);
         context.setService(hService);
         return hService;
     }
@@ -293,7 +312,12 @@ public class xRTRandom
     }
 
     /**
-     * Cached Random handle.
+     * Cached Random handle, guarded by this template's monitor.
      */
     private ObjectHandle m_hRandom;
+
+    /**
+     * Cached secure Random handle, guarded by this template's monitor.
+     */
+    private ServiceHandle m_hSecureRandom;
 }
