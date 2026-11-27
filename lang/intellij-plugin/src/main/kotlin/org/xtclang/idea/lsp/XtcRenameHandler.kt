@@ -20,6 +20,7 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 
 // The XTC rename, not LSP4IJ's: it asks the XTC server with xtc/rename, whose proposal carries the change of the
@@ -71,9 +72,7 @@ class XtcRenameHandler : RenameHandler {
                 if (project.isDisposed || editor.isDisposed) return@invokeLater
                 when {
                     error != null -> {
-                        HintManager
-                            .getInstance()
-                            .showErrorHint(editor, renameFailure(error))
+                        renameFailure(error)?.let { HintManager.getInstance().showErrorHint(editor, it) }
                     }
 
                     stamp != editor.document.modificationStamp -> {
@@ -206,9 +205,7 @@ class XtcRenameHandler : RenameHandler {
                     if (file.project.isDisposed || editor.isDisposed) return@invokeLater
                     when {
                         error != null -> {
-                            HintManager
-                                .getInstance()
-                                .showErrorHint(editor, renameFailure(error))
+                            renameFailure(error)?.let { HintManager.getInstance().showErrorHint(editor, it) }
                         }
 
                         edit == null -> {
@@ -242,17 +239,24 @@ class XtcRenameHandler : RenameHandler {
 internal const val RENAME_OVERTAKEN = "The project changed during the rename; invoke Rename again."
 
 /**
- * What the rename's hint says when the server's answer failed with [error]: that a change of the project overtook the
- * server's proof, as its ContentModified says, so that the same rename invoked again is proven of the project as it then
- * is; otherwise the server's reason, as that it can't prove the rename while a module does not compile.
+ * What the rename's hint says when the server's answer failed with [error]: nothing for a cancellation, as when the user
+ * cancels the rename's progress, whose future then has no message; that a change of the project overtook the server's
+ * proof, as its ContentModified says, so that the same rename invoked again is proven of the project as it then is;
+ * otherwise the server's reason, as that it can't prove the rename while a module does not compile.
  */
-internal fun renameFailure(error: Throwable): String =
-    if (
-        generateSequence(error) { it.cause }.any {
-            it is ResponseErrorException && it.responseError.code == ResponseErrorCode.ContentModified.value
+internal fun renameFailure(error: Throwable): String? {
+    val causes = generateSequence(error) { it.cause }
+    return when {
+        causes.any { it is CancellationException } -> {
+            null
         }
-    ) {
-        RENAME_OVERTAKEN
-    } else {
-        "Rename failed: ${error.cause?.message ?: error.message}"
+
+        causes.any { it is ResponseErrorException && it.responseError.code == ResponseErrorCode.ContentModified.value } -> {
+            RENAME_OVERTAKEN
+        }
+
+        else -> {
+            "Rename failed: ${error.cause?.message ?: error.message}"
+        }
     }
+}
