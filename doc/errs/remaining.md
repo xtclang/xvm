@@ -1272,6 +1272,70 @@ New open entry, after the one above:
   accident, and keep `__pycache__` out of the repository: `6a4684a033` (2026-11-11), which also
   ignores `*.pyc`.
 
+### Playbook cases for formatting from .editorconfig and a folder on another XDK (X361–X366)
+
+Features with unit tests and no check in a real editor, now in both editors' compiler playbooks
+(`lagergren/formatting-cases`, on errs at `73a1b9d469`, 2026-11-27): the catalog and the manual test plan
+(`ba755a8a1e`), VS Code (`8d2d0d0e12`), IntelliJ (`6922bbeca4`), and a VS Code fix that X366 found
+(`c76f19d7f6`). The manual rows are after X360's, in *Formatting from .editorconfig, formatter markers and comment
+reflow* and *A folder on another XDK*; sections 13 and 18a point to them.
+
+- [x] X361: a case's `.editorconfig` (`root = true`, `indent_size = 2`, `max_line_length = 60` for `*.x`) wins over
+  the editor's 4 and 120 at Reformat Code or Format Document; with `indent_style = tab` and `tab_width = 3`, a later
+  section's `unset` takes `indent_size` out, so the module indents one tab a level (an ignored value would leave the
+  editor's 4 columns), and the margin is the editor's; in IntelliJ, Code Style | General | Enable EditorConfig support
+  turned off, through that page's own component (the EditorConfig plugin's options, by the class their extension
+  names), gives the editor's settings back. Both editors full.
+- [x] X362: `// @formatter:off` … `// @formatter:on` keep their lines' layout through a format and as `;` is typed,
+  while the declaration after them is indented; with the markers in the editor's settings (IntelliJ has them on by
+  default; VS Code's `xtc.formatting.formatterTagsEnabled`) or in `.editorconfig` only (`ij_formatter_tags_enabled`),
+  and every line formatted with them off. Both editors full.
+- [x] X363: with wrapping of comments on (IntelliJ's Wrap at right margin, VS Code's `xtc.formatting.wrapComments`),
+  a doc comment's paragraph past the margin is refilled, its `@param` paragraphs and an indented code line past the
+  margin keep their layout, and a second format changes nothing; off, nothing changes. VS Code full; IntelliJ
+  partial: its "nothing changes" checks read the server's formatting answer, not Reformat Code.
+- [x] X364, VS Code: `end_of_line = crlf` gives an LF document CRLF at Format Document (`xtc/endOfLine`). IntelliJ
+  not-implemented: its own EditorConfig support applies `end_of_line`, and the plugin does not read the request.
+- [x] X365: `trim_trailing_whitespace = true` trims a line's trailing spaces and tab, `false` keeps them, also where
+  VS Code's `files.trimTrailingWhitespace` asks to trim, which without the property trims. Both editors full.
+- [x] X366 (slow): a Gradle build whose `xdkDistribution` is `org.xtclang:xdk:0.9.0`, from a Maven repository the
+  case makes, beside one on the tree's XDK; once their models are imported the first builds and runs with Gradle and
+  the notice, the picker or Build and Run page and the status bar or Select Ecstasy Build Mode say `builds with XDK
+  0.9.0, not the bundled XDK`, and the server's `gradleFolders` has it, while the second builds and runs embedded.
+  VS Code full, with the two builds as folders of the window; IntelliJ partial: one server per project takes the
+  whole project to Gradle, so the bundled build goes first at the project root and the other in its place.
+- [x] Found by X366 and fixed (`c76f19d7f6`): in a VS Code window of several folders, Run of a module in Gradle mode
+  ran `./gradlew` where the terminal starts, not in the module's folder, and ended with exit code 127; Run Module
+  (`runModuleTask`) now gives the run task the module's folder, and Run, Build, Debug and the Gradle test runs run
+  at `gradleRoot`, the nearest directory at or above the folder with the wrapper or a build's settings, so a folder
+  that is a project inside another folder's build reaches its wrapper. `run-task.test.ts` has tests on folders
+  outside the window's.
+
+Runs, in the container, on errs at `73a1b9d469` with the series, with X132, X138, X139, X249, X250, X288, X289 and
+X290 beside the new cases, after an independent review's fixes (the cases' cleanups as steps that each run, tasks and
+runs ended first; X361's unset told from an ignored value; X365's step where VS Code asks; the notice only when X366's
+reason is the session's first; a status that is not there told from one with no folder; IntelliJ's Build Project
+waited for and checked by its answer; the zip's Unix modes kept): VS Code run-ptNAsW and run-GrHvzE, 14 of 14 passed
+in each, the harness's 28 tests first; the extension suite, 112 passing (extension-tests/run-otwOz4), and the
+harness, 28 passing (harness-tests/run-Q3GKPk); IntelliJ run-17750809714245111010 and run-766945919719716251, 10
+passed and 3 partial (X288, X363 and X366, as their coverage says) of 13 selected in each, X364 not-implemented. Earlier runs' failures, all fixed in the series: VS Code run-ccNYkv (a listing past
+execFile's buffer), run-Lt8d4h and run-lFSi79 (exit code 127), run-2hqsw6 (a wait that counted the wrong field),
+run-gzhmN9 (a settings change before VS Code wrote the workspace file for X366's folders); IntelliJ
+run-18179416478162994728 (IntelliJ's markers on by default); the extension suite run-MCF6SW (a test's expectation for
+a window of one folder). `:lang:spotlessCheck`, `:lang:detekt`, npmCompile and eslint: no findings.
+
+- [ ] X366's other XDK is this tree's XDK with one entry more in its `javatools.jar`, republished as 0.9.0, not a
+  second XDK version built for the case; its bundled half holds only where `publishLocal` ran from the same tree, as
+  in the container (an older mavenLocal XDK is another XDK too).
+- [ ] X366 does not read the Gradle run's output in VS Code's task terminal (18a.9); IntelliJ's Build Project in
+  Gradle mode is checked only not to be the embedded compiler's.
+- [ ] VS Code: a run of a module name typed into Run Module, which no folder holds, in a window of several folders
+  still runs where the terminal starts.
+- [ ] None of X361–X366 has been in a full-catalog run yet. X366 checks the notice only when its reason is the
+  session's first; after another folder's reason it checks the reason alone and says so.
+- [ ] VS Code: an included build without a wrapper of its own runs at its own root, where `./gradlew` is not;
+  `gradleRoot` does not read the imported model's build roots.
+
 ### Beyond the current scope
 
 Only if a real need comes up; each is a documented refusal today.
