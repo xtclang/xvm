@@ -805,9 +805,55 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   canceled it. Fixed (`73ef53e12d`): Find References asks again
   when documents only opened or closed while it ran, and an edit still refuses it; `XdkReferencesServerTest`
   reproduces it by ordering.
-- [ ] Found 2026-11-26 in VS Code's full playbook (`run-InIBIg`, on the playbook deduplication branch): X216 timed out
-  in "Move applied: all sources and resources agree" (30 s), and the runner stopped there with 135 cases unrun. It
-  passed in `run-LgTm8x`; the branch did not change its path. Unknown.
+- [x] Found 2026-11-26 in VS Code's full playbook (`run-InIBIg`, on the playbook deduplication branch): X216 timed out
+  in "Move applied: all sources and resources agree" (30 s), and the runner stopped there with 135 cases unrun
+  (`run-Oz8vjq` the same after X335, 21 unrun). The move had lost its edits, which a user could hit too: the
+  `didClose` of X166's `Library.x`, which VS Code released three minutes after the case opened it, retired the
+  server's graph queries as `xtc/renameFiles` proved the move, and the server answered RequestCancelled, which the
+  client had not asked for; the language client's handling of that throws, so VS Code moved the file without the edits
+  and said nothing. In `run-Oz8vjq` ten such releases came as X335's move started, and the participant's own check
+  ("Source documents changed while calculating the refactoring") threw the same way. Fixed (`331934d3db`): the move
+  participant asks again for both, as for ContentModified. The move's check now waits while VS Code's events of the
+  files come, and fails at once once they are final (`f68f717a4d`; X218's UP23 Undo fails in 0 s, not 30 s). One
+  case's failure, a timeout, a case past its bound or a failed or stuck cleanup too, now fails that case alone: the
+  waits it is in fail, it ends through its own cleanup, the editor is restored, and the run goes on (`3f8449236f`).
+  Full runs since: `run-GVNl3L` 357 of 360 passed and `run-XalCz5` 355, none unrun.
+- [ ] Found 2026-11-26 with X216: the server retires every graph query on any `didClose`, also of a document it does
+  not have open, and answers a query that its own retirement cancelled with RequestCancelled, as if the client had
+  cancelled it. The playbook's cleanup sends its own `didClose` for each document it detaches (`Workspace.discard`),
+  and VS Code's release three minutes later sends a second one. The client now asks again for a move; other requests
+  that a release cancels or overtakes still end empty or failed (Find References asks again since `73ef53e12d`): X143
+  failed so in `run-GVNl3L` (2026-11-27), its `workspace/symbol` rejected ("Document changed during analysis") as
+  X117's `App.x` was released, and in `run-XalCz5` X172 (its own `xtc/renameFiles`), X352 (references and definitions,
+  "No result.") and X357 (Organize Imports), each as VS Code released an earlier case's document. The server could
+  ignore a `didClose` of a document that is not open, answer ContentModified for work it retired, and ask its
+  workspace queries again as it does Find References.
+- [ ] Found 2026-11-27 in `run-XalCz5`: X5 failed in "Parser recovery diagnostic" (30 s): the pull of `Navigation.x`'s
+  version 2 ended "failed: Canceled" and nothing pulled it again; it passed in the full runs before.
+- [ ] Found 2026-11-27 in `run-GVNl3L`: X194 failed with "locator.focus: Timeout 5000ms exceeded" in
+  `WorkbenchUi.focusEditor` (from `focusTestEditor`, in `discovered`), waiting for the active editor's input; it
+  passed in the four full runs before. A Playwright call with a fixed 5 s bound, not a progress-based wait; cause not
+  looked into.
+- [ ] Found 2026-11-27 with X216: VS Code's playbook waits other than the type moves' file check still wait a fixed
+  30 s (`PLAYBOOK_WAIT_MS`), and each case has a fixed bound (90 s, or its own), which a slow machine can outlast
+  while it progresses; only `settles` (the type moves) and the diagnostics waits' finality follow the hang rules.
+  `cleanUp`'s restore resets the source graph and restarts the server, but not other settings that a case whose own
+  cleanup failed may have left changed; a case body still in a call an hour past its bound is left to itself.
+- [ ] Found 2026-11-27 recording the VS Code tour (`run-cjtCLE`, debugging): "Set a value" failed, "The value box
+  takes the keyboard … nothing under way for 60 s". `TourUi.menu` clicked Set Value, which chose it, and 34 ms later,
+  as the menu was still closing and its item still had the keyboard, pressed Enter for a click that only gave the item
+  the keyboard (`870ce8e0ef`); the Enter went to the value box that had just opened, which took the unchanged value
+  and closed. `menu` needs a sign that the click did not choose, not a menu still showing.
+- [x] Found 2026-11-26 in the review of the IntelliJ tour's wait fixes, checked for the VS Code tour: its `Activity`
+  already leaves out the server's background traffic (the 2-s workspace pull, `$/cancelRequest`, `$/setTrace`,
+  `$/progress` and the work under them); a replay of its trace rules over the full `run-UcTGyc` finds no request or
+  compile that recurs by itself. But it counted every edit of a document, the language server's log among them, which
+  grows with every request the server logs, the 2-s pulls too, while VS Code keeps it. Fixed (`3b617880d2`): edits of
+  output channels and log files no longer count.
+- [ ] Found 2026-11-27 checking the VS Code tour's waits: a running debug session, and a shell or process task, count
+  as under way however silent they are, so a wait whose condition never comes while a debugged program waits for
+  input, or a Gradle task hangs, runs to the hang's bound (an embedded run counts only while it prints, since
+  `b79a852e3b`). The server's requests and compiles count for every wait, also one that only the UI can satisfy.
 - [ ] Found 2026-11-26 in a one-case IntelliJ run (X1, with another container running): the test Driver's first call
   into the IDE timed out 9 s after start (DriverIllegalStateException, TimeoutException), before the case ran; X1–X3
   passed in the next run. It came twice more the same evening, in the shared queue's validation runs (one in each
@@ -819,8 +865,15 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   probe timeout report every minute (`c96fa574fd`, `279df1b59f`, `b20330b23a`), and the
   negative checks read the server's settled state once the choice has run (`db629c91bf`): the section
   takes 50 s instead of 10 minutes or the hour bound.
-- [ ] Found 2026-11-26 recording the VS Code tour: the new "Breakpoints while you edit" step once found Quick Open not
-  opening `Eights.x` (60 s, nothing under way; it failed fast, as designed); it passed in its other runs.
+- [x] Found 2026-11-26 recording the VS Code tour: the new "Breakpoints while you edit" step once found Quick Open not
+  opening `Eights.x` (60 s, nothing under way; it failed fast, as designed); it passed in its other runs. The check
+  before it leaves the keyboard in the Debug Console's input, and Quick Open typed the name as soon as its box showed,
+  before the box had the keyboard, then took any row with the name in it (SaveEights.x's has Eights.x) and pressed
+  Enter on whichever row the box focused. Go to Line typed the same way. Fixed (`4c6f5d3427`): Quick Open and Go to
+  Line type only once the box has the keyboard and holds nothing else, close and reopen a box that holds other text or
+  lost the keyboard, choose the file's row by its exact name, and the open repeats while no tab of the file has become
+  active. Recorded runs `run-154cud`, `run-cjtCLE` and `run-RgQjoX`: 43 Quick Opens and 19 Go to Lines, each at the
+  first try; the step passed in all three.
 - [x] Found 2026-11-26 in the review of VS Code's rename refusal: the server answered `xtc/rename` and
   `textDocument/rename` with no edit for a refused proof, and also when the project changed during the proof
   (`XdkProjectQueries`, its `isCurrent()` checks), its base compile failed, discovery had a problem, or the module had
