@@ -240,8 +240,8 @@ abstract class AbstractAdapter : Adapter {
             val startLine = range?.start?.line ?: 0
             val endLine = range?.end?.line ?: (lines.size - 1)
 
-            // Trailing whitespace removal
-            if (options.trimTrailingWhitespace || range == null) {
+            // Trailing whitespace removal, only as the options ask
+            if (options.trimTrailingWhitespace) {
                 for (i in startLine..minOf(endLine, lines.size - 1)) {
                     AdapterFormatter.trailingWhitespaceEdit(i, lines[i])?.let(::add)
                 }

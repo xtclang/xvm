@@ -147,8 +147,8 @@ class AdapterFormatter {
      * Build formatting edits for a line range (or the whole document when [endLine] is null).
      *
      * For each line, computes the correct indentation from the AST and emits an edit if the actual
-     * indentation differs. Also strips trailing whitespace and inserts a final newline for
-     * whole-document formatting.
+     * indentation differs. Also strips trailing whitespace, and for a whole document inserts a final newline,
+     * as the options ask.
      */
     private fun buildFormattingEdits(
         tree: AdapterTree,
@@ -175,8 +175,8 @@ class AdapterFormatter {
                     }
                 }
 
-                // Trailing whitespace removal
-                if (options.trimTrailingWhitespace || isFullDocument) {
+                // Trailing whitespace removal, only as the options ask: for a whole document too, as in the compiler adapter
+                if (options.trimTrailingWhitespace) {
                     trailingWhitespaceEdit(i, line)?.let(::add)
                 }
             }

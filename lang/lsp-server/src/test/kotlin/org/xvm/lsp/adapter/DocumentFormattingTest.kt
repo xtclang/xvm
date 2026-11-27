@@ -468,6 +468,16 @@ class DocumentFormattingTest {
         }
 
         @Test
+        @DisplayName("trimTrailingWhitespace=false keeps a whole document's trailing whitespace")
+        fun keepsTrailingWhitespace() {
+            val input = "module myapp {   \n    class Foo {}  \n}\n"
+            val uri = freshUri()
+            ts.compile(uri, input)
+            val options = FormattingOptions(tabSize = 4, insertSpaces = true, trimTrailingWhitespace = false)
+            assertThat(apply(input, ts.formatDocument(uri, input, options))).isEqualTo(input)
+        }
+
+        @Test
         @DisplayName("insertFinalNewline=false respects user preference")
         fun respectsUserPreferenceNoNewline() {
             val input = "module myapp {}"
