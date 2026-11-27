@@ -75,6 +75,7 @@ Every page of the guide with its sections, and the areas of the lookup pages:
   - [Quick fixes and imports](refactoring.md#quick-fixes-and-imports)
 - [Building and running](building-and-running.md)
   - [Build modes](building-and-running.md#build-modes)
+    - [When builds and runs use Gradle whatever the mode](building-and-running.md#when-builds-and-runs-use-gradle-whatever-the-mode)
   - [Build](building-and-running.md#build)
   - [Run](building-and-running.md#run)
     - [Program input](building-and-running.md#program-input)

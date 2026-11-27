@@ -6,9 +6,7 @@ The build mode decides how Build, Run, Debug and the tests work. Press <kbd>Ctrl
 choose it in either editor, or:
 
 - **IntelliJ:** **Tools | Select Ecstasy Build Mode**, or **Settings | Languages & Frameworks |
-  Ecstasy | Build and Run**. It is saved with the project. Where the project's own modules replace
-  bundled XDK libraries, as in the XVM repository, the embedded compiler is shown as not available,
-  and builds and runs use Gradle.
+  Ecstasy | Build and Run**. It is saved with the project.
 - **VS Code:** **Ecstasy: Select Build Mode**, or the status bar item that a folder with a Gradle build
   shows. It is the `xtc.build.mode` setting, per folder.
 
@@ -32,6 +30,41 @@ The next build or run uses the new mode; nothing restarts.
 *VS Code: **Ecstasy: Select Build Mode**, which <kbd>Ctrl+Alt+X</kbd>, then <kbd>B</kbd>, and a click on the status bar's build mode open too.*
 
 </td></tr></table>
+
+### When builds and runs use Gradle whatever the mode
+
+The embedded compiler builds and runs with the XDK that the language server comes with. Where that
+XDK cannot stand in for the project's own, Build, Run, Debug and the tests use Gradle whatever the
+mode, and the editors say why: a notice the first time, and the embedded compiler shown as not
+available, with the reason, on IntelliJ's **Build and Run** page and in **Select Ecstasy Build
+Mode**, and in VS Code's picker and the tooltip of its status bar item. That is so in two cases:
+
+- **The project builds with another XDK.** Its Gradle build compiles and runs it with another XDK
+  than the bundled one, as its `xdkDistribution` or `xdk` dependency selects it: another version, or
+  another build of the same snapshot version. When the Gradle model is imported, the XTC plugin
+  reads the XDK's distribution, from a repository or a file dependency, and records the SHA-256 of
+  each of its module files and a revision of its `javatools.jar`, which leaves out the commit and
+  branch it was built at. The language server compares those with what it bundles, since every
+  build of a snapshot has the same version, while two builds of the same sources at other commits
+  hold the same modules and compiler. An XDK that a project of the build tree makes, as a composite
+  build's included XDK, which the import does not build, counts as another XDK, as does one that the
+  import could not resolve or download; the next import tries again, also with Gradle's
+  configuration cache on. The reason names both XDKs, as in *builds with XDK 0.5.0, not the bundled
+  XDK 0.4.4*, and a folder whose modules only depend on such a module says that it depends on it.
+  Refresh the model after the build changes its XDK. Without an imported model, or with one from an
+  older XTC plugin, the server does not know the build's XDK, and embedded builds and runs use the
+  bundled one.
+- **The project's own modules replace bundled XDK libraries**, as in the XVM repository, whose
+  `lib_*` modules replace them all. That is the reason given for a folder that has both causes. The
+  XVM repository's `manualTests` builds with the repository's own XDK, so the repository builds with
+  Gradle also with library replacement turned off.
+
+In VS Code this applies per folder: the window's other folders keep their mode, and a task of a
+folder's `tasks.json` takes its folder's. A run that belongs to no folder, as a multi-root
+workspace's own launch configuration or **Ecstasy: Run Module** for a module name typed in, uses
+Gradle when one of the window's folders does. IntelliJ, with one language server per project, takes the whole project. A choice of the embedded compiler is kept, and
+applies again once the cause goes, as after the build moves to the bundled XDK and the model is
+refreshed.
 
 ## Build
 
@@ -105,9 +138,11 @@ sessions take the module's run settings from its Gradle project's `xtcRun`: the 
 of its `module { ... }`, where the run configuration leaves them empty, and its `jvmArgs`. Tests take
 `xtcTest`'s `jvmArgs`. The run's output says which settings it took, before the program's own output.
 
-Settings made only on a task, as in `tasks.runXtc { ... }`, are not seen, nor are the build's XDK
-version, its compile settings and its other run settings, such as `xtcRun`'s module path. After you
-change the build, refresh the model for the next run. Which JVM options a run leaves out, and how their
+Settings made only on a task, as in `tasks.runXtc { ... }`, are not seen, nor are the build's
+compile settings and its other run settings, such as `xtcRun`'s module path. A build on another XDK
+than the bundled one builds and runs with Gradle instead (see
+[When builds and runs use Gradle whatever the mode](#when-builds-and-runs-use-gradle-whatever-the-mode)).
+After you change the build, refresh the model for the next run. Which JVM options a run leaves out, and how their
 relative paths resolve, is in the [configuration reference](../configuration.md#33-child-processes).
 
 ---
