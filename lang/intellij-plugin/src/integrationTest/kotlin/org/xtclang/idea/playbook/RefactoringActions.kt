@@ -6,7 +6,6 @@ import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
-import com.intellij.driver.sdk.WaitForException
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
@@ -15,7 +14,8 @@ import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
-import kotlin.time.Duration.Companion.seconds
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 
 /** Exercise the installed Rename handler and its dialog, including ordered resource operations. */
 fun Driver.rename(
@@ -98,15 +98,31 @@ fun Driver.choosePopup(
     selected: String,
     reopen: () -> Unit,
 ) {
-    val inspection = PopupInspection(this, editor, reopen)
+    // how many of the case's code-action requests the server had answered as the menu was last asked for
+    var asked = 0
+    val ask = {
+        asked = Quiescence.trace?.answered(CODE_ACTION) ?: 0
+        reopen()
+    }
+    val inspection = PopupInspection(this, editor, ask)
     val choices = utility(NativePopupChoices::class)
 
     // Each read, and the choice, is one step in the IDE: a list that closes in between reads as closed and
     // has nothing chosen from it, so the wait goes on and may reopen it while the source is unchanged.
     fun rows() = withContext(OnDispatcher.EDT) { choices.listRows() }
+
+    // Whether the menu is not to show: the server has answered the code actions asked for it, none is left to
+    // answer, the IDE has nothing in progress, and a round of its EDT, which shows the menu once it has the
+    // answers, has not shown it. A cold request can fill LSP4IJ's cache without showing the menu.
+    fun answeredWithoutMenu(): Boolean {
+        val trace = Quiescence.trace ?: return false
+        if (trace.answered(CODE_ACTION) <= asked || trace.answering(CODE_ACTION)) return false
+        withContext(OnDispatcher.EDT) {}
+        return rows() == null && Quiescence.activity().text.isEmpty()
+    }
     // Capture the source/caret before dispatch: an intention can move the caret while it
     // discovers actions. Recovery must retain the requested location, not that later position.
-    reopen()
+    ask()
     awaitUi(
         "native popup contains $expected",
         HANG_LIMIT,
@@ -115,10 +131,17 @@ fun Driver.choosePopup(
         inspection.recover()
         val rows = rows()
         if (rows == null) {
-            try {
-                awaitUi("intention menu opens", 2.seconds) { rows() != null }
-            } catch (_: WaitForException) {
-                // Reopen only an unapplied inspection, never a completed generation or rename.
+            // The menu shows once the IDE has the server's code actions, however long the server takes. Reopen only an
+            // unapplied inspection, never a completed generation or rename, and only once the menu is not to show, or,
+            // when no answer comes, once nothing that could show it is in progress, as the tour's waits judge it: the
+            // IDE's work, this case's unanswered requests and the server's compiles.
+            Quiescence.stuck = null
+            withinOrFail(HANG_LIMIT, "the intention menu opens") { rows() != null || answeredWithoutMenu() }
+            if (rows() == null) {
+                val why = Quiescence.stuck ?: "the server answered its code actions and the IDE showed no menu"
+                println(
+                    "[playbook] ${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)} the intention menu did not open: $why; opening it again",
+                )
                 inspection.reopenUnapplied()
             }
             return@awaitUi false
@@ -127,6 +150,9 @@ fun Driver.choosePopup(
     }
     awaitUi("chosen popup closes", HANG_LIMIT) { rows() == null }
 }
+
+/** The LSP request whose answers fill the intention menu with the server's fixes. */
+private const val CODE_ACTION = "textDocument/codeAction"
 
 /** LSP4IJ renders multiple navigation targets through IntelliJ's Show Usages table. */
 fun Driver.chooseTargets(
@@ -165,9 +191,8 @@ fun Driver.quickFix(
         editor.editor.getCaretModel().moveToOffset(at)
         if (selectionEnd != at) editor.editor.getSelectionModel().setSelection(at, selectionEnd)
     }
-    // TODO LSP4IJ: UP07 — overlapping full pulls can cancel an old lazy fix during discovery.
     // Dispatch through the UI queue so the platform handles ProcessCanceledException normally;
-    // the bounded popup wait may reopen an unapplied inspection, never replay a chosen edit.
+    // the popup wait may reopen an unapplied inspection, never replay a chosen edit.
     choosePopup(editor, listOf(title), title) {
         invokeAction("ShowIntentionActions", now = false, component = editor.component)
     }

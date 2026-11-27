@@ -1522,7 +1522,7 @@ private fun Tour.refactoring() {
         settle = 3.seconds,
         after = { restore() },
     ) {
-        // the list may have been asked again meanwhile (UP07), so it is opened again until it has the row
+        // the list can open before the server's answer is in it, so it is opened again until it has the row
         if (!choose("Extract expression to local")) {
             select("one.hand.isEmpty() || two.hand.isEmpty()")
             apply("Extract expression to local")
