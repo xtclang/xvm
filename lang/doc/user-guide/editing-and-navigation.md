@@ -171,10 +171,11 @@ ij_ecstasy_continuation_indent_size = 8
 ij_ecstasy_wrap_comments = true
 ```
 
-The editors also apply `.editorconfig` to their own typing, such as the <kbd>Tab</kbd> key: IntelliJ when its
-EditorConfig support is on (**Code Style | General | Enable EditorConfig support**), VS Code with the EditorConfig
-extension. The formatter reads the files itself either way. A document that is not a file on disk, such as an unsaved
-new one, takes the editor's settings.
+In IntelliJ, the formatter reads `.editorconfig` files only while IntelliJ applies them itself, that is, while
+**Code Style | General | Enable EditorConfig support** is on and the bundled EditorConfig plugin is enabled. In VS Code
+it always reads them: VS Code has no such switch, and its EditorConfig extension applies the files only to VS Code's
+own typing, such as the <kbd>Tab</kbd> key. A document that is not a file on disk, such as an unsaved new one, takes
+the editor's settings.
 
 ## Errors and warnings
 

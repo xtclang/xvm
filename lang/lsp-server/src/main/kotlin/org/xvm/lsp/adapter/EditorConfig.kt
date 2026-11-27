@@ -13,7 +13,8 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * The files are found as the EditorConfig specification says: from the file's directory up to the file system's root,
  * or to the first that says `root = true`; a nearer file's sections, and a later section in one file, win. What they
- * set overrides the editor's settings ([FormattingConfig.resolve]); a property set to `unset` leaves the editor's. Only
+ * set overrides the editor's settings ([FormattingConfig.resolve]), unless the editor turns `.editorconfig` off
+ * ([FormattingConfig.editorConfig]); a property set to `unset` leaves the editor's. Only
  * the properties the formatter acts on are read:
  *
  * - `indent_style`, `indent_size` and `tab_width`, with the specification's defaults between them: `indent_size = tab`
@@ -54,7 +55,8 @@ internal object EditorConfig {
 
     /**
      * The settings a request on [uri] uses: the editor's ([FormattingConfig.resolve] of [options] and [editor]), with
-     * what the `.editorconfig` files of a `file:` URI set over them.
+     * what the `.editorconfig` files of a `file:` URI set over them, unless the editor turned them off
+     * ([FormattingConfig.editorConfig], as IntelliJ does while its EditorConfig support is off).
      */
     fun formatting(
         uri: String,
@@ -62,6 +64,7 @@ internal object EditorConfig {
         editor: FormattingConfig?,
     ): Formatting {
         val base = Formatting(FormattingConfig.resolve(options, editor), options)
+        if (editor?.editorConfig == false) return base
         val file = runCatching { URI(uri) }.getOrNull()?.takeIf { it.scheme == "file" }?.let { runCatching { Path.of(it) }.getOrNull() }
         return file?.let { apply(properties(it), base, it) } ?: base
     }

@@ -1,0 +1,7 @@
+<!-- What the plugin does with IntelliJ's bundled EditorConfig plugin, which a user can disable: its switch for applying
+     .editorconfig files, which the language server's formatter follows. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="org.xtclang.idea">
+        <editorConfigSwitch implementation="org.xtclang.idea.lsp.EditorConfigPluginSwitch"/>
+    </extensions>
+</idea-plugin>

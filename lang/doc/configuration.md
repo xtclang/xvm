@@ -147,6 +147,7 @@ Deployment | Ecstasy** (`XtcBuildPointerConfigurable`). Stored in the project's 
 | Use tab character | off | `insertSpaces` (inverted) |
 | Hard wrap at (right margin) | 120 | `maxLineWidth` |
 | Comments: Wrap at right margin, on the Wrapping and Braces tab | off | `wrapComments` |
+| Code Style \| General: Enable EditorConfig support (the EditorConfig plugin's; off while that plugin is disabled) | on | `editorConfig` (`idea/lsp/EditorConfigSwitch.kt`) |
 
 **LSP4IJ's Language Servers page** keeps the trace level and the debug port for `xtcLanguageServer`.
 They belong to LSP4IJ: the plugin builds the command with LSP4IJ's `JavaProcessCommandBuilder`, which
@@ -255,6 +256,7 @@ The server asks only when the client declares `workspace.configuration`.
 | `xtc.formatting` `continuationIndentSize` | integer 1 to 32, `8` | Continuation indent. | `lsp/server/EditorFormattingState.kt:77` |
 | `xtc.formatting` `insertSpaces` | boolean, `true` | Spaces or tabs. | `lsp/server/EditorFormattingState.kt:78` |
 | `xtc.formatting` `maxLineWidth` | integer 1 to 1000, `120` | Wrapping width. | `lsp/server/EditorFormattingState.kt:79` |
+| `xtc.formatting` `editorConfig` | boolean, `true` | `false`: formatting reads no `.editorconfig` file. IntelliJ sends its EditorConfig switch; VS Code sends nothing. | `lsp/server/EditorFormattingState.kt:81`, `lsp/adapter/EditorConfig.kt:61` |
 | `xtc.formatting` `wrapComments` | boolean, `false` | Refills a comment's paragraphs that run past `maxLineWidth`: in a comment with `/**` or `/*` and `*/` on lines of their own and a `*` starting each line between, keeping `@param` lines, list items and code as they are laid out. | `lsp/server/EditorFormattingState.kt:80`, `lsp/adapter/xdk/XdkCommentReflow.kt` |
 | `xtc.codeLens` `references` | boolean, `true` | Reference-count lenses, asked per document (`scopeUri`); after 10 seconds without an answer the lenses are off. | `lsp/server/XtcLanguageServer.kt:427`, `lsp/server/CodeLensSettings.kt:11` |
 
@@ -262,7 +264,7 @@ For a `file:` document, each formatting request also reads the file's `.editorco
 one with `root = true`, and sets what they give over `xtc.formatting` and the request's options: `indent_style`,
 `indent_size`, `tab_width`, `max_line_length` (`off` wraps nothing), `trim_trailing_whitespace`, `insert_final_newline`,
 `ij_ecstasy_continuation_indent_size` (or `ij_continuation_indent_size`) and `ij_ecstasy_wrap_comments`; `unset` keeps
-the editor's value, and a value out of range is skipped with a warning (`lsp/adapter/EditorConfig.kt:59`).
+the editor's value, and a value out of range is skipped with a warning (`lsp/adapter/EditorConfig.kt:61`).
 
 On `workspace/didChangeConfiguration` the server asks for `xtc.formatting` again, refreshes inlay
 hints and lenses, and takes `settings.xtc.compiler` as given; when the notification has only

@@ -16,6 +16,8 @@ data class FormattingConfig(
     val maxLineWidth: Int = 120,
     /** Whether formatting refills a doc or block comment's paragraphs that run past [maxLineWidth]. */
     val wrapComments: Boolean = false,
+    /** Whether formatting reads a file's `.editorconfig` files; IntelliJ says no while its EditorConfig support is off. */
+    val editorConfig: Boolean = true,
 ) {
     companion object {
         /** XTC's opinionated defaults, matching lib_ecstasy conventions. */
