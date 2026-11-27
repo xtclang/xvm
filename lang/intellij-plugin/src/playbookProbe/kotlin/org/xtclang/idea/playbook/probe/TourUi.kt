@@ -86,6 +86,7 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.startup.StartupManager
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -182,6 +183,12 @@ import kotlin.time.TimeSource
 object TourUi {
     /** The plugin's language server, CompilerSettings.SERVER_ID, which is internal to the plugin. */
     private const val SERVER_ID = "xtcLanguageServer"
+
+    /**
+     * How LSP4IJ's task for the server's check of the workspace ends its title, after the server's name: the progress
+     * that the server sends while it answers a pull of the workspace's diagnostics (XtcLanguageServer.observeQuery).
+     */
+    private const val WORKSPACE_CHECK = ": Checking workspace"
 
     private val log = logger<TourUi>()
 
@@ -309,10 +316,68 @@ object TourUi {
     fun activity(): String = listOf(ideActivity(), serverActivity()).filter(String::isNotEmpty).joinToString("; ")
 
     /**
-     * The language server's work in hand, as `xtc/busy` answers: the client's requests it has not answered, and its
-     * compiler's jobs; empty when it has none, or when no server is started; a server that does not answer is busy.
+     * What is in progress that could still make a wait's condition hold, as a JSON object: `live`, the IDE's own tasks
+     * and progress, but the server's check of the workspace, indexing, its running processes and a running debug
+     * session, which move where a wait cannot always see it, as a Gradle build that prints nothing for a while; and
+     * `settling`, the selected file's analysis, the Ecstasy language server's start and its compiler's jobs, which every
+     * answer waits for. Each is empty when nothing of it is. The client's requests that the server answers are the
+     * tour's to count, from the server's trace, by the step they belong to: `xtc/busy` counts LSP4IJ's pulls of the
+     * workspace's diagnostics too, about one a second whatever a step does.
      */
-    private fun serverActivity(): String {
+    @JvmStatic
+    fun work(): String {
+        val ide = ideWork(workspaceChecks = false)
+        return JsonObject()
+            .apply {
+                addProperty("live", ide.live.joinToString("; "))
+                addProperty(
+                    "settling",
+                    listOfNotNull(ide.analysis, serverStarting(), serverActivity(requests = false))
+                        .filter(String::isNotEmpty)
+                        .joinToString("; "),
+                )
+            }.toString()
+    }
+
+    /**
+     * How far the IDE's start is, as a JSON object: `opening`, what it does before the project's window shows, with
+     * the modal dialog that shows then, if one does, such as a trust or license dialog; or, once the window shows,
+     * `activities`, whether the project's startup activities still run. The dialog is read off the EDT, which the start
+     * may hold.
+     */
+    @JvmStatic
+    fun starting(): String {
+        val project = ProjectManager.getInstance().openProjects.singleOrNull()
+        return JsonObject()
+            .apply {
+                if (project == null || WindowManager.getInstance().getFrame(project)?.isShowing != true) {
+                    val dialog = Window.getWindows().filterIsInstance<Dialog>().lastOrNull { it.isShowing && it.isModal }
+                    addProperty(
+                        "opening",
+                        "the IDE, opening the project${dialog?.let { "; a modal dialog shows: \"${it.title}\"" }.orEmpty()}",
+                    )
+                } else {
+                    addProperty("activities", !StartupManager.getInstance(project).postStartupActivityPassed())
+                }
+            }.toString()
+    }
+
+    /** The Ecstasy language server's start, while LSP4IJ starts it; empty otherwise. */
+    private fun serverStarting(): String =
+        "the language server starting"
+            .takeIf {
+                LanguageServiceAccessor
+                    .getInstance(project())
+                    .startedServers
+                    .any { it.serverDefinition.id == SERVER_ID && it.serverStatus == ServerStatus.starting }
+            }.orEmpty()
+
+    /**
+     * The language server's work in hand, as `xtc/busy` answers: the client's requests it has not answered, unless not
+     * [requests], and its compiler's jobs; empty when it has none, or when no server is started; a server that does not
+     * answer is busy.
+     */
+    private fun serverActivity(requests: Boolean = true): String {
         val server =
             LanguageServiceAccessor
                 .getInstance(project())
@@ -321,15 +386,23 @@ object TourUi {
                 ?.languageServer as? XtcServerProtocol ?: return ""
         val busy =
             runCatching { server.busy().get(30, TimeUnit.SECONDS) }.getOrElse { return "the server is not answering" }
-        val requests = (busy["requests"] as? Number)?.toInt() ?: 0
+        val answering = (busy["requests"] as? Number)?.toInt() ?: 0
         val jobs = (busy["compilerJobs"] as? Number)?.toInt() ?: 0
         return listOfNotNull(
-            "the server answering $requests requests".takeIf { requests > 0 },
+            "the server answering $answering requests".takeIf { requests && answering > 0 },
             "the server compiling, $jobs jobs".takeIf { jobs > 0 },
         ).joinToString("; ")
     }
 
-    private fun ideActivity(): String =
+    /** What is in progress in the IDE, as [activity] says: its own work, and the selected file's analysis. */
+    private fun ideActivity(): String = ideWork(workspaceChecks = true).let { (it.live + listOfNotNull(it.analysis)).joinToString("; ") }
+
+    /**
+     * What is in progress in the IDE, in one round of its EDT: its own work, without the server's checks of the
+     * workspace, unless [workspaceChecks], which LSP4IJ shows as a task of the server's while it answers one of its
+     * pulls; and the selected file's analysis.
+     */
+    private fun ideWork(workspaceChecks: Boolean): IdeWork =
         anyEdt {
             val bar = WindowManager.getInstance().getStatusBar(project()) as? StatusBarEx
             val project = project()
@@ -341,42 +414,51 @@ object TourUi {
                     .getInstance(project)
                     .selectedTextEditor
                     ?.let { PsiDocumentManager.getInstance(project).getPsiFile(it.document) }
-            listOfNotNull(
-                // with their text and fraction, which move as a task makes progress
-                bar
-                    ?.backgroundProcessModels
-                    .orEmpty()
-                    .joinToString(", ") { (task, model) ->
-                        val says = listOfNotNull(model.getText(), model.getDetails()).filter(String::isNotBlank).joinToString(" ")
-                        "${task.title} ($says ${(model.getFraction() * 100).toInt()}%)"
-                    }.ifEmpty { null },
-                "indexing".takeIf { DumbService.isDumb(project) },
-                // with its consoles' size, which grows as it prints: a process that runs on prints, or does nothing
-                RunContentManager
-                    .getInstance(project)
-                    .allDescriptors
-                    .filter { it.processHandler?.let { handler -> !handler.isProcessTerminated && handler !in paused } == true }
-                    .joinToString(", ") { descriptor ->
-                        val printed =
-                            descriptor.component
-                                ?.let {
-                                    UIUtil.uiTraverser(it).filter(ConsoleViewImpl::class.java).sumOf { console ->
-                                        console.contentSize
+            val live =
+                listOfNotNull(
+                    // with their text and fraction, which move as a task makes progress
+                    bar
+                        ?.backgroundProcessModels
+                        .orEmpty()
+                        .filter { (task, _) -> workspaceChecks || !task.title.endsWith(WORKSPACE_CHECK) }
+                        .joinToString(", ") { (task, model) ->
+                            val says = listOfNotNull(model.getText(), model.getDetails()).filter(String::isNotBlank).joinToString(" ")
+                            "${task.title} ($says ${(model.getFraction() * 100).toInt()}%)"
+                        }.ifEmpty { null },
+                    "indexing".takeIf { DumbService.isDumb(project) },
+                    // with its consoles' size, which grows as it prints: a process that runs on prints, or does nothing
+                    RunContentManager
+                        .getInstance(project)
+                        .allDescriptors
+                        .filter { it.processHandler?.let { handler -> !handler.isProcessTerminated && handler !in paused } == true }
+                        .joinToString(", ") { descriptor ->
+                            val printed =
+                                descriptor.component
+                                    ?.let {
+                                        UIUtil.uiTraverser(it).filter(ConsoleViewImpl::class.java).sumOf { console ->
+                                            console.contentSize
+                                        }
                                     }
-                                }
-                                ?: 0
-                        "running ${descriptor.displayName}, $printed characters printed"
-                    }.ifEmpty { null },
-                sessions.firstOrNull { !it.isStopped && !it.isPaused }?.let { "debugging" },
-                // the file's own analysis, not the daemon's: with a debug session paused, the Debug window's expression
-                // field restarts the daemon every 300 ms, which then never stands idle; and only while the daemon runs or
-                // has a pass to run: in run 16, Player.x stood unfinished for an hour with no pass running or pending
-                "analyzing ${file?.name}".takeIf {
-                    val daemon = DaemonCodeAnalyzer.getInstance(project) as DaemonCodeAnalyzerImpl
-                    file != null && !daemon.isErrorAnalyzingFinished(file) && daemon.isRunningOrPending
-                },
-            ).joinToString("; ")
+                                    ?: 0
+                            "running ${descriptor.displayName}, $printed characters printed"
+                        }.ifEmpty { null },
+                    sessions.firstOrNull { !it.isStopped && !it.isPaused }?.let { "debugging" },
+                )
+            // the file's own analysis, not the daemon's: with a debug session paused, the Debug window's expression field
+            // restarts the daemon every 300 ms, which then never stands idle; and only while the daemon runs or has a
+            // pass to run: in run 16, Player.x stood unfinished for an hour with no pass running or pending
+            val daemon = DaemonCodeAnalyzer.getInstance(project) as DaemonCodeAnalyzerImpl
+            IdeWork(
+                live,
+                "analyzing ${file?.name}".takeIf { file != null && !daemon.isErrorAnalyzingFinished(file) && daemon.isRunningOrPending },
+            )
         }
+
+    /** The IDE's own work in progress, [live], each part as its text, and the selected file's [analysis], or null. */
+    private data class IdeWork(
+        val live: List<String>,
+        val analysis: String?,
+    )
 
     /** The IDE's threads, as a thread dump shows them. */
     @JvmStatic
