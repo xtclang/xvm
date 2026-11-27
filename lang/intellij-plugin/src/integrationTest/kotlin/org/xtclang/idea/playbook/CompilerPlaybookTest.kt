@@ -8,6 +8,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.APPEND
 import java.nio.file.StandardOpenOption.CREATE
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 
 /** Opt-in acceptance tests against the packaged plugin, a real IDE and the bundled compiler. */
 class CompilerPlaybookTest {
@@ -153,7 +155,14 @@ class CompilerPlaybookTest {
             }
         var failure: Throwable? = null
         try {
-            ide.run(if (mode == PlaybookMode.SETTINGS_PERSISTENCE) 2 else 1) { phase -> cases.run(this, phase) }
+            ide.run(if (mode == PlaybookMode.SETTINGS_PERSISTENCE) 2 else 1) { phase ->
+                // the waits that go as the tour's do, such as the Structure view's, which say so every minute and end
+                //  once nothing that could end them is in progress
+                Quiescence.watch(utility(TourProbe::class), run) { line ->
+                    println("[playbook] ${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)} $line")
+                }
+                cases.run(this, phase)
+            }
             check(ide.unexpectedIdeFailures.isEmpty()) { ide.unexpectedIdeFailures.joinToString("\n\n") }
         } catch (escaped: Throwable) {
             failure = escaped
