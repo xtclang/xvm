@@ -73,6 +73,11 @@ interface Algorithm {
     @RO Int blockSize;
 
     /**
+     * A value returned by [keyRequired()] when any positive key size is accepted.
+     */
+    static Int VariableKeySize = -1;
+
+    /**
      * Determine if a key is required by the algorithm, and what the details of that key are.
      *
      * @return True iff the algorithm requires a key

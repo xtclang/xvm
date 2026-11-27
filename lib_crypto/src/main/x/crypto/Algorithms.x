@@ -145,9 +145,12 @@ const Algorithms {
      * @return true if the actual size matches one of the supported sizes
      */
     static Boolean validSize(Int|Int[] supportedSize, Int actualSize) {
-        return supportedSize.is(Int)
-                ? actualSize == supportedSize
-                : supportedSize.contains(actualSize);
+        if (supportedSize.is(Int)) {
+            return supportedSize == Algorithm.VariableKeySize
+                    ? actualSize > 0
+                    : actualSize == supportedSize;
+        }
+        return supportedSize.contains(actualSize);
     }
 
     // ----- internal ------------------------------------------------------------------------------
