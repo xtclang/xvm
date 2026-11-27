@@ -17,6 +17,23 @@ const moveRequest = new RequestType<RenameFilesParams, RenameProposal | null, vo
  */
 const MOVE_RETRIES = 3;
 
+/**
+ * A proof that a change overtook while it ran: documents opened, closed or changed, or the compiler settings did, as
+ * when VS Code releases documents that no editor shows, some minutes after an extension opened them. A rename shows
+ * its message; a move, which VS Code makes whatever its participants answer, asks the server again.
+ */
+class Overtaken extends Error {}
+
+/**
+ * Whether the server's [error] says that a change of the project overtook its proof: ContentModified, or a cancellation
+ * the client did not ask for, as when a document's close retires the server's graph queries, the move's among them.
+ */
+function overtakenAnswer(error: unknown, token: vscode.CancellationToken): boolean {
+    if (!(error instanceof ResponseError)) return false;
+    return error.code === LSPErrorCodes.ContentModified || (!token.isCancellationRequested
+        && (error.code === LSPErrorCodes.RequestCancelled || error.code === LSPErrorCodes.ServerCancelled));
+}
+
 /** VS Code's native Rename saves affected files when files.refactoring.autoSave is enabled.
  * Without that save, moving an edited model can lose its text Undo. Reordering the operations
  * fixes Undo but breaks Redo, so refuse this unsupported editor configuration before editing.
@@ -175,16 +192,27 @@ export async function moveWithConfiguration(
                 files: event.files.map(move => ({ oldUri: move.oldUri.toString(), newUri: move.newUri.toString() }))
             }, event.token).catch(error => {
                 reason = error instanceof Error ? error.message : String(error);
-                overtaken = error instanceof ResponseError && error.code === LSPErrorCodes.ContentModified;
-                return client.handleFailedRequest(moveRequest, event.token, error, null, false);
+                // the client's handling of a cancellation it did not ask for throws, which would leave VS Code to move
+                // the files without the server's edits, and with no word of it
+                overtaken = overtakenAnswer(error, event.token);
+                return overtaken ? null : client.handleFailedRequest(moveRequest, event.token, error, null, false);
             });
             refused = proposal === null;
             return proposal;
         },
-        event.files.map(move => move.oldUri.toString()));
+        event.files.map(move => move.oldUri.toString()))
+        // documents or the compiler settings that changed as the server proved the move, which the client finds once it
+        // has the server's answer
+        .catch(error => {
+            if (!(error instanceof Overtaken) || event.token.isCancellationRequested) throw error;
+            reason = error.message;
+            overtaken = refused = true;
+            return null;
+        });
     let edit = await propose();
     // a change of the project while the server proved the move, such as a file written on disk, which it learns of
-    // as it comes, overtakes the proof: the server proves the move again, of the project as it now is
+    // as it comes, or a document that VS Code released, overtakes the proof: the server proves the move again, of the
+    // project as it now is
     for (let retries = 0; overtaken && retries < MOVE_RETRIES && !event.token.isCancellationRequested; retries++) edit = await propose();
     if (overtaken) reason = `the project changed each of the ${MOVE_RETRIES + 1} times the language server proved it`;
     if (refused && !event.token.isCancellationRequested) {
@@ -219,7 +247,7 @@ async function proposalWithConfiguration(
             throw new Error('This refactoring needs an explicit graph in this workspace’s settings. Global or folder overrides cannot be rewritten safely.');
         }
         if (settings.isClosed || settings.version !== snapshot.version || configurationState(uri) !== state) {
-            throw new Error('Compiler settings changed while calculating the refactoring. Try again.');
+            throw new Overtaken('Compiler settings changed while calculating the refactoring. Try again.');
         }
         const edits = sourceGraphEdits(snapshot.text, location.path, proposal.graph.before, proposal.graph.after, base);
         const configurationEdit: TextDocumentEdit = {
@@ -243,12 +271,12 @@ async function proposalWithConfiguration(
     const converted = await client.protocol2CodeConverter.asWorkspaceEdit(edit, token);
     if (token.isCancellationRequested) return null;
     if (proposal.graph && (settings?.isClosed || settings?.version !== snapshot?.version || configurationState(uri) !== state)) {
-        throw new Error('Compiler settings changed while converting the refactoring. Try again.');
+        throw new Overtaken('Compiler settings changed while converting the refactoring. Try again.');
     }
     if (documents.some(({ document, version }) => document.isClosed || document.version !== version)
         || vscode.workspace.textDocuments.filter(value => !value.isClosed && value.languageId === 'xtc').length !== documents.length) {
-        throw new Error('Source documents changed while calculating the refactoring. Try again.');
+        throw new Overtaken('Source documents changed while calculating the refactoring. Try again.');
     }
-    if (!client.validateWorkspaceEdit(proposal.edit)) throw new Error('Documents changed while calculating the refactoring. Try again.');
+    if (!client.validateWorkspaceEdit(proposal.edit)) throw new Overtaken('Documents changed while calculating the refactoring. Try again.');
     return converted ?? null;
 }
