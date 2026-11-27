@@ -56,7 +56,8 @@ export class XtcTaskProvider implements vscode.TaskProvider {
     resolveTask(task: vscode.Task): vscode.ProviderResult<vscode.Task> {
         const definition = task.definition as XtcTaskDefinition;
         if (definition.moduleName && !definition.moduleName.startsWith('_')) {
-            return createXtcRunTask(definition, this.client);
+            // a task of tasks.json belongs to its folder, whose build mode it takes
+            return createXtcRunTask(definition, this.client, typeof task.scope === 'object' ? task.scope : undefined);
         }
         return undefined;
     }
@@ -81,25 +82,32 @@ export class XtcTaskProvider implements vscode.TaskProvider {
     }
 }
 
-/** The folder that owns the definition's module, or the first folder. */
-function runFolder(definition: XtcTaskDefinition): vscode.WorkspaceFolder | undefined {
-    const uri = definition.moduleUri ? vscode.Uri.parse(definition.moduleUri) : undefined;
-    return uri ? vscode.workspace.getWorkspaceFolder(uri) : vscode.workspace.workspaceFolders?.[0];
+/**
+ * The folder that a run of the module at [moduleUri] takes its build mode from: the folder that holds the module, or
+ * else [scope], the folder that the run's task belongs to, or else the only folder open. None in a window of several
+ * folders, where [buildMode] takes Gradle as soon as one of them builds and runs with it, rather than the first folder's
+ * mode.
+ */
+export function runFolder(moduleUri: string | undefined, scope?: vscode.WorkspaceFolder): vscode.WorkspaceFolder | undefined {
+    const owner = moduleUri ? vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(moduleUri)) : undefined;
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    return owner ?? scope ?? (folders.length === 1 ? folders[0] : undefined);
 }
 
-/** How a run definition executes: an explicit mode, the legacy switch, or the folder's build mode. */
-function runMode(definition: XtcTaskDefinition): BuildMode | 'cli' {
+/** How a run definition executes: an explicit mode, the legacy switch, or the build mode of its folder ([runFolder]). */
+function runMode(definition: XtcTaskDefinition, scope?: vscode.WorkspaceFolder): BuildMode | 'cli' {
     if (definition.mode) {
         return definition.mode;
     }
     if (definition.useGradle !== undefined) {
         return definition.useGradle ? 'gradle' : 'cli';
     }
-    return buildMode(runFolder(definition));
+    return buildMode(runFolder(definition.moduleUri, scope));
 }
 
-export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAccess): vscode.Task {
-    const mode = runMode(definition);
+/** The task that runs [definition]'s module, in the build mode of its folder, or of [scope], the folder its task is of. */
+export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAccess, scope?: vscode.WorkspaceFolder): vscode.Task {
+    const mode = runMode(definition, scope);
     if (mode === 'embedded') {
         return createEmbeddedRunTask(client, definition, {
             module: definition.moduleUri ?? definition.moduleName,
@@ -108,7 +116,7 @@ export function createXtcRunTask(definition: XtcTaskDefinition, client: ClientAc
             label: definition.moduleName,
             method: definition.methodName,
             args: moduleArguments(definition),
-            folder: runFolder(definition),
+            folder: runFolder(definition.moduleUri, scope),
         });
     }
 

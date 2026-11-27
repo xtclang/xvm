@@ -62,31 +62,36 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
         }
 
     /**
-     * The bundled libraries that the language server says this project's own modules replace, as the XVM repository's
-     * replace them all. While there are any, builds and runs use Gradle: the server builds and runs only with the
-     * bundled XDK. Not saved: each server says it again.
+     * Why the language server says this project builds and runs with Gradle, whatever the chosen mode, as the server
+     * builds and runs only with the bundled XDK: what each of its folders that does so does, such as `builds with XDK
+     * 0.5.0, not the bundled XDK 0.4.4` or `replaces the bundled libraries json.xtclang.org with its own modules`. None
+     * while the server builds and runs the project's modules. Not saved: each server says it again.
      */
     @Volatile
-    var replacedLibraries: List<String> = emptyList()
+    var gradleReasons: List<String> = emptyList()
         private set
 
-    /** Whether this project was told that the replaced libraries make builds use Gradle. */
+    /** Whether this project was told that it builds and runs with Gradle. */
     private val told = AtomicBoolean()
 
-    /** Takes the server's [libraries]; the first time they make builds use Gradle instead of the chosen mode, says so. */
+    /**
+     * Takes what the server says: the bundled [libraries] that the project's own modules replace, as the XVM repository's
+     * replace them all, and, by folder, why folders build and run with Gradle, its [reasons]; the first time they make
+     * builds use Gradle instead of the chosen mode, says why.
+     */
     fun replaced(
         project: Project,
         libraries: List<String>,
+        reasons: Collection<String>,
     ) {
-        replacedLibraries = libraries
-        if (libraries.isNotEmpty() && resolve(mode, project.basePath?.let(Path::of)) != XtcBuildMode.GRADLE &&
+        gradleReasons = gradleReasons(libraries, reasons)
+        if (gradleReasons.isNotEmpty() && resolve(mode, project.basePath?.let(Path::of)) != XtcBuildMode.GRADLE &&
             told.compareAndSet(false, true)
         ) {
             Notification(
                 XtcFileOperations.NOTIFICATIONS,
                 "Ecstasy builds and runs use Gradle",
-                "This project's own modules replace the bundled libraries ${libraries.joinToString()}, and the language " +
-                    "server builds and runs only with the bundled XDK, so Build, Run and Debug use Gradle.",
+                "${gradleOnly(gradleReasons)}, so Build, Run and Debug use Gradle.",
                 NotificationType.INFORMATION,
             ).notify(project)
         }
@@ -172,35 +177,54 @@ class XtcBuildSettings : SerializablePersistentStateComponent<XtcBuildSettings.O
 
         /** The mode builds and runs use: [XtcBuildMode.EMBEDDED] or [XtcBuildMode.GRADLE], never automatic. */
         fun effective(project: Project): XtcBuildMode =
-            getInstance(project).let { resolve(it.mode, project.basePath?.let(Path::of), it.replacedLibraries) }
+            getInstance(project).let { resolve(it.mode, project.basePath?.let(Path::of), it.gradleReasons) }
 
         /**
-         * Gradle while the project's own modules replace [replaced] bundled libraries; else automatic means Gradle
-         * exactly when [root] has a Gradle build, as in the VS Code extension.
+         * Gradle while the server says the project builds and runs with it, for [reasons] ([gradleReasons]); else
+         * automatic means Gradle exactly when [root] has a Gradle build, as in the VS Code extension.
          */
         internal fun resolve(
             mode: XtcBuildMode,
             root: Path?,
-            replaced: List<String> = emptyList(),
+            reasons: List<String> = emptyList(),
         ): XtcBuildMode =
             when {
-                replaced.isNotEmpty() -> XtcBuildMode.GRADLE
+                reasons.isNotEmpty() -> XtcBuildMode.GRADLE
                 mode != XtcBuildMode.AUTOMATIC -> mode
                 hasGradleBuild(root) -> XtcBuildMode.GRADLE
                 else -> XtcBuildMode.EMBEDDED
             }
 
-        /** Whether [mode] can apply while the project's own modules replace [replaced] bundled libraries: embedded cannot. */
+        /**
+         * Why the project builds and runs with Gradle, from what the server says: its [reasons], one for each folder that
+         * does, or else, from a server that names no folder, that the project's own modules replace the bundled
+         * [libraries]; none while there is neither.
+         */
+        internal fun gradleReasons(
+            libraries: List<String>,
+            reasons: Collection<String>,
+        ): List<String> =
+            reasons.distinct().ifEmpty {
+                listOfNotNull(
+                    libraries.joinToString().takeIf { it.isNotEmpty() }?.let { "replaces the bundled libraries $it with its own modules" },
+                )
+            }
+
+        /** That the project does what [reasons] say, and that the server builds and runs only with the bundled XDK. */
+        internal fun gradleOnly(reasons: List<String>): String =
+            "This project ${reasons.joinToString(" and ")}, and the language server builds and runs only with the bundled XDK"
+
+        /** Whether [mode] can apply while the project builds and runs with Gradle for [reasons]: embedded cannot. */
         internal fun available(
             mode: XtcBuildMode,
-            replaced: List<String>,
-        ): Boolean = mode != XtcBuildMode.EMBEDDED || replaced.isEmpty()
+            reasons: List<String>,
+        ): Boolean = mode != XtcBuildMode.EMBEDDED || reasons.isEmpty()
 
-        /** Why the embedded compiler is not available while the project's own modules replace [replaced] libraries. */
-        internal fun unavailable(replaced: List<String>): String =
-            "Not available while this project's own modules replace the bundled libraries ${replaced.joinToString()}: the " +
-                "language server builds and runs only with the bundled XDK, so builds and runs use Gradle. A choice of the " +
-                "embedded compiler is kept, and applies again once no library is replaced."
+        /** Why the embedded compiler is not available while the project builds and runs with Gradle for [reasons]. */
+        internal fun unavailable(reasons: List<String>): String =
+            "Not available while this project ${reasons.joinToString(" and ")}: the language server builds and runs only " +
+                "with the bundled XDK, so builds and runs use Gradle. A choice of the embedded compiler is kept, and applies " +
+                "again once that changes."
 
         /** Whether [root] has its own Gradle build. */
         internal fun hasGradleBuild(root: Path?): Boolean = root != null && GRADLE_BUILD_FILES.any { Files.isRegularFile(root.resolve(it)) }

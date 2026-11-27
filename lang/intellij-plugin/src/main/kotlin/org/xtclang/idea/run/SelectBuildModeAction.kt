@@ -17,24 +17,27 @@ import org.xtclang.idea.lsp.XtcFileOperations
 class SelectBuildModeAction : XtcProjectAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
+        JBPopupFactory.getInstance().createListPopup(step(project)).showInBestPositionFor(event.dataContext)
+    }
+
+    /** The popup's choices for [project], of which the one chosen applies at once. */
+    internal fun step(project: Project): BaseListPopupStep<XtcBuildMode> {
         val settings = XtcBuildSettings.getInstance(project)
-        val replaced = settings.replacedLibraries
-        val step =
-            object : BaseListPopupStep<XtcBuildMode>("Ecstasy Build Mode", XtcBuildMode.entries) {
-                // the embedded compiler, shown unavailable while the project's own modules replace bundled libraries
-                override fun isSelectable(value: XtcBuildMode) = XtcBuildSettings.available(value, replaced)
+        val reasons = settings.gradleReasons
+        return object : BaseListPopupStep<XtcBuildMode>("Ecstasy Build Mode", XtcBuildMode.entries) {
+            // the embedded compiler, shown unavailable, saying why, while the project builds and runs with Gradle
+            override fun isSelectable(value: XtcBuildMode) = XtcBuildSettings.available(value, reasons)
 
-                override fun getTextFor(value: XtcBuildMode) =
-                    if (isSelectable(value)) value.label else "${value.label} (not available: this project replaces bundled libraries)"
+            override fun getTextFor(value: XtcBuildMode) =
+                if (isSelectable(value)) value.label else "${value.label} (not available: this project ${reasons.joinToString(" and ")})"
 
-                override fun getDefaultOptionIndex() = XtcBuildMode.entries.indexOf(settings.mode)
+            override fun getDefaultOptionIndex() = XtcBuildMode.entries.indexOf(settings.mode)
 
-                override fun onChosen(
-                    selectedValue: XtcBuildMode,
-                    finalChoice: Boolean,
-                ): PopupStep<*>? = doFinalStep { choose(project, settings, selectedValue) }
-            }
-        JBPopupFactory.getInstance().createListPopup(step).showInBestPositionFor(event.dataContext)
+            override fun onChosen(
+                selectedValue: XtcBuildMode,
+                finalChoice: Boolean,
+            ): PopupStep<*>? = doFinalStep { choose(project, settings, selectedValue) }
+        }
     }
 
     private fun choose(
@@ -45,15 +48,14 @@ class SelectBuildModeAction : XtcProjectAction() {
         if (project.isDisposed || settings.mode == mode) return
         settings.mode = mode
         val effective = if (XtcBuildSettings.effective(project) == XtcBuildMode.GRADLE) "Gradle" else "the embedded compiler"
-        val replaced = settings.replacedLibraries
+        val reasons = settings.gradleReasons
         Notification(
             XtcFileOperations.NOTIFICATIONS,
             "Ecstasy build mode: $mode",
-            if (replaced.isEmpty() || mode == XtcBuildMode.GRADLE) {
+            if (reasons.isEmpty() || mode == XtcBuildMode.GRADLE) {
                 "Build, Rebuild and Run now use $effective."
             } else {
-                "Build, Rebuild and Run still use Gradle while this project's own modules replace the bundled " +
-                    "libraries ${replaced.joinToString()}."
+                "Build, Rebuild and Run still use Gradle while this project ${reasons.joinToString(" and ")}."
             },
             NotificationType.INFORMATION,
         ).notify(project)

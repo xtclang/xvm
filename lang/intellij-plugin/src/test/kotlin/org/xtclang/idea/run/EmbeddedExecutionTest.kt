@@ -47,7 +47,9 @@ class EmbeddedExecutionTest {
     fun `a project whose own modules replace bundled libraries builds with Gradle whatever the mode`(
         @TempDir root: Path,
     ) {
-        val replaced = listOf("ecstasy.xtclang.org", "json.xtclang.org")
+        // from a server that names no folder, the replaced libraries are the reason
+        val replaced = XtcBuildSettings.gradleReasons(listOf("ecstasy.xtclang.org", "json.xtclang.org"), emptyList())
+        assertThat(replaced).containsExactly("replaces the bundled libraries ecstasy.xtclang.org, json.xtclang.org with its own modules")
         XtcBuildMode.entries.forEach {
             assertThat(XtcBuildSettings.resolve(it, root, replaced)).describedAs(it.name).isEqualTo(XtcBuildMode.GRADLE)
         }
@@ -56,6 +58,25 @@ class EmbeddedExecutionTest {
             .containsExactly(XtcBuildMode.AUTOMATIC, XtcBuildMode.GRADLE)
         assertThat(XtcBuildMode.entries.filter { XtcBuildSettings.available(it, emptyList()) }).isEqualTo(XtcBuildMode.entries)
         assertThat(XtcBuildSettings.unavailable(replaced)).contains("json.xtclang.org", "Gradle", "is kept")
+        assertThat(XtcBuildSettings.gradleReasons(emptyList(), emptyList())).isEmpty()
+    }
+
+    @Test
+    fun `a project on another XDK than the bundled one builds with Gradle whatever the mode, and says which XDK`(
+        @TempDir root: Path,
+    ) {
+        val xdk = "builds with XDK 0.5.0, not the bundled XDK 0.4.4"
+        // the server's reasons, one for each folder, are why; the same reason of two folders is said once
+        val reasons = XtcBuildSettings.gradleReasons(emptyList(), listOf(xdk, xdk))
+        assertThat(reasons).containsExactly(xdk)
+        XtcBuildMode.entries.forEach {
+            assertThat(XtcBuildSettings.resolve(it, root, reasons)).describedAs(it.name).isEqualTo(XtcBuildMode.GRADLE)
+        }
+        assertThat(XtcBuildSettings.unavailable(reasons)).startsWith("Not available while this project $xdk:").contains("is kept")
+        assertThat(XtcBuildSettings.gradleOnly(reasons))
+            .isEqualTo("This project $xdk, and the language server builds and runs only with the bundled XDK")
+        // a folder's reason comes before the replaced libraries of a server that names no folder
+        assertThat(XtcBuildSettings.gradleReasons(listOf("json.xtclang.org"), listOf(xdk))).containsExactly(xdk)
     }
 
     @Test
