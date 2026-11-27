@@ -1317,6 +1317,7 @@ class CompilerPlaybook(
         val start = TimeSource.Monotonic.markNow()
         println("IntelliJ playbook $id: $description")
         playbookLine("$id $description: starts")
+        Quiescence.begin("$id $description")
         if (id != "START" && id != "START_REOPEN") progress(id, "running", description)
         try {
             action()

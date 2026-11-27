@@ -5,8 +5,10 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.getToolWindow
 import com.intellij.driver.sdk.invokeAction
+import com.intellij.driver.sdk.ui.components.UiComponent
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.toolwindows.structureToolWindow
+import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.time.LocalTime
@@ -31,6 +33,12 @@ private val keepsStaleSymbols: Boolean =
 private val staleAfter = 10.seconds
 
 /**
+ * How long one try at expanding the Structure tree runs in the IDE, the driver's default: a try that takes longer is
+ * tried again, so this paces the wait and decides nothing.
+ */
+private val expansion = 5.seconds
+
+/**
  * Inspect the actual Structure tree populated by LSP4IJ, including deliberately absent
  * declarations.
  */
@@ -41,37 +49,59 @@ fun Driver.structure(
 ) {
     val visible = withContext(OnDispatcher.EDT) { getToolWindow("Structure").isVisible() }
     if (!visible) invokeAction("ActivateStructureToolWindow", component = editor.component)
-    val tree = ui.structureToolWindow().waitAndGetStructureTree()
+    // the window and its tree, looked for as the wait polls, not found with the driver's waitAndGetStructureTree: that
+    //  gives the tree ten seconds to show and its first expansion five, without a retry, and X1's first expansion after
+    //  the server's start outlasted those five on a loaded machine (a TimeoutException in JTreeTextFixture.expandAll,
+    //  three times on 2026-11-26); waited for as the tour's waits do, which say so every minute and end once nothing that
+    //  could make the Structure view show them is in progress
+    val window = ui.structureToolWindow()
+    val tree = window.tree()
+    var showing = false
+    var rows = emptyList<String>()
     var asked = TimeSource.Monotonic.markNow()
-    awaitUi("Structure contains $include and excludes $exclude", HANG_LIMIT) {
-        // the driver gives a tree's expansion a few seconds of its own, which a loaded machine can exceed; expanding
-        // again is harmless, so its timeout means only that the rows are not all there yet, and the hang bound ends a
-        // tree that never expands
-        val expanded =
-            runCatching { tree.expandAll() }
-                .onFailure { failure -> if (generateSequence(failure, Throwable::cause).none { it is TimeoutException }) throw failure }
-                .isSuccess
-        if (!expanded) return@awaitUi false
-        val rows = tree.collectExpandedPaths().map { it.path.last() }
+    Quiescence.stuck = null
+    val contains =
+        withinOrFail(HANG_LIMIT, "Structure contains $include and excludes $exclude") {
+            // looked for until they show, and not again: each look writes a line of the driver's log
+            showing = showing || (shows(window) && shows(tree))
+            if (!showing) return@withinOrFail false
+            // the driver gives a tree's expansion a few seconds of its own, which a loaded machine can exceed; expanding
+            // again is harmless, so its timeout means only that the rows are not all there yet, and the hang bound ends a
+            // tree that never expands; nor does a tree whose nodes still load expand yet
+            val fixture = tree.fixture
+            val expanded =
+                fixture.areTreeNodesLoaded() &&
+                    runCatching { fixture.expandAll(expansion.inWholeMilliseconds.toInt()) }
+                        .onFailure { failure ->
+                            if (generateSequence(failure, Throwable::cause).none { it is TimeoutException }) throw failure
+                        }.isSuccess
+            if (!expanded) return@withinOrFail false
+            rows = tree.collectExpandedPaths().map { it.path.last() }
 
-        fun contains(name: String) =
-            rows.any {
-                Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").containsMatchIn(it)
+            fun contains(name: String) =
+                rows.any {
+                    Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").containsMatchIn(it)
+                }
+            val shown = include.all(::contains) && exclude.none(::contains)
+            if (!shown && keepsStaleSymbols && asked.elapsedNow() > staleAfter) {
+                println(
+                    "[playbook] ${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)} warning: the Structure view shows $rows " +
+                        "after $staleAfter; editing the text and back, as LSP4IJ before 0.30.0 can keep an empty answer (#1738)",
+                )
+                val text = editor.text
+                editor.text = "$text "
+                editor.text = text
+                asked = TimeSource.Monotonic.markNow()
             }
-        val shown = include.all(::contains) && exclude.none(::contains)
-        if (!shown && keepsStaleSymbols && asked.elapsedNow() > staleAfter) {
-            println(
-                "[playbook] ${LocalTime.now().truncatedTo(ChronoUnit.SECONDS)} warning: the Structure view shows $rows " +
-                    "after $staleAfter; editing the text and back, as LSP4IJ before 0.30.0 can keep an empty answer (#1738)",
-            )
-            val text = editor.text
-            editor.text = "$text "
-            editor.text = text
-            asked = TimeSource.Monotonic.markNow()
+            shown
         }
-        shown
-    }
+    check(contains) { "The Structure view did not show $include without $exclude: it shows $rows; ${Quiescence.stuck}" }
 }
+
+/** Whether [component] shows: one that the driver finds more than once, which present() fails on, does not yet. */
+private fun shows(component: UiComponent): Boolean =
+    runCatching { component.present() }
+        .getOrElse { failure -> if ("more than one" in failure.message.orEmpty()) false else throw failure }
 
 /**
  * Lines of fold regions installed in the native editor, rather than a second direct LSP request.
