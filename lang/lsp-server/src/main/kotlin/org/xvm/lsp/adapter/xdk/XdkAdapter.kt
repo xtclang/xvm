@@ -25,6 +25,7 @@ import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.DocumentHighlight
 import org.xvm.lsp.adapter.DocumentLink
+import org.xvm.lsp.adapter.EditorConfig
 import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
@@ -2332,11 +2333,8 @@ class XdkAdapter
             if (isLibraryDocument(uri)) {
                 emptyList()
             } else {
-                XdkLexical.format(
-                    content,
-                    FormattingConfig.resolve(options, editorFormattingConfig),
-                    options,
-                )
+                val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
+                XdkLexical.format(content, formatting.config, formatting.options)
             }
 
         override fun formatRange(
@@ -2348,12 +2346,8 @@ class XdkAdapter
             if (isLibraryDocument(uri)) {
                 emptyList()
             } else {
-                XdkLexical.format(
-                    content,
-                    FormattingConfig.resolve(options, editorFormattingConfig),
-                    options,
-                    range,
-                )
+                val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
+                XdkLexical.format(content, formatting.config, formatting.options, range)
             }
 
         /**
@@ -2371,8 +2365,9 @@ class XdkAdapter
             // the text as last sent, not as last analyzed: the request does not wait for the analysis of a change
             (synchronized(lifecycle) { overlays[uri] } ?: currentText(uri))
                 ?.let { text ->
-                    val config = FormattingConfig.resolve(options, editorFormattingConfig)
-                    val typing = options.copy(trimTrailingWhitespace = false)
+                    val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
+                    val config = formatting.config
+                    val typing = formatting.options.copy(trimTrailingWhitespace = false)
                     val current = text.lines().getOrNull(line) ?: return@let emptyList()
                     if (ch == "\n" && current.isBlank()) {
                         XdkLexical

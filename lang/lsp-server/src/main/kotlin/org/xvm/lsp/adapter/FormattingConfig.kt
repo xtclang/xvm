@@ -4,11 +4,10 @@ package org.xvm.lsp.adapter
  * Formatting configuration for Ecstasy source files.
  *
  * Resolution order (highest priority first):
- * 1. Editor config from `workspace/configuration` (IntelliJ Code Style settings)
- * 2. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
- * 3. Ecstasy defaults (4-space indent, 8-space continuation, no tabs)
- *
- * File-scoped configuration and project-local `xtc-format.toml` lookup are not implemented.
+ * 1. The file's `.editorconfig` files, which [EditorConfig] reads at each formatting request
+ * 2. Editor config from `workspace/configuration` (IntelliJ Code Style settings, VS Code's `xtc.formatting`)
+ * 3. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
+ * 4. Ecstasy defaults (4-space indent, 8-space continuation, no tabs)
  */
 data class FormattingConfig(
     val indentSize: Int = 4,
@@ -26,7 +25,7 @@ data class FormattingConfig(
          * Resolve the effective formatting config from settings supplied by the caller.
          *
          * Priority: editor config > LSP options > defaults. This function performs no file lookup;
-         * any file-scoped settings must be resolved by the caller before applying this precedence.
+         * [EditorConfig.formatting] sets a file's `.editorconfig` settings over its result.
          *
          * @param lspOptions the LSP FormattingOptions from the current request
          * @param editorConfig editor-provided config from `workspace/configuration`, or null
