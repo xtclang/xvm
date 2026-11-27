@@ -137,6 +137,18 @@ class EditorConfigTest {
     }
 
     @Test
+    fun `the line ending is the file's end_of_line, for the editor to apply`() {
+        val uri = write("App.x", "").toUri().toString()
+        listOf("lf" to "lf", "CRLF" to "crlf", "cr" to "cr", "native" to null, "unset" to null).forEach { (value, ending) ->
+            write(".editorconfig", "root = true\n[*.x]\nend_of_line = $value\n")
+            assertThat(EditorConfig.endOfLine(uri, null)).describedAs(value).isEqualTo(ending)
+        }
+        write(".editorconfig", "root = true\n[*.x]\nend_of_line = crlf\n")
+        assertThat(EditorConfig.endOfLine(uri, FormattingConfig(editorConfig = false))).isNull()
+        assertThat(EditorConfig.endOfLine("untitled:Untitled-1", null)).isNull()
+    }
+
+    @Test
     fun `a document that is not a file keeps the editor's settings`() {
         val options = FormattingOptions(4, true)
         val editor = FormattingConfig(indentSize = 3)

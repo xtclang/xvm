@@ -25,7 +25,8 @@ import java.util.concurrent.ConcurrentHashMap
  * - IntelliJ's names for what the standard does not have, as its EditorConfig export writes them for the Ecstasy
  *   language: `ij_ecstasy_continuation_indent_size` (or `ij_continuation_indent_size`) and `ij_ecstasy_wrap_comments`
  *
- * Others, such as `end_of_line` and `charset`, are the editor's: the formatter keeps a file's line endings and encoding.
+ * `end_of_line` is for the editor to apply ([endOfLine]): an edit's line breaks cannot change a document's, as both
+ * editors give inserted text the document's own. `charset` and other properties are not read.
  */
 internal object EditorConfig {
     const val FILE_NAME = ".editorconfig"
@@ -65,9 +66,26 @@ internal object EditorConfig {
     ): Formatting {
         val base = Formatting(FormattingConfig.resolve(options, editor), options)
         if (editor?.editorConfig == false) return base
-        val file = runCatching { URI(uri) }.getOrNull()?.takeIf { it.scheme == "file" }?.let { runCatching { Path.of(it) }.getOrNull() }
-        return file?.let { apply(properties(it), base, it) } ?: base
+        return file(uri)?.let { apply(properties(it), base, it) } ?: base
     }
+
+    /**
+     * The line ending that [uri]'s `.editorconfig` files ask for, `lf`, `crlf` or `cr`, or null when they ask for none
+     * or [editor] turned them off: for a client to apply itself (`xtc/endOfLine`), as the line breaks of a text edit
+     * cannot change a document's.
+     */
+    fun endOfLine(
+        uri: String,
+        editor: FormattingConfig?,
+    ): String? {
+        if (editor?.editorConfig == false) return null
+        val file = file(uri) ?: return null
+        return Values(properties(file), file).choice("end_of_line", "lf" to "lf", "crlf" to "crlf", "cr" to "cr")
+    }
+
+    /** The file a `file:` URI names, or null for another document, such as an unsaved new one. */
+    private fun file(uri: String): Path? =
+        runCatching { URI(uri) }.getOrNull()?.takeIf { it.scheme == "file" }?.let { runCatching { Path.of(it) }.getOrNull() }
 
     /** The properties the `.editorconfig` files set for [file], with `unset` ones left out. */
     fun properties(file: Path): Map<String, String> {

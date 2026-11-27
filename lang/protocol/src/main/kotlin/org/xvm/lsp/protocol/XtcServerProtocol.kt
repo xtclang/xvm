@@ -41,6 +41,14 @@ interface XtcServerProtocol : LanguageServer {
     @JsonRequest("xtc/discoverConsumers")
     fun discoverConsumers(params: DiscoverConsumersParams): CompletableFuture<ConsumerDiscovery>
 
+    /**
+     * The line ending a file's `.editorconfig` files ask for, `lf`, `crlf` or `cr`, or null when they ask for none or the
+     * editor turned them off: for the client to apply itself, as the line breaks of a text edit cannot change a
+     * document's. VS Code's extension adds it to Format Document; IntelliJ applies `end_of_line` on its own.
+     */
+    @JsonRequest("xtc/endOfLine")
+    fun endOfLine(params: TextDocumentIdentifier): CompletableFuture<String?>
+
     /** A rename's edit, with the source-graph change the host must apply in the same transaction. */
     @JsonRequest("xtc/rename")
     fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?>

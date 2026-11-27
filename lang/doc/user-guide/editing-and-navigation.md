@@ -146,6 +146,7 @@ The formatter takes each setting from the first of these that sets it:
 | Refill comments | **Wrapping and Braces: Comments, Wrap at right margin** | `xtc.formatting.wrapComments` | `ij_ecstasy_wrap_comments`: `true` or `false` |
 | Trailing whitespace | What the editor sends with the request | What the editor sends with the request | `trim_trailing_whitespace`: `true` or `false` |
 | Final newline | What the editor sends with the request | What the editor sends with the request | `insert_final_newline`: `true` or `false` |
+| Line endings | IntelliJ's own: it applies `end_of_line` itself | **Format Document** sets the document's | `end_of_line`: `lf` or `crlf` |
 
 **`.editorconfig`.** For each file it formats, the language server reads the `.editorconfig` files from the file's
 folder up, stopping at one that says `root = true`. It reads them again at every format, so a saved change applies the
@@ -156,9 +157,12 @@ EditorConfig globs: `*`, `**`, `?`, `[abc]`, `[!abc]`, `{a,b}` and `{1..9}`.
 The server reads the standard `indent_style`, `indent_size` (`tab` indents by the tab width), `tab_width`,
 `trim_trailing_whitespace` and `insert_final_newline`, and the widely used `max_line_length`. For the two settings the
 standard has no name for, it reads the names IntelliJ gives Ecstasy's code style in `.editorconfig`, so a file that
-IntelliJ exports from its code style works in both editors. `end_of_line` and `charset` stay with the editor, as the
-formatter keeps a file's line endings and encoding, and other properties are not read. A value the formatter cannot
-use, such as `indent_size = 0` or `indent_style = spaces`, is skipped, with a warning in the language server's log.
+IntelliJ exports from its code style works in both editors. A formatting edit cannot change a file's line endings,
+as both editors give the text it inserts the document's own, so `end_of_line` is applied by the editor: IntelliJ
+applies it itself while its EditorConfig support is on, and in VS Code, **Format Document**, and `editor.formatOnSave`,
+converts the document to the `lf` or `crlf` that the server reads (VS Code has no `cr`). `charset` stays with the editor, and other
+properties are not read. A value the formatter cannot use, such as `indent_size = 0` or `indent_style = spaces`, is
+skipped, with a warning in the language server's log.
 
 ```ini
 root = true

@@ -66,6 +66,7 @@ import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.CodeAction
+import org.xvm.lsp.adapter.EditorConfig
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
@@ -1356,6 +1357,11 @@ class XtcLanguageServer internal constructor(
                 ?.effectiveSourceModules()
                 ?.map { it.toProtocol() }
                 .orEmpty()
+        }
+
+    override fun endOfLine(params: TextDocumentIdentifier): CompletableFuture<String?> =
+        supplyAsync("xtc/endOfLine", params.uri.substringAfterLast('/'), { it ?: "none" }) {
+            EditorConfig.endOfLine(params.uri, editorFormattingConfig)
         }
 
     /**
