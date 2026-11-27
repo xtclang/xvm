@@ -828,6 +828,11 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
 - [ ] Found 2026-11-26 in the same review: `XdkAdapter.renameProposalAsync`'s path for a rename outside a project query
   maps `renameAsync` with `thenApply`, which does not pass a client's cancel on to the rename's proof, as
   `plainRenameAsync`'s `mapCancellable` does; it predates the review.
+- [ ] Found 2026-11-26 in the review of the IntelliJ tour's wait fixes: a positive wait (`within`, `until`) counts the
+  server's trace events and requests as work under way, so one whose condition never comes can still run to the
+  hang's bound while the server keeps working, now reporting every minute but not failing sooner. The tour's
+  start-up waits (`UiWaits.awaitUi`) have no idle check at all. Fix: count only progress that could make the
+  condition hold (the IDE's own tasks, a request the step made), not the server's background traffic.
 - [ ] Found 2026-11-26: a checkout's copied-back VS Code reports include every run the slot's work volume keeps,
   other checkouts' too, and since the shared queue from both slots; a script that took the newest copied run as its
   own took another agent's tour run (`run-y0hT9c` in wt-video). Fix: copy back only the runs this container made, as
