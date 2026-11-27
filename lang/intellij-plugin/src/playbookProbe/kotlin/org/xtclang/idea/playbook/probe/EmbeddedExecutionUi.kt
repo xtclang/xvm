@@ -141,15 +141,55 @@ object EmbeddedExecutionUi {
         project: Project,
         timeoutSeconds: Int,
     ): String {
-        val text = StringBuffer()
-        val links = ConcurrentLinkedQueue<String>()
-        val filters = ConcurrentLinkedQueue<Filter>()
-        val disposable = Disposer.newDisposable("Ecstasy playbook build")
+        val watch = BuildWatch(project)
         try {
+            return watch.state(watch.start().blockingGet(timeoutSeconds, TimeUnit.SECONDS)).toString()
+        } finally {
+            watch.close()
+        }
+    }
+
+    /** The Build Project that [startBuild] started, and its answer once it has one. */
+    @Volatile
+    private var startedBuild: Pair<BuildWatch, Promise<ProjectTaskManager.Result>>? = null
+
+    /** Starts Build Project, whose state [buildState] answers, as a wait that goes on while it runs asks it. */
+    @JvmStatic
+    fun startBuild(project: Project) {
+        startedBuild?.first?.close()
+        val watch = BuildWatch(project)
+        startedBuild = watch to watch.start()
+    }
+
+    /**
+     * The state of the Build Project that [startBuild] started: whether it has ended, and once it has, what [build]
+     * answers, with the titles of the builds that the Build tool window started, and how many of its tasks ran.
+     */
+    @JvmStatic
+    fun buildState(): String {
+        val (watch, promise) = requireNotNull(startedBuild) { "No Build Project has started" }
+        if (promise.state == Promise.State.PENDING) return JsonObject().apply { addProperty("done", false) }.toString()
+        val result = runCatching { promise.blockingGet(0) }.getOrNull()
+        watch.close()
+        return watch.state(result).apply { addProperty("done", true) }.toString()
+    }
+
+    /** What the Build tool window shows of the builds that a Build Project of [project] starts, until [close]. */
+    private class BuildWatch(
+        private val project: Project,
+    ) {
+        private val text = StringBuffer()
+        private val links = ConcurrentLinkedQueue<String>()
+        private val filters = ConcurrentLinkedQueue<Filter>()
+        private val titles = ConcurrentLinkedQueue<String>()
+        private val disposable = Disposer.newDisposable("Ecstasy playbook build")
+
+        init {
             project.getService(BuildViewManager::class.java).addListener(
                 BuildProgressListener { _, event ->
                     when (event) {
                         is StartBuildEvent -> {
+                            titles += event.buildDescriptor.title
                             (event.buildDescriptor as? DefaultBuildDescriptor)?.executionFilters?.let(filters::addAll)
                         }
 
@@ -180,19 +220,35 @@ object EmbeddedExecutionUi {
                 },
                 disposable,
             )
+        }
+
+        fun start(): Promise<ProjectTaskManager.Result> {
             var promise: Promise<ProjectTaskManager.Result>? = null
             ApplicationManager.getApplication().invokeAndWait { promise = ProjectTaskManager.getInstance(project).buildAllModules() }
-            val result = requireNotNull(promise).blockingGet(timeoutSeconds, TimeUnit.SECONDS)
-            return JsonObject()
-                .apply {
-                    addProperty("aborted", result?.isAborted ?: true)
-                    addProperty("errors", result?.hasErrors() ?: true)
-                    addProperty("text", text.toString())
-                    add("links", JsonArray().apply { links.forEach(::add) })
-                }.toString()
-        } finally {
-            Disposer.dispose(disposable)
+            return requireNotNull(promise)
         }
+
+        /** What the build answered as [result], none when it did not answer, and what the Build tool window showed. */
+        fun state(result: ProjectTaskManager.Result?): JsonObject {
+            var tasks = 0
+            var ran = 0
+            result?.anyTaskMatches { _, state ->
+                tasks++
+                if (!state.isSkipped) ran++
+                false
+            }
+            return JsonObject().apply {
+                addProperty("aborted", result?.isAborted ?: true)
+                addProperty("errors", result?.hasErrors() ?: true)
+                addProperty("text", text.toString())
+                add("links", JsonArray().apply { links.forEach(::add) })
+                add("titles", JsonArray().apply { titles.forEach(::add) })
+                addProperty("tasks", tasks)
+                addProperty("ran", ran)
+            }
+        }
+
+        fun close() = Disposer.dispose(disposable)
     }
 
     /** Runs [module] through an Ecstasy Application configuration that follows the project mode. */
