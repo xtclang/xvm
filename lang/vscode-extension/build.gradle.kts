@@ -375,8 +375,11 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
     val tour = providers.gradleProperty("vscodeTour").map(String::toBoolean).orElse(false)
     val tourSections = providers.gradleProperty("vscodeTourSections").orElse("")
     val tourHang = providers.gradleProperty("vscodeTourHang").orElse("")
+    // the server's suites as the report's host checks, only when asked: CI and local test runs have them, and they cost a
+    // full run's container slot about nine minutes before its first case
+    val hostChecks = providers.gradleProperty("playbookHostChecks").map(String::toBoolean).orElse(false)
     dependsOn("assemble")
-    if (!selectedCases.isPresent && !tour.get()) {
+    if (hostChecks.get() && !selectedCases.isPresent && !tour.get()) {
         dependsOn(":lsp-server:test", ":lsp-server:compilerStdioTest")
     }
     val playbookArgs =
@@ -389,6 +392,7 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
                         "--multi-root".takeIf { multipleRoots },
                     )
             }.zip(cancelUi) { arguments, visibleCancel -> arguments + listOfNotNull("--cancel-ui".takeIf { visibleCancel }) }
+            .zip(hostChecks) { arguments, checks -> arguments + listOfNotNull("--host-checks".takeIf { checks }) }
     val tourArgs =
         tourSections.zip(tourHang) { sections, hang ->
             listOf("run", "test:tour", "--") +

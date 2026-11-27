@@ -73,8 +73,10 @@ export async function run(): Promise<void> {
             ...(results.find(result => result.id === id) ?? { status: selected.some(value => value === id) ? 'not-run' : 'not-selected' }) })),
         errors: results.filter(result => !cases.has(result.id)),
         scope: 'VS Code extension-host/provider checks; X145 --cancel-ui and X260 activate visible Cancel controls, and X259 inspects rendered inlay labels. X154/X276/X277 capture the startup theme without changing it; separate X277 --theme/--lexical-baseline launches compare dark/light/high-contrast styles; X276 checks resolved annotations and library ownership, and X277 checks lexical styles and damaged-source recovery. X278 applies the compiler documentation action with native Undo/Redo; X279 clicks rendered reference lenses, opens native reference peek and checks live settings. Other visual appearance and physical key/menu interaction remain manual.',
-        hostChecks: await hostResults(),
-        hostChecksNote: 'Existing Gradle XML evidence; inspect timestamps. Focused editor runs do not rerun host checks.',
+        hostChecks: process.env.XTC_PLAYBOOK_HOST_CHECKS === 'true' ? await hostResults() : [],
+        hostChecksNote: process.env.XTC_PLAYBOOK_HOST_CHECKS === 'true'
+            ? 'Gradle XML of the server suites this run ran first; inspect timestamps.'
+            : 'Host checks not run: -PplaybookHostChecks=true runs the server suites before a full run.',
         supportingCoverage: {
             '7a.1–7a.2': 'XdkStdioTest: packaged compiler with absent and invalid XDK_HOME',
             '7a.3–7a.4': 'Case timings and XdkRetentionTest latency output; interactive cold/warm log interpretation remains manual',
