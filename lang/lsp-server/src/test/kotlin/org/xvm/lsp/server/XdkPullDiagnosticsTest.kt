@@ -36,6 +36,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
+import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -248,6 +249,51 @@ class XdkPullDiagnosticsTest {
                     .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
                     .awaited(),
             ).isNotEmpty()
+        }
+    }
+
+    @Test
+    fun `a document's pull waits for no library source's compile, as the one that Go to Definition into the library starts`() {
+        CompilerTestSupport.configure()
+        // as X5 does: an edit's parse error, then Go to Definition opens a library source, whose compile holds, as the
+        // whole library's took 14 to over 30 seconds in the playbook's container
+        val copy = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", "ecstasy/text/String.x")))
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val uri = file.toURI().toString()
+        val hold = AtomicBoolean()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val held = AtomicBoolean()
+        val adapter =
+            hookedAdapter {
+                if (hold.compareAndSet(true, false)) {
+                    held.set(true)
+                    entered.countDown()
+                    try {
+                        check(release.awaited())
+                    } finally {
+                        held.set(false)
+                    }
+                }
+            }
+        try {
+            Session(adapter = adapter).use { session ->
+                session.open(uri, VALID, 1)
+                assertThat(session.pull(uri).left.items).isEmpty()
+                session.change(uri, BROKEN, 2)
+                val broken = session.pull(uri).left.items
+                assertThat(broken).isNotEmpty()
+                hold.set(true)
+                session.open(copy.toUri().toString(), copy.toFile().readText(), 1)
+                assertThat(entered.awaited()).isTrue()
+                // the document's own analysis has its error, and the library's reports on none of the workspace's documents
+                assertThat(session.pull(uri).left.items).isEqualTo(broken)
+                assertThat(held).describedAs("the library's compile holds as the document's pull answers").isTrue()
+                // let the library's compile go before the server closes, which waits for its compiles to end
+                release.countDown()
+            }
+        } finally {
+            release.countDown()
         }
     }
 
