@@ -16,12 +16,14 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -242,11 +244,12 @@ public class xFuture
 
             cfThis.whenComplete((hR, ex) -> {
                 if (ex == null) {
-                    CompletableFuture<ObjectHandle> cfThen =
-                            frame.f_context.postRequest(frame, hRun, Utils.OBJECTS_NONE, 0);
+                    CompletableFuture<ObjectHandle> cfThen = postCallback(frame, hRun, Utils.OBJECTS_NONE, 0);
 
-                    cfThen.whenComplete((hVoid, exThen) ->
-                            hThen.complete(hR, Utils.translate(exThen)));
+                    cfThen.whenComplete((hVoid, exThen) -> {
+                        reportDropped(frame, hRun, exThen);
+                        hThen.complete(hR, Utils.translate(exThen));
+                    });
                 } else {
                     hThen.complete(null, Utils.translate(ex));
                 }
@@ -291,11 +294,12 @@ public class xFuture
 
             cfThis.whenComplete((hR, ex) -> {
                 if (ex == null) {
-                    CompletableFuture<ObjectHandle> cfPass =
-                            frame.f_context.postRequest(frame, hConsume, new ObjectHandle[] {hR}, 0);
+                    CompletableFuture<ObjectHandle> cfPass = postCallback(frame, hConsume, new ObjectHandle[] {hR}, 0);
 
-                    cfPass.whenComplete((hVoid, exPass) ->
-                            hPass.complete(hR, Utils.translate(exPass)));
+                    cfPass.whenComplete((hVoid, exPass) -> {
+                        reportDropped(frame, hConsume, exPass);
+                        hPass.complete(hR, Utils.translate(exPass));
+                    });
                 } else {
                     hPass.complete(null, Utils.translate(ex));
                 }
@@ -344,11 +348,12 @@ public class xFuture
 
             cfThis.whenComplete((hR, ex) -> {
                 if (ex == null) {
-                    CompletableFuture<ObjectHandle> cfTrans =
-                            frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hR}, 1);
+                    CompletableFuture<ObjectHandle> cfTrans = postCallback(frame, hConvert, new ObjectHandle[] {hR}, 1);
 
-                    cfTrans.whenComplete((hNew, exTrans) ->
-                            hTrans.complete(hNew, Utils.translate(exTrans)));
+                    cfTrans.whenComplete((hNew, exTrans) -> {
+                        reportDropped(frame, hConvert, exTrans);
+                        hTrans.complete(hNew, Utils.translate(exTrans));
+                    });
                 } else {
                     hTrans.complete(null, Utils.translate(ex));
                 }
@@ -400,11 +405,12 @@ public class xFuture
                     hHandle.complete(hR, null);
                 } else {
                     ExceptionHandle hEx = Utils.translate(ex);
-                    CompletableFuture<ObjectHandle> cfTrans =
-                            frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hEx}, 1);
+                    CompletableFuture<ObjectHandle> cfTrans = postCallback(frame, hConvert, new ObjectHandle[] {hEx}, 1);
 
-                    cfTrans.whenComplete((hNew, exTrans) ->
-                            hHandle.complete(hNew, Utils.translate(exTrans)));
+                    cfTrans.whenComplete((hNew, exTrans) -> {
+                        reportDropped(frame, hConvert, exTrans);
+                        hHandle.complete(hNew, Utils.translate(exTrans));
+                    });
                 }
             });
             return frame.assignValue(iReturn, hHandle);
@@ -444,11 +450,12 @@ public class xFuture
             FutureHandle hTrans = makeHandle(clzTrans, new CompletableFuture<>());
 
             cfThis.whenComplete((hR, ex) -> {
-                CompletableFuture<ObjectHandle> cfTrans =
-                        frame.f_context.postRequest(frame, hConvert, combineResult(hR, ex), 1);
+                CompletableFuture<ObjectHandle> cfTrans = postCallback(frame, hConvert, combineResult(hR, ex), 1);
 
-                cfTrans.whenComplete((hNew, exTrans) ->
-                        hTrans.complete(hNew, Utils.translate(exTrans)));
+                cfTrans.whenComplete((hNew, exTrans) -> {
+                    reportDropped(frame, hConvert, exTrans);
+                    hTrans.complete(hNew, Utils.translate(exTrans));
+                });
             });
             return frame.assignValue(iReturn, hTrans);
         }
@@ -509,11 +516,12 @@ public class xFuture
                         assert false;
                     }
 
-                    CompletableFuture<ObjectHandle> cfAnd =
-                            frame.f_context.postRequest(frame, hCombine, ahArg, 1);
+                    CompletableFuture<ObjectHandle> cfAnd = postCallback(frame, hCombine, ahArg, 1);
 
-                    cfAnd.whenComplete((hNew, exTrans) ->
-                            hAnd.complete(hNew, Utils.translate(exTrans)));
+                    cfAnd.whenComplete((hNew, exTrans) -> {
+                        reportDropped(frame, hCombine, exTrans);
+                        hAnd.complete(hNew, Utils.translate(exTrans));
+                    });
                 } else {
                     hAnd.complete(null, Utils.translate(ex));
                 }
@@ -572,10 +580,15 @@ public class xFuture
             FutureHandle hWhen = makeHandle(hThis.getComposition(), new CompletableFuture<>());
 
             cfThis.whenComplete((hR, ex) -> {
-                CompletableFuture<ObjectHandle> cfWhen =
-                        frame.f_context.postRequest(frame, hNotify, combineResult(hR, ex), 0);
+                CompletableFuture<ObjectHandle> cfWhen = postCallback(frame, hNotify, combineResult(hR, ex), 0);
 
                 cfWhen.whenComplete((hVoid, exWhen) -> {
+                    if (exWhen != null && !reportDropped(frame, hNotify, exWhen)) {
+                        // the notification threw; the future that whenComplete returns, which
+                        // gets that exception, is usually dropped, so it is reported as the
+                        // service's unhandled exception, as one of a "callLater" function is
+                        frame.f_context.callUnhandledExceptionHandler(Utils.translate(exWhen));
+                    }
                     if (exWhen == null && ex == null) {
                         hWhen.complete(hR, null);
                     } else {
@@ -585,6 +598,42 @@ public class xFuture
             });
             return frame.assignValue(iReturn, hWhen);
         }
+    }
+
+    /**
+     * Post a call of a function that the frame's service registered to run once a future
+     * completes. A service that has terminated runs none of its requests any more, so the call
+     * then fails at once, as they do, instead of leaving the future that waits for it incomplete.
+     *
+     * @return the future of the call
+     */
+    private static CompletableFuture<ObjectHandle> postCallback(Frame frame, FunctionHandle hFunction,
+                                                                ObjectHandle[] ahArg, int cReturns) {
+        ServiceContext                  context = frame.f_context;
+        CompletableFuture<ObjectHandle> cfCall  = context.postRequest(frame, hFunction, ahArg, cReturns);
+        return cfCall == null
+                ? CompletableFuture.failedFuture(xException.serviceTerminated(null, context.f_sName).getException())
+                : cfCall;
+    }
+
+    /**
+     * Report a call that {@link #postCallback} made, if it failed because the frame's service had
+     * terminated: the function did not run, so the future's completion did not reach it. That
+     * service cannot report anything any more, so this goes to the runtime's error output, as a
+     * service's unexpected failure does.
+     *
+     * @param exCall  how the call failed, or null if it did not
+     *
+     * @return true if the call was dropped, and so reported
+     */
+    private static boolean reportDropped(Frame frame, FunctionHandle hFunction, Throwable exCall) {
+        ServiceContext context = frame.f_context;
+        if (exCall == null || !context.isTerminated()) {
+            return false;
+        }
+        System.err.println("A future's completion was not passed on: " + context
+                + " has terminated, so it cannot call " + hFunction);
+        return true;
     }
 
     /**
