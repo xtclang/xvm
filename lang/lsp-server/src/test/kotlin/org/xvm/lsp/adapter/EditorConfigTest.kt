@@ -127,6 +127,16 @@ class EditorConfigTest {
     }
 
     @Test
+    fun `an editor that turns EditorConfig off keeps its own settings`() {
+        write(".editorconfig", "root = true\n[*.x]\nindent_size = 2\n")
+        val uri = write("App.x", "").toUri().toString()
+        val options = FormattingOptions(4, true)
+        assertThat(EditorConfig.formatting(uri, options, FormattingConfig(indentSize = 4)).config.indentSize).isEqualTo(2)
+        val off = FormattingConfig(indentSize = 4, editorConfig = false)
+        assertThat(EditorConfig.formatting(uri, options, off)).isEqualTo(EditorConfig.Formatting(off, options))
+    }
+
+    @Test
     fun `a document that is not a file keeps the editor's settings`() {
         val options = FormattingOptions(4, true)
         val editor = FormattingConfig(indentSize = 3)

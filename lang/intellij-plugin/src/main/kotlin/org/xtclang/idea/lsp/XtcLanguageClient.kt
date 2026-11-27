@@ -91,6 +91,9 @@ class XtcLanguageClient(
                     if (!isDisposed && !project.isDisposed) triggerChangeConfiguration()
                 },
             )
+        EditorConfigSwitch.EP_NAME.extensionList.forEach { switch ->
+            switch.onChange(project, this) { if (!isDisposed && !project.isDisposed) triggerChangeConfiguration() }
+        }
     }
 
     override fun dispose() {
@@ -247,6 +250,7 @@ class XtcLanguageClient(
                     "insertSpaces" to !indentOptions.USE_TAB_CHARACTER,
                     "maxLineWidth" to commonSettings.RIGHT_MARGIN,
                     "wrapComments" to commonSettings.WRAP_COMMENTS,
+                    "editorConfig" to EditorConfigSwitch.enabled(settings),
                 )
             } else {
                 mapOf(
@@ -256,6 +260,7 @@ class XtcLanguageClient(
                     "insertSpaces" to true,
                     "maxLineWidth" to 120,
                     "wrapComments" to false,
+                    "editorConfig" to EditorConfigSwitch.enabled(settings),
                 )
             }
         logger.info("workspace/configuration: returning formatting config: $config")

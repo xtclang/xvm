@@ -36,6 +36,9 @@
     <!-- IntelliJ's Problems view, whose Project Errors ProjectErrors fills: part of the platform up to 2026.2, and from
          2026.3 a bundled plugin of its own, whose classes a plugin sees only by depending on it -->
     <depends optional="true" config-file="xtc-problems-view.xml">com.intellij.problemsView</depends>
+    <!-- IntelliJ's EditorConfig plugin, bundled but possible to disable: its switch for applying .editorconfig files,
+         which the language server's formatter follows -->
+    <depends optional="true" config-file="xtc-editorconfig.xml">org.editorconfig.editorconfigjetbrains</depends>
 
     <actions>
         <action id="xtc.selectLanguageAdapter" class="org.xtclang.idea.lsp.SelectLanguageAdapterAction"
@@ -91,6 +94,8 @@
     <extensionPoints>
         <!-- the roots of the builds IntelliJ links to a project besides its own directory: Gradle's, by xtc-gradle.xml -->
         <extensionPoint name="buildRoots" interface="org.xtclang.idea.lsp.BuildRoots" dynamic="true"/>
+        <!-- IntelliJ's switch for applying .editorconfig files: the EditorConfig plugin's, by xtc-editorconfig.xml -->
+        <extensionPoint name="editorConfigSwitch" interface="org.xtclang.idea.lsp.EditorConfigSwitch" dynamic="true"/>
     </extensionPoints>
 
     <extensions defaultExtensionNs="com.intellij">

@@ -6,6 +6,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
 import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.lsp.EcstasyConfigurable
@@ -256,29 +258,20 @@ class PluginManifestTest {
             )
     }
 
-    @Test
-    @DisplayName("depends on IntelliJ's Gradle plugin optionally, so that it installs in every JetBrains IDE")
-    fun gradleDependency() {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = ["com.intellij.gradle", "com.intellij.problemsView", "org.editorconfig.editorconfigjetbrains"])
+    @DisplayName(
+        "depends optionally on IntelliJ's Gradle plugin, which only some IDEs have, its Problems view plugin, whose " +
+            "classes Project Errors needs from 2026.3, and its EditorConfig plugin, which a user can disable",
+    )
+    fun optionalDependency(id: String) {
         val elements = pluginXml.getElementsByTagName("depends")
-        val gradle =
+        val dependency =
             (0 until elements.length)
                 .map { elements.item(it) as Element }
-                .single { it.textContent.trim() == "com.intellij.gradle" }
-        assertThat(gradle.getAttribute("optional")).isEqualTo("true")
-        val config = gradle.getAttribute("config-file")
-        assertThat(javaClass.classLoader.getResource("META-INF/$config")).describedAs(config).isNotNull()
-    }
-
-    @Test
-    @DisplayName("depends on IntelliJ 2026.3's Problems view plugin optionally, whose classes Project Errors needs there")
-    fun problemsViewDependency() {
-        val elements = pluginXml.getElementsByTagName("depends")
-        val problemsView =
-            (0 until elements.length)
-                .map { elements.item(it) as Element }
-                .single { it.textContent.trim() == "com.intellij.problemsView" }
-        assertThat(problemsView.getAttribute("optional")).isEqualTo("true")
-        val config = problemsView.getAttribute("config-file")
+                .single { it.textContent.trim() == id }
+        assertThat(dependency.getAttribute("optional")).isEqualTo("true")
+        val config = dependency.getAttribute("config-file")
         assertThat(javaClass.classLoader.getResource("META-INF/$config")).describedAs(config).isNotNull()
     }
 

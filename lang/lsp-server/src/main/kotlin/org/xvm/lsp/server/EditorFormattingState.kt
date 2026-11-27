@@ -78,6 +78,7 @@ internal class EditorFormattingState : AutoCloseable {
                 boolean("insertSpaces", true),
                 integer("maxLineWidth", 120, 1000),
                 boolean("wrapComments", false),
+                boolean("editorConfig", true),
             )
         }
     }
