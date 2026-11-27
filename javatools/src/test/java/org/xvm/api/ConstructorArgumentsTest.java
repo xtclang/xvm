@@ -7,7 +7,6 @@ import java.util.List;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener.ErrorInfo;
-import org.xvm.compiler.Compiler;
 import org.xvm.util.Severity;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * that the shorthand declaration implies. Where explicit constructors stand in its place, the
  * compiler reports them as unused, rather than accept code that it never compiles, unless they
  * match the explicit constructor that takes the synthetic one's place: redundant information that
- * matches is allowed.
+ * matches is allowed. These are the cases that compile; the ones that must not are negative
+ * compiler tests in the XDK's {@code compiler-errors} suite, {@code contributionArguments.x} and
+ * {@code constructorDefaults.x}.
  */
 class ConstructorArgumentsTest {
     private EmbeddingSupport support;
@@ -35,56 +36,13 @@ class ConstructorArgumentsTest {
     }
 
     @Test
-    void extendsArgumentsBesideExplicitConstructorsAreUnused() {
-        // the arguments name nothing: no constructor passes them, so nothing used to compile them
-        assertEquals(List.of(Compiler.CONTRIBUTION_PARAMS_UNEXPECTED), errors("""
-                module Test {
-                    class Base {
-                        construct(Int n) {}
-                    }
-                    class Derived extends Base(noSuchName, alsoMissing) {
-                        construct(Int n) {
-                            construct Base(n);
-                        }
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void extendsArgumentsWithoutAnExplicitShorthandOrDefaultConstructorAreReported() {
-        // the shape of jsondb's JsonLogStoreBase: the names look like the constructor's, but no
-        // constructor takes the synthetic one's place, so they name no parameter
-        assertEquals(List.of(Compiler.CONTRIBUTION_PARAMS_UNEXPECTED), errors("""
-                module Test {
-                    class Base {
-                        construct(Int n) {}
-                    }
-                    class Store extends Base(n) {
-                        construct(Int n) {
-                            construct Base(n);
-                        }
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void contributionArgumentsOfAClassWithoutConstructorsAreUsed() {
+    void contributionArgumentsOfAClassWithoutConstructorsCompile() {
         // with neither a shorthand declaration nor any constructor, the synthetic default
-        // constructor passes the contribution's arguments: a valid one is no error, and one that
-        // names nothing is unresolvable, so that the implicit super constructor call it is in
-        // fails, which shows that they are compiled, not unused
+        // constructor passes the contribution's arguments, so a valid one is no error
         assertEquals(List.of(), diagnostics("""
                 module Test {
                     class Base(Int seed) {}
                     class Implicit extends Base(1) {}
-                }
-                """));
-        assertEquals(List.of(Compiler.NAME_UNRESOLVABLE, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING), errors("""
-                module Test {
-                    class Base(Int seed) {}
-                    class Implicit extends Base(noSuchName) {}
                 }
                 """));
     }
@@ -120,45 +78,6 @@ class ConstructorArgumentsTest {
                     class Default extends Base(1, "base") {
                         construct() {
                             construct Base(1, "base");
-                        }
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void contributionArgumentsThatDifferFromTheExplicitConstructorAreReported() {
-        // another parameter, another literal, a name that is a parameter only of the constructor,
-        // and an expression, which never matches
-        assertEquals(List.of(Compiler.CONTRIBUTION_PARAMS_UNEXPECTED,
-                             Compiler.CONTRIBUTION_PARAMS_UNEXPECTED,
-                             Compiler.CONTRIBUTION_PARAMS_UNEXPECTED,
-                             Compiler.CONTRIBUTION_PARAMS_UNEXPECTED), errors("""
-                module Test {
-                    class Base {
-                        construct(Int n) {}
-                    }
-                    class OtherParameter(Int x, Int y) extends Base(x) {
-                        construct(Int x, Int y) {
-                            construct Base(y);
-                            this.x = x;
-                            this.y = y;
-                        }
-                    }
-                    class OtherLiteral extends Base(1) {
-                        construct() {
-                            construct Base(2);
-                        }
-                    }
-                    class ConstructorParameter extends Base(n) {
-                        construct(Int n = 0) {
-                            construct Base(n);
-                        }
-                    }
-                    class SameExpression(Int x) extends Base(x + 1) {
-                        construct(Int x) {
-                            construct Base(x + 1);
-                            this.x = x;
                         }
                     }
                 }
@@ -208,31 +127,6 @@ class ConstructorArgumentsTest {
     }
 
     @Test
-    void shorthandDefaultsThatDifferFromTheExplicitConstructorAreReported() {
-        // the class declares the property itself; the explicit constructor has another default,
-        // or none
-        assertEquals(List.of(Compiler.CONSTRUCTOR_PARAM_DEFAULT_MISMATCH,
-                             Compiler.CONSTRUCTOR_PARAM_DEFAULT_MISMATCH), errors("""
-                module Test {
-                    class Appender(Int width, Boolean flush = True) {
-                        construct(Int width, Boolean flush = False) {
-                            this.width = width;
-                            this.flush = flush;
-                        }
-                        Int width;
-                        Boolean flush;
-                    }
-                    class Required(Int width = 4) {
-                        construct(Int width) {
-                            this.width = width;
-                        }
-                        Int width;
-                    }
-                }
-                """));
-    }
-
-    @Test
     void argumentsAndDefaultsThatTheSyntheticConstructorOrAPropertyUsesCompile() {
         assertEquals(List.of(), errors("""
                 module Test {
@@ -244,24 +138,6 @@ class ConstructorArgumentsTest {
                     class Initialized(Int width = 4) {
                         construct(Int width = 4) {
                             this.width = width;
-                        }
-                    }
-                }
-                """));
-    }
-
-    @Test
-    void enumValuesWithExplicitConstructorsHaveNoContributionsToCheck() {
-        // an enum value has no compositions, which the check failed on with an internal error; the
-        // error that remains is that an enum value needs a no-parameter constructor
-        assertEquals(List.of(Compiler.DEFAULT_CONSTRUCTOR_REQUIRED), errors("""
-                module Test {
-                    enum Color {
-                        Red {
-                            construct(Int n = 0) {}
-                        },
-                        Green {
-                            construct(Int n) {}
                         }
                     }
                 }
