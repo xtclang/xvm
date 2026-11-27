@@ -15,9 +15,9 @@ function keyPresses(binding: string): string[] {
 /** Answers the rendered quick pick the way a user does: type the label, then Enter. */
 async function choose(ui: WorkbenchUi, title: string, label: string): Promise<void> {
     const widget = ui.page.locator('.quick-input-widget');
-    await widget.locator('.quick-input-title', { hasText: title }).waitFor({ state: 'visible', timeout: 15_000 });
+    await ui.shows(widget.locator('.quick-input-title', { hasText: title }), `The chooser ${title}`);
     await ui.page.keyboard.type(label);
-    await widget.locator('.monaco-list-row', { hasText: label }).first().waitFor({ state: 'visible', timeout: 5_000 });
+    await ui.shows(widget.locator('.monaco-list-row', { hasText: label }).first(), `The chooser's row ${label}`);
     await ui.page.keyboard.press('Enter');
 }
 
@@ -48,7 +48,7 @@ export function adapterChooserCases(): void {
             await ui.focusEditor();
             await ui.page.keyboard.press('F1');
             await ui.page.keyboard.type(data.commandTitle);
-            await ui.page.locator('.quick-input-widget .monaco-list-row', { hasText: data.commandTitle }).first().waitFor({ state: 'visible', timeout: 15_000 });
+            await ui.shows(ui.page.locator('.quick-input-widget .monaco-list-row', { hasText: data.commandTitle }).first(), `The palette's row ${data.commandTitle}`);
             await ui.page.keyboard.press('Enter');
             await choose(ui, data.chooserTitle, data.compilerLabel);
             const compiler = await eventually(adapterStatus, value => value?.adapter === 'XDK' && value.pid !== previous, 'Command chooser restarts into the compiler');

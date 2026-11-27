@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as path from 'node:path';
-import { createServer } from 'node:net';
-import { chromium, Browser, Page } from 'playwright-core';
+import { chromium, Browser, Locator, Page } from 'playwright-core';
+import { answered, TRY_MS, untilTakes, type UnderWay } from './uiWait';
 
 /** Test-only attachment to the isolated Electron renderer; never controls the desktop pointer. */
 export class WorkbenchUi {
@@ -23,25 +23,48 @@ export class WorkbenchUi {
         await this.page.screenshot({ path: path.join(process.env.XTC_PLAYBOOK_REPORT_DIR!, `${name}.png`) });
     }
 
+    /**
+     * Does [action], a Playwright action that waits for its target at most [TRY_MS], again until it takes, while the
+     * workbench, or what [underWay] adds, does anything that could make it take ([untilTakes]); an action that times out
+     * has not acted, so a try again acts once.
+     */
+    async tries(what: string, action: () => Promise<unknown>, underWay: UnderWay = { server: true }): Promise<void> {
+        await untilTakes(what, action, underWay);
+    }
+
+    /** Waits, [tries]'s way, until [locator] shows, or with [hidden] until it no longer does; [what] names it. */
+    async shows(locator: Locator, what: string, hidden = false, underWay: UnderWay = { server: true }): Promise<void> {
+        await this.tries(`${what} ${hidden ? 'closes' : 'shows'}`, () => locator.waitFor({ state: hidden ? 'hidden' : 'visible', timeout: TRY_MS }), underWay);
+    }
+
     async cancelReferences(): Promise<void> {
         const notification = this.page.locator('.notification-list-item').filter({ hasText: 'Finding references' });
         const button = notification.getByRole('button', { name: 'Cancel', exact: true });
-        await button.waitFor({ state: 'visible', timeout: 10_000 });
+        await this.shows(button, "Finding references' Cancel");
         await this.screenshot('X145-before-visible-cancel');
         // Trusted renderer input activates the actual workbench control, once. No token.cancel fallback.
-        await button.click({ timeout: 5_000 });
+        await this.tries('Cancel takes the click', () => button.click({ timeout: TRY_MS }));
     }
 
     async inlayLabels(): Promise<string[]> {
         return this.page.locator('.monaco-editor:visible .view-lines [class*="dyn-rule-"]').allTextContents();
     }
 
-    async focusEditor(): Promise<void> {
+    /**
+     * Gives the keyboard to the active editor's text, again until it has it, as [tries] does, each try after [show],
+     * which shows the editor, as run-GVNl3L's X194 found it not showing within the 5 s that a single focus waited.
+     */
+    async focusEditor(show: () => Thenable<unknown> = async () => undefined): Promise<void> {
         // Focus the actual text input rather than an Output panel left open by a preceding case.
         // DOM focus does not move the desktop pointer and never repeats an edit/history command.
         const input = this.page.locator('.editor-group-container.active .monaco-editor:visible :is(textarea.inputarea, .native-edit-context)');
-        await input.focus({ timeout: 5_000 });
-        assert.ok(await input.evaluate(element => element === element.ownerDocument.activeElement), 'Source editor owns keyboard focus');
+        // Only the workbench's events count: what the server does draws no editor.
+        await this.tries('The source editor takes the keyboard', async () => {
+            await answered(show(), 'Showing the document');
+            await input.focus({ timeout: TRY_MS });
+            assert.ok(await answered(input.evaluate(element => element === element.ownerDocument.activeElement), 'The focus check'),
+                'Source editor owns keyboard focus');
+        }, {});
     }
 
     async inlineText(): Promise<string> {
@@ -49,14 +72,4 @@ export class WorkbenchUi {
     }
 
     async close(): Promise<void> { await this.browser.close(); }
-}
-
-/** Let the OS allocate a loopback port; fail if another process wins the short launch race. */
-export async function workbenchPort(): Promise<number> {
-    const server = createServer();
-    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-    const address = server.address();
-    assert.ok(address && typeof address !== 'string');
-    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-    return address.port;
 }

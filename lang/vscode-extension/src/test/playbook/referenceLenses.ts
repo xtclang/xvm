@@ -1,5 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
+import { TRY_MS } from '../uiWait';
 import { WorkbenchUi } from '../workbenchUi';
 import { client, eventually, noErrors, playbook } from './support';
 
@@ -24,11 +25,12 @@ export function referenceLensCases(): void {
                 .map(lens => lens.isResolved ? lens : provider.resolveCodeLens!(lens, token.token)));
             await eventually(lenses, values => values.some(lens => lens?.command?.title === data.initialTitle), 'Closed-consumer reference count');
             const link = ui.page.locator('.editor-group-container.active .codelens-decoration a').filter({ hasText: data.initialTitle });
-            await link.waitFor({ state: 'visible', timeout: 30_000 });
+            // VS Code draws the lens after its own delay, in which only the client's lens work says it is due.
+            await ui.shows(link, 'The reference lens', false, { server: true, lenses: true });
             await ui.screenshot('X279-reference-lens');
-            await link.click({ timeout: 5_000 });
+            await ui.tries('The reference lens takes the click', () => link.click({ timeout: TRY_MS }), { server: true, lenses: true });
             const peek = ui.page.locator('.peekview-widget');
-            await peek.waitFor({ state: 'visible', timeout: 15_000 });
+            await ui.shows(peek, 'The reference peek');
             await eventually(() => peek.innerText(), text => text.includes(data.consumerFile) && text.includes(data.file), 'Native reference peek contains both files');
             await vscode.commands.executeCommand('closeReferenceSearch');
             const consumer = await workspace.open(data.consumerFile);

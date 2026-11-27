@@ -11,7 +11,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { runTests } from '@vscode/test-electron';
 import { testVSCodeBuild } from './vscodeCache';
-import { workbenchPort } from './workbenchUi';
+import { workbenchPort } from './workbenchPort';
 
 async function main(): Promise<void> {
     // __dirname at runtime resolves to <ext>/out/test, so the extension

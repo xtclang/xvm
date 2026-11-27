@@ -13,7 +13,7 @@ import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { runTests } from '@vscode/test-electron';
 import { testVSCodeBuild } from './vscodeCache';
-import { workbenchPort } from './workbenchUi';
+import { workbenchPort } from './workbenchPort';
 
 /** The tour's project, which the card game's sources replace the sources of. */
 const PROJECT = 'cardGame';

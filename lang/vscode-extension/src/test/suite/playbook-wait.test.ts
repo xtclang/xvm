@@ -1,5 +1,6 @@
 import * as assert from 'node:assert';
 import Mocha from 'mocha';
+import { untilTakes } from '../uiWait';
 import { mustStopPlaybook, PlaybookCleanupFailure, PlaybookFinal, PlaybookTimeout, runCase, stopOnUnsafeFailure, waitFor, waitWhile, withPlaybookCleanup } from '../wait';
 
 suite('Playbook timeout isolation', () => {
@@ -57,6 +58,15 @@ suite('Playbook timeout isolation', () => {
             error => error instanceof PlaybookFinal && error.message.includes('final') && looks === 3);
         looks = 0;
         assert.strictEqual(await waitWhile(async () => ++looks, value => value === 10, 'Files agree', value => value < 10 ? ['an edit'] : [], () => undefined), 10);
+    });
+
+    test('a UI action is tried again until it takes, and fails at once at three tries with nothing under way', async () => {
+        let tries = 0;
+        await untilTakes('The box shows', async () => { if (++tries < 2) throw new Error('not yet'); }, {});
+        assert.strictEqual(tries, 2);
+        tries = 0;
+        await assert.rejects(untilTakes('The box shows', async () => { tries++; throw new Error('locator.waitFor: Timeout 2000ms exceeded'); }, {}),
+            error => error instanceof PlaybookFinal && error.message.includes('Timeout 2000ms') && tries >= 3);
     });
 
     test('cleanup runs after success or failure and preserves both failures when restoration fails', async () => {

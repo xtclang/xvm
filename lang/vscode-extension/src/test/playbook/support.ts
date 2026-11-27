@@ -8,7 +8,7 @@ import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type Diag
 import { RENAME_OVERTAKEN, RENAME_REFUSED } from '../../rename-proposal';
 import { focusTestEditor } from '../native-focus';
 import { waitsUnderWay, withTestWait } from '../progress';
-import { PLAYBOOK_WAIT_MS, PlaybookCleanupFailure, PlaybookTimeout, runCase, waitFor, waitWhile } from '../wait';
+import { caseRuns, PLAYBOOK_WAIT_MS, PlaybookCleanupFailure, PlaybookTimeout, progress, runCase, waitFor, waitReport, waitWhile } from '../wait';
 import * as fs from './disk';
 import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
 
@@ -49,13 +49,7 @@ export async function renameOrNone<T>(rename: T | Thenable<T>): Promise<T | unde
     }
 }
 
-/** A line of the run's progress in the build's output, in the format the IntelliJ playbook prints. */
-export function progress(line: string): void {
-    console.log(`[playbook] ${new Date().toTimeString().slice(0, 8)} ${line}`);
-}
-
-/** The case that runs, which a wait's report names. */
-let running: string | undefined;
+export { progress };
 
 export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string, timeoutMs?: number): Promise<T> {
     return withTestWait(message, () => waitFor(read, accept, message, timeoutMs), `${(timeoutMs ?? PLAYBOOK_WAIT_MS) / 1000}s`);
@@ -68,7 +62,7 @@ export async function eventually<T>(read: () => Promise<T>, accept: (value: T) =
  */
 export async function settles<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string,
     underWay: (value: T) => Promise<string[]> | string[]): Promise<T> {
-    return withTestWait(message, () => waitWhile(read, accept, message, underWay, line => progress(`${running ?? ''} ${line}`)),
+    return withTestWait(message, () => waitWhile(read, accept, message, underWay, waitReport),
         'while under way');
 }
 
@@ -436,11 +430,11 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
         assert.ok(root);
         const workspace = new Workspace(path.join(root, id));
         fs.forgetChanges();
-        running = id;
+        caseRuns(id);
         // one case's failure, a timeout too, fails that case only: once it has ended, the editor is restored for the next
         const error = await runCase(() => body(workspace, scenario.values), timeoutMs, line => progress(`${id} ${line}`), waitsUnderWay,
             async () => vscode.commands.executeCommand('xtc.restartServer'));
-        running = undefined;
+        caseRuns(undefined);
         if (error !== undefined) {
             const report = process.env.XTC_PLAYBOOK_REPORT_DIR;
             if (report) {
