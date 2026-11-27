@@ -252,13 +252,32 @@ class XtcTextDocumentService(
     private val pendingQueries = mutableMapOf<CompletableFuture<*>, String>()
 
     /**
-     * The basis of each document outside the graph that closed with its text as the file has it, by URI, while queries
-     * were pending: as VS Code releases a document that no editor shows, some minutes after an extension or a
-     * navigation opened it. No analysis and no graph query reads anything else for it, so a workspace query that
-     * started while it was open still answers for what it started with ([startQuery]). Cleared as the last pending
-     * query ends, and for a URI as it opens again.
+     * What each document that closed with its text as the file has it, by URI, while queries were pending, closed with:
+     * as VS Code releases a document that no editor shows, some minutes after an extension or a navigation opened it. Of
+     * one outside the graph, or of a member of the graph ([didClose]), no analysis and no graph query reads anything else
+     * for it, so a workspace query that started while it was open still answers for what it started with, by its basis
+     * ([startQuery]). Cleared as the last pending query ends, and for a URI as its file changes on disk
+     * ([refreshForFile]), or as it opens with other text than it closed with.
      */
-    private val released = mutableMapOf<String, Any>()
+    private val released = mutableMapOf<String, Release>()
+
+    /**
+     * The [bases] that a released document closed at, each of the times it closed with its file's text since it first
+     * did, as it opened again with that text between, and, of a member of the graph, that [text].
+     */
+    private class Release(
+        val bases: List<Any>,
+        val text: String?,
+    )
+
+    /**
+     * The basis of each member of the graph that opened with its text as the file has it, by URI, while queries were
+     * pending: as VS Code opens a document for a peek or a search, or the language client opens again each document
+     * that VS Code holds as the server restarts. The graph's queries and the analyses of its modules read the file
+     * already, so a workspace query answers for what it started with, as if the document had not opened, until the
+     * document changes ([startQuery]). Cleared as the last pending query ends.
+     */
+    private val opened = mutableMapOf<String, Any>()
 
     private fun <R> supplyAsync(
         method: String,
@@ -406,16 +425,34 @@ class XtcTextDocumentService(
                 )
             }
 
+        // whether the document [other] still answers for what it was, [then], as the query started: at the same basis, as
+        // also one that had opened with its file's text before, or, while it is closed or since it opened again with its
+        // file's text, which the query reads of a closed member too, at one it was released at. A diagnostic pull joins
+        // the analyses of the open documents as it answers, under the lock, so it takes a document that opened since it
+        // started as a change, as it did not wait for its analysis
+        fun kept(
+            other: String,
+            then: Document,
+        ): Boolean {
+            val now = openDocuments[other]
+            if (now?.basis === then.basis) return true
+            val again = now == null || (now.basis === opened[other] && !reportsOutOfSync)
+            return again && released[other]?.bases?.any { it === then.basis } == true
+        }
+
         // a query stays current while its document's basis does, also when another member's didOpen replaces the analysis;
-        // a workspace query while no document opens and the basis of each it started with stays, also of one released
+        // a workspace query while no document opens but a member with its file's text, which a pull takes as a change,
+        // and each document it started with is kept
         fun stale(): Boolean =
             closed ||
                 changed(document, openDocuments[uri]) ||
                 (
                     documents != null &&
                         (
-                            openDocuments.keys.any { it !in documents && waitsFor(it) } ||
-                                documents.any { (it, then) -> then.basis !== (openDocuments[it]?.basis ?: released[it]) }
+                            openDocuments.any { (it, now) ->
+                                it !in documents && waitsFor(it) && (reportsOutOfSync || now.basis !== opened[it])
+                            } ||
+                                documents.any { (it, then) -> !kept(it, then) }
                         )
                 )
         val started = System.nanoTime()
@@ -450,7 +487,7 @@ class XtcTextDocumentService(
                 // a document that is not open is answered from its text on disk, as its module analyzes it, until its
                 // didOpen, after which the editor's text wins: a restarted client asks before it opens its files again
                 document?.let { settled(uri, it.analysis) }
-                    ?: (adapter as? XdkAdapter)?.closedAnalysisAsync(uri)
+                    ?: (adapter as? XdkAdapter)?.closedAnalysisAsync(uri)?.let { closedSettled(uri, it, result) }
                     ?: CompletableFuture.completedFuture(null)
             }
         ready
@@ -527,7 +564,10 @@ class XtcTextDocumentService(
         publication.whenCompleteAsync { _, _ ->
             synchronized(lifecycle) {
                 pendingQueries.remove(result)
-                if (pendingQueries.isEmpty()) released.clear()
+                if (pendingQueries.isEmpty()) {
+                    released.clear()
+                    opened.clear()
+                }
             }
         }
         return server.observeQuery(method, progress, publication, uri)
@@ -554,6 +594,24 @@ class XtcTextDocumentService(
         analysis
             .handleAsync { _, _ -> synchronized(lifecycle) { openDocuments[uri]?.analysis?.takeIf { it !== analysis } } }
             .thenCompose { replacement -> replacement?.let { settled(uri, it) } ?: CompletableFuture.completedFuture(null) }
+
+    /**
+     * Completes once the analysis that answers [uri], a document that is not open, has: [analysis], or, when the compiler
+     * ended it unfinished, as a member's open with its file's text replaces its module's compile, the one it has now,
+     * while the [query] that waits for it does. Off the thread that ended [analysis], which can hold the compiler's lock.
+     */
+    private fun closedSettled(
+        uri: String,
+        analysis: CompletableFuture<*>,
+        query: CompletableFuture<*>,
+    ): CompletableFuture<*> =
+        analysis
+            .handleAsync { _, _ ->
+                (adapter as? XdkAdapter)
+                    ?.takeIf { analysis.isCancelled && !query.isDone }
+                    ?.closedAnalysisAsync(uri)
+                    ?.takeIf { it !== analysis }
+            }.thenCompose { replacement -> replacement?.let { closedSettled(uri, it, query) } ?: CompletableFuture.completedFuture(null) }
 
     private fun outOfSyncFailure(uri: String) =
         ResponseErrorException(
@@ -585,20 +643,28 @@ class XtcTextDocumentService(
     override fun didOpen(params: DidOpenTextDocumentParams) {
         synchronized(lifecycle) {
             if (closed) return
+            val uri = params.textDocument.uri
             logger.info(
                 "textDocument/didOpen: {} version={}",
-                params.textDocument.uri,
+                uri,
                 params.textDocument.version,
             )
-            outOfSync.remove(params.textDocument.uri)
-            released.remove(params.textDocument.uri)
-            analyze(
-                params.textDocument.uri,
-                params.textDocument.text,
-                params.textDocument.version,
-                // as a client opens its files again after a restart: the module's analyses already read this text
-                edited = !onDisk(params.textDocument.uri, params.textDocument.text),
-            )
+            outOfSync.remove(uri)
+            // as a client opens its files again after a restart: the module's analyses already read this text
+            val edited = !onDisk(uri, params.textDocument.text)
+            // and the graph's queries too, of a member of the graph, as VS Code opens one for a peek or a search, unless
+            // the document closed with other text while they were pending, or the analyses read other text of the file:
+            // it changed on disk since, which no watcher has reported yet
+            val unchanged =
+                !edited &&
+                    released[uri].let { it == null || it.text == params.textDocument.text } &&
+                    (adapter as? XdkAdapter)?.opensUnchanged(uri, params.textDocument.text) == true
+            if (!unchanged) {
+                released.remove(uri)
+                opened.remove(uri)
+            }
+            analyze(uri, params.textDocument.text, params.textDocument.version, edited = edited, unchanged = unchanged)
+            if (unchanged && pendingQueries.isNotEmpty()) openDocuments[uri]?.let { opened[uri] = it.basis }
         }
     }
 
@@ -687,28 +753,25 @@ class XtcTextDocumentService(
 
     /**
      * Refresh the changed module, then open source consumers in dependency order. Unless the module's text [edited], the
-     * queries of documents whose text stays as it was wait for the new analyses instead of failing as stale.
+     * queries of documents whose text stays as it was wait for the new analyses instead of failing as stale. A member of
+     * the graph that opens [unchanged], with its file's text, which the graph's queries and the analyses of its module's
+     * consumers read already, retires neither, nor a diagnostic report: only its module is analyzed, with its document.
      */
     private fun analyze(
         uri: String,
         content: String,
         version: Int,
         edited: Boolean = true,
+        unchanged: Boolean = false,
     ) {
-        diagnosticRevision++
+        if (!unchanged) diagnosticRevision++
         // an open with the text on disk, as a close with it, leaves what a listed action was made from as it was
         if (edited) clearResolveReports()
         val compiler = adapter as? XdkAdapter
         val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
-        analyzeOne(uri, content, version, edited = edited)
-        refreshScopes(
-            (
-                changedGraph +
-                    (compiler?.affectedSourceScopes(uri) ?: adapter.affectedAnalysisScopes(uri))
-            ) -
-                adapter.analysisScope(uri),
-            edited,
-        )
+        analyzeOne(uri, content, version, edited = edited, unchanged = unchanged)
+        val consumers = if (unchanged) emptySet() else compiler?.affectedSourceScopes(uri) ?: adapter.affectedAnalysisScopes(uri)
+        refreshScopes((changedGraph + consumers) - adapter.analysisScope(uri), edited)
     }
 
     private fun refreshScopes(
@@ -738,7 +801,8 @@ class XtcTextDocumentService(
 
     /**
      * A member edit replaces the analysis future for every open document in that module, and the pending queries of
-     * them are stale. Unless the module's text [edited]: then only the queries of a document whose text changed are.
+     * them are stale. Unless the module's text [edited]: then only the queries of a document whose text changed are. A
+     * member of the graph [unchanged] retires nothing in the compiler ([XdkAdapter.compileAsync]).
      */
     private fun analyzeOne(
         uri: String,
@@ -746,8 +810,18 @@ class XtcTextDocumentService(
         version: Int,
         ownership: Map<String, String>? = null,
         edited: Boolean = true,
+        unchanged: Boolean = false,
     ) {
-        val analysis = adapter.compileAsync(uri, content)
+        val analysis =
+            if (unchanged) {
+                (adapter as XdkAdapter).compileAsync(
+                    uri,
+                    content,
+                    unchanged = true,
+                )
+            } else {
+                adapter.compileAsync(uri, content)
+            }
         val scope = adapter.analysisScope(uri)
         val currentScopes = ownership ?: analysisScopes()
         val affected =
@@ -770,12 +844,7 @@ class XtcTextDocumentService(
         // Publication must not block the compiler worker behind a queued navigation request.
         analysis.whenCompleteAsync { result, failure ->
             synchronized(lifecycle) {
-                if (
-                    !closed &&
-                    current.all { (documentUri, document) ->
-                        openDocuments[documentUri] === document
-                    }
-                ) {
+                if (!closed && publishes(current)) {
                     if (failure == null) {
                         publish(scope, result)
                     } else if (failure !is CancellationException) {
@@ -786,6 +855,16 @@ class XtcTextDocumentService(
             }
         }
     }
+
+    /**
+     * Called under lifecycle: whether the analysis of [current], the open documents it was made for, publishes as it ends:
+     * one of them is still open, and each that is still has it. A document that closed since leaves the others to publish
+     * for: one that closed with its file's text analyzes nothing again, and another's close analyzes the others again,
+     * which replaces this analysis.
+     */
+    private fun publishes(current: Map<String, Document>): Boolean =
+        current.keys.any(openDocuments::containsKey) &&
+            current.all { (uri, document) -> openDocuments[uri].let { it == null || it === document } }
 
     /** A source closure publishes together; artifact-only foreign sources remain related info. */
     private fun publish(
@@ -839,37 +918,89 @@ class XtcTextDocumentService(
                 return
             }
             logger.info("textDocument/didClose: {}", uri)
-            diagnosticRevision++
+            val compiler = adapter as? XdkAdapter
             // a close that leaves the text as the file has it, as VS Code's release of a document that no editor
             // shows, three minutes after an extension or a navigation opened it, changes nothing that a listed action
             // or lens was made from: a click on an action listed before it still applies the action; nor does the close
             // of a library's document, whose text never changes, as the ecstasy-library content that Go to Definition opens
-            val kept = uri !in outOfSync && ((adapter as? XdkAdapter)?.isLibraryDocument(uri) == true || onDisk(uri, open.content))
-            if (!kept) clearResolveReports()
+            val clean = uri !in outOfSync && onDisk(uri, open.content)
+            val kept = clean || (uri !in outOfSync && compiler?.isLibraryDocument(uri) == true)
+            val member = compiler?.hasProject(uri) == true
+            // nor, of a member of the graph, any text that its module's analyses or the graph's queries read
+            val unchanged = clean && member
             // nor, for a document outside the graph, anything that an analysis of another or a graph query reads
-            if (kept && pendingQueries.isNotEmpty() && (adapter as? XdkAdapter)?.hasProject(uri) != true) released[uri] = open.basis
-            val affected = adapter.affectedAnalysisScopes(uri)
-            semanticTokenReports.retire(uri)
-            val document = openDocuments.remove(uri)
-            outOfSync.remove(uri)
-            invalidateQueries(setOf(uri))
-            document?.analysis?.cancel(false)
+            val release = kept && (unchanged || !member)
+            val affected = forget(uri, open, kept, unchanged, release, member)
             val retired =
-                if (adapter is XdkAdapter) {
-                    adapter.closeDocumentAndRefresh(uri)
+                if (compiler != null) {
+                    compiler.closeDocumentAndRefresh(uri, unchanged)
                 } else {
                     adapter.closeDocument(uri)
                     emptySet()
                 }
             if (closed) return
+            afterClose(uri, open, unchanged, affected, retired)
+        }
+    }
+
+    /**
+     * Called under lifecycle, as [open] of [uri] closes: what was made from its text goes, unless the close [kept] its text
+     * as its file has it, and the analyses and the diagnostic reports that read it, unless it closed [unchanged], a member
+     * of the graph with its file's text; a pending workspace query keeps the document by its basis when the close is a
+     * [release] ([released]), with its text if it is a [member]; its own pending queries end. Returns the scopes whose
+     * open documents are analyzed again, those that read its text.
+     */
+    private fun forget(
+        uri: String,
+        open: Document,
+        kept: Boolean,
+        unchanged: Boolean,
+        release: Boolean,
+        member: Boolean,
+    ): Set<String> {
+        if (!unchanged) diagnosticRevision++
+        if (!kept) clearResolveReports()
+        if (release && pendingQueries.isNotEmpty()) {
+            // a document that opened again with its file's text since it was released keeps each basis it closed at
+            val earlier = released[uri]?.takeIf { open.basis === opened[uri] }?.bases.orEmpty()
+            released[uri] = Release(earlier + open.basis, open.content.takeIf { member })
+        }
+        val affected = if (unchanged) emptySet() else adapter.affectedAnalysisScopes(uri)
+        semanticTokenReports.retire(uri)
+        openDocuments.remove(uri)
+        outOfSync.remove(uri)
+        invalidateQueries(setOf(uri))
+        // the analysis of a module that a member closes unchanged from goes on, for its other documents and queries
+        if (!unchanged) open.analysis.cancel(false)
+        return affected
+    }
+
+    /**
+     * Called under lifecycle, once [document] of [uri] has closed and the compiler [retired] what read it: the document's
+     * diagnostics go, unless it closed [unchanged] while another document of its module publishes them; the client
+     * refreshes, unless nothing changed; the open documents of the [affected] and [retired] scopes are analyzed again;
+     * and the module's diagnostics go once no document of it is open.
+     */
+    private fun afterClose(
+        uri: String,
+        document: Document,
+        unchanged: Boolean,
+        affected: Set<String>,
+        retired: Set<String>,
+    ) {
+        val published = openDocuments.values.any { it.scope == document.scope }
+        // the closed member's diagnostics stay its module's, which an open document of it still publishes
+        if (!unchanged || !published) {
             diagnosticReports.record(uri, emptyList())
-            server.publishDiagnostics(uri, emptyList(), document?.version)
+            server.publishDiagnostics(uri, emptyList(), document.version)
+        }
+        if (!unchanged || retired.isNotEmpty()) {
             server.refreshDiagnostics()
             server.refreshSemanticFeatures()
-            refreshScopes(affected + retired)
-            if (openDocuments.values.none { it.scope == document?.scope }) {
-                clearUnowned(publishedByScope.remove(document?.scope).orEmpty() - uri)
-            }
+        }
+        refreshScopes(affected + retired)
+        if (!published) {
+            clearUnowned(publishedByScope.remove(document.scope).orEmpty() - uri)
         }
     }
 
@@ -880,6 +1011,8 @@ class XtcTextDocumentService(
             // deleted. Recompiling identical overlays here cancels otherwise current queries.
             // didChange already propagates edits; didClose re-reads disk and membership.
             if (closed || openDocuments.containsKey(uri)) return
+            // a released document whose file no longer has the text it closed with, which pending workspace queries read
+            released[uri]?.text?.takeUnless { onDisk(uri, it) }?.let { released.remove(uri) }
             val affected =
                 (adapter as? XdkAdapter)?.changedFileScopes(uri)
                     ?: adapter.affectedAnalysisScopes(uri)
