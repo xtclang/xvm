@@ -3,7 +3,6 @@ package org.xtclang.plugin.tasks;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -139,9 +138,10 @@ public abstract class XtcLspSourceSetTask extends DefaultTask {
         test.put("jvmArgs", getTestJvmArgs().get());
         test.put("problems", getTestProblems().get());
         model.put("test", test);
-        final var output = getReport().get().getAsFile().toPath();
-        Files.createDirectories(output.getParent());
-        Files.writeString(output, JsonOutput.prettyPrint(JsonOutput.toJson(model)) + '\n');
+        // replaced whole, as the model is: another build exporting the same project at once, as two editors' imports
+        // of one folder, would otherwise read the report part written
+        XtcLspModelTask.writeAtomically(getReport().get().getAsFile().toPath(),
+            JsonOutput.prettyPrint(JsonOutput.toJson(model)) + '\n');
     }
 
     public static List<String> uris(final List<File> files) {

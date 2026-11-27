@@ -2,13 +2,16 @@ package org.xtclang.plugin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -82,6 +85,37 @@ class XtcLspModelTest {
         final var changed = run("prepareXtcLspModel");
         assertTrue(changed.getOutput().contains("Configuration cache entry reused"));
         assertEquals("A CHANGED RESOURCE", Files.readString(directory.resolve("relocated/processed-assets/data.txt")).strip());
+    }
+
+    @Test
+    void exportsReplaceTheirReportsWholeInsteadOfRewritingThemInPlace() throws IOException {
+        write("settings.gradle.kts", "rootProject.name = \"model-test\"\n");
+        write("build.gradle.kts", "plugins { id(\"org.xtclang.xtc-plugin\") }\nversion = \"1.0\"\n");
+        write("src/main/x/App.x", "module App {}");
+        run("exportXtcLspModel");
+        final var report = directory.resolve("build/xtc/lsp/main.json");
+        final var model = directory.resolve(".gradle/xtc/lsp-model.json");
+        final var reportBefore = fileKey(report);
+        final var modelBefore = fileKey(model);
+        assumeTrue(reportBefore != null && modelBefore != null, "the file system gives a file a key, such as its inode");
+
+        // a new source file changes the export's inputs, so both tasks write again
+        write("src/main/x/Other.x", "module Other {}");
+        run("exportXtcLspModel");
+        // a file moved into place is another file; one rewritten in place, which a reader can find part written, is not
+        assertNotEquals(reportBefore, fileKey(report), "the source set's report is replaced whole");
+        assertNotEquals(modelBefore, fileKey(model), "the model is replaced whole");
+        assertTrue(sourceSets().stream().anyMatch(entry -> entry.get("moduleRoots").toString().contains("Other.x")));
+        for (final var folder : List.of(report.getParent(), model.getParent())) {
+            try (var files = Files.list(folder)) {
+                assertEquals(List.of(), files.map(file -> file.getFileName().toString())
+                    .filter(name -> name.startsWith("model-")).toList(), "no temporary file is left in " + folder);
+            }
+        }
+    }
+
+    private static Object fileKey(final Path file) throws IOException {
+        return Files.readAttributes(file, BasicFileAttributes.class).fileKey();
     }
 
     @Test

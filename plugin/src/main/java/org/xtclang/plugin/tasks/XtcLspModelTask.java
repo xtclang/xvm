@@ -3,6 +3,7 @@ package org.xtclang.plugin.tasks;
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
@@ -32,12 +33,20 @@ public abstract class XtcLspModelTask extends DefaultTask {
     public void exportModel() throws IOException {
         final var sourceSets = getReports().getFiles().stream().sorted()
             .map(file -> new JsonSlurper().parse(file)).toList();
-        final var output = getModel().get().getAsFile().toPath();
+        writeAtomically(getModel().get().getAsFile().toPath(),
+            JsonOutput.prettyPrint(JsonOutput.toJson(Map.of("schemaVersion", 1, "sourceSets", sourceSets))) + '\n');
+    }
+
+    /**
+     * Writes {@code text} to {@code output} through a temporary file in its directory that is then moved into place,
+     * so that a reader, or another build that exports the same project at once, finds the old content or the new,
+     * never part of either.
+     */
+    static void writeAtomically(final Path output, final String text) throws IOException {
         Files.createDirectories(output.getParent());
         final var temporary = Files.createTempFile(output.getParent(), "model-", ".json");
         try {
-            Files.writeString(temporary, JsonOutput.prettyPrint(JsonOutput.toJson(
-                Map.of("schemaVersion", 1, "sourceSets", sourceSets))) + '\n');
+            Files.writeString(temporary, text);
             try {
                 Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             } catch (AtomicMoveNotSupportedException unsupported) {
