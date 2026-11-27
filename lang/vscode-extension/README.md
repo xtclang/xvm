@@ -109,12 +109,12 @@ source `package.json` and development output remain unchanged.
 
 The LSP server starts automatically on activation. Status is shown in the status bar:
 
-| Indicator         | Meaning                                                |
-|-------------------|--------------------------------------------------------|
-| `⟳ Ecstasy` (spinning)| Server is starting                                 |
+| Indicator              | Meaning                                           |
+|------------------------|---------------------------------------------------|
+| `⟳ Ecstasy` (spinning) | Server is starting                                |
 | `✓ Ecstasy · Compiler` | Server is ready; the label identifies its adapter |
-| `⚠ Ecstasy`       | Server encountered an error — click to restart        |
-| `✗ Ecstasy` (red) | Server stopped — click to restart                      |
+| `⚠ Ecstasy`            | Server encountered an error — click to restart    |
+| `✗ Ecstasy` (red)      | Server stopped — click to restart                 |
 
 Click the ready status bar item to switch adapters. Use **Ecstasy: Show Language Server Output**
 or **Ctrl+Alt+X, then L** to open the server logs.
@@ -347,27 +347,27 @@ Custom run tasks can be added to `.vscode/tasks.json`:
 
 Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **Ecstasy**:
 
-| Command                                  | Description                                            |
-|------------------------------------------|--------------------------------------------------------|
-| `Ecstasy: Create New Project`            | Scaffold a new Ecstasy project (`xtc init`)            |
-| `Ecstasy: Run Module`                    | Build and run the editor's module, per `xtc.build.mode` |
-| `Ecstasy: Build`                         | Build the folder's modules, per `xtc.build.mode`        |
-| `Ecstasy: Rebuild`                       | Rebuild the folder's modules from scratch               |
-| `Ecstasy: Select Build Mode`             | Choose embedded, Gradle or automatic for the folder (`Ctrl+Alt+X`, then `B`) |
-| `Ecstasy: Restart Language Server`       | Stop and restart the LSP server (`Ctrl+Alt+X`, then `R`) |
-| `Ecstasy: Switch Language Adapter`       | Choose the compiler or Tree-sitter adapter ([details](#lsp-adapter-selection)) |
-| `Ecstasy: Show Language Server Output`   | Open the LSP output channel                            |
-| `Ecstasy: Hide Language Server Output`   | Close it again (both are on `Ctrl+Alt+X`, then `L`)    |
-| `Ecstasy: Open Language Service Settings` | Open the extension's settings in the Settings editor  |
-| `Ecstasy: Show Effective Language Service Configuration` | Show the settings in effect, the running server and its negotiated features |
-| `Ecstasy: Configure Compiler Paths`      | Edit the compiler's source modules, resources and Gradle model ([details](#compiler-project-settings)) |
-| `Ecstasy: Show Effective Compiler Paths` | Show the source modules and inputs in effect, with the last Gradle import |
-| `Ecstasy: Refresh Gradle Compiler Model` | Import the compiler inputs from the folder's Gradle build again |
-| `Ecstasy: Prepare Generated Compiler Resources` | Run the Gradle build's generated-input preparation |
-| `Ecstasy: Configure Libraries and Sources` | Edit binary libraries and attached sources ([details](#ordered-libraries-and-attached-sources)) |
-| `Ecstasy: Export Server Logs`            | Save a ZIP of the server's recent logs and status ([details](#machine-local-jvm-tuning-and-log-support)) |
-| `Ecstasy: Copy Option to Debug a Program Outside the Editor` | Copy the `--debug` option that an attach configuration attaches to |
-| `Show Values as Hexadecimal`             | In the Variables and Watch views' context menu: integers in hexadecimal, or decimal again |
+| Command                                                      | Description                                                                                              |
+|--------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| `Ecstasy: Create New Project`                                | Scaffold a new Ecstasy project (`xtc init`)                                                              |
+| `Ecstasy: Run Module`                                        | Build and run the editor's module, per `xtc.build.mode`                                                  |
+| `Ecstasy: Build`                                             | Build the folder's modules, per `xtc.build.mode`                                                         |
+| `Ecstasy: Rebuild`                                           | Rebuild the folder's modules from scratch                                                                |
+| `Ecstasy: Select Build Mode`                                 | Choose embedded, Gradle or automatic for the folder (`Ctrl+Alt+X`, then `B`)                             |
+| `Ecstasy: Restart Language Server`                           | Stop and restart the LSP server (`Ctrl+Alt+X`, then `R`)                                                 |
+| `Ecstasy: Switch Language Adapter`                           | Choose the compiler or Tree-sitter adapter ([details](#lsp-adapter-selection))                           |
+| `Ecstasy: Show Language Server Output`                       | Open the LSP output channel                                                                              |
+| `Ecstasy: Hide Language Server Output`                       | Close it again (both are on `Ctrl+Alt+X`, then `L`)                                                      |
+| `Ecstasy: Open Language Service Settings`                    | Open the extension's settings in the Settings editor                                                     |
+| `Ecstasy: Show Effective Language Service Configuration`     | Show the settings in effect, the running server and its negotiated features                              |
+| `Ecstasy: Configure Compiler Paths`                          | Edit the compiler's source modules, resources and Gradle model ([details](#compiler-project-settings))   |
+| `Ecstasy: Show Effective Compiler Paths`                     | Show the source modules and inputs in effect, with the last Gradle import                                |
+| `Ecstasy: Refresh Gradle Compiler Model`                     | Import the compiler inputs from the folder's Gradle build again                                          |
+| `Ecstasy: Prepare Generated Compiler Resources`              | Run the Gradle build's generated-input preparation                                                       |
+| `Ecstasy: Configure Libraries and Sources`                   | Edit binary libraries and attached sources ([details](#ordered-libraries-and-attached-sources))          |
+| `Ecstasy: Export Server Logs`                                | Save a ZIP of the server's recent logs and status ([details](#machine-local-jvm-tuning-and-log-support)) |
+| `Ecstasy: Copy Option to Debug a Program Outside the Editor` | Copy the `--debug` option that an attach configuration attaches to                                       |
+| `Show Values as Hexadecimal`                                 | In the Variables and Watch views' context menu: integers in hexadecimal, or decimal again                |
 
 ### Snippets
 
@@ -452,14 +452,14 @@ This extension contributes the following defaults for the `xtc` language:
 
 ## Troubleshooting
 
-| Symptom                                                | Action                                                                                                  |
-|--------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
-| Status bar shows `⚠ Ecstasy` or `✗ Ecstasy`            | Click to restart; check the **Ecstasy Language Server** output channel for errors.                      |
-| "JAR not found" error on activation                    | Rebuild: `./gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true`. |
-| No completions or hover                                | Confirm `✓ Ecstasy` in the status bar; enable `xtc.trace.server: "verbose"` and inspect the output channel. |
-| Wrong Java version detected                            | Set `xtc.java.home` to a Java 25+ installation directory.                                               |
-| `xtc init` not found when running **Create Project**   | Install the XDK and put `xtc` on your `PATH`.                                                           |
-| `.x` files not highlighted                             | Run **Developer: Reload Window**; verify the file's language mode (bottom-right) is `Ecstasy`.          |
+| Symptom                                              | Action                                                                                                      |
+|------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| Status bar shows `⚠ Ecstasy` or `✗ Ecstasy`          | Click to restart; check the **Ecstasy Language Server** output channel for errors.                          |
+| "JAR not found" error on activation                  | Rebuild: `./gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true`. |
+| No completions or hover                              | Confirm `✓ Ecstasy` in the status bar; enable `xtc.trace.server: "verbose"` and inspect the output channel. |
+| Wrong Java version detected                          | Set `xtc.java.home` to a Java 25+ installation directory.                                                   |
+| `xtc init` not found when running **Create Project** | Install the XDK and put `xtc` on your `PATH`.                                                               |
+| `.x` files not highlighted                           | Run **Developer: Reload Window**; verify the file's language mode (bottom-right) is `Ecstasy`.              |
 
 For deeper diagnostics, open **View → Output** and select **Ecstasy Language Server**.
 
