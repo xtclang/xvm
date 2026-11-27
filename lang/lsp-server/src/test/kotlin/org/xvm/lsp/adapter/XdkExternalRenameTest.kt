@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
@@ -10,6 +11,7 @@ import org.xvm.lsp.adapter.xdk.XdkProject
 import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkRenameScope
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.unreadRename
 import org.xvm.testing.awaited
 import java.io.File
 import java.nio.file.Path
@@ -101,9 +103,11 @@ class XdkExternalRenameTest {
         XdkAdapter().use { adapter ->
             adapter.replaceSourceModules(graph(library, missing))
             assertThat(adapter.compile(library.toURI().toString(), LIBRARY).diagnostics).isEmpty()
-            assertThat(
-                adapter.rename(library.toURI().toString(), 0, LIBRARY.indexOf("input"), "value"),
-            ).isNull()
+            // refused, saying why, rather than proven of the modules that could be read
+            assertThatThrownBy { adapter.rename(library.toURI().toString(), 0, LIBRARY.indexOf("input"), "value") }
+                .rootCause()
+                .isInstanceOfSatisfying(RenameRefused::class.java) { assertThat(it.unproven).isTrue() }
+                .hasMessage(unreadRename(listOf("Consumer")))
         }
     }
 
@@ -125,14 +129,14 @@ class XdkExternalRenameTest {
                 },
                 { false },
             )
-        assertThat(
+        assertThatThrownBy {
             query.renameProposal(
                 library.toURI().toString(),
                 0,
                 LIBRARY.indexOf("input"),
                 "value",
-            ),
-        ).isNull()
+            )
+        }.isInstanceOf(RenameOvertaken::class.java)
         assertThat(library.readText()).isEqualTo(LIBRARY)
     }
 

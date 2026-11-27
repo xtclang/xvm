@@ -117,10 +117,7 @@ internal fun ParityScenarios.graphCases() {
         replace(consumer, data.string("replaceWith"))
         errors(consumer)
         check(graphReferences(document).isEmpty())
-        check(
-            proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
-                .isJsonNull,
-        )
+        uncompiledRename(document, document.at(data.string("anchor")), data.string("newName"))
         clean(document)
         replace(consumer, fixture(consumer.file))
         clean(consumer)

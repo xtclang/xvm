@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter
 
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -9,6 +10,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
+import org.xvm.lsp.adapter.xdk.uncompiledRename
 import org.xvm.lsp.util.Watched
 import java.nio.file.Path
 
@@ -49,11 +51,13 @@ class XdkTeachingWorkspaceTest {
             val consumerUri = consumerFile.toURI().toString()
             assertThat(adapter.compile(uri, library).diagnostics).isEmpty()
             assertThat(adapter.compile(consumerUri, consumer).success).isEqualTo(!broken)
-            val edit = adapter.rename(uri, 0, library.indexOf("number"), "amount")
             if (broken) {
-                assertThat(edit).isNull()
+                assertThatThrownBy { adapter.rename(uri, 0, library.indexOf("number"), "amount") }
+                    .rootCause()
+                    .isInstanceOfSatisfying(RenameRefused::class.java) { assertThat(it.unproven).isTrue() }
+                    .hasMessage(uncompiledRename(listOf("Consumer")))
             } else {
-                val changes = requireNotNull(edit).changes
+                val changes = requireNotNull(adapter.rename(uri, 0, library.indexOf("number"), "amount")).changes
                 assertThat(changes.values).allMatch { it.size == 1 }
                 assertThat(changes).hasSize(2)
                 changes.forEach { (document, edits) ->

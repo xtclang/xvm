@@ -1,13 +1,22 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
+import { LSPErrorCodes, ResponseError, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
 import { scenarioRegex } from './shared';
-import { client, diagnostics, fixture, noErrors, playbook, position, symbols } from './support';
+import { client, diagnostics, fixture, noErrors, playbook, position, RENAME_UNPROVEN, symbols } from './support';
 
 export async function rename(document: vscode.TextDocument, at: vscode.Position, newName: string): Promise<WorkspaceEdit | null> {
     return client().sendRequest<WorkspaceEdit | null>('textDocument/rename', {
         textDocument: { uri: document.uri.toString() }, position: at, newName
     });
+}
+
+/**
+ * That [rename] fails as the server answers a rename that it can't prove while a module does not compile: saying so, for
+ * the client to ask again once it compiles, rather than with no edit, which would say that the rename is refused.
+ */
+export async function uncompiled(rename: Promise<unknown>): Promise<void> {
+    await assert.rejects(rename, (error: unknown) => error instanceof ResponseError && error.code === LSPErrorCodes.RequestFailed
+        && error.data === RENAME_UNPROVEN && /does not compile/.test(error.message));
 }
 
 export async function applyRename(document: vscode.TextDocument, at: vscode.Position, newName: string): Promise<void> {
@@ -82,7 +91,7 @@ export function renameCases(): void {
         const document = await workspace.open(data.file);
         await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, data.replaceWith));
         await diagnostics(document.uri, values => values.length > 0, 'Broken rename source');
-        assert.strictEqual(await rename(document, position(document, data.anchor), data.newName), null);
+        await uncompiled(rename(document, position(document, data.anchor), data.newName));
         await workspace.replace(document, fixture(data.file));
         await noErrors(document.uri);
         for (const name of data.invalidNames) {

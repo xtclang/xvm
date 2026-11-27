@@ -2,6 +2,7 @@ import * as assert from 'node:assert';
 import * as fs from './disk';
 import * as vscode from 'vscode';
 import { LSPErrorCodes, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
+import { uncompiled } from './rename';
 import { catalog, scenarioRegex, scenarioText } from './shared';
 import { client, diagnostics, eventually, fixture, hover, noErrors, playbook, position, symbols, targets, Workspace } from './support';
 
@@ -95,7 +96,7 @@ export function graphCases(): void {
         await workspace.replace(consumer, data.replaceWith);
         await diagnostics(consumer.uri, values => values.length > 0, 'Incomplete graph diagnostic');
         assert.deepStrictEqual(await references(document), []);
-        assert.strictEqual(await rename(document, data.anchor, data.newName), null);
+        await uncompiled(rename(document, data.anchor, data.newName));
         await noErrors(document.uri);
         await workspace.replace(consumer, fixture(data.file));
         await noErrors(consumer.uri);

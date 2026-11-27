@@ -36,6 +36,8 @@ import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.PrepareRenameResult
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.ReadOnlyDocument
+import org.xvm.lsp.adapter.RenameOvertaken
+import org.xvm.lsp.adapter.RenameRefused
 import org.xvm.lsp.adapter.SelectionRange
 import org.xvm.lsp.adapter.SemanticTokens
 import org.xvm.lsp.adapter.SignatureHelp
@@ -1175,16 +1177,24 @@ class XdkAdapter
                 retired.forEach { compiles.remove(it.task) }
             }
 
+        /**
+         * The graph's answer to [query], on the compiler worker, or [unavailable] when the graph has none: discovery has a
+         * problem, or [key]'s document is in no module of the graph. With [refusal], such a query fails instead, with what
+         * it makes of discovery's problem, or of none when the document is in no module, as a rename tells its client why.
+         */
         private fun <T> projectQuery(
             key: ProjectQueryKey,
             unavailable: T,
+            refusal: ((problem: String?) -> Throwable)? = null,
             query: (XdkProjectQueries) -> T,
         ): CompletableFuture<T> {
             val (request, previous) =
                 synchronized(lifecycle) {
                     if (closed) return closedAdapter()
-                    if (discovery.get().problem != null || project.scope(key.uri) == null) {
-                        return CompletableFuture.completedFuture(unavailable)
+                    val problem = discovery.get().problem
+                    if (problem != null || project.scope(key.uri) == null) {
+                        return refusal?.let { CompletableFuture.failedFuture(it(problem)) }
+                            ?: CompletableFuture.completedFuture(unavailable)
                     }
                     val request =
                         ProjectRequest(key, project, dependencies, overlays.toMap(), queueTrace) { work: ProjectRequest<T> ->
@@ -2780,7 +2790,11 @@ class XdkAdapter
                         } == true
                 )
 
-        /** Hosts that own persistent source settings can accept the graph replacement with the edit. */
+        /**
+         * Hosts that own persistent source settings can accept the graph replacement with the edit. As [renameAsync], a
+         * rename that can't be proven now fails with an unproven [RenameRefused], and one whose project changed while it
+         * was proven with [RenameOvertaken]; a cancellation of the returned future reaches the proof.
+         */
         fun renameProposalAsync(
             uri: String,
             line: Int,
@@ -2788,11 +2802,11 @@ class XdkAdapter
             newName: String,
         ): CompletableFuture<XdkRenameProposal?> =
             if (isProjectRename(uri, line, column)) {
-                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME_PROPOSAL), null) {
+                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME_PROPOSAL), null, ::projectRenameRefusal) {
                     it.renameProposal(uri, line, column, newName)
                 }
             } else {
-                renameAsync(uri, line, column, newName).thenApply { it?.let(::XdkRenameProposal) }
+                renameAsync(uri, line, column, newName).mapCancellable { it?.let(::XdkRenameProposal) }
             }
 
         /**
@@ -2806,7 +2820,7 @@ class XdkAdapter
             newName: String,
         ): CompletableFuture<XdkRenameProposal?> =
             if (isProjectRename(uri, line, column)) {
-                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME), null) {
+                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME), null, ::projectRenameRefusal) {
                     it.plainRename(uri, line, column, newName)
                 }
             } else {
@@ -2936,6 +2950,11 @@ class XdkAdapter
             newName: String,
         ): WorkspaceEdit? = renameAsync(uri, line, column, newName).join()
 
+        /**
+         * The edit of the rename, or null when its proof refuses it. A rename that can't be proven now fails with an
+         * unproven [RenameRefused] that says why: discovery has a problem, or the document's module has not compiled, or
+         * did not. One whose sources changed while it was proven fails with [RenameOvertaken].
+         */
         override fun renameAsync(
             uri: String,
             line: Int,
@@ -2946,6 +2965,7 @@ class XdkAdapter
                 return projectQuery<WorkspaceEdit?>(
                     ProjectQueryKey(uri, ProjectQueryKind.RENAME),
                     null,
+                    ::projectRenameRefusal,
                 ) {
                     it.rename(uri, line, column, newName)
                 }
@@ -2953,10 +2973,12 @@ class XdkAdapter
             val (request, previous) =
                 synchronized(lifecycle) {
                     if (closed) return closedAdapter()
-                    val compilation = currentCompilation(uri) ?: return CompletableFuture.completedFuture(null)
-                    val module =
-                        completed[compilation.scope]?.takeIf { it.succeeded }
-                            ?: return CompletableFuture.completedFuture(null)
+
+                    fun unproven(reason: String) = CompletableFuture.failedFuture<WorkspaceEdit?>(RenameRefused(reason, unproven = true))
+                    discovery.get().problem?.let { return unproven(discoveryRename(it)) }
+                    val compilation = currentCompilation(uri) ?: return unproven(notYetCompiledRename(moduleName(analysisScope(uri))))
+                    val module = completed[compilation.scope] ?: return unproven(notYetCompiledRename(moduleName(compilation.scope)))
+                    if (!module.succeeded) return unproven(uncompiledRename(listOf(moduleName(compilation.scope))))
                     if (renameRange(uri, line, column) == null) {
                         return CompletableFuture.completedFuture(null)
                     }
@@ -2975,6 +2997,22 @@ class XdkAdapter
             previous?.result?.cancel(false)
             return request.result
         }
+
+        /**
+         * Why the graph can't prove a project rename ([projectQuery]): discovery's [problem], or, without one, a change
+         * of the graph that took the document out of it since the rename found it in it.
+         */
+        private fun projectRenameRefusal(problem: String?): Throwable =
+            problem?.let { RenameRefused(discoveryRename(it), unproven = true) } ?: RenameOvertaken()
+
+        /**
+         * The module whose root is [scope], as a client is told of it: by its name in the graph, or by its root's file.
+         * Call while holding [lifecycle].
+         */
+        private fun moduleName(scope: String): String =
+            project.modules.values
+                .firstOrNull { it.uri == scope }
+                ?.name ?: XdkSources.file(scope)?.name ?: scope
 
         private fun isProjectRename(
             uri: String,
@@ -3060,7 +3098,7 @@ class XdkAdapter
                 ) ?: return null
             val after = compile(plan.proposed) ?: return null
             if (!XdkRename.preservesBindings(before, after, plan)) return null
-            // A closed file can change without a watcher event. Refuse edits against that old snapshot.
+            // A closed file can change without a watcher event. An edit against that old snapshot is overtaken.
             if (module.sourceInputs != null) {
                 val current =
                     try {
@@ -3068,7 +3106,7 @@ class XdkAdapter
                     } catch (_: IOException) {
                         return null
                     }
-                if (current != module.sourceInputs) return null
+                if (current != module.sourceInputs) throw RenameOvertaken()
             }
             return WorkspaceEdit(
                 plan.edits.keys.associate { name ->

@@ -123,10 +123,7 @@ internal fun ParityScenarios.renameCases() {
             fixture(document.file).replace(data.string("replaceFrom"), data.string("replaceWith")),
         )
         errors(document)
-        check(
-            proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
-                .isJsonNull,
-        )
+        uncompiledRename(document, document.at(data.string("anchor")), data.string("newName"))
         replace(document, fixture(document.file))
         clean(document)
         data.strings("invalidNames").forEach { name ->
@@ -161,6 +158,23 @@ internal fun ParityWorkspace.proposedRename(
     at: Int,
     name: String,
 ): JsonElement = query("textDocument/rename", document, at, mapOf("newName" to name))
+
+/**
+ * That a rename fails as the server answers one that it can't prove while a module does not compile: saying so, for the
+ * client to ask again once it compiles, rather than with no edit, which would say that the rename is refused.
+ */
+internal fun ParityWorkspace.uncompiledRename(
+    document: ParityWorkspace.Document,
+    at: Int,
+    name: String,
+) {
+    val failure = runCatching { proposedRename(document, at, name) }.exceptionOrNull()
+    check(
+        failure is ClientRequestFailure &&
+            failure.code == ResponseErrorCode.RequestFailed.value &&
+            "does not compile" in failure.message.orEmpty(),
+    ) { failure ?: "The rename answered" }
+}
 
 internal fun ParityWorkspace.applyRename(
     document: ParityWorkspace.Document,

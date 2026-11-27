@@ -1571,7 +1571,9 @@ class XtcTextDocumentService(
         }
 
     /**
-     * LSP: textDocument/rename
+     * LSP: textDocument/rename. No edit for a rename that its proof refuses; a request failure with the reason for one the
+     * adapter refuses, also for one it can't prove while a module does not compile, and ContentModified for one that a
+     * change of the project overtook, which the client may ask again ([RenameRefused.asResponseError]).
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.rename
      */
@@ -1608,7 +1610,8 @@ class XtcTextDocumentService(
             "xtc/rename",
             params.textDocument.uri,
             {
-                // a refusal reaches the client with its reason, as textDocument/rename's does, not as an internal error
+                // a refusal reaches the client with its reason, and an overtaken proof as ContentModified, as
+                // textDocument/rename's do, not as an internal error
                 compiler
                     .renameProposalAsync(
                         params.textDocument.uri,

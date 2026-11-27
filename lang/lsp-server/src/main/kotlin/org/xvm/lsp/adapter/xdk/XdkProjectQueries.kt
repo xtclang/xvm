@@ -12,6 +12,7 @@ import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.CodeActionCompiles
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.adapter.RenameOvertaken
 import org.xvm.lsp.adapter.RenameRefused
 import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.CompilationResult
@@ -407,6 +408,12 @@ internal class XdkProjectQueries(
             if (proposal.sourceModules != null) throw RenameRefused(SOURCE_MODULES_RENAME)
         }
 
+    /**
+     * The rename's proposal, or null when its proof refuses it. A rename that this graph can't prove, as while one of its
+     * modules does not compile, is refused with an unproven [RenameRefused] that says why, and one whose sources changed
+     * while it was proven with [RenameOvertaken]: its answer, an edit or a refusal, would be of sources that are no
+     * longer there.
+     */
     fun renameProposal(
         uri: String,
         line: Int,
@@ -421,7 +428,11 @@ internal class XdkProjectQueries(
                     "choose the Adaptive memory policy, or a maximum heap of 2G or more, in the Ecstasy server's runtime settings.",
             )
         }
-        return renameBase()?.let { renameProposal(it, uri, line, column, name) }
+        var uncompiled: String? = null
+        val proposal = renameBase { uncompiled = it }?.let { renameProposal(it, uri, line, column, name) }
+        // an answer of sources that changed meanwhile, an edit or a refusal, would be of sources that are no longer there
+        (if (isCurrent()) uncompiled?.let { RenameRefused(it, unproven = true) } else RenameOvertaken())?.let { throw it }
+        return proposal
     }
 
     /**
@@ -439,9 +450,10 @@ internal class XdkProjectQueries(
      * The compile of this query's sources that a rename's proof starts from: the revision's, which code actions share
      * ([revisionBase]), when every module compiled in it, as the proof needs. Its facts are a repair's, which hold what a
      * rename's own compile holds and more. When a module did not compile in it, the sources are compiled here as a rename
-     * compiled them before, which fails where a module does not compile, and the log says so.
+     * compiled them before, which fails where a module does not compile, and the log says so; [failed] then gets what a
+     * client is told of it, the modules that did not compile, or whose sources could not be read.
      */
-    private fun renameBase(): XdkCodeActionCache.Base? {
+    private fun renameBase(failed: (String) -> Unit = {}): XdkCodeActionCache.Base? {
         val base = revisionBase(revision())
         val missing = project.modules.keys - base?.artifacts?.keys.orEmpty()
         if (sources.size == project.modules.size && missing.isEmpty()) return base
@@ -449,7 +461,17 @@ internal class XdkProjectQueries(
             "rename: the revision's compile has no artifact of {}, so the proof compiles the sources before the edit itself",
             missing.sorted().joinToString().ifEmpty { "a module whose sources it could not read" },
         )
-        return build(texts)
+        return build(texts).also {
+            if (it == null) {
+                val unread =
+                    project.modules.values
+                        .filterNot(sources::containsKey)
+                        .map { module -> module.name }
+                // the modules that reported errors, not those that did not compile only because one they import did not
+                val reported = missing.filter { module -> base?.errors?.containsKey(module) == true }.ifEmpty { missing }
+                failed(if (unread.isEmpty()) uncompiledRename(reported.sorted()) else unreadRename(unread.sorted()))
+            }
+        }
     }
 
     private fun renameProposal(
@@ -475,7 +497,7 @@ internal class XdkProjectQueries(
                 }
             val plan = XdkRename.Plan(texts, mapOf(source to replacements))
             val after = compile(plan.proposed, reuse = base) ?: return null
-            if (!preservesBindings(before, after, plan) || !isCurrent()) return null
+            if (!preservesBindings(before, after, plan)) return null
             return XdkRenameProposal(
                 WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                 scope = renameScope(),
@@ -603,7 +625,7 @@ internal class XdkProjectQueries(
             )
         }
         val after = compile(plan.proposed, moves = moves.paths, graph = graph, reuse = base) ?: return null
-        if (!preservesBindings(before, after, plan) || !isCurrent()) return null
+        if (!preservesBindings(before, after, plan)) return null
         return XdkRenameProposal(
             WorkspaceEdit(
                 plan.edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
@@ -2028,6 +2050,27 @@ private const val SOURCE_MODULES_RENAME =
     "This rename also changes the configured source modules (xtc.compiler.sourceModules), which " +
         "textDocument/rename can't update; rename it in a client that sends xtc/rename, " +
         "such as the Ecstasy plugins for IntelliJ and VS Code"
+
+/** Why a rename can't be proven while [modules] do not compile: its proof compiles them before and after the edit. */
+internal fun uncompiledRename(modules: List<String>): String =
+    "This rename can't be proven while ${inWords(modules)} ${if (modules.size == 1) "does" else "do"} not compile: " +
+        "fix the errors, then rename again"
+
+/** Why a rename can't be proven while [module] has not compiled yet, as while it compiles after an edit. */
+internal fun notYetCompiledRename(module: String): String =
+    "This rename can't be proven until $module has compiled: rename again once it has"
+
+/** Why a rename can't be proven while the sources of [modules] can't be read. */
+internal fun unreadRename(modules: List<String>): String =
+    "This rename can't be proven while the sources of ${inWords(modules)} can't be read"
+
+/** Why a rename can't be proven while discovery of the workspace's source modules has [problem]. */
+internal fun discoveryRename(problem: String): String =
+    "This rename can't be proven while the workspace's source modules have a problem: $problem"
+
+/** [names] as a sentence names them: `A`, `A and B`, `A, B and C`. */
+private fun inWords(names: List<String>): String =
+    if (names.size < 2) names.joinToString() else names.dropLast(1).joinToString() + " and " + names.last()
 
 /**
  * A note on the root of a workspace module that replaces a bundled library and has errors: the server compiles it with

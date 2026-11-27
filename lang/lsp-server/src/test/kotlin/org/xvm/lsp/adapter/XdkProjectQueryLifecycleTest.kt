@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -164,19 +165,19 @@ class XdkProjectQueryLifecycleTest {
             assertThat(session.entered.awaited()).isTrue()
             session.consumer.writeText("\n$CONSUMER")
             session.release.countDown()
-            val result = query.awaited()
             when (feature) {
                 Feature.REFERENCES -> {
-                    assertThat(result as List<*>).isEmpty()
+                    assertThat(query.awaited() as List<*>).isEmpty()
                 }
 
                 Feature.CODE_LENSES -> {
                     // The rejected graph yields no reference lenses, and Library has no entry point to run.
-                    assertThat((result as List<*>).filterIsInstance<CodeLens>()).isEmpty()
+                    assertThat((query.awaited() as List<*>).filterIsInstance<CodeLens>()).isEmpty()
                 }
 
                 Feature.RENAME -> {
-                    assertThat(result).isNull()
+                    // overtaken, not refused: the rename asked again proves the graph as it now is
+                    assertThatThrownBy { query.awaited() }.rootCause().isInstanceOf(RenameOvertaken::class.java)
                 }
             }
             assertThat(session.adapter.getCachedResult(session.libraryUri)?.diagnostics).isEmpty()

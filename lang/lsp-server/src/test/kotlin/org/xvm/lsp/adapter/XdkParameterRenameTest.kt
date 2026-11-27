@@ -1,9 +1,11 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.uncompiledRename
 import java.nio.file.Path
 
 /**
@@ -105,7 +107,11 @@ class XdkParameterRenameTest {
         XdkAdapter().use { adapter ->
             val result = adapter.compile(uri("App"), text)
             assertThat(result.diagnostics.map { it.code }).contains("COMPILER-141")
-            assertThat(adapter.rename(uri("App"), 0, text.indexOf("input"), "value")).isNull()
+            // the module does not compile, so no rename's proof can start, which the refusal says
+            assertThatThrownBy { adapter.rename(uri("App"), 0, text.indexOf("input"), "value") }
+                .rootCause()
+                .isInstanceOfSatisfying(RenameRefused::class.java) { assertThat(it.unproven).isTrue() }
+                .hasMessage(uncompiledRename(listOf("App.x")))
         }
     }
 

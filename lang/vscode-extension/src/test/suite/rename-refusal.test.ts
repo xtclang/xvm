@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { BaseLanguageClient, LSPErrorCodes, ResponseError, type LanguageClient, type MessageSignature } from 'vscode-languageclient/node';
-import { RENAME_REFUSED, renameWithConfiguration } from '../../rename-proposal';
+import { RENAME_OVERTAKEN, RENAME_REFUSED, renameWithConfiguration } from '../../rename-proposal';
 
 suite('Rename refusals', () => {
     /**
@@ -47,8 +47,13 @@ suite('Rename refusals', () => {
         assert.strictEqual(await said(server(async () => { throw new ResponseError(LSPErrorCodes.RequestFailed, reason); })), reason);
     });
 
-    test('a rename that ends without an answer, as the server drops it as a document changes, says there is no result', async () => {
-        const dropped = server(async () => { throw new ResponseError(LSPErrorCodes.ContentModified, 'Document changed during analysis'); });
-        assert.strictEqual(await said(dropped), 'No result.');
+    test("a rename that the server can't prove while a module does not compile says the server's reason", async () => {
+        const reason = "This rename can't be proven while Library does not compile: fix the errors, then rename again";
+        assert.strictEqual(await said(server(async () => { throw new ResponseError(LSPErrorCodes.RequestFailed, reason, 'unproven'); })), reason);
+    });
+
+    test('a rename that a change of the project overtook says so, to rename again, rather than that there is no result', async () => {
+        const overtaken = server(async () => { throw new ResponseError(LSPErrorCodes.ContentModified, 'The project changed while the rename was proven'); });
+        assert.strictEqual(await said(overtaken), RENAME_OVERTAKEN);
     });
 });

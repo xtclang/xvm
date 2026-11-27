@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
@@ -13,6 +14,7 @@ import org.xvm.lsp.adapter.xdk.XdkProject
 import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import org.xvm.lsp.adapter.xdk.uncompiledRename
 import java.io.File
 import java.nio.file.Path
 
@@ -51,14 +53,16 @@ class XdkProjectQueryTest {
             )
 
         val incomplete = graph(emptySet())
-        assertThat(
+        // Consumer, which does not declare its import of Library, does not compile, which the refusal says
+        assertThatThrownBy {
             incomplete.rename(
                 library.toURI().toString(),
                 0,
                 library.readText().indexOf("pick"),
                 "choose",
-            ),
-        ).isNull()
+            )
+        }.isInstanceOfSatisfying(RenameRefused::class.java) { assertThat(it.unproven).isTrue() }
+            .hasMessage(uncompiledRename(listOf("Consumer")))
         assertThat(incomplete.symbols("run")).isEmpty()
         val configured = graph(setOf("Library"))
         val edit =
@@ -464,15 +468,16 @@ class XdkProjectQueryTest {
             ).isNull()
         }
         consumer.writeText(consumer.readText().replace("box.pick(1)", "box."))
-        assertThat(
+        assertThatThrownBy {
             query(library, consumer)
                 .rename(
                     library.toURI().toString(),
                     0,
                     library.readText().indexOf("pick"),
                     "choose",
-                ),
-        ).isNull()
+                )
+        }.isInstanceOfSatisfying(RenameRefused::class.java) { assertThat(it.unproven).isTrue() }
+            .hasMessage(uncompiledRename(listOf("Consumer")))
         assertThat(
             query(library, consumer)
                 .references(

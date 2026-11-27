@@ -88,8 +88,14 @@ class XdkConditionalRenameTest {
             """.trimIndent()
         val consumer = "module Consumer { package lib import Library; lib.Box<String>? saved = Null; }"
         directory.libraryAndConsumer(library, consumer) { adapter, libraryUri, consumerUri ->
+            // the document renamed in is analyzed, as an editor's open one is, so that the rename's proof refuses it
+            assertThat(adapter.compile(libraryUri, library).diagnostics).isEmpty()
             assertThat(adapter.compile(consumerUri, consumer).diagnostics).isEmpty()
             val at = library.positionOf("Int read", "read")
+            // a name that neither contract of Both declares is proven, so that the refusal of fetch is the collision's
+            val renamed = requireNotNull(adapter.rename(libraryUri, at.line, at.column, "obtain")) { "No rename of read" }
+            assertThat(renamed.changes.keys).containsExactly(libraryUri)
+            assertThat(apply(library, renamed.changes.getValue(libraryUri))).isEqualTo(library.replace("read", "obtain"))
             assertThat(adapter.rename(libraryUri, at.line, at.column, "fetch")).isNull()
             assertThat(adapter.compile(libraryUri, library.replace("read", "fetch")).diagnostics).isEmpty()
             assertThat(adapter.compile(consumerUri, consumer).diagnostics).isEmpty()

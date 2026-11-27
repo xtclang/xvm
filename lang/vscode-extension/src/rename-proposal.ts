@@ -79,10 +79,18 @@ function folderOverrides(uri: vscode.Uri): unknown[] {
 export const RENAME_REFUSED = 'This rename is not supported or would change another binding.';
 
 /**
+ * What VS Code says when the server answers a rename with ContentModified: a change of the project overtook its proof, as
+ * an edit or a file written on disk does while it compiles, and the same rename asked again proves the project as it then
+ * is. It is not asked again here, where nothing says when the change has settled: the user renames again.
+ */
+export const RENAME_OVERTAKEN = 'The project changed while the language server proved this rename. Rename again.';
+
+/**
  * The edit of a rename at [position] to [newName], as the server proposes it with xtc/rename. VS Code shows the message
  * of an error that a rename provider throws, and says only "No result." when it answers nothing: a refusal that the
- * server gives its reason for, an error, keeps that reason, and its answer of no edit fails with [RENAME_REFUSED]. A
- * request that ends without an answer, as one the server drops as a document changes, answers nothing.
+ * server gives its reason for, an error, keeps that reason, as one that it can't prove while a module does not compile,
+ * its answer of no edit fails with [RENAME_REFUSED], and its ContentModified with [RENAME_OVERTAKEN]. A request that the
+ * user cancels answers nothing.
  */
 export async function renameWithConfiguration(
     client: LanguageClient,
@@ -98,7 +106,13 @@ export async function renameWithConfiguration(
         }, token).then(proposal => {
             if (!proposal && !token.isCancellationRequested) throw new Error(RENAME_REFUSED);
             return proposal;
-        }, error => client.handleFailedRequest(renameRequest, token, error, null, false)));
+        }, error => {
+            // the language client takes ContentModified as no answer, which VS Code shows as "No result."
+            if (error instanceof ResponseError && error.code === LSPErrorCodes.ContentModified && !token.isCancellationRequested) {
+                throw new Error(RENAME_OVERTAKEN);
+            }
+            return client.handleFailedRequest(renameRequest, token, error, null, false);
+        }));
 }
 
 /**
