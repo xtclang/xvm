@@ -5,7 +5,8 @@ What a voice says over the IntelliJ plugin's tour, step by step, as text: the to
 `compose.py` makes from a run of it.
 
 Each `##` heading is a section of the tour, named exactly as the tour names it, in the tour's order; the paragraph
-right under it is spoken over the section's title card. Each `###` heading under a section is one of its steps, named
+right under it is spoken over its first narrated step, whether a title card or a screen. The voice pauses for one
+second before the step's own text. Each `###` heading under a section is one of its steps, named
 exactly as the step's title, and the paragraph under it is spoken over that step. A card that the tour shows as a step
 of its own, such as the one that opens Build and run, has its `###` like any other step, after its section's paragraph.
 Steps are matched by their section and title, never by number, as the composer renumbers the steps it leaves out. A

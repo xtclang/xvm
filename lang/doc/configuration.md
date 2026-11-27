@@ -495,6 +495,9 @@ properties of the Starter test JVM. All are `providers` properties.
 | `XTC_RECORDING_START_FILE` | environment, default `/out/screen.start` | The recording's start time, for the tour's clips. | `ideaIt/TourTest.kt:62` |
 | `xtc.test.textmate` | system property, set by `test` | The TextMate bundle for the light platform tests. | `lang/intellij-plugin/build.gradle.kts:1019`, `lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/LightEditor.kt:46` |
 
+After the run, compose its captures with the IntelliJ narration using the command in section 6.3 and
+`narration-intellij.md`. The tour test and its recording settings are the same for silent and narrated videos.
+
 ### 6.3 VS Code tests
 
 `testCompilerPlaybook` passes its Gradle properties to `npm run test:playbook` or `test:tour`
@@ -533,6 +536,35 @@ The runners hand these environment variables to the test code in VS Code:
 | `XTC_EXPLORER_PROBE_REPORT`, `XTC_EXPLORER_PROBE_REFRESH` | `vsc/test/runTest.ts:133` | `vsc/test/explorer-probe/index.ts:14`, `:16` |
 | `XTC_SETTINGS_PHASE` | `vsc/test/runTest.ts:134` | `vsc/test/settings-persistence/index.ts:11` |
 | `XTC_VSCODE_TEST_CACHE` | The user, or the container (`lang/intellij-plugin/container/in-container.sh:30`) | `vsc/test/vscodeCache.ts:42`; without it, `$XDG_CACHE_HOME`, `~/Library/Caches` or `%LOCALAPPDATA%`, then `xtclang/vscode-test` |
+
+#### Composing either editor's tour with narration
+
+From the repository root, give the shared composer the editor's script, one or more saved run directories,
+and an output directory. This example uses the British English Jenny voice with a locally installed Piper model.
+
+```bash
+tour=lang/intellij-plugin/tour
+python3 "$tour/compose.py" --narration "$tour/narration-vscode.md" \
+    --tts piper --piper-model ~/.local/share/piper-voices/en_GB-jenny_dioco-medium.onnx \
+    "$run_dir" "$out_dir"
+```
+
+For IntelliJ, use `narration-intellij.md` and an IntelliJ run directory. The composer needs Pillow, python-pptx,
+ffmpeg and ffprobe. Piper needs an installed `piper` executable and the model's matching `.onnx.json` beside it.
+On macOS, omit the Piper options to use `say`, with `--voice Daniel` or another installed voice.
+Speech is synthesized offline and cached per paragraph, voice, engine and pacing under
+`$XDG_CACHE_HOME/xtc-tour/speech` (default `~/.cache/xtc-tour/speech`).
+
+The first narrated step in each section speaks its introduction, pauses for one second, then speaks the step.
+`--sentence-pause` adds a pause between sentences (default 0.75 seconds). A long paragraph extends the final
+frame until `--narration-pad` seconds after the speech (default 0.6). New steps without text are silent.
+The composer lists missing step text and unused script entries in the console and in `failures.md`.
+A partial run therefore lists unused paragraphs from the other sections. Both engines pronounce XTC as “Ecstasy,”
+including in commands and Gradle task names. The subtitles and slides retain the original spelling.
+
+Alongside the narrated MP4, the composer writes matching `.srt` and `.vtt` files and puts the narration
+in the slide notes. Pass `--burn-subtitles` to draw subtitles into the picture. Omit `--narration` to
+compose a silent video from the same captures.
 
 ### 6.4 The playbook container
 

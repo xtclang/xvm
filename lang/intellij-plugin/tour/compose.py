@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Compose the IntelliJ tour's video and slides from a tour run.
+Compose the IntelliJ or VS Code tour's video and slides from one or more tour runs.
 
 A run of TourTest (the intellij-plugin's integration tests, with -PintellijTour=true) leaves tour.json and the
 screens it captured, frames/NNN.png, in its run directory. This draws each step as a 1920x1080 frame, the captured
@@ -22,7 +22,23 @@ sped up when it would still run longer than CLIP_MAX seconds; the step's keys an
 a ring where the pointer clicked. Its frame then holds for --hold seconds, for its caption to be read. The deck keeps the frames and links
 each step's clip.
 
-Usage: compose.py [--speed <factor>] [--hold <seconds>] [--editor intellij|vscode] <run directory>... <out directory>
+Usage: compose.py [--speed <factor>] [--hold <seconds>] [--editor intellij|vscode]
+                  [--narration <script> [--tts say|piper] [--voice <name>] [--piper-model <model.onnx>]
+                   [--sentence-pause <seconds>] [--narration-pad <seconds>] [--burn-subtitles]]
+                  <run directory>... <out directory>
+
+With --narration, each Markdown ## section and ### step title in the editor's script matches tour.json by name.
+The first narrated step in each section speaks the introduction before its own paragraph, on the same card or screen.
+A step missing its paragraph plays in silence. Unused paragraphs and missing steps appear on stderr and in failures.md.
+The video holds each step for its original reading or recording time, or through its last spoken word plus
+--narration-pad (default 0.6 seconds), whichever takes longer. The notes carry the narration when available.
+The resulting MP4 has a 48 kHz mono AAC track. SRT and WebVTT files beside it carry the subtitles.
+--burn-subtitles also draws them above the caption band.
+
+Speech is generated locally. macOS say uses --voice (Daniel by default) at 160 words per minute. Piper needs its CLI
+on PATH and a local ONNX model with its .onnx.json alongside it. It uses a slightly slower length scale of 1.07.
+--sentence-pause adds 0.75 seconds between sentences by default. Two paragraphs on one step have a one-second break.
+Normalized paragraphs are reused from $XDG_CACHE_HOME/xtc-tour/speech, or ~/.cache/xtc-tour/speech.
 
 <editor> is the editor the runs toured, intellij or vscode, as their tour.json's "editor" names it, so that the two
 tours' files keep apart; --editor gives it for runs recorded before tour.json named it. Runs of both are refused.
@@ -42,15 +58,20 @@ Needs Pillow and python-pptx (pip install pillow python-pptx) and ffmpeg on the 
 
 import argparse
 import json
+import math
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
+from collections import Counter
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
 from pptx.util import Emu
+
+import narration
 
 WIDTH, HEIGHT = 1920, 1080
 # the editors whose tours this composes, which name the video and the deck
@@ -315,7 +336,7 @@ def held(step, still, out):
 def clips_video(segments, out, movie):
     """The steps' segments, clips and held frames, one after another, as one video, [movie]."""
     listing = out / "clips.txt"
-    listing.write_text("".join(f"file '{segment.resolve()}'\n" for segment in segments))
+    listing.write_text("".join(f"file '{segment.relative_to(out)}'\n" for segment in segments))
     subprocess.run(
         ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy",
          "-movflags", "+faststart", str(movie)],
@@ -330,14 +351,36 @@ def seconds(step):
     return min(max(8.0 + words * 0.42, 12.0), 22.0)
 
 
-def video(frames, steps, out, movie):
-    """The frames, each held for its step's time, as an H.264 video at 15 frames a second, [movie]."""
+def frame_listing(frames, steps, out):
     listing = out / "frames.txt"
     with listing.open("w") as entries:
         for frame, step in zip(frames, steps):
             entries.write(f"file '{frame.resolve()}'\nduration {seconds(step):.2f}\n")
         # the concat demuxer holds the last frame only if it is listed again
         entries.write(f"file '{frames[-1].resolve()}'\n")
+    return listing
+
+
+def still_frame_counts(steps):
+    """Measure the silent composer's actual holds, including how this ffmpeg treats its repeated final image."""
+    with tempfile.TemporaryDirectory() as tmp:
+        directory = Path(tmp)
+        markers = []
+        for i in range(len(steps)):
+            # A single RGB pixel identifies the step on every output frame of the reference timeline.
+            marker = directory / f"{i}.ppm"
+            marker.write_bytes(b"P6\n1 1\n255\n" + i.to_bytes(3, "big"))
+            markers.append(marker)
+        listing = frame_listing(markers, steps, directory)
+        rgb = subprocess.check_output(["ffmpeg", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
+                                       "-vf", f"fps={narration.FPS}", "-pix_fmt", "rgb24", "-f", "rawvideo", "-"])
+    counts = Counter(rgb[i:i + 3] for i in range(0, len(rgb), 3))
+    return [counts[i.to_bytes(3, "big")] for i in range(len(steps))]
+
+
+def video(frames, steps, out, movie):
+    """The frames, each held for its step's time, as an H.264 video at 15 frames a second, [movie]."""
+    listing = frame_listing(frames, steps, out)
     subprocess.run(
         [
             "ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
@@ -347,6 +390,10 @@ def video(frames, steps, out, movie):
         check=True,
     )
     listing.unlink()
+
+
+def slide_notes(step):
+    return "\n\n".join(step.get("paragraphs", [])) or step["caption"]
 
 
 def slides(frames, steps, out, path):
@@ -373,7 +420,7 @@ def slides(frames, steps, out, path):
         cards = [(frame, step) for frame, step in members if step.get("card")]
         shots = [(frame, step) for frame, step in members if step.get("image")]
         for frame, step in cards:
-            picture(frame, step["caption"])
+            picture(frame, slide_notes(step))
         if shots:
             overview = Image.new("RGB", (WIDTH, HEIGHT), BACKGROUND)
             draw = ImageDraw.Draw(overview)
@@ -387,9 +434,9 @@ def slides(frames, steps, out, path):
                 draw.text((x, y), f"{step['number']:02d}   {step['title']}", font=font(30), fill=TEXT)
             listing = out / "frames" / f"section-{len(deck.slides._sldIdLst):03d}.png"
             overview.save(listing)
-            picture(listing, "\n".join(f"{step['number']:02d} {step['title']}: {step['caption']}" for _, step in members))
+            picture(listing, "\n".join(f"{step['number']:02d} {step['title']}: {slide_notes(step)}" for _, step in members))
             for frame, step in shots if any(step.get("clip") for _, step in shots) else shots[:1]:
-                picture(frame, step["caption"], step.get("clip"))
+                picture(frame, slide_notes(step), step.get("clip"))
     deck.save(str(path))
 
 
@@ -469,7 +516,7 @@ def failed_checks(tours):
     return checks
 
 
-def failures_report(failures, checks, out):
+def failures_report(failures, checks, out, narration_warnings=()):
     """failures.md: the steps that failed or were not captured, and the checks that failed."""
     lines = ["# Failures", "",
              "The steps that failed or were not captured, newest run first, and what the video and the deck show "
@@ -486,6 +533,8 @@ def failures_report(failures, checks, out):
     lines += [f"- {section} ({run.name}): {one_line(failure)}" for section, run, failure in checks]
     if not checks:
         lines.append("None.")
+    if narration_warnings:
+        lines += ["", "## Narration", "", *[f"- {message}" for message in narration_warnings]]
     (out / "failures.md").write_text("\n".join(lines) + "\n")
 
 
@@ -493,12 +542,27 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--speed", type=float, default=SPEED, help="how fast clips play against the recording")
     parser.add_argument("--hold", type=float, default=HOLD, help="how long, in seconds, a clip's last frame stays")
+    parser.add_argument("--narration", type=Path, metavar="SCRIPT", help="read the tour's Markdown narration script")
+    parser.add_argument("--tts", choices=("say", "piper"), default="say", help="local speech engine")
+    parser.add_argument("--voice", default="Daniel", help="macOS say voice (default: Daniel)")
+    parser.add_argument("--piper-model", type=Path, help="local Piper ONNX voice model")
+    parser.add_argument("--narration-pad", type=float, default=0.6, metavar="SECONDS",
+                        help="minimum time after the narration before the next step (default: 0.6)")
+    parser.add_argument("--sentence-pause", type=float, default=narration.SENTENCE_PAUSE, metavar="SECONDS",
+                        help="extra silence between spoken sentences (default: 0.75)")
+    parser.add_argument("--burn-subtitles", action="store_true", help="also draw the subtitles in the video")
     parser.add_argument("--editor", choices=EDITORS,
                         help="the editor the runs toured, for runs whose tour.json does not name it")
     parser.add_argument("paths", nargs="+", metavar="directory", help="the run directories, then the out directory")
     arguments = parser.parse_args()
     if len(arguments.paths) < 2 or arguments.speed <= 0 or arguments.hold <= 0:
         sys.exit(__doc__)
+    if not math.isfinite(arguments.narration_pad) or arguments.narration_pad < 0:
+        parser.error("--narration-pad must be a finite, nonnegative number")
+    if not math.isfinite(arguments.sentence_pause) or arguments.sentence_pause < 0:
+        parser.error("--sentence-pause must be a finite, nonnegative number")
+    if arguments.burn_subtitles and not arguments.narration:
+        parser.error("--burn-subtitles requires --narration")
     runs, out = [Path(arg) for arg in arguments.paths[:-1]], Path(arguments.paths[-1])
     tours = []
     candidates = {}
@@ -534,6 +598,21 @@ def main():
             steps.append({**shown, "number": len(steps) + 1})
         else:
             left += 1
+    warnings = []
+    if arguments.narration:
+        try:
+            script = narration.read_script(arguments.narration)
+            speech = narration.speech_cache(arguments.tts, arguments.voice, arguments.piper_model, arguments.sentence_pause)
+        except (OSError, ValueError) as error:
+            parser.error(str(error))
+        paragraphs, warnings = narration.match(script, steps)
+        for step, spoken in zip(steps, paragraphs):
+            step["paragraphs"] = spoken
+        for message in warnings:
+            print(f"warning: {message}", file=sys.stderr)
+        if not steps:
+            failures_report(failures, failed_checks(tours), out, warnings)
+            parser.exit(1, f"No captured steps to narrate. See {out / 'failures.md'}\n")
     for directory in ("frames", "clips"):
         if (out / directory).exists():
             shutil.rmtree(out / directory)
@@ -541,6 +620,10 @@ def main():
     frames = []
     segments = []
     recorded = any(step.get("screen") for step in steps)
+    still_counts = still_frame_counts(steps) if arguments.narration and not recorded else []
+    cues = []
+    elapsed_frames = 0
+    burn = (WIDTH, SCREEN, font(39, "Medium")) if arguments.burn_subtitles else None
     for step in steps:
         path = out / "frames" / f"{step['number']:03d}.png"
         still = compose(step, len(steps))
@@ -549,14 +632,34 @@ def main():
         frames.append(path)
         if recorded:
             step["clip"] = clip(step, still, out, arguments.speed, arguments.hold)
+        if arguments.narration:
+            clip_path = step.get("clip")
+            if clip_path:
+                visual_seconds = round(length(clip_path) * narration.FPS) / narration.FPS
+            elif still_counts:
+                visual_seconds = still_counts[step["number"] - 1] / narration.FPS
+            else:
+                visual_seconds = seconds(step)
+            spoken = [speech.paragraph(text) for text in step["paragraphs"]]
+            segment = out / "clips" / f"{step['number']:03d}.mp4"
+            target = segment.with_suffix(".narrated.mp4") if clip_path else segment
+            cues.extend(narration.paragraph_cues(spoken, elapsed_frames / narration.FPS))
+            elapsed_frames += narration.render_segment(path, clip_path, visual_seconds, spoken,
+                                                       arguments.narration_pad, target, burn)
+            if clip_path:
+                target.replace(segment)
+            segments.append(segment)
+        elif recorded:
             segments.append(step["clip"] or held(step, still, out))
-    if recorded:
+    if recorded or arguments.narration:
         clips_video(segments, out, movie)
     else:
         video(frames, steps, out, movie)
+    if arguments.narration:
+        narration.write_subtitles(movie, cues)
     slides(frames, steps, out, deck)
     checks = failed_checks(tours)
-    failures_report(failures, checks, out)
+    failures_report(failures, checks, out, warnings)
     # of the written video: the clips' stretched and held lengths are not the steps' reading times
     total = length(movie)
     print(f"{len(steps)} steps, {total / 60:.1f} minutes; {len(failures)} failed steps, {left} steps left out, "
