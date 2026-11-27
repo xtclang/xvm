@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { showTestProgress } from '../progress';
 import { stopOnUnsafeFailure } from '../wait';
 import { selectedScenarioIds, sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
-import { cases } from './support';
+import { cases, progress } from './support';
 
 async function hostResults() {
     const root = path.resolve(__dirname, '../../../../lsp-server/build/test-results');
@@ -21,11 +21,6 @@ async function hostResults() {
         }));
         return { task, status: !suites.length ? 'not-run' : suites.some(suite => suite.failures || suite.errors || suite.skipped) ? 'failed-or-skipped' : 'passed', suites };
     }));
-}
-
-/** A line of the run's progress in the build's output, in the format the IntelliJ playbook prints. */
-function progress(line: string): void {
-    console.log(`[playbook] ${new Date().toTimeString().slice(0, 8)} ${line}`);
 }
 
 export async function run(): Promise<void> {

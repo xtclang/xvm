@@ -2,14 +2,17 @@ import type Mocha from 'mocha';
 import * as vscode from 'vscode';
 import { PLAYBOOK_WAIT_MS } from './wait';
 
-interface WaitStep { readonly token: symbol; readonly message?: string; readonly elapsed?: number }
+interface WaitStep { readonly token: symbol; readonly message?: string; readonly elapsed?: number; readonly bound?: string }
 const waits = new vscode.EventEmitter<WaitStep>();
 
-/** Describe bounded waits without hiding the case ID, counters or failure result. */
-export async function withTestWait<T>(message: string, action: () => Promise<T>): Promise<T> {
+/**
+ * Describe bounded waits without hiding the case ID, counters or failure result; [bound] says how long the wait may
+ * take, the playbook's bound by default.
+ */
+export async function withTestWait<T>(message: string, action: () => Promise<T>, bound = `${PLAYBOOK_WAIT_MS / 1000}s`): Promise<T> {
     const token = Symbol(message);
     const started = performance.now();
-    const report = () => waits.fire({ token, message, elapsed: Math.floor((performance.now() - started) / 1000) });
+    const report = () => waits.fire({ token, message, elapsed: Math.floor((performance.now() - started) / 1000), bound });
     report();
     const timer = setInterval(report, 1000);
     try { return await action(); }
@@ -46,7 +49,7 @@ export function showTestProgress(runner: Mocha.Runner, title: string, label: (te
         const active = [...activeWaits.values()].pop();
         const message = active?.message;
         if (message === undefined) { show(`${caption(current)} — running`, current.fullTitle()); return; }
-        const timing = `${active?.elapsed}s / ${PLAYBOOK_WAIT_MS / 1000}s`;
+        const timing = `${active?.elapsed}s / ${active?.bound}`;
         const detail = `${current.fullTitle()}\nWaiting: ${message} (${timing})`;
         const short = message.length > 58 ? `${message.slice(0, 55)}…` : message;
         show(`${current.title.split(':')[0]} — ${short} (${timing})`, detail);
