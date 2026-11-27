@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { normalizeLibraries } from '../../library-configuration';
 import { libraryOptions } from '../../library-settings';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
+import { TRY_MS } from '../uiWait';
 import { WorkbenchUi } from '../workbenchUi';
 import { catalog, sharedScenarioPath } from './shared';
 import { client, diagnostics, eventually, noErrors, playbook, targets } from './support';
@@ -30,19 +31,18 @@ export function librarySettingsCases(): void {
                 if (id === 'X266') {
                     const ui = await WorkbenchUi.connect();
                     const pick = async (label: string) => {
-                        await ui.page.locator('.quick-input-widget:visible .monaco-list-row').filter({ hasText: label }).first().click({ timeout: 10_000 });
+                        const row = ui.page.locator('.quick-input-widget:visible .monaco-list-row').filter({ hasText: label }).first();
+                        await ui.tries(`The picker's row ${label} takes the click`, () => row.click({ timeout: TRY_MS }));
                     };
                     const enter = async (value: string) => {
                         const widget = ui.page.locator('.quick-input-widget:visible');
                         // QuickPick and InputBox reuse the same input element. Wait for the prompt,
                         // then for the returned path row, before sending the next input.
-                        await widget.getByText('File URI or path relative to the single workspace folder')
-                            .waitFor({ state: 'visible', timeout: 10_000 });
+                        await ui.shows(widget.getByText('File URI or path relative to the single workspace folder'), "The path's prompt");
                         const input = widget.locator('input').first();
                         await input.fill(value);
                         await input.press('Enter');
-                        await widget.locator('.monaco-list-row').filter({ hasText: value }).first()
-                            .waitFor({ state: 'visible', timeout: 10_000 });
+                        await ui.shows(widget.locator('.monaco-list-row').filter({ hasText: value }).first(), `The path's row ${value}`);
                     };
                     try {
                         const cancelled = vscode.commands.executeCommand('xtc.configureCompilerLibraries');

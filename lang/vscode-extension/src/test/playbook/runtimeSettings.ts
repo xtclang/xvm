@@ -54,8 +54,8 @@ export function runtimeSettingsCases(): void {
                 const working = await status();
                 await settings.update('java.vmOptions', data.invalidOptions, vscode.ConfigurationTarget.Global);
                 await assert.rejects(async () => vscode.commands.executeCommand('xtc.restartServer'), /heap/);
-                await ui.page.locator('.notification-list-item').filter({ hasText: 'Invalid Ecstasy runtime/log settings' })
-                    .filter({ hasText: 'heap' }).waitFor({ state: 'visible', timeout: 5_000 });
+                await ui.shows(ui.page.locator('.notification-list-item').filter({ hasText: 'Invalid Ecstasy runtime/log settings' })
+                    .filter({ hasText: 'heap' }), 'The notification of the invalid heap');
                 assert.strictEqual((await status()).pid, working.pid);
                 await noErrors(document.uri);
             } else {
@@ -69,8 +69,8 @@ export function runtimeSettingsCases(): void {
                 assert.ok(archive.length < 6 * 1024 * 1024);
                 await settings.update('server.logs', { ...data.logs, totalSizeMb: 0 }, vscode.ConfigurationTarget.Global);
                 await assert.rejects(async () => vscode.commands.executeCommand('xtc.restartServer'), /retention/i);
-                await ui.page.locator('.notification-list-item').filter({ hasText: 'Invalid Ecstasy runtime/log settings' })
-                    .filter({ hasText: 'retention' }).waitFor({ state: 'visible', timeout: 5_000 });
+                await ui.shows(ui.page.locator('.notification-list-item').filter({ hasText: 'Invalid Ecstasy runtime/log settings' })
+                    .filter({ hasText: 'retention' }), 'The notification of the invalid retention');
                 assert.strictEqual((await status()).pid, applied.pid);
             }
             assert.strictEqual(document.getText(), data.source);
@@ -102,8 +102,8 @@ export function runtimeSettingsCases(): void {
                 await settings.update('java.vmOptions', data.startupFailureOptions, vscode.ConfigurationTarget.Global);
                 await assert.rejects(async () => vscode.commands.executeCommand('xtc.restartServer'),
                     /initialization|connection|start/i);
-                await ui.page.locator('.notification-list-item').filter({ hasText: 'Ecstasy Language Server could not start' })
-                    .waitFor({ state: 'visible', timeout: 5_000 });
+                await ui.shows(ui.page.locator('.notification-list-item').filter({ hasText: 'Ecstasy Language Server could not start' }),
+                    'The notification that the server could not start');
                 const failures = (await ui.page.locator('.notification-list-item').allTextContents())
                     .filter(text => /could not start|Server initialization failed|Pending response rejected|Connection to server got closed/.test(text));
                 assert.strictEqual(failures.length, 1, 'One actionable notification per failed launch');

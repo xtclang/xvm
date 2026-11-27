@@ -10,6 +10,24 @@ export const PLAYBOOK_HANG_MS = 3_600_000;
 /** How often a wait that goes on says what it waits for, and what is under way. */
 const REPORT_MS = 60_000;
 
+/** A line of the run's progress in the build's output, in the format the IntelliJ playbook prints. */
+export function progress(line: string): void {
+    console.log(`[playbook] ${new Date().toTimeString().slice(0, 8)} ${line}`);
+}
+
+/** The case that runs, which a wait's report names. */
+let running: string | undefined;
+
+/** Notes [id] as the case that runs, or with undefined that none does. */
+export function caseRuns(id: string | undefined): void {
+    running = id;
+}
+
+/** A wait's line of the run's progress, which names the case that runs. */
+export function waitReport(line: string): void {
+    progress(running === undefined ? line : `${running} ${line}`);
+}
+
 /**
  * A wait that did not end within its bound: the editor's operation may still be running, so the extension suite
  * starts no other test; the playbook lets the case end and restores the editor before its next case.

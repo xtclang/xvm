@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import { modelPath, workspaceModelPath } from '../../build-model';
 import { compilerBuildModels, refreshCompilerBuild } from '../../compiler-paths';
 import { updateCompilerConfiguration } from '../../lsp-client';
+import { TRY_MS } from '../uiWait';
 import { WorkbenchUi } from '../workbenchUi';
 import { catalog, sharedScenarioPath } from './shared';
 import { client, diagnostics, eventually, noErrors, playbook } from './support';
@@ -50,11 +51,11 @@ export function compilerImportCases(): void {
                 const pending = vscode.commands.executeCommand(command);
                 if (vscode.workspace.workspaceFolders!.length > 1) {
                     const picker = ui.page.locator('.quick-input-widget:visible');
-                    await picker.getByPlaceholder('Select workspace folder').waitFor({ state: 'visible', timeout: 10_000 });
-                    await picker.locator('.monaco-list-row')
-                        .filter({ has: ui.page.getByText(vscode.workspace.workspaceFolders![0].name, { exact: true }) })
-                        .click({ timeout: 5_000 });
-                    await picker.waitFor({ state: 'hidden', timeout: 10_000 });
+                    await ui.shows(picker.getByPlaceholder('Select workspace folder'), 'The folder picker');
+                    const row = picker.locator('.monaco-list-row')
+                        .filter({ has: ui.page.getByText(vscode.workspace.workspaceFolders![0].name, { exact: true }) });
+                    await ui.tries("The folder picker's row takes the click", () => row.click({ timeout: TRY_MS }));
+                    await ui.shows(picker, 'The folder picker', true);
                 }
                 return { pending };
             }
@@ -128,16 +129,16 @@ export function compilerImportCases(): void {
                     await noErrors(document.uri);
                     if (step.duplicate) {
                         await (await startImport('xtc.refreshCompilerBuild')).pending;
-                        await ui.page.locator('.notification-list-item').filter({ hasText: 'already running' }).waitFor({ state: 'visible' });
+                        await ui.shows(ui.page.locator('.notification-list-item').filter({ hasText: 'already running' }), 'The notification that the import runs');
                         assert.strictEqual(executions.size, 1, 'Duplicate request must not create another native task');
                     }
                     if (step.cancel) {
                         await vscode.commands.executeCommand('notifications.showList');
                         const notification = ui.page.locator('.notification-list-item').filter({ hasText: 'preparing generated inputs' });
                         const button = notification.getByRole('button', { name: 'Cancel', exact: true });
-                        await button.waitFor({ state: 'visible', timeout: 10_000 });
+                        await ui.shows(button, "The import's Cancel");
                         await ui.screenshot(`${id}-before-cancel`);
-                        await button.click({ timeout: 5_000 });
+                        await ui.tries("The import's Cancel takes the click", () => button.click({ timeout: TRY_MS }));
                     } else await fs.writeFile(path.join(control, `${operation}.release`), 'release\n');
                     await pending;
                     console.log(`[${operation}] Native import returned; checking accepted inputs`);

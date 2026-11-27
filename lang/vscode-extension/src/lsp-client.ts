@@ -75,6 +75,32 @@ export function pullsInFlight(): number {
     return pulling;
 }
 
+/**
+ * The client's code lens work: how many of its fetches and resolves of the lenses are under way, and when it last
+ * came or went, a request or the server's refresh of the lenses, which VS Code fetches only after a delay of its own.
+ * A test waits on it while VS Code is still due to draw a lens.
+ */
+const lenses: { inFlight: number; last?: number } = { inFlight: 0 };
+/** The watch of the server's refreshes of the lenses, and the client whose they are. */
+let lensRefreshes: { client: LanguageClient; watch: vscode.Disposable } | undefined;
+
+/** The client's code lens work, as [lenses] has it. */
+export function lensActivity(): { readonly inFlight: number; readonly last?: number } {
+    return { ...lenses };
+}
+
+/** [request], one of the client's code lens requests, counted as the client's lens work. */
+async function lensed<T>(request: () => vscode.ProviderResult<T>): Promise<T | null | undefined> {
+    lenses.inFlight++;
+    lenses.last = Date.now();
+    try {
+        return await request();
+    } finally {
+        lenses.inFlight--;
+        lenses.last = Date.now();
+    }
+}
+
 /** Whether the server's diagnostics are pulled, so that each report is for a known document version. */
 export function pullsDiagnostics(): boolean {
     return client?.initializeResult?.capabilities.diagnosticProvider !== undefined;
@@ -204,6 +230,18 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                 }
                 return report;
             },
+            provideCodeLenses: (document, token, next) => {
+                // the server's refresh, after which VS Code fetches the lenses again once its delay has passed
+                if (lensRefreshes?.client !== connection) {
+                    lensRefreshes?.watch.dispose();
+                    const watch = connection.getFeature('textDocument/codeLens').getProvider(document)?.onDidChangeCodeLensEmitter.event(() => {
+                        lenses.last = Date.now();
+                    });
+                    lensRefreshes = watch && { client: connection, watch };
+                }
+                return lensed(() => next(document, token));
+            },
+            resolveCodeLens: (lens, token, next) => lensed(() => next(lens, token)),
             provideInlayHints: (document, range, token, next) => {
                 const value = vscode.workspace.getConfiguration('xtc', document.uri).get<unknown>('inlayHints.enabled', true);
                 const enabled = typeof value === 'boolean' ? value : preferences.inlayHints;
