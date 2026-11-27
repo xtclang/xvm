@@ -7,7 +7,7 @@ import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type Diag
 import { RENAME_OVERTAKEN, RENAME_REFUSED } from '../../rename-proposal';
 import { focusTestEditor } from '../native-focus';
 import { withTestWait } from '../progress';
-import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
+import { mustStopPlaybook, PLAYBOOK_WAIT_MS, PlaybookCleanupFailure, waitFor, waitWhile } from '../wait';
 import * as fs from './disk';
 import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
 
@@ -48,8 +48,59 @@ export async function renameOrNone<T>(rename: T | Thenable<T>): Promise<T | unde
     }
 }
 
+/** A line of the run's progress in the build's output, in the format the IntelliJ playbook prints. */
+export function progress(line: string): void {
+    console.log(`[playbook] ${new Date().toTimeString().slice(0, 8)} ${line}`);
+}
+
+/** The case that runs, which a wait's report names. */
+let running: string | undefined;
+
 export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string, timeoutMs?: number): Promise<T> {
-    return withTestWait(message, () => waitFor(read, accept, message, timeoutMs));
+    return withTestWait(message, () => waitFor(read, accept, message, timeoutMs), `${(timeoutMs ?? PLAYBOOK_WAIT_MS) / 1000}s`);
+}
+
+/**
+ * Waits until [read]'s value satisfies [accept] while anything that could change it is under way, as [underWay] names
+ * it for each value read, and fails at once once the value is final: [waitWhile]'s way, which says every minute in the
+ * run's progress what it waits for.
+ */
+export async function settles<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string,
+    underWay: (value: T) => Promise<string[]> | string[]): Promise<T> {
+    return withTestWait(message, () => waitWhile(read, accept, message, underWay, line => progress(`${running ?? ''} ${line}`)),
+        'while under way');
+}
+
+/**
+ * What changes the files under [directory] as it comes, which [take] answers once, since it last did: VS Code's edits,
+ * opens, closes and saves of their documents, its moves, and the disk's events.
+ */
+export class FileChanges implements vscode.Disposable {
+    private seen: string[] = [];
+    private readonly subscriptions: vscode.Disposable[];
+
+    constructor(private readonly directory: string) {
+        const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(directory), '**'));
+        const noted = (what: string) => (uri: vscode.Uri) => {
+            if (uri.scheme === 'file' && uri.fsPath.startsWith(directory + path.sep)) this.seen.push(`${path.relative(directory, uri.fsPath)} ${what}`);
+        };
+        this.subscriptions = [watcher, watcher.onDidCreate(noted('made')), watcher.onDidChange(noted('written')), watcher.onDidDelete(noted('deleted')),
+            vscode.workspace.onDidChangeTextDocument(event => { if (event.contentChanges.length > 0) noted('edited')(event.document.uri); }),
+            vscode.workspace.onDidOpenTextDocument(document => noted('opened')(document.uri)),
+            vscode.workspace.onDidCloseTextDocument(document => noted('closed')(document.uri)),
+            vscode.workspace.onDidSaveTextDocument(document => noted('saved')(document.uri)),
+            vscode.workspace.onDidRenameFiles(event => event.files.forEach(file => noted('moved here')(file.newUri)))];
+    }
+
+    take(): string[] {
+        const seen = this.seen;
+        this.seen = [];
+        return seen;
+    }
+
+    dispose(): void {
+        this.subscriptions.forEach(subscription => subscription.dispose());
+    }
 }
 
 export async function loadFixtures(): Promise<void> {
@@ -383,6 +434,7 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
         assert.ok(root);
         const workspace = new Workspace(path.join(root, id));
         fs.forgetChanges();
+        running = id;
         try { await body(workspace, scenario.values); }
         catch (error) {
             // A timed-out command can still be mutating the disposable editor. The runner aborts;

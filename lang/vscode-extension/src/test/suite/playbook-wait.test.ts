@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import Mocha from 'mocha';
-import { mustStopPlaybook, PlaybookCleanupFailure, PlaybookTimeout, stopOnUnsafeFailure, waitFor, withPlaybookCleanup } from '../wait';
+import { mustStopPlaybook, PlaybookCleanupFailure, PlaybookFinal, PlaybookTimeout, stopOnUnsafeFailure, waitFor, waitWhile, withPlaybookCleanup } from '../wait';
 
 suite('Playbook timeout isolation', () => {
     test('condition timeout fails with its last observation', async () => {
@@ -33,6 +33,14 @@ suite('Playbook timeout isolation', () => {
             assert.strictEqual(failures, 1);
             assert.strictEqual(followingRan, false);
         }
+    });
+
+    test('a wait while something is under way fails at once once nothing is, and goes on while something is', async () => {
+        let looks = 0;
+        await assert.rejects(waitWhile(async () => ++looks, () => false, 'Files agree', () => [], () => undefined),
+            error => error instanceof PlaybookFinal && error.message.includes('final') && looks === 3);
+        looks = 0;
+        assert.strictEqual(await waitWhile(async () => ++looks, value => value === 10, 'Files agree', value => value < 10 ? ['an edit'] : [], () => undefined), 10);
     });
 
     test('cleanup runs after success or failure and preserves both failures when restoration fails', async () => {

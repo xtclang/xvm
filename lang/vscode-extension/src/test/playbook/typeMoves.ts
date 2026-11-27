@@ -4,9 +4,9 @@ import * as vscode from 'vscode';
 import { compilerSettingsLocation, compilerSourceModules } from '../../rename-proposal';
 import { SourceModule, sourceGraphKey } from '../../source-graph-configuration';
 import { focusTestWindow } from '../native-focus';
-import { PlaybookTimeout, withPlaybookCleanup } from '../wait';
+import { PlaybookFinal, withPlaybookCleanup } from '../wait';
 import { discovered } from './liveWorkspace';
-import { client, eventually, noErrors, outsideUsesMessage, playbook, symbols } from './support';
+import { client, eventually, FileChanges, noErrors, outsideUsesMessage, playbook, settles, symbols } from './support';
 
 export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172' | 'X173' | 'X174' | 'X175' | 'X176' | 'X216' | 'X217' | 'X218' | 'X219' | 'X335')[] = ['X161', 'X162', 'X163']): void {
     ids.forEach(id => playbook(id, async (workspace, data) => {
@@ -50,6 +50,8 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
             await vscode.window.showTextDocument(document, { preview: false });
             await refactoring.update('autoSave', false, vscode.ConfigurationTarget.Global);
         }
+        // what changes the case's files: the move, its Undo and Redo, and VS Code's events of them, which come after
+        const changes = new FileChanges(workspace.directory);
         await withPlaybookCleanup(async () => {
             const move = new vscode.WorkspaceEdit();
             for (const item of moves) move.renameFile(workspace.uri(item.from), workspace.uri(item.to), { overwrite: false });
@@ -69,12 +71,19 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
             }
 
             const verify = async (moved: boolean) => {
-                await eventually(async () => Promise.all(data.files.map(async file => {
+                // VS Code has made the move, its Undo or Redo, as it answers: the files agree once its events of them
+                // have come, and while they come, however long they take; once none comes, what they have is final
+                let read: string[] | undefined;
+                await settles(async () => Promise.all(data.files.map(async file => {
                     const uri = workspace.uri(moved ? file.destination : file.file);
                     const buffer = vscode.workspace.textDocuments.find(value => !value.isClosed && value.uri.toString() === uri.toString());
                     return buffer?.getText() ?? fs.readFile(uri.fsPath, 'utf8').catch(() => '');
                 })), texts => texts.every((text, index) => text === (moved ? data.files[index].expected : data.files[index].source)),
-                `Move ${moved ? 'applied' : 'undone'}: all sources and resources agree`);
+                `Move ${moved ? 'applied' : 'undone'}: all sources and resources agree`, texts => {
+                    const changed = read !== undefined && texts.some((text, index) => text !== read![index]);
+                    read = texts;
+                    return [...changes.take(), ...(changed ? ['the files read otherwise than at the last look'] : [])];
+                });
                 for (const file of data.files.filter(value => value.destination !== value.file)) {
                     assert.strictEqual(await fs.stat(workspace.uri(moved ? file.file : file.destination).fsPath).catch(() => null), null);
                 }
@@ -99,15 +108,15 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
                 await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                 await vscode.commands.executeCommand(action);
                 // TODO VSCODE: UP23 — VS Code undoes overlapping parent and child moves in forward order, which fails with
-                // "target already exists", so X218's Undo never restores them; fail that as the assertion the register
-                // records, not as a timeout, which stops the rest of the playbook
+                // "target already exists", so X218's Undo never restores them; fail that as the assertion the register records
                 await verify(moved).catch(error => {
-                    throw id === 'X218' && action === 'undo' && error instanceof PlaybookTimeout
+                    throw id === 'X218' && action === 'undo' && error instanceof PlaybookFinal
                         ? new assert.AssertionError({ message: `UP23: ${error.message}` })
                         : error;
                 });
             }
         }, async () => {
+            changes.dispose();
             if (explorer) await refactoring.update('autoSave', undefined, vscode.ConfigurationTarget.Global);
             // gives back the language client's own handler of the messages, which observing them took
             if ('outsideUses' in data) await vscode.commands.executeCommand('xtc.restartServer');
