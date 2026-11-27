@@ -9,7 +9,7 @@ import { updateCompilerConfiguration } from '../../lsp-client';
 import { cutAndPasteDirectories } from '../explorer-move';
 import { ExplorerMoveTrace } from '../explorer-move-trace';
 import { discovered } from './liveWorkspace';
-import { client, diagnostics, eventually, hover, label, noErrors, playbook, serviceStatus, symbols, targets, type Workspace } from './support';
+import { client, diagnostics, eventually, hover, label, noErrors, playbook, serviceStatus, settles, symbols, targets, type Workspace } from './support';
 
 /** The Gradle model [model] that an import of the case's build writes, with ${workspace} for the case's directory. */
 export function gradleModel(workspace: Workspace, model: unknown): string {
@@ -213,8 +213,29 @@ export function platformCases(): void {
                 await noErrors(document.uri);
                 for (const [action, expected] of [['undo', false], ['redo', true]] as const) {
                     await trace.command('workbench.files.action.focusFilesExplorer');
+                    const mark = trace.recorded;
                     await trace.command(action);
-                    await eventually(moved, values => values.every(value => value.old !== expected && value.new === expected), `${action} restores all paths`);
+                    // The Explorer answers Undo and Redo at once and moves the folders after, which has ended with its
+                    // didRenameFiles, after the folders are back on disk: in run-M6gUDp, Redo pressed as they were, 9 ms
+                    // before Undo's didRenameFiles, found nothing to redo. The wait goes on until the action has acted,
+                    // while VS Code's events of the move come and while the folders move, and fails once none does.
+                    const moves = data.sources.map(source => {
+                        const [from, to] = expected ? [source, `${data.destination}/${source}`] : [`${data.destination}/${source}`, source];
+                        return { oldUri: workspace.uri(from).toString(), newUri: workspace.uri(to).toString() };
+                    });
+                    let events = trace.recorded;
+                    let paths: string | undefined;
+                    await settles(async () => ({ renamed: trace.renamed(mark, moves), paths: await moved() }),
+                        state => state.renamed && state.paths.every(value => value.old !== expected && value.new === expected),
+                        `${action} restores all paths, as its didRenameFiles says`, state => {
+                            const now = JSON.stringify(state.paths);
+                            const happened = [...(trace.acted(mark) ? [] : [`VS Code's ${action}, which has answered and not yet acted`]),
+                                ...(trace.recorded > events ? ["VS Code's events of the move"] : []),
+                                ...(paths !== undefined && now !== paths ? ['the folders moved'] : [])];
+                            events = trace.recorded;
+                            paths = now;
+                            return happened;
+                        });
                     await noErrors(document.uri);
                 }
                 for (const file of data.files) {

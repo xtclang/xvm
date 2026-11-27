@@ -43,6 +43,26 @@ export class ExplorerMoveTrace {
         this.events.push({ milliseconds: performance.now() - this.started, event, data });
     }
 
+    /** How many events it has recorded: a mark, from which [renamed] reads. */
+    get recorded(): number {
+        return this.events.length;
+    }
+
+    /**
+     * Whether VS Code did anything that it recorded from [mark] on, but run or end a command or change the window's
+     * state: a file event or operation.
+     */
+    acted(mark: number): boolean {
+        return this.events.slice(mark).some(event => !event.event.startsWith('command-') && event.event !== 'window-state');
+    }
+
+    /** Whether a didRenameFiles that it recorded from [mark] on moved each of [moves], from its oldUri to its newUri. */
+    renamed(mark: number, moves: readonly { oldUri: string; newUri: string }[]): boolean {
+        const renames = this.events.slice(mark).filter(event => event.event === 'didRenameFiles')
+            .flatMap(event => event.data as { oldUri: string; newUri: string }[]);
+        return moves.every(move => renames.some(rename => rename.oldUri === move.oldUri && rename.newUri === move.newUri));
+    }
+
     async command<T = unknown>(id: string, ...args: unknown[]): Promise<T | undefined> {
         await focusTestWindow();
         this.record('command-start', { id, args });
