@@ -3,6 +3,7 @@ import * as fs from './disk';
 import * as path from 'node:path';
 import Mocha from 'mocha';
 import * as vscode from 'vscode';
+import { runHarness } from '../harness';
 import { showTestProgress } from '../progress';
 import { selectedScenarioIds, sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
 import { cases, knownFailures, progress } from './support';
@@ -26,6 +27,15 @@ export async function run(): Promise<void> {
     const directory = process.env.XTC_PLAYBOOK_REPORT_DIR;
     assert.ok(directory, 'Launch with npm run test:playbook or the Gradle playbook task');
     const selected = selectedScenarioIds(process.env.XTC_PLAYBOOK_CASES);
+    // the harness's own tests first: no case runs on a broken harness, which the run's results say, as the retention reads
+    await runHarness().catch(async (failure: unknown) => {
+        await fs.writeFile(path.join(directory, 'results.json'), JSON.stringify({
+            commit: process.env.XTC_COMMIT, vscode: vscode.version, finished: new Date().toISOString(), status: 'failed',
+            error: `The harness's tests failed, so no case ran: ${failure instanceof Error ? failure.message : String(failure)}`,
+        }, null, 2) + '\n');
+        throw failure;
+    });
+    progress("the harness's tests passed");
     const mocha = new Mocha({ ui: 'tdd', color: true, timeout: 90_000 });
     const ids = selected.map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
     mocha.grep(new RegExp(`(?:^| )(?:${ids}):`));

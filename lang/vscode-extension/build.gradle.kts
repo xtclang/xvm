@@ -331,7 +331,7 @@ val packageMarketplaceExtension =
 // needs `xvfb-run` (or a similar virtual display). The intent is that local
 // developers run it explicitly, and CI opt-in via xvfb if/when desired.
 val pruneTestReports =
-    listOf("compiler-playbook", "extension-tests", "project-lifecycle", "explorer-probe").map { report ->
+    listOf("compiler-playbook", "extension-tests", "project-lifecycle", "explorer-probe", "harness-tests").map { report ->
         tasks.register<PruneTestReportsTask>("prune${report.split('-').joinToString("") { it.replaceFirstChar(Char::uppercase) }}Reports") {
             group = "verification"
             description = "Retain five completed $report payloads, ten failed runs' and all compact results"
@@ -354,6 +354,21 @@ val testVscodeExtension =
         inputs.dir(layout.projectDirectory.dir("src/test"))
     }
 
+// Runs the harness's own tests alone, which check the playbook's and the tour's waits and case runner, not the
+// extension: testCompilerPlaybook runs them first, the extension suite (testVscodeExtension) does not, and neither
+// does check; this task is for a change of the harness only.
+val testPlaybookHarness =
+    tasks.register<NpmTask>("testPlaybookHarness") {
+        group = "verification"
+        description = "Run the VS Code playbook and tour harness's own tests"
+        dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyLicense, generateIcons)
+        args.set(listOf("run", "test:harness"))
+        finalizedBy(pruneTestReports)
+        // its own VS Code window, as the extension suite's: see testCompilerPlaybook
+        mustRunAfter(testVscodeExtension)
+        inputs.dir(layout.projectDirectory.dir("src/test"))
+    }
+
 // Runs the compiler playbook inside VS Code and the host/protocol checks referenced by it. With -PvscodeTour=true it
 // runs the tour instead, which records the extension's features for its video and checks them, on a project that
 // xtc init makes; -PvscodeTourSections=<ids> records only those sections, and -PvscodeTourHang=<seconds> shortens
@@ -363,10 +378,10 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
     group = "verification"
     description = "Run XdkAdapter playbook in VS Code, or with -PvscodeTour=true the tour"
     finalizedBy(pruneTestReports)
-    // the extension suite drives a VS Code window of its own on the same display, so the two must not overlap, as
-    // tasks of one project can with the configuration cache, even under --no-parallel: each would take the other's
-    // focus, and the tour's frames would show both
-    mustRunAfter(testVscodeExtension)
+    // the extension suite and the harness's tests drive a VS Code window of their own on the same display, so none of
+    // them may overlap, as tasks of one project can with the configuration cache, even under --no-parallel: each would
+    // take the other's focus, and the tour's frames would show both
+    mustRunAfter(testVscodeExtension, testPlaybookHarness)
     dependsOn(":lsp-server:prepareLibraryPlaybook")
     val selectedCases = providers.gradleProperty("compilerPlaybookCases")
     val multiRoot =

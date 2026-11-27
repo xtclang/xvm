@@ -26,9 +26,12 @@ async function main(): Promise<void> {
         await (await import('./runTour.js')).runTour(extensionRoot, args.filter(argument => argument !== '--tour'));
         return;
     }
-    if (args.some(argument => !['--settings-persistence', '--playbook', '--multi-root', '--cancel-ui', '--host-checks', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases=') && !argument.startsWith('--theme=') && argument !== '--lexical-baseline')) {
-        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root, --cancel-ui, --host-checks, --theme=NAME and --lexical-baseline, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move, or --settings-persistence');
+    if (args.some(argument => !['--settings-persistence', '--playbook', '--multi-root', '--cancel-ui', '--host-checks', '--explorer-move-probe', '--refresh-during-move', '--harness'].includes(argument) && !argument.startsWith('--cases=') && !argument.startsWith('--theme=') && argument !== '--lexical-baseline')) {
+        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root, --cancel-ui, --host-checks, --theme=NAME and --lexical-baseline, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move, or --settings-persistence, or --harness');
     }
+    // the harness's own tests alone, which the playbook and the tour run first
+    const harness = args.includes('--harness');
+    if (harness && args.length !== 1) throw new Error('--harness runs independently');
     const explorerProbe = args.includes('--explorer-move-probe');
     const refreshDuringMove = args.includes('--refresh-during-move');
     if (refreshDuringMove && !explorerProbe) throw new Error('--refresh-during-move requires --explorer-move-probe');
@@ -63,10 +66,10 @@ async function main(): Promise<void> {
     if (lexicalBaseline && (!playbook || selected.length !== 1 || selected[0] !== 'X277')) {
         throw new Error('--lexical-baseline requires --playbook --cases=X277');
     }
-    const extensionTestsPath = path.resolve(__dirname, persistence ? 'settings-persistence' : explorerProbe ? 'explorer-probe' : playbook ? 'playbook' : 'suite', 'index');
+    const extensionTestsPath = path.resolve(__dirname, persistence ? 'settings-persistence' : explorerProbe ? 'explorer-probe' : playbook ? 'playbook' : harness ? 'harness' : 'suite', 'index');
     const { version, executable } = await testVSCodeBuild(extensionRoot);
     console.log(`[vscode-test] Running on VS Code ${version} (${executable})`);
-    const reports = path.join(extensionRoot, 'build', 'reports', explorerProbe ? 'explorer-probe' : playbook ? 'compiler-playbook' : 'extension-tests');
+    const reports = path.join(extensionRoot, 'build', 'reports', explorerProbe ? 'explorer-probe' : playbook ? 'compiler-playbook' : harness ? 'harness-tests' : 'extension-tests');
     await fs.mkdir(reports, { recursive: true });
     const runDirectory = await fs.mkdtemp(path.join(reports, 'run-'));
     const extensionDevelopmentPath = explorerProbe ? path.join(runDirectory, 'empty-extension') : extensionRoot;
