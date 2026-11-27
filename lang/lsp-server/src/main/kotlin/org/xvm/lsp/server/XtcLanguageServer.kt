@@ -500,7 +500,8 @@ class XtcLanguageServer internal constructor(
             xdk.onReplacedLibraries {
                 CompletableFuture.runAsync {
                     synchronized(connectedClient) {
-                        val params = ReplacedLibrariesParams(xdk.replacedLibraries().sorted(), xdk.replacedFolders())
+                        val folders = xdk.gradleFolders()
+                        val params = ReplacedLibrariesParams(xdk.replacedLibraries().sorted(), folders.keys.toList(), folders)
                         (this.client as? XtcClientProtocol)?.replacedLibraries(params)
                     }
                 }
@@ -884,6 +885,7 @@ class XtcLanguageServer internal constructor(
                 },
                 evaluated?.binaries.orEmpty(),
                 composite = explicit == null && model != null,
+                xdks = if (explicit == null && model != null) evaluated?.xdks.orEmpty() else emptyMap(),
             )
         val replacement = inputs.copy(binaries = libraries.resolve(inputs.binaries))
         val automatic = model == null && explicit == null && CompilerConfiguration.automatic(raw)
@@ -1496,6 +1498,8 @@ class XtcLanguageServer internal constructor(
                 // the bundled libraries that the workspace's own modules replace, as the XVM repository's replace them all
                 "replacedLibraries" to (adapter as? XdkAdapter)?.replacedLibraries().orEmpty().sorted(),
                 "replacedFolders" to (adapter as? XdkAdapter)?.replacedFolders().orEmpty(),
+                // the folders that build and run with Gradle, as the server builds and runs only with the bundled XDK, and why
+                "gradleFolders" to (adapter as? XdkAdapter)?.gradleFolders().orEmpty(),
                 // the Gradle project of each source module, which the client runs its tasks in, from the build model
                 "gradleProjects" to gradleProjects.get().toSortedMap(),
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),

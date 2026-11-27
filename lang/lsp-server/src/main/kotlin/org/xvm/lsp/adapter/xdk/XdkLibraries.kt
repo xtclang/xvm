@@ -40,7 +40,7 @@ internal object XdkLibraries {
                         FileStructure(bytes.inputStream()).module
                     }
                 repository.storeModule(module)
-                module.name to HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+                module.name to revision(bytes)
             }
         for (module in listOf("ecstasy.xtclang.org", "mack.xtclang.org", "_native.xtclang.org")) {
             checkNotNull(repository.loadModule(module)) { "Bundled XDK is missing $module" }
@@ -60,13 +60,58 @@ internal object XdkLibraries {
     }
 
     /** One revision for the whole bundle: equal exactly when every bundled module is byte for byte the same. */
-    internal val fingerprint: String by lazy {
-        val revisions =
-            bundle.revisions.entries
-                .sortedBy { it.key }
-                .joinToString("\n") { (name, revision) -> "$name=$revision" }
-        HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(revisions.toByteArray()))
+    internal val fingerprint: String by lazy { combined(bundle.revisions) }
+
+    /**
+     * The version of the bundled XDK, which is the server's own, as the server is built with the libraries it bundles;
+     * null where the server's build did not say.
+     */
+    internal val version: String? by lazy {
+        val info = XdkLibraries::class.java.getResourceAsStream("/lsp-version.properties") ?: return@lazy null
+        info.use { Properties().apply { load(it) } }.getProperty("lsp.version")
     }
+
+    /**
+     * The revisions of the bundled modules' files, as [revision] has each: read from the bundle's files alone, without
+     * the modules in them, which a comparison with a Gradle build's XDK needs no more of.
+     */
+    internal val revisions: Set<String> by lazy {
+        immutableSet(
+            packagedResources.map { name ->
+                resource(name).use { revision(it.readBytes()) }
+            },
+        )
+    }
+
+    /**
+     * The revision of the javatools jar that the server bundles, its compiler and runtime, as its build recorded it: over
+     * the jar's files, with its build information taken without the commit and branch it was built at, which change with
+     * every commit, as the XTC plugin's export gives a Gradle build's XDK's.
+     */
+    internal val javatools: String? by lazy {
+        resource("modules.properties").use { Properties().apply { load(it) } }.getProperty("javatools")?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Whether a Gradle build's XDK, whose module files have the SHA-256 [modules] and whose `javatools.jar` has the
+     * revision [javatools], is the bundled one: the same module files, byte for byte, and the same compiler and runtime,
+     * which a version cannot tell, as every build of a snapshot has the same. A module file or a javatools outside the
+     * bundle makes it another, whatever the modules' names.
+     */
+    internal fun bundles(
+        modules: Collection<String>,
+        javatools: String?,
+    ): Boolean = this.javatools != null && javatools == this.javatools && modules.toSet() == revisions
+
+    /** The SHA-256 of a module's file, [bytes], in hex: the module's revision. */
+    private fun revision(bytes: ByteArray): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+
+    /** One revision for the modules whose [revisions] these are, by module name, in name order. */
+    private fun combined(revisions: Map<String, String>): String =
+        revisions.entries
+            .sortedBy { it.key }
+            .joinToString("\n") { (name, revision) -> "$name=$revision" }
+            .let { HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(it.toByteArray())) }
 
     /**
      * A directory with the bundled libraries' files, for a launcher in a process of its own, such as `xtc test`'s for

@@ -1,4 +1,7 @@
+import java.security.MessageDigest
 import java.time.Instant
+import java.util.HexFormat
+import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
@@ -221,11 +224,58 @@ val copyNativeLibToResources =
     }
 
 val compilerModuleFiles = compilerModules.asFileTree.matching { include("**/*.xtc") }
+
+// The javatools jar that the server bundles, its compiler and runtime, as the XDK distribution has it as javatools.jar
+val bundledJavatools =
+    configurations.runtimeClasspath
+        .get()
+        .incoming
+        .artifactView {
+            componentFilter { id ->
+                (id is ModuleComponentIdentifier && id.group == "org.xtclang" && id.module == "javatools") ||
+                    (id is ProjectComponentIdentifier && id.projectName == "javatools")
+            }
+        }.files
 val compilerModuleIndex =
     tasks.register<WriteProperties>("compilerModuleIndex") {
         destinationFile.set(layout.buildDirectory.file("generated/compiler/modules.properties"))
         inputs.files(compilerModuleFiles).withPathSensitivity(PathSensitivity.NONE)
+        inputs.files(bundledJavatools).withPathSensitivity(PathSensitivity.NONE)
         property("modules", compilerModuleFiles.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
+        // its revision, which a Gradle build's XDK must have for the server to take it for the bundled one, as the XTC
+        // plugin's export gives a distribution's javatools.jar (XtcLspSourceSetTask.javatoolsRevision): the SHA-256 of a
+        // line <name>=<SHA-256> for each file in it, in name order, with build-info.properties taken without its blank
+        // and git. lines, which name the commit and branch it was built at and change with every commit
+        property(
+            "javatools",
+            bundledJavatools.elements.map { files ->
+                fun sha256(bytes: ByteArray) = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+                ZipFile(files.single().asFile).use { jar ->
+                    jar
+                        .entries()
+                        .asSequence()
+                        .filterNot { it.isDirectory }
+                        .associate { entry ->
+                            val bytes = jar.getInputStream(entry).use { it.readBytes() }
+                            entry.name to
+                                sha256(
+                                    if (entry.name == "build-info.properties") {
+                                        String(bytes, Charsets.ISO_8859_1)
+                                            .lines()
+                                            .filter { it.isNotBlank() && !it.startsWith("git.") }
+                                            .joinToString("\n")
+                                            .toByteArray(Charsets.ISO_8859_1)
+                                    } else {
+                                        bytes
+                                    },
+                                )
+                        }.toSortedMap()
+                        .entries
+                        .joinToString("") { (name, revision) -> "$name=$revision\n" }
+                        .let { sha256(it.toByteArray()) }
+                }
+            },
+        )
     }
 
 val compilerSourceIndex =

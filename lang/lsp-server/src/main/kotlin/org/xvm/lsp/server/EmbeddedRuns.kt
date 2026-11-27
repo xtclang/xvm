@@ -77,7 +77,9 @@ import kotlin.time.Duration.Companion.seconds
  * takes the method and arguments of its `xtcRun` where the run gives none, and runs with the JVM options of `xtcRun`,
  * or of `xtcTest` for a run of tests, but for those that [JvmOptions] leaves out; the run's output says, ahead of the
  * program's, which it took and which it left out, which options hold a relative path, and what the model's export
- * could not read. The build's XDK version never applies: the server builds and runs with its own.
+ * could not read. The server builds and runs only with its own XDK: a module whose Gradle build compiles it with
+ * another one, as the model names it, has no embedded build, run or debug session, which [XdkAdapter.buildAsync]
+ * refuses, and its workspace folder builds and runs with Gradle ([XdkAdapter.gradleFolders]).
  */
 internal class EmbeddedRuns(
     private val adapter: Adapter,

@@ -160,6 +160,19 @@ class XdkAdapter
                 discovery.get().folders.filter { folder -> built.any { XdkLibraryReplacement.folderOf(it, listOf(folder)) != null } }
             }.map { it.toURI().toString() }
 
+        /**
+         * The workspace folders that hold a module the server does not build or run ([XdkProject.gradleOnly]), by file URI,
+         * each with why, as the editors say it after the folder's name ([XdkProject.noEmbedded]).
+         */
+        internal fun gradleFolders(): Map<String, String> =
+            synchronized(lifecycle) {
+                val graph = project
+                discovery.get().folders.mapNotNull { folder ->
+                    val held = graph.modules.values.filter { XdkLibraryReplacement.folderOf(it, listOf(folder)) != null }
+                    graph.noEmbedded(held.map { it.name })?.let { folder.toURI().toString() to it.reason }
+                }
+            }.toMap()
+
         /** Called each time [replacedLibraries] changes, under the adapter's lock, so it must not block. */
         @Volatile
         private var replacedLibrariesChanged: () -> Unit = {}
@@ -229,6 +242,7 @@ class XdkAdapter
             discovery.updateAndGet {
                 it.copy(folders = workspaceFolders.map { path -> File(path).canonicalFile }.distinct())
             }
+            gradleFoldersMoved()
             refreshDiscoveredSources()
             progressReporter?.invoke("Compiler source graph discovered", 100)
         }
@@ -388,6 +402,15 @@ class XdkAdapter
                         ).distinct(),
                 )
             }
+            gradleFoldersMoved()
+        }
+
+        /**
+         * Tells the listener of [replacedLibraries] that the folders changed while a module builds and runs with Gradle,
+         * as [gradleFolders] then changes: a build model applied at initialize comes before the workspace's folders.
+         */
+        private fun gradleFoldersMoved() {
+            synchronized(lifecycle) { if (project.gradleOnly.isNotEmpty()) replacedLibrariesChanged() }
         }
 
         override val readOnlyDocumentSchemes = setOf(XdkLibrarySources.SCHEME)
@@ -465,7 +488,7 @@ class XdkAdapter
          * source modules of the workspace folder [folder] and their dependencies, or every source module without
          * one, into the embedded build directory of the owning workspace folder. Shares the compiler worker with
          * editor analysis, so it never runs concurrently with another compilation. Refused when a module it builds
-         * is built against a replaced library ([XdkLibraryReplacement]).
+         * is built against a replaced library ([XdkLibraryReplacement]) or with another XDK ([XdkProject.gradleOnly]).
          */
         fun buildAsync(
             target: String?,
@@ -498,8 +521,16 @@ class XdkAdapter
 
                         else -> graph.buildOrder()
                     }
-                if (order.any { it.name in graph.onReplaced }) {
-                    return CompletableFuture.failedFuture(IllegalStateException(XdkLibraryReplacement.NO_EMBEDDED_RUNS))
+                // the reason of what was asked for, the module or the folder's modules, as the editors give a folder's
+                val asked =
+                    module?.let { listOf(it.name) }
+                        ?: within?.let { folder ->
+                            graph.modules.values
+                                .filter { XdkLibraryReplacement.folderOf(it, listOf(folder)) != null }
+                                .map { it.name }
+                        }
+                graph.noEmbedded(asked ?: order.map { it.name })?.let { refused ->
+                    return CompletableFuture.failedFuture(IllegalStateException(refused.refusal))
                 }
                 val output = within ?: buildFolder(module ?: order.firstOrNull())
                 val scope = module?.uri ?: output.toURI().toString()
@@ -1658,7 +1689,7 @@ class XdkAdapter
                             replacement.buildOrder(request.scope).any { it.name in changed } ||
                             request.overlays.keys.any { project.scope(it) != replacement.scope(it) }
                     }.mapTo(linkedSetOf()) { it.scope }
-            val replaced = project.replaced != replacement.replaced || project.onReplaced != replacement.onReplaced
+            val replaced = project.replaced != replacement.replaced || project.gradleOnly != replacement.gradleOnly
             project = replacement
             dependencies = artifacts
             if (replaced) replacedLibrariesChanged()
@@ -1731,7 +1762,7 @@ class XdkAdapter
             inputs: XdkBuildModel.Inputs,
             automatic: Boolean = false,
         ): Set<String> {
-            val replacement = XdkProject(inputs.modules)
+            val replacement = XdkProject(inputs.modules, inputs.xdks)
             val artifacts = XdkDependencies(inputs.binaries)
             val (retired, probes) =
                 synchronized(lifecycle) {

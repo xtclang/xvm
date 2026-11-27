@@ -16,6 +16,7 @@ import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
+import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkRunSettings
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
@@ -231,6 +232,98 @@ class XdkBuildModelTest {
             "build model: test of one is malformed, and left out",
             "build model: the export of one could not read module Other's moduleArgs: it has no value",
         )
+    }
+
+    @Test
+    fun `a module whose project builds with another XDK than the bundled one has it, and one without an XDK keeps to the bundled one`() {
+        fun lib(project: String) = directory.resolve("$project/build/xtc/xdk/lib").toFile()
+        val json = XdkLibraries.revisions.first()
+        val inputs =
+            model(
+                entry("same", "main", listOf(source("same/Same.x", "module Same {}"))).with(
+                    mapOf("xdk" to CompilerTestSupport.xdk(lib("same"))),
+                ),
+                entry("same", "test", listOf(source("same/test/SameTest.x", "module SameTest {}")))
+                    .with(mapOf("xdk" to CompilerTestSupport.xdk(lib("same")))),
+                // another version, with another build of one module
+                entry("other", "main", listOf(source("other/Other.x", "module Other {}"))).with(
+                    mapOf("xdk" to CompilerTestSupport.xdk(lib("other"), "9.9.9", XdkLibraries.revisions - json + "0".repeat(64))),
+                ),
+                // a snapshot of the bundled version that is another build of it: its modules are the bundle's, its javatools not
+                entry("snapshot", "main", listOf(source("snapshot/Snapshot.x", "module Snapshot {}"))).with(
+                    mapOf("xdk" to CompilerTestSupport.xdk(lib("snapshot"), javatools = "1".repeat(64))),
+                ),
+                // one that the build tree makes, which the export neither builds nor reads, whatever an earlier build left
+                entry("composite", "main", listOf(source("composite/Composite.x", "module Composite {}"))).with(
+                    mapOf(
+                        "xdk" to
+                            mapOf(
+                                "version" to XdkLibraries.version,
+                                "libraries" to lib("composite").toURI().toString(),
+                                "project" to ":xdk",
+                            ),
+                    ),
+                ),
+                entry("unfetched", "main", listOf(source("unfetched/Unfetched.x", "module Unfetched {}"))).with(
+                    mapOf("xdk" to mapOf("version" to "9.9.9", "problem" to "the import could not fetch its distribution")),
+                ),
+                entry("malformed", "main", listOf(source("malformed/Malformed.x", "module Malformed {}"))).with(mapOf("xdk" to "9.9.9")),
+                // a model from a plugin that does not write it, or of a project without an XDK dependency
+                entry("old", "main", listOf(source("old/Old.x", "module Old {}"))),
+            ).resolve()
+        assertThat(inputs.modules.map { it.name }).hasSize(8)
+        assertThat(inputs.xdks.keys).containsExactlyInAnyOrder("Other", "Snapshot", "Composite", "Unfetched", "Malformed")
+        val reasons = inputs.xdks.mapValues { (name, xdk) -> xdk.noEmbedded(name).reason }
+        val against = "the bundled XDK ${XdkLibraries.version}"
+        val unknown = "which the language server cannot compare with $against"
+        assertThat(reasons.getValue("Other")).isEqualTo("builds with XDK 9.9.9, not $against")
+        assertThat(reasons.getValue("Snapshot")).isEqualTo("builds with another build of XDK ${XdkLibraries.version} than the bundled one")
+        assertThat(
+            reasons.getValue("Composite"),
+        ).isEqualTo("builds with XDK ${XdkLibraries.version} that the build's own project :xdk makes, $unknown")
+        assertThat(
+            reasons.getValue("Unfetched"),
+        ).isEqualTo("builds with XDK 9.9.9, $unknown, as the import could not fetch its distribution")
+        assertThat(reasons.getValue("Malformed")).isEqualTo("builds with an XDK, $unknown, as the Gradle model does not say what it holds")
+        assertThat(
+            inputs.xdks
+                .getValue("Other")
+                .noEmbedded("Other")
+                .refusal,
+        ).startsWith("The module Other builds with XDK 9.9.9, not $against")
+    }
+
+    @Test
+    fun `a folder whose module depends on another folder's module on another XDK says so, though its own build has the bundled one`() {
+        val app = source("foreign/App.x", "module App {}")
+        val tool = source("consumer/Tool.x", "module Tool { package app import App; }")
+        val foreign = directory.resolve("foreign").toFile()
+        val consumer = directory.resolve("consumer").toFile()
+        val inputs =
+            model(
+                entry("foreign", "main", listOf(app)).with(
+                    mapOf("xdk" to CompilerTestSupport.xdk(foreign.resolve("build/xtc/xdk/lib"), "9.9.9", listOf("0".repeat(64)))),
+                ),
+                entry("consumer", "main", listOf(tool), dependencies = listOf("foreign"))
+                    .with(mapOf("xdk" to CompilerTestSupport.xdk(consumer.resolve("build/xtc/xdk/lib")))),
+            ).resolve()
+        assertThat(inputs.xdks.keys).containsExactly("App")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(foreign.path, consumer.path))
+            adapter.replaceBuildInputs(inputs)
+            val reason = "builds with XDK 9.9.9, not the bundled XDK ${XdkLibraries.version}"
+            assertThat(adapter.gradleFolders()).isEqualTo(
+                mapOf(foreign.toURI().toString() to reason, consumer.toURI().toString() to "depends on the module App, which $reason"),
+            )
+            // a build of the module, or of its folder, says so too, as the editors do
+            for (refused in listOf(
+                { adapter.buildAsync("Tool", false) },
+                { adapter.buildAsync(null, false, folder = consumer.toURI().toString()) },
+            )) {
+                assertThatThrownBy { refused().get() }.hasMessageContaining("The module Tool depends on the module App, which $reason")
+            }
+            assertThatThrownBy { adapter.buildAsync("App", false).get() }.hasMessageContaining("The module App $reason")
+        }
     }
 
     @Test

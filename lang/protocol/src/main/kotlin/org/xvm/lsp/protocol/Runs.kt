@@ -66,12 +66,17 @@ data class RunExitedParams(
 )
 
 /**
- * `xtc/replacedLibraries` parameters: the bundled libraries that the workspace's own modules replace, by name, and the
- * workspace folders, as URIs, whose modules are built against them, which then build and run with Gradle.
+ * `xtc/replacedLibraries` parameters: the bundled libraries that the workspace's own modules replace, by name; the
+ * workspace [folders], as URIs, whose modules the server does not build or run, which then build and run with Gradle;
+ * and, by folder URI, why, as the editors say it after the folder's name, its [reasons]: the folder builds with another
+ * XDK than the bundled one, which it names, as in `builds with XDK 0.5.0, not the bundled XDK 0.4.4`, or replaces
+ * bundled libraries with its own modules. A folder without a reason, as from an older server, is one whose modules are
+ * built against the replaced [libraries].
  */
 data class ReplacedLibrariesParams(
     val libraries: List<String> = emptyList(),
     val folders: List<String> = emptyList(),
+    val reasons: Map<String, String> = emptyMap(),
 )
 
 /** `xtc/gradleProjects` parameters: the Gradle project that owns each source module, by module name, as its path in the build tree. */

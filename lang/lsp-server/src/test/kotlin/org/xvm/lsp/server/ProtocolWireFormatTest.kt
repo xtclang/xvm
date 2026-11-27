@@ -48,7 +48,8 @@ import org.xvm.lsp.protocol.TestSelector
  * classes (EmbeddedRuns.kt, DebugSessions.kt, RenameProposal.kt, XdkBuild.kt, XdkTests.kt, and dap-server's DebugRuns.kt
  * and TestEvent.kt), serialized with lsp4j's Gson as the server's connection writes them. Each value here is the same
  * value made from the protocol's types the way the server makes it now: a build's modules and diagnostics and a
- * module's tests through ProtocolConversions.
+ * module's tests through ProtocolConversions. Since the capture, ReplacedLibrariesParams has gained `reasons`, which
+ * its captured cases now write as the empty map they have, beside a case of its own; the fields it had are as captured.
  */
 class ProtocolWireFormatTest {
     private val gson = MessageJsonHandler(emptyMap()).gson
@@ -157,6 +158,12 @@ class ProtocolWireFormatTest {
             "RunInputParams.end" to RunInputParams("r1", end = true),
             "ReplacedLibrariesParams" to ReplacedLibrariesParams(listOf("json.xtclang.org"), listOf("file:///w/")),
             "ReplacedLibrariesParams.empty" to ReplacedLibrariesParams(),
+            "ReplacedLibrariesParams.reasons" to
+                ReplacedLibrariesParams(
+                    emptyList(),
+                    listOf("file:///v/"),
+                    mapOf("file:///v/" to "builds with XDK 0.5.0, not the bundled XDK 0.4.4"),
+                ),
             "GradleProjectsParams" to GradleProjectsParams(mapOf("app.examples.org" to ":app", "lib.examples.org" to ":lib")),
             "RunOutputParams" to RunOutputParams("r1", "out\n"),
             "TestEventParams" to TestEventParams("r1", event),
