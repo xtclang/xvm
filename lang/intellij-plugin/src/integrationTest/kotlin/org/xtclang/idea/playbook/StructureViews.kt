@@ -8,6 +8,7 @@ import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.ui.components.UiComponent
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.toolwindows.structureToolWindow
+import com.intellij.driver.sdk.ui.components.elements.JTreeUiComponent
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
@@ -54,17 +55,18 @@ fun Driver.structure(
     //  the server's start outlasted those five on a loaded machine (a TimeoutException in JTreeTextFixture.expandAll,
     //  three times on 2026-11-26); waited for as the tour's waits do, which say so every minute and end once nothing that
     //  could make the Structure view show them is in progress
-    val window = ui.structureToolWindow()
-    val tree = window.tree()
-    var showing = false
+    var structure: JTreeUiComponent? = null
     var rows = emptyList<String>()
     var asked = TimeSource.Monotonic.markNow()
     Quiescence.stuck = null
     val contains =
         withinOrFail(HANG_LIMIT, "Structure contains $include and excludes $exclude") {
             // looked for until they show, and not again: each look writes a line of the driver's log
-            showing = showing || (shows(window) && shows(tree))
-            if (!showing) return@withinOrFail false
+            if (structure == null) {
+                val window = ui.structureToolWindow(structureWindow())
+                structure = window.tree().takeIf { shows(window) && shows(it) }
+            }
+            val tree = structure ?: return@withinOrFail false
             // the driver gives a tree's expansion a few seconds of its own, which a loaded machine can exceed; expanding
             // again is harmless, so its timeout means only that the rows are not all there yet, and the hang bound ends a
             // tree that never expands; nor does a tree whose nodes still load expand yet
@@ -96,6 +98,28 @@ fun Driver.structure(
             shown
         }
     check(contains) { "The Structure view did not show $include without $exclude: it shows $rows; ${Quiescence.stuck}" }
+}
+
+/**
+ * Where the driver finds the Structure tool window: its decorator, by the name it has for accessibility, its title, or else
+ * its stripe title, or else its ID, and " Tool Window" (InternalDecoratorImpl.AccessibleInternalDecorator). The driver's
+ * own structureToolWindow() takes "Logical" and "Physical" too, which can be the Project window's: X1 once read the
+ * Project view's tree, the JDK's classes, as the Structure view's (run-12107724608578254908).
+ */
+private fun Driver.structureWindow(): String {
+    val window = cast(getToolWindow("Structure"), TitledToolWindow::class)
+    val name = withContext(OnDispatcher.EDT) { window.getTitle()?.ifEmpty { null } ?: window.getStripeTitle().ifEmpty { window.getId() } }
+    return "//div[@class='InternalDecoratorImpl' and @accessiblename='$name Tool Window']"
+}
+
+/** A tool window, by the names its decorator takes. */
+@Remote("com.intellij.openapi.wm.ToolWindow")
+interface TitledToolWindow {
+    fun getTitle(): String?
+
+    fun getStripeTitle(): String
+
+    fun getId(): String
 }
 
 /** Whether [component] shows: one that the driver finds more than once, which present() fails on, does not yet. */
