@@ -57,11 +57,32 @@ export async function launch(id: string, ...args: unknown[]): Promise<void> {
  */
 export async function open(file: string, text?: string, delta = 0, occurrence = 0): Promise<vscode.TextEditor> {
     if (input && vscode.window.activeTextEditor?.document.uri.fsPath !== file && !await ignored(file)) {
-        // the editor Quick Open makes active, whichever file it is, waited for as the tour's waits are
+        const ui = input;
+        const name = path.basename(file);
         const before = vscode.window.activeTextEditor;
-        await input.quickOpen(path.basename(file));
-        await input.waiter(`Quick Open opens ${path.basename(file)}`,
-            () => vscode.window.activeTextEditor !== undefined && vscode.window.activeTextEditor !== before);
+        // the editor Quick Open makes active, of a file of the name, whichever it is, waited for as the tour's waits are;
+        // and its tab, which the window makes active as it starts to open the file, before the extension host hears of it
+        const opened = () => {
+            const now = vscode.window.activeTextEditor;
+            return now !== undefined && now !== before && path.basename(now.document.uri.fsPath) === name;
+        };
+        const opening = async () => {
+            const tab = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+            return (tab instanceof vscode.TabInputText && path.basename(tab.uri.fsPath) === name) || await ui.activeTab() === name;
+        };
+        await ui.quickOpen(name);
+        // again until it takes, as a user would open it again: a Quick Open that opened nothing, as one did in the
+        // recording of 2026-11-26 (run-RAgfZn), leaves no tab of the file once its box has closed, at two looks in a row
+        let unopened = 0;
+        await ui.waiter(`Quick Open opens ${name}`, async () => {
+            if (opened()) return true;
+            unopened = await opening() ? 0 : unopened + 1;
+            if (unopened >= 2) {
+                unopened = 0;
+                await ui.quickOpen(name);
+            }
+            return false;
+        });
     }
     const active = vscode.window.activeTextEditor;
     // while a step acts, the editor takes the keyboard, as a click in it does: an earlier step can have left it in a

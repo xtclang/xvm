@@ -433,27 +433,81 @@ export class TourUi {
     }
 
     /**
-     * Opens the file named [name] by Quick Open, as the user does: Ctrl+P, its name, and Enter, once a row shows it;
-     * ends once the box has closed.
+     * Opens the file named [name] by Quick Open, as the user does: Ctrl+P, its name, and Enter once the row the box
+     * focuses is the file's, or a click on the file's row; ends once the box has closed after it, as [quickInput] does.
      */
     async quickOpen(name: string): Promise<void> {
-        await this.press('Control+P');
         const widget = this.page.locator('.quick-input-widget');
-        await this.until(widget, 'Quick Open');
-        await this.type(name);
-        await this.until(widget.locator('.monaco-list-row', { hasText: name }).first(), `Quick Open's row of ${name}`);
-        await this.press('Enter');
-        await this.until(widget, 'Quick Open', true);
+        // the file's row, by its name, not a row of another file whose name has it, as SaveEights.x's has Eights.x
+        const exactly = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
+        const row = widget.locator('.monaco-list-row').filter({ has: this.page.locator('.label-name', { hasText: exactly }) }).first();
+        await this.quickInput(`Quick Open of ${name}`, 'Control+P', '', name, () => row.isVisible(), async () => {
+            const focused = await widget.locator('.monaco-list-row.focused .label-name').first().innerText({ timeout: 1_000 }).catch(() => '');
+            if (exactly.test(focused.trim())) await this.press('Enter');
+            else await this.click(row);
+        });
+    }
+
+    /** The name of the file whose tab is active in the active editor group, as the window shows it, or '' when none is. */
+    async activeTab(): Promise<string> {
+        const tab = this.page.locator('.editor-group-container.active .tab.active').first();
+        return (await tab.innerText({ timeout: 1_000 }).catch(() => '')).split('\n').map(line => line.trim()).find(Boolean) ?? '';
     }
 
     /** Puts the active editor's caret at its 1-based [line] and [column] by Go to Line, as the user does: Ctrl+G, `line:column`, and Enter. */
     async goTo(line: number, column: number): Promise<void> {
-        await this.press('Control+G');
+        await this.quickInput('Go to Line', 'Control+G', ':', `${line}:${column}`, async () => true, () => this.press('Enter'));
+    }
+
+    /**
+     * Opens the quick input that [keys] open, whose box opens with [prefix], types [text] into it once it has the
+     * keyboard, and once the box holds them both and [ready] says so, [choose]s, as Enter does; ends once the input has
+     * closed after that. Again until it takes, as a user would: keys typed before the box had the keyboard go where the
+     * keyboard was, as the Debug Console's input, and leave the box short of the text, which closes it with Escape to
+     * open it again, and an input that loses the keyboard closes, to be opened again.
+     */
+    private async quickInput(what: string, keys: string, prefix: string, text: string, ready: () => Promise<boolean>,
+        choose: () => Promise<void>): Promise<void> {
         const widget = this.page.locator('.quick-input-widget');
-        await this.until(widget, 'Go to Line');
-        await this.type(`${line}:${column}`);
-        await this.press('Enter');
-        await this.until(widget, 'Go to Line', true);
+        const box = widget.locator('input').first();
+        // whether the keys were pressed for the input that shows or is about to, whether it showed since, at how many
+        // looks since it has not, and whether it chose
+        let pressed = false;
+        let shown = false;
+        let unshown = 0;
+        let chosen = false;
+        await this.waiter(`${what} takes`, async () => {
+            const showing = await widget.isVisible();
+            if (chosen) return !showing;
+            // another quick input, which showed before the keys, would take the text: Escape closes it first
+            if (!pressed && showing) {
+                await this.press('Escape');
+                return false;
+            }
+            if (!showing) {
+                // keys that opened nothing, or an input that closed between two looks, as it lost the keyboard, show
+                // nothing at two looks in a row: the keys again
+                unshown = pressed && !shown ? unshown + 1 : 0;
+                if (!pressed || shown || unshown >= 2) {
+                    await this.press(keys);
+                    pressed = true;
+                    shown = false;
+                    unshown = 0;
+                }
+                return false;
+            }
+            shown = true;
+            if (!await this.focusedIn(box)) return false;
+            const value = await box.inputValue({ timeout: 1_000 }).catch(() => undefined);
+            if (value === undefined) return false;
+            if (value === prefix) await this.type(text);
+            else if (value !== prefix + text) await this.press('Escape');
+            else if (await ready()) {
+                await choose();
+                chosen = true;
+            }
+            return false;
+        });
     }
 
     /** Clicks the item of the open context menu whose label is [label]. */
