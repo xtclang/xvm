@@ -795,6 +795,8 @@ code/literal tokens refuse the edit. With `xtc.formatting.wrapComments`, doc and
 past the margin are refilled. Operator-spacing normalization, declaration alignment, literal
 splitting and brace relocation are not implemented. Range and save-time requests use
 these rules; on-type formatting only indents and cleans whitespace. See X102/X107/X132/X249/X250.
+A file's `.editorconfig` settings, IntelliJ's formatter markers, comment reflow, line endings and trailing whitespace
+are X361–X365, in *Formatting from .editorconfig, formatter markers and comment reflow* below.
 
 **How to trigger (full document):**
 - *IntelliJ:* Ctrl+Alt+L (Reformat Code)
@@ -1293,6 +1295,9 @@ module Hello {
 | 18a.18 | Debug (IntelliJ) | Set a breakpoint in `Hello.x` and Debug its Ecstasy Application configuration (Shift+F9; macOS Ctrl+D) | The program stops at the breakpoint, with its call stack in the Debug tool window, and Resume Program runs it to its exit (automated in X304) |
 | 18a.19 | Tests | Add a `@Test` method to a module; run and debug it from VS Code's Test Explorer or IntelliJ's gutter icon, with a breakpoint in it | The test is marked passed or failed, with a failure's message, and under Debug the breakpoint stops it (automated in X339; in Gradle mode, with `testXtc`, in X340) |
 | 18a.20 | A workspace that replaces bundled libraries | With the embedded build mode chosen, open a folder (VS Code) or project (IntelliJ) with a Gradle build and a module `json.xtclang.org`, or the XVM repository; Build, then open **Ecstasy: Select Build Mode** (Ctrl+Alt+X, then B) and choose the embedded compiler | One notice says that builds, runs and debug sessions use Gradle and names the replaced libraries; Build uses Gradle; VS Code's status bar shows **Gradle build**, its tooltip naming the libraries; choosing the embedded compiler says Gradle still applies while they are replaced. In the XVM repository, once the Gradle model is imported (IntelliJ: **Refresh Gradle model** on the Ecstasy Compiler page; VS Code: **Ecstasy: Refresh Gradle Compiler Model**), Run, Debug and tests of an XDK module run its own project's task, such as `:xdk:lib-json:testXtc`; before that, Gradle answers "Task 'testXtc' not found in root project 'xvm'" and the editor says once to import the build (VS Code: for tests) |
+
+A project whose Gradle build has another XDK than the bundled one builds and runs with Gradle, whatever the mode, once
+its Gradle model is imported, and the editors say which XDK: X366, in *A folder on another XDK* below.
 
 Known limits: up to four programs at a time per server, each in its own execution worker (a fifth run
 reports that four programs are already running); `readLine`'s `suppressEcho` is not honored, because the client echoes input; IntelliJ
@@ -4128,6 +4133,37 @@ hover.
 | ID | Actions | Expected result |
 |---|---|---|
 | X360 | Write `Lambdas.x`, a module with a class `Box<Element>` whose method `<To extends Number> To[] convert(...)` has the lambda `n -> n.toInt64().as(To)`, and a `new To[]` outside any lambda. On `To` in the lambda, Go to Definition, Find References and highlight its uses, and hover it and the `To` of `new To[]`. | Go to Definition goes to `To` in `<To extends`. The references and the highlights are each `To` of the module, exactly, in and out of the lambdas. The hover names `To`, and is the one of `new To[]`. |
+
+### Formatting from .editorconfig, formatter markers and comment reflow (X361–X365)
+
+The compiler formatter reads a file's `.editorconfig` files at each format, from the file's folder up to one with
+`root = true`, and what they set for it wins over the editor's settings: `indent_size`, `max_line_length`,
+`trim_trailing_whitespace`, IntelliJ's `ij_formatter_tags_enabled`, and `end_of_line`, which VS Code applies from the
+server's `xtc/endOfLine` as a formatting edit cannot change a document's line endings. IntelliJ's formatter follows them
+only while Code Style › General › Enable EditorConfig support is on. Each case writes its own `.editorconfig`, with
+`root = true`, beside its file, and removes it afterwards, with the editor settings it changed. Section 13 has the
+formatter's other checks.
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X361 | Write `Configured.x`, an unindented module whose `run` returns three strings concatenated, and beside it an `.editorconfig` with `root = true` and, for `[*.x]`, `indent_size = 2` and `max_line_length = 60`, with the editor's own indentation 4 and margin 120. Format it (IntelliJ: Reformat Code; VS Code: Format Document). Undo, add `indent_style = tab` and `tab_width = 3` to the section and a later `[*.x]` section with `indent_size = unset` and `max_line_length = unset`, and format again. IntelliJ: undo, write the first file again, turn off Settings › Editor › Code Style › General › Enable EditorConfig support, format again, and turn it back on. | With the file's values the module indents by 2, and the concatenation wraps after each `+` at the 60-column margin, its continuation lines at 12. With `unset`, `indent_size` is gone, so `indent_style = tab` indents by its tab width, one tab a level, where an ignored value would leave the editor's 4 columns, a tab and a space; and the margin is the editor's 120 again, so the line stays whole. In IntelliJ with EditorConfig support off, the module indents by 4 spaces and the line stays whole, as the editor's settings say. |
+| X362 | Write `Markers.x`, with `// @formatter:off` and `// @formatter:on` comments around an array whose second line is aligned with its first element and an unindented `Int kept = 2;`, and an unindented `Int value = 1;` after them. With the markers off (IntelliJ: Code Style › General › Formatter › Turn formatter on/off with markers in code comments, on by default; VS Code: `xtc.formatting.formatterTagsEnabled`, off by default), format. Undo, turn them on and format again. Undo, delete the `;` of both declarations and type it again, first in `Int kept = 2`, then in `Int value = 1`. Turn the markers off, write an `.editorconfig` with `ij_formatter_tags_enabled = true` for `[*.x]`, and format once more. | With the markers off everywhere, every line is indented, the array's second line by the continuation indent. With them on, the lines from the off comment through the on comment stay as they are, the array's alignment and the unindented `Int kept = 2;` included, and `Int value = 1;` is indented by 4. Typed, `;` leaves `Int kept = 2;` where it is and indents `Int value = 1;`. With the markers on in `.editorconfig` only, the format is the same as with them on. |
+| X363 | Write `Reflow.x`, a module whose method's doc comment has a paragraph longer than the 120-column margin, a two-line `@param first`, a `@param second` and an indented code line longer than the margin. Format with wrapping of comments off; then turn it on (IntelliJ: Code Style › Ecstasy › Wrapping and Braces › Comments › Wrap at right margin; VS Code: `xtc.formatting.wrapComments`) and format again, twice. | Off, the comment stays as it is. On, the paragraph is refilled at the margin, its last words on a line of their own, and the `@param` lines and the code line stay as they are, the code line past the margin too. The second format changes nothing. |
+| X364 | VS Code: write `Endings.x`, an unindented module with LF line endings, and beside it an `.editorconfig` with `end_of_line = crlf` for `[*.x]`. Format Document. IntelliJ applies `end_of_line` itself, with its EditorConfig support, which is not a case of the plugin's. | The module is indented and its lines end in CRLF (the status bar shows **CRLF**); the server answers `crlf` to `xtc/endOfLine`. |
+| X365 | Write `Trailing.x`, an unindented module whose lines end in spaces and a tab, and beside it an `.editorconfig` with `trim_trailing_whitespace = true` for `[*.x]`. Format. VS Code: undo, turn `files.trimTrailingWhitespace` on, so that VS Code asks the formatter to trim, take the property out of the file, and format again. Undo, set it to `false`, and format again. | With `true` the lines are indented and their trailing whitespace is gone. In VS Code, without the property, with VS Code asking, it is gone too. With `false` the lines are indented and keep it, also where VS Code asks to trim it; IntelliJ never asks. |
+
+### A folder on another XDK (X366)
+
+As the user guide's *When builds and runs use Gradle whatever the mode* says, a project whose Gradle build compiles and
+runs it with another XDK than the bundled one builds and runs with Gradle, whatever the mode, once its Gradle model is
+imported, and the editors say why. VS Code does so per folder; IntelliJ, with one language server per project, for the
+whole project. The case makes the other XDK from the one that `publishLocal` put in mavenLocal, so it needs
+`./gradlew xdk:installDist publishLocal` first, as X303 does; the Gradle builds take the XTC plugin from mavenLocal.
+Manual mode switching is row 18a.14 in [section 18a](#18a-embedded-build-and-run).
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X366 | Make the other XDK: the XDK that `publishLocal` put in mavenLocal, with a file more in its `javatools.jar`, as `org.xtclang:xdk:0.9.0` in a Maven repository of its own. Write two Gradle builds that apply the XTC plugin from mavenLocal, each with a module that prints its name: `OtherXdk`, whose `xdkDistribution` is `org.xtclang:xdk:0.9.0` from that repository, and `BundledXdk`, on this tree's XDK. VS Code: open both as folders of the window, with no build mode chosen, and import each one's model (**Ecstasy: Refresh Gradle Compiler Model**). Open each module and look at the status bar item and its tooltip; open **Ecstasy: Select Build Mode** for `OtherXdk`; then Build and Run each module. IntelliJ: with the embedded compiler chosen, write `BundledXdk` at the project root, import its model (**Refresh Gradle model** on the Compiler page), and Run it; then put `OtherXdk` in its place, import again, look at the notice, the Build and Run page and **Select Ecstasy Build Mode**, and Build Project and Run it. | VS Code: a notice says that the folder `OtherXdk` builds with XDK 0.9.0, not the bundled XDK. With its module open the status bar shows **Gradle build**, whose tooltip says why, and the picker's embedded compiler says it is not available there, and why; Build and Run go through its Gradle build and end with exit code 0, and the build extracted the other XDK. `BundledXdk` has no reason: its status bar shows **Embedded build**, and its Build and Run use the embedded compiler, which prints `BundledXdk runs embedded`. IntelliJ: `BundledXdk` has no reason either, and runs embedded. Once `OtherXdk` is imported, a notice says that the project builds with XDK 0.9.0, not the bundled XDK, so Build, Run and Debug use Gradle; the page's Embedded compiler is disabled, with that reason, and the popup's is not available, saying why; Build Project is not taken by the embedded compiler, and Run calls the wrapper's `runXtc`, which prints `OtherXdk runs with Gradle`. In both, the server's status lists the folder in `gradleFolders` with that reason. Each editor gives the notice once a session: after another folder's reason, or in a second X366, look for the reason alone. |
 
 ### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
