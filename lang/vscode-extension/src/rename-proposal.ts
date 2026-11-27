@@ -18,11 +18,29 @@ const moveRequest = new RequestType<RenameFilesParams, RenameProposal | null, vo
 const MOVE_RETRIES = 3;
 
 /**
- * A proof that a change overtook while it ran: documents opened, closed or changed, or the compiler settings did, as
- * when VS Code releases documents that no editor shows, some minutes after an extension opened them. A rename shows
- * its message; a move, which VS Code makes whatever its participants answer, asks the server again.
+ * A proof that a change overtook while it ran: documents changed ([sourcesChanged]), or the compiler settings did. A
+ * rename shows its message; a move, which VS Code makes whatever its participants answer, asks the server again.
  */
 class Overtaken extends Error {}
+
+/** An open Ecstasy document as a refactoring's proof started: its version, and whether it had unsaved edits. */
+export interface SourceState {
+    document: vscode.TextDocument;
+    version: number;
+    dirty: boolean;
+}
+
+/**
+ * Whether the text of Ecstasy's documents that the server proved a refactoring from changed since [before], now that
+ * [open] are open: one of them was edited, or closed with unsaved edits, or one opened with unsaved edits. VS Code
+ * releases a document that no editor shows some minutes after an extension or a navigation opened it, and opens one
+ * for a peek or a search; either leaves its text as its file has it, which the server reads of a closed file, so
+ * neither overtakes the proof.
+ */
+export function sourcesChanged(before: readonly SourceState[], open: readonly vscode.TextDocument[]): boolean {
+    return before.some(({ document, version, dirty }) => document.version !== version || (document.isClosed && dirty))
+        || open.some(document => document.isDirty && !before.some(state => state.document === document));
+}
 
 /**
  * Whether the server's [error] says that a change of the project overtook its proof: ContentModified, or a cancellation
@@ -230,7 +248,7 @@ async function proposalWithConfiguration(
     hostMoves: readonly string[] = [],
 ): Promise<vscode.WorkspaceEdit | null> {
     const documents = vscode.workspace.textDocuments.filter(value => !value.isClosed && value.languageId === 'xtc')
-        .map(document => ({ document, version: document.version }));
+        .map(document => ({ document, version: document.version, dirty: document.isDirty }));
     const location = compilerSettingsLocation();
     const config = compilerSourceModules();
     const state = configurationState(uri);
@@ -273,8 +291,7 @@ async function proposalWithConfiguration(
     if (proposal.graph && (settings?.isClosed || settings?.version !== snapshot?.version || configurationState(uri) !== state)) {
         throw new Overtaken('Compiler settings changed while converting the refactoring. Try again.');
     }
-    if (documents.some(({ document, version }) => document.isClosed || document.version !== version)
-        || vscode.workspace.textDocuments.filter(value => !value.isClosed && value.languageId === 'xtc').length !== documents.length) {
+    if (sourcesChanged(documents, vscode.workspace.textDocuments.filter(value => !value.isClosed && value.languageId === 'xtc'))) {
         throw new Overtaken('Source documents changed while calculating the refactoring. Try again.');
     }
     if (!client.validateWorkspaceEdit(proposal.edit)) throw new Overtaken('Documents changed while calculating the refactoring. Try again.');

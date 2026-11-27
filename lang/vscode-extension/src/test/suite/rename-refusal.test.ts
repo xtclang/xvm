@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { BaseLanguageClient, LSPErrorCodes, ResponseError, type LanguageClient, type MessageSignature } from 'vscode-languageclient/node';
-import { RENAME_OVERTAKEN, RENAME_REFUSED, renameWithConfiguration } from '../../rename-proposal';
+import { RENAME_OVERTAKEN, RENAME_REFUSED, renameWithConfiguration, sourcesChanged } from '../../rename-proposal';
 
 suite('Rename refusals', () => {
     /**
@@ -55,5 +55,24 @@ suite('Rename refusals', () => {
     test('a rename that a change of the project overtook says so, to rename again, rather than that there is no result', async () => {
         const overtaken = server(async () => { throw new ResponseError(LSPErrorCodes.ContentModified, 'The project changed while the rename was proven'); });
         assert.strictEqual(await said(overtaken), RENAME_OVERTAKEN);
+    });
+
+    /** A document as VS Code has it, at [version], with unsaved edits or not, open or closed. */
+    function source(version: number, dirty: boolean, closed = false): vscode.TextDocument {
+        return { version, isDirty: dirty, isClosed: closed } as vscode.TextDocument;
+    }
+
+    test('the sources a refactoring was proven from changed only by an edit, or by a close or open of unsaved text', () => {
+        const kept = source(2, false);
+        const edited = source(2, true);
+        const before = [{ document: kept, version: 2, dirty: false }, { document: edited, version: 2, dirty: true }];
+        assert.strictEqual(sourcesChanged(before, [kept, edited]), false, 'nothing changed');
+        // as VS Code releases a document that no editor shows, or opens one for a peek, with its text as its file has it
+        const released = [{ document: source(2, false, true), version: 2, dirty: false }, before[1]];
+        assert.strictEqual(sourcesChanged(released, [edited, source(1, false)]), false, 'a release and an open of saved text');
+        assert.strictEqual(sourcesChanged([{ document: source(3, true), version: 2, dirty: false }], []), true, 'an edit');
+        assert.strictEqual(sourcesChanged([{ document: source(3, false, true), version: 2, dirty: false }], []), true, 'an edit, then a close');
+        assert.strictEqual(sourcesChanged([{ document: source(2, true, true), version: 2, dirty: true }], []), true, 'a close of unsaved text');
+        assert.strictEqual(sourcesChanged(before, [kept, edited, source(2, true)]), true, 'an open of unsaved text');
     });
 });
