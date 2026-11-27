@@ -27,8 +27,12 @@ export function waitsUnderWay(): string[] {
     return [...running.values()].map(wait => `${wait.message} (${Math.floor((performance.now() - wait.started) / 1000)} s)`);
 }
 
-/** Share native status-bar progress between smoke tests and selected or full playbook runs. */
-export function showTestProgress(runner: Mocha.Runner, title: string, label: (test: Mocha.Test) => string): void {
+/**
+ * Share native status-bar progress between smoke tests and selected or full playbook runs; [status] names how a test
+ * ended where its state does not say it, as a playbook case's known host failure, which Mocha has as pending.
+ */
+export function showTestProgress(runner: Mocha.Runner, title: string, label: (test: Mocha.Test) => string,
+    status: (test: Mocha.Test) => string | undefined = () => undefined): void {
     const progress = vscode.window.createStatusBarItem('xtc.tests.progress', vscode.StatusBarAlignment.Left, 10_000);
     progress.name = `${title} progress`;
     const show = (current: string, detail: string) => {
@@ -67,7 +71,7 @@ export function showTestProgress(runner: Mocha.Runner, title: string, label: (te
     runner.on('test end', test => {
         current = undefined;
         activeWaits.clear();
-        show(`${caption(test)} — ${test.state ?? 'skipped'}`, test.fullTitle());
+        show(`${caption(test)} — ${status(test) ?? test.state ?? 'skipped'}`, test.fullTitle());
     });
     runner.once('end', () => { subscription.dispose(); progress.dispose(); });
 }

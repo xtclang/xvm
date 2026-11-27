@@ -5,7 +5,7 @@ import Mocha from 'mocha';
 import * as vscode from 'vscode';
 import { showTestProgress } from '../progress';
 import { selectedScenarioIds, sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
-import { cases, progress } from './support';
+import { cases, knownFailures, progress } from './support';
 
 async function hostResults() {
     const root = path.resolve(__dirname, '../../../../lsp-server/build/test-results');
@@ -30,7 +30,7 @@ export async function run(): Promise<void> {
     const ids = selected.map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
     mocha.grep(new RegExp(`(?:^| )(?:${ids}):`));
     mocha.addFile(path.join(__dirname, 'playbook.test.js'));
-    const results: { id: string; title: string; status: string; durationMs?: number; error?: string }[] = [];
+    const results: { id: string; title: string; status: string; durationMs?: number; error?: string; knownHost?: string }[] = [];
     // at most every two minutes, a line of how many of the selected cases have run, are left, passed and failed
     let summarized = Date.now();
     const summary = (): void => {
@@ -38,13 +38,15 @@ export async function run(): Promise<void> {
         summarized = Date.now();
         const run = results.filter(result => selected.some(value => value === result.id));
         const count = (status: string) => run.filter(result => result.status === status).length;
-        progress(`${run.length}/${selected.length} cases run, ${selected.length - run.length} left: ${count('passed')} passed, ${count('failed')} failed`);
+        progress(`${run.length}/${selected.length} cases run, ${selected.length - run.length} left: ${count('passed')} passed, ${count('failed')} failed`
+            + `, ${count('known-host-failure')} known host failures`);
     };
     const failures = await new Promise<number>(resolve => {
         // a case that fails, a timeout or a failed cleanup too, fails alone: each case ends and restores the editor
         // before the next starts, so that the run goes on with every case it selected
         const runner = mocha.run(resolve);
-        showTestProgress(runner, 'Ecstasy playbook', test => test.title);
+        showTestProgress(runner, 'Ecstasy playbook', test => test.title,
+            test => knownFailures.has(test.title.split(':')[0]) ? `known host failure: ${knownFailures.get(test.title.split(':')[0])!.up}` : undefined);
         runner.on('test', test => progress(`${test.title.replace(':', '')}: starts`));
         runner.on('pass', test => {
             progress(`${test.title.replace(':', '')}: passed`);
@@ -58,8 +60,19 @@ export async function run(): Promise<void> {
             console.error(`${test.title}\n${error.stack}`);
         });
         runner.on('pending', test => {
-            progress(`${test.title.replace(':', '')}: not-run`);
-            results.push({ id: test.title.split(':')[0], title: test.title, status: 'not-run' });
+            const id = test.title.split(':')[0];
+            // a case that failed with a known host bug's symptom, which Mocha has as pending, leaves the run green, and
+            // is no pass; its title says so
+            const known = knownFailures.get(id);
+            if (known) {
+                const line = known.error instanceof Error ? known.error.message.split('\n')[0] : String(known.error);
+                progress(`${test.title.replace(':', '')} — ${line.slice(0, 120)}`);
+                results.push({ id, title: test.title, status: 'known-host-failure', knownHost: known.up, durationMs: test.duration,
+                    error: known.error instanceof Error ? known.error.stack : String(known.error) });
+            } else {
+                progress(`${test.title.replace(':', '')}: not-run`);
+                results.push({ id, title: test.title, status: 'not-run' });
+            }
             summary();
         });
     });
@@ -72,6 +85,9 @@ export async function run(): Promise<void> {
         cases: [...cases].map(([id, description]) => ({ ...description, id,
             ...(results.find(result => result.id === id) ?? { status: selected.some(value => value === id) ? 'not-run' : 'not-selected' }) })),
         errors: results.filter(result => !cases.has(result.id)),
+        // the cases that failed with a known host bug's symptom, apart from both the passed and the failed ones
+        knownHostFailures: results.filter(result => result.status === 'known-host-failure')
+            .map(result => ({ id: result.id, up: result.knownHost, error: result.error })),
         scope: 'VS Code extension-host/provider checks; X145 --cancel-ui and X260 activate visible Cancel controls, and X259 inspects rendered inlay labels. X154/X276/X277 capture the startup theme without changing it; separate X277 --theme/--lexical-baseline launches compare dark/light/high-contrast styles; X276 checks resolved annotations and library ownership, and X277 checks lexical styles and damaged-source recovery. X278 applies the compiler documentation action with native Undo/Redo; X279 clicks rendered reference lenses, opens native reference peek and checks live settings. Other visual appearance and physical key/menu interaction remain manual.',
         hostChecks: process.env.XTC_PLAYBOOK_HOST_CHECKS === 'true' ? await hostResults() : [],
         hostChecksNote: process.env.XTC_PLAYBOOK_HOST_CHECKS === 'true'
@@ -94,13 +110,15 @@ export async function run(): Promise<void> {
     await fs.writeFile(path.join(directory, 'results.txt'), [
         `Compiler playbook at ${report.commit}; VS Code ${report.vscode}`,
         `Selection: ${report.selection.mode} (${selected.join(', ')})`,
-        ...report.cases.map(item => `${item.id}: ${item.status} — ${item.title}${'error' in item && item.error ? `\n  ${item.error}` : ''}${item.manual.length ? `\n  Manual: ${item.manual.join('; ')}` : ''}`),
+        ...report.cases.map(item => `${item.id}: ${item.status}${'knownHost' in item && item.knownHost ? ` (${item.knownHost})` : ''} — ${item.title}${'error' in item && item.error ? `\n  ${item.error}` : ''}${item.manual.length ? `\n  Manual: ${item.manual.join('; ')}` : ''}`),
+        `Known host failures: ${report.knownHostFailures.map(item => `${item.id} (${item.up})`).join(', ') || 'none'}`,
         ...report.hostChecks.map(item => `Host ${item.task}: ${item.status} (${item.suites.reduce((sum, suite) => sum + suite.tests, 0)} XDK tests; XML timestamps in results.json)`),
         report.hostChecksNote,
         ...Object.entries(report.supportingCoverage).map(([id, coverage]) => `${id}: ${coverage}`),
         ...report.errors.map(error => error.error ?? error.title), report.scope
     ].join('\n') + '\n');
     assert.strictEqual(failures, 0, `Compiler playbook failed; see ${directory}/results.json`);
-    assert.strictEqual(report.cases.filter(item => selected.some(id => id === item.id) && item.status !== 'passed').length,
-        0, 'No silently skipped selected playbook cases');
+    // a known host failure is no pass, and leaves the run green
+    assert.strictEqual(report.cases.filter(item => selected.some(id => id === item.id) && item.status !== 'passed'
+        && item.status !== 'known-host-failure').length, 0, 'No silently skipped selected playbook cases');
 }

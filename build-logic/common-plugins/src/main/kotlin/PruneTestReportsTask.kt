@@ -65,6 +65,9 @@ internal object TestReportRetention {
     /** Client traces from this size on are compressed; most are a few kilobytes. */
     const val CLIENT_TRACE_COMPRESSED_FROM = 1L shl 20
 
+    /** The statuses of a selected case of VS Code's playbook that leave its run green: a pass, and a known host bug's failure. */
+    private val PASSING = setOf("passed", "known-host-failure")
+
     private val serverTrace = Regex("lsp-trace-.+\\.jsonl")
     private val clientTrace = Regex("client-trace-.+\\.log")
 
@@ -123,8 +126,9 @@ internal object TestReportRetention {
 
     /**
      * Whether [run]'s `results.json` says it passed: it names no failed case, step or check, no IDE failure and no
-     * error, counts no failure, and every case that VS Code's playbook selected passed, as its run asserts after it
-     * writes the file, in the formats of IntelliJ's and VS Code's playbooks, tours and probes.
+     * error, counts no failure, and every case that VS Code's playbook selected passed, or failed with a known host
+     * bug's symptom, which leaves the run green, as its run asserts after it writes the file, in the formats of
+     * IntelliJ's and VS Code's playbooks, tours and probes.
      */
     private fun passed(run: Path): Boolean {
         val json = results(run) ?: return false
@@ -137,7 +141,7 @@ internal object TestReportRetention {
             (json["failed"] as? List<*>).isNullOrEmpty() &&
             ((counts?.get("failed") as? Number)?.toInt() ?: 0) == 0 &&
             ((json["failures"] as? Number)?.toInt() ?: 0) == 0 &&
-            cases.none { it["status"] == "failed" || (it["id"] in selected && it["status"] != "passed") } &&
+            cases.none { it["status"] == "failed" || (it["id"] in selected && it["status"] !in PASSING) } &&
             (json["ideFailures"] as? List<*>).isNullOrEmpty() &&
             (json["errors"] as? List<*>).isNullOrEmpty()
     }

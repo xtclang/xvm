@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { compilerSettingsLocation, compilerSourceModules } from '../../rename-proposal';
 import { SourceModule, sourceGraphKey } from '../../source-graph-configuration';
 import { focusTestWindow } from '../native-focus';
-import { PlaybookFinal, withPlaybookCleanup } from '../wait';
+import { withPlaybookCleanup } from '../wait';
 import { discovered } from './liveWorkspace';
 import { client, eventually, FileChanges, noErrors, outsideUsesMessage, playbook, settles, symbols } from './support';
 
@@ -107,13 +107,8 @@ export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' |
                 await focusTestWindow();
                 await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                 await vscode.commands.executeCommand(action);
-                // TODO VSCODE: UP23 — VS Code undoes overlapping parent and child moves in forward order, which fails with
-                // "target already exists", so X218's Undo never restores them; fail that as the assertion the register records
-                await verify(moved).catch(error => {
-                    throw id === 'X218' && action === 'undo' && error instanceof PlaybookFinal
-                        ? new assert.AssertionError({ message: `UP23: ${error.message}` })
-                        : error;
-                });
+                // X218's Undo fails as known host failure UP23 (knownHostFailures.ts)
+                await verify(moved);
             }
         }, async () => {
             changes.dispose();
