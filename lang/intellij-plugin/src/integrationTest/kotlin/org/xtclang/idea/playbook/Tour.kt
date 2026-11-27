@@ -7,11 +7,8 @@ import com.intellij.driver.client.Remote
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Proxy
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.CompletableFuture
@@ -145,19 +142,8 @@ internal class Tour(
         } as TourProbe
 
     init {
-        // asked beside a call that may hold the EDT or the driver, which the activity needs too: an IDE that does not
-        //  say counts toward the idle window, as one that does nothing would
-        Quiescence.activity = { asked { probe.activity() } ?: NOT_ANSWERING }
-        Quiescence.state = { asked { "${probe.activity().ifEmpty { "idle" }}; ${probe.serverState()}" } ?: "the IDE not answering" }
-        val trace = TraceProgress(run.resolve("server-trace"))
-        Quiescence.progress = { "${trace.events()} server trace events" }
-        Quiescence.report = { line -> progress("${section.ifEmpty { "the start" }}: $line") }
-        Quiescence.watching = true
+        Quiescence.watch(probe, run) { line -> progress("${section.ifEmpty { "the start" }}: $line") }
     }
-
-    /** What [question] answers, or null when the IDE does not answer within [ANSWER] or fails. */
-    private fun <T> asked(question: () -> T): T? =
-        runCatching { CompletableFuture.supplyAsync(question).get(ANSWER.inWholeMilliseconds, TimeUnit.MILLISECONDS) }.getOrNull()
 
     /** Writes the IDE's and the server's threads into the run's dumps, as a stuck wait left them; [why] names it. */
     private fun dumpThreads(why: String) {
@@ -295,7 +281,7 @@ internal class Tour(
         var shot: Long? = null
         val number = steps.size + 1
         progress("$number $title: starts")
-        Quiescence.doing = "$number $title"
+        Quiescence.begin("$number $title")
         val image = "frames/%03d.png".format(number)
         var step =
             try {
@@ -366,7 +352,7 @@ internal class Tour(
         if (!recording || skips(what, needs)) return
         checks++
         progress("check $what: starts")
-        Quiescence.doing = "check $what"
+        Quiescence.begin("check $what")
         val started = System.currentTimeMillis()
         Quiescence.stuck = null
         val failure = runCatching { ui.block() }.exceptionOrNull()
@@ -436,7 +422,7 @@ internal class Tour(
     /** Runs [block] as a step's preparation that captures nothing, in a recorded section only; a failure is not fatal. */
     fun prepare(block: TourProbe.() -> Unit) {
         if (!recording) return
-        Quiescence.doing = "a preparation"
+        Quiescence.begin("a preparation")
         runCatching { ui.block() }.onFailure { println("Tour: preparation failed in $section: $it") }
     }
 
@@ -446,7 +432,7 @@ internal class Tour(
      */
     fun restore() {
         if (!recording) return
-        Quiescence.doing = "the restore of the project's sources"
+        Quiescence.begin("the restore of the project's sources")
         runCatching {
             ui.dismiss()
             // a modal dialog holds every call that waits for the EDT outside it, as restoring the files does
@@ -533,8 +519,9 @@ internal class Tour(
     fun awaitServer(timeout: Duration = HANG) = awaitStart("the Ecstasy language server starts", timeout) { ui.ready() }
 
     /**
-     * Waits as [awaitUi] does, up to [timeout], until [condition] holds, which [what] names, as the tour starts, and
-     * fails with [errorMessage]; it says so about once a minute, as [within] does, with what is in progress.
+     * Waits as [within] does, up to [timeout], until [condition] holds, which [what] names, as the tour starts, and
+     * fails with [errorMessage] and how the wait stood, or with what [condition] failed with. The IDE's start, as
+     * [TourProbe.starting] says it, is [Quiescence.start] meanwhile, which every wait sees, a probe call's too.
      */
     private fun awaitStart(
         what: String,
@@ -542,12 +529,14 @@ internal class Tour(
         errorMessage: (() -> String)? = null,
         condition: () -> Boolean,
     ) {
-        val report = WaitReport(what)
-        awaitUi(what, timeout, errorMessage) { condition().also { done -> if (!done) report.due(::underWay) } }
+        Quiescence.stuck = null
+        Quiescence.start = { asked { probe.starting() }?.let(Start::of) ?: Start() }
+        try {
+            check(withinOrFail(timeout, what, condition)) { "${errorMessage?.invoke() ?: "Failed: $what"}; ${Quiescence.stuck}" }
+        } finally {
+            Quiescence.start = { Start() }
+        }
     }
-
-    /** What is in progress, as [Quiescence.activity] says, or the project's opening before its window shows. */
-    private fun underWay(): String = if (asked { probe.projectOpen() } == true) Quiescence.activity() else "the IDE, opening the project"
 }
 
 /**
@@ -590,6 +579,10 @@ internal interface TourProbe {
     fun activity(): String
 
     fun ideThreads(): String
+
+    fun work(): String
+
+    fun starting(): String
 
     fun projectOpen(): Boolean
 
@@ -1057,7 +1050,10 @@ internal fun TourProbe.watches(): String = toolWindowText("Debug")
 /**
  * Whether [condition] holds within [timeout], polled: a bound against a hang, which a condition that holds never reaches.
  * A wait that goes on says so about once a minute, as the VS Code tour's waits do: what it waits for, [what] in the step
- * or check that waits, and what is in progress.
+ * or check that waits, and what is in progress. It fails before its bound once nothing that could make [condition] hold
+ * has been in progress, or nothing in progress has moved, for [IDLE]; the server's own traffic is neither. While the
+ * IDE opens the project, as [Quiescence.start] says, only the bound ends the wait; its startup activities, after that,
+ * are in progress beside what [Quiescence.activity] says.
  */
 internal fun within(
     timeout: Duration,
@@ -1067,32 +1063,48 @@ internal fun within(
     val deadline = TimeSource.Monotonic.markNow() + timeout
     val report = WaitReport(listOfNotNull(what, Quiescence.doing.ifEmpty { null }).joinToString(", in ").ifEmpty { "a condition" })
     var idleSince: TimeSource.Monotonic.ValueTimeMark? = null
-    // what is in progress, with the server's trace, and since when it has stood still: in progress means progress made
+    // what is in progress, with the step's trace, and since when it has stood still: in progress means progress made
     var progress = ""
     var stillSince = TimeSource.Monotonic.markNow()
+    // the server's own traffic while nothing was in progress, which the idle failure names: it goes on, and decides nothing
+    var traffic = Quiescence.traffic()
     while (true) {
         if (runCatching(condition).getOrDefault(false)) return true
+        val start = Quiescence.start()
         if (deadline.hasPassedNow()) {
-            Quiescence.stuck = "the bound of $timeout passed while ${Quiescence.activity().ifEmpty { "nothing was in progress" }}"
+            val underWay = start.opening.ifEmpty { Quiescence.activity().text }
+            Quiescence.stuck = "the bound of $timeout passed while ${underWay.ifEmpty { "nothing was in progress" }}"
             return false
+        }
+        // the IDE, opening the project before its window shows, does what the probe cannot ask about
+        if (start.opening.isNotEmpty()) {
+            idleSince = null
+            stillSince = TimeSource.Monotonic.markNow()
+            report.due { start.opening }
+            Thread.sleep(250)
+            continue
         }
         // nothing in progress that could still make the condition hold, or no answer from the IDE, all through the idle
         //  window: a hang, not slowness
-        val activity = Quiescence.activity()
-        idleSince = if (activity.isEmpty() || activity == NOT_ANSWERING) idleSince ?: TimeSource.Monotonic.markNow() else null
+        val activity = Quiescence.activity().let { if (start.activities) it.starting() else it }
+        if (idleSince == null) traffic = Quiescence.traffic()
+        idleSince = if (activity.text.isEmpty() || activity.text == NOT_ANSWERING) idleSince ?: TimeSource.Monotonic.markNow() else null
         if (Quiescence.watching && idleSince != null && idleSince.elapsedNow() >= IDLE) {
             Quiescence.stuck =
-                if (activity == NOT_ANSWERING) {
+                if (activity.text == NOT_ANSWERING) {
                     "the IDE did not say what is in progress for $IDLE: a call holds its EDT or its driver"
                 } else {
-                    "nothing was in progress that could make it hold: ${Quiescence.state()}"
+                    "nothing that could make it hold was in progress for $IDLE, while the server's own traffic added " +
+                        "${Quiescence.traffic() - traffic} trace events: ${Quiescence.state()}"
                 }
             return false
         }
-        // something in progress that does not move all through the idle window, the same text and no new server trace
-        //  event, as run 16's "analyzing Player.x" with no pass running stood for its hour: a hang, too
-        val now = "$activity; ${Quiescence.progress()}"
-        if (now != progress) {
+        // something in progress that does not move all through the idle window, the same text and no new trace event of
+        //  the steps' work, as run 16's "analyzing Player.x" with no pass running stood for its hour: a hang, too; but
+        //  not while the IDE runs a task, process or debug session of its own, which moves where the wait cannot always
+        //  see it, as a Gradle build that prints nothing while its daemon starts or a task compiles
+        val now = "${activity.text}; ${Quiescence.progress()}"
+        if (now != progress || activity.live) {
             progress = now
             stillSince = TimeSource.Monotonic.markNow()
         }
@@ -1100,10 +1112,32 @@ internal fun within(
             Quiescence.stuck = "nothing that was in progress moved for $IDLE: $now"
             return false
         }
-        report.due { activity }
+        report.due { activity.text }
         Thread.sleep(250)
     }
 }
+
+/** Whether [condition] holds within [timeout], as [within] waits for it, which [what] names; a failure of [condition] ends the wait and is thrown. */
+internal fun withinOrFail(
+    timeout: Duration,
+    what: String,
+    condition: () -> Boolean,
+): Boolean {
+    var failure: Throwable? = null
+    val held =
+        within(timeout, what) {
+            runCatching(condition).getOrElse {
+                failure = it
+                true
+            }
+        }
+    failure?.let { throw it }
+    return held
+}
+
+/** What [question] answers, or null when the IDE does not answer within [ANSWER] or fails. */
+private fun <T> asked(question: () -> T): T? =
+    runCatching { CompletableFuture.supplyAsync(question).get(ANSWER.inWholeMilliseconds, TimeUnit.MILLISECONDS) }.getOrNull()
 
 /** How long the IDE has to say what is in progress, beside a call that may hold its EDT, before it counts as silent. */
 private val ANSWER = 30.seconds
@@ -1113,9 +1147,9 @@ internal const val NOT_ANSWERING = "the IDE, not answering what is in progress"
 
 /**
  * How long a wait sees nothing in progress, without a break, before it fails as stuck: the IDE with no background task,
- * no running process or launching session, no pending event and no analysis, and the server with no request unanswered
- * and no compiler job. Long enough to span a debounce or a slow first answer on a loaded machine, which can leave
- * seconds with nothing visibly in progress; a real hang still shows in about a minute.
+ * no running process or launching session, no pending event and no analysis, and the server with no request of the
+ * step's unanswered and no compiler job. Long enough to span a debounce or a slow first answer on a loaded machine,
+ * which can leave seconds with nothing visibly in progress; a real hang still shows in about a minute.
  */
 private val IDLE = 60.seconds
 
@@ -1144,82 +1178,130 @@ private class WaitReport(
 }
 
 /**
- * What the tour's waits ask about the IDE between their polls: whether anything is in progress that could still make
- * their condition hold, which [within] reads, and the wait that last gave up, which a failure's message and dumps
- * name. The tour sets it up as it starts; a wait outside a tour has nothing to ask and waits out its bound.
+ * What the tour's and the playbook's waits ask about the IDE between their polls: whether anything is in progress that
+ * could still make their condition hold, which [within] reads, and the wait that last gave up, which a failure's message
+ * and dumps name. [watch] sets it up as the tour or the playbook starts; a wait outside them has nothing to ask and
+ * waits out its bound.
  */
 internal object Quiescence {
-    /** The step or check that runs, which a wait's report names; set by the tour. */
+    /** The step, check or case that runs, which a wait's report names; set by [begin]. */
     @Volatile
     var doing = ""
 
-    /** Writes a wait's report into the run's progress, with the section; set by the tour. */
+    /** Writes a wait's report into the run's progress; set by [watch]. */
     @Volatile
     var report: (String) -> Unit = {}
 
-    /** What is in progress, empty when nothing is; set by the tour. */
+    /** What is in progress that could make a wait's condition hold; set by [watch]. */
     @Volatile
-    var activity: () -> String = { "" }
+    var activity: () -> Activity = { Activity("") }
 
-    /** The IDE's state when a wait gave up, for its message; set by the tour. */
+    /** How far the IDE's start is, which a wait at the tour's start sets; done otherwise. */
+    @Volatile
+    var start: () -> Start = { Start() }
+
+    /** The IDE's state when a wait gave up, with what it does that no wait counts, for its message; set by [watch]. */
     @Volatile
     var state: () -> String = { "" }
 
     /**
-     * How far the work beside [activity] has gone, which moves while it runs, such as the count of the server's trace
-     * events; set by the tour.
+     * How far the work beside [activity] has gone, which moves while it runs, such as the count of the trace events of
+     * the steps' work; set by [watch].
      */
     @Volatile
     var progress: () -> String = { "" }
 
-    /** Whether waits fail as soon as nothing is in progress; off until the tour is set up. */
+    /** How much of the server's own traffic its trace has, which no wait counts, for a failure's message; set by [watch]. */
+    @Volatile
+    var traffic: () -> Long = { 0L }
+
+    /** What [begin] does as a step, check, preparation, restore or case begins; set by [watch]. */
+    @Volatile
+    var begun: () -> Unit = {}
+
+    /** Whether waits fail as soon as nothing is in progress; off until [watch]. */
     @Volatile
     var watching = false
 
     /** How the last wait that gave up stood, or null; a step's or check's failure reads and clears it. */
     @Volatile
     var stuck: String? = null
-}
 
-/**
- * The count of the language server's trace events in [directory], its JSON lines, but the ones of the xtc/busy requests
- * that the tour's own waits send: it grows while the server answers requests and compiles, each leaving events there,
- * and stands still while the server does nothing, however long its last request or job has been in hand. It reads each
- * file from where it last stopped, whole lines only.
- */
-internal class TraceProgress(
-    private val directory: Path,
-) {
-    private val read = mutableMapOf<Path, Long>()
-    private var events = 0L
+    /** Begins [what], a step, check, preparation, restore or case, whose waits count what the client sends from now on. */
+    fun begin(what: String) {
+        doing = what
+        begun()
+    }
 
-    @Synchronized
-    fun events(): Long {
-        val files =
-            runCatching { Files.list(directory).use { paths -> paths.filter { it.toString().endsWith(".jsonl") }.toList() } }
-                .getOrDefault(emptyList())
-        files.forEach { file ->
-            runCatching {
-                FileChannel.open(file, StandardOpenOption.READ).use { channel ->
-                    val from = read[file] ?: 0L
-                    if (channel.size() > from) {
-                        val bytes = ByteBuffer.allocate((channel.size() - from).toInt())
-                        channel.read(bytes, from)
-                        val end = (bytes.position() - 1 downTo 0).firstOrNull { bytes.get(it) == '\n'.code.toByte() }
-                        if (end != null) {
-                            events += String(bytes.array(), 0, end, Charsets.UTF_8).lineSequence().count { BUSY !in it }
-                            read[file] = from + end + 1
-                        }
-                    }
-                }
-            }
+    /**
+     * Sets the waits up for a run of the IDE that [probe] asks, whose language servers trace into [run]'s server-trace
+     * directory, with [report] writing a wait's line every minute. What counts as in progress is what could make a
+     * wait's condition hold: the IDE's own work and the server's start and compiles, which the probe says, and the
+     * requests of the step that waits, which the server's trace has; not the server's own traffic, such as LSP4IJ's
+     * pulls of the workspace's diagnostics, which goes on however long the condition does not come. The probe is asked
+     * beside a call that may hold the IDE's EDT or its driver, which it needs too: an IDE that does not say counts toward
+     * the idle window, as one that does nothing would.
+     */
+    fun watch(
+        probe: TourProbe,
+        run: Path,
+        report: (String) -> Unit,
+    ) {
+        val trace = ServerTrace(run.resolve("server-trace"))
+        activity = {
+            asked { JsonParser.parseString(probe.work()).asJsonObject }?.let { work ->
+                val live = work["live"].asString
+                Activity(
+                    listOf(live, work["settling"].asString, trace.inHand()).filter(String::isNotEmpty).joinToString("; "),
+                    live.isNotEmpty(),
+                )
+            } ?: Activity(NOT_ANSWERING)
         }
-        return events
+        state = { asked { "${probe.activity().ifEmpty { "idle" }}; ${probe.serverState()}" } ?: "the IDE not answering" }
+        progress = { "${trace.moved()} trace events of the steps' work" }
+        traffic = trace::traffic
+        begun = trace::begin
+        this.report = report
+        watching = true
     }
 }
 
-/** How a trace line of an xtc/busy request names it. */
-private const val BUSY = "\"operation\":\"xtc/busy\""
+/**
+ * What is in progress that could make a wait's condition hold, as [text] says it, empty when nothing is, or
+ * [NOT_ANSWERING]; [live] when the IDE runs a task, process or debug session of its own among it, which moves where a
+ * wait cannot always see it.
+ */
+internal data class Activity(
+    val text: String,
+    val live: Boolean = false,
+) {
+    /** This, with the project's startup activities in progress beside it, unless the IDE does not answer. */
+    fun starting(): Activity =
+        when (text) {
+            NOT_ANSWERING -> this
+            else -> copy(text = listOf(STARTUP, text).filter(String::isNotEmpty).joinToString("; "))
+        }
+}
+
+/**
+ * How far the IDE's start is, as [TourProbe.starting] says: [opening], what it does before the project's window shows,
+ * empty once the window shows; and [activities], whether the project's startup activities still run.
+ */
+internal data class Start(
+    val opening: String = "",
+    val activities: Boolean = false,
+) {
+    companion object {
+        /** The start as [TourProbe.starting] answers it, a JSON object. */
+        fun of(json: String): Start =
+            JsonParser.parseString(json).asJsonObject.let { start ->
+                Start(start["opening"]?.asString.orEmpty(), start["activities"]?.asBoolean == true)
+            }
+    }
+}
+
+/** How a wait names the project's startup activities while they run. */
+private const val STARTUP = "the project's startup activities"
 
 /**
  * Opens Show Intention Actions on the caret or selection, and again, up to [INTENTION_OPENINGS] times, while its list,
