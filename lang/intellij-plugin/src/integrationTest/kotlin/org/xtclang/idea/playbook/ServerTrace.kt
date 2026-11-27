@@ -39,6 +39,9 @@ internal class ServerTrace(
     /** How many events the trace has had of the server's own traffic: see [traffic]. */
     private var traffic = 0L
 
+    /** How many of the step's requests the server has answered, by their methods. */
+    private val answered = mutableMapOf<String, Int>()
+
     /**
      * Begins the next step: what the trace has until now is earlier steps' work, which no wait counts, so their spans and
      * requests go, but the compiles'.
@@ -50,6 +53,21 @@ internal class ServerTrace(
             server.spans.values.removeIf { !it.compiling }
             server.open.clear()
         }
+        answered.clear()
+    }
+
+    /** How many requests of [method] that the client sent since the step began the server has answered. */
+    @Synchronized
+    fun answered(method: String): Int {
+        read()
+        return answered[method] ?: 0
+    }
+
+    /** Whether the server is answering a request of [method] that the client sent since the step began. */
+    @Synchronized
+    fun answering(method: String): Boolean {
+        read()
+        return servers.values.any { method in it.open.values }
     }
 
     /** How many events the trace has of the steps' work, and of compiles, which grows as long as that work goes on. */
@@ -152,7 +170,7 @@ internal class ServerTrace(
             span.client && event.text("event") == "start" && event.text("direction") == "from-client" ->
                 open[id] = event.text("operation").orEmpty()
 
-            event.text("event") == "end" -> open.remove(id)
+            event.text("event") == "end" -> open.remove(id)?.let { method -> answered.merge(method, 1, Int::plus) }
         }
     }
 

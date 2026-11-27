@@ -1792,9 +1792,10 @@ class CompilerPlaybook(
         }
         // Independent cases replace the source graph. Close their predecessors' fixture tabs,
         // as the workspace scenarios already did, before opening this case's caller.
-        // TODO LSP4IJ: UP07 — keeping unrelated broken fixtures open during replacement can
-        // cancel the new caller's lazy intentions after a successful server action reply.
-        // This isolates fixtures; it does not claim to repair that production delivery race.
+        // Earlier cases' fixtures left open, broken as many are, keep the server busy: LSP4IJ
+        // pulls the diagnostics of every open file, and with 25 of them open it pulled 19 times
+        // as often and a code action took up to 9.7 s (2026-11-27). Closing them keeps this
+        // case's answers quick.
         closeAllEditors()
         // Match VS Code's per-case discovery workspace so unrelated teaching fixtures cannot
         // silently alter this scenario's graph or the scope of its refactoring proof.

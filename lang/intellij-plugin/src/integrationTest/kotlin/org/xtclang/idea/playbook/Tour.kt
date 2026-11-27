@@ -1221,6 +1221,10 @@ internal object Quiescence {
     @Volatile
     var begun: () -> Unit = {}
 
+    /** The language servers' trace that [watch] reads, which says the step's requests; none until [watch]. */
+    @Volatile
+    var trace: ServerTrace? = null
+
     /** Whether waits fail as soon as nothing is in progress; off until [watch]. */
     @Volatile
     var watching = false
@@ -1249,7 +1253,7 @@ internal object Quiescence {
         run: Path,
         report: (String) -> Unit,
     ) {
-        val trace = ServerTrace(run.resolve("server-trace"))
+        val trace = ServerTrace(run.resolve("server-trace")).also { this.trace = it }
         activity = {
             asked { JsonParser.parseString(probe.work()).asJsonObject }?.let { work ->
                 val live = work["live"].asString
@@ -1318,10 +1322,10 @@ internal fun TourProbe.intentions(
         // no input while IntelliJ searches for context actions: a key pressed then waits in the queue and reaches the
         //  list once it opens, where it chooses the first row, which may be the very fix a check looks for
         within(timeout) { !searching() }
-        // TODO LSP4IJ: UP07 — overlapping full pulls can cancel a lazy code action while the list discovers it, so
-        //  the list can open without the server's actions; the playbook's quickFix reopens it for the same reason.
-        //  LSP4IJ answers the list again from its cache for the same text and caret, so the caret goes off the spot
-        //  and back first, as a user's would, once the IDE has looked at the other spot
+        // the list can open before the server's code actions are in it, as when the server answers slowly, so it is
+        //  opened again, as the playbook's quickFix does. LSP4IJ answers the list again from its cache for the same
+        //  text and caret, so the caret goes off the spot and back first, as a user's would, once the IDE has looked
+        //  at the other spot
         if (opening > 0) {
             val path = editor()["path"].asString
             moveCaret(1)
