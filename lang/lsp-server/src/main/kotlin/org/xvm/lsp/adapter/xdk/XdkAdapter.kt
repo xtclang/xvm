@@ -932,6 +932,17 @@ class XdkAdapter
         override fun compileAsync(
             uri: String,
             content: String,
+        ): CompletableFuture<CompilationResult> = compileAsync(uri, content, unchanged = false)
+
+        /**
+         * As [compileAsync]. A member of the graph whose [content] is [unchanged], its file's text on disk, as it opens with
+         * it, retires nothing that read that file before, as the graph's queries and the analyses of the modules that
+         * depend on its module did: its module's compile only replaces the one that read it from disk.
+         */
+        fun compileAsync(
+            uri: String,
+            content: String,
+            unchanged: Boolean,
         ): CompletableFuture<CompilationResult> {
             if (isUncompiledLibraryDocument(uri)) {
                 return CompletableFuture.completedFuture(CompilationResult.success(uri, emptyList()))
@@ -948,7 +959,7 @@ class XdkAdapter
                         requests[scope]?.takeIf {
                             XdkLibrarySources.isCopy(scope) && !it.result.isCancelled && !it.result.isCompletedExceptionally
                         }
-                    val submission = if (shared == null) submit(scope, uri, retire = true) else null
+                    val submission = if (shared == null) submit(scope, uri, retire = !unchanged || project.scope(uri) == null) else null
                     (shared ?: checkNotNull(submission).request) to submission
                 }
             submission?.retired?.forEach { it.result.cancel(false) }
@@ -1003,7 +1014,8 @@ class XdkAdapter
 
         /**
          * Called under lifecycle. Queues a compile of [scope] for [uri], with the open documents of the modules it
-         * builds; one that brings a new input, [retire], first retires the analyses that it affects.
+         * builds; one that brings a new input, [retire], first retires the analyses that it affects. One that brings none
+         * ends the compile of [scope] that it replaces, which, superseded, would never run nor end.
          */
         private fun submit(
             scope: String,
@@ -1051,7 +1063,13 @@ class XdkAdapter
                     obsolete.forEach { it.result.cancel(false) }
                 }
             }
-            val (retired, obsoleteQueries) = if (retire) retireRequests(project.affected(scope)) else emptyList<Request>() to emptyList()
+            val (retired, obsoleteQueries) =
+                if (retire) {
+                    retireRequests(project.affected(scope))
+                } else {
+                    // as a member's open with its file's text replaces the compile that a query of a closed member waits on
+                    listOfNotNull(requests.remove(scope)?.also(::removeQueued)) to emptyList()
+                }
             requests[scope] = request
             scheduled[request] =
                 schedule {
@@ -1252,6 +1270,9 @@ class XdkAdapter
                                                 work.dependencies,
                                                 compiler::compileTree,
                                                 ::stale,
+                                                // the editors' documents as they are now, which a query's answer must
+                                                // still be of, also of a document that closed since with its file's text
+                                                liveOverlays = { synchronized(lifecycle) { overlays.toMap() } },
                                                 discoverImports = !settings.explicit,
                                                 diagnosticCache = diagnosticCache,
                                                 navigationIndex = navigationIndex,
@@ -1794,24 +1815,37 @@ class XdkAdapter
             closeDocumentAndRefresh(uri)
         }
 
-        /** Closing restores disk headers and returns exactly the scopes retired by that change. */
-        fun closeDocumentAndRefresh(uri: String): Set<String> {
+        /**
+         * Closing restores disk headers and returns exactly the scopes retired by that change. A member of the graph whose
+         * text is [unchanged], its file's text on disk, as the caller found it, retires nothing: each analysis and graph
+         * query that read its text reads the same of its file now, as VS Code's release of a document that no editor shows
+         * leaves it. Its module's analysis serves the module's other open documents, and goes, with the memory it holds,
+         * with the last of them, which retires nothing either.
+         */
+        fun closeDocumentAndRefresh(
+            uri: String,
+            unchanged: Boolean = false,
+        ): Set<String> {
             // a copy's compile keeps its text until it closes, even when navigation has parsed it since it opened
             if (isUncompiledLibraryDocument(uri)) return emptySet()
+            var dropped: Request? = null
             val (retired, obsoleteQueries) =
                 synchronized(lifecycle) {
                     val scope = scopes.remove(uri) ?: analysisScope(uri)
                     overlays.remove(uri)
                     // a library's compile serves its other open copies, and goes, with the memory it holds, with the last
                     if (XdkLibrarySources.isCopy(scope) && scope in scopes.values) return emptySet()
-                    retireRequests(project.affected(scope)).also {
-                        val retained =
-                            requests.keys
-                                .flatMap { project.buildOrder(it).map(XdkSourceModule::name) }
-                                .toSet()
-                        builds.keys.retainAll(retained)
+                    if (unchanged && project.scope(uri) != null) {
+                        if (scope !in scopes.values) {
+                            dropped = requests.remove(scope)?.also(::removeQueued)
+                            completed.remove(scope)
+                            retainBuilds()
+                        }
+                        return@synchronized emptyList<Request>() to emptyList<QueryWork>()
                     }
+                    retireRequests(project.affected(scope)).also { retainBuilds() }
                 }
+            dropped?.result?.cancel(false)
             retired.forEach { it.result.cancel(false) }
             obsoleteQueries.forEach { it.result.cancel(false) }
             val (settings, previous) = synchronized(lifecycle) { discovery.get() to project }
@@ -1829,6 +1863,11 @@ class XdkAdapter
                 }
             return refreshDocumentHeader(uri, disk, settings, previous, closing = true) +
                 retired.map { it.scope }
+        }
+
+        /** Called under lifecycle: keeps the module builds of the modules that a remaining analysis builds. */
+        private fun retainBuilds() {
+            builds.keys.retainAll(requests.keys.flatMap { project.buildOrder(it).map(XdkSourceModule::name) }.toSet())
         }
 
         override fun close() {
@@ -3167,6 +3206,38 @@ class XdkAdapter
 
         /** Whether [uri] is a source of a module of the graph, which the graph's queries read. */
         internal fun hasProject(uri: String): Boolean = synchronized(lifecycle) { project.scope(uri) != null }
+
+        /**
+         * Whether [uri], a source of a module of the graph, opening with [content], leaves each analysis that read its file
+         * reading what it read: each module that holds it, or may use it as a resource, finished, running or as a build
+         * that its consumers' analyses compiled, read [content] of it, or has not read it yet. False when one read other
+         * text, as of a file that changed on disk since, which no watcher has reported yet.
+         */
+        internal fun opensUnchanged(
+            uri: String,
+            content: String,
+        ): Boolean =
+            synchronized(lifecycle) {
+                val file = XdkSources.file(uri) ?: return false
+                val scopes = inputScopes(uri)
+                val overlay = mapOf(file to content)
+                project.scope(uri) != null &&
+                    scopes.all { scope ->
+                        val root =
+                            project.modules.values
+                                .firstOrNull { it.uri == scope }
+                                ?.root ?: XdkSources.file(scope)
+                        val running = requests[scope]?.takeUnless { it.result.isDone }
+                        when {
+                            root == null -> false
+
+                            running != null -> readsUnchanged(running, file, root, overlay)
+
+                            // what no analysis has read, as of a module that none compiled, it reads as it opens
+                            else -> sourceInputs(scope)?.let { XdkFileChanges.unchanged(file, root, it, overlay) } ?: true
+                        }
+                    }
+            }
 
         private fun workspaceNavigation(uri: String): XdkWorkspaceNavigation? =
             projectQuery<XdkWorkspaceNavigation?>(

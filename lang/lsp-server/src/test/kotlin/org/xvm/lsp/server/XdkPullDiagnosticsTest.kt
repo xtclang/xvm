@@ -28,6 +28,8 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDocumentDiagnosticReport
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -993,6 +995,87 @@ class XdkPullDiagnosticsTest {
             assertThat(report.relatedDocuments).isNull()
             assertThatThrownBy { session.pull(URI, identifier = "unknown") }
                 .hasMessageContaining("not negotiated")
+        }
+    }
+
+    @Test
+    fun `a member that opens with its file's text, which changed on disk since the analyses read it, analyzes its consumers again`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {}\n") }
+        val part =
+            directory.resolve("Lib/Part.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Part {}\n")
+            }
+        val appText = "module App { package lib import Lib; lib.Part make() = new lib.Part(); }\n"
+        val app = directory.resolve("App.x").toFile().apply { writeText(appText) }
+        Session().use { session ->
+            val appUri = app.toURI().toString()
+            session.server.replaceCompilerSourceModules(
+                listOf(XdkSourceModule("Lib", lib.toURI().toString()), XdkSourceModule("App", appUri, setOf("Lib"))),
+            )
+            session.open(appUri, appText, 1)
+            assertThat(session.pull(appUri).left.items).isEmpty()
+            // Part changes on disk, as a checkout changes it, and an editor opens it with its new text before any watcher
+            // reports the change: App's analysis read Part as it was, and its use of Part no longer compiles
+            part.writeText("class Piece {}\n")
+            session.open(part.toURI().toString(), part.readText(), 1)
+            assertThat(session.pull(appUri).left.items).isNotEmpty()
+        }
+    }
+
+    @Test
+    fun `a pull is overtaken by the open of a member with its file's text, whose analysis it did not wait for`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val nodeText = "module Node0 { class Box {} }\n"
+        val consumerText = "module Consumer { package lib import Node0; class Child extends lib.Box {} }\n"
+        val node = directory.resolve("Node0.x").toFile().apply { writeText(nodeText) }
+        val consumer = directory.resolve("Consumer.x").toFile().apply { writeText(consumerText) }
+        val holdNode = AtomicBoolean()
+        val holdConsumer = AtomicBoolean()
+        val nodeEntered = CountDownLatch(1)
+        val nodeRelease = CountDownLatch(1)
+        val consumerRelease = CountDownLatch(1)
+        val adapter =
+            hookedAdapter { sources ->
+                if (holdNode.compareAndSet(true, false)) {
+                    nodeEntered.countDown()
+                    check(nodeRelease.awaited())
+                } else if (holdConsumer.get() && "Consumer" in (sources.qualifiedModuleName ?: sources.fileName)) {
+                    check(consumerRelease.awaited())
+                }
+            }
+        try {
+            Session(adapter = adapter).use { session ->
+                val nodeUri = node.toURI().toString()
+                val consumerUri = consumer.toURI().toString()
+                session.server.replaceCompilerSourceModules(
+                    listOf(XdkSourceModule("Node0", nodeUri), XdkSourceModule("Consumer", consumerUri, setOf("Node0"))),
+                )
+                session.open(nodeUri, nodeText, 1)
+                session.pull(nodeUri)
+                holdNode.set(true)
+                holdConsumer.set(true)
+                // Node0's analysis of its edit holds, and its pull waits for it
+                session.change(nodeUri, "module Node0 { class Box {} class Lid {} }\n", 2)
+                assertThat(nodeEntered.awaited()).isTrue()
+                val pull = session.server.textDocumentService.diagnostic(DocumentDiagnosticParams(TextDocumentIdentifier(nodeUri)))
+                // a member opens with its file's text, whose compile will hold: the pull, which answers under the lock,
+                // joined its analysis, which it did not wait for, and held every request and notification until it ended
+                session.open(consumerUri, consumerText, 1)
+                nodeRelease.countDown()
+                // it answers while Consumer's compile still holds, which ends only after the test
+                assertThatThrownBy { pull.awaited() }
+                    .rootCause()
+                    .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                        assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                    }
+            }
+        } finally {
+            nodeRelease.countDown()
+            consumerRelease.countDown()
         }
     }
 

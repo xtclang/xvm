@@ -52,6 +52,8 @@ internal class XdkProjectQueries(
     private val discoveryFolders: List<File> = emptyList(),
     // Whether the graph is a Gradle model's own, which holds every module of its composite build.
     private val composite: Boolean = false,
+    // The editors' documents as they are when the query checks that its sources are current (isCurrent).
+    private val liveOverlays: () -> Map<String, String> = { overlays },
 ) {
     private val captured =
         project.buildOrder().associateWith { module ->
@@ -2000,9 +2002,15 @@ internal class XdkProjectQueries(
         if (cancelled()) throw CancellationException()
     }
 
-    /** Reject changed closed sources/membership even when their watcher notification is delayed. */
+    /**
+     * Reject changed closed sources/membership even when their watcher notification is delayed: the sources as they
+     * are now, the editors' documents ([liveOverlays]) and the files of the rest, have the text that the query captured,
+     * whichever of them an editor has open. A document that was open as the query started and closed since with its
+     * file's text is read of its file, whose later change the query's own overlays would hide.
+     */
     private fun isCurrent(): Boolean {
         checkCurrent()
+        val buffers = liveOverlays()
         return try {
             captured
                 .all { (module, original) ->
@@ -2011,14 +2019,15 @@ internal class XdkProjectQueries(
                             XdkSources
                                 .capture(
                                     module.root,
-                                    overlays,
+                                    buffers,
                                     module.resourceFiles,
                                     cancelled,
                                 ).inputs
                         } catch (_: IOException) {
                             null
                         }
-                    current == original.getOrNull()?.inputs
+                    // which of the files an editor has open, as its URI, is no input of the answer
+                    current?.copy(aliases = emptyMap()) == original.getOrNull()?.inputs?.copy(aliases = emptyMap())
                 }.also { checkCurrent() }
         } catch (_: IOException) {
             false
