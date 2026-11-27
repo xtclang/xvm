@@ -4,7 +4,6 @@ import * as path from 'node:path';
 import Mocha from 'mocha';
 import * as vscode from 'vscode';
 import { showTestProgress } from '../progress';
-import { stopOnUnsafeFailure } from '../wait';
 import { selectedScenarioIds, sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
 import { cases, progress } from './support';
 
@@ -42,8 +41,9 @@ export async function run(): Promise<void> {
         progress(`${run.length}/${selected.length} cases run, ${selected.length - run.length} left: ${count('passed')} passed, ${count('failed')} failed`);
     };
     const failures = await new Promise<number>(resolve => {
+        // a case that fails, a timeout or a failed cleanup too, fails alone: each case ends and restores the editor
+        // before the next starts, so that the run goes on with every case it selected
         const runner = mocha.run(resolve);
-        stopOnUnsafeFailure(runner);
         showTestProgress(runner, 'Ecstasy playbook', test => test.title);
         runner.on('test', test => progress(`${test.title.replace(':', '')}: starts`));
         runner.on('pass', test => {

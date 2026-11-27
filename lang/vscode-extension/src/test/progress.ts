@@ -4,6 +4,8 @@ import { PLAYBOOK_WAIT_MS } from './wait';
 
 interface WaitStep { readonly token: symbol; readonly message?: string; readonly elapsed?: number; readonly bound?: string }
 const waits = new vscode.EventEmitter<WaitStep>();
+/** The waits under way, by their tokens: what each waits for, and since when. */
+const running = new Map<symbol, { message: string; started: number }>();
 
 /**
  * Describe bounded waits without hiding the case ID, counters or failure result; [bound] says how long the wait may
@@ -12,11 +14,17 @@ const waits = new vscode.EventEmitter<WaitStep>();
 export async function withTestWait<T>(message: string, action: () => Promise<T>, bound = `${PLAYBOOK_WAIT_MS / 1000}s`): Promise<T> {
     const token = Symbol(message);
     const started = performance.now();
+    running.set(token, { message, started });
     const report = () => waits.fire({ token, message, elapsed: Math.floor((performance.now() - started) / 1000), bound });
     report();
     const timer = setInterval(report, 1000);
     try { return await action(); }
-    finally { clearInterval(timer); waits.fire({ token }); }
+    finally { clearInterval(timer); running.delete(token); waits.fire({ token }); }
+}
+
+/** The waits under way, each as what it waits for and for how long, the innermost last. */
+export function waitsUnderWay(): string[] {
+    return [...running.values()].map(wait => `${wait.message} (${Math.floor((performance.now() - wait.started) / 1000)} s)`);
 }
 
 /** Share native status-bar progress between smoke tests and selected or full playbook runs. */
