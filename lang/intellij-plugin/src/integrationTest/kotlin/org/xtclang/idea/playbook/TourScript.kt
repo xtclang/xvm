@@ -2023,6 +2023,10 @@ private fun Tour.debugging() {
         open(source("Deck.x"), 0)
         deck = at("addCard(new Card(suit, rank));")
         breakpoint(deck, "rank == Rank.Queen && suit == Suit.Spades")
+        // the balloon hides as soon as the gutter it hangs from moves (DebuggerUIUtil's component listeners): after
+        //  Build and run, which sets the run and build modes back as it ends, the server's refreshes have Deck.x's
+        //  lenses come again as this step opens it, and they move the editor
+        lensesInPlace(source("Deck.x"))
         editBreakpoint(deck)
     }
     prepare {

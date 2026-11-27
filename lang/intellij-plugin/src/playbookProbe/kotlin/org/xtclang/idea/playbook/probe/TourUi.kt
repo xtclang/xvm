@@ -1584,7 +1584,11 @@ object TourUi {
 
     /**
      * Closes popups, hints, the completion lookup and the language server's messages, such as a rename's on modules
-     * outside the workspace, whose balloons would otherwise stay in the frames of the steps after theirs.
+     * outside the workspace, whose balloons would otherwise stay in the frames of the steps after theirs; and hides the
+     * other notifications' balloons, such as the build mode's after its chooser, which the Notifications window keeps.
+     * A notification's balloon left showing is the newest popup in the frame's layered pane, which [popupText] and a
+     * step's popup subject read in place of the step's own: the Debugging section's breakpoint balloon, after Build and
+     * run had chosen Gradle, was never read.
      */
     @JvmStatic
     fun dismiss(): Unit =
@@ -1592,11 +1596,9 @@ object TourUi {
             FileEditorManager.getInstance(project()).selectedTextEditor?.let { LookupManager.getActiveLookup(it)?.hideLookup(true) }
             JBPopupFactory.getInstance().getChildPopups(frame()).forEach { it.cancel() }
             HintManager.getInstance().hideAllHints()
-            NotificationsManager
-                .getNotificationsManager()
-                .getNotificationsOfType(Notification::class.java, project())
-                .filter { it.groupId == "LSP/window/showMessage" }
-                .forEach(Notification::expire)
+            val notifications = NotificationsManager.getNotificationsManager().getNotificationsOfType(Notification::class.java, project())
+            notifications.filter { it.groupId == "LSP/window/showMessage" }.forEach(Notification::expire)
+            notifications.forEach(Notification::hideBalloon)
         }
 
     /**
