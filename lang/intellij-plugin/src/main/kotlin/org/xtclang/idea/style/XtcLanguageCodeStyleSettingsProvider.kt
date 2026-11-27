@@ -61,7 +61,9 @@ class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider()
 
     override fun getCodeSample(settingsType: SettingsType): String = CODE_SAMPLE
 
-    override fun getIndentOptionsEditor(): IndentOptionsEditor = SmartIndentOptionsEditor()
+    // with this provider, the editor shows only the options customizeSettings names: the formatter has no smart tabs, and
+    // keeps no indentation on empty lines
+    override fun getIndentOptionsEditor(): IndentOptionsEditor = SmartIndentOptionsEditor(this)
 
     override fun createConfigurable(
         baseSettings: CodeStyleSettings,
