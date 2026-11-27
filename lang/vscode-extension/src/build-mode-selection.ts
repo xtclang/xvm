@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import {
-    buildMode, hasGradleBuild, onDidChangeReplacedLibraries, replacedLibraries, type BuildMode,
+    buildMode, gradleReason, hasGradleBuild, onDidChangeReplacedLibraries, type BuildMode,
 } from './embedded-execution';
 
 type BuildModeSetting = BuildMode | 'auto';
@@ -16,14 +16,14 @@ const choices: ReadonlyArray<vscode.QuickPickItem & { mode: BuildModeSetting }> 
 ];
 
 /**
- * The picker's choices for a folder whose modules are built against [replaced] libraries, which the workspace's own
- * modules replace: the embedded compiler says it is not available there, as VS Code cannot disable a choice.
+ * The picker's choices for a folder that builds and runs with Gradle for [reason] ([gradleReason]): the embedded
+ * compiler says it is not available there, and why, as VS Code cannot disable a choice.
  */
-export function buildModeChoices(current: string, replaced: readonly string[]): (vscode.QuickPickItem & { mode: BuildModeSetting })[] {
+export function buildModeChoices(current: string, reason: string | undefined): (vscode.QuickPickItem & { mode: BuildModeSetting })[] {
     return choices.map(choice => ({
         ...choice,
-        description: choice.mode === 'embedded' && replaced.length > 0
-            ? `Not available: this folder's modules replace ${replaced.join(', ')}${choice.mode === current ? '; selected' : ''}`
+        description: choice.mode === 'embedded' && reason !== undefined
+            ? `Not available: this folder ${reason}${choice.mode === current ? '; selected' : ''}`
             : choice.mode === current ? 'Selected' : undefined,
     }));
 }
@@ -54,7 +54,7 @@ export async function selectBuildMode(requested?: unknown, folder?: vscode.Uri):
     const settings = vscode.workspace.getConfiguration('xtc', target.uri);
     const current = settings.get<string>('build.mode', 'embedded');
     const selected = requested as BuildModeSetting | undefined
-        ?? (await vscode.window.showQuickPick(buildModeChoices(current, replacedLibraries(target)),
+        ?? (await vscode.window.showQuickPick(buildModeChoices(current, gradleReason(target)),
             { title: 'Ecstasy: Select Build Mode', placeHolder: `How Build, Run and Rebuild work in ${target.name}` }))?.mode;
     if (selected === undefined || selected === current) return;
     const scope = (vscode.workspace.workspaceFolders?.length ?? 0) > 1
@@ -62,24 +62,23 @@ export async function selectBuildMode(requested?: unknown, folder?: vscode.Uri):
     await settings.update('build.mode', selected, scope);
 }
 
-/** Why [folder] keeps Gradle after a choice of the embedded compiler while its modules replace [replaced] libraries. */
-export function embeddedUnavailable(folder: string, replaced: readonly string[]): string {
-    return `The embedded compiler cannot build or run ${folder} while its modules replace the bundled libraries `
-        + `${replaced.join(', ')}: the language server builds and runs only with the bundled XDK. ${folder} keeps `
-        + 'using Gradle; the choice is kept, and applies once no library is replaced.';
+/** Why [folder] keeps Gradle after a choice of the embedded compiler while it builds and runs with Gradle for [reason]. */
+export function embeddedUnavailable(folder: string, reason: string): string {
+    return `The embedded compiler cannot build or run ${folder}, which ${reason}: the language server builds and runs only `
+        + `with the bundled XDK. ${folder} keeps using Gradle; the choice is kept, and applies once that changes.`;
 }
 
 /**
  * Warns when a folder's build mode becomes the embedded compiler, by the picker or by an edit of xtc.build.mode in
- * the settings, while its modules are built against libraries that the workspace's own modules replace.
+ * the settings, while it builds and runs with Gradle whatever its mode ([gradleReason]).
  */
 export function watchEmbeddedChoice(): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(event => {
         for (const folder of vscode.workspace.workspaceFolders ?? []) {
-            const replaced = replacedLibraries(folder);
-            if (replaced.length > 0 && event.affectsConfiguration('xtc.build.mode', folder.uri)
+            const reason = gradleReason(folder);
+            if (reason !== undefined && event.affectsConfiguration('xtc.build.mode', folder.uri)
                 && vscode.workspace.getConfiguration('xtc', folder.uri).get<string>('build.mode') === 'embedded') {
-                void vscode.window.showWarningMessage(embeddedUnavailable(folder.name, replaced));
+                void vscode.window.showWarningMessage(embeddedUnavailable(folder.name, reason));
             }
         }
     });
@@ -115,10 +114,9 @@ export function createBuildModeStatus(): vscode.Disposable {
         const mode = buildMode(folder);
         item.text = buildModeStatusText(mode);
         shown = item.text;
-        const replaced = replacedLibraries(folder);
-        item.tooltip = replaced.length > 0
-            ? `Ecstasy builds and runs ${folder.name} through its Gradle build while its own modules replace the bundled `
-                + `libraries ${replaced.join(', ')}.`
+        const reason = gradleReason(folder);
+        item.tooltip = reason !== undefined
+            ? `Ecstasy builds and runs ${folder.name} through its Gradle build, as it ${reason}.`
             : mode === 'gradle'
             ? `Ecstasy builds and runs ${folder.name} through its Gradle build. Click to choose the embedded compiler.`
             : `Ecstasy builds and runs ${folder.name} with the embedded compiler; of its Gradle build's settings, only the run `

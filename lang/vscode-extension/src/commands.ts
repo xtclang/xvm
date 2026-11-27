@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient, Location, Position } from 'vscode-languageclient/node';
 
 import { buildMode, createEmbeddedBuildTask } from './embedded-execution';
-import { createXtcRunTask, XtcTaskDefinition, XtcTaskProvider } from './task-provider';
+import { createXtcRunTask, runFolder, XtcTaskDefinition, XtcTaskProvider } from './task-provider';
 
 const MODULE_NAME_REGEX = /^[a-zA-Z_]\w*$/;
 
@@ -68,8 +68,8 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
             let moduleName = typeof name === 'string' ? name : undefined;
             const document = uri ? vscode.workspace.textDocuments.find(each => each.uri.toString() === uri) : activeEcstasyDocument();
             const source = uri ?? document?.uri.toString();
-            const folder = source ? vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(source)) : undefined;
-            const mode = buildMode(folder ?? vscode.workspace.workspaceFolders?.[0]);
+            // the module's folder; for a module name typed in, which no open editor declares, none in a window of several
+            const mode = buildMode(runFolder(source));
             moduleName ??= document ? declaredModule(document) : undefined;
             if (!moduleName && !(mode === 'embedded' && source)) {
                 moduleName = await vscode.window.showInputBox({

@@ -8,21 +8,22 @@ import com.intellij.ui.dsl.builder.panel
 
 /**
  * Settings | Languages & Frameworks | Ecstasy | Build and Run: what Build, Rebuild and Ecstasy run configurations use. The
- * embedded compiler is shown unavailable while the project's own modules replace bundled libraries.
+ * embedded compiler is shown unavailable, saying why, while the language server says the project builds and runs with
+ * Gradle: it builds with another XDK than the bundled one, or its own modules replace bundled libraries.
  */
 class XtcBuildConfigurable(
     private val project: Project,
 ) : BoundConfigurable("Build and Run") {
     override fun createPanel(): DialogPanel {
         val settings = XtcBuildSettings.getInstance(project)
-        val replaced = settings.replacedLibraries
+        val reasons = settings.gradleReasons
         return panel {
             buttonsGroup("Build and run using:") {
                 XtcBuildMode.entries.forEach { mode ->
                     row {
                         val choice = radioButton(mode.label, mode)
-                        if (!XtcBuildSettings.available(mode, replaced)) {
-                            choice.enabled(false).comment(XtcBuildSettings.unavailable(replaced))
+                        if (!XtcBuildSettings.available(mode, reasons)) {
+                            choice.enabled(false).comment(XtcBuildSettings.unavailable(reasons))
                         }
                     }
                 }

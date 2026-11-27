@@ -23,37 +23,46 @@ export function hasGradleBuild(folder: vscode.WorkspaceFolder | undefined): bool
 }
 
 /**
- * The bundled libraries that the language server says the workspace's own modules replace, as the XVM repository's
- * replace them all, and the workspace folders whose modules are built against them, as file URIs; none means every
- * folder. In those folders builds and runs use Gradle: the server builds and runs only with the bundled XDK. A
- * replacement does not reach the other folders of the window. Each server says it again.
+ * What the language server says of the workspace folders that build and run with Gradle whatever their mode, as the
+ * server builds and runs only with the bundled XDK: the bundled libraries that the workspace's own modules replace, as
+ * the XVM repository's replace them all; the folders, as file URIs, none meaning every folder where libraries are
+ * replaced; and, by folder URI, why, as the server says it after the folder's name, such as `builds with XDK 0.5.0, not
+ * the bundled XDK 0.4.4`: the folder builds with another XDK than the bundled one, or replaces bundled libraries with
+ * its own modules. Neither reaches the other folders of the window. Each server says it again.
  */
 export interface ReplacedLibraries {
     readonly libraries: readonly string[];
     readonly folders: readonly string[];
+    readonly reasons: Readonly<Record<string, string>>;
 }
 
-let replaced: ReplacedLibraries = { libraries: [], folders: [] };
-/** Whether the user was told that the replaced libraries make builds use Gradle, once per session. */
+let replaced: ReplacedLibraries = { libraries: [], folders: [], reasons: {} };
+/** Whether the user was told that folders build and run with Gradle, once per session. */
 let told = false;
 const replacedChanges = new vscode.EventEmitter<ReplacedLibraries>();
 
-/** Fires when the libraries that the workspace's own modules replace, or the folders they reach, change. */
+/** Fires when the folders that build and run with Gradle whatever their mode, or why, change. */
 export const onDidChangeReplacedLibraries = replacedChanges.event;
 
-/** The libraries replaced for [folder]'s modules: none when the replacing modules are in other folders. */
-export function replacedLibraries(folder: vscode.WorkspaceFolder | undefined): readonly string[] {
-    return replacedIn(folder?.uri.fsPath, replaced);
+/** Why [folder] builds and runs with Gradle whatever its mode, as the server says it after its name; undefined when it does not. */
+export function gradleReason(folder: vscode.WorkspaceFolder | undefined): string | undefined {
+    return gradleReasonIn(folder?.uri.fsPath, replaced);
 }
 
 /**
- * The libraries of [scope] replaced for the folder at [folder], a file system path: all of them when [scope] names
- * no folders or [folder] is unknown, else those only when one of its folders is [folder].
+ * Why, by [scope], the folder at [folder], a file system path, builds and runs with Gradle: for every folder when
+ * [scope] names none, that the workspace's own modules replace its libraries, if any; else, for one of its folders, the
+ * reason it gives that folder, or else that, and nothing for another folder. Without a folder, as for a launch
+ * configuration of a multi-root workspace's own, the reason of the first folder it names: with one folder, that
+ * folder's, and with several, Gradle as soon as one of them builds with it. A folder it names always has a reason.
  */
-export function replacedIn(folder: string | undefined, scope: ReplacedLibraries): readonly string[] {
-    if (scope.folders.length === 0 || folder === undefined) return scope.libraries;
-    const own = realPath(folder);
-    return scope.folders.some(uri => realPath(vscode.Uri.parse(uri).fsPath) === own) ? scope.libraries : [];
+export function gradleReasonIn(folder: string | undefined, scope: ReplacedLibraries): string | undefined {
+    const libraries = scope.libraries.length === 0 ? undefined
+        : `replaces the bundled libraries ${scope.libraries.join(', ')} with its own modules`;
+    if (scope.folders.length === 0) return libraries;
+    const own = folder === undefined ? undefined : realPath(folder);
+    const named = scope.folders.find(uri => own === undefined || realPath(vscode.Uri.parse(uri).fsPath) === own);
+    return named === undefined ? undefined : scope.reasons[named] ?? libraries ?? 'is not built or run by the language server';
 }
 
 // the server's folders are canonical, as /private/tmp for macOS's /tmp
@@ -66,31 +75,36 @@ function realPath(file: string): string {
     }
 }
 
-/** A stopped language server's libraries are no longer replaced; the next server says again what it replaces. */
+/** A stopped language server builds no folder with Gradle any more; the next server says again which it does. */
 export function forgetReplacedLibraries(): void {
-    replace({ libraries: [], folders: [] });
+    replace({ libraries: [], folders: [], reasons: {} });
 }
 
 function replace(scope: ReplacedLibraries): void {
     replaced = scope;
     replacedChanges.fire(scope);
-    if (scope.libraries.length > 0 && !told) {
+    const reasons = scope.folders.length === 0
+        ? [gradleReasonIn(undefined, scope)].filter(reason => reason !== undefined).map(reason => `This workspace ${reason}`)
+        : scope.folders.map(uri => {
+            const folder = vscode.Uri.parse(uri).fsPath;
+            return `The folder ${path.basename(folder)} ${gradleReasonIn(folder, scope) ?? ''}`;
+        });
+    if (reasons.length > 0 && !told) {
         told = true;
-        const where = scope.folders.length === 0 ? 'This workspace\'s own modules'
-            : `The modules of ${scope.folders.map(uri => path.basename(vscode.Uri.parse(uri).fsPath)).join(', ')}`;
         void vscode.window.showInformationMessage(
-            `${where} replace the bundled libraries ${scope.libraries.join(', ')}, and the language server builds and `
-            + 'runs only with the bundled XDK, so Ecstasy builds, runs and debug sessions there use Gradle.');
+            `${reasons.join('; ')}, and the language server builds and runs only with the bundled XDK, so Ecstasy builds, `
+            + 'runs and debug sessions there use Gradle.');
     }
 }
 
 /**
- * The effective mode for a folder: Gradle while its modules are built against libraries that the workspace's own
- * modules replace; else the setting, embedded by default even with a Gradle build, or with `auto`, Gradle exactly
- * when the folder has a Gradle build.
+ * The effective mode for a folder: Gradle while the server says it builds and runs with Gradle ([gradleReason]), as it
+ * builds with another XDK than the bundled one or its modules are built against libraries that the workspace's own
+ * modules replace; else the setting, embedded by default even with a Gradle build, or with `auto`, Gradle exactly when
+ * the folder has a Gradle build.
  */
 export function buildMode(folder: vscode.WorkspaceFolder | undefined): BuildMode {
-    if (replacedLibraries(folder).length > 0) {
+    if (gradleReason(folder) !== undefined) {
         return 'gradle';
     }
     const setting = vscode.workspace.getConfiguration('xtc', folder).get<string>('build.mode', 'embedded');
@@ -181,8 +195,9 @@ export function attachEmbeddedExecution(client: LanguageClient): vscode.Disposab
         'xtc/runExited',
         (params: { runId: string; exitCode?: number | null; error?: string | null }) =>
             sessions.get(params.runId)?.exited(params.exitCode ?? undefined, params.error ?? undefined));
-    const libraries = client.onNotification('xtc/replacedLibraries', (params: { libraries?: string[]; folders?: string[] }) =>
-        replace({ libraries: params.libraries ?? [], folders: params.folders ?? [] }));
+    const libraries = client.onNotification('xtc/replacedLibraries',
+        (params: { libraries?: string[]; folders?: string[]; reasons?: Record<string, string> }) =>
+            replace({ libraries: params.libraries ?? [], folders: params.folders ?? [], reasons: params.reasons ?? {} }));
     return vscode.Disposable.from(output, tested, exited, libraries);
 }
 
