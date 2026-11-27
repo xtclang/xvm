@@ -839,6 +839,7 @@
         "lint": "eslint src/",
         "test:vscode": "node ./scripts/run-vscode-tests.cjs",
         "test:playbook": "node ./scripts/run-vscode-tests.cjs --playbook",
+        "test:harness": "node ./scripts/run-vscode-tests.cjs --harness",
         "test:tour": "node ./scripts/run-vscode-tests.cjs --tour"
     },
     "dependencies": {

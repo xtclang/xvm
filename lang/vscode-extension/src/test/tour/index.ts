@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { runHarness } from '../harness';
 import { script, type Coverage } from './script';
 import { describe, Tour } from './tour';
 import { RECORDING, TourUi } from './ui';
@@ -17,6 +18,13 @@ export async function run(): Promise<void> {
     const project = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!directory || !fixture || !project) throw new Error('Launch the tour with npm run test:tour, or -PvscodeTour=true');
     const sections = new Set((process.env.XTC_TOUR_SECTIONS ?? '').split(',').map(section => section.trim()).filter(Boolean));
+    // the harness's own tests first, as the playbook's: no step runs on a broken harness, which the run's results say
+    await runHarness().catch(async (failure: unknown) => {
+        const error = `The harness's tests failed, so no step ran: ${failure instanceof Error ? failure.message : String(failure)}`;
+        await fs.writeFile(path.join(directory, 'failure.txt'), `${error}\n`);
+        await fs.writeFile(path.join(directory, 'results.json'), JSON.stringify({ mode: 'TOUR', status: 'failed', error }, null, 2) + '\n');
+        throw failure;
+    });
     const ui = await TourUi.connect();
     const tour = new Tour(ui, project, fixture, directory, sections);
     const coverage: Coverage = {};
