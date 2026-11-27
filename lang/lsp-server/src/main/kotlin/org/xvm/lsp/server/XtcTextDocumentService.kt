@@ -842,8 +842,9 @@ class XtcTextDocumentService(
             diagnosticRevision++
             // a close that leaves the text as the file has it, as VS Code's release of a document that no editor
             // shows, three minutes after an extension or a navigation opened it, changes nothing that a listed action
-            // or lens was made from: a click on an action listed before it still applies the action
-            val kept = uri !in outOfSync && onDisk(uri, open.content)
+            // or lens was made from: a click on an action listed before it still applies the action; nor does the close
+            // of a library's document, whose text never changes, as the ecstasy-library content that Go to Definition opens
+            val kept = uri !in outOfSync && ((adapter as? XdkAdapter)?.isLibraryDocument(uri) == true || onDisk(uri, open.content))
             if (!kept) clearResolveReports()
             // nor, for a document outside the graph, anything that an analysis of another or a graph query reads
             if (kept && pendingQueries.isNotEmpty() && (adapter as? XdkAdapter)?.hasProject(uri) != true) released[uri] = open.basis

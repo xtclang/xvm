@@ -1,11 +1,14 @@
 package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionKind
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolParams
@@ -18,12 +21,18 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.TextDocumentContentCapabilities
+import org.eclipse.lsp4j.TextDocumentContentChangeEvent
+import org.eclipse.lsp4j.TextDocumentContentParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.WorkspaceSymbolParams
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -150,18 +159,37 @@ class XdkReleaseServerTest {
         )
     }
 
-    /** The close that the requests must outlast. */
-    enum class Close {
+    /** A close as it comes while the requests wait, which they outlast unless it [overtakes] them. */
+    enum class Close(
+        val overtakes: Boolean = false,
+    ) {
         /** VS Code's release of a document outside the graph, with its text as the file has it. */
         RELEASE {
             override fun of(session: Session) = session.uri("Other")
+        },
+
+        /** VS Code's release of the ecstasy-library content of String's source, which Go to Definition opened. */
+        LIBRARY {
+            override fun prepare(session: Session) = session.openLibrary()
+
+            override fun of(session: Session) = session.library
         },
 
         /** A second didClose: of the graph's consumer, which no editor has open, as of one the playbook closed itself. */
         NOT_OPEN {
             override fun of(session: Session) = session.uri("Consumer")
         },
+
+        /** The close of a document outside the graph with unsaved text, which gives the analyses its file's text again. */
+        UNSAVED(overtakes = true) {
+            override fun prepare(session: Session) = session.edit("Other")
+
+            override fun of(session: Session) = session.uri("Other")
+        },
         ;
+
+        /** Readies the close's document, before the requests are asked. */
+        open fun prepare(session: Session) {}
 
         abstract fun of(session: Session): String
     }
@@ -172,7 +200,15 @@ class XdkReleaseServerTest {
 
     @ParameterizedTest(name = "{0}")
     @EnumSource(Request::class)
+    fun `a workspace request outlasts the release of a library's source`(request: Request) = run(request, Close.LIBRARY)
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(Request::class)
     fun `a workspace request outlasts a didClose of a document that is not open`(request: Request) = run(request, Close.NOT_OPEN)
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(Request::class)
+    fun `the close of a document with unsaved text overtakes a workspace request`(request: Request) = run(request, Close.UNSAVED)
 
     private fun run(
         request: Request,
@@ -181,6 +217,7 @@ class XdkReleaseServerTest {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
         Session(directory).use { session ->
+            close.prepare(session)
             // the graph's diagnostics, which an editor pulls, compile the closed consumer first, and the compile holds
             session.hold.set(true)
             session.adapter.workspaceDiagnosticsAsync()
@@ -193,14 +230,23 @@ class XdkReleaseServerTest {
             assertThat(answer).describedAs("$request waits for the held compile").isNotDone()
             session.server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(close.of(session))))
             session.release.countDown()
-            request.check(session, answer.awaited())
+            if (close.overtakes) {
+                assertThatThrownBy { answer.awaited() }
+                    .rootCause()
+                    .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                        assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                    }
+            } else {
+                request.check(session, answer.awaited())
+            }
         }
     }
 
     /**
      * A server with the graph of [SOURCES]' Node0 and its consumer Consumer, whose root Node0 the editor has open, and
      * Other, a module outside the graph, as an earlier case's file that the editor still has open, both with their
-     * text as the files have it; the next module compile after [hold] is set holds until [release].
+     * text as the files have it; the next module compile after [hold] is set holds until [release]. [openLibrary] opens
+     * [library], String's source, as VS Code does after Go to Definition on Other's String.
      */
     class Session(
         private val directory: Path,
@@ -217,6 +263,7 @@ class XdkReleaseServerTest {
                 }
             }
         val server = XtcLanguageServer(adapter)
+        lateinit var library: String
 
         init {
             SOURCES.forEach { (name, text) ->
@@ -247,6 +294,7 @@ class XdkReleaseServerTest {
                                                 resourceOperations = listOf("rename")
                                             }
                                         fileOperations = FileOperationsWorkspaceCapabilities().apply { willRename = true }
+                                        textDocumentContent = TextDocumentContentCapabilities()
                                     }
                             }
                     },
@@ -261,6 +309,44 @@ class XdkReleaseServerTest {
                 server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri(name), "xtc", 1, SOURCES.getValue(name))))
                 server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri(name)))).awaited()
             }
+        }
+
+        fun openLibrary() {
+            val other = SOURCES.getValue("Other")
+            library =
+                server.textDocumentService
+                    .definition(DefinitionParams(TextDocumentIdentifier(uri("Other")), position(other, "String")))
+                    .awaited()
+                    .left
+                    .single()
+                    .uri
+            val text =
+                server.workspaceService
+                    .textDocumentContent(TextDocumentContentParams(library))
+                    .awaited()
+                    .text
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(library, "xtc", 1, text)))
+            server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(library))).awaited()
+        }
+
+        /** Gives [name]'s document text that its file does not have, and waits for its analysis. */
+        fun edit(name: String) {
+            server.textDocumentService.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(uri(name), 2),
+                    listOf(TextDocumentContentChangeEvent(SOURCES.getValue(name).replace("}\n}", "}\n    class Unsaved {}\n}"))),
+                ),
+            )
+            server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri(name)))).awaited()
+        }
+
+        private fun position(
+            text: String,
+            word: String,
+        ): Position {
+            val lines = text.lines()
+            val line = lines.indexOfFirst { word in it }
+            return Position(line, lines[line].indexOf(word))
         }
 
         fun uri(name: String): String =
@@ -282,7 +368,7 @@ class XdkReleaseServerTest {
                 "Node0" to "module Node0 {\n    import ecstasy.collections.ReverseList;\n\n    class Box {}\n}\n",
                 "Node0/Part" to "class Part {}\n",
                 "Consumer" to "module Consumer {\n    package lib import Node0;\n    class Child extends lib.Box {}\n}\n",
-                "Other" to "module Other {\n    class Extract {}\n}\n",
+                "Other" to "module Other {\n    class Extract {\n        String text = \"value\";\n    }\n}\n",
             )
     }
 }
