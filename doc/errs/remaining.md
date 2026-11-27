@@ -971,11 +971,39 @@ New open entry, after the one above:
   minute. The focus shows the document again at each try. X194 passed in four runs, the 33 cases that use the helpers in
   `run-NVQStk`. Left: `connectOverCDP`'s 15 s and X145's 70 s `xtc-lsp` restart; the original failure was not
   reproduced.
-- [ ] Found 2026-11-27 with X216: VS Code's playbook waits other than the type moves' file check still wait a fixed
-  30 s (`PLAYBOOK_WAIT_MS`), and each case has a fixed bound (90 s, or its own), which a slow machine can outlast
-  while it progresses; only `settles` (the type moves) and the diagnostics waits' finality follow the hang rules.
+- [x] Found 2026-11-27 with X216: VS Code's playbook waits other than the type moves' file check still wait a fixed 30
+  s (`PLAYBOOK_WAIT_MS`), and each case has a fixed bound (90 s, or its own), which a slow machine can outlast while
+  it progresses; only `settles` (the type moves) and the diagnostics waits' finality follow the hang rules.
   `cleanUp`'s restore resets the source graph and restarts the server, but not other settings that a case whose own
-  cleanup failed may have left changed; a case body still in a call an hour past its bound is left to itself.
+  cleanup failed may have left changed; a case body still in a call an hour past its bound is left to itself. Also
+  fixed bounds: `connectOverCDP`'s 15 s, X145's 70 s `xtc-lsp` restart and 20 s re-requests, the suite setup's 60 s,
+  X129-X131's 30 s Explorer selection, X303/X337/X340's 120 s Gradle waits, and `untilTakes`' three 2 s tries with no
+  workbench event. Fixed (`f925834d19`), after two independent reviews: `eventually` is `whileUnderWay`, which goes on
+  while a UI try's call or a debug adapter's request of the case has not answered (but a launch or an attach, which
+  waits for its program), while something happened within the last minute (the workbench's events, the workspace's
+  files, debug sessions and the adapters' events, tasks and their processes, a process task's terminal output read
+  through DevTools without Gradle's clock, terminals, the embedded runs' output, the tests' results, the client's
+  restart states, a starting server's time and its own session's log, and a case's own processes' output and time),
+  and otherwise while the server works. A read that has not answered within 2 s is waited for again and reported every
+  minute, and its late answers count toward the verdict. Three looks with nothing under way are final, and the hour is
+  only the last resort; `untilTakes` counts the same minute's record. A case has no bound: it goes on while it is in a
+  wait, or in a call with something under way. One in a call with nothing under way is given up on: its waits fail,
+  its signal aborts and ends its own processes, and a server restart ends its call, all while the case is still
+  watched. One that then does not end, or whose restart does not, is left to itself as `PlaybookLeftRunning`: no
+  cleanup races it, no other case runs, and the run says so (`stopped` in results.json, `Stopped:` in results.txt). A
+  call still unanswered when its case ends is reported as left over and counts for no later case. Each case's cleanup
+  first ends the debug sessions and tasks it left running, and records every setting at its start (user, workspace,
+  workspace folders), putting back what differs, a language block key by key. It restarts the server when that touches
+  a setting that applies only on restart, or the case failed after changing one, and waits out the extension's own
+  restart for a connection setting. X145's ContentModified re-requests end at three with nothing happening between
+  them. In `run-RnkqNA` the restore found X137 leaving `xtc.languageService.adapter` written. `run-MZCzoF`: 359 of 360
+  passed and X218 was the known host failure UP23; the cases the reviews named passed in `run-O4bbGJ` (X130 its known
+  host failure UP16), and `run-AhNpub` passed under a load average near 150. The harness's tests that act on the
+  window run in the playbook's and their own window only, so the tour finds its project as before (`run-gKMBtm`: no
+  `.vscode` in its first Explorer frame). Left: `xtc-lsp` itself still gives each session's status 1 s, and the
+  restart's answer at most 600 s, its longest. Gradle's test runs (not tasks) count by test events and workspace
+  writes only, and a process's time counts on Linux only. The settings-persistence run, which uses the new waits, has
+  no Gradle task and was not run.
 - [x] Found 2026-11-27 recording the VS Code tour (`run-cjtCLE`, debugging): "Set a value" failed, "The value box takes
   the keyboard ... nothing under way for 60 s". `TourUi.menu` pressed Enter 34 ms after a click that had chosen Set
   Value, as the menu still showed: VS Code's menu runs a clicked item in a timer task after the mouse's release, and the
@@ -992,6 +1020,12 @@ New open entry, after the one above:
   as under way however silent they are, so a wait whose condition never comes while a debugged program waits for
   input, or a Gradle task hangs, runs to the hang's bound (an embedded run counts only while it prints, since
   `b79a852e3b`). The server's requests and compiles count for every wait, also one that only the UI can satisfy.
+  A fix waits on `lagergren/vscode-bounds` (`5bb3406783`), held while the tours are narrated: a debug session counts
+  by its messages and unanswered requests, a task by its starts, ends and active terminal's output, and the tour's UI
+  waits leave out the server's work (whole tour `run-7phygd`: 101 steps, 0 failed). Before it lands, it imports
+  `withoutClock` from `src/test/terminal.ts`; still open there from the playbook's reviews: an unanswered launch or
+  attach counts as under way, adapter requests are not scoped to a step, a hung condition call gives no minute's
+  report, and a silently computing process counts as nothing.
 - [x] Found 2026-11-26 in a one-case IntelliJ run (X1, with another container running): the test Driver's first call
   into the IDE timed out 9 s after start (DriverIllegalStateException, TimeoutException), before the case ran; X1–X3
   passed in the next run. It came twice more the same evening, in the shared queue's validation runs (one in each
