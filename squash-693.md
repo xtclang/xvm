@@ -1,6 +1,6 @@
 # Squashing #693 into reviewable pull requests
 
-A plan only: making it changed nothing in #693. It covers the 651 commits of `errs/full-testable-lsp-20261009` over `master` (tip `dd3771f1a3`, master `ede5667376`, 2026-11-27), numbered 1 to 651 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-651 came after, and were placed by the same rules. Three are open on master as their own PRs, and each takes its commits out of #693 when it merges: 458, with 499, 521 and 644 its review rounds, is #802; 196, with the test fixtures of 194 (`Await` and `Watchdog`; 194's edits of #693's own tests stay), is #811; and 170 and 198 are #812, on #811's branch, as their tests wait through its fixtures. #813's four commits, 407, 465, 470 and 613 then, merged to master as ede5667376 on 2026-11-27; #693 was rebased onto it without them, which renumbered the commits after 407. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480. #810, the plugin installable in every JetBrains IDE, merged as 4350e40af0 the same day; #693 was rebased onto it with no commit dropped, as its own fuller change (Gradle optional, not removed) is commit 530.
+A plan only: making it changed nothing in #693. It covers the 652 commits of `errs/full-testable-lsp-20261009` over `master` (tip `9c527a5dfa`, master `ede5667376`, 2026-11-27), numbered 1 to 652 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-652 came after, and were placed by the same rules. Three are open on master as their own PRs, and each takes its commits out of #693 when it merges: 458, with 499, 521, 644 and 652 its review rounds, is #802; 196, with the test fixtures of 194 (`Await` and `Watchdog`; 194's edits of #693's own tests stay), is #811; and 170 and 198 are #812, on #811's branch, as their tests wait through its fixtures. #813's four commits, 407, 465, 470 and 613 then, merged to master as ede5667376 on 2026-11-27; #693 was rebased onto it without them, which renumbered the commits after 407. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480. #810, the plugin installable in every JetBrains IDE, merged as 4350e40af0 the same day; #693 was rebased onto it with no commit dropped, as its own fuller change (Gradle optional, not removed) is commit 530.
 
 It proposes 15 pull requests, each of which changes either only files outside lang/ (xvm only: X1-X5) or only files in lang/ (lang only: L1-L10), merged in one order. To get there, the commits are first sorted into 13 topics (P1-P13), the commits of a topic that implement or fix the same thing, however far apart, are grouped to be joined, and every commit is then divided at lang/: its other files go to its topic's xvm PR, its lang/ files to its topic's lang PR.
 
@@ -24,7 +24,7 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 14 | **L9** | lang/ | Debugging: the DAP server, debug sessions, launch and attach, and both editors' debug UI | X4, L8 | P10 | 49 | 8.7k / 11.1k |
 | 15 | **L10** | lang/ | Test infrastructure: the playbooks, the scenario catalog, the manual test plan and the tours | L9, X5 | P12, P13 | 239 | 9.2k / 64.8k |
 
-Already open on master, apart from these, each leaving #693 when it merges: #802 (unused constructor arguments, commits 458, 499, 521 and 644); #811 (a hasher map's spare key per thread, 196, with 194's test fixtures); and #812 (Future callbacks and service shutdowns reported and completed, 170 and 198, on #811). #804 (runXtc keeps xtcRun's settings), #813 (the Gradle model's build-tree paths and run settings, and its reports written whole, merged as `ede5667376`, which #693 is now based on), #808 (the plugin tests' one network download dropped) and #810 (the plugin installable in every JetBrains IDE) are merged.
+Already open on master, apart from these, each leaving #693 when it merges: #802 (unused constructor arguments, commits 458, 499, 521, 644 and 652); #811 (a hasher map's spare key per thread, 196, with 194's test fixtures); and #812 (Future callbacks and service shutdowns reported and completed, 170 and 198, on #811). #804 (runXtc keeps xtcRun's settings), #813 (the Gradle model's build-tree paths and run settings, and its reports written whole, merged as `ede5667376`, which #693 is now based on), #808 (the plugin tests' one network download dropped) and #810 (the plugin installable in every JetBrains IDE) are merged.
 
 Prerequisites are the PRs that must be merged first; the order above satisfies all of them, so merging in it always works. Where a PR lists two, either can be merged first of the two, but both before it. Some can be reviewed side by side: L4 and L5 both need only L3, and L6 and L7 both need L4 and L5.
 
@@ -42,7 +42,7 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 
 | Topic | Title | Builds on | Only lang/? | Commits now | After squashing (about) | Added lines: main / tests |
 |---|---|---|---|---|---|---|
-| P1 | Compiler diagnostics: the error-listener contract and repository read failures | master | no | 16 | 4 | 3.1k / 3.2k |
+| P1 | Compiler diagnostics: the error-listener contract and repository read failures | master | no | 17 | 4 | 3.1k / 3.3k |
 | P2 | Compiler host API: compilation outcomes, snapshots, syntax and semantic facts | P1 | no | 8 | 4 | 5.8k / 3.1k |
 | P3 | Compiler analysis of incomplete source: recovery, cursor fitting, declarations | P2 | no | 6 | 2 | 5.7k / 2.0k |
 | P4 | Language server core: protocol, document sync, compile pipeline, discovery, diagnostics | P3 | yes, once 5 commits' other files move | 56 | 16 | 20.8k / 29.8k |
@@ -55,7 +55,7 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 | P11 | The XDK's library sources and the XDK workspace | P5 | yes, once 1 commit's other files move | 24 | 9 | 3.5k / 3.5k |
 | P12 | Test infrastructure: playbooks, scenarios, tours and their container | P7-P11 | no | 192 | 22 | 3.8k / 65.2k |
 | P13 | Documentation, build and CI | the PRs it documents | no | 50 | 6 | 6.9k / 376 |
-| | **Total** | | | **651** | **174** | |
+| | **Total** | | | **652** | **174** | |
 
 The topics group the commits; the PRs above divide them at lang/. Sizes count added lines, with commit 8 divided by package (below). They leave out only the two files that later commits delete whole (XdkColorPrototype, XdkMonikers); the rest of what the pairs in finding 2 take back is still counted, so squashed PRs come out somewhat smaller. Tests are most of every PR's size: reviewers read the main code and skim the tests.
 
@@ -291,6 +291,7 @@ These commits change files outside the components of the PR they are placed in, 
 - 646 `dbee3e81aa` Refuse embedded builds and runs of a project on another XDK, and tell the editors which folders build with Gradle and why, in P9 (+663; also touches: build)
 - 647 `abe754a389` Build a folder on another XDK with Gradle in both editors, and say which XDK it builds with, in P9 (+315; also touches: playbook)
 - 651 `dd3771f1a3` Answer a file move that can't be proven, or that a change overtook, for what it is, as a rename answers, and show its reason in both editors, in P6 (+394; also touches: build, intellij, playbook, vscode)
+- 652 `9c527a5dfa` Move the negative constructor argument tests to the XDK's compiler-errors suite, in P1 (+105; also touches: xdk)
 
 ## Splitting commit 8
 
@@ -314,14 +315,14 @@ The division is by file; inside XdkAdapter.kt, the largest file (2,448 lines), a
 
 **Scope.** javatools: every report goes to an explicit ErrorListener, with a reason for silence; parser and validation listeners scoped and restored; module repository read failures kept, cached and reported.
 
-**Builds on** master. **Commits:** 16 now, about 4 after squashing. **Added lines:** 3,198 main, 3,247 tests.
+**Builds on** master. **Commits:** 17 now, about 4 after squashing. **Added lines:** 3,198 main, 3,352 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
 | Keep, cache and report module repository read failures | 1 `f597130694` Preserve module repository read failures without blocking usable candidates<br>9 `6e2df65490` Report repository read attempts without inferring dependency failures<br>11 `f6dd130142` Keep unchanged repository read failures cached until file metadata changes | Three steps of one change to ModuleRepository's failure handling: preserve the failures, report the attempts without inferring dependency failures, keep them cached until file metadata changes. |
 | Require explicit error listeners, separate reporting from abort policy | 2 `0393125d13` Separate diagnostic reporting from listener abort policy<br>3 `6e5d586776` Require explicit compiler listeners and reasons for silence<br>4 `c5d57e2ddd` Scope parser diagnostics and restore validation listeners on every exit<br>19 `c7262be202` Route repository and runtime reports through error listeners<br>41 `171c45ff62` Stop the lexer at a source's end and keep diagnostics that only look like duplicates<br>465 `6d62bb081e` Drop TypeConstant's import of Silence.PROBE, whose only use went with getJitICType()<br>466 `9352626a2e` Say silent(PROBE) at each newable check of #803's JIT code, and drop the helper that chose a listener for them | One contract change (ErrorListener) made over five commits: separate reporting from abort, require listeners and reasons for silence, scope parser diagnostics, route repository and runtime reports, and the lexer fix that the new duplicate check exposed. |
 | Regression tests for diagnostics, embedding, cancellation and duplicate types | 384 `444710c1a0` Add errs' regression tests for compiler diagnostics, embedding, cancellation and duplicate types<br>386 `15b7606972` Check duplicate source types through the command line, and implicitly abstract classes, in manualTests | Tests of the behaviour above, added later from errs; put them with the change they test. The embedding and cancellation test classes of 384 belong to P2 instead: split 384 by test class. |
-| Unused constructor arguments and defaults (open PR #802) | 458 `a52c397838` Report constructor arguments and default values that no constructor uses<br>499 `e1601172eb` Allow contribution arguments and shorthand defaults that match the explicit constructor<br>521 `8687101044` Test that a class without constructors compiles and uses its contribution's arguments<br>644 `3f489826da` Say plainly what is unused and what to do in COMPILER-188 and COMPILER-210 | already open on master as #802, with 502 and 524 its review round; they drop out of #693 when #802 merges |
+| Unused constructor arguments and defaults (open PR #802) | 458 `a52c397838` Report constructor arguments and default values that no constructor uses<br>499 `e1601172eb` Allow contribution arguments and shorthand defaults that match the explicit constructor<br>521 `8687101044` Test that a class without constructors compiles and uses its contribution's arguments<br>644 `3f489826da` Say plainly what is unused and what to do in COMPILER-188 and COMPILER-210<br>652 `9c527a5dfa` Move the negative constructor argument tests to the XDK's compiler-errors suite | already open on master as #802, with 499, 521, 644 and 652 its review rounds; they drop out of #693 when #802 merges |
 
 ## Topic P2: Compiler host API: compilation outcomes, snapshots, syntax and semantic facts
 
@@ -1319,3 +1320,4 @@ Kept as they are:
 | 649 | `3e1d411d2f` | P4 | — | L1, L2 | Keep documents current and the server responsive | Keep workspace requests and analyses through the close or open of a graph member with its file's text |
 | 650 | `e0ba727366` | P4 | — | L1 | Keep documents current and the server responsive | Answer a request whose work the server retired for a change with ContentModified, and a document's diagnostic pull with a cancellation |
 | 651 | `dd3771f1a3` | P6 | — | L4 | Rename guards and proofs | Answer a file move that can't be proven, or that a change overtook, for what it is, as a rename answers, and show its reason in both editors |
+| 652 | `9c527a5dfa` | P1 | #802 | — | Unused constructor arguments and defaults (open PR #802) | Move the negative constructor argument tests to the XDK's compiler-errors suite |
