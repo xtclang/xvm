@@ -1,6 +1,6 @@
 # Squashing #693 into reviewable pull requests
 
-A plan only: making it changed nothing in #693. It covers the 613 commits of `errs/full-testable-lsp-20261009` over `master` (tip `d41e4e9b48`, master `4350e40af0`, 2026-11-26), numbered 1 to 613 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-613 came after, and were placed by the same rules. Four are open on master as their own PRs, and each takes its commits out of #693 when it merges: 459, with 502 and 524 its review round, is #802; 196, with the test fixtures of 194 (`Await` and `Watchdog`; 194's edits of #693's own tests stay), is #811; 170 and 198 are #812, on #811's branch, as their tests wait through its fixtures; and 407, 465, 470 and 613 are #813. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480. #810, the plugin installable in every JetBrains IDE, merged as 4350e40af0 the same day; #693 was rebased onto it with no commit dropped, as its own fuller change (Gradle optional, not removed) is commit 530.
+A plan only: making it changed nothing in #693. It covers the 616 commits of `errs/full-testable-lsp-20261009` over `master` (tip `b74000ae86`, master `4350e40af0`, 2026-11-26), numbered 1 to 616 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-616 came after, and were placed by the same rules. Four are open on master as their own PRs, and each takes its commits out of #693 when it merges: 459, with 502 and 524 its review round, is #802; 196, with the test fixtures of 194 (`Await` and `Watchdog`; 194's edits of #693's own tests stay), is #811; 170 and 198 are #812, on #811's branch, as their tests wait through its fixtures; and 407, 465, 470 and 613 are #813. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480. #810, the plugin installable in every JetBrains IDE, merged as 4350e40af0 the same day; #693 was rebased onto it with no commit dropped, as its own fuller change (Gradle optional, not removed) is commit 530.
 
 It proposes 15 pull requests, each of which changes either only files outside lang/ (xvm only: X1-X5) or only files in lang/ (lang only: L1-L10), merged in one order. To get there, the commits are first sorted into 13 topics (P1-P13), the commits of a topic that implement or fix the same thing, however far apart, are grouped to be joined, and every commit is then divided at lang/: its other files go to its topic's xvm PR, its lang/ files to its topic's lang PR.
 
@@ -11,12 +11,12 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 1 | **X1** | files outside lang/ | Compiler diagnostics: the error-listener contract and repository read failures | — (master) | P1 | 12 | 2.9k / 2.8k |
 | 2 | **X2** | files outside lang/ | Compiler host API: compilation outcomes, snapshots, syntax and semantic facts | X1 | P2, P11 | 15 | 5.7k / 1.1k |
 | 3 | **X3** | files outside lang/ | Compiler analysis of incomplete source: recovery, cursor fitting, declarations | X2 | P3, P4 | 8 | 5.8k / 1.7k |
-| 4 | **X4** | files outside lang/ | Runtime support for running, testing and debugging from the editors: the debugger and its agent, xtc, xunit and the Gradle plugin | X3 | P9, P10 | 56 | 9.5k / 5.2k |
+| 4 | **X4** | files outside lang/ | Runtime support for running, testing and debugging from the editors: the debugger and its agent, xtc, xunit and the Gradle plugin | X3 | P9, P10 | 57 | 9.5k / 5.2k |
 | 5 | **X5** | files outside lang/ | Build, CI and test tooling outside lang: CI test tiers, build checks, test hang detection, the LSP4IJ and IntelliJ versions, PR previews | X4 | P4, P7, P12, P13 | 28 | 1.7k / 989 |
 | 6 | **L1** | lang/ | Language server: the server, its protocol, document synchronization, Tree-sitter and the mock adapter | X3, X5 | P4 | 47 | 11.4k / 13.9k |
 | 7 | **L2** | lang/ | Language server: the compiler adapter's core, compiling, discovery, diagnostics and workspace pulls | L1 | P1, P2, P3, P4 | 41 | 9.3k / 17.6k |
 | 8 | **L3** | lang/ | Language server: the semantic model and read-only editor features | L2 | P5 | 38 | 6.5k / 7.7k |
-| 9 | **L4** | lang/ | Language server: code actions and refactorings | L3 | P6 | 42 | 9.4k / 13.3k |
+| 9 | **L4** | lang/ | Language server: code actions and refactorings | L3 | P6 | 44 | 9.6k / 13.7k |
 | 10 | **L5** | lang/ | Language server: the XDK's library sources and the XDK workspace | L3 | P11 | 23 | 3.1k / 3.3k |
 | 11 | **L6** | lang/ | IntelliJ plugin, on LSP4IJ 0.30.1 | L4, L5, X5 | P7 | 79 | 10.5k / 6.6k |
 | 12 | **L7** | lang/ | VS Code extension | L4, L5 | P8 | 12 | 2.7k / 341 |
@@ -47,15 +47,15 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 | P3 | Compiler analysis of incomplete source: recovery, cursor fitting, declarations | P2 | no | 6 | 2 | 5.7k / 2.0k |
 | P4 | Language server core: protocol, document sync, compile pipeline, discovery, diagnostics | P3 | yes, once 5 commits' other files move | 51 | 16 | 20.4k / 28.9k |
 | P5 | Language server: semantic model and read-only editor features | P4 | yes | 37 | 8 | 6.6k / 7.7k |
-| P6 | Language server: code actions and refactorings | P5 | yes | 41 | 10 | 9.4k / 13.3k |
+| P6 | Language server: code actions and refactorings | P5 | yes | 43 | 10 | 9.6k / 13.7k |
 | P7 | IntelliJ plugin, built against LSP4IJ 0.30.1 | P6 | nearly | 78 | 28 | 10.6k / 6.7k |
 | P8 | VS Code extension | P6 | yes | 11 | 7 | 2.7k / 341 |
 | P9 | Embedded build, run and tests from the editors | P4 (and P7, P8 for the editor parts) | no | 58 | 23 | 10.6k / 9.8k |
-| P10 | Debugger: runtime debugger, DAP server and the editors' debugging | P9 | no | 61 | 36 | 17.3k / 15.3k |
+| P10 | Debugger: runtime debugger, DAP server and the editors' debugging | P9 | no | 62 | 36 | 17.3k / 15.3k |
 | P11 | The XDK's library sources and the XDK workspace | P5 | yes, once 1 commit's other files move | 24 | 9 | 3.5k / 3.5k |
 | P12 | Test infrastructure: playbooks, scenarios, tours and their container | P7-P11 | no | 174 | 22 | 3.7k / 63.4k |
 | P13 | Documentation, build and CI | the PRs it documents | no | 49 | 6 | 6.8k / 376 |
-| | **Total** | | | **613** | **175** | |
+| | **Total** | | | **616** | **175** | |
 
 The topics group the commits; the PRs above divide them at lang/. Sizes count added lines, with commit 8 divided by package (below). They leave out only the two files that later commits delete whole (XdkColorPrototype, XdkMonikers); the rest of what the pairs in finding 2 take back is still counted, so squashed PRs come out somewhat smaller. Tests are most of every PR's size: reviewers read the main code and skim the tests.
 
@@ -273,7 +273,8 @@ These commits change files outside the components of the PR they are placed in, 
 - 605 `bda66624a8` Make lang's three copies of Awaiting.kt one test fixture, org.xvm.testing's, in a new project, lang/test-support, in P12 (+252; also touches: build, dap, intellij, server)
 - 606 `bfdd13c2b1` Say in VS Code why a rename is refused, as IntelliJ's plugin does, instead of VS Code's "No result.", in P6 (+101; also touches: playbook, vscode)
 - 612 `681c7a2ebb` Copy back only the VS Code runs that a container made, not every run its slot's work volume keeps, in P12 (+27; also touches: intellij)
-
+- 614 `51e0a51f1f` Answer a rename that can't be proven, or that a change overtook, for what it is, and let a cancel reach a plain rename's proof, in P6 (+584; also touches: intellij, playbook, vscode)
+- 616 `b74000ae86` Show nothing in IntelliJ for a rename that the user cancels, not "Rename failed: null", in P6 (+33; also touches: intellij)
 
 ## Splitting commit 8
 
@@ -383,7 +384,7 @@ Kept as they are:
 
 **Scope.** lsp-server: quick fixes, rename (with its facts and guards), moves, extraction, inlining, safe delete and the proof compiles that check code actions. Commit 8's XdkProjectQueries, XdkRename, CompilerRenameFacts, CompilerMissingMethod, XdkMissingMethods, XdkMissingDeclarations, XdkMethodExtraction, XdkLocalExtraction, XdkTypeMoves, XdkLocalInline, XdkMemberInline, XdkMemberActions and CompilerMemberAction with their tests.
 
-**Builds on** P5. **Commits:** 41 now, about 10 after squashing. **Added lines:** 9,532 main, 13,384 tests.
+**Builds on** P5. **Commits:** 43 now, about 10 after squashing. **Added lines:** 9,732 main, 13,801 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -392,7 +393,7 @@ Kept as they are:
 | Safely delete an unused member | 76 `717233fe9b` Safely delete an unused public or protected member<br>214 `a9b4696250` Safely delete a member whose body has an annotation, as an injected local | 214 fixes 76 for a body with an annotation. |
 | Extract statements | 168 `76fd05727f` Extract statements that use an injected local, passing its value<br>177 `ea126a4aa3` Extract statements from a selection of whole lines | 177 extends 168's extraction to a selection of whole lines. |
 | Moves: rename adopted properties, widen extraction, move and rename roots | 37 `d6618d5ac9` Rename adopted properties, widen extraction, and move and rename discovered roots<br>167 `360af1b0ab` Import a moved type where its new package's name is a property | 167 fixes the import of a moved type introduced with 37. |
-| Rename guards and proofs | 16 `937159ba6f` Guard code actions and renames at synthetic bodies and locked library sources<br>70 `db639a11f8` Prove a rename past a register the semantic model cannot place<br>394 `1460c6b48c` Refuse a plain rename that also changes the configured source modules, and say why<br>412 `9e60b8b3f9` Prove a rename in a workspace module that replaces a bundled library as the workspace's sources<br>416 `8268b5ad82` Find a text's line breaks once per comparison in a rename's proof, not once per position<br>417 `dc7ad6baf9` Prove a rename where the facts cannot prove every binding, unless one spells a name the rename changes<br>418 `15c8dc1d98` Refuse a rename over ecstasy's sources below a 2 GB heap, and test a rename of the workspace's ecstasy<br>460 `09ffc95572` Prove XdkRenameUnprovableTest's refusal on a binding that stays unprovable, CompileType.Element<br>606 `bfdd13c2b1` Say in VS Code why a rename is refused, as IntelliJ's plugin does, instead of VS Code's "No result."<br>607 `60b1f428ff` Answer xtc/rename's refusals with their reason, as textDocument/rename does, instead of as an internal error | Guards and proofs of the same rename: synthetic bodies and locked libraries (16), a register the model cannot place (70), the refusal of a plain rename that changes the source modules (394). |
+| Rename guards and proofs | 16 `937159ba6f` Guard code actions and renames at synthetic bodies and locked library sources<br>70 `db639a11f8` Prove a rename past a register the semantic model cannot place<br>394 `1460c6b48c` Refuse a plain rename that also changes the configured source modules, and say why<br>412 `9e60b8b3f9` Prove a rename in a workspace module that replaces a bundled library as the workspace's sources<br>416 `8268b5ad82` Find a text's line breaks once per comparison in a rename's proof, not once per position<br>417 `dc7ad6baf9` Prove a rename where the facts cannot prove every binding, unless one spells a name the rename changes<br>418 `15c8dc1d98` Refuse a rename over ecstasy's sources below a 2 GB heap, and test a rename of the workspace's ecstasy<br>460 `09ffc95572` Prove XdkRenameUnprovableTest's refusal on a binding that stays unprovable, CompileType.Element<br>606 `bfdd13c2b1` Say in VS Code why a rename is refused, as IntelliJ's plugin does, instead of VS Code's "No result."<br>607 `60b1f428ff` Answer xtc/rename's refusals with their reason, as textDocument/rename does, instead of as an internal error<br>614 `51e0a51f1f` Answer a rename that can't be proven, or that a change overtook, for what it is, and let a cancel reach a plain rename's proof<br>616 `b74000ae86` Show nothing in IntelliJ for a rename that the user cancels, not "Rename failed: null" | Guards and proofs of the same rename: synthetic bodies and locked libraries (16), a register the model cannot place (70), the refusal of a plain rename that changes the source modules (394). |
 | Quick fixes: a const with toString, Create class, declared action kinds | 145 `45a1d2c667` Offer code actions in a module that has a const with a toString<br>176 `3e8ec2315e` Offer Create class for the diagnostic of a statement that constructs it<br>211 `b52901a692` Declare the code action kinds the language server's actions have | Small fixes and additions to the same quick-fix provider. |
 | Say what a change to a public declaration reaches outside the workspace | 436 `d536a66bb8` Say, when a rename or safe delete changes a public declaration, that modules outside the workspace are not changed<br>445 `52597c7f21` Say, when a file move or rename or a plain rename changes a public declaration, that modules outside the workspace are not changed<br>569 `1c14a091c7` Say, when a rename leaves string literals and comments that spell the old name, how many and where | renames, safe deletes and file moves say when a public declaration changes for modules outside it |
 | A client's cancellation reaches the adapter's work | 438 `6ffd778c67` Let a client's cancellation of a rename, or of xtc/build, reach the adapter's work<br>451 `466b3932cf` Ask an adapter's work to stop on every cancellation of a converted result, also once the result is done | cancelling a rename or xtc/build stops the adapter's work, also once a result is converted |
@@ -502,7 +503,7 @@ Kept as they are:
 
 **Scope.** javatools' SessionDebugger and its agent, the dap-server, the language server's debug sessions, launch and attach (embedded, Gradle and command-line), and the debug UI of both editors. Large: review it as two PRs, P10a (javatools and dap-server: 46-53, 55, 59-63, 65, 72, 75, 78, 80, 91, 101, 103, 141, 142, 166, 169, 174, 183, 215) and P10b (launch, attach, agent, editors: the rest).
 
-**Builds on** P9. **Commits:** 61 now, about 36 after squashing. **Added lines:** 17,343 main, 15,293 tests.
+**Builds on** P9. **Commits:** 62 now, about 36 after squashing. **Added lines:** 17,343 main, 15,307 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -513,7 +514,7 @@ Kept as they are:
 | Conditional breakpoints, hit counts, logpoints | 50 `7dec2a8726` Conditional breakpoints, hit counts, logpoints and exception classes<br>183 `b995ed7623` Say on the debug console why a breakpoint's condition cannot be evaluated | 183 explains an unevaluable condition. |
 | Lazy properties and their time limit | 55 `472fc335c9` Lazy properties, hexadecimal values, paged arrays, Set Value, completions<br>78 `79185ffa8f` Let a host give lazy variables' code longer than ON_DEMAND<br>431 `11a3f96670` Let a debug launch or attach set how long evaluations and lazy values may run | 78 lets a host give lazy variables longer. |
 | Restart a stopped frame | 62 `7b3bc048cd` Restart a stopped frame, which its caller then calls again<br>215 `3ae8ffa957` Restart a frame whose fiber ran code in its stop | 215 fixes it for a fiber that ran code in its stop. |
-| SessionDebuggerTest made independent of timing | 80 `de6a76b286` Let SessionDebuggerTest's runs show they started before it ends them<br>91 `0b77ea36d4` Let two SessionDebuggerTest cases check what their sleeps waited for<br>142 `e7f14fa47b` Lift SessionDebuggerTest's time limit to an hour<br>166 `7a6d483815` Make SessionDebuggerTest independent of how its threads are scheduled | Four fixes of the same test class; fold into the commit that added it. |
+| SessionDebuggerTest made independent of timing | 80 `de6a76b286` Let SessionDebuggerTest's runs show they started before it ends them<br>91 `0b77ea36d4` Let two SessionDebuggerTest cases check what their sleeps waited for<br>142 `e7f14fa47b` Lift SessionDebuggerTest's time limit to an hour<br>166 `7a6d483815` Make SessionDebuggerTest independent of how its threads are scheduled<br>615 `1eae932a06` Print a stalled close's fibers before the watchdog fails it, which in CI they never were | Four fixes of the same test class; fold into the commit that added it. |
 | A line typed in the Debug console (net small) | 159 `d4cb3b40e9` Take a line typed in IntelliJ's Debug console to the debug session<br>362 `afb77fd141` Let LSP4IJ evaluate a line typed in the Debug console (UP71) | 362 deletes 102 of 159's 358 lines once LSP4IJ evaluates the line (UP71). |
 | Physical expression fragments (net small) | 197 `c7d32a561c` Make the debugger's expression fragment physical, which ends a paused session's daemon loop<br>360 `9be5fda3cb` Let LSP4IJ make the debugger's expression fragments physical (UP37) | 360 deletes 55 of 197's 100 lines once LSP4IJ makes them physical (UP37). |
 | Run to Cursor's breakpoint (net small) | 225 `c287d79bf9` Keep Run to Cursor's temporary breakpoint until the program stops, in IntelliJ<br>367 `b7aa73cf37` Let LSP4IJ keep Run to Cursor's breakpoint until the program stops (UP44) | 367 deletes 113 of 225's 155 lines once LSP4IJ keeps the breakpoint (UP44). |
@@ -1265,3 +1266,6 @@ Kept as they are:
 | 611 | `5079fb00a0` | P12 | — | L10 | IntelliJ tour step fixes | Report a tour wait once a minute, not in a burst after a blocked call, and leave no wait after a probe timeout silent |
 | 612 | `681c7a2ebb` | P12 | — | L10 | The playbook container and the IDE it drives | Copy back only the VS Code runs that a container made, not every run its slot's work volume keeps |
 | 613 | `d41e4e9b48` | P9 | X4 | — | The Gradle model: each source set's project path, xtcRun's and xtcTest's settings | Write each source set's Gradle model report as the model is written, whole: to a temporary file moved into place |
+| 614 | `51e0a51f1f` | P6 | — | L4 | Rename guards and proofs | Answer a rename that can't be proven, or that a change overtook, for what it is, and let a cancel reach a plain rename's proof |
+| 615 | `1eae932a06` | P10 | X4 | — | SessionDebuggerTest made independent of timing | Print a stalled close's fibers before the watchdog fails it, which in CI they never were |
+| 616 | `b74000ae86` | P6 | — | L4 | Rename guards and proofs | Show nothing in IntelliJ for a rename that the user cancels, not "Rename failed: null" |

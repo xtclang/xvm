@@ -821,13 +821,33 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   takes 50 s instead of 10 minutes or the hour bound.
 - [ ] Found 2026-11-26 recording the VS Code tour: the new "Breakpoints while you edit" step once found Quick Open not
   opening `Eights.x` (60 s, nothing under way; it failed fast, as designed); it passed in its other runs.
-- [ ] Found 2026-11-26 in the review of VS Code's rename refusal: the server answers `xtc/rename` with no edit for a
-  refused proof, and also when the project changed during the proof (`XdkProjectQueries`, its `isCurrent()` checks),
-  its base compile failed, discovery has a problem, or the module has not compiled; both editors show the refusal for
-  all of them, where for a changed project a retry would succeed. The server could answer ContentModified there.
-- [ ] Found 2026-11-26 in the same review: `XdkAdapter.renameProposalAsync`'s path for a rename outside a project query
-  maps `renameAsync` with `thenApply`, which does not pass a client's cancel on to the rename's proof, as
-  `plainRenameAsync`'s `mapCancellable` does; it predates the review.
+- [x] Found 2026-11-26 in the review of VS Code's rename refusal: the server answered `xtc/rename` and
+  `textDocument/rename` with no edit for a refused proof, and also when the project changed during the proof
+  (`XdkProjectQueries`, its `isCurrent()` checks), its base compile failed, discovery had a problem, or the module had
+  not compiled; both editors showed the refusal for all of them. Done 2026-11-27 (`4da6bc57c2`,
+  errs): a changed project answers ContentModified (`RenameOvertaken`; `renameProposal` checks
+  `isCurrent()` once before any answer, the plain rename's proof when a closed member changed on disk), and so does a
+  cancellation of the proof the client did not ask for, as a watcher's event retiring it, which answered
+  RequestCancelled (silent in VS Code, "Rename failed: The request ... has been cancelled" in IntelliJ); a failed
+  compile, a discovery problem or an uncompiled module answers RequestFailed naming the cause, with `unproven` as its
+  data; a refused proof is still no edit. Neither editor retries: VS Code says "The project changed while the language
+  server proved this rename. Rename again.", IntelliJ "The project changed during the rename; invoke Rename again.";
+  both show the server's reason for the rest. `renameOrNone` takes ContentModified and `unproven` as not yet; X58 and
+  X63 expect the unproven answer in both editors. XdkConditionalRenameTest's collision case had passed on an
+  unanalyzed module's no edit; it analyzes it now, and the proof refuses it.
+- [x] Found 2026-11-26 in the same review: `XdkAdapter.renameProposalAsync`'s path outside a project query mapped
+  `renameAsync` with `thenApply`, so a client's cancel did not reach the proof. Done 2026-11-27 (`4da6bc57c2`):
+  `mapCancellable`; XdkRenameTest's `a cancel of a rename proposal outside a project query reaches its proof` counts 3
+  compiles, where `thenApply` let the proof go on to 4.
+- [ ] Found 2026-11-27 with the above: file moves (`xtc/renameFiles`, `workspace/willRenameFiles`) still answer no edit
+  for a changed project or a failed base compile; the plain rename's proof checks a closed member's change only before
+  an edit, so its refusal of a changed member is still no edit. VS Code's textDocument/rename (sent only to a server
+  without `xtcRenameProposal`) says "No result." for ContentModified, and LSP4IJ 0.30.1's own rename "The element can't
+  be renamed."; the plugin turns LSP4IJ's rename off for Ecstasy files.
+- [x] Found 2026-11-27 in the review of the rename answers: cancelling IntelliJ's "Renaming ..." progress showed
+  "Rename failed: null", from the CancellationException LSP4IJ's wait gives the rename's future, in the rename's hint
+  and the prepare step's. Fixed (`3408f07efc`): `renameFailure` shows nothing for a failure with a cancellation among
+  its causes; RenameFailureTest has it bare and inside a CompletionException.
 - [ ] Found 2026-11-26 in the review of the IntelliJ tour's wait fixes: a positive wait (`within`, `until`) counts the
   server's trace events and requests as work under way, so one whose condition never comes can still run to the
   hang's bound while the server keeps working, now reporting every minute but not failing sooner. The tour's
@@ -1165,6 +1185,16 @@ Editor batch (2026-10-27), for X280–X330 after `819e2ac754`: VS Code passes al
 implemented cases among them with released LSP4IJ 0.21.0 (`run-15774751429931474506`), 13 at their
 recorded partial coverage.
 
+  Looked at again 2026-11-27 (`d962a75405`): not reproduced, nor its cause found. The test repeated 150 times with 8
+  CPU burners, and SessionDebuggerTest's 57 tests 6 times with 10 burners and the XVM pool pinned to 2 and 4 threads
+  (CI's 4 vCPUs give it 4), all passed; a probe after each test found the native container's time unfrozen, the clock's
+  timer alive and the XVM workers idle. Ruled out by reading: a lock-order inversion between the debugger's monitor and
+  the runtime's, a stop made after `terminate()`, the runner's `endWhenIdle` alarm held by frozen time, console reads
+  holding XVM threads (they run on IO threads), call-laters run inline on the timer thread (they are async). A passing
+  CI run's javatools tests take 9.5 minutes; the failing one ended at the failure, 3 minutes in, since CI tests fail
+  fast (`org.xtclang.java.test.failFast=true`), so the close watchdog's fibers print, after a minute, could never be
+  kept. It prints at half the watchdog's idle window now, 30 s; a probe with a deliberately stuck close showed the
+  fibers at 30 s and the watchdog's failure with every thread's dump at 60 s. To do: read both the next time it fails.
 - [x] R9: conditional breakpoints (`BC`), hit counts and logpoints (`5b2686a2e`, `edeab8f5b`; shared
   X311). Conditions are `Boolean` expressions since R7's tier 1 (X313). IntelliJ checks the condition;
   its logpoints: UP32; its hit counts: UP55.
