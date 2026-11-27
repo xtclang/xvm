@@ -79,6 +79,21 @@ final class XtcLspModelIntegration {
             configurations.forEach(configuration -> task.getModulePath().from(configuration.getIncoming().artifactView(view ->
                 view.componentFilter(id -> !(id instanceof ProjectComponentIdentifier component) || !buildDirectories.containsKey(component.getBuild().getBuildPath())))
                 .getFiles().filter(file -> !file.equals(mainOutput.get().getAsFile()))));
+            // What the project's xtcRun and xtcTest run its modules with, which runXtc and testXtc take unless their own
+            // configuration changes it, for a language server's embedded runs. The extensions are read, not the tasks, which
+            // the export neither realizes nor runs, so that no task's configuration can fail an import; read once the build
+            // is configured, and never so that a value that cannot be read fails the export: XtcLspRunSettings leaves it out
+            // and says so.
+            final var runExtension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+            final var testExtension = XtcProjectDelegate.resolveXtcTestExtension(project);
+            final var run = project.provider(() -> XtcLspRunSettings.of(runExtension, true));
+            final var test = project.provider(() -> XtcLspRunSettings.of(testExtension, false));
+            task.getRunModuleMethods().set(run.map(XtcLspRunSettings::methods));
+            task.getRunModuleArgs().set(run.map(XtcLspRunSettings::arguments));
+            task.getRunJvmArgs().set(run.map(XtcLspRunSettings::jvmArgs));
+            task.getRunProblems().set(run.map(XtcLspRunSettings::problems));
+            task.getTestJvmArgs().set(test.map(XtcLspRunSettings::jvmArgs));
+            task.getTestProblems().set(test.map(XtcLspRunSettings::problems));
             task.getReport().set(project.getLayout().getBuildDirectory().file("xtc/lsp/" + sourceSet.getName() + ".json"));
             task.mustRunAfter(resources);
         });
