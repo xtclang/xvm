@@ -1080,6 +1080,43 @@ class XdkPullDiagnosticsTest {
     }
 
     @Test
+    fun `a document's pull whose analysis the compiler retires is canceled, and the workspace's answers ContentModified`() {
+        CompilerTestSupport.configure()
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val adapter =
+            XdkAdapter { source, errors ->
+                started.countDown()
+                check(release.awaited())
+                EmbeddingSupport.instance().compileModule(source, null, errors)
+            }
+        try {
+            Session(adapter = adapter).use { session ->
+                session.open(URI, VALID, 1)
+                assertThat(started.awaited()).isTrue()
+                val document = session.server.textDocumentService.diagnostic(DocumentDiagnosticParams(TextDocumentIdentifier(URI)))
+                val workspace = session.server.workspaceDiagnostics(WorkspaceDiagnosticParams(emptyList()))
+                // the compiler retires the analysis that both pulls wait for, as it retires the analyses of the modules
+                // that a change elsewhere affects, and the server has no other
+                session.adapter.compileAsync(URI, VALID)
+                release.countDown()
+                // VS Code's client pulls a document's diagnostics again after a cancellation, where it takes ContentModified
+                // as an empty report; the workspace's it pulls again after ContentModified, where it counts a cancellation
+                // as a failure, and after the sixth it pulls no more
+                assertThatThrownBy { document.awaited() }
+                assertThat(document.isCancelled).isTrue()
+                assertThatThrownBy { workspace.awaited() }
+                    .rootCause()
+                    .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                        assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                    }
+            }
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
     fun `canceling a waiting pull preserves shared compilation and an edit rejects late reports`() {
         CompilerTestSupport.configure()
         val started = CountDownLatch(1)

@@ -434,6 +434,17 @@ class XdkReleaseServerTest {
         event: Event,
     ) = run(request, event)
 
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(Request::class, names = ["SYMBOLS", "PARTIAL_SYMBOLS", "ORGANIZE_IMPORTS"])
+    fun `a workspace request whose graph query a new graph retires answers ContentModified, not a cancellation`(request: Request) =
+        waiting(request) { session, answer ->
+            // a module that no editor has open joins the graph: the graph's queries go, and no open document changes,
+            // which the request's own checks would find
+            session.join("Extra", "module Extra {}\n")
+            session.release.countDown()
+            assertContentModified(answer)
+        }
+
     /**
      * [request], asked as the graph's held compile holds its graph query, then [event]; or, [again], the same request
      * asked once more after the event, while the first one waits and so keeps the event remembered: its graph query takes
@@ -443,40 +454,52 @@ class XdkReleaseServerTest {
         request: Request,
         event: Event,
         again: Boolean = false,
+    ) = waiting(request, event::prepare) { session, first ->
+        val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
+        val published = session.published.size
+        event.act(session)
+        event.after(session)
+        // no analysis of the module again, and no diagnostics of it again, which its root still publishes
+        if (event.compilesNothing) assertThat(session.adapter.compilerQueueSnapshot()["submittedTotal"]).isEqualTo(submitted)
+        if (event.publishesNothing) assertThat(session.published.drop(published)).isEmpty()
+        val answer = if (again) request.ask(session) else first
+        session.release.countDown()
+        if (event.overtakes) assertContentModified(answer) else request.check(session, answer.awaited())
+    }
+
+    /**
+     * [then] with the [answer][then] to [request], once its graph query queues behind the graph's held compile, after
+     * [prepare] readied the session.
+     */
+    private fun waiting(
+        request: Request,
+        prepare: (Session) -> Unit = {},
+        then: (Session, CompletableFuture<*>) -> Unit,
     ) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
         Session(directory).use { session ->
-            event.prepare(session)
+            prepare(session)
             // the graph's diagnostics, which an editor pulls, compile the closed consumer first, and the compile holds
             session.hold.set(true)
             session.adapter.workspaceDiagnosticsAsync()
             assertThat(session.entered.awaited()).isTrue()
-            val first = request.ask(session)
+            val answer = request.ask(session)
             awaitUntil("$request queues its graph query behind the held compile") {
                 @Suppress("UNCHECKED_CAST")
                 (session.adapter.compilerQueueSnapshot()["queuedJobs"] as List<String>).any { "project-" in it && "DIAGNOSTICS" !in it }
             }
-            assertThat(first).describedAs("$request waits for the held compile").isNotDone()
-            val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
-            val published = session.published.size
-            event.act(session)
-            event.after(session)
-            // no analysis of the module again, and no diagnostics of it again, which its root still publishes
-            if (event.compilesNothing) assertThat(session.adapter.compilerQueueSnapshot()["submittedTotal"]).isEqualTo(submitted)
-            if (event.publishesNothing) assertThat(session.published.drop(published)).isEmpty()
-            val answer = if (again) request.ask(session) else first
-            session.release.countDown()
-            if (event.overtakes) {
-                assertThatThrownBy { answer.awaited() }
-                    .rootCause()
-                    .isInstanceOfSatisfying(ResponseErrorException::class.java) {
-                        assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
-                    }
-            } else {
-                request.check(session, answer.awaited())
-            }
+            assertThat(answer).describedAs("$request waits for the held compile").isNotDone()
+            then(session, answer)
         }
+    }
+
+    private fun assertContentModified(answer: CompletableFuture<*>) {
+        assertThatThrownBy { answer.awaited() }
+            .rootCause()
+            .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+            }
     }
 
     /**
@@ -503,6 +526,7 @@ class XdkReleaseServerTest {
             }
         val server = XtcLanguageServer(adapter)
         lateinit var library: String
+        private val graph = listOf(XdkSourceModule("Node0", uri("Node0")), XdkSourceModule("Consumer", uri("Consumer"), setOf("Node0")))
 
         init {
             SOURCES.forEach { (name, text) ->
@@ -543,13 +567,17 @@ class XdkReleaseServerTest {
                             }
                     },
                 ).awaited()
-            server.replaceCompilerSourceModules(
-                listOf(
-                    XdkSourceModule("Node0", uri("Node0")),
-                    XdkSourceModule("Consumer", uri("Consumer"), setOf("Node0")),
-                ),
-            )
+            server.replaceCompilerSourceModules(graph)
             listOf("Node0", "Other").forEach(::open)
+        }
+
+        /** Writes [text] to [name]'s file, a module that no editor has open, and adds it to the graph. */
+        fun join(
+            name: String,
+            text: String,
+        ) {
+            write(name, text)
+            server.replaceCompilerSourceModules(graph + XdkSourceModule(name, uri(name)))
         }
 
         /** The open of [name]'s document with its text as the file has it, as the editor sends it. */
