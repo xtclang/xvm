@@ -818,18 +818,55 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   case's failure, a timeout, a case past its bound or a failed or stuck cleanup too, now fails that case alone: the
   waits it is in fail, it ends through its own cleanup, the editor is restored, and the run goes on (`3f8449236f`).
   Full runs since: `run-GVNl3L` 357 of 360 passed and `run-XalCz5` 355, none unrun.
-- [ ] Found 2026-11-26 with X216: the server retires every graph query on any `didClose`, also of a document it does
-  not have open, and answers a query that its own retirement cancelled with RequestCancelled, as if the client had
-  cancelled it. The playbook's cleanup sends its own `didClose` for each document it detaches (`Workspace.discard`),
-  and VS Code's release three minutes later sends a second one. The client now asks again for a move; other requests
-  that a release cancels or overtakes still end empty or failed (Find References asks again since `73ef53e12d`): X143
-  failed so in `run-GVNl3L` (2026-11-27), its `workspace/symbol` rejected ("Document changed during analysis") as
-  X117's `App.x` was released, and in `run-XalCz5` X172 (its own `xtc/renameFiles`), X352 (references and definitions,
-  "No result.") and X357 (Organize Imports), each as VS Code released an earlier case's document. The server could
-  ignore a `didClose` of a document that is not open, answer ContentModified for work it retired, and ask its
-  workspace queries again as it does Find References.
-- [ ] Found 2026-11-27 in `run-XalCz5`: X5 failed in "Parser recovery diagnostic" (30 s): the pull of `Navigation.x`'s
-  version 2 ended "failed: Canceled" and nothing pulled it again; it passed in the full runs before.
+- [x] Found 2026-11-26 with X216: the server ended workspace requests when VS Code released a document. X143's
+  `workspace/symbol` (`run-GVNl3L`), X172's `xtc/renameFiles`, X352's `xtc/rename` ("No result.") and X357's
+  Organize Imports (0 actions) (`run-XalCz5`) were rejected with "Document changed during analysis". Each rejection
+  came 28 to 220 ms after the `didClose` of an earlier case's document, a module outside the case's graph whose text
+  was its file's: X117's `App.x`, X135's `LogPanel.x`, X311's `DebugLogs.x`, X317's `DebugFormats.x`. The playbook's
+  cleanup had closed it itself, a server restart had opened it again, and VS Code then released it. Without a restart,
+  the release reaches the server as a second `didClose`, of a document it does not have open (X172's `App.x` at
+  10:52:06.700 and again at 10:54:32.391). Two faults:
+  - every open or close changed every workspace query's snapshot;
+  - retiring any scope's analysis also retired every graph query, even for a scope outside the graph.
+
+  Fixed (`2a7bf8eb12`):
+  - a `didClose` of a document that is not open is ignored;
+  - a close that leaves a document outside the graph with its file's text keeps that document in pending workspace
+    queries' snapshots, partial-result batches included;
+  - retiring a scope retires the graph's queries only when the scope is a module of the graph.
+
+  `b24843e27a` adds the release of a library's source, the ecstasy-library content that Go to Definition opens, which
+  has no file. In `run-I1H3nu`, before that commit, its release rejected X142's `xtc/rename`. X352's rename was also at
+  risk in VS Code's own check (`proposalWithConfiguration`), which took any close or open of an Ecstasy document as a
+  change. It now takes only an edit, or a close or an open of unsaved text (`dca831a228`).
+
+  `XdkReleaseServerTest` reproduces the server faults by ordering: 20 cases. The 15 release and not-open cases fail
+  without the fix and pass with it; the 5 unsaved-close cases check that such a close still overtakes. On errs
+  (`de8a1f284e`) X352 and X357 passed three times alone in each editor, so their failures were this release, not
+  `run-XalCz5`'s harness changes. With the fixes, X5, X143, X172, X352 and X357 passed 3 of 3 in each editor, and in
+  the full VS Code runs `run-I1H3nu` and `run-M6gUDp` (358 of 360 each).
+- [x] Found 2026-11-27 in `run-XalCz5`: X5 failed in "Parser recovery diagnostic" (30 s). This was not the release
+  race, and the canceled pull was asked again: VS Code's client cancels an active pull when it pulls again. The pull
+  of `Navigation.x`'s version 2 that followed waited for the analyses of every open document. One of them was the
+  ecstasy library source that the case's Go to Definition had opened. That library's whole compile took 24.9 s, and
+  its results were still being processed when the case's 30 s ran out. In `run-GVNl3L` the same compile took 14 s, so
+  X5 passed. Fixed (`f8aaa1a549`): a pull of a workspace document waits only for the analyses of documents that are
+  not a library's. A library source's analysis reports on no workspace document. A test in `XdkPullDiagnosticsTest`
+  covers it.
+- [ ] Found 2026-11-27 with the release fix: a close that leaves a member of the graph with its file's text still
+  retires its module's analyses and the graph's queries, and still overtakes workspace queries, though that close
+  changes no text either. With a discovered graph rather than a configured one, an earlier case's file can be such a
+  member. The adapter would need to skip retirement for such a close (`closeDocumentAndRefresh`), and the server would
+  need to skip the module's analysis and its diagnostics' republication. Also still open: a document that opens
+  overtakes a workspace query, and work that the server retires for a real change answers RequestCancelled where the
+  client did not cancel. ContentModified would say what happened, except for diagnostic pulls, which VS Code's client
+  asks again only after a cancellation.
+- [ ] Found 2026-11-27 in `run-M6gUDp` (VS Code, the release fix's tip): X130 failed in "redo restores all paths"
+  (30 s). The case asked for Redo at 839 ms, as soon as the files were back on disk. VS Code's Undo had not ended:
+  its `didRenameFiles` came at 848 ms, so Redo found nothing to redo. Neither the server nor the move participant is
+  involved, and the trace has no `willRenameFiles` for the Undo. X130 passed in every kept run before. The case
+  should wait for the Undo's own `didRenameFiles`, which its `ExplorerMoveTrace` records, before Redo, not for the
+  files on disk.
 - [ ] Found 2026-11-27 in `run-GVNl3L`: X194 failed with "locator.focus: Timeout 5000ms exceeded" in
   `WorkbenchUi.focusEditor` (from `focusTestEditor`, in `discovered`), waiting for the active editor's input; it
   passed in the four full runs before. A Playwright call with a fixed 5 s bound, not a progress-based wait; cause not
