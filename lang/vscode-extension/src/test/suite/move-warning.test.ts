@@ -22,9 +22,9 @@ suite('File moves', () => {
     /**
      * A language server whose answers to xtc/renameFiles are [answers] in turn, each a refusal because a change of the
      * project overtook it, ContentModified, a cancellation that the client did not ask for, as the server's when a
-     * document's close retires its graph queries, an edit during which a document opens, or the edit [edit], which the
-     * client converts to [converted]; [asked] counts the requests. Its handling of a failed request is the language
-     * client's: a cancellation the client did not ask for fails, and ContentModified answers nothing.
+     * document's close retires its graph queries, an edit during which a document with unsaved text opens, or the edit
+     * [edit], which the client converts to [converted]; [asked] counts the requests. Its handling of a failed request is
+     * the language client's: a cancellation the client did not ask for fails, and ContentModified answers nothing.
      */
     function overtaken(answers: readonly ('overtaken' | 'cancelled' | 'opened' | 'edit')[], converted: vscode.WorkspaceEdit) {
         const edit = { documentChanges: [] };
@@ -34,7 +34,7 @@ suite('File moves', () => {
                 const answer = answers[Math.min(asked.count++, answers.length - 1)];
                 if (answer === 'overtaken') throw new ResponseError(LSPErrorCodes.ContentModified, 'The content was modified');
                 if (answer === 'cancelled') throw new ResponseError(LSPErrorCodes.RequestCancelled, 'The request was cancelled');
-                // a document that opens as the server proves the move, as one that VS Code releases closes
+                // a document that opens with unsaved text as the server proves the move, as an untitled one with content does
                 if (answer === 'opened') await vscode.workspace.openTextDocument({ language: 'xtc', content: 'module Opened {}' });
                 return { edit };
             },
@@ -80,7 +80,7 @@ suite('File moves', () => {
         assert.deepStrictEqual(warnings, []);
     });
 
-    test('a move whose proof the server cancelled, as a document closed, or during which a document opened, asks the server again', async () => {
+    test('a move whose proof the server cancelled, as a document closed, or during which a document with unsaved text opened, asks the server again', async () => {
         const hand = vscode.Uri.joinPath(folder(), 'cardGame', 'Hand.x');
         const uses = new vscode.WorkspaceEdit();
         uses.replace(vscode.Uri.joinPath(folder(), 'cardGame', 'Player.x'), new vscode.Range(0, 0, 0, 4), 'PlayerHand');
