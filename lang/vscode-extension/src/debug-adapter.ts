@@ -5,6 +5,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, GRADLE_NOT_USED, hasGradleBuild } from './embedded-execution';
 import { gradleProjects, gradleTask, noticeMissingTask } from './gradle-projects';
+import { gradleRoot } from './gradle-root';
 import type { SourceModule } from './source-graph-configuration';
 import { createXtcRunTask, type XtcTaskDefinition } from './task-provider';
 import { terminateTask } from './task-termination';
@@ -137,7 +138,7 @@ async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationT
     const { command, args } = gradleDebugCommand(params);
     const definition: XtcTaskDefinition = { type: 'xtc', moduleName: params.module, methodName: params.method, mode: 'gradle' };
     const task = new vscode.Task(definition, folder ?? vscode.TaskScope.Workspace, `Debug ${params.module}`, 'xtc',
-        new vscode.ShellExecution(command, args), []);
+        new vscode.ShellExecution(command, args, folder ? { cwd: gradleRoot(folder) } : undefined), []);
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Shared };
     const execution = await vscode.tasks.executeTask(task);
     return new Promise(resolve => {
@@ -171,7 +172,7 @@ async function runDebugTask(params: DebugTaskParams, token: vscode.CancellationT
 function runDebugTestTask(params: DebugTaskParams, tests: readonly TestSelection[], adapter: LanguageServerDebugAdapter,
                           folder: vscode.WorkspaceFolder, token: vscode.CancellationToken): Promise<number | undefined> {
     const args = [...gradleTestArgs(params.module, tests), '--mode=ATTACHED', `-PxtcDebug=${params.debug}`];
-    return runTestProcess(gradleWrapper(), args, folder.uri.fsPath, (line, error) => {
+    return runTestProcess(gradleWrapper(), args, gradleRoot(folder), (line, error) => {
         const event = error ? undefined : parseTestEvent(line);
         if (event) {
             adapter.tested(event);
