@@ -1887,7 +1887,11 @@ class XtcTextDocumentService(
             )
         }
 
-    /** Unlike willRenameFiles, this proposal includes the requested moves and host graph update. */
+    /**
+     * Unlike willRenameFiles, this proposal includes the requested moves and host graph update. As a rename's, a move
+     * that can't be proven while a module does not compile answers a request failure with the reason, and one that a
+     * change of the project overtook ContentModified ([RenameRefused.asResponseError]); one that its proof refuses no edit.
+     */
     internal fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?> {
         val compiler = adapter as? XdkAdapter ?: return CompletableFuture.completedFuture(null)
         val first = params.files.firstOrNull() ?: return CompletableFuture.completedFuture(null)
@@ -1902,7 +1906,11 @@ class XtcTextDocumentService(
         return queryAsync(
             "xtc/renameFiles",
             first.oldUri,
-            { compiler.renameFilesProposalAsync(params.files.associate { it.oldUri to it.newUri }) },
+            {
+                compiler
+                    .renameFilesProposalAsync(params.files.associate { it.oldUri to it.newUri })
+                    .mapFailureCancellable { RenameRefused.asResponseError(it, fileOperation(params)) }
+            },
             workspace = true,
         ) { proposal -> proposal?.let { protocolProposal(it)?.to(it.outsideUses) } }.mapCancellable { answer ->
             answer?.let { (protocol, names) -> outsideUses(fileOperation(params), names, protocol) }
@@ -1913,6 +1921,7 @@ class XtcTextDocumentService(
     private fun fileOperation(params: RenameFilesParams): String =
         if (params.files.all { XdkSources.file(it.oldUri)?.parentFile == XdkSources.file(it.newUri)?.parentFile }) "rename" else "move"
 
+    /** workspace/willRenameFiles' edit, which answers as [renameFilesProposal] does. */
     internal fun renameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> {
         val compiler = adapter as? XdkAdapter ?: return CompletableFuture.completedFuture(null)
         val first = params.files.firstOrNull() ?: return CompletableFuture.completedFuture(null)
@@ -1928,7 +1937,11 @@ class XtcTextDocumentService(
         return queryAsync(
             "workspace/willRenameFiles",
             first.oldUri,
-            { compiler.plainRenameFilesAsync(params.files.associate { it.oldUri to it.newUri }) },
+            {
+                compiler
+                    .plainRenameFilesAsync(params.files.associate { it.oldUri to it.newUri })
+                    .mapFailureCancellable { RenameRefused.asResponseError(it, fileOperation(params)) }
+            },
             workspace = true,
         ) { proposal ->
             proposal?.let { protocolEdit(it.edit)?.to(it.outsideUses) }

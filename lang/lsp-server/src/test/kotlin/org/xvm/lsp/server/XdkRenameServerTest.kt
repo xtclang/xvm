@@ -743,6 +743,103 @@ class XdkRenameServerTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["xtc/renameFiles", "workspace/willRenameFiles"])
+    fun `a move whose project changed while it was proven answers ContentModified, not no edit`(method: String) {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val text = "module App { Box make() = new Box(); }"
+        val root = directory.resolve("App.x").toFile().apply { writeText(text) }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        val other = directory.resolve("App/Other.x").toFile().apply { writeText("class Other {}") }
+        val hold = AtomicBoolean()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val adapter =
+            hookedAdapter {
+                if (hold.compareAndSet(true, false)) {
+                    entered.countDown()
+                    check(release.awaited())
+                }
+            }
+        val server = XtcLanguageServer(adapter)
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(moves()).awaited()
+            val uri = root.toURI().toString()
+            server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", uri)))
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+            server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).awaited()
+            hold.set(true)
+            val params =
+                RenameFilesParams(listOf(FileRename(member.toURI().toString(), directory.resolve("App/Crate.x").toUri().toString())))
+            val moved = if (method == "xtc/renameFiles") server.renameFilesProposal(params) else server.willRenameFiles(params)
+            // the proof's compile of the sources before the move
+            assertThat(entered.awaited()).isTrue()
+            // Other, which no editor has open, changes on disk, which no watcher says: the proof finds it once it has compiled
+            other.writeText("class Other { Int extra = 1; }")
+            release.countDown()
+            assertThatThrownBy { moved.awaited() }
+                .rootCause()
+                .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                    assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                }
+            assertThat(member).exists()
+        } finally {
+            release.countDown()
+            server.shutdown().awaited()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["xtc/renameFiles", "workspace/willRenameFiles"])
+    fun `a move while a module of the graph does not compile says which, for the client to ask again`(method: String) {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val text = "module Library {}"
+        val library = directory.resolve("Library.x").toFile().apply { writeText(text) }
+        val member =
+            directory.resolve("Library/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        directory.resolve("Library/tools").toFile().mkdirs()
+        val consumer =
+            directory.resolve("Consumer.x").toFile().apply {
+                writeText("module Consumer { package lib import Library; Int run(lib.Box box) = 1 }")
+            }
+        val uri = library.toURI().toString()
+        val server = XtcLanguageServer(hookedAdapter {})
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(moves()).awaited()
+            server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", uri),
+                    XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                ),
+            )
+            server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+            server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).awaited()
+            val to = directory.resolve("Library/tools/Box.x").toUri().toString()
+            val params = RenameFilesParams(listOf(FileRename(member.toURI().toString(), to)))
+            val moved = if (method == "xtc/renameFiles") server.renameFilesProposal(params) else server.willRenameFiles(params)
+            assertThatThrownBy { moved.awaited() }
+                .rootCause()
+                .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                    assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.RequestFailed.value)
+                    assertThat(it.responseError.message).isEqualTo(uncompiledRename(listOf("Consumer"), "move"))
+                    assertThat(it.responseError.data).isEqualTo(RenameRefused.UNPROVEN)
+                }
+        } finally {
+            server.shutdown().awaited()
+        }
+    }
+
     @Test
     fun `configured graph references and rename include closed consumers with correct edit versions`() {
         directory = directory.toRealPath()
@@ -1269,6 +1366,13 @@ class XdkRenameServerTest {
         parameters().apply {
             workspaceFolders = listOf(WorkspaceFolder(folder.toURI().toString(), folder.name))
             initializationOptions = mapOf("xtcAddConsumers" to ADD_CONSUMERS)
+        }
+
+    /** [parameters] of a client that moves files with their edits, as both editors do. */
+    private fun moves() =
+        parameters().apply {
+            capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
+            capabilities.workspace.fileOperations = FileOperationsWorkspaceCapabilities().apply { willRename = true }
         }
 
     private fun parameters() =

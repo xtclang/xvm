@@ -170,6 +170,29 @@ class XdkRenameTest {
     }
 
     @Test
+    fun `a rename that its proof refuses in a closed member changed on disk is overtaken, not refused`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("Rename.x").toFile()
+        val member = directory.resolve("Rename/Child.x").toFile()
+        val text = "module Rename {}"
+        // input renamed to other would read the parameter where the property is read: the proof refuses it
+        val child = "class Child { Int other = 2; private Int pick(Int input) = input + other; Int run() = pick(1); }"
+        root.writeText(text)
+        member.parentFile.mkdirs()
+        member.writeText(child)
+        val uri = member.toURI().toString()
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(root.toURI().toString(), text).diagnostics).isEmpty()
+            assertThat(adapter.rename(uri, 0, child.indexOf("input"), "other")).isNull()
+            member.writeText("\n$child")
+            // the proof refuses the old snapshot of a member that changed on disk, which no watcher said: overtaken
+            assertThatThrownBy { adapter.rename(uri, 0, child.indexOf("input"), "other") }
+                .rootCause()
+                .isInstanceOf(RenameOvertaken::class.java)
+        }
+    }
+
+    @Test
     fun `editing or closing the module cancels a blocked rename proof`() {
         for (close in listOf(false, true)) {
             val entered = CountDownLatch(1)

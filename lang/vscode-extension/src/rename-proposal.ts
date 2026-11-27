@@ -52,6 +52,14 @@ function overtakenAnswer(error: unknown, token: vscode.CancellationToken): boole
         && (error.code === LSPErrorCodes.RequestCancelled || error.code === LSPErrorCodes.ServerCancelled));
 }
 
+/**
+ * Whether the server's [error] refuses the proof for a reason that it gives, as RequestFailed's message: as for a move
+ * that it can't prove while a module does not compile, or while discovery of the workspace's modules has a problem.
+ */
+function refusedAnswer(error: unknown): boolean {
+    return error instanceof ResponseError && error.code === LSPErrorCodes.RequestFailed;
+}
+
 /** VS Code's native Rename saves affected files when files.refactoring.autoSave is enabled.
  * Without that save, moving an edited model can lose its text Undo. Reordering the operations
  * fixes Undo but breaks Redo, so refuse this unsupported editor configuration before editing.
@@ -182,7 +190,11 @@ export function unupdatedReferences(moved: readonly vscode.Uri[], reason?: strin
 /**
  * File-operation participation contributes only extra edits; VS Code owns the requested moves. A participant cannot
  * refuse a move, so when the server refuses its edits for sources that the project uses, [warn] says so: the move
- * leaves those uses as they were.
+ * leaves those uses as they were. A refusal that the server gives its reason for, as for a move that it can't prove
+ * while a module does not compile, where its references can't find the uses either, says so with that reason for each
+ * moved file or folder, whatever uses they find: the server proves only a move within a module of the graph, of its
+ * sources or its folders, which are its packages and hold its resources, or of a folder that holds a module, and the
+ * proof that it could not make updates the uses of their types and the file and directory literals that name them.
  */
 export async function moveWithConfiguration(
     client: LanguageClient,
@@ -203,17 +215,21 @@ export async function moveWithConfiguration(
     let refused = false;
     let reason: string | undefined;
     let overtaken = false;
+    let unproven = false;
     const propose = () => proposalWithConfiguration(client, event.files[0].oldUri, event.token,
         async () => {
-            overtaken = false;
+            overtaken = unproven = false;
+            reason = undefined;
             const proposal = await client.sendRequest(moveRequest, {
                 files: event.files.map(move => ({ oldUri: move.oldUri.toString(), newUri: move.newUri.toString() }))
             }, event.token).catch(error => {
                 reason = error instanceof Error ? error.message : String(error);
                 // the client's handling of a cancellation it did not ask for throws, which would leave VS Code to move
-                // the files without the server's edits, and with no word of it
+                // the files without the server's edits, and with no word of it; so does its handling of a refusal that
+                // the server gives its reason for, which the warning names instead
                 overtaken = overtakenAnswer(error, event.token);
-                return overtaken ? null : client.handleFailedRequest(moveRequest, event.token, error, null, false);
+                unproven = refusedAnswer(error);
+                return overtaken || unproven ? null : client.handleFailedRequest(moveRequest, event.token, error, null, false);
             });
             refused = proposal === null;
             return proposal;
@@ -234,7 +250,8 @@ export async function moveWithConfiguration(
     for (let retries = 0; overtaken && retries < MOVE_RETRIES && !event.token.isCancellationRequested; retries++) edit = await propose();
     if (overtaken) reason = `the project changed each of the ${MOVE_RETRIES + 1} times the language server proved it`;
     if (refused && !event.token.isCancellationRequested) {
-        const unupdated = await used(event.files.map(move => move.oldUri), event.token);
+        const moved = event.files.map(move => move.oldUri);
+        const unupdated = unproven ? moved : await used(moved, event.token);
         if (unupdated.length) warn(unupdatedReferences(unupdated, reason));
     }
     return edit;

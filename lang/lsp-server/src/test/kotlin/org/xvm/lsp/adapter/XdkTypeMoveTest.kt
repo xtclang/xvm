@@ -1,12 +1,14 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.uncompiledRename
 import org.xvm.testing.awaited
 import java.nio.file.Files
 import java.nio.file.Path
@@ -447,16 +449,23 @@ class XdkTypeMoveTest {
         write("App/tools/Box.x", "class Box {}")
         write("App/Owner.x", "class Owner {}")
         write("Other.x", "module Other {}")
-        listOf("App/Owner/nested", "Other/empty", "unowned").forEach { Files.createDirectories(directory.resolve(it)) }
+        listOf("Other/empty", "unowned").forEach { Files.createDirectories(directory.resolve(it)) }
+        val original = sourceTexts()
         session { adapter ->
-            val original = sourceTexts()
-            listOf("App/Owner/nested", "unowned").forEach { destination ->
-                assertThat(adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("$destination/Box.x"))).awaited())
-                    .describedAs(destination)
-                    .isNull()
-            }
-            assertThat(sourceTexts()).isEqualTo(original)
+            assertThat(adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("unowned/Box.x"))).awaited()).isNull()
         }
+        // a folder below a class, which the class's own folder holds, is no package: App does not compile with it, so no
+        // move there can be proven, which the refusal says
+        Files.createDirectories(directory.resolve("App/Owner/nested"))
+        session { adapter ->
+            assertThatThrownBy { adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("App/Owner/nested/Box.x"))).awaited() }
+                .rootCause()
+                .isInstanceOfSatisfying(RenameRefused::class.java) {
+                    assertThat(it.unproven).isTrue()
+                    assertThat(it.message).isEqualTo(uncompiledRename(listOf("App"), "move"))
+                }
+        }
+        assertThat(sourceTexts()).isEqualTo(original)
     }
 
     @Test

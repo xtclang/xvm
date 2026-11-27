@@ -10,6 +10,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 
 /** Shared preflight ownership for the file-tree Rename and Move actions. */
@@ -55,7 +58,7 @@ internal object XtcFileOperations {
                 if (project.isDisposed || future.isCancelled) return@invokeLater
                 val failure =
                     when {
-                        error != null -> "$title failed: ${error.cause?.message ?: error.message}"
+                        error != null -> fileOperationFailure(title, error) ?: return@invokeLater
                         edit == null -> "The compiler cannot safely apply this operation. No changes were made."
                         !edit.apply() -> "Sources or paths changed; invoke the operation again."
                         else -> null
@@ -68,6 +71,35 @@ internal object XtcFileOperations {
                     Notification(NOTIFICATIONS, "Ecstasy Refactoring", failure, NotificationType.ERROR).notify(project)
                 }
             }
+        }
+    }
+}
+
+/** What a file operation's notification says when a change of the project overtook the server's proof. */
+internal const val FILE_OPERATION_OVERTAKEN = "the project changed while the language server proved it; invoke it again."
+
+/**
+ * What the notification of the file operation [title], a file's rename or a move, says when the server's answer failed with
+ * [error]: nothing for a cancellation, as of the operation's progress; that a change of the project overtook the server's
+ * proof, as its ContentModified says, so that the operation invoked again is proven of the project as it then is;
+ * otherwise the server's reason, as that it can't prove the operation while a module does not compile.
+ */
+internal fun fileOperationFailure(
+    title: String,
+    error: Throwable,
+): String? {
+    val causes = generateSequence(error) { it.cause }
+    return when {
+        causes.any { it is CancellationException } -> {
+            null
+        }
+
+        causes.any { it is ResponseErrorException && it.responseError.code == ResponseErrorCode.ContentModified.value } -> {
+            "$title failed: $FILE_OPERATION_OVERTAKEN"
+        }
+
+        else -> {
+            "$title failed: ${error.cause?.message ?: error.message}"
         }
     }
 }

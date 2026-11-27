@@ -43,6 +43,11 @@ class RenameRefusedTest {
                 assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
                 assertThat(it.responseError.message).isEqualTo(RenameOvertaken.REASON)
             }
+            // a move's says so
+            assertThat(RenameRefused.asResponseError(failure, "move")).isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                assertThat(it.responseError.message).isEqualTo("The project changed while the move was proven")
+            }
         }
     }
 

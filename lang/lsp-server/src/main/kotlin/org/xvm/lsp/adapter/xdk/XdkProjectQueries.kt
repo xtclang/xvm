@@ -430,9 +430,21 @@ internal class XdkProjectQueries(
                     "choose the Adaptive memory policy, or a maximum heap of 2G or more, in the Ecstasy server's runtime settings.",
             )
         }
+        return proven("rename") { renameProposal(it, uri, line, column, name) }
+    }
+
+    /**
+     * The [operation]'s answer, a rename's or a move's, that [proof] makes of the compile of this query's sources before it
+     * ([renameBase]), or null when the proof refuses it. One that this graph can't prove, as while one of its modules does
+     * not compile, is refused with an unproven [RenameRefused] that says why, and one whose sources changed while it was
+     * proven with [RenameOvertaken]: its answer, an edit or a refusal, would be of sources that are no longer there.
+     */
+    private fun proven(
+        operation: String,
+        proof: (XdkCodeActionCache.Base) -> XdkRenameProposal?,
+    ): XdkRenameProposal? {
         var uncompiled: String? = null
-        val proposal = renameBase { uncompiled = it }?.let { renameProposal(it, uri, line, column, name) }
-        // an answer of sources that changed meanwhile, an edit or a refusal, would be of sources that are no longer there
+        val proposal = renameBase(operation) { uncompiled = it }?.let(proof)
         (if (isCurrent()) uncompiled?.let { RenameRefused(it, unproven = true) } else RenameOvertaken())?.let { throw it }
         return proposal
     }
@@ -453,9 +465,12 @@ internal class XdkProjectQueries(
      * ([revisionBase]), when every module compiled in it, as the proof needs. Its facts are a repair's, which hold what a
      * rename's own compile holds and more. When a module did not compile in it, the sources are compiled here as a rename
      * compiled them before, which fails where a module does not compile, and the log says so; [failed] then gets what a
-     * client is told of it, the modules that did not compile, or whose sources could not be read.
+     * client is told of it, the modules that did not compile, or whose sources could not be read, for the [operation].
      */
-    private fun renameBase(failed: (String) -> Unit = {}): XdkCodeActionCache.Base? {
+    private fun renameBase(
+        operation: String = "rename",
+        failed: (String) -> Unit = {},
+    ): XdkCodeActionCache.Base? {
         val base = revisionBase(revision())
         val missing = project.modules.keys - base?.artifacts?.keys.orEmpty()
         if (sources.size == project.modules.size && missing.isEmpty()) return base
@@ -471,7 +486,7 @@ internal class XdkProjectQueries(
                         .map { module -> module.name }
                 // the modules that reported errors, not those that did not compile only because one they import did not
                 val reported = missing.filter { module -> base?.errors?.containsKey(module) == true }.ifEmpty { missing }
-                failed(if (unread.isEmpty()) uncompiledRename(reported.sorted()) else unreadRename(unread.sorted()))
+                failed(if (unread.isEmpty()) uncompiledRename(reported.sorted(), operation) else unreadRename(unread.sorted(), operation))
             }
         }
     }
@@ -709,32 +724,64 @@ internal class XdkProjectQueries(
             else -> null
         }
 
-    /** Complete transaction for hosts that persist the graph with the requested resource moves. */
+    /**
+     * Complete transaction for hosts that persist the graph with the requested resource moves, or null when its proof
+     * refuses it. As a rename ([renameProposal]), a move that this graph can't prove, as while one of its modules does not
+     * compile, is refused with an unproven [RenameRefused] that says why, and one whose sources changed while it was
+     * proven with [RenameOvertaken].
+     */
     fun renameFilesProposal(requested: Map<String, String>): XdkRenameProposal? {
-        val inputOperations =
-            requested.entries
-                .associate { (from, to) ->
-                    (XdkSources.file(from) ?: return null) to (XdkSources.file(to) ?: return null)
-                }.filter { (from, to) -> from != to }
-        val operations = XdkMoveOperations.ordered(inputOperations) ?: return null
-        if (operations.isEmpty()) return XdkRenameProposal(WorkspaceEdit(emptyMap(), versioned = true))
-        if (
-            operations.values.distinct().size != operations.size ||
-            operations.any { (from, to) ->
-                !from.exists() ||
-                    !to.parentFile.isDirectory ||
-                    to.exists() ||
-                    Files.isSymbolicLink(from.toPath()) ||
-                    (
-                        from.isDirectory &&
-                            from.walkTopDown().any { Files.isSymbolicLink(it.toPath()) }
-                    ) ||
-                    to.toPath().startsWith(from.toPath())
-            }
-        ) {
-            return null
+        val operations = moveOperations(requested)
+        return when {
+            operations == null -> null
+
+            operations.isEmpty() -> XdkRenameProposal(WorkspaceEdit(emptyMap(), versioned = true))
+
+            // a file renamed where it is, as its type, module or package with it; any other operation moves what it names
+            else ->
+                proven(if (operations.all { (from, to) -> from.parentFile == to.parentFile }) "rename" else "move") {
+                    renameFilesProposal(it, operations)
+                }
         }
-        val base = renameBase() ?: return null
+    }
+
+    /**
+     * The [requested] moves of files and folders, as child-first operations ([XdkMoveOperations.ordered]) without those
+     * that move nothing, or null when one of them can't be made: of a path that is not a file, to a destination that
+     * another takes, that exists, that is no folder's child, or within what it moves, or of a symbolic link.
+     */
+    private fun moveOperations(requested: Map<String, String>): Map<File, File>? {
+        val files =
+            requested.entries.mapNotNull { (from, to) ->
+                XdkSources.file(from)?.let { file -> XdkSources.file(to)?.let { file to it } }
+            }
+        return files
+            .takeIf { it.size == requested.size }
+            ?.toMap()
+            ?.filter { (from, to) -> from != to }
+            ?.let(XdkMoveOperations::ordered)
+            ?.takeIf { operations ->
+                operations.values.distinct().size == operations.size && operations.none { (from, to) -> unmovable(from, to) }
+            }
+    }
+
+    /** Whether [from] can't move to [to], as [moveOperations] says. */
+    private fun unmovable(
+        from: File,
+        to: File,
+    ): Boolean =
+        !from.exists() ||
+            !to.parentFile.isDirectory ||
+            to.exists() ||
+            Files.isSymbolicLink(from.toPath()) ||
+            (from.isDirectory && from.walkTopDown().any { Files.isSymbolicLink(it.toPath()) }) ||
+            to.toPath().startsWith(from.toPath())
+
+    /** [renameFilesProposal]'s proof of the ordered [operations], from [base], the compile of the sources before them. */
+    private fun renameFilesProposal(
+        base: XdkCodeActionCache.Base,
+        operations: Map<File, File>,
+    ): XdkRenameProposal? {
         val before = base.facts
         val directories = sources.values.flatMap { it.inputs.directories }.toSet()
         val rootOperations =
@@ -1010,12 +1057,9 @@ internal class XdkProjectQueries(
         }
         val (move, plan, after) = proven(emptySet()) ?: return null
         val edits = plan.edits
-        if (!move.provesDestinations(after) || !preservesBindings(before, after, plan, graph) ||
-            !isCurrent() || !movedInputs.isCurrent(cancelled) ||
-            resourceSnapshots != captureResources()
-        ) {
-            return null
-        }
+        if (!move.provesDestinations(after) || !preservesBindings(before, after, plan, graph)) return null
+        // the moved inputs' bytes, and the resources that the modules read, changed on disk while the move was proven
+        if (!movedInputs.isCurrent(cancelled) || resourceSnapshots != captureResources()) throw RenameOvertaken()
         val replacement = !discoverImports && !project.sameConfiguration(graph)
         // a moved type, or a module root renamed as it moves, has another qualified name; a file renamed where it is
         // renames its type, module or package, as its proposal says
@@ -2060,18 +2104,26 @@ private const val SOURCE_MODULES_RENAME =
         "textDocument/rename can't update; rename it in a client that sends xtc/rename, " +
         "such as the Ecstasy plugins for IntelliJ and VS Code"
 
-/** Why a rename can't be proven while [modules] do not compile: its proof compiles them before and after the edit. */
-internal fun uncompiledRename(modules: List<String>): String =
-    "This rename can't be proven while ${inWords(modules)} ${if (modules.size == 1) "does" else "do"} not compile: " +
-        "fix the errors, then rename again"
+/**
+ * Why a rename, or another [operation], as a move, can't be proven while [modules] do not compile: its proof compiles them
+ * before and after the edit.
+ */
+internal fun uncompiledRename(
+    modules: List<String>,
+    operation: String = "rename",
+): String =
+    "This $operation can't be proven while ${inWords(modules)} ${if (modules.size == 1) "does" else "do"} not compile: " +
+        "fix the errors, then $operation again"
 
 /** Why a rename can't be proven while [module] has not compiled yet, as while it compiles after an edit. */
 internal fun notYetCompiledRename(module: String): String =
     "This rename can't be proven until $module has compiled: rename again once it has"
 
-/** Why a rename can't be proven while the sources of [modules] can't be read. */
-internal fun unreadRename(modules: List<String>): String =
-    "This rename can't be proven while the sources of ${inWords(modules)} can't be read"
+/** Why a rename, or another [operation], as a move, can't be proven while the sources of [modules] can't be read. */
+internal fun unreadRename(
+    modules: List<String>,
+    operation: String = "rename",
+): String = "This $operation can't be proven while the sources of ${inWords(modules)} can't be read"
 
 /** Why a rename can't be proven while discovery of the workspace's source modules has [problem]. */
 internal fun discoveryRename(problem: String): String =
