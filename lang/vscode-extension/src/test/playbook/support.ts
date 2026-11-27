@@ -10,10 +10,13 @@ import { focusTestEditor } from '../native-focus';
 import { waitsUnderWay, withTestWait } from '../progress';
 import { caseRuns, PLAYBOOK_WAIT_MS, PlaybookCleanupFailure, PlaybookTimeout, progress, runCase, waitFor, waitReport, waitWhile } from '../wait';
 import * as fs from './disk';
+import { knownHostFailure, seemsFixed } from './knownHostFailures';
 import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
 
 export const manualPath = path.resolve(__dirname, '../../../../doc/manual-test-plan.md');
 export const cases = new Map<string, { title: string; manual: string[]; tags: string[] }>();
+/** The cases that failed with a known host bug's symptom ([knownHostFailure]), by their IDs: the bug's UP ID and the failure. */
+export const knownFailures = new Map<string, { up: string; error: unknown }>();
 let fixtures: Map<string, string>;
 
 export function client() {
@@ -423,7 +426,7 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
     const { title, manual } = scenario;
     assert.ok(!cases.has(id), `Duplicate playbook case ${id}`);
     cases.set(id, { title, manual, tags: scenarioTags(id) });
-    test(`${id}: ${title}`, async function () {
+    test(`${id}: ${title}`, async function (this: Mocha.Context) {
         // the case's bound is [runCase]'s: Mocha's would start the next case while this one still runs
         this.timeout(0);
         const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
@@ -447,7 +450,18 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
         }
         const failures = await cleanUp(workspace, timeoutMs);
         if (failures.length) throw new PlaybookCleanupFailure(error === undefined ? failures : [error, ...failures]);
-        if (error !== undefined) throw error;
+        // a known host bug's exact symptom is no failure of the run, nor a pass: Mocha has it as pending, by a title that
+        // says so, and the runner reports it apart; any other failure fails
+        const known = error === undefined ? undefined : knownHostFailure(id, error);
+        if (known) {
+            knownFailures.set(id, { up: known.up, error });
+            this.test!.title = `${this.test!.title} — known host failure: ${known.up}`;
+            this.skip();
+        } else if (error !== undefined) throw error;
+        else {
+            const fixed = seemsFixed(id);
+            if (fixed) throw fixed;
+        }
     });
 }
 

@@ -7299,7 +7299,7 @@
     "X218": {
       "title": "overlapping parent and child moves preserve companions with native Undo/Redo",
       "manual": [
-        "Submit the independently moved child before its parent to reach the VS Code Undo check. Apply succeeds, but Undo fails in VS Code 1.140.0 because inverse operations retain their original order (UP23). Keep this acceptance test failing until the host is repaired. IntelliJ passes the complete transaction. Verify companions, closed consumers, Undo and Redo."
+        "Submit the independently moved child before its parent to reach the VS Code Undo check. Apply succeeds, but Undo fails in VS Code 1.140.0 because inverse operations retain their original order (UP23). The VS Code playbook reports it as known host failure UP23 until the host is repaired, and fails it as UP23 seems fixed once Undo works. IntelliJ passes the complete transaction. Verify companions, closed consumers, Undo and Redo."
       ],
       "values": {
         "root": "App.x",

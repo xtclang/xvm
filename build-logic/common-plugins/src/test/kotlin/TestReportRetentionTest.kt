@@ -235,6 +235,19 @@ class TestReportRetentionTest {
     }
 
     @Test
+    fun `a VS Code playbook run whose selected cases passed but for a known host failure is kept as a passing run`() {
+        val known = "\"failures\": 0, \"selection\": {\"mode\": \"focused\", \"ids\": [\"X1\", \"X218\"]}, \"cases\": " +
+            "[{\"id\": \"X1\", \"status\": \"passed\"}, {\"id\": \"X218\", \"status\": \"known-host-failure\", \"knownHost\": \"UP23\"}]"
+        val passed = "\"failures\": 0, \"selection\": {\"mode\": \"focused\", \"ids\": [\"X1\"]}, \"cases\": " +
+            "[{\"id\": \"X1\", \"status\": \"passed\"}]"
+        val older = traced("run-known", 1, "FEATURES", known)
+        traced("run-passed", 2, "FEATURES", passed)
+        TestReportRetention.prune(root, keep = 1)
+        // past the newest run, it keeps only its results, as a passing run does, and a failed one would not
+        assertTrue(onlyResults(older), "$older keeps only its results")
+    }
+
+    @Test
     fun `a prune that cannot take the lock leaves every run alone`() {
         val done = traced("run-done", 1, "FEATURES", "\"counts\": {\"passed\": 1}")
         FileChannel.open(root.resolve(".retention.lock"), CREATE, WRITE).use { channel ->

@@ -33,8 +33,10 @@ export function waitReport(line: string): void {
  * starts no other test; the playbook lets the case end and restores the editor before its next case.
  */
 export class PlaybookTimeout extends Error {}
-/** A progress-based wait's value that does not do, with nothing under way that could change it. */
-export class PlaybookFinal extends Error {}
+/** A progress-based wait's [value] that does not do, with nothing under way that could change it. */
+export class PlaybookFinal extends Error {
+    constructor(message: string, readonly value?: unknown) { super(message); }
+}
 export class PlaybookCleanupFailure extends Error {
     constructor(readonly failures: readonly unknown[]) { super(`Playbook cleanup failed: ${failures.map(String).join('; ')}`); }
 }
@@ -179,7 +181,7 @@ export async function waitWhile<T>(read: () => Promise<T>, accept: (value: T) =>
             idle = work.length > 0 ? 0 : idle + 1;
             if (idle >= 3) {
                 throw new PlaybookFinal(`${message}: the value is final, with nothing under way that could change it, after `
-                    + `${Math.round((Date.now() - begun) / 1000)} s; last value: ${JSON.stringify(last)}`);
+                    + `${Math.round((Date.now() - begun) / 1000)} s; last value: ${JSON.stringify(last)}`, last);
             }
             if (Date.now() - reported >= REPORT_MS) {
                 reported = Date.now();

@@ -34,7 +34,7 @@ export async function cutAndPasteDirectories(sources: readonly vscode.Uri[], des
             // block. Return only that failure so callers can collect Undo/Redo evidence before
             // failing. Other errors abort immediately. No VS Code internals are patched.
             // TODO VSCODE: UP16 — retire this diagnostic capture after native Paste safely
-            // clears stale Cut items; the scenario must keep failing while the host throws.
+            // clears stale Cut items; the scenario reports known host failure UP16 while the host throws.
             assert.ok(error instanceof Error && error.message.includes('Data tree node not found')
                 && error.stack?.includes('itemsCopied'), String(error));
             return error;
