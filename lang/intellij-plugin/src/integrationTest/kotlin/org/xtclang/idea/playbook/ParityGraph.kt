@@ -48,7 +48,7 @@ internal fun ParityScenarios.graphCases() {
         data.strings("modules").forEach { name ->
             val file = SharedScenarios.text(data.string("file"), name)
             val expected = fixture(file).replace(data.pattern("replaceFrom"), data.string("replaceWith"))
-            // UP21 persists closed consumers for the compiler; the open editor stays unsaved.
+            // LSP4IJ saves the closed consumers the rename changes, for the compiler; the open editor stays unsaved.
             val expectedDisk = if (file == document.file) fixture(file) else expected
             check(Files.readString(directory.resolve(file)) == expectedDisk) {
                 "Rename must preserve the open buffer's disk text and persist closed consumers: $file"
