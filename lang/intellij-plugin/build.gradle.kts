@@ -1127,6 +1127,20 @@ val pruneCompilerPlaybookReports =
         retainedFailedRuns.set(providers.gradleProperty("playbookRetainedFailedRuns").map(String::toInt).orElse(10))
     }
 
+// The tests of the playbook's and the tour's harness, not of the product, tagged "harness" (HARNESS in the integration
+// tests): alone, for a change to the harness, and first in every testCompilerPlaybook run, whose own cases and tour leave
+// them out, so that a broken harness fails the run before it opens an IDE. No check runs them.
+val testPlaybookHarness =
+    tasks.register<Test>("testPlaybookHarness") {
+        group = "verification"
+        description = "Run the IntelliJ playbook's and tour's harness tests, which need no IDE"
+        testClassesDirs = integrationTestSourceSet.output.classesDirs
+        classpath = integrationTestSourceSet.runtimeClasspath
+        useJUnitPlatform { includeTags("harness") }
+        jvmArgs("-Xlog:cds=off")
+        testLogging.events("passed", "skipped", "failed")
+    }
+
 // Launch the packaged plugin in an isolated IDE using JetBrains' Starter/Driver test task.
 // This suite is opt-in; ordinary plugin tests do not open an IDE window.
 intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
@@ -1140,7 +1154,9 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         classpath = integrationTestSourceSet.runtimeClasspath
         // IDE-side probes load only inside the sandbox plugin classloader, not Starter's JVM.
         include("**/*Test.class")
-        useJUnitPlatform()
+        // the harness's own tests run before, in testPlaybookHarness, whatever cases or tour --tests picks here
+        useJUnitPlatform { excludeTags("harness") }
+        dependsOn(testPlaybookHarness)
         systemProperty("xtc.playbook.ideVersion", playbookIdeVersion)
         localLsp4ijPlugin.orNull?.let { pluginDirectory ->
             inputs.dir(pluginDirectory).withPropertyName("localLsp4ijPlugin")
