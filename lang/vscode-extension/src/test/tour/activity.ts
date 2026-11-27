@@ -88,8 +88,10 @@ export class Activity implements vscode.Disposable {
 
     constructor(private readonly traces: string | undefined, private readonly dap: readonly { from: 'vscode' | 'adapter'; message: DapMessage }[]) {
         this.subscriptions = [
+            // not a log's, as the language server's, which shows in the Output view: it grows with every request the
+            // server logs, as the workspace pulls VS Code makes every 2 s, and says what work did, which is no work
             vscode.workspace.onDidChangeTextDocument(event => {
-                if (event.contentChanges.length > 0) this.happened(`an edit of ${path.basename(event.document.uri.path)}`);
+                if (event.contentChanges.length > 0 && !log(event.document)) this.happened(`an edit of ${path.basename(event.document.uri.path)}`);
             }),
             vscode.languages.onDidChangeDiagnostics(event => this.happened(`the diagnostics of ${event.uris.map(uri => path.basename(uri.path)).join(', ')}`)),
             vscode.window.onDidChangeActiveTextEditor(() => this.happened('the active editor changed')),
@@ -324,6 +326,11 @@ export class Activity implements vscode.Disposable {
         }
         return false;
     }
+}
+
+/** Whether [document] is a log, an output channel's or a log file's, as the Output view shows them. */
+function log(document: vscode.TextDocument): boolean {
+    return document.uri.scheme === 'output' || document.uri.path.endsWith('.log');
 }
 
 /** Whether the process [pid] is still alive. */
