@@ -26,7 +26,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import java.util.function.Function;
@@ -72,6 +71,7 @@ import org.xvm.runtime.SessionDebugger.Watchable;
 
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 import org.xvm.testing.Await;
+import org.xvm.testing.Watchdog;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -115,10 +115,13 @@ public class SessionDebuggerTest {
     private static EmbeddingSupport support;
 
     /**
-     * Prints where the runtime's fibers are once a run's close has not returned for a minute
-     * ({@link #watchCloses}).
+     * Prints where the runtime's fibers are once a run's close has not returned for half the
+     * watchdog's idle window ({@link #watchCloses}).
      */
     private static Thread closeWatchdog;
+
+    /** How long a run's close waits before {@link #watchCloses} prints the runtime's fibers. */
+    private static final Duration STALLED_CLOSE = Watchdog.IDLE.dividedBy(2);
 
     /**
      * A module whose run() passes an object, an array and a string to a method, which stops on line
@@ -881,9 +884,11 @@ public class SessionDebuggerTest {
 
     /**
      * Print the runtime's containers, their services and the fibers of those with their frames,
-     * once a thread has been in a run's close for a minute, so that a run that does not end shows
-     * where it is stuck. It only prints, once for each stalled close: the close's wait still decides
-     * the test's result, as the watchdog finds it hung.
+     * once a thread has been in a run's close for half the watchdog's idle window, so that a run
+     * that does not end shows where it is stuck. That is before the watchdog fails a close in which
+     * nothing used CPU for the whole window, whose failure, with every thread's dump, can end the
+     * test task at once, as it did in CI, where after a minute this printed nothing. It only prints,
+     * once for each stalled close: the close's wait still decides the test's result.
      */
     private static void watchCloses() {
         Map<Thread, Long> closingSince = new HashMap<>();
@@ -898,8 +903,9 @@ public class SessionDebuggerTest {
                             && element.getClassName().equals(InterpreterControl.class.getName()));
                     if (!closing) {
                         closingSince.remove(thread);
-                    } else if (now - closingSince.computeIfAbsent(thread, _ -> now) > TimeUnit.MINUTES.toNanos(1)) {
-                        System.err.println("A close has not returned for a minute on " + thread.getName() + ":\n" + fibers());
+                    } else if (now - closingSince.computeIfAbsent(thread, _ -> now) > STALLED_CLOSE.toNanos()) {
+                        System.err.println("A close has not returned for " + STALLED_CLOSE.toSeconds() + " s on "
+                                + thread.getName() + ":\n" + fibers());
                         closingSince.put(thread, Long.MAX_VALUE);
                     }
                 });
