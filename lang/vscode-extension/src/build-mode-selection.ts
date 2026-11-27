@@ -84,11 +84,16 @@ export function watchEmbeddedChoice(): vscode.Disposable {
     });
 }
 
-/** What the build mode status bar item shows, or undefined while it is hidden; for the playbook. */
-let shown: string | undefined;
+/** What the build mode status bar item shows, and its tooltip, or undefined while it is hidden; for the playbook. */
+let shown: { text: string; tooltip: string } | undefined;
 
 export function buildModeStatus(): string | undefined {
-    return shown;
+    return shown?.text;
+}
+
+/** The tooltip of the build mode status bar item, or undefined while it is hidden; for the playbook. */
+export function buildModeTooltip(): string | undefined {
+    return shown?.tooltip;
 }
 
 /** The status bar text for a folder's effective build mode. */
@@ -113,14 +118,15 @@ export function createBuildModeStatus(): vscode.Disposable {
         }
         const mode = buildMode(folder);
         item.text = buildModeStatusText(mode);
-        shown = item.text;
         const reason = gradleReason(folder);
-        item.tooltip = reason !== undefined
+        const tooltip = reason !== undefined
             ? `Ecstasy builds and runs ${folder.name} through its Gradle build, as it ${reason}.`
             : mode === 'gradle'
             ? `Ecstasy builds and runs ${folder.name} through its Gradle build. Click to choose the embedded compiler.`
             : `Ecstasy builds and runs ${folder.name} with the embedded compiler; of its Gradle build's settings, only the run `
                 + 'settings of xtcRun and xtcTest apply, once the Gradle model is imported. Click to choose Gradle.';
+        item.tooltip = tooltip;
+        shown = { text: item.text, tooltip };
         item.show();
     };
     update();

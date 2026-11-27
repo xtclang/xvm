@@ -1,21 +1,27 @@
 import * as assert from 'node:assert';
 import { execFile, spawn } from 'node:child_process';
 import * as fs from './disk';
+// what X366 writes before its folders open, which no watcher reports: past the record of the changes the server has to hear of
+import * as files from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 import * as vscode from 'vscode';
-import { buildModeStatus } from '../../build-mode-selection';
-import { buildMode, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
+import { buildModeStatus, buildModeTooltip } from '../../build-mode-selection';
+import { refreshCompilerBuild } from '../../compiler-paths';
+import { buildMode, gradleReason, onDidChangeReplacedLibraries, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { gradleProjects } from '../../gradle-projects';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
+import { terminateTask } from '../../task-termination';
 import { onDidRefreshTests, onDidReportTest, onDidStartTest, type TestReport } from '../../test-explorer';
 import { watchProcess } from '../uiWait';
-import { caseSignal } from '../wait';
+import { caseSignal, PlaybookCleanupFailure, withPlaybookCleanup } from '../wait';
+import { WorkbenchUi } from '../workbenchUi';
 import { discovered } from './liveWorkspace';
 import { gradleModel, withGradleModel } from './platform';
-import { client, diagnosticCode, eventually, noErrors, playbook, type Workspace } from './support';
+import { scenarioText, sharedScenarioPath } from './shared';
+import { client, diagnosticCode, eventually, noErrors, playbook, progress, serviceStatus, type Workspace } from './support';
 
 /** Records what each embedded build or run terminal shows, keyed by kind and label. */
 class Executions implements vscode.Disposable {
@@ -1349,6 +1355,14 @@ interface GradleProjectValues {
     statusGradle: string;
 }
 
+/** Checks that mavenLocal has each of [artifacts] at [version], which case [id] builds with, as publishLocal puts them there. */
+async function requireMavenLocal(id: string, artifacts: readonly string[], version: string): Promise<void> {
+    for (const artifact of artifacts) {
+        const published = path.join(os.homedir(), '.m2', 'repository', artifact, version);
+        assert.ok(await exists(published), `${id} builds with ${artifact} ${version} from mavenLocal; run ./gradlew publishLocal first`);
+    }
+}
+
 /**
  * Makes a project with xtc init, which Ecstasy: Create Project runs, at the folder root, where Gradle mode runs
  * ./gradlew, runs [body] with it, and removes it again, with the folder's build mode as it was. Its build takes the
@@ -1377,10 +1391,7 @@ async function withGradleProject(id: string, data: GradleProjectValues,
         await fs.chmod(root('gradlew'), 0o755);
         const version = new RegExp(data.versionPattern, 'm').exec(await fs.readFile(root(data.catalog), 'utf8'))?.[1];
         assert.ok(version, `An XTC version in ${data.catalog}`);
-        for (const artifact of data.mavenLocal) {
-            const published = path.join(os.homedir(), '.m2', 'repository', artifact, version);
-            assert.ok(await exists(published), `${id} builds with ${artifact} ${version} from mavenLocal; run ./gradlew publishLocal first`);
-        }
+        await requireMavenLocal(id, data.mavenLocal, version);
         await body(folder, root);
     } finally {
         await settings.update('build.mode', original, vscode.ConfigurationTarget.Workspace);
@@ -1758,4 +1769,231 @@ export function gradleRunCases(): void {
             assert.ok(!own.includes(data.output), own);
         });
     }));
+}
+
+/** A project of X366's: a Gradle build of its own, with one module. */
+interface XdkProject {
+    project: string;
+    module: string;
+    file: string;
+    source: string;
+    output: string;
+}
+
+/**
+ * Runs [command] with [args] in [cwd], a process of the case's own: under way while it prints or computes, and ended
+ * with the case once that is given up on.
+ */
+async function caseProcess(command: string, args: string[], cwd?: string): Promise<void> {
+    const running = promisify(execFile)(command, args, { cwd, signal: caseSignal() });
+    watchProcess(running.child, command);
+    await running;
+}
+
+/**
+ * Makes the other XDK of X366 in the Maven repository [repository]: the XDK [archive] that publishLocal put in mavenLocal,
+ * with its POM [pom], as version [version], with [marker] in its javatools.jar too, which makes it another XDK for the
+ * language server, as the revision of javatools.jar is one of what it compares.
+ */
+async function otherXdk(archive: string, pom: string, repository: string, version: string, marker: { file: string; text: string }): Promise<void> {
+    const target = path.join(repository, 'org', 'xtclang', 'xdk', version);
+    await files.mkdir(target, { recursive: true });
+    const work = await files.mkdtemp(path.join(os.tmpdir(), 'xtc-other-xdk-'));
+    try {
+        await caseProcess('unzip', ['-q', archive, '*/javatools/javatools.jar', '-d', work]);
+        const [top] = await files.readdir(work);
+        const jar = path.join(top, 'javatools', 'javatools.jar');
+        const entries = path.join(work, 'entries');
+        await files.mkdir(path.join(entries, path.dirname(marker.file)), { recursive: true });
+        await files.writeFile(path.join(entries, marker.file), marker.text);
+        await caseProcess('zip', ['-q', path.join(work, jar), marker.file], entries);
+        const copy = path.join(target, `xdk-${version}.zip`);
+        await files.copyFile(archive, copy);
+        await caseProcess('zip', ['-q', copy, jar], work);
+        const published = /<version>([^<]+)<\/version>/.exec(await files.readFile(pom, 'utf8'));
+        assert.ok(published, `A version in ${pom}`);
+        await files.writeFile(path.join(target, `xdk-${version}.pom`),
+            (await files.readFile(pom, 'utf8')).replace(published[0], `<version>${version}</version>`));
+    } finally {
+        await files.rm(work, { recursive: true, force: true });
+    }
+}
+
+/**
+ * Whether a folder of the window has had a reason to build and run with Gradle in this session, which the extension
+ * says once a session, in its notice: X366 checks the notice only when its reason is the session's first.
+ */
+let gradleReasonBefore = false;
+onDidChangeReplacedLibraries(scope => {
+    if (scope.folders.length > 0 || scope.libraries.length > 0) gradleReasonBefore = true;
+});
+
+/**
+ * Runs each of [steps], a cleanup's, on its own, so that one that fails leaves the next to run, and fails with what failed,
+ * each as its step names it, once all have run.
+ */
+async function cleanupSteps(steps: readonly [string, () => Promise<unknown>][]): Promise<void> {
+    const failures: unknown[] = [];
+    for (const [what, step] of steps) {
+        try {
+            await step();
+        } catch (error) {
+            failures.push(new Error(`${what}: ${error instanceof Error ? error.message : String(error)}`));
+        }
+    }
+    if (failures.length > 0) throw new PlaybookCleanupFailure(failures);
+}
+
+/**
+ * X366, registered after X365 in catalog order: a folder whose Gradle build has another XDK than the bundled one builds
+ * and runs with Gradle once its model is imported, and the notice, the picker and the status bar say which XDK it builds
+ * with, while a folder on the bundled XDK beside it builds and runs embedded.
+ */
+export function otherXdkCases(): void {
+    playbook('X366', async (_workspace, data) => {
+        // the launcher opens the window with a workspace file for this case, as adding a folder to a window of one folder
+        // would make the window a new workspace, which restarts the extension host and the playbook with it
+        assert.ok(vscode.workspace.workspaceFile, 'X366 adds folders to the window, which needs a workspace file');
+        const primary = vscode.workspace.workspaceFolders![0];
+        const base = path.join(path.dirname(primary.uri.fsPath), 'X366');
+        const tree = path.resolve(path.dirname(sharedScenarioPath), '../../..');
+        const version = new RegExp(data.versionPattern, 'm').exec(await files.readFile(path.join(tree, data.versionFile), 'utf8'))?.[1];
+        assert.ok(version, `An XDK version in ${data.versionFile}`);
+        await requireMavenLocal('X366', data.mavenLocal, version);
+        // the extension's one notice of the session is X366's only when no folder had a reason before
+        const notice = !gradleReasonBefore;
+        const projects: [XdkProject, string][] = [[data.other, data.otherVersion], [data.bundled, version]];
+        const uris = projects.map(([project]) => vscode.Uri.file(path.join(base, project.project)));
+        const ours = () => (vscode.workspace.workspaceFolders ?? []).filter(folder => uris.some(uri => uri.toString() === folder.uri.toString()));
+        // [count] folders of the case's in the window, once VS Code says it has changed them as [change] asks: only then has
+        // it written the workspace file, which a change of the workspace's settings before would find unsaved, and miss
+        const folders = async (count: number, change: () => boolean, message: string) => {
+            let changed = false;
+            const listener = vscode.workspace.onDidChangeWorkspaceFolders(() => { changed = ours().length === count; });
+            try {
+                assert.ok(change(), 'VS Code takes the change of the folders');
+                await eventually(async () => changed, value => value, message);
+            } finally {
+                listener.dispose();
+            }
+        };
+        // the reasons of the folders that build with Gradle, as the server's status says; none while there is no status,
+        // as while the server restarts
+        const gradleFolders = async () => {
+            const status = await serviceStatus<{ gradleFolders?: Record<string, string> }>();
+            return status === undefined ? undefined : Object.values(status.gradleFolders ?? {});
+        };
+        await withPlaybookCleanup(async () => {
+            // the other XDK, from this tree's, in a Maven repository of the case's own
+            const repository = path.join(base, data.repository);
+            const published = path.join(os.homedir(), '.m2', 'repository', 'org', 'xtclang', 'xdk', version);
+            await otherXdk(path.join(published, `xdk-${version}.zip`), path.join(published, `xdk-${version}.pom`), repository, data.otherVersion,
+                { file: data.marker, text: data.markerText });
+            // the two Gradle builds, each with this tree's wrapper, and the XTC plugin from mavenLocal
+            for (const [[project, xdk], uri] of projects.map((each, index) => [each, uris[index]] as const)) {
+                const root = (file: string) => path.join(uri.fsPath, file);
+                await files.mkdir(path.dirname(root(project.file)), { recursive: true });
+                await files.writeFile(root('settings.gradle.kts'), scenarioText(data.settings, project.project, vscode.Uri.file(repository).toString()));
+                await files.writeFile(root('build.gradle.kts'), scenarioText(data.build, version, xdk, project.module));
+                await files.writeFile(root(project.file), project.source);
+                for (const file of data.wrapper) {
+                    await files.mkdir(path.dirname(root(file)), { recursive: true });
+                    await files.copyFile(path.join(tree, file), root(file));
+                }
+                await files.chmod(root('gradlew'), 0o755);
+            }
+            await folders(uris.length, () => vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders!.length, 0, ...uris.map(uri => ({ uri }))),
+                "The window has the case's folders");
+            const [other, bundled] = uris.map(uri => vscode.workspace.getWorkspaceFolder(uri)!);
+            // the folders' Gradle models, which the extension gives the language server without explicit modules; the
+            // case's cleanup puts the source modules back
+            await vscode.workspace.getConfiguration('xtc.compiler').update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
+            for (const folder of [other, bundled]) await refreshCompilerBuild(false, folder);
+
+            // the server says why the folder on the other XDK builds with Gradle, and gives the other folder no reason
+            await eventually(async () => ({ server: await gradleFolders(), client: gradleReason(other) }),
+                value => value.server?.length === 1 && value.server[0].startsWith(data.reason) && value.client === value.server[0],
+                'The language server says why OtherXdk builds with Gradle');
+            assert.strictEqual(gradleReason(bundled), undefined, 'BundledXdk has no reason to build with Gradle');
+            assert.deepStrictEqual([buildMode(other), buildMode(bundled)], ['gradle', 'embedded']);
+
+            // the notice, and the picker's embedded compiler, which is not available there
+            const ui = await WorkbenchUi.connect();
+            try {
+                if (notice) {
+                    await vscode.commands.executeCommand('notifications.showList');
+                    await ui.shows(ui.page.locator('.notification-list-item').filter({ hasText: data.vscodeNotice }).first(), 'The notice that OtherXdk builds with Gradle');
+                    await vscode.commands.executeCommand('notifications.hideList');
+                } else {
+                    progress('X366 checks no notice: a folder had a reason to build with Gradle before in this session, which took the extension\'s one notice');
+                }
+                const picking = vscode.commands.executeCommand('xtc.selectBuildMode', undefined, other.uri);
+                try {
+                    await ui.shows(ui.page.locator('.quick-input-widget:visible .monaco-list-row').filter({ hasText: data.picker }).first(),
+                        "The picker's embedded compiler, not available in OtherXdk");
+                } finally {
+                    await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+                    await picking;
+                }
+            } finally {
+                await ui.close();
+            }
+
+            // the status bar of each folder's module
+            const show = async (folder: vscode.WorkspaceFolder, project: XdkProject) => {
+                const document = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folder.uri, project.file));
+                await vscode.window.showTextDocument(document, { preview: false });
+                return document;
+            };
+            const otherModule = await show(other, data.other);
+            await eventually(async () => ({ text: buildModeStatus(), tooltip: buildModeTooltip() }),
+                status => status.text === data.statusGradle && !!status.tooltip?.includes(data.tooltip),
+                'The status bar says that OtherXdk builds with Gradle, and why');
+
+            // Gradle builds and runs OtherXdk, with the other XDK
+            assert.strictEqual(await shellTaskExit('Build', () => vscode.commands.executeCommand('xtc.build')), 0, 'Gradle build exit code');
+            const root = (file: string) => path.join(other.uri.fsPath, file);
+            assert.ok(await exists(root(data.other.artifact)), `The Gradle build writes ${data.other.artifact}`);
+            // unzip lists the entry, and fails when the jar has none
+            const extracted = await caseProcess('unzip', ['-l', root(data.other.javatools), data.marker]).then(() => true, () => false);
+            assert.ok(extracted, `The Gradle build extracted the other XDK, whose javatools.jar has ${data.marker}`);
+            assert.strictEqual(await shellTaskExit(`Run ${data.other.module}`,
+                () => vscode.commands.executeCommand('xtc.runModule', otherModule.uri.toString(), data.other.module)), 0, 'Gradle run exit code');
+
+            // and BundledXdk, beside it, builds and runs embedded
+            const bundledModule = await show(bundled, data.bundled);
+            await eventually(async () => buildModeStatus(), text => text === data.statusEmbedded, 'The status bar says that BundledXdk builds embedded');
+            await executing(async executions => {
+                const built = await executions.build('The embedded build of BundledXdk ends');
+                assert.strictEqual(built.exitCode, 0, built.text);
+                assert.ok(built.text.includes(data.bundled.module), built.text);
+                const run = await executions.lens(data.bundled.module, bundledModule.uri, 'The embedded run of BundledXdk ends');
+                assert.strictEqual(run.exitCode, 0, run.text);
+                assert.ok(run.text.includes(data.bundled.output), run.text);
+            });
+        }, () => cleanupSteps([
+            // first the case's tasks, a Gradle task among them, which would write into the folders as they go
+            ["Ending the case's tasks", async () => {
+                vscode.tasks.taskExecutions.forEach(terminateTask);
+                await eventually(async () => vscode.tasks.taskExecutions.map(execution => execution.task.name), running => running.length === 0,
+                    "The case's tasks end");
+            }],
+            ['Closing the notices and the editors', async () => {
+                await vscode.commands.executeCommand('notifications.clearAll');
+                await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+            }],
+            ["Taking the case's folders out of the window", async () => {
+                const added = ours();
+                if (added.length > 0) {
+                    await folders(0, () => vscode.workspace.updateWorkspaceFolders(added[0].index, added.length), "The case's folders leave the window");
+                }
+            }],
+            // the models of the folders the window has, which are not the case's any more
+            ["Giving the server the window's models", () => updateCompilerConfiguration()],
+            ["Removing the case's files", () => files.rm(base, { recursive: true, force: true })],
+            // no folder builds with Gradle any more, so the next case has its own build mode
+            ['Waiting until no folder builds with Gradle', () => eventually(async () => gradleFolders(),
+                value => value !== undefined && value.length === 0 && gradleReason(primary) === undefined, 'No folder builds with Gradle after the case')],
+        ]));
+    });
 }
