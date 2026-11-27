@@ -29,11 +29,20 @@ export function formattingSettings(): object {
         if (typeof value !== 'boolean') throw new Error(`Ecstasy formatting.${key} must be a boolean`);
         return value;
     };
+    const string = (key: string, fallback: string) => {
+        const value = config.get<unknown>(key, fallback);
+        if (typeof value !== 'string') throw new Error(`Ecstasy formatting.${key} must be a string`);
+        return value;
+    };
     return {
         indentSize: integer('indentSize', 4),
         continuationIndentSize: integer('continuationIndentSize', 8),
         maxLineWidth: integer('maxLineWidth', 120, 1000),
         insertSpaces: boolean('insertSpaces', true),
         wrapComments: boolean('wrapComments', false),
+        formatterTagsEnabled: boolean('formatterTagsEnabled', false),
+        formatterOffTag: string('formatterOffTag', '@formatter:off'),
+        formatterOnTag: string('formatterOnTag', '@formatter:on'),
+        formatterTagsAcceptRegexp: boolean('formatterTagsAcceptRegexp', false),
     };
 }

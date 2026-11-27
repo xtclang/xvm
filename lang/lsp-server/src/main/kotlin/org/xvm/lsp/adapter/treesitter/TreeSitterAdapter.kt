@@ -16,6 +16,7 @@ import org.xvm.lsp.adapter.DocumentHighlight.HighlightKind
 import org.xvm.lsp.adapter.DocumentLink
 import org.xvm.lsp.adapter.EditorConfig
 import org.xvm.lsp.adapter.FoldingRange
+import org.xvm.lsp.adapter.FormatterTags
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
 import org.xvm.lsp.adapter.LanguageConstants.builtInTypeCompletions
@@ -148,6 +149,9 @@ class TreeSitterAdapter : AbstractAdapter() {
          * minimum.
          */
         const val MIN_JAVA_VERSION: Int = 25
+
+        /** The grammar's comment nodes, as its folding ranges name them. */
+        private val commentNodes = setOf("comment", "line_comment", "block_comment", "doc_comment")
 
         /**
          * Conservative `http(s)` URL matcher for document-link extraction. Stops at the first
@@ -1472,7 +1476,9 @@ class TreeSitterAdapter : AbstractAdapter() {
                     return super.formatDocument(uri, content, options)
                 }
         val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
-        return formatter.formatDocument(tree, content, formatting.config, formatting.options)
+        return FormatterTags.kept(formatting.config, {
+            comments(tree)
+        }, formatter.formatDocument(tree, content, formatting.config, formatting.options))
     }
 
     override fun formatRange(
@@ -1491,7 +1497,8 @@ class TreeSitterAdapter : AbstractAdapter() {
                     return super.formatRange(uri, content, range, options)
                 }
         val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
-        return formatter.formatRange(tree, content, range, formatting.config, formatting.options)
+        val edits = formatter.formatRange(tree, content, range, formatting.config, formatting.options)
+        return FormatterTags.kept(formatting.config, { comments(tree) }, edits)
     }
 
     // ========================================================================
@@ -1523,8 +1530,18 @@ class TreeSitterAdapter : AbstractAdapter() {
             ch,
             config,
         )
-        return formatter.onTypeFormatting(tree, line, column, ch, config)
+        return FormatterTags.kept(config, { comments(tree) }, formatter.onTypeFormatting(tree, line, column, ch, config))
     }
+
+    /** The tree's comments, in the order of the text, for the formatter markers ([FormatterTags]). */
+    private fun comments(tree: XtcTree): List<FormatterTags.Comment> = comments(tree.root)
+
+    private fun comments(node: XtcNode): List<FormatterTags.Comment> =
+        if (node.type in commentNodes) {
+            listOf(FormatterTags.Comment(node.startLine..node.endLine, node.text))
+        } else {
+            node.children.flatMap(::comments)
+        }
 
     /**
      * Emit document links for `http(s)` URLs that appear inside comments and string literals.

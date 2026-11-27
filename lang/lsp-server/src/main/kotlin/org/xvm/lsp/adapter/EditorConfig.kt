@@ -22,8 +22,11 @@ import java.util.concurrent.ConcurrentHashMap
  *   `indent_size` when `tab_width` is not set
  * - `max_line_length`: the width that code wraps and comments refill at; `off` wraps no line and refills no comment
  * - `trim_trailing_whitespace` and `insert_final_newline`
- * - IntelliJ's names for what the standard does not have, as its EditorConfig export writes them for the Ecstasy
- *   language: `ij_ecstasy_continuation_indent_size` (or `ij_continuation_indent_size`) and `ij_ecstasy_wrap_comments`
+ * - what the standard does not have: the continuation indent, as `ij_ecstasy_continuation_indent_size`,
+ *   `ij_continuation_indent_size` or `continuation_indent_size`; comment refilling, as `ij_ecstasy_wrap_comments`; and
+ *   the formatter markers ([FormatterTags]), as `ij_formatter_tags_enabled`, `ij_formatter_off_tag`,
+ *   `ij_formatter_on_tag` and `ij_formatter_tags_accept_regexp`: IntelliJ's names, as its EditorConfig export writes
+ *   them for the Ecstasy language, and the EditorConfig wiki's for the continuation indent
  *
  * `end_of_line` is for the editor to apply ([endOfLine]): an edit's line breaks cannot change a document's, as both
  * editors give inserted text the document's own. `charset` and other properties are not read.
@@ -48,7 +51,7 @@ internal object EditorConfig {
         val sections: List<Section>,
     )
 
-    /** A section: its glob and its properties, names and values in lowercase. */
+    /** A section: its glob and its properties, the names in lowercase, and the standard properties' values too. */
     data class Section(
         val glob: Glob,
         val properties: Map<String, String>,
@@ -104,7 +107,7 @@ internal object EditorConfig {
             .fold(emptyMap<String, String>()) { properties, (directory, parsed) ->
                 val relative = directory.relativize(absolute).joinToString("/")
                 parsed.sections.filter { it.glob.matches(relative) }.fold(properties) { all, section -> all + section.properties }
-            }.filterValues { it != "unset" }
+            }.filterValues { !it.equals("unset", ignoreCase = true) }
     }
 
     /** Parses a `.editorconfig` file's text; lines that are neither a section, a property nor a comment are skipped. */
@@ -127,7 +130,7 @@ internal object EditorConfig {
 
                     else -> {
                         val name = line.substringBefore('=').trim().lowercase()
-                        val value = line.substringAfter('=').trim().lowercase()
+                        val value = line.substringAfter('=').trim().let { if (name in STANDARD) it.lowercase() else it }
                         when {
                             last != null ->
                                 parsed.copy(
@@ -154,11 +157,11 @@ internal object EditorConfig {
         val (indent, tab) = indentation(values, spaces, base.options.tabSize)
         val width = if (values["max_line_length"] == "off") 0 else values.integer("max_line_length", MAX_LINE_WIDTH)
         val continuation =
-            values.integer("ij_ecstasy_continuation_indent_size", MAX_INDENT) ?: values.integer("ij_continuation_indent_size", MAX_INDENT)
+            CONTINUATION.firstNotNullOfOrNull { values.integer(it, MAX_INDENT) }
         val config = base.config
         val options = base.options
         return Formatting(
-            config.copy(
+            markers(values, config).copy(
                 indentSize = indent ?: config.indentSize,
                 continuationIndentSize = continuation ?: config.continuationIndentSize,
                 insertSpaces = spaces ?: config.insertSpaces,
@@ -190,6 +193,20 @@ internal object EditorConfig {
         return (if (byTab) tab ?: editorTab else size) to tab
     }
 
+    /** IntelliJ's formatter markers that [values] set over [config]'s. */
+    private fun markers(
+        values: Values,
+        config: FormattingConfig,
+    ): FormattingConfig {
+        val regexp = values.boolean("ij_formatter_tags_accept_regexp") ?: config.formatterTagsAcceptRegexp
+        return config.copy(
+            formatterTagsEnabled = values.boolean("ij_formatter_tags_enabled") ?: config.formatterTagsEnabled,
+            formatterOffTag = values.tag("ij_formatter_off_tag", regexp) ?: config.formatterOffTag,
+            formatterOnTag = values.tag("ij_formatter_on_tag", regexp) ?: config.formatterOnTag,
+            formatterTagsAcceptRegexp = regexp,
+        )
+    }
+
     /** One request's properties, read so that a value the formatter cannot use is ignored with a warning. */
     private class Values(
         private val properties: Map<String, String>,
@@ -208,12 +225,21 @@ internal object EditorConfig {
 
         fun boolean(name: String) = choice(name, "true" to true, "false" to false)
 
+        /** A formatter marker's tag, as it is written; with [regexp], only one that is a regular expression. */
+        fun tag(
+            name: String,
+            regexp: Boolean,
+        ): String? =
+            properties[name]?.let { tag ->
+                tag.takeIf { !regexp || runCatching { Regex(it) }.isSuccess } ?: ignored(name, "a regular expression")
+            }
+
         fun <T : Any> choice(
             name: String,
             vararg choices: Pair<String, T>,
         ): T? =
             properties[name]?.let { value ->
-                choices.firstOrNull { it.first == value }?.second
+                choices.firstOrNull { it.first == value.lowercase() }?.second
                     ?: ignored(name, choices.joinToString(" or ") { it.first })
             }
 
@@ -240,6 +266,23 @@ internal object EditorConfig {
                 null
             }
         }
+
+    /** The properties whose values the specification makes case-insensitive, which [parse] gives in lowercase. */
+    private val STANDARD =
+        setOf(
+            "root",
+            "indent_style",
+            "indent_size",
+            "tab_width",
+            "end_of_line",
+            "charset",
+            "trim_trailing_whitespace",
+            "insert_final_newline",
+            "max_line_length",
+        )
+
+    /** The continuation indent's names, the first set winning: IntelliJ's for Ecstasy, IntelliJ's, the wiki's. */
+    private val CONTINUATION = listOf("ij_ecstasy_continuation_indent_size", "ij_continuation_indent_size", "continuation_indent_size")
 
     /** The editors' own bounds for an indentation and a line width. */
     private const val MAX_INDENT = 32

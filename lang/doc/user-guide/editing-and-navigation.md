@@ -139,7 +139,7 @@ The formatter takes each setting from the first of these that sets it:
 | Setting | IntelliJ's Code Style page | VS Code | `.editorconfig` |
 |---|---|---|---|
 | Indentation | **Tabs and Indents: Indent** | `xtc.formatting.indentSize` | `indent_size` |
-| Continuation lines | **Tabs and Indents: Continuation indent** | `xtc.formatting.continuationIndentSize` | `ij_ecstasy_continuation_indent_size`, or `ij_continuation_indent_size` |
+| Continuation lines | **Tabs and Indents: Continuation indent** | `xtc.formatting.continuationIndentSize` | `ij_ecstasy_continuation_indent_size`, `ij_continuation_indent_size` or `continuation_indent_size` |
 | Tabs or spaces | **Tabs and Indents: Use tab character** | `xtc.formatting.insertSpaces` | `indent_style`: `space` or `tab` |
 | Tab width | **Tabs and Indents: Tab size** | `editor.tabSize` | `tab_width` |
 | Right margin | **Wrapping and Braces: Hard wrap at** | `xtc.formatting.maxLineWidth` | `max_line_length`, or `off` for none |
@@ -147,6 +147,21 @@ The formatter takes each setting from the first of these that sets it:
 | Trailing whitespace | What the editor sends with the request | What the editor sends with the request | `trim_trailing_whitespace`: `true` or `false` |
 | Final newline | What the editor sends with the request | What the editor sends with the request | `insert_final_newline`: `true` or `false` |
 | Line endings | IntelliJ's own: it applies `end_of_line` itself | **Format Document** sets the document's | `end_of_line`: `lf` or `crlf` |
+| Formatter markers | **Code Style \| General: Turn formatter on/off with markers in code comments** | `xtc.formatting.formatterTagsEnabled` | `ij_formatter_tags_enabled`: `true` or `false` |
+| Off and on tags | The same page's **Off** and **On** | `xtc.formatting.formatterOffTag`, `xtc.formatting.formatterOnTag` | `ij_formatter_off_tag`, `ij_formatter_on_tag` |
+| Tags as regular expressions | The same page's **Enable regular expressions in formatter markers** | `xtc.formatting.formatterTagsAcceptRegexp` | `ij_formatter_tags_accept_regexp` |
+
+**Formatter markers.** With the markers on, formatting leaves the lines from a comment with the off tag through the
+next comment with the on tag, or to the end of the file, as they are, both when you reformat and as you type:
+
+```ecstasy
+// @formatter:off
+static Int[] Identity = [1, 0,
+                         0, 1];
+// @formatter:on
+```
+
+A tag is text the comment contains or, with regular expressions on, a pattern it has a match of.
 
 **`.editorconfig`.** For each file it formats, the language server reads the `.editorconfig` files from the file's
 folder up, stopping at one that says `root = true`. It reads them again at every format, so a saved change applies the
@@ -155,9 +170,10 @@ they set wins over your editor's settings; a property set to `unset` gives it ba
 EditorConfig globs: `*`, `**`, `?`, `[abc]`, `[!abc]`, `{a,b}` and `{1..9}`.
 
 The server reads the standard `indent_style`, `indent_size` (`tab` indents by the tab width), `tab_width`,
-`trim_trailing_whitespace` and `insert_final_newline`, and the widely used `max_line_length`. For the two settings the
-standard has no name for, it reads the names IntelliJ gives Ecstasy's code style in `.editorconfig`, so a file that
-IntelliJ exports from its code style works in both editors. A formatting edit cannot change a file's line endings,
+`trim_trailing_whitespace` and `insert_final_newline`, and the widely used `max_line_length`. For the settings the
+standard has no name for, it reads the names IntelliJ gives them in `.editorconfig`, so a file that IntelliJ exports
+from its code style works in both editors, and for the continuation indent also the EditorConfig wiki's
+`continuation_indent_size`. A formatting edit cannot change a file's line endings,
 as both editors give the text it inserts the document's own, so `end_of_line` is applied by the editor: IntelliJ
 applies it itself while its EditorConfig support is on, and in VS Code, **Format Document**, and `editor.formatOnSave`,
 converts the document to the `lf` or `crlf` that the server reads (VS Code has no `cr`). `charset` stays with the editor, and other

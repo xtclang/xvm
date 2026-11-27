@@ -18,6 +18,12 @@ data class FormattingConfig(
     val wrapComments: Boolean = false,
     /** Whether formatting reads a file's `.editorconfig` files; IntelliJ says no while its EditorConfig support is off. */
     val editorConfig: Boolean = true,
+    /** Whether IntelliJ's formatter markers keep the lines between them as they are ([FormatterTags]). */
+    val formatterTagsEnabled: Boolean = false,
+    val formatterOffTag: String = "@formatter:off",
+    val formatterOnTag: String = "@formatter:on",
+    /** Whether the formatter markers' tags are regular expressions. */
+    val formatterTagsAcceptRegexp: Boolean = false,
 ) {
     companion object {
         /** XTC's opinionated defaults, matching lib_ecstasy conventions. */

@@ -27,6 +27,7 @@ import org.xvm.lsp.adapter.DocumentHighlight
 import org.xvm.lsp.adapter.DocumentLink
 import org.xvm.lsp.adapter.EditorConfig
 import org.xvm.lsp.adapter.FoldingRange
+import org.xvm.lsp.adapter.FormatterTags
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
 import org.xvm.lsp.adapter.InlayHint
@@ -2334,7 +2335,11 @@ class XdkAdapter
                 emptyList()
             } else {
                 val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
-                XdkLexical.format(content, formatting.config, formatting.options)
+                FormatterTags.kept(
+                    formatting.config,
+                    { XdkLexical.commentsOf(content) },
+                    XdkLexical.format(content, formatting.config, formatting.options),
+                )
             }
 
         override fun formatRange(
@@ -2347,7 +2352,8 @@ class XdkAdapter
                 emptyList()
             } else {
                 val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
-                XdkLexical.format(content, formatting.config, formatting.options, range)
+                val edits = XdkLexical.format(content, formatting.config, formatting.options, range)
+                FormatterTags.kept(formatting.config, { XdkLexical.commentsOf(content) }, edits)
             }
 
         /**
@@ -2369,15 +2375,23 @@ class XdkAdapter
                     val config = formatting.config
                     val typing = formatting.options.copy(trimTrailingWhitespace = false)
                     val current = text.lines().getOrNull(line) ?: return@let emptyList()
-                    if (ch == "\n" && current.isBlank()) {
-                        XdkLexical
-                            .blankLineIndentation(text, line, config, typing)
-                            ?.takeIf { it != current }
-                            ?.let { listOf(TextEdit(Range(Position(line, 0), Position(line, current.length)), it)) }
-                            .orEmpty()
-                    } else {
-                        XdkLexical.format(text, config, typing, Range(Position(line, 0), Position(line, current.length)), wrapLines = false)
-                    }
+                    val edits =
+                        if (ch == "\n" && current.isBlank()) {
+                            XdkLexical
+                                .blankLineIndentation(text, line, config, typing)
+                                ?.takeIf { it != current }
+                                ?.let { listOf(TextEdit(Range(Position(line, 0), Position(line, current.length)), it)) }
+                                .orEmpty()
+                        } else {
+                            XdkLexical.format(
+                                text,
+                                config,
+                                typing,
+                                Range(Position(line, 0), Position(line, current.length)),
+                                wrapLines = false,
+                            )
+                        }
+                    FormatterTags.kept(config, { XdkLexical.commentsOf(text) }, edits)
                 }.orEmpty()
 
         override fun getDocumentLinks(

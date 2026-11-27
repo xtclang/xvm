@@ -597,6 +597,30 @@
                         "default": false,
                         "description": "Refill the paragraphs of doc and block comments that run past xtc.formatting.maxLineWidth, keeping @param lines, lists and code as they are laid out (compiler adapter).",
                         "scope": "window"
+                    },
+                    "xtc.formatting.formatterTagsEnabled": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Leave the lines from a comment with xtc.formatting.formatterOffTag through the next comment with xtc.formatting.formatterOnTag as they are, as IntelliJ's formatter markers do.",
+                        "scope": "window"
+                    },
+                    "xtc.formatting.formatterOffTag": {
+                        "type": "string",
+                        "default": "@formatter:off",
+                        "description": "The text in a comment that turns formatting off, with xtc.formatting.formatterTagsEnabled.",
+                        "scope": "window"
+                    },
+                    "xtc.formatting.formatterOnTag": {
+                        "type": "string",
+                        "default": "@formatter:on",
+                        "description": "The text in a comment that turns formatting on again, with xtc.formatting.formatterTagsEnabled.",
+                        "scope": "window"
+                    },
+                    "xtc.formatting.formatterTagsAcceptRegexp": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Take xtc.formatting.formatterOffTag and xtc.formatting.formatterOnTag as regular expressions that a comment has a match of.",
+                        "scope": "window"
                     }
                 }
             },

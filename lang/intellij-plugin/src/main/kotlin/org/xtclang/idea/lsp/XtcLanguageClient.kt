@@ -240,6 +240,15 @@ class XtcLanguageClient(
         val settings = CodeStyle.getProjectOrDefaultSettings(project)
         val commonSettings = settings.getCommonSettings(XtcIntelliJLanguage)
         val indentOptions = commonSettings.indentOptions
+        // Code Style | General: the EditorConfig switch and the formatter markers, the same for every language
+        val general =
+            mapOf(
+                "editorConfig" to EditorConfigSwitch.enabled(settings),
+                "formatterTagsEnabled" to settings.FORMATTER_TAGS_ENABLED,
+                "formatterOffTag" to settings.FORMATTER_OFF_TAG,
+                "formatterOnTag" to settings.FORMATTER_ON_TAG,
+                "formatterTagsAcceptRegexp" to settings.FORMATTER_TAGS_ACCEPT_REGEXP,
+            )
 
         val config =
             if (indentOptions != null) {
@@ -250,8 +259,7 @@ class XtcLanguageClient(
                     "insertSpaces" to !indentOptions.USE_TAB_CHARACTER,
                     "maxLineWidth" to commonSettings.RIGHT_MARGIN,
                     "wrapComments" to commonSettings.WRAP_COMMENTS,
-                    "editorConfig" to EditorConfigSwitch.enabled(settings),
-                )
+                ) + general
             } else {
                 mapOf(
                     "indentSize" to 4,
@@ -260,8 +268,7 @@ class XtcLanguageClient(
                     "insertSpaces" to true,
                     "maxLineWidth" to 120,
                     "wrapComments" to false,
-                    "editorConfig" to EditorConfigSwitch.enabled(settings),
-                )
+                ) + general
             }
         logger.info("workspace/configuration: returning formatting config: $config")
         return config

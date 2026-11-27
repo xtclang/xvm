@@ -57,11 +57,14 @@ class EditorConfigTest {
     fun `a nearer file and a later section win, unset gives the editor's value back, and root ends the search`() {
         write(".editorconfig", "root = true\n[*]\nindent_size = 3\ntab_width = 9\nmax_line_length = 80\n")
         write("outer/.editorconfig", "[*.x]\nindent_size = 2\n[*.x]\nindent_size = 6\nmax_line_length = unset\n")
-        write("outer/inner/.editorconfig", "# a comment\n; another\n[*.x]\nINDENT_SIZE = 5\n")
+        write("outer/inner/.editorconfig", "# a comment\n; another\n[*.x]\nINDENT_SIZE = 5\nij_formatter_off_tag = @Fmt:Off\n")
         val file = write("outer/inner/App.x", "")
-        assertThat(EditorConfig.properties(file)).isEqualTo(mapOf("indent_size" to "5", "tab_width" to "9"))
+        // a standard property's value in lowercase, another's as it is written
+        assertThat(EditorConfig.properties(file))
+            .isEqualTo(mapOf("indent_size" to "5", "tab_width" to "9", "ij_formatter_off_tag" to "@Fmt:Off"))
         write("outer/.editorconfig", "root = true\n[*.x]\nindent_style = Tab\n")
-        assertThat(EditorConfig.properties(file)).isEqualTo(mapOf("indent_style" to "tab", "indent_size" to "5"))
+        assertThat(EditorConfig.properties(file))
+            .isEqualTo(mapOf("indent_style" to "tab", "indent_size" to "5", "ij_formatter_off_tag" to "@Fmt:Off"))
     }
 
     @Test
@@ -102,9 +105,38 @@ class EditorConfigTest {
         assertThat(applied.config).isEqualTo(editor.copy(maxLineWidth = 100, continuationIndentSize = 4, wrapComments = true))
         assertThat(applied.options.trimTrailingWhitespace).isFalse()
         assertThat(applied.options.insertFinalNewline).isFalse()
-        assertThat(EditorConfig.apply(mapOf("ij_continuation_indent_size" to "6"), base(editor), root).config.continuationIndentSize)
-            .isEqualTo(6)
+
+        fun continuation(vararg properties: Pair<String, String>) =
+            EditorConfig.apply(mapOf(*properties), base(editor), root).config.continuationIndentSize
+        assertThat(continuation("ij_continuation_indent_size" to "6")).isEqualTo(6)
+        assertThat(continuation("continuation_indent_size" to "5")).isEqualTo(5)
+        assertThat(continuation("continuation_indent_size" to "5", "ij_continuation_indent_size" to "6")).isEqualTo(6)
         assertThat(EditorConfig.apply(mapOf("max_line_length" to "off"), base(editor), root).config.maxLineWidth).isZero()
+    }
+
+    @Test
+    fun `IntelliJ's names set the formatter markers, and a tag that is no regular expression stays the editor's`() {
+        val editor = FormattingConfig()
+        val markers =
+            EditorConfig
+                .apply(
+                    mapOf(
+                        "ij_formatter_tags_enabled" to "TRUE",
+                        "ij_formatter_off_tag" to "@Fmt:Off",
+                        "ij_formatter_on_tag" to "@Fmt:On",
+                    ),
+                    base(editor),
+                    root,
+                ).config
+        assertThat(markers).isEqualTo(editor.copy(formatterTagsEnabled = true, formatterOffTag = "@Fmt:Off", formatterOnTag = "@Fmt:On"))
+        val regexp =
+            EditorConfig
+                .apply(
+                    mapOf("ij_formatter_tags_accept_regexp" to "true", "ij_formatter_off_tag" to "no(", "ij_formatter_on_tag" to "on\\d"),
+                    base(editor),
+                    root,
+                ).config
+        assertThat(regexp).isEqualTo(editor.copy(formatterTagsAcceptRegexp = true, formatterOnTag = "on\\d"))
     }
 
     @Test

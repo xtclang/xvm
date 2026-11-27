@@ -61,6 +61,10 @@ entries start at lines 358 to 653. The six machine-scoped ones, `xtc.java.vmOpti
 | `xtc.formatting.tabSize` | integer 1 to 32, `4` | Deprecated; nothing reads it (`deprecationMessage` in `package.json`). Use `editor.tabSize`. | Not sent | none |
 | `xtc.formatting.insertSpaces` | boolean, `true` | Spaces instead of tabs. | `xtc.formatting` section | `vsc/editor-settings.ts:36` |
 | `xtc.formatting.maxLineWidth` | integer 1 to 1000, `120` | Target width for the compiler adapter's wrapping. | `xtc.formatting` section | `vsc/editor-settings.ts:35` |
+| `xtc.formatting.formatterTagsEnabled` | boolean, `false` | Formatting leaves the lines from a comment with `formatterOffTag` through the next comment with `formatterOnTag` as they are, as IntelliJ's formatter markers do. | `xtc.formatting` section | `vsc/editor-settings.ts:43` |
+| `xtc.formatting.formatterOffTag` | string, `@formatter:off` | The off marker's text. | `xtc.formatting` section | `vsc/editor-settings.ts:44` |
+| `xtc.formatting.formatterOnTag` | string, `@formatter:on` | The on marker's text. | `xtc.formatting` section | `vsc/editor-settings.ts:45` |
+| `xtc.formatting.formatterTagsAcceptRegexp` | boolean, `false` | The two tags are regular expressions that a comment has a match of. | `xtc.formatting` section | `vsc/editor-settings.ts:46` |
 | `xtc.formatting.wrapComments` | boolean, `false` | The compiler adapter refills the paragraphs of doc and block comments that run past `maxLineWidth`. | `xtc.formatting` section | `vsc/editor-settings.ts:37` |
 | `xtc.java.home` | string, `""` | The Java 25+ installation that runs the server. Empty: `jdk-utils` discovery (`JAVA_HOME`, `PATH`, SDKMAN and others), then a JRE downloaded earlier, then a download from Adoptium. A path without `bin/java` is an error. A change restarts the server. | The `java` executable of the command line | `vsc/java.ts:54`, order `vsc/java.ts:22` |
 | `xtc.java.vmOptions` | string array, `[]` | JVM options, one per item: `-Xms`, `-Xmx`, `-Xss`, `-XX:MaxMetaspaceSize=`, `-XX:ReservedCodeCacheSize=` (K, M or G), `-XX:ActiveProcessorCount=`, `-XX:+UseG1GC`, `UseSerialGC`, `UseParallelGC`, `UseZGC`. Anything else is rejected. Without a collector or `-Xmx` among them, the server runs `-XX:+UseZGC -XX:SoftMaxHeapSize=1G`: ZGC keeps the heap near 1 GB and grows past it only as far as the live data needs. Machine scope. | JVM options | `vsc/runtime-settings.ts:37`, validation `vsc/runtime-settings.ts:4`, default `vsc/runtime-settings.ts:31` |
@@ -147,6 +151,7 @@ Deployment | Ecstasy** (`XtcBuildPointerConfigurable`). Stored in the project's 
 | Use tab character | off | `insertSpaces` (inverted) |
 | Hard wrap at (right margin) | 120 | `maxLineWidth` |
 | Comments: Wrap at right margin, on the Wrapping and Braces tab | off | `wrapComments` |
+| Code Style \| General: Formatter, Turn formatter on/off with markers in code comments, with its Off and On tags and Enable regular expressions in formatter markers | off, `@formatter:off`, `@formatter:on`, off | `formatterTagsEnabled`, `formatterOffTag`, `formatterOnTag`, `formatterTagsAcceptRegexp` |
 | Code Style \| General: Enable EditorConfig support (the EditorConfig plugin's; off while that plugin is disabled) | on | `editorConfig` (`idea/lsp/EditorConfigSwitch.kt`) |
 
 **LSP4IJ's Language Servers page** keeps the trace level and the debug port for `xtcLanguageServer`.
@@ -257,13 +262,16 @@ The server asks only when the client declares `workspace.configuration`.
 | `xtc.formatting` `insertSpaces` | boolean, `true` | Spaces or tabs. | `lsp/server/EditorFormattingState.kt:78` |
 | `xtc.formatting` `maxLineWidth` | integer 1 to 1000, `120` | Wrapping width. | `lsp/server/EditorFormattingState.kt:79` |
 | `xtc.formatting` `editorConfig` | boolean, `true` | `false`: formatting reads no `.editorconfig` file. IntelliJ sends its EditorConfig switch; VS Code sends nothing. | `lsp/server/EditorFormattingState.kt:81`, `lsp/adapter/EditorConfig.kt:61` |
+| `xtc.formatting` `formatterTagsEnabled`, `formatterOffTag`, `formatterOnTag`, `formatterTagsAcceptRegexp` | boolean `false`, strings `@formatter:off` and `@formatter:on`, boolean `false` | The formatter markers: both adapters' formatting drops every edit to the lines from a comment with the off tag through the next comment with the on tag, or to the end (`lsp/adapter/FormatterTags.kt`); an empty tag matches nothing, and a tag that is not a regular expression is taken as text. | `lsp/server/EditorFormattingState.kt:93` |
 | `xtc.formatting` `wrapComments` | boolean, `false` | Refills a comment's paragraphs that run past `maxLineWidth`: in a comment with `/**` or `/*` and `*/` on lines of their own and a `*` starting each line between, keeping `@param` lines, list items and code as they are laid out. | `lsp/server/EditorFormattingState.kt:80`, `lsp/adapter/xdk/XdkCommentReflow.kt` |
 | `xtc.codeLens` `references` | boolean, `true` | Reference-count lenses, asked per document (`scopeUri`); after 10 seconds without an answer the lenses are off. | `lsp/server/XtcLanguageServer.kt:427`, `lsp/server/CodeLensSettings.kt:11` |
 
 For a `file:` document, each formatting request also reads the file's `.editorconfig` files, from its directory up to
 one with `root = true`, and sets what they give over `xtc.formatting` and the request's options: `indent_style`,
 `indent_size`, `tab_width`, `max_line_length` (`off` wraps nothing), `trim_trailing_whitespace`, `insert_final_newline`,
-`ij_ecstasy_continuation_indent_size` (or `ij_continuation_indent_size`) and `ij_ecstasy_wrap_comments`; `unset` keeps
+`ij_ecstasy_continuation_indent_size` (or `ij_continuation_indent_size`, or `continuation_indent_size`),
+`ij_ecstasy_wrap_comments`, and the markers' `ij_formatter_tags_enabled`, `ij_formatter_off_tag`, `ij_formatter_on_tag`
+and `ij_formatter_tags_accept_regexp`; `unset` keeps
 the editor's value, and a value out of range is skipped with a warning (`lsp/adapter/EditorConfig.kt:61`).
 `xtc/endOfLine` (`{ "uri": ... }`) answers the file's `end_of_line`, `lf`, `crlf` or `cr`, or null, for the client to
 apply, as a text edit cannot change a document's line endings: VS Code's extension adds `TextEdit.setEndOfLine` to

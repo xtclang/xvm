@@ -32,6 +32,11 @@ class EditorFormattingStateTest {
         assertThat(state.config?.editorConfig).isTrue()
         assertThat(state.accept(state.request(), mapOf("editorConfig" to false)) {}).isTrue()
         assertThat(state.config?.editorConfig).isFalse()
+        val markers = mapOf("formatterTagsEnabled" to true, "formatterOffTag" to "keep", "formatterTagsAcceptRegexp" to true)
+        assertThat(state.accept(state.request(), markers) {}).isTrue()
+        assertThat(
+            state.config?.let { listOf(it.formatterTagsEnabled, it.formatterOffTag, it.formatterOnTag, it.formatterTagsAcceptRegexp) },
+        ).containsExactly(true, "keep", "@formatter:on", true)
         state.accept(state.request(), null) {}
         assertThat(state.config).isNull()
         assertThat(state.accept(newest, mapOf("indentSize" to 2)) { error("reset undone") })
@@ -49,6 +54,7 @@ class EditorFormattingStateTest {
             mapOf("insertSpaces" to "false"),
             mapOf("wrapComments" to "true"),
             mapOf("editorConfig" to "false"),
+            mapOf("formatterOffTag" to 1),
             mapOf("continuationIndentSize" to 1000000),
         ).forEach { invalid ->
             assertThatThrownBy {
