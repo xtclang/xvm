@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
@@ -446,22 +448,27 @@ class MockAdapterTest {
     @Nested
     @DisplayName("formatDocument()")
     inner class FormatTests {
-        @Test
-        @DisplayName("should remove trailing whitespace")
-        fun shouldRemoveTrailingWhitespace() {
+        @ParameterizedTest(name = "trimTrailingWhitespace = {0}")
+        @ValueSource(booleans = [true, false])
+        @DisplayName("should remove trailing whitespace only when the options ask, for a whole document too")
+        fun shouldRemoveTrailingWhitespace(trim: Boolean) {
             val source = "module myapp {   \n    class Person {  \n    }\n}"
             val options =
                 FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
-                    trimTrailingWhitespace = true,
+                    trimTrailingWhitespace = trim,
                     insertFinalNewline = false,
                 )
 
             val edits = adapter.formatDocument("file:///test.x", source, options)
 
-            assertThat(edits).hasSizeGreaterThanOrEqualTo(2)
-            assertThat(edits).allMatch { it.newText.isEmpty() }
+            if (trim) {
+                assertThat(edits).hasSizeGreaterThanOrEqualTo(2)
+                assertThat(edits).allMatch { it.newText.isEmpty() }
+            } else {
+                assertThat(edits).isEmpty()
+            }
         }
 
         @Test
