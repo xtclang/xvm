@@ -11189,6 +11189,185 @@
         "limitations": []
       }
     },
+    "X361": {
+      "title": ".editorconfig over the editor's settings: Reformat Code or Format Document follows the indent_size and max_line_length that the file's .editorconfig sets for *.x; a later section's unset takes them out again, so that indent_style = tab indents by its tab_width and the margin is the editor's; and in IntelliJ, turning off its EditorConfig support gives the editor's settings back",
+      "manual": [
+        "Editing .editorconfig in the editor, and IntelliJ's Code Style | General | Enable EditorConfig support clicked by hand: the case writes the file on disk and turns the switch through that page's own component."
+      ],
+      "values": {
+        "file": "Configured.x",
+        "source": "module Configured {\nString run() {\nreturn \"1111111111111111111111\" + \"2222222222222222222222\" + \"3333333333333333333333\";\n}\n}\n",
+        "editorConfig": ".editorconfig",
+        "settings": "root = true\n\n[*.x]\nindent_size = 2\nmax_line_length = 60\n",
+        "unset": "root = true\n\n[*.x]\nindent_style = tab\ntab_width = 3\nindent_size = 2\nmax_line_length = 60\n\n[*.x]\nindent_size = unset\nmax_line_length = unset\n",
+        "fromFile": "module Configured {\n  String run() {\n    return \"1111111111111111111111\" +\n            \"2222222222222222222222\" +\n            \"3333333333333333333333\";\n  }\n}\n",
+        "fromUnset": "module Configured {\n\tString run() {\n\t\treturn \"1111111111111111111111\" + \"2222222222222222222222\" + \"3333333333333333333333\";\n\t}\n}\n",
+        "fromEditor": "module Configured {\n    String run() {\n        return \"1111111111111111111111\" + \"2222222222222222222222\" + \"3333333333333333333333\";\n    }\n}\n",
+        "indentSize": 4,
+        "maxLineWidth": 120
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X362": {
+      "title": "formatter markers: with the markers on, in the editor's settings or in .editorconfig, the lines from // @formatter:off through // @formatter:on keep their layout through Reformat Code or Format Document and as you type, and the lines outside them are formatted",
+      "manual": [
+        "IntelliJ's Code Style | General | Formatter | Turn formatter on/off with markers in code comments, clicked by hand: the case sets the setting that the page applies."
+      ],
+      "values": {
+        "file": "Markers.x",
+        "source": "module Markers {\n    // @formatter:off\n    Int[] matrix = [1, 0,\n                    0, 1];\nInt kept = 2;\n    // @formatter:on\nInt value = 1;\n}\n",
+        "expected": "module Markers {\n    // @formatter:off\n    Int[] matrix = [1, 0,\n                    0, 1];\nInt kept = 2;\n    // @formatter:on\n    Int value = 1;\n}\n",
+        "unmarked": "module Markers {\n    // @formatter:off\n    Int[] matrix = [1, 0,\n            0, 1];\n    Int kept = 2;\n    // @formatter:on\n    Int value = 1;\n}\n",
+        "typing": "module Markers {\n    // @formatter:off\n    Int[] matrix = [1, 0,\n                    0, 1];\nInt kept = 2\n    // @formatter:on\nInt value = 1\n}\n",
+        "keys": ";",
+        "kept": "Int kept = 2",
+        "formatted": "Int value = 1",
+        "editorConfig": ".editorconfig",
+        "settings": "root = true\n\n[*.x]\nij_formatter_tags_enabled = true\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X363": {
+      "title": "comment reflow: with wrapping of comments on, Reformat Code or Format Document refills a doc comment's paragraph that runs past the margin, and its @param lines and code keep their layout; with it off the comment stays as it is",
+      "manual": [
+        "IntelliJ's Code Style | Ecstasy | Wrapping and Braces | Comments | Wrap at right margin, clicked by hand: the case sets the setting that the page applies."
+      ],
+      "values": {
+        "file": "Reflow.x",
+        "source": "module Reflow {\n    /**\n     * Adds two numbers, which may be negative, and returns their sum, which may overflow when both of the numbers are very large, as an Int has 64 bits.\n     *\n     * @param first   the first number,\n     *                to add\n     * @param second  the second number\n     *\n     *     Int sum = add(1, 2); // an example, whose code keeps its layout although it runs past the margin of the file it is in\n     */\n    Int add(Int first, Int second) = first + second;\n}\n",
+        "expected": "module Reflow {\n    /**\n     * Adds two numbers, which may be negative, and returns their sum, which may overflow when both of the numbers are\n     * very large, as an Int has 64 bits.\n     *\n     * @param first   the first number,\n     *                to add\n     * @param second  the second number\n     *\n     *     Int sum = add(1, 2); // an example, whose code keeps its layout although it runs past the margin of the file it is in\n     */\n    Int add(Int first, Int second) = first + second;\n}\n"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "That the comment stays as it is with wrapping off, and that a second format changes nothing, are checked in the server's textDocument/formatting answer for the document, with the options LSP4IJ sends, tab size 4 and spaces, not through Reformat Code: a Reformat Code that changes nothing cannot be told from one whose edits have not come yet. The refill itself goes through Reformat Code."
+        ]
+      }
+    },
+    "X364": {
+      "title": "line endings: with end_of_line = crlf in .editorconfig, Format Document gives an LF document CRLF line endings, which the language server says (xtc/endOfLine) and VS Code applies",
+      "manual": [],
+      "values": {
+        "file": "Endings.x",
+        "source": "module Endings {\nInt value = 1;\n}\n",
+        "expected": "module Endings {\r\n    Int value = 1;\r\n}\r\n",
+        "editorConfig": ".editorconfig",
+        "settings": "root = true\n\n[*.x]\nend_of_line = crlf\n",
+        "endOfLine": "crlf"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "IntelliJ applies end_of_line itself: while Code Style | General | Enable EditorConfig support is on, its EditorConfig support gives the file the line separator that .editorconfig asks for. The language server's xtc/endOfLine is for VS Code, whose formatting edits cannot change a document's line endings; the plugin does not read it, so there is nothing of the plugin's to check."
+        ]
+      }
+    },
+    "X365": {
+      "title": "trailing whitespace: trim_trailing_whitespace in .editorconfig decides whether a whole-document format trims a line's trailing whitespace, whatever the editor asks: false keeps it, true trims it",
+      "manual": [],
+      "values": {
+        "file": "Trailing.x",
+        "source": "module Trailing {\nInt value = 1;   \nString text = \"two  spaces\";\t\n}\n",
+        "editorConfig": ".editorconfig",
+        "without": "root = true\n",
+        "keep": "root = true\n\n[*.x]\ntrim_trailing_whitespace = false\n",
+        "trim": "root = true\n\n[*.x]\ntrim_trailing_whitespace = true\n",
+        "kept": "module Trailing {\n    Int value = 1;   \n    String text = \"two  spaces\";\t\n}\n",
+        "trimmed": "module Trailing {\n    Int value = 1;\n    String text = \"two  spaces\";\n}\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X366": {
+      "title": "a folder on another XDK: after its Gradle model is imported, a project whose build has the xdkDistribution of another XDK version, from a local Maven repository, builds and runs with Gradle, and the notice, the build mode page or picker and the status say which XDK it builds with, while a project on the bundled XDK beside it still builds and runs embedded",
+      "tags": [
+        "slow"
+      ],
+      "manual": [
+        "Needs ./gradlew xdk:installDist and publishLocal first, as X303 does: the case makes the other XDK from the XDK that publishLocal put in mavenLocal, as version otherVersion with one entry more in its javatools.jar, the language server's tell of another XDK, and publishes it to a Maven repository of its own, as building a second XDK for the case would take as long as the XDK's whole build. Both projects' builds take the XTC Gradle plugin from mavenLocal.",
+        "The Gradle run's output in VS Code's task terminal is read manually (18a.9); the case checks the Build and Run tasks' exit codes, and that the Gradle build extracted the other XDK.",
+        "The notice, which each editor gives once a session, is checked only when X366's reason is the session's first, as in the container's runs; after another folder's reason, as an older mavenLocal XDK gives X260 or X303 on a desktop, or in a retry of X366 in the same editor, the case checks the reason and says in its log that it checks no notice."
+      ],
+      "values": {
+        "repository": "xdk-repository",
+        "otherVersion": "0.9.0",
+        "marker": "META-INF/xtc-playbook-other-xdk.txt",
+        "markerText": "The X366 playbook case's other XDK: this tree's, with this file more in its javatools.jar.\n",
+        "mavenLocal": [
+          "org/xtclang/xtc-plugin",
+          "org/xtclang/xdk"
+        ],
+        "versionFile": "version.properties",
+        "versionPattern": "^xdk\\.version=(.+)$",
+        "settings": "rootProject.name = \"${0}\"\n\npluginManagement {\n    repositories {\n        mavenLocal()\n        gradlePluginPortal()\n    }\n}\n\ndependencyResolutionManagement {\n    repositories {\n        // the XDK that the case makes, then this tree's, which publishLocal publishes\n        maven { url = uri(\"${1}\") }\n        mavenLocal()\n        mavenCentral()\n    }\n}\n",
+        "build": "plugins {\n    id(\"org.xtclang.xtc-plugin\") version \"${0}\"\n}\n\ndependencies {\n    xdkDistribution(\"org.xtclang:xdk:${1}\")\n}\n\nxtcRun {\n    module {\n        moduleName = \"${2}\"\n    }\n}\n",
+        "wrapper": [
+          "gradlew",
+          "gradlew.bat",
+          "gradle/wrapper/gradle-wrapper.jar",
+          "gradle/wrapper/gradle-wrapper.properties"
+        ],
+        "other": {
+          "project": "OtherXdk",
+          "module": "OtherXdk",
+          "file": "src/main/x/OtherXdk.x",
+          "source": "module OtherXdk {\n    void run() {\n        @Inject Console console;\n        console.print(\"OtherXdk runs with Gradle\");\n    }\n}\n",
+          "output": "OtherXdk runs with Gradle",
+          "artifact": "build/xtc/main/lib/OtherXdk.xtc",
+          "javatools": "build/xtc/xdk/lib/javatools.jar"
+        },
+        "bundled": {
+          "project": "BundledXdk",
+          "module": "BundledXdk",
+          "file": "src/main/x/BundledXdk.x",
+          "source": "module BundledXdk {\n    void run() {\n        @Inject Console console;\n        console.print(\"BundledXdk runs embedded\");\n    }\n}\n",
+          "output": "BundledXdk runs embedded"
+        },
+        "reason": "builds with XDK 0.9.0, not the bundled XDK",
+        "vscodeNotice": "The folder OtherXdk builds with XDK 0.9.0, not the bundled XDK",
+        "intellijNotice": "This project builds with XDK 0.9.0, not the bundled XDK",
+        "noticeTitle": "Ecstasy builds and runs use Gradle",
+        "picker": "Not available: this folder builds with XDK 0.9.0, not the bundled XDK",
+        "popup": "Embedded compiler (not available: this project builds with XDK 0.9.0, not the bundled XDK",
+        "tooltip": "through its Gradle build, as it builds with XDK 0.9.0, not the bundled XDK",
+        "statusGradle": "$(tools) Gradle build",
+        "statusEmbedded": "$(tools) Embedded build",
+        "embeddedBuild": "with the embedded compiler",
+        "rootEntries": [
+          ".gradle",
+          "build.gradle.kts",
+          "gradle",
+          "gradlew",
+          "gradlew.bat",
+          "settings.gradle.kts",
+          "src",
+          "build/reports",
+          "build/tmp",
+          "build/xtc/main",
+          "build/xtc/xdk"
+        ],
+        "sharedDirectories": [
+          "build/xtc",
+          "build"
+        ],
+        "embeddedOutput": "build/xtc/embedded"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "IntelliJ has one language server for the project and builds the whole project with Gradle as soon as one of its folders builds with another XDK, as the user guide says, so the project on the bundled XDK is checked first, at the project root, where Gradle mode runs ./gradlew, and then the project on the other XDK in its place, rather than beside it. In Gradle mode Build Project goes to the IDE's own builder, so the case checks only that the embedded compiler does not take it; Run goes through the Gradle wrapper.",
+          "The notice is IntelliJ's once a session for the project: the case checks it only while the project has not been told yet, and else says in its log that it checks the reason alone."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "tags": [
