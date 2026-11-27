@@ -1515,8 +1515,9 @@ For example, rerun the class/interface header case:
     -PcompilerPlaybookCases=X95
 ```
 
-Use `-PcompilerPlaybookCases=X94,X95,X96` for the related type-completion group. Without that property the existing full
-playbook plus host checks run. With an assembled extension, the direct equivalent from
+Use `-PcompilerPlaybookCases=X94,X95,X96` for the related type-completion group. Without that property the full
+playbook runs; `-PplaybookHostChecks=true` also runs the server's suites first as its host checks, which the report then
+cites. With an assembled extension, the direct equivalent from
 `lang/vscode-extension` is `npm run test:playbook -- --cases=X95`.
 Unknown, duplicate or empty IDs fail before VS Code opens. Reports state `focused`, list selected
 IDs and mark every excluded case `not-selected`; every selected case must pass. Existing host XML

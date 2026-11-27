@@ -31,7 +31,8 @@ async function emit(size, name) {
         .png({ compressionLevel: 9 })
         .toFile(outPath);
     const bytes = fs.statSync(outPath).size;
-    console.log(`[icons] wrote ${outPath} (${size}x${size}, ${bytes} bytes)`);
+    // only on request: a build shows the task's outcome, and the files are its declared outputs
+    if (process.env.XTC_ICONS_VERBOSE) console.log(`[icons] wrote ${outPath} (${size}x${size}, ${bytes} bytes)`);
 }
 
 (async () => {

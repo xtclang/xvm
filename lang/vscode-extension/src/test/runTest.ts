@@ -26,8 +26,8 @@ async function main(): Promise<void> {
         await (await import('./runTour.js')).runTour(extensionRoot, args.filter(argument => argument !== '--tour'));
         return;
     }
-    if (args.some(argument => !['--settings-persistence', '--playbook', '--multi-root', '--cancel-ui', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases=') && !argument.startsWith('--theme=') && argument !== '--lexical-baseline')) {
-        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root, --cancel-ui, --theme=NAME and --lexical-baseline, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move, or --settings-persistence');
+    if (args.some(argument => !['--settings-persistence', '--playbook', '--multi-root', '--cancel-ui', '--host-checks', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases=') && !argument.startsWith('--theme=') && argument !== '--lexical-baseline')) {
+        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root, --cancel-ui, --host-checks, --theme=NAME and --lexical-baseline, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move, or --settings-persistence');
     }
     const explorerProbe = args.includes('--explorer-move-probe');
     const refreshDuringMove = args.includes('--refresh-during-move');
@@ -40,9 +40,11 @@ async function main(): Promise<void> {
     const playbook = args.includes('--playbook');
     const multiRoot = args.includes('--multi-root');
     const cancelUi = args.includes('--cancel-ui');
+    const hostChecks = args.includes('--host-checks');
     const uiPort = await workbenchPort();
     if (multiRoot && !playbook) throw new Error('Use --multi-root with --playbook');
     if (cancelUi && !playbook) throw new Error('Use --cancel-ui with --playbook');
+    if (hostChecks && !playbook) throw new Error('Use --host-checks with --playbook');
     const selections = args.filter(argument => argument.startsWith('--cases='));
     if (selections.length > 1 || (selections.length > 0 && !playbook)) {
         throw new Error('Use --cases=ID[,ID] once, with --playbook');
@@ -126,6 +128,7 @@ async function main(): Promise<void> {
                 XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'),
                 XTC_PLAYBOOK_CASES: selected.join(','),
                 XTC_PLAYBOOK_CANCEL_UI: String(cancelUi),
+                XTC_PLAYBOOK_HOST_CHECKS: String(hostChecks),
                 XTC_PLAYBOOK_UI_PORT: String(uiPort),
                 // A checkout exported without .git, such as the container's, gets them from its caller.
                 XTC_COMMIT: process.env.XTC_COMMIT ?? git(extensionDevelopmentPath, 'rev-parse', 'HEAD'),
