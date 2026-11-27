@@ -423,13 +423,16 @@ class XtcLanguageServerTest {
         @DisplayName("formatting should return edits")
         fun formattingShouldReturnEdits() {
             val uri = openDirtyDocument()
+            // trailing whitespace goes only when the request asks, as it is the document's only fault
+            val options = FormattingOptions(4, true)
+            options.putBoolean("trimTrailingWhitespace", true)
 
             val edits =
                 server.textDocumentService
                     .formatting(
                         DocumentFormattingParams(
                             TextDocumentIdentifier(uri),
-                            FormattingOptions(4, true),
+                            options,
                         ),
                     ).get()
 
