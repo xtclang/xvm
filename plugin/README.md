@@ -20,6 +20,7 @@ simplest possible XTC "HelloWorld" setup, take a look at the examples repository
   - [Launcher Configuration](#launcher-configuration)
 - [Build Lifecycle](#build-lifecycle)
 - [Module Path Resolution](#module-path-resolution)
+- [IDE Model](#ide-model)
 - [Configuration Cache Compatibility](#configuration-cache-compatibility)
 - [Performance Optimization](#performance-optimization)
 - [Troubleshooting](#troubleshooting)
@@ -491,6 +492,53 @@ dependencies {
   build/xtc/test/
 ]
 ```
+
+## IDE Model
+
+`exportXtcLspModel` writes what the Ecstasy editors' language server needs to know of the build to
+`.gradle/xtc/lsp-model.json` at the root project, one entry per source set: its sources, module
+roots, resources, project dependencies and module path, its project's `xtcRun` and `xtcTest` run
+settings, and the XDK that its project compiles and runs with. `prepareXtcLspModel` also processes
+the resources first. The editors run either task when they import the build; neither compiles a
+module.
+
+A project's XDK is its `xdk` entry, the same in each of its source sets:
+
+```json
+"xdk": {
+  "version": "0.4.4",
+  "libraries": "file:/home/me/app/build/xtc/xdk/lib/",
+  "modules": ["0f3a…", "…"],
+  "javatools": "9c41…"
+}
+```
+
+`version` is the version that the project's `xdkDistribution` or `xdk` dependency resolves to,
+and `libraries` the directory where the plugin extracts that XDK's `ecstasy.xtc` and other core
+modules for `compileXtc`, `runXtc` and `testXtc`. For an XDK from a repository, or of a file
+dependency, which names no version and so has none, the export reads its distribution archive,
+without extracting it, and gives the SHA-256 of each module file in it, in order, as `modules`,
+and the revision of its `javatools.jar`, the compiler and runtime, as `javatools`: the SHA-256 of
+a line `<name>=<SHA-256>` for each file in the jar, in name order, with `build-info.properties`
+taken without its blank lines and its `git.` lines, which name the commit and branch the jar was
+built at and so change with every commit, as javatools' own build leaves them out of its
+classpath's normalization. A language server that compiles and runs modules itself, with the XDK
+it bundles, compares those with its own to tell whether the project builds with the same XDK,
+which a snapshot version alone cannot tell, as every build of it has the same. Where the export
+cannot say what the XDK holds, the entry says why instead of `modules` and `javatools`:
+
+- `project`: the path in the build tree of the project that makes the XDK, for one that a build
+  of the build tree makes, as a composite build's included XDK is. The export neither builds it nor
+  reads what an earlier build extracted, which may be another XDK by now.
+- `problem`: why the import could not resolve the dependency, or fetch or read the archive. No such
+  failure fails the export. For a dependency that does not resolve, `version` is the version it
+  asks for. The export of a problem leaves a new token in `build/xtc/lsp/<source set>.xdk-retry`,
+  which the next export reads as Gradle configures the build, so that it configures it again and
+  resolves the XDK anew, rather than reuse a configuration cache entry that kept the failure.
+
+A project without an XDK dependency, whose core modules come over its module path, has no `xdk`
+entry, as an older plugin's model has none. `extractXdk` syncs the distribution into its
+directory, so that the modules of an XDK extracted there before do not stay on the module path.
 
 ## Configuration Cache Compatibility
 

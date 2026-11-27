@@ -8,14 +8,27 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import com.sun.net.httpserver.HttpServer;
 
 import groovy.json.JsonSlurper;
 
@@ -28,6 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.xtclang.plugin.internal.XtcLauncherDefaults;
+import org.xtclang.plugin.tasks.XtcLspSourceSetTask;
 
 /** Exercise the real plugin's evaluated model and producers without compiling XTC modules. */
 class XtcLspModelTest {
@@ -260,6 +274,232 @@ class XtcLspModelTest {
         final var given = (Map<?, ?>) entry(":", "main").get("run");
         assertEquals(Map.of("methodName", "run", "moduleArgs", List.of("hi")), ((Map<?, ?>) given.get("modules")).get("App"));
         assertEquals(1, ((List<?>) given.get("problems")).size(), given.toString());
+    }
+
+    @Test
+    void theModelSaysWhatTheXdkOfEachProjectHoldsWithoutExtractingItOrFailingOverIt() throws IOException {
+        directory = directory.toRealPath();
+        // XDK distributions in a repository, as org.xtclang:xdk is published: one with two modules and its javatools, one
+        // with one module, and one whose archive is missing, as when a download fails after the metadata resolved
+        final var javatools = jar("org/xvm/Compiler.class", "a compiler", "build-info.properties", "git.commit=82488d09\nxdk.version=9.9.9\n");
+        final var released = xdk("9.9.9", Map.of("xdk/lib/ecstasy.xtc", bytes("the library"),
+            "xdk/javatools/javatools_turtle.xtc", bytes("the turtle"), "xdk/javatools/javatools.jar", javatools, "xdk/bin/xec", bytes("a launcher")));
+        xdk("9.9.8", Map.of("xdk/lib/ecstasy.xtc", bytes("the library")));
+        pom("8.0.0");
+        final var projects = List.of("released", "unfetched", "unresolved", "local", "built", "filed", "plain");
+        write("settings.gradle.kts", "rootProject.name = \"model-test\"\ninclude(" + projects.stream()
+            .map(name -> '"' + name + '"').collect(Collectors.joining(", ")) + ")\n");
+        write("build.gradle.kts", "plugins { id(\"org.xtclang.xtc-plugin\") apply false }\n");
+        for (final var asked : Map.of("released", "9.9.9", "unfetched", "8.0.0", "unresolved", "7.7.7").entrySet()) {
+            write(asked.getKey() + "/build.gradle.kts", repositoryXdk(asked.getValue()));
+        }
+        // an XDK that a project of the build makes, as a composite build's included XDK is
+        write("built/build.gradle.kts", """
+            plugins { base }
+            version = "8.8.8"
+            val archive = tasks.register<Zip>("xdkArchive") {
+                from("content")
+                destinationDirectory.set(layout.buildDirectory.dir("distributions"))
+            }
+            configurations.consumable("xdkArchive")
+            artifacts { add("xdkArchive", archive) }
+            """);
+        write("built/content/lib/ecstasy.xtc", "another library");
+        write("local/build.gradle.kts", """
+            plugins { id("org.xtclang.xtc-plugin") }
+            version = "1.0"
+            dependencies { add("xdkDistribution", project(path = ":built", configuration = "xdkArchive")) }
+            """);
+        // an XDK of a file dependency, whose archive is there, but which names no version
+        write("filed/build.gradle.kts", """
+            plugins { id("org.xtclang.xtc-plugin") }
+            version = "1.0"
+            dependencies { add("xdkDistribution", files("%s")) }
+            """.formatted(released));
+        write("plain/build.gradle.kts", "plugins { id(\"org.xtclang.xtc-plugin\") }\nversion = \"1.0\"\n");
+        for (final var project : projects) {
+            if (!project.equals("built")) {
+                write(project + "/src/main/x/" + project + ".x", "module " + project + " {}");
+            }
+        }
+
+        final var first = run("exportXtcLspModel");
+        // the released XDK's distribution is read, not extracted: what each of its modules and its javatools are
+        assertTrue(first.getTasks().stream().noneMatch(task -> task.getPath().endsWith("extractXdk")), first.getTasks().toString());
+        assertFalse(Files.exists(directory.resolve("released/build/xtc/xdk/lib")));
+        final var contents = Map.of("modules", Stream.of("the library", "the turtle").map(XtcLspModelTest::sha256).sorted().toList(),
+            "javatools", XtcLspSourceSetTask.javatoolsRevision(javatools));
+        final var expected = new HashMap<String, Object>(contents);
+        expected.putAll(Map.of("version", "9.9.9", "libraries", folder("released/build/xtc/xdk/lib")));
+        assertEquals(expected, entry(":released", "main").get("xdk"));
+        // each source set of the project has the project's XDK
+        assertEquals(expected, entry(":released", "test").get("xdk"));
+        // one that cannot be fetched, or does not resolve, is named with why, and fails no export
+        assertEquals(Map.of("version", "8.0.0", "libraries", folder("unfetched/build/xtc/xdk/lib"),
+            "problem", "the import could not fetch its distribution"), entry(":unfetched", "main").get("xdk"));
+        final var unresolved = (Map<?, ?>) entry(":unresolved", "main").get("xdk");
+        assertEquals("7.7.7", unresolved.get("version"));
+        assertTrue(unresolved.get("problem").toString().startsWith("the import could not resolve it (Could not find org.xtclang:xdk:7.7.7"),
+            unresolved.toString());
+        // the built one is named with its project, but neither built nor read for it
+        assertNull(first.task(":built:xdkArchive"));
+        assertEquals(Map.of("version", "8.8.8", "libraries", folder("local/build/xtc/xdk/lib"), "project", ":built"),
+            entry(":local", "main").get("xdk"));
+        // a file dependency's archive is read as a repository's is, without a version
+        final var filed = new HashMap<String, Object>(contents);
+        filed.put("libraries", folder("filed/build/xtc/xdk/lib"));
+        assertEquals(filed, entry(":filed", "main").get("xdk"));
+        // and a project without an XDK dependency names none
+        assertFalse(entry(":plain", "main").containsKey("xdk"));
+        // while an XDK cannot be fetched or resolved, each import configures the build again, to resolve it anew
+        assertTrue(run("exportXtcLspModel").getOutput().contains("xdk-retry"));
+        // without those, an import reuses the configuration cache's entry
+        write("settings.gradle.kts", "rootProject.name = \"model-test\"\ninclude(" + projects.stream()
+            .filter(name -> !name.startsWith("un")).map(name -> '"' + name + '"').collect(Collectors.joining(", ")) + ")\n");
+        assertTrue(run("exportXtcLspModel").getOutput().contains("Configuration cache entry stored"));
+        assertTrue(run("exportXtcLspModel").getOutput().contains("Configuration cache entry reused"));
+        // with the reports gone, the export runs again from the entry that the configuration cache kept, and says the same
+        Files.delete(directory.resolve("released/build/xtc/lsp/main.json"));
+        Files.delete(directory.resolve(".gradle/xtc/lsp-model.json"));
+        final var reused = run("exportXtcLspModel");
+        assertTrue(reused.getOutput().contains("Configuration cache entry reused"));
+        assertEquals(TaskOutcome.SUCCESS, reused.task(":released:exportXtcLspInputs").getOutcome());
+        assertEquals(expected, entry(":released", "main").get("xdk"));
+        // without the configuration cache, the export says the same
+        Files.delete(directory.resolve(".gradle/xtc/lsp-model.json"));
+        GradleRunner.create().withProjectDir(directory.toFile()).withPluginClasspath()
+            .withArguments("exportXtcLspModel", "--no-configuration-cache", "--no-watch-fs", "--stacktrace").build();
+        assertEquals(expected, entry(":released", "main").get("xdk"));
+        assertEquals(":built", ((Map<?, ?>) entry(":local", "main").get("xdk")).get("project"));
+
+        // extractXdk replaces what an earlier XDK left in its directory, rather than adding to it: after 9.9.9, 9.9.8,
+        // which lacks its turtle and javatools, leaves only its own module
+        assertEquals(TaskOutcome.SUCCESS, run(":released:extractXdk").task(":released:extractXdk").getOutcome());
+        assertEquals(List.of("ecstasy.xtc", "javatools.jar", "javatools_turtle.xtc"), extracted("released"));
+        write("released/build.gradle.kts", repositoryXdk("9.9.8"));
+        assertEquals(TaskOutcome.SUCCESS, run(":released:extractXdk").task(":released:extractXdk").getOutcome());
+        assertEquals(List.of("ecstasy.xtc"), extracted("released"));
+    }
+
+    @Test
+    void anXdkThatAnImportCouldNotDownloadIsDownloadedByTheNextOneThoughTheConfigurationCacheKeptTheFirst() throws IOException {
+        directory = directory.toRealPath();
+        xdk("9.9.9", Map.of("xdk/lib/ecstasy.xtc", bytes("the library")));
+        // a repository whose server fails to send the archive, as a download can fail, until it is well again
+        final var failing = new AtomicBoolean(true);
+        final var server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        server.createContext("/", exchange -> {
+            final var file = directory.resolve("repository").resolve(exchange.getRequestURI().getPath().substring(1)).normalize();
+            final var archive = file.getFileName().toString().endsWith(".zip");
+            if ((failing.get() && archive) || !Files.isRegularFile(file)) {
+                exchange.sendResponseHeaders(archive && failing.get() ? 500 : 404, -1);
+            } else if (exchange.getRequestMethod().equals("HEAD")) {
+                exchange.getResponseHeaders().set("Content-Length", String.valueOf(Files.size(file)));
+                exchange.sendResponseHeaders(200, -1);
+            } else {
+                final var content = Files.readAllBytes(file);
+                exchange.sendResponseHeaders(200, content.length);
+                exchange.getResponseBody().write(content);
+            }
+            exchange.close();
+        });
+        server.start();
+        try {
+            write("settings.gradle.kts", "rootProject.name = \"model-test\"\n");
+            write("build.gradle.kts", """
+                plugins { id("org.xtclang.xtc-plugin") }
+                version = "1.0"
+                repositories { maven { url = uri("http://127.0.0.1:%d/"); isAllowInsecureProtocol = true } }
+                dependencies { add("xdkDistribution", "org.xtclang:xdk:9.9.9@zip") }
+                """.formatted(server.getAddress().getPort()));
+            write("src/main/x/App.x", "module App {}");
+            final var first = run("exportXtcLspModel");
+            assertTrue(first.getOutput().contains("Configuration cache entry stored"));
+            assertEquals("the import could not fetch its distribution", ((Map<?, ?>) entry(":", "main").get("xdk")).get("problem"));
+            failing.set(false);
+            // the problem's export left a token that the next import reads as it configures the build, so that it does so
+            // again rather than reuse the entry that kept the failed download
+            final var again = run("exportXtcLspModel");
+            assertTrue(again.getOutput().contains("xdk-retry"), again.getOutput());
+            assertEquals(List.of(sha256("the library")), ((Map<?, ?>) entry(":", "main").get("xdk")).get("modules"));
+            // and once it is well, an import reuses the entry
+            assertTrue(run("exportXtcLspModel").getOutput().contains("Configuration cache entry reused"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    /** A build script of a project whose XDK is {@code version} of org.xtclang:xdk from the test's repository. */
+    private static String repositoryXdk(final String version) {
+        return """
+            plugins { id("org.xtclang.xtc-plugin") }
+            version = "1.0"
+            repositories { maven { url = uri("../repository") } }
+            dependencies { add("xdkDistribution", "org.xtclang:xdk:%s@zip") }
+            """.formatted(version);
+    }
+
+    /** Publishes {@code version} of org.xtclang:xdk with the {@code entries} of its archive to the test's repository; the archive. */
+    private Path xdk(final String version, final Map<String, byte[]> entries) throws IOException {
+        final var archive = pom(version).resolve("xdk-" + version + ".zip");
+        try (var zip = new ZipOutputStream(Files.newOutputStream(archive))) {
+            for (final var entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
+        }
+        return archive;
+    }
+
+    /** Publishes the metadata of {@code version} of org.xtclang:xdk to the test's repository, without its archive; its directory. */
+    private Path pom(final String version) throws IOException {
+        final var release = directory.resolve("repository/org/xtclang/xdk/" + version);
+        Files.createDirectories(release);
+        Files.writeString(release.resolve("xdk-" + version + ".pom"), """
+            <project><modelVersion>4.0.0</modelVersion><groupId>org.xtclang</groupId><artifactId>xdk</artifactId>
+            <version>%s</version><packaging>zip</packaging></project>
+            """.formatted(version));
+        return release;
+    }
+
+    /** A jar with the {@code entries}, as name and text, in pairs. */
+    private static byte[] jar(final String... entries) throws IOException {
+        final var content = new ByteArrayOutputStream();
+        try (var jar = new ZipOutputStream(content)) {
+            for (int each = 0; each < entries.length; each += 2) {
+                jar.putNextEntry(new ZipEntry(entries[each]));
+                jar.write(bytes(entries[each + 1]));
+                jar.closeEntry();
+            }
+        }
+        return content.toByteArray();
+    }
+
+    private static byte[] bytes(final String text) {
+        return text.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** The files that {@code project}'s extractXdk extracted, by name. */
+    private List<String> extracted(final String project) throws IOException {
+        try (var files = Files.list(directory.resolve(project + "/build/xtc/xdk/lib"))) {
+            return files.map(file -> file.getFileName().toString()).sorted().toList();
+        }
+    }
+
+    /** The SHA-256 of {@code text}'s UTF-8 bytes, in hex, as the export gives a file's. */
+    private static String sha256(final String text) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes(text)));
+        } catch (NoSuchAlgorithmException missing) {
+            throw new IllegalStateException(missing);
+        }
+    }
+
+    /** The file URI of the directory at {@code path}, with its trailing slash, whether or not it is there. */
+    private String folder(final String path) {
+        final var uri = uri(path);
+        return uri.endsWith("/") ? uri : uri + '/';
     }
 
     private Map<String, Object> entry(final String project, final String sourceSet) {
