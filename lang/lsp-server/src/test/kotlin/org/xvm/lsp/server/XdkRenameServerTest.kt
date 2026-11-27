@@ -42,9 +42,11 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockingDetails
 import org.xvm.lsp.adapter.CompilerTestSupport
+import org.xvm.lsp.adapter.RenameRefused
 import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.uncompiledRename
 import org.xvm.lsp.logged
 import org.xvm.lsp.protocol.DiscoverConsumersParams
 import org.xvm.lsp.protocol.SourceModuleConfiguration
@@ -638,6 +640,106 @@ class XdkRenameServerTest {
                 release.countDown()
                 server.shutdown().awaited()
             }
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource("textDocument/rename,false", "textDocument/rename,true", "xtc/rename,false", "xtc/rename,true")
+    fun `a rename whose project changed while it was proven answers ContentModified, not a refusal`(
+        method: String,
+        watched: Boolean,
+    ) {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val text = "module Library { class Box { Int pick(Int value) = value; } }"
+        val library = directory.resolve("Library.x").toFile().apply { writeText(text) }
+        val consumerText = "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }"
+        val consumer = directory.resolve("Consumer.x").toFile().apply { writeText(consumerText) }
+        val uri = library.toURI().toString()
+        val hold = AtomicBoolean()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val adapter =
+            hookedAdapter {
+                if (hold.compareAndSet(true, false)) {
+                    entered.countDown()
+                    check(release.awaited())
+                }
+            }
+        val server = XtcLanguageServer(adapter)
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(parameters()).awaited()
+            server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", uri),
+                    XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                ),
+            )
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+            documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).awaited()
+            hold.set(true)
+            val params = RenameParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("pick")), "choose")
+            val renamed = if (method == "xtc/rename") server.renameProposal(params) else documents.rename(params)
+            // the proof's first compile, Library's before the edit
+            assertThat(entered.awaited()).isTrue()
+            // Consumer, which no editor has open, changes on disk: a watcher's event retires the proof, and without one
+            // the proof finds the change once it has compiled
+            consumer.writeText("$consumerText // changed")
+            if (watched) {
+                server.workspaceService.didChangeWatchedFiles(
+                    DidChangeWatchedFilesParams(listOf(FileEvent(consumer.toURI().toString(), FileChangeType.Changed))),
+                )
+            }
+            release.countDown()
+            assertThatThrownBy { renamed.awaited() }
+                .rootCause()
+                .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                    assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                }
+        } finally {
+            release.countDown()
+            server.shutdown().awaited()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["textDocument/rename", "xtc/rename"])
+    fun `a rename while a module of the graph does not compile says which, for the client to ask again`(method: String) {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val text = "module Library { class Box { Int pick(Int value) = value; } }"
+        val library = directory.resolve("Library.x").toFile().apply { writeText(text) }
+        val consumer =
+            directory.resolve("Consumer.x").toFile().apply {
+                writeText("module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1) }")
+            }
+        val uri = library.toURI().toString()
+        val server = XtcLanguageServer(hookedAdapter {})
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(parameters()).awaited()
+            server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", uri),
+                    XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                ),
+            )
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+            documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).awaited()
+            val params = RenameParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("pick")), "choose")
+            val renamed = if (method == "xtc/rename") server.renameProposal(params) else documents.rename(params)
+            assertThatThrownBy { renamed.awaited() }
+                .rootCause()
+                .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                    assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.RequestFailed.value)
+                    assertThat(it.responseError.message).isEqualTo(uncompiledRename(listOf("Consumer")))
+                    assertThat(it.responseError.data).isEqualTo(RenameRefused.UNPROVEN)
+                }
+        } finally {
+            server.shutdown().awaited()
         }
     }
 

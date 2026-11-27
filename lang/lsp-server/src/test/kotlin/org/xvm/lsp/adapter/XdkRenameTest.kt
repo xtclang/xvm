@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
@@ -156,9 +157,15 @@ class XdkRenameTest {
                 .contains("value = 1")
             assertThat(member.readText()).isEqualTo(child)
             member.writeText("\n$child")
-            assertThat(
-                adapter.rename(member.toURI().toString(), 0, child.indexOf("input"), "value"),
-            ).isNull()
+            // the proof finds the closed member changed on disk, which no watcher said: overtaken, not refused
+            assertThatThrownBy { adapter.rename(member.toURI().toString(), 0, child.indexOf("input"), "value") }
+                .rootCause()
+                .isInstanceOf(RenameOvertaken::class.java)
+            // the module analyzed again, as a watcher's event has it, the rename is proven of the member as it now is
+            adapter.didChangeWatchedFile(member.toURI().toString(), 2)
+            assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+            assertThat(adapter.rename(member.toURI().toString(), 1, child.indexOf("input"), "value")?.changes?.keys)
+                .containsExactly(member.toURI().toString())
         }
     }
 
@@ -191,6 +198,38 @@ class XdkRenameTest {
         }
     }
 
+    @Test
+    fun `a cancel of a rename proposal outside a project query reaches its proof`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val attempts = AtomicInteger()
+        val adapter =
+            XdkAdapter { source, errors ->
+                // the first compile analyzes the module, the second is the proof's of its sources before the edit
+                if (attempts.incrementAndGet() == 2) {
+                    entered.countDown()
+                    check(release.awaited())
+                }
+                EmbeddingSupport.instance().compileModule(source, null, errors)
+            }
+        val text = "module Rename { Int run() { Int local = 1; return local; } }"
+        try {
+            CompilerTestSupport.configure()
+            assertThat(adapter.compile(URI, text).success).isTrue()
+            val proposal = adapter.renameProposalAsync(URI, 0, text.indexOf("local"), "value")
+            assertThat(entered.awaited()).isTrue()
+            assertThat(proposal.cancel(false)).isTrue()
+            release.countDown()
+            // the compiler's one worker compiles Other once the proof has ended: after the compile it was in, as the
+            // cancel reached it, where it would otherwise go on to compile the sources after the edit first
+            assertThat(adapter.compileAsync(OTHER, "module Other {}").awaited().success).isTrue()
+            assertThat(attempts.get()).isEqualTo(3)
+        } finally {
+            release.countDown()
+            adapter.close()
+        }
+    }
+
     private fun withSource(
         text: String,
         test: (XdkAdapter) -> Unit,
@@ -204,5 +243,6 @@ class XdkRenameTest {
 
     private companion object {
         const val URI = "file:///Rename.x"
+        const val OTHER = "file:///Other.x"
     }
 }

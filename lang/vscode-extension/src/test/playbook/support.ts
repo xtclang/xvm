@@ -2,8 +2,9 @@ import * as assert from 'node:assert';
 import { realpathSync } from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { ResponseError } from 'vscode-languageclient/node';
 import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type DiagnosticReport } from '../../lsp-client';
-import { RENAME_REFUSED } from '../../rename-proposal';
+import { RENAME_OVERTAKEN, RENAME_REFUSED } from '../../rename-proposal';
 import { focusTestEditor } from '../native-focus';
 import { withTestWait } from '../progress';
 import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
@@ -28,15 +29,21 @@ export async function serviceStatus<T>(): Promise<T | undefined> {
     catch { return undefined; }
 }
 
+/** The data of the server's error for a rename that it can't prove while the workspace is as it is, as while a module does not compile. */
+export const RENAME_UNPROVEN = 'unproven';
+
 /**
- * [rename]'s edit, or none while the server refuses it: it answers a rename with no edit until discovery and the
- * watcher have settled, which the extension shows as [RENAME_REFUSED], so a case that asks again takes it as not yet.
+ * [rename]'s edit, or none while the server does not make it yet: until discovery and the watcher have settled, it
+ * answers a rename with no edit, which the extension shows as [RENAME_REFUSED], with ContentModified, as a change of the
+ * project overtook it ([RENAME_OVERTAKEN]), or says that it can't prove it while a module has not compiled
+ * ([RENAME_UNPROVEN]), so a case that asks again takes each as not yet.
  */
 export async function renameOrNone<T>(rename: T | Thenable<T>): Promise<T | undefined> {
     try {
         return await rename;
     } catch (error) {
-        if (error instanceof Error && error.message === RENAME_REFUSED) return undefined;
+        if (error instanceof Error && [RENAME_REFUSED, RENAME_OVERTAKEN].includes(error.message)) return undefined;
+        if (error instanceof ResponseError && error.data === RENAME_UNPROVEN) return undefined;
         throw error;
     }
 }

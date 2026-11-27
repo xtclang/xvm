@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
@@ -8,6 +9,7 @@ import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.notYetCompiledRename
 import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
@@ -103,7 +105,11 @@ class XdkLiveWorkspaceTest {
             val current = adapter.prepareTypeHierarchy(root, 0, text.indexOf("Base")).single()
             assertThat(adapter.getSubtypes(current).single().name).isEqualTo("Child")
             assertThat(adapter.findReferences(root, 0, text.indexOf("Base"), true)).isEmpty()
-            assertThat(adapter.rename(root, 0, text.indexOf("Base"), "Renamed")).isNull()
+            // the edit retired the root's analysis, which nothing has asked again
+            assertThatThrownBy { adapter.rename(root, 0, text.indexOf("Base"), "Renamed") }
+                .rootCause()
+                .isInstanceOfSatisfying(RenameRefused::class.java) { assertThat(it.unproven).isTrue() }
+                .hasMessage(notYetCompiledRename("Healthy"))
             assertThat(adapter.getCachedResult(root)).isNull()
         }
     }

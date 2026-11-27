@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.slf4j.LoggerFactory
@@ -11,6 +12,7 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.uncompiledRename
 import org.xvm.testing.awaited
 import java.io.File
 import java.nio.file.Path
@@ -110,7 +112,7 @@ class XdkRenameReuseTest {
     }
 
     @Test
-    fun `a revision's compile in which a module did not compile is not a rename's, which is refused as before`() {
+    fun `a revision's compile in which a module did not compile is not a rename's, which says that it did not`() {
         val root = chain(BROKEN_OTHER)
         val lines =
             logged {
@@ -120,7 +122,10 @@ class XdkRenameReuseTest {
                     val (line, column) = TOP.at("three")
                     val start = compiled.size
                     adapter.prepareRename(top, line, column)
-                    assertThat(adapter.renameAsync(top, line, column, "drei").awaited()).isNull()
+                    assertThatThrownBy { adapter.renameAsync(top, line, column, "drei").awaited() }
+                        .rootCause()
+                        .isInstanceOfSatisfying(RenameRefused::class.java) { assertThat(it.unproven).isTrue() }
+                        .hasMessage(uncompiledRename(listOf("Other")))
                     // prepareRename's compile of every module, Other failing, then the proof's own compile of the
                     // sources before the edit, which stops at Other, as it did before there was a revision's compile
                     assertThat(compiled.drop(start)).containsExactly("Base", "Middle", "Other", "Top", "Base", "Middle", "Other")
