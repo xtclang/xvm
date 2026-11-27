@@ -251,6 +251,15 @@ class XtcTextDocumentService(
     private val publishedByScope = mutableMapOf<String, Set<String>>()
     private val pendingQueries = mutableMapOf<CompletableFuture<*>, String>()
 
+    /**
+     * The basis of each document outside the graph that closed with its text as the file has it, by URI, while queries
+     * were pending: as VS Code releases a document that no editor shows, some minutes after an extension or a
+     * navigation opened it. No analysis and no graph query reads anything else for it, so a workspace query that
+     * started while it was open still answers for what it started with ([startQuery]). Cleared as the last pending
+     * query ends, and for a URI as it opens again.
+     */
+    private val released = mutableMapOf<String, Any>()
+
     private fun <R> supplyAsync(
         method: String,
         logParams: String,
@@ -393,20 +402,23 @@ class XtcTextDocumentService(
                 )
             }
 
-        // a query stays current while its document's basis does, also when another member's didOpen replaces the analysis
+        // a query stays current while its document's basis does, also when another member's didOpen replaces the analysis;
+        // a workspace query while no document opens and the basis of each it started with stays, also of one released
         fun stale(): Boolean =
             closed ||
                 changed(document, openDocuments[uri]) ||
                 (
                     documents != null &&
-                        (documents.keys != openDocuments.keys || documents.any { (it, then) -> changed(then, openDocuments[it]) })
+                        (
+                            openDocuments.keys.any { it !in documents } ||
+                                documents.any { (it, then) -> then.basis !== (openDocuments[it]?.basis ?: released[it]) }
+                        )
                 )
         val started = System.nanoTime()
         logger.info("{}: {}", method, uri)
         // A JSON-RPC cancellation can complete this future under the transport's request lock.
         // Release that thread before entering either the document or compiler lifecycle.
         result.whenCompleteAsync { _, failure ->
-            synchronized(lifecycle) { pendingQueries.remove(result) }
             val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.lastOrNull()
             val outcome =
                 when {
@@ -499,12 +511,21 @@ class XtcTextDocumentService(
                     result,
                     {
                         synchronized(lifecycle) {
-                            if (stale() || diagnosticRevision != revision) throw contentModified()
+                            // newer diagnostics overtake a diagnostic report, the one kind that reports out-of-sync
+                            // documents; another answer's batches stay current while its query does
+                            if (stale() || (reportsOutOfSync && diagnosticRevision != revision)) throw contentModified()
                         }
                     },
                     partial,
                 )
             }
+        // pending while its batches stream too, which a document's release must not end either
+        publication.whenCompleteAsync { _, _ ->
+            synchronized(lifecycle) {
+                pendingQueries.remove(result)
+                if (pendingQueries.isEmpty()) released.clear()
+            }
+        }
         return server.observeQuery(method, progress, publication, uri)
     }
 
@@ -566,6 +587,7 @@ class XtcTextDocumentService(
                 params.textDocument.version,
             )
             outOfSync.remove(params.textDocument.uri)
+            released.remove(params.textDocument.uri)
             analyze(
                 params.textDocument.uri,
                 params.textDocument.text,
@@ -805,13 +827,22 @@ class XtcTextDocumentService(
     override fun didClose(params: DidCloseTextDocumentParams) {
         synchronized(lifecycle) {
             val uri = params.textDocument.uri
+            // a document that is not open closes nothing, as a second didClose of one, which a client that closed it
+            // itself sends again as VS Code releases it, minutes later, as the playbook's cleanup does
+            val open = openDocuments[uri]
+            if (open == null) {
+                logger.info("textDocument/didClose: {} is not open; nothing to close", uri)
+                return
+            }
             logger.info("textDocument/didClose: {}", uri)
             diagnosticRevision++
             // a close that leaves the text as the file has it, as VS Code's release of a document that no editor
             // shows, three minutes after an extension or a navigation opened it, changes nothing that a listed action
             // or lens was made from: a click on an action listed before it still applies the action
-            val kept = openDocuments[uri]?.takeIf { uri !in outOfSync }?.let { onDisk(uri, it.content) } == true
+            val kept = uri !in outOfSync && onDisk(uri, open.content)
             if (!kept) clearResolveReports()
+            // nor, for a document outside the graph, anything that an analysis of another or a graph query reads
+            if (kept && pendingQueries.isNotEmpty() && (adapter as? XdkAdapter)?.hasProject(uri) != true) released[uri] = open.basis
             val affected = adapter.affectedAnalysisScopes(uri)
             semanticTokenReports.retire(uri)
             val document = openDocuments.remove(uri)

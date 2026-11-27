@@ -1157,7 +1157,11 @@ class XdkAdapter
             override val task = trace.task("rename-proof", uri, result) { work(this) }
         }
 
-        /** Called under lifecycle; future callbacks must run after releasing it. */
+        /**
+         * Called under lifecycle; future callbacks must run after releasing it. The graph's queries go too when [scope] is
+         * a module of the graph, whose sources they read; a document outside it, as an earlier case's file that the editor
+         * releases, changes nothing that they read.
+         */
         private fun retireQueries(scope: String): List<QueryWork> =
             (cursors.values + renames.values)
                 .filter { it.compilation.scope == scope }
@@ -1167,7 +1171,7 @@ class XdkAdapter
                         is RenameRequest -> renames.remove(it.uri, it)
                     }
                     compiles.remove(it.task)
-                } + retireProjectQueries()
+                } + if (project.modules.values.any { it.uri == scope }) retireProjectQueries() else emptyList()
 
         /** Every graph query owns a complete configured snapshot, so any source change retires it. */
         private fun retireProjectQueries(): List<QueryWork> =
@@ -1656,15 +1660,19 @@ class XdkAdapter
             dependencies = artifacts
             if (replaced) replacedLibrariesChanged()
             if (force) builds.clear() else builds.keys.removeAll { it in changed || it !in replacement.modules }
-            return retireRequests(retired)
+            // a new graph, also one that retires no analysis, is a new snapshot for each of the graph's queries
+            return retireRequests(retired).let { (requests, queries) -> requests to queries + retireProjectQueries() }
         }
 
-        /** Called under lifecycle. Compiler-owned objects never enter the artifact cache. */
+        /**
+         * Called under lifecycle. Compiler-owned objects never enter the artifact cache. Retires the queries of [scopes]
+         * ([retireQueries]), the graph's among them only when one of them is a module of the graph.
+         */
         private fun retireRequests(scopes: Set<String>): Pair<List<Request>, List<QueryWork>> {
             val retired = scopes.mapNotNull { requests.remove(it) }
             scopes.forEach(completed::remove)
             retired.forEach(::removeQueued)
-            return retired to (scopes.flatMap(::retireQueries) + retireProjectQueries())
+            return retired to scopes.flatMap(::retireQueries)
         }
 
         private fun removeQueued(request: Request) {
@@ -3116,7 +3124,8 @@ class XdkAdapter
             )
         }
 
-        private fun hasProject(uri: String): Boolean = synchronized(lifecycle) { project.scope(uri) != null }
+        /** Whether [uri] is a source of a module of the graph, which the graph's queries read. */
+        internal fun hasProject(uri: String): Boolean = synchronized(lifecycle) { project.scope(uri) != null }
 
         private fun workspaceNavigation(uri: String): XdkWorkspaceNavigation? =
             projectQuery<XdkWorkspaceNavigation?>(
