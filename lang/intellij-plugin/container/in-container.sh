@@ -131,6 +131,14 @@ reports=/work/xvm/lang/intellij-plugin/build/reports/compiler-playbook
 earlier="$(mktemp)"
 find "$reports" -maxdepth 1 -name 'run-*' -exec basename {} \; > "$earlier" 2>/dev/null || true
 
+# the VS Code extension's reports in the work volume, one directory per kind (its suite, playbook, tour, ...), each
+# with a run-* directory per run: the volume is the slot's, so it also keeps other checkouts' runs, which
+# copy_vscode_runs leaves out, as it leaves out the runs that were there before this container
+vscode_reports=/work/xvm/lang/vscode-extension/build/reports
+vscode_earlier="$(mktemp)"
+find "$vscode_reports" -mindepth 2 -maxdepth 2 -type d -name 'run-*' 2>/dev/null | sed "s|^$vscode_reports/||" \
+    > "$vscode_earlier" || true
+
 copy_runs() {
     [ -d "$reports" ] || return 0
     mkdir -p /out/runs
@@ -177,6 +185,24 @@ copy_runs() {
     fi
 }
 
+# copies the VS Code runs that this container made into /out/vscode-reports, with their kind's shared files, such as
+# latest-run.txt, which then name this container's newest run of that kind; a kind it made no run of is left alone
+copy_vscode_runs() {
+    [ -d "$vscode_reports" ] || return 0
+    local dir kind name
+    for dir in "$vscode_reports"/*/run-*/; do
+        [ -d "$dir" ] || continue
+        dir="${dir%/}"
+        name="$(basename "$dir")"
+        kind="$(basename "$(dirname "$dir")")"
+        grep -qxF "$kind/$name" "$vscode_earlier" && continue
+        mkdir -p "/out/vscode-reports/$kind"
+        rsync -a "$dir/" "/out/vscode-reports/$kind/$name/"
+        find "$vscode_reports/$kind" -maxdepth 1 -type f -exec cp -p {} "/out/vscode-reports/$kind/" \;
+        echo "copied VS Code $kind/$name"
+    done
+}
+
 case "$mode" in
     build)
         echo "xdk: building, as the build mode asks (${XTC_XDK_FINGERPRINT:0:12})"
@@ -207,12 +233,7 @@ case "$mode" in
         ./gradlew -PincludeBuildLang=true -PincludeBuildAttachLang=true "$@" || status=$?
         stop_recording
         copy_runs
-        # the VS Code extension's reports (its suite, playbook, lifecycle and explorer runs), when there are any
-        vscode_reports=/work/xvm/lang/vscode-extension/build/reports
-        if [ -d "$vscode_reports" ]; then
-            mkdir -p /out/vscode-reports
-            rsync -a "$vscode_reports/" /out/vscode-reports/
-        fi
+        copy_vscode_runs
         # the screen of a recorded VS Code tour, whose tour.json names this recording by its start: into its run's
         # directory, where the composer cuts the steps' clips from it
         if [ -f /out/screen.mp4 ] && [ -d /out/vscode-reports/vscode-tour ]; then
