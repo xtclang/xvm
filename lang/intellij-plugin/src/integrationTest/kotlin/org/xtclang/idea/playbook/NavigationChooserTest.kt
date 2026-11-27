@@ -2,6 +2,7 @@ package org.xtclang.idea.playbook
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.xtclang.idea.playbook.probe.NavigationChooser
 import java.awt.event.ActionEvent
@@ -17,6 +18,7 @@ import javax.swing.SwingUtilities
  * Reproduces native navigation-popup selection without relying on global keyboard focus. The selected row
  * must reach the popup action exactly once, preventing a stalled playbook or duplicate navigation.
  */
+@Tag(HARNESS)
 class NavigationChooserTest {
     @Test
     fun `the chosen row reaches the popup action once without keyboard focus`() =

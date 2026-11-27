@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicInteger
@@ -14,6 +15,7 @@ import kotlin.time.Duration
  * Protects readiness polling from checking a successful observation twice during connection replacement. Uses
  * controlled observations to cover expiry, pending reads and cancellation without launching an IDE.
  */
+@Tag(HARNESS)
 class UiWaitsTest {
     @Test
     fun `a successful readiness observation is not checked again`() {
