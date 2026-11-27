@@ -854,10 +854,22 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   as under way however silent they are, so a wait whose condition never comes while a debugged program waits for
   input, or a Gradle task hangs, runs to the hang's bound (an embedded run counts only while it prints, since
   `b79a852e3b`). The server's requests and compiles count for every wait, also one that only the UI can satisfy.
-- [ ] Found 2026-11-26 in a one-case IntelliJ run (X1, with another container running): the test Driver's first call
+- [x] Found 2026-11-26 in a one-case IntelliJ run (X1, with another container running): the test Driver's first call
   into the IDE timed out 9 s after start (DriverIllegalStateException, TimeoutException), before the case ran; X1–X3
   passed in the next run. It came twice more the same evening, in the shared queue's validation runs (one in each
-  slot), so it is no rare event: a startup wait that machine load can outlast, to find and fix.
+  slot). Not the driver's connection, which had served the START case: X1's first look at the Structure view went
+  through the framework's `StructureToolWindowUi.waitAndGetStructureTree`, which gives the tree 10 s to show and its
+  first expansion 5 s (`JTreeTextFixture.expandAll`'s `TimeoutException`), without a retry; the first expansion after
+  the server's start outlasted it under load. Fixed (`b98720b28b`): `structure()` looks for the window and its tree as its
+  wait polls and expands the tree through its fixture, a try that runs out meaning only "not yet", waiting as the
+  tour's waits do. START, X1–X3, X5 and X92 passed (`run-9411032263120541660`). The driver's own connection wait
+  (BackgroundRun, 3 minutes, ending once the IDE's process exits) stays the framework's fixed bound; nothing has failed
+  on it.
+- [x] Found 2026-11-27 in the IntelliJ harness-category runs (`run-12107724608578254908`): X1 read the Project view's
+  rows as its Structure view's: the framework's structureToolWindow() xpath also accepts 'Logical Tool Window' and
+  'Physical Tool Window', and the Driver-start fix (`b98720b28b`) kept the first single match. Fixed (`44fc3871bd`):
+  structure() asks the IDE for the Structure tool window's title and looks only for the decorator of that name;
+  START, X1, X5 and X92 passed in `run-5912515692017944589` and `run-784764294860882422`.
 - [x] Found 2026-11-26 recording the IntelliJ tour: the settings section's negative check "Choosing the adapter in use
   restarted the server" (`expect(!within(HANG) { serverState() != same })`) sat about 10 minutes without a word: `within`
   ends early only when nothing moved for its idle window, the server's periodic trace events kept resetting that, and
@@ -901,15 +913,45 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   "Rename failed: null", from the CancellationException LSP4IJ's wait gives the rename's future, in the rename's hint
   and the prepare step's. Fixed (`3408f07efc`): `renameFailure` shows nothing for a failure with a cancellation among
   its causes; RenameFailureTest has it bare and inside a CompletionException.
-- [ ] Found 2026-11-26 in the review of the IntelliJ tour's wait fixes: a positive wait (`within`, `until`) counts the
-  server's trace events and requests as work under way, so one whose condition never comes can still run to the
-  hang's bound while the server keeps working, now reporting every minute but not failing sooner. The tour's
-  start-up waits (`UiWaits.awaitUi`) have no idle check at all. Fix: count only progress that could make the
-  condition hold (the IDE's own tasks, a request the step made), not the server's background traffic.
-- [ ] Found 2026-11-26: a checkout's copied-back VS Code reports include every run the slot's work volume keeps,
+- [x] Found 2026-11-26 in the review of the IntelliJ tour's wait fixes: a positive wait (`within`, `until`) counted the
+  server's trace events and requests as work under way, so one whose condition never comes could still run to the
+  hang's bound while the server kept working: LSP4IJ pulls the workspace's diagnostics about once a second, and
+  `xtc/busy` saw a pull in flight now and then. The tour's start-up waits (`UiWaits.awaitUi`) had no idle check at
+  all. Fixed (`5158e7e4d5`): a wait counts as in progress only the IDE's own work (its tasks and indicators but LSP4IJ's
+  "Checking workspace" task, indexing, running processes, a running debug session, the selected file's analysis), the
+  server's start and compile jobs, and the requests that the step sent since it began and the server has not
+  answered (`ServerTrace`, from the server's trace); as movement, the IDE's text and only the trace events of the
+  step's messages and of compiles, and the IDE's live work (tasks, processes, debug sessions) as moving while it runs,
+  which a quiet Gradle build or test run needs. The start-up waits go through `within`: only the project's opening,
+  before its window shows, waits on to the bound; its startup activities count as in progress beside the IDE's work,
+  checked as any. Validated with "Start here", "Build and run", "Debugging" and "Tests" (`run-tour-6488512318759578076`)
+  and "Settings and the server" (`run-tour-15862507148547814103`). A throwaway wait for a condition that never comes failed after 1 min with "the server's own traffic added 600
+  trace events" (`run-tour-12872712752952306452`), where the old rule's longest idle stretch was 32 s.
+- [x] Found 2026-11-27 in the IntelliJ tour's Debugging section (`run-tour-8243433117218196435`, after "Build and run"):
+  "A conditional breakpoint" never read the breakpoint's editor balloon, in every run without a screen recording that
+  had "Build and run" first. No regression: the recordings' own tree (`a381083d89`) fails it too; they passed it with
+  `XTC_RECORD_VIDEO=1`, whose visible input and slower steps change what is left by step 15. Two causes: the
+  "Ecstasy build mode: GRADLE" notification's balloon, from the section's check of Ctrl+Alt+X, B, stayed up, and
+  `popupText()` and a step's popup subject took it, as the highest popup in the layered pane, over the breakpoint's
+  balloon (`TourUi.dismiss()` hid only the server's messages); and Deck.x's lenses came again after the section's last
+  step set the run and build modes back, moving the editor, which hides the balloon (DebuggerUIUtil's gutter
+  listeners). Fixed (`f3c56848ca`): `dismiss()` hides every notification's balloon (the Notifications window keeps them),
+  and the step opens the balloon once `lensesInPlace(Deck.x)`. Two runs of "Build and run" and
+  "Debugging" passed, the balloon in both frames (`run-tour-15174852437686858037`, `run-tour-2258179756030299091`).
+- [ ] Found 2026-11-27 in the IntelliJ tour's "Settings and the server" (`run-tour-17520097840937157005`,
+  `run-tour-10782924926301660469`): the check "Ctrl+Alt+X, L shows the server's log, and hides it again" pressed the
+  chord (the tour's action log has it) and the Language Servers window never opened, nothing in progress for a minute;
+  2 of the 5 runs of the section alone on 2026-11-27 failed it, 1 of 10 earlier runs in the logs. Not the window's
+  hide from the step before: a wait until `ToolWindow.isVisible` was false before the chord (branch
+  `lagergren/ij-tour-waits-serverlog-attempt`, `216f7bd6f6`) still failed once in three runs. Not the IDE's age at the
+  chord (65.6 s and 70.3 s failed, 68.6 s passed); one failure's chord came with the Starter's screenshot heartbeat,
+  the other's 8 s after one. The IDE log has nothing at the chord. Unknown: the keys (Robot, through X) may not reach
+  the IDE's key dispatcher, or its second stroke may be lost; next, log the key events the IDE gets at the chord.
+- [x] Found 2026-11-26: a checkout's copied-back VS Code reports include every run the slot's work volume keeps,
   other checkouts' too, and since the shared queue from both slots; a script that took the newest copied run as its
   own took another agent's tour run (`run-y0hT9c` in wt-video). Fix: copy back only the runs this container made, as
   `copy_runs` does for IntelliJ.
+  Fixed (`3810708615`): a container copies back only the runs it made, `latest-run.txt` with them.
 - [x] The playbooks' diagnostics waits took whatever the editor showed, which may be the report
   from before an edit, so a "no errors" wait could pass on the text before it (2026-10-29,
   `b2f452c2f2`). Both editors pull diagnostics, each pull for one version of a document, and the
