@@ -520,9 +520,14 @@ export class TourUi {
             throw new Error(`The menu has no ${label} to choose: ${(await menu.innerText().catch(() => '')).split('\n').filter(Boolean).join(' | ')}`);
         }
         await this.click(item);
-        // a click that chose the item has closed the menu; one that only gave it the keyboard left the menu open, as Set
-        // Value's in run-hAoYtv and Break on Value Change's in run-Snny5m did: Enter chooses it, as a user's would
+        // a click that chose the item closes the menu; one that only gave it the keyboard leaves the menu open, as Set
+        // Value's in run-hAoYtv and Break on Value Change's in run-Snny5m did: Enter chooses it, as a user's would. VS
+        // Code's menu runs a clicked item in a task of the window's after the mouse's release, and closes as it does,
+        // so a menu that shows just after the click may be choosing: in run-cjtCLE, Enter 34 ms after the click went to
+        // the value box that Set Value had just opened. A menu that still shows once the window has run the tasks it had
+        // when looked at did not take the click, or the Enter, as a choice
         await this.waiter(`The menu takes ${label}`, async () => {
+            await this.page.evaluate('new Promise(resolve => setTimeout(() => setTimeout(resolve, 0), 0))');
             if (!await menu.isVisible()) return true;
             if (await this.focusedIn(item)) await this.press('Enter');
             return false;
