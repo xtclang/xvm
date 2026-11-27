@@ -749,6 +749,8 @@ internal interface TourProbe {
         tab: String,
     )
 
+    fun keysGot(): String
+
     fun showing(focus: String): Boolean
 
     fun fill(text: String)

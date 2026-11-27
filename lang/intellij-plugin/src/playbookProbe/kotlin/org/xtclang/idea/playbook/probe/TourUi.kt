@@ -1175,8 +1175,16 @@ object TourUi {
     ) {
         val strokes = listOf(first, second).map { checkNotNull(KeyStroke.getKeyStroke(it)) { "No key stroke $it" } }
         logAction("key", strokes.joinToString(", ") { KeymapUtil.getKeystrokeText(it) })
+        KeyLog.mark()
         strokes.forEach(::press)
     }
+
+    /**
+     * What the IDE got since the last [chord] began, as [KeyLog] has it: its keys, where they went, the focus's moves and
+     * the actions that ran.
+     */
+    @JvmStatic
+    fun keysGot(): String = KeyLog.got()
 
     /** Opens the IDE's main menu, as a click on its menu bar's [menu], or on the Main Menu button, does. */
     @JvmStatic

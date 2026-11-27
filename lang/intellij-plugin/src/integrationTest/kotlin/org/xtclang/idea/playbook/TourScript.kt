@@ -2940,7 +2940,7 @@ private fun Tour.settings() {
         open(source("Eights.x"), 0)
         editorChord("ctrl alt X", "L")
         expect(within(HANG) { toolWindowText("Language Servers").let { "initialize" in it || "INFO" in it } }) {
-            "The log: ${toolWindowText("Language Servers").take(400)}"
+            "The log: ${toolWindowText("Language Servers").take(400)}; what the IDE got of the keys: ${keysGot()}"
         }
         open(source("Eights.x"), 0)
         editorChord("ctrl alt X", "L")
