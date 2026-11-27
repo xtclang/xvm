@@ -1,6 +1,6 @@
 # Squashing #693 into reviewable pull requests
 
-A plan only: making it changed nothing in #693. It covers the 612 commits of `errs/full-testable-lsp-20261009` over `master` (tip `681c7a2ebb`, master `4350e40af0`, 2026-11-26), numbered 1 to 612 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-612 came after, and were placed by the same rules. Four are open on master as their own PRs, and each takes its commits out of #693 when it merges: 459, with 502 and 524 its review round, is #802; 196, with the test fixtures of 194 (`Await` and `Watchdog`; 194's edits of #693's own tests stay), is #811; 170 and 198 are #812, on #811's branch, as their tests wait through its fixtures; and 407, 465 and 470 are #813. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480. #810, the plugin installable in every JetBrains IDE, merged as 4350e40af0 the same day; #693 was rebased onto it with no commit dropped, as its own fuller change (Gradle optional, not removed) is commit 530.
+A plan only: making it changed nothing in #693. It covers the 613 commits of `errs/full-testable-lsp-20261009` over `master` (tip `d41e4e9b48`, master `4350e40af0`, 2026-11-26), numbered 1 to 613 from the oldest, with their short hashes. Commits 1-397 were planned on 2026-11-23; the rebase onto master of 2026-11-25 kept their numbers and gave them new hashes. Commits 398-613 came after, and were placed by the same rules. Four are open on master as their own PRs, and each takes its commits out of #693 when it merges: 459, with 502 and 524 its review round, is #802; 196, with the test fixtures of 194 (`Await` and `Watchdog`; 194's edits of #693's own tests stay), is #811; 170 and 198 are #812, on #811's branch, as their tests wait through its fixtures; and 407, 465, 470 and 613 are #813. #804's four commits, 467, 471, 473 and 474 then, merged to master as 2e26663249 on 2026-11-25; #693 was rebased onto it without them, which renumbered the commits after 467. #808's three, 481-483 then, merged as fb7ba82052 on 2026-11-26, and #693 was rebased onto it without them, which renumbered the commits after 480. #810, the plugin installable in every JetBrains IDE, merged as 4350e40af0 the same day; #693 was rebased onto it with no commit dropped, as its own fuller change (Gradle optional, not removed) is commit 530.
 
 It proposes 15 pull requests, each of which changes either only files outside lang/ (xvm only: X1-X5) or only files in lang/ (lang only: L1-L10), merged in one order. To get there, the commits are first sorted into 13 topics (P1-P13), the commits of a topic that implement or fix the same thing, however far apart, are grouped to be joined, and every commit is then divided at lang/: its other files go to its topic's xvm PR, its lang/ files to its topic's lang PR.
 
@@ -11,7 +11,7 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 1 | **X1** | files outside lang/ | Compiler diagnostics: the error-listener contract and repository read failures | — (master) | P1 | 12 | 2.9k / 2.8k |
 | 2 | **X2** | files outside lang/ | Compiler host API: compilation outcomes, snapshots, syntax and semantic facts | X1 | P2, P11 | 15 | 5.7k / 1.1k |
 | 3 | **X3** | files outside lang/ | Compiler analysis of incomplete source: recovery, cursor fitting, declarations | X2 | P3, P4 | 8 | 5.8k / 1.7k |
-| 4 | **X4** | files outside lang/ | Runtime support for running, testing and debugging from the editors: the debugger and its agent, xtc, xunit and the Gradle plugin | X3 | P9, P10 | 55 | 9.5k / 5.2k |
+| 4 | **X4** | files outside lang/ | Runtime support for running, testing and debugging from the editors: the debugger and its agent, xtc, xunit and the Gradle plugin | X3 | P9, P10 | 56 | 9.5k / 5.2k |
 | 5 | **X5** | files outside lang/ | Build, CI and test tooling outside lang: CI test tiers, build checks, test hang detection, the LSP4IJ and IntelliJ versions, PR previews | X4 | P4, P7, P12, P13 | 28 | 1.7k / 989 |
 | 6 | **L1** | lang/ | Language server: the server, its protocol, document synchronization, Tree-sitter and the mock adapter | X3, X5 | P4 | 47 | 11.4k / 13.9k |
 | 7 | **L2** | lang/ | Language server: the compiler adapter's core, compiling, discovery, diagnostics and workspace pulls | L1 | P1, P2, P3, P4 | 41 | 9.3k / 17.6k |
@@ -24,7 +24,7 @@ It proposes 15 pull requests, each of which changes either only files outside la
 | 14 | **L9** | lang/ | Debugging: the DAP server, debug sessions, launch and attach, and both editors' debug UI | X4, L8 | P10 | 49 | 8.7k / 11.1k |
 | 15 | **L10** | lang/ | Test infrastructure: the playbooks, the scenario catalog, the manual test plan and the tours | L9, X5 | P12, P13 | 220 | 9.0k / 63.0k |
 
-Already open on master, apart from these, each leaving #693 when it merges: #802 (unused constructor arguments, commits 459, 502 and 524); #811 (a hasher map's spare key per thread, 196, with 194's test fixtures); #812 (Future callbacks and service shutdowns reported and completed, 170 and 198, on #811); and #813 (the Gradle model's build-tree paths and run settings, 407, 465 and 470). #804 (runXtc keeps xtcRun's settings), #808 (the plugin tests' one network download dropped) and #810 (the plugin installable in every JetBrains IDE) are merged.
+Already open on master, apart from these, each leaving #693 when it merges: #802 (unused constructor arguments, commits 459, 502 and 524); #811 (a hasher map's spare key per thread, 196, with 194's test fixtures); #812 (Future callbacks and service shutdowns reported and completed, 170 and 198, on #811); and #813 (the Gradle model's build-tree paths and run settings, and its reports written whole, 407, 465, 470 and 613). #804 (runXtc keeps xtcRun's settings), #808 (the plugin tests' one network download dropped) and #810 (the plugin installable in every JetBrains IDE) are merged.
 
 Prerequisites are the PRs that must be merged first; the order above satisfies all of them, so merging in it always works. Where a PR lists two, either can be merged first of the two, but both before it. Some can be reviewed side by side: L4 and L5 both need only L3, and L6 and L7 both need L4 and L5.
 
@@ -50,12 +50,12 @@ L2, L9 and L10 are large: review L2 by package, L9 as the DAP server and the edi
 | P6 | Language server: code actions and refactorings | P5 | yes | 41 | 10 | 9.4k / 13.3k |
 | P7 | IntelliJ plugin, built against LSP4IJ 0.30.1 | P6 | nearly | 78 | 28 | 10.6k / 6.7k |
 | P8 | VS Code extension | P6 | yes | 11 | 7 | 2.7k / 341 |
-| P9 | Embedded build, run and tests from the editors | P4 (and P7, P8 for the editor parts) | no | 57 | 23 | 10.6k / 9.8k |
+| P9 | Embedded build, run and tests from the editors | P4 (and P7, P8 for the editor parts) | no | 58 | 23 | 10.6k / 9.8k |
 | P10 | Debugger: runtime debugger, DAP server and the editors' debugging | P9 | no | 61 | 36 | 17.3k / 15.3k |
 | P11 | The XDK's library sources and the XDK workspace | P5 | yes, once 1 commit's other files move | 24 | 9 | 3.5k / 3.5k |
 | P12 | Test infrastructure: playbooks, scenarios, tours and their container | P7-P11 | no | 174 | 22 | 3.7k / 63.4k |
 | P13 | Documentation, build and CI | the PRs it documents | no | 49 | 6 | 6.8k / 376 |
-| | **Total** | | | **612** | **175** | |
+| | **Total** | | | **613** | **175** | |
 
 The topics group the commits; the PRs above divide them at lang/. Sizes count added lines, with commit 8 divided by package (below). They leave out only the two files that later commits delete whole (XdkColorPrototype, XdkMonikers); the rest of what the pairs in finding 2 take back is still counted, so squashed PRs come out somewhat smaller. Tests are most of every PR's size: reviewers read the main code and skim the tests.
 
@@ -274,6 +274,7 @@ These commits change files outside the components of the PR they are placed in, 
 - 606 `bfdd13c2b1` Say in VS Code why a rename is refused, as IntelliJ's plugin does, instead of VS Code's "No result.", in P6 (+101; also touches: playbook, vscode)
 - 612 `681c7a2ebb` Copy back only the VS Code runs that a container made, not every run its slot's work volume keeps, in P12 (+27; also touches: intellij)
 
+
 ## Splitting commit 8
 
 | Goes to | Main lines | Test lines | What |
@@ -466,7 +467,7 @@ Kept as they are:
 
 **Scope.** The server's run/ package (execution workers, embedded builds, console input), xunit runs and reports, xtc tool and Gradle plugin changes for test modules, and the run and test UI of both editors (run icons, run configurations, test consoles, Run All tests).
 
-**Builds on** P4 (and P7, P8 for the editor parts). **Commits:** 57 now, about 23 after squashing. **Added lines:** 10,572 main, 9,832 tests.
+**Builds on** P4 (and P7, P8 for the editor parts). **Commits:** 58 now, about 23 after squashing. **Added lines:** 10,588 main, 9,866 tests.
 
 | Join into | Commits | Why |
 |---|---|---|
@@ -484,7 +485,7 @@ Kept as they are:
 | Gradle plugin fixes | 98 `0decb86b3a` Don't reuse a module compiled in another copy of the project<br>204 `751e6f5c72` Run testXtc whenever a tool reads its test report, never from the cache<br>244 `05ed97434e` Drop XtcRunConfigurationTest's redundant casts to TaskOutputsInternal | Small plugin fixes needed by the editors' Gradle mode. |
 | Describe running and testing in the READMEs | 117 `165a57084b` Describe running and debugging tests from both editors in the READMEs<br>121 `000fc09f82` List the editors' test, attach and debug-task sources, and when xtc is needed | Fold into this PR's docs. |
 | Library replacement in Gradle mode, per workspace folder, with the editors' setting | 406 `ea49f75c71` Build, run and debug with Gradle while the workspace's own modules replace bundled libraries<br>415 `4bd073219d` Add an editor setting for whether the workspace's own modules replace bundled XDK libraries<br>422 `cc1a143dcc` Keep a replaced library to the workspace folder that replaces it, so a window's other projects build embedded<br>423 `ecdfd2614c` Show the embedded compiler as not available where the project's own modules replace bundled libraries | the workspace's own modules replacing bundled libraries: in Gradle mode, kept to the folder that replaces them, the editors' setting, and the embedded compiler shown as not available; the editor parts need L6 and L7, so the group goes to L8 |
-| The Gradle model: each source set's project path, xtcRun's and xtcTest's settings | 407 `59d2ce57fb` Name each source set's project by its path in the build tree in the IDE's Gradle model (#774)<br>465 `562c4ac388` Export each project's xtcRun and xtcTest settings in the language server's Gradle model<br>470 `31e194930f` Export the JVM arguments that xtcRun's and xtcTest's JVMs get, now that jvmArgs holds only the build script's | the plugin's model export that the server reads; 470 exports the JVM arguments that #804's allJvmArgs give |
+| The Gradle model: each source set's project path, xtcRun's and xtcTest's settings | 407 `59d2ce57fb` Name each source set's project by its path in the build tree in the IDE's Gradle model (#774)<br>465 `562c4ac388` Export each project's xtcRun and xtcTest settings in the language server's Gradle model<br>470 `31e194930f` Export the JVM arguments that xtcRun's and xtcTest's JVMs get, now that jvmArgs holds only the build script's<br>613 `d41e4e9b48` Write each source set's Gradle model report as the model is written, whole: to a temporary file moved into place | the plugin's model export that the server reads; 470 exports the JVM arguments that #804's allJvmArgs give |
 | Gradle tasks in each module's own project (#774) | 408 `84b8cc34f9` Tell the client each module's Gradle project from the imported build model (#774)<br>409 `d034abf98d` Run a module's Gradle tasks in its own project in IntelliJ, which reaches a composite's included builds (#774)<br>410 `baadfd1215` Run a module's Gradle tasks in its own project in VS Code, which reaches a composite's included builds (#774)<br>411 `5c600b935c` Expect the XVM repository's Gradle-mode Run, Debug and tests to reach its included builds in manual check 18a.20 (#774) | the server names each module's Gradle project, and both editors run its tasks there, reaching a composite's included builds |
 | Embedded runs with their Gradle project's xtcRun and xtcTest settings | 466 `ba160fac63` Run embedded programs with their Gradle project's xtcRun and xtcTest settings, and say so in both editors | embedded runs take the Gradle project's method, arguments and JVM options, from 465's export |
 
@@ -1263,3 +1264,4 @@ Kept as they are:
 | 610 | `3d5ded659a` | P12 | — | L10 | IntelliJ tour step fixes | Report the IntelliJ tour's start-up waits about once a minute, as its other waits now do |
 | 611 | `5079fb00a0` | P12 | — | L10 | IntelliJ tour step fixes | Report a tour wait once a minute, not in a burst after a blocked call, and leave no wait after a probe timeout silent |
 | 612 | `681c7a2ebb` | P12 | — | L10 | The playbook container and the IDE it drives | Copy back only the VS Code runs that a container made, not every run its slot's work volume keeps |
+| 613 | `d41e4e9b48` | P9 | X4 | — | The Gradle model: each source set's project path, xtcRun's and xtcTest's settings | Write each source set's Gradle model report as the model is written, whole: to a temporary file moved into place |
