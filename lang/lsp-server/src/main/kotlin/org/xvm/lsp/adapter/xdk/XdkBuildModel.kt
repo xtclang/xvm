@@ -23,7 +23,63 @@ internal class XdkBuildModel private constructor(
         val buildTreePath: String? = null,
         /** The project's run settings, which apply to the modules of each of its source sets; null from an older plugin. */
         val runs: Runs? = null,
+        /** The XDK that the project compiles and runs with; null from an older plugin, or for a project without one. */
+        val xdk: Xdk? = null,
     )
+
+    /**
+     * The XDK that a source set's project compiles and runs with, as the model says it: its [version]; the directory of
+     * its [libraries], where the plugin extracts `ecstasy.xtc` and the other core modules for the project's builds and
+     * runs; and what it holds, as the export read it from the XDK's distribution, the SHA-256 of each of its module files,
+     * its [modules], and of its `javatools.jar`, its [javatools]. Where the export could not say what it holds, it has
+     * either the [project] of the build tree that makes it, which the export neither builds nor reads, or the [problem]
+     * that kept the export from reading it; null [modules] with neither is a model that does not say.
+     */
+    data class Xdk(
+        val version: String?,
+        val libraries: File?,
+        val modules: List<String>? = null,
+        val javatools: String? = null,
+        val project: String? = null,
+        val problem: String? = null,
+    ) {
+        /** Whether this is the bundled XDK: its modules and javatools are the bundled ones ([XdkLibraries.bundles]). */
+        val bundled: Boolean get() = project == null && problem == null && modules != null && XdkLibraries.bundles(modules, javatools)
+
+        /**
+         * Why the server does not build or run [module], whose Gradle build compiles it with this XDK, which is not the
+         * bundled one, or, for another [owner], which depends on that module, whose Gradle build does: what the module's
+         * workspace folder does, after its name, and what a build of it that the server refuses says.
+         */
+        fun noEmbedded(
+            module: String,
+            owner: String = module,
+        ): NoEmbeddedBuild =
+            described().let {
+                val builds = if (owner == module) "builds with $it" else "depends on the module $owner, which builds with $it"
+                NoEmbeddedBuild(
+                    builds,
+                    "The module $module $builds, and the server builds and runs only with the bundled XDK, so build and run " +
+                        "it with Gradle (Ecstasy build mode: Gradle)",
+                    this,
+                    owner,
+                )
+            }
+
+        /** This XDK against the bundled one, as a module builds with it: `XDK 0.5.0, not the bundled XDK 0.4.4`. */
+        private fun described(): String {
+            val bundled = XdkLibraries.version?.let { "the bundled XDK $it" } ?: "the bundled XDK"
+            val named = version?.let { "XDK $it" } ?: "an XDK"
+            val unknown = "which the language server cannot compare with $bundled"
+            return when {
+                project != null -> "$named that the build's own project $project makes, $unknown"
+                problem != null -> "$named, $unknown, as $problem"
+                modules == null -> "$named, $unknown, as the Gradle model does not say what it holds"
+                version != null && version == XdkLibraries.version -> "another build of XDK $version than the bundled one"
+                else -> "$named, not $bundled"
+            }
+        }
+    }
 
     /**
      * A project's run settings, as its `xtcRun` and `xtcTest` have them: the method and arguments that `xtcRun` runs each
@@ -56,6 +112,12 @@ internal class XdkBuildModel private constructor(
         val composite: Boolean = false,
         /** What the Gradle project that owns each source module runs it with, by module name, where the model says. */
         val runs: Map<String, XdkRunSettings> = emptyMap(),
+        /**
+         * The XDK that the Gradle project that owns each source module compiles and runs it with, by module name, where the
+         * model names one that is not the bundled XDK, which the server builds and runs with: such a module builds and runs
+         * with Gradle ([XdkProject.gradleOnly]).
+         */
+        val xdks: Map<String, Xdk> = emptyMap(),
     )
 
     fun resolve(): Inputs =
@@ -144,7 +206,20 @@ internal class XdkBuildModel private constructor(
         val projects = modules.mapNotNull { module -> owned[module.name]?.let { module.name to it } }.toMap()
         val settings = owners.entries.associate { (module, owner) -> module.name to owner.runs?.let { settings(module.name, owner, it) } }
         val runs = modules.mapNotNull { module -> settings[module.name]?.let { module.name to it } }.toMap()
-        return Inputs(modules, binaries, projects, composite = true, runs = runs)
+        return Inputs(modules, binaries, projects, composite = true, runs = runs, xdks = otherXdks(owners, modules))
+    }
+
+    /**
+     * The XDK that the Gradle project of each of [modules] builds it with, by module name, where the model of its [owners]
+     * source set names one that is not the bundled XDK. Telling it from the bundled one compares the hashes that the
+     * model has, without reading a file.
+     */
+    private fun otherXdks(
+        owners: Map<XdkSourceModule, SourceSet>,
+        modules: List<XdkSourceModule>,
+    ): Map<String, Xdk> {
+        val built = owners.entries.associate { (module, owner) -> module.name to owner.xdk }
+        return modules.mapNotNull { module -> built[module.name]?.takeUnless { it.bundled }?.let { module.name to it } }.toMap()
     }
 
     /**
@@ -223,6 +298,7 @@ internal class XdkBuildModel private constructor(
                             files("modulePath"),
                             entry["buildTreePath"]?.let { string("buildTreePath") },
                             runs(entry, project, notes),
+                            xdk(entry["xdk"], project, notes),
                         )
                     }
                 }
@@ -287,6 +363,42 @@ internal class XdkBuildModel private constructor(
             ).also { runs ->
                 (runs.problems + runs.testProblems).forEach { notes.add("build model: the export of $project could not read $it") }
             }
+        }
+
+        /**
+         * A source set's project's XDK, its `xdk`: none where the source set has none, as from an older plugin or for a
+         * project without an XDK dependency, whose modules keep to the bundled XDK. One that is not an object, or whose
+         * fields are not what they should be, is one that the model does not say the contents of, which [notes] says: the
+         * server cannot tell that it is the bundled XDK, and does not take it for one.
+         */
+        private fun xdk(
+            value: JsonElement?,
+            project: String,
+            notes: MutableSet<String>,
+        ): Xdk? {
+            if (value == null) return null
+            val xdk = value.takeIf { it.isJsonObject }?.asJsonObject
+
+            fun text(key: String) =
+                xdk
+                    ?.get(key)
+                    ?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }
+                    ?.asString
+                    ?.takeIf { it.isNotBlank() }
+            val modules = xdk?.get("modules")?.let(::strings)
+            val read =
+                Xdk(
+                    text("version"),
+                    text("libraries")?.let(XdkSources::file),
+                    modules,
+                    text("javatools"),
+                    text("project"),
+                    text("problem"),
+                )
+            if (read.modules == null && read.project == null && read.problem == null) {
+                notes.add("build model: the XDK of $project is malformed, and taken for another than the bundled one")
+            }
+            return read
         }
 
         /** The object that [value], the build model's section [key], is: none without one, and none, with [warn], if it is not one. */

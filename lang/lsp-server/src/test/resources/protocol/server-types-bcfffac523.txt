@@ -11,8 +11,9 @@ StopRunParams	{"runId":"r1"}
 StopRunParams.empty	{}
 RunInputParams.text	{"runId":"r1","text":"line\n"}
 RunInputParams.end	{"runId":"r1","end":true}
-ReplacedLibrariesParams	{"libraries":["json.xtclang.org"],"folders":["file:///w/"]}
-ReplacedLibrariesParams.empty	{"libraries":[],"folders":[]}
+ReplacedLibrariesParams	{"libraries":["json.xtclang.org"],"folders":["file:///w/"],"reasons":{}}
+ReplacedLibrariesParams.empty	{"libraries":[],"folders":[],"reasons":{}}
+ReplacedLibrariesParams.reasons	{"libraries":[],"folders":["file:///v/"],"reasons":{"file:///v/":"builds with XDK 0.5.0, not the bundled XDK 0.4.4"}}
 GradleProjectsParams	{"projects":{"app.examples.org":":app","lib.examples.org":":lib"}}
 RunOutputParams	{"runId":"r1","text":"out\n"}
 TestEventParams	{"runId":"r1","event":{"event":"finished","id":"app.examples.org:tests.MathTest.adds","status":"failed","message":"m","details":"d","durationMillis":5}}

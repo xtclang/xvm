@@ -32,8 +32,9 @@ interface XtcClientProtocol : LanguageClient {
     fun debugMessage(params: DebugMessageParams) {}
 
     /**
-     * The bundled libraries that the workspace's own modules replace, each time they change: while there are any, the
-     * client builds and runs with Gradle, as the server builds and runs only with the bundled XDK.
+     * The bundled libraries that the workspace's own modules replace, and the workspace folders whose modules build with
+     * another XDK than the bundled one or against those libraries, each with why, each time they change: the client builds
+     * and runs those folders with Gradle, as the server builds and runs only with the bundled XDK.
      */
     @JsonNotification("xtc/replacedLibraries")
     fun replacedLibraries(params: ReplacedLibrariesParams) {}

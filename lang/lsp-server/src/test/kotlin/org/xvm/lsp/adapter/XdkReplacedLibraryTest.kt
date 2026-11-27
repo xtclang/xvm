@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter
 
+import com.google.gson.Gson
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -10,6 +11,8 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.CompilerRenameFacts
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkAutoImports
+import org.xvm.lsp.adapter.xdk.XdkBuildModel
+import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkLibraryReplacement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
@@ -120,6 +123,66 @@ class XdkReplacedLibraryTest {
                 assertThatThrownBy { refused().get() }
                     .isInstanceOf(ExecutionException::class.java)
                     .hasMessageContaining(XdkLibraryReplacement.NO_EMBEDDED_RUNS)
+            }
+        }
+    }
+
+    @Test
+    fun `in the XVM repository the replaced libraries are the folder's reason, and manualTests on its own XDK keeps it on Gradle`() {
+        // the repository's json, which replaces the bundled one, and manualTests, whose xdk dependency is the XDK that the
+        // repository's own project :xdk makes, which the export names without reading it
+        val json = directory.source("lib_json/src/main/x/json", "module json.xtclang.org {}")
+        val manual = directory.source("manualTests/src/main/x/ManualTest", "module ManualTest {}")
+
+        fun entry(
+            project: String,
+            module: String,
+            more: Map<String, Any> = emptyMap(),
+        ) = mapOf(
+            "projectId" to project,
+            "sourceSet" to "main",
+            "sourceFiles" to listOf(module),
+            "moduleRoots" to listOf(module),
+            "resourceRoots" to emptyList<String>(),
+            "projectDependencies" to emptyList<String>(),
+            "modulePath" to emptyList<String>(),
+        ) + more
+        val xdk =
+            mapOf(
+                "version" to XdkLibraries.version.orEmpty(),
+                "libraries" to "${uri("manualTests")}build/xtc/xdk/lib/",
+                "project" to ":xdk",
+            )
+        val model =
+            XdkBuildModel.read(
+                listOf(
+                    Gson()
+                        .toJsonTree(
+                            mapOf(
+                                "schemaVersion" to 1,
+                                "sourceSets" to listOf(entry(":lib_json", json), entry(":manualTests", manual, mapOf("xdk" to xdk))),
+                            ),
+                        ).asJsonObject,
+                ),
+            )
+        val root = uri(".")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            adapter.replaceBuildInputs(model.resolve())
+            // the folder's reason, and that of a build of it, is the replaced library, as the editors and the manual plan say
+            assertThat(adapter.gradleFolders()).isEqualTo(mapOf(root to "replaces the bundled libraries $JSON with its own modules"))
+            assertThatThrownBy { adapter.buildAsync(null, false, folder = root).get() }
+                .hasMessageContaining(XdkLibraryReplacement.NO_EMBEDDED_RUNS)
+            val own = "builds with XDK ${XdkLibraries.version} that the build's own project :xdk makes"
+            assertThatThrownBy { adapter.buildAsync("ManualTest", false).get() }.hasMessageContaining("The module ManualTest $own")
+            // with every library bundled, manualTests alone keeps the folder on Gradle, for the repository's own XDK
+            System.setProperty(XdkLibraryReplacement.PROPERTY, "false")
+            try {
+                adapter.replaceBuildInputs(model.resolve())
+                assertThat(adapter.replacedLibraries()).isEmpty()
+                assertThat(adapter.gradleFolders().getValue(root)).startsWith(own)
+            } finally {
+                System.clearProperty(XdkLibraryReplacement.PROPERTY)
             }
         }
     }

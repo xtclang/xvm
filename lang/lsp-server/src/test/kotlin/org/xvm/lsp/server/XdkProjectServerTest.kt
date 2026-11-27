@@ -34,6 +34,7 @@ import org.xvm.lsp.Slow
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.lsp.logged
@@ -578,6 +579,100 @@ class XdkProjectServerTest {
                 DidChangeWatchedFilesParams(listOf(FileEvent(json.toURI().toString(), FileChangeType.Deleted))),
             )
             awaitAsserted { assertThat(heard.lastOrNull()).isEmpty() }
+        }
+    }
+
+    @Test
+    fun `a folder whose Gradle build has another XDK builds with Gradle beside one with the bundled XDK, and the client hears why`() {
+        CompilerTestSupport.configure()
+        val root = directory.toRealPath().toFile()
+        val bundled = root.resolve("bundled").also { it.mkdirs() }
+        val foreign = root.resolve("foreign").also { it.mkdirs() }
+        val tool = bundled.resolve("Tool.x").also { it.writeText("module Tool { void run() {} }") }
+        val app = foreign.resolve("App.x").also { it.writeText("module App { void run() {} }") }
+        // each build's XDK, as the XTC plugin reads its distribution: the bundled one, and another, of one module alone
+        val same = CompilerTestSupport.xdk(bundled.resolve("build/xtc/xdk/lib"))
+        val other = CompilerTestSupport.xdk(foreign.resolve("build/xtc/xdk/lib"), "9.9.9", XdkLibraries.revisions.take(1))
+
+        fun entry(
+            project: String,
+            module: File,
+            xdk: Map<String, Any?>,
+        ) = mapOf(
+            "projectId" to project,
+            "sourceSet" to "main",
+            "sourceFiles" to listOf(module.toURI().toString()),
+            "moduleRoots" to listOf(module.toURI().toString()),
+            "resourceRoots" to emptyList<String>(),
+            "projectDependencies" to emptyList<String>(),
+            "modulePath" to emptyList<String>(),
+            "xdk" to xdk,
+        )
+        val heard = CopyOnWriteArrayList<ReplacedLibrariesParams>()
+        val client =
+            object : XtcClientProtocol, LanguageClient by mock(LanguageClient::class.java) {
+                override fun runOutput(params: RunOutputParams) {}
+
+                override fun runExited(params: RunExitedParams) {}
+
+                override fun replacedLibraries(params: ReplacedLibrariesParams) {
+                    heard += params
+                }
+            }
+        val foreignUri = foreign.toURI().toString()
+        val bundledUri = bundled.toURI().toString()
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(client)
+            server
+                .initialize(
+                    editorInitializeParams().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(bundledUri, "bundled"), WorkspaceFolder(foreignUri, "foreign"))
+                        initializationOptions =
+                            mapOf(
+                                "xtcCompiler" to
+                                    mapOf(
+                                        "buildModels" to
+                                            listOf(
+                                                mapOf(
+                                                    "schemaVersion" to 1,
+                                                    "sourceSets" to
+                                                        listOf(
+                                                            entry("bundled", tool, same),
+                                                            entry("foreign", app, other),
+                                                        ),
+                                                ),
+                                            ),
+                                    ),
+                            )
+                    },
+                ).awaited()
+            val reason = "builds with XDK 9.9.9, not the bundled XDK ${XdkLibraries.version}"
+            // the foreign folder alone builds and runs with Gradle, for its XDK, as no library is replaced
+            awaitAsserted {
+                assertThat(
+                    heard.lastOrNull(),
+                ).isEqualTo(ReplacedLibrariesParams(emptyList(), listOf(foreignUri), mapOf(foreignUri to reason)))
+            }
+            assertThat(server.languageServiceStatus().awaited()["gradleFolders"]).isEqualTo(mapOf(foreignUri to reason))
+            // its module has no embedded build, by module or as its folder, and no embedded run, which builds it first
+            val refusal = "The module App builds with XDK 9.9.9, not the bundled XDK ${XdkLibraries.version}"
+            for (refused in listOf(
+                { server.build(BuildParams("App")) },
+                { server.build(BuildParams(folder = foreignUri)) },
+                { server.run(RunParams(module = "App", runId = "refused")) },
+            )) {
+                assertThatThrownBy { refused().awaited() }.hasStackTraceContaining(refusal)
+            }
+            // while the folder whose build has the bundled XDK builds embedded
+            val built = server.build(BuildParams(folder = bundledUri)).awaited()
+            assertThat(built.succeeded).describedAs(built.toString()).isTrue()
+            assertThat(built.modules.map { it.name }).containsExactly("Tool")
+            // once the foreign folder leaves the window, the client hears that no folder builds with Gradle
+            server.workspaceService.didChangeWorkspaceFolders(
+                DidChangeWorkspaceFoldersParams(WorkspaceFoldersChangeEvent(emptyList(), listOf(WorkspaceFolder(foreignUri, "foreign")))),
+            )
+            awaitAsserted { assertThat(heard.lastOrNull()).isEqualTo(ReplacedLibrariesParams()) }
+            assertThat(server.languageServiceStatus().awaited()["gradleFolders"]).isEqualTo(emptyMap<String, String>())
         }
     }
 

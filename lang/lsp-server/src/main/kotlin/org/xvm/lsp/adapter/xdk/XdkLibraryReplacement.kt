@@ -20,7 +20,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * `-Dxtc.lsp.replaceLibraries=false` keeps every library bundled and leaves such modules out, as a heap too small to
  * compile ecstasy from source does in a workspace that has ecstasy's sources. Embedded builds and runs do not run in a
- * workspace that replaces a library: the server's runtime and libraries are the bundled XDK's, not the workspace's.
+ * workspace that replaces a library: the server's runtime and libraries are the bundled XDK's, not the workspace's. They
+ * do not run for a module that its Gradle build compiles with another XDK either ([XdkBuildModel.Xdk]): the folders of
+ * either kind of module build and run with Gradle, and the editors hear which, and why ([XdkProject.gradleOnly]).
  */
 internal object XdkLibraryReplacement {
     const val PROPERTY = ServerProperties.REPLACE_LIBRARIES
@@ -29,6 +31,10 @@ internal object XdkLibraryReplacement {
     const val NO_EMBEDDED_RUNS =
         "This workspace's own modules replace bundled libraries: the server builds and runs with the bundled XDK's " +
             "runtime and libraries, not these, so build and run them with Gradle (Ecstasy build mode: Gradle)"
+
+    /** Why the server does not build or run a module built against the replaced [libraries]. */
+    fun noEmbedded(libraries: Collection<String>): NoEmbeddedBuild =
+        NoEmbeddedBuild("replaces the bundled libraries ${libraries.sorted().joinToString()} with its own modules", NO_EMBEDDED_RUNS)
 
     /** The bundled modules that a workspace's sources never replace. */
     val BOOTSTRAP = setOf("mack.xtclang.org", "_native.xtclang.org")
@@ -83,4 +89,21 @@ internal object XdkLibraryReplacement {
         }
         return false
     }
+}
+
+/**
+ * Why the server does not build or run a module, which then builds and runs with Gradle: what the module's workspace
+ * folder does, as the editors say it after the folder's name, its [reason], such as `builds with XDK 0.5.0, not the
+ * bundled XDK 0.4.4`; what a build of the module that the server refuses says, its [refusal]; and, for a module that
+ * builds with another XDK than the bundled one, or depends on one that does, that [xdk] and its [owner], the module
+ * whose Gradle build has it. The editors and a refused build name another XDK after a replaced library.
+ */
+internal data class NoEmbeddedBuild(
+    val reason: String,
+    val refusal: String,
+    val xdk: XdkBuildModel.Xdk? = null,
+    val owner: String? = null,
+) {
+    /** Whether the reason is another XDK than the bundled one, rather than a replaced library. */
+    val otherXdk: Boolean get() = xdk != null
 }
