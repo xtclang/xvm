@@ -14,6 +14,7 @@ import org.xvm.lsp.adapter.CompletionItem.CompletionKind
 import org.xvm.lsp.adapter.DocumentHighlight
 import org.xvm.lsp.adapter.DocumentHighlight.HighlightKind
 import org.xvm.lsp.adapter.DocumentLink
+import org.xvm.lsp.adapter.EditorConfig
 import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
@@ -1470,8 +1471,8 @@ class TreeSitterAdapter : AbstractAdapter() {
                     )
                     return super.formatDocument(uri, content, options)
                 }
-        val config = FormattingConfig.resolve(options, editorFormattingConfig)
-        return formatter.formatDocument(tree, content, config, options)
+        val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
+        return formatter.formatDocument(tree, content, formatting.config, formatting.options)
     }
 
     override fun formatRange(
@@ -1489,8 +1490,8 @@ class TreeSitterAdapter : AbstractAdapter() {
                     )
                     return super.formatRange(uri, content, range, options)
                 }
-        val config = FormattingConfig.resolve(options, editorFormattingConfig)
-        return formatter.formatRange(tree, content, range, config, options)
+        val formatting = EditorConfig.formatting(uri, options, editorFormattingConfig)
+        return formatter.formatRange(tree, content, range, formatting.config, formatting.options)
     }
 
     // ========================================================================
@@ -1513,7 +1514,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                     )
                     return emptyList()
                 }
-        val config = FormattingConfig.resolve(options, editorFormattingConfig)
+        val config = EditorConfig.formatting(uri, options, editorFormattingConfig).config
         logger.info(
             "onTypeFormatting: uri={} line={} column={} ch='{}' config={}",
             uri.substringAfterLast('/'),

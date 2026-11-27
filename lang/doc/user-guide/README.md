@@ -62,6 +62,7 @@ Every page of the guide with its sections, and the areas of the lookup pages:
     - [Parameter info](editing-and-navigation.md#parameter-info)
     - [Templates](editing-and-navigation.md#templates)
     - [Formatting and comments](editing-and-navigation.md#formatting-and-comments)
+    - [Formatting settings and `.editorconfig`](editing-and-navigation.md#formatting-settings)
   - [Errors and warnings](editing-and-navigation.md#errors-and-warnings)
     - [As you type](editing-and-navigation.md#as-you-type)
     - [In the whole project](editing-and-navigation.md#in-the-whole-project)

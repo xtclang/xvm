@@ -186,8 +186,9 @@ internal object XdkLexical {
         val newline = newlines.find(text)?.value ?: "\n"
         val start = range?.start?.line ?: 0
         val end = range?.end?.let { if (it.column == 0 && it.line > start) it.line - 1 else it.line } ?: lines.lastIndex
-        val refills =
-            if (wrapLines && config.wrapComments) refills(tokens, lines, nesting, start..end, config, options) else emptyMap()
+        // max_line_length = off sets no width, which refills no comment
+        val refill = wrapLines && config.wrapComments && config.maxLineWidth > 0
+        val refills = if (refill) refills(tokens, lines, nesting, start..end, config, options) else emptyMap()
         val refilled = refills.values.flatten()
         val edits =
             buildList {

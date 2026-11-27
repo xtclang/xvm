@@ -112,7 +112,8 @@ Templates write common declarations. In IntelliJ, <kbd>Ctrl+J</kbd> lists the li
 ### Formatting and comments
 
 Formatting goes through the language server's formatter, with your indentation settings
-(IntelliJ's **Settings | Editor | Code Style | Ecstasy**, VS Code's `xtc.formatting.*` settings).
+(IntelliJ's **Settings | Editor | Code Style | Ecstasy**, VS Code's `xtc.formatting.*` settings, or an
+`.editorconfig` file; see [Formatting settings](#formatting-settings)).
 Reformat a file or a selection with <kbd>Ctrl+Alt+L</kbd> (IntelliJ) or <kbd>Shift+Alt+F</kbd> (VS Code). <kbd>Enter</kbd> and `}`
 indent as you type, and typing `{` and <kbd>Enter</kbd> closes the block. To format on save, use IntelliJ's
 **Actions on Save | Reformat code**, or VS Code's `editor.formatOnSave`.
@@ -124,6 +125,56 @@ code keep their layout, a paragraph that fits stays as it is, and a word or URL 
 
 <kbd>Ctrl+/</kbd> comments out the selected lines with `//`; in IntelliJ, <kbd>Ctrl+Shift+/</kbd> wraps a selection in
 `/* */`.
+
+### Formatting settings
+
+The formatter takes each setting from the first of these that sets it:
+
+1. The `.editorconfig` files of the file being formatted.
+2. Your editor's Ecstasy settings: IntelliJ's **Settings | Editor | Code Style | Ecstasy**, or VS Code's
+   `xtc.formatting.*` settings, which apply to your user or to the workspace, not to one folder. The language server
+   asks the editor for them when it starts, and again when you change them.
+3. The defaults: 4 spaces per level, 8 for continuation lines, a margin of 120 columns, and comments left as they are.
+
+| Setting | IntelliJ's Code Style page | VS Code | `.editorconfig` |
+|---|---|---|---|
+| Indentation | **Tabs and Indents: Indent** | `xtc.formatting.indentSize` | `indent_size` |
+| Continuation lines | **Tabs and Indents: Continuation indent** | `xtc.formatting.continuationIndentSize` | `ij_ecstasy_continuation_indent_size`, or `ij_continuation_indent_size` |
+| Tabs or spaces | **Tabs and Indents: Use tab character** | `xtc.formatting.insertSpaces` | `indent_style`: `space` or `tab` |
+| Tab width | **Tabs and Indents: Tab size** | `editor.tabSize` | `tab_width` |
+| Right margin | **Wrapping and Braces: Hard wrap at** | `xtc.formatting.maxLineWidth` | `max_line_length`, or `off` for none |
+| Refill comments | **Wrapping and Braces: Comments, Wrap at right margin** | `xtc.formatting.wrapComments` | `ij_ecstasy_wrap_comments`: `true` or `false` |
+| Trailing whitespace | What the editor sends with the request | What the editor sends with the request | `trim_trailing_whitespace`: `true` or `false` |
+| Final newline | What the editor sends with the request | What the editor sends with the request | `insert_final_newline`: `true` or `false` |
+
+**`.editorconfig`.** For each file it formats, the language server reads the `.editorconfig` files from the file's
+folder up, stopping at one that says `root = true`. It reads them again at every format, so a saved change applies the
+next time you format or type. A nearer file wins over one further up, a later section over an earlier one, and what
+they set wins over your editor's settings; a property set to `unset` gives it back to the editor. Sections take the
+EditorConfig globs: `*`, `**`, `?`, `[abc]`, `[!abc]`, `{a,b}` and `{1..9}`.
+
+The server reads the standard `indent_style`, `indent_size` (`tab` indents by the tab width), `tab_width`,
+`trim_trailing_whitespace` and `insert_final_newline`, and the widely used `max_line_length`. For the two settings the
+standard has no name for, it reads the names IntelliJ gives Ecstasy's code style in `.editorconfig`, so a file that
+IntelliJ exports from its code style works in both editors. `end_of_line` and `charset` stay with the editor, as the
+formatter keeps a file's line endings and encoding, and other properties are not read. A value the formatter cannot
+use, such as `indent_size = 0` or `indent_style = spaces`, is skipped, with a warning in the language server's log.
+
+```ini
+root = true
+
+[*.x]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+ij_ecstasy_continuation_indent_size = 8
+ij_ecstasy_wrap_comments = true
+```
+
+The editors also apply `.editorconfig` to their own typing, such as the <kbd>Tab</kbd> key: IntelliJ when its
+EditorConfig support is on (**Code Style | General | Enable EditorConfig support**), VS Code with the EditorConfig
+extension. The formatter reads the files itself either way. A document that is not a file on disk, such as an unsaved
+new one, takes the editor's settings.
 
 ## Errors and warnings
 
