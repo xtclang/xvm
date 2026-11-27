@@ -12,6 +12,9 @@ set -euo pipefail
 if [ "$(id -u)" = 0 ]; then
     mkdir -p /work /gradle /out /home/playbook/.m2
     find /work /gradle /out /home/playbook/.m2 -xdev ! -user playbook -exec chown playbook:playbook {} + 2>/dev/null || true
+    # where the system bus would listen, for the playbook user's stand-in started beside the display: the image has no
+    # system bus configuration
+    mkdir -p /run/dbus && chown playbook:playbook /run/dbus
     exec runuser -u playbook -- env HOME=/home/playbook GRADLE_USER_HOME=/gradle bash "$0" "$@"
 fi
 
@@ -62,6 +65,17 @@ start_display() {
         xdpyinfo > /dev/null 2>&1 && break
         sleep 0.2
     done
+    # a session bus beside the display: without one, VS Code's Chromium logs an ERROR for every D-Bus call it would make
+    # (the keyring, notifications, power), "Failed to connect to the bus", and IntelliJ looks for one too
+    if command -v dbus-launch > /dev/null 2>&1; then
+        eval "$(dbus-launch --sh-syntax)"
+        export DBUS_SESSION_BUS_ADDRESS
+    fi
+    # and a bus where the system bus would be, as nothing provides one: Chromium asks it for logind's power inhibition,
+    # which then fails once instead of every connection
+    if [ -w /run/dbus ] && command -v dbus-daemon > /dev/null 2>&1; then
+        dbus-daemon --session --address=unix:path=/run/dbus/system_bus_socket --fork > /dev/null 2>&1 || true
+    fi
     if [ "${PLAYBOOK_WM:-openbox}" = "openbox" ]; then
         openbox > /out/openbox.log 2>&1 &
         sleep 1
