@@ -56,6 +56,8 @@ class ParityScenarios(
         libraryDocumentationCases()
         libraryArgumentCases()
         lambdaTypeParameterCases()
+        formattingCases()
+        otherXdkCases()
     }
 
     internal fun case(

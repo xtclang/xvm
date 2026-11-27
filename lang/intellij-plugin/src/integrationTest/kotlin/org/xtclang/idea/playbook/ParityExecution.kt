@@ -8,13 +8,22 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
+import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import org.xtclang.idea.playbook.probe.HANG_SECONDS
+import java.io.ByteArrayOutputStream
 import java.net.URI
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.PosixFilePermission
 import java.util.concurrent.TimeUnit
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
@@ -1314,6 +1323,456 @@ internal fun ParityScenarios.gradleRunCases() {
 }
 
 /**
+ * X366, registered after X365 in catalog order: a project whose Gradle build has another XDK than the bundled one builds
+ * and runs with Gradle once its model is imported, and the notice, the Build and Run page and Select Ecstasy Build Mode
+ * say which XDK it builds with. IntelliJ takes the whole project to Gradle for one folder on another XDK, so the project
+ * on the bundled XDK goes first, at the project root, where Gradle mode runs ./gradlew, and the other in its place.
+ */
+internal fun ParityScenarios.otherXdkCases() {
+    case("X366") { data ->
+        val rootEntries = data.strings("rootEntries").map(projectRoot::resolve)
+        rootEntries.forEach { check(!Files.exists(it)) { "X366 needs a project root without ${projectRoot.relativize(it)}" } }
+        // the embedded build's output at the project root, which BundledXdk's run writes, unless an earlier case's is there
+        val madeOutput = !Files.exists(projectRoot.resolve(data.string("embeddedOutput")))
+        val builds = XdkBuilds(data)
+        val project = with(driver) { singleProject() }
+        val execution = with(driver) { utility(EmbeddedExecutionProbe::class) }
+        // IntelliJ's one notice of the session for the project is X366's only when the project has not been told before
+        val notice = !with(driver) { utility(BuildModeProbe::class) }.told(project)
+        val previous = mode(execution, project, "EMBEDDED")
+        val opened = mutableListOf<ParityWorkspace.Document>()
+        val failure =
+            runCatching {
+                builds.makeOtherXdk(projectRoot)
+                // the Gradle model, which the plugin gives the language server without explicit modules
+                configure(null)
+                with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).useBuildModel(project) } }
+                runBundledXdk(builds, execution)
+                // the project on the other XDK in its place: the project builds and runs with Gradle, and says why
+                val other = data.getAsJsonObject("other")
+                Files.delete(projectRoot.resolve(data.getAsJsonObject("bundled").string("file")))
+                changed(projectRoot.resolve(data.getAsJsonObject("bundled").string("file")))
+                writeXdkBuild(builds, other, data.string("otherVersion"))
+                importModel(other.string("project"))
+                check(
+                    withinOrFail(HANG_LIMIT, "$id: the server says why the project builds with Gradle") { gradleReasons().isNotEmpty() },
+                ) {
+                    "No reason to build with Gradle: ${gradleFolders()}; ${Quiescence.stuck}"
+                }
+                opened += open(projectRoot.resolve(other.string("file")), other.string("file"))
+                checkGradleReason(data, opened.single(), notice)
+                runOtherXdk(data, execution)
+            }.exceptionOrNull()
+        // each step on its own, the case's runs and import first, which would write into the project root as they go
+        val cleanup =
+            cleanupSteps(
+                "Ending the case's runs and its import" to { endXdkWork(execution) },
+                "Closing the case's editors" to { opened.forEach(::closeEditor) },
+                "Setting the build mode back" to { mode(execution, project, previous) },
+                "Removing the case's builds, the model and the notice" to { removeXdkBuilds(data, builds, madeOutput) },
+                "Waiting until no folder builds with Gradle" to {
+                    // no folder builds with Gradle any more, so the next case has its own build mode
+                    check(
+                        withinOrFail(HANG_LIMIT, "$id: no folder builds with Gradle after the case") {
+                            gradleReasons().isEmpty() && gradleFolders()?.isEmpty() == true
+                        },
+                    ) { "Still built with Gradle: ${gradleReasons()}, ${gradleFolders()}; ${Quiescence.stuck}" }
+                },
+            )
+        if (failure != null) {
+            cleanup?.let(failure::addSuppressed)
+            throw failure
+        }
+        cleanup?.let { throw it }
+    }
+}
+
+/**
+ * Runs each of [steps], a cleanup's, on its own, so that one that fails leaves the next to run, and answers what failed,
+ * each as its step names it, as one [PlaybookCleanupFailure], or null when nothing did.
+ */
+private fun cleanupSteps(vararg steps: Pair<String, () -> Unit>): Throwable? {
+    val failures =
+        steps.mapNotNull { (what, step) ->
+            runCatching(step).exceptionOrNull()?.let { IllegalStateException("$what: ${it.message}", it) }
+        }
+    return failures.firstOrNull()?.let { first -> PlaybookCleanupFailure(first).apply { failures.drop(1).forEach(::addSuppressed) } }
+}
+
+/**
+ * The project on the bundled XDK, at the project root: its model names its project, the server gives it no reason, and
+ * it runs embedded.
+ */
+private fun ParityWorkspace.runBundledXdk(
+    builds: XdkBuilds,
+    execution: EmbeddedExecutionProbe,
+) {
+    val bundled = builds.data.getAsJsonObject("bundled")
+    val project = with(driver) { singleProject() }
+    writeXdkBuild(builds, bundled, builds.version)
+    importModel(bundled.string("project"))
+    check(
+        withinOrFail(HANG_LIMIT, "$id: the model's Gradle project of ${bundled.string("module")}") {
+            JsonParser
+                .parseString(with(driver) { utility(TestRunProbe::class) }.gradleProjects(project))
+                .asJsonObject
+                .has(bundled.string("module"))
+        },
+    ) { "The model has no Gradle project of ${bundled.string("module")}; ${Quiescence.stuck}" }
+    check(gradleReasons().isEmpty() && gradleFolders()?.isEmpty() == true) {
+        "BundledXdk has no reason to build with Gradle: ${gradleReasons()}, ${gradleFolders()}"
+    }
+    val embedded =
+        execution.runToExit(
+            project,
+            bundled.string("module"),
+            rootUri(bundled.string("file")),
+            "",
+            "the embedded run of BundledXdk finishes",
+            0,
+        )
+    check(bundled.string("output") in embedded) { embedded }
+}
+
+/**
+ * The project on the other XDK in Gradle mode: Build Project goes to the IDE's builder, which builds the project's
+ * modules, and not to the embedded compiler; and Run goes through the wrapper's runXtc, which runs the module with the
+ * other XDK, which it extracted.
+ */
+private fun ParityWorkspace.runOtherXdk(
+    data: JsonObject,
+    execution: EmbeddedExecutionProbe,
+) {
+    val project = with(driver) { singleProject() }
+    val other = data.getAsJsonObject("other")
+    execution.startBuild(project)
+    var state = JsonObject()
+    check(
+        withinOrFail(HANG_LIMIT, "$id: Build Project ends") {
+            state = JsonParser.parseString(execution.buildState()).asJsonObject
+            state["done"].asBoolean
+        },
+    ) { "Build Project did not end: $state; ${Quiescence.stuck}" }
+    val titles = state.getAsJsonArray("titles").map { it.asString }
+    check(!state["aborted"].asBoolean && !state["errors"].asBoolean && state["tasks"].asInt > 0) {
+        "Build Project's builder did not build the project's modules: $state"
+    }
+    check(EMBEDDED_TITLE !in titles && data.string("embeddedBuild") !in state.string("text")) {
+        "The embedded compiler must not build OtherXdk: $state"
+    }
+    val run =
+        execution.runToExit(
+            project,
+            other.string("module"),
+            rootUri(other.string("file")),
+            "",
+            "the Gradle run of OtherXdk finishes",
+            0,
+        )
+    check(other.string("output") in run) { run }
+    ZipFile(projectRoot.resolve(other.string("javatools")).toFile()).use { jar ->
+        check(jar.getEntry(data.string("marker")) != null) { "The Gradle run extracted the other XDK, whose javatools.jar has the marker" }
+    }
+}
+
+/** X366's Gradle builds: this tree's XDK version and wrapper, the XDK in mavenLocal, and the other XDK's repository. */
+private class XdkBuilds(
+    val data: JsonObject,
+) {
+    val tree: Path =
+        Path
+            .of(System.getProperty("xtc.playbook.scenarios"))
+            .parent.parent.parent.parent
+    val version: String =
+        checkNotNull(
+            Regex(data.string("versionPattern"), RegexOption.MULTILINE)
+                .find(Files.readString(tree.resolve(data.string("versionFile"))))
+                ?.groupValues
+                ?.get(1),
+        ) { "An XDK version in ${data.string("versionFile")}" }
+
+    /** The other XDK's repository, beside the project rather than in it. */
+    fun repository(projectRoot: Path): Path = projectRoot.parent.resolve("X366-${data.string("repository")}")
+
+    /** Makes the other XDK in [repository] from the XDK that publishLocal put in mavenLocal. */
+    fun makeOtherXdk(projectRoot: Path) {
+        requireMavenLocal("X366", data.strings("mavenLocal"), version)
+        val published = MAVEN_LOCAL.resolve("org/xtclang/xdk/$version")
+        otherXdk(
+            published.resolve("xdk-$version.zip"),
+            published.resolve("xdk-$version.pom"),
+            repository(projectRoot),
+            data.string("otherVersion"),
+            data.string("marker") to data.string("markerText"),
+        )
+    }
+}
+
+/** The URI of [file] under the project root. */
+private fun ParityWorkspace.rootUri(file: String): String = projectRoot.resolve(file).toUri().toString()
+
+/** Why the server says the project builds and runs with Gradle, as the plugin keeps it. */
+private fun ParityWorkspace.gradleReasons(): List<String> =
+    with(driver) {
+        JsonParser.parseString(utility(BuildModeProbe::class).reasons(singleProject())).asJsonArray.map { it.asString }
+    }
+
+/**
+ * The reasons of the folders that the server builds and runs with Gradle, as its status says; null while there is no
+ * status, as while the server restarts, which a wait for none takes as not yet.
+ */
+private fun ParityWorkspace.gradleFolders(): List<String>? =
+    runCatching { protocol.status()["gradleFolders"] }
+        .getOrNull()
+        ?.takeIf { it.isJsonObject }
+        ?.asJsonObject
+        ?.entrySet()
+        ?.map { it.value.asString }
+
+/** Writes the Gradle build of [build], one of X366's projects, at the project root, on the XDK [xdk], with this tree's wrapper. */
+private fun ParityWorkspace.writeXdkBuild(
+    builds: XdkBuilds,
+    build: JsonObject,
+    xdk: String,
+) {
+    val data = builds.data
+    val repository = builds.repository(projectRoot).toUri().toString()
+    val files =
+        mapOf(
+            "settings.gradle.kts" to SharedScenarios.text(data.string("settings"), build.string("project"), repository),
+            "build.gradle.kts" to SharedScenarios.text(data.string("build"), builds.version, xdk, build.string("module")),
+            build.string("file") to build.string("source"),
+        )
+    files.forEach { (file, text) ->
+        Files.createDirectories(projectRoot.resolve(file).parent)
+        Files.writeString(projectRoot.resolve(file), text)
+    }
+    data.strings("wrapper").forEach { file ->
+        Files.createDirectories(projectRoot.resolve(file).parent)
+        Files.copy(builds.tree.resolve(file), projectRoot.resolve(file), StandardCopyOption.REPLACE_EXISTING)
+    }
+    if (!System.getProperty("os.name").startsWith("Windows")) check(projectRoot.resolve("gradlew").toFile().setExecutable(true))
+    (files.keys + data.strings("wrapper")).forEach { changed(projectRoot.resolve(it)) }
+}
+
+/** Imports the Gradle model of the build at the project root, as the Compiler page's Refresh Gradle model does, and publishes it. */
+private fun ParityWorkspace.importModel(what: String) {
+    val page = with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerImportPage::class).open(singleProject()) } }
+    try {
+        val before = page.description()
+        with(driver) { withContext(OnDispatcher.EDT) { page.click("Refresh Gradle model") } }
+        check(
+            withinOrFail(HANG_LIMIT, "$id: the import of $what ends") { page.description().let { it != before && "Last import:" in it } },
+        ) {
+            "The import of $what: ${page.description()}; ${Quiescence.stuck}"
+        }
+        check(IMPORTED in page.description()) { "The import of $what: ${page.description()}" }
+        // the imported model, which the plugin gives the language server
+        refreshBuildModel()
+    } finally {
+        with(driver) { withContext(OnDispatcher.EDT) { page.closePage() } }
+    }
+}
+
+/**
+ * Checks what says why the project builds with Gradle, for a project on another XDK: the server's reason and status, the
+ * Build and Run page and Select Ecstasy Build Mode's popup, from [editor]'s, and, when it is the session's first reason,
+ * the [notice].
+ */
+private fun ParityWorkspace.checkGradleReason(
+    data: JsonObject,
+    editor: ParityWorkspace.Document,
+    notice: Boolean,
+) {
+    val reason = gradleReasons().single()
+    check(reason.startsWith(data.string("reason"))) { reason }
+    check(gradleFolders() == listOf(reason)) { "The server's status: ${gradleFolders()}" }
+    with(driver) {
+        val project = singleProject()
+        val modes = utility(BuildModeProbe::class)
+        check(modes.effective(project) == "GRADLE") { "OtherXdk builds with Gradle" }
+        if (notice) {
+            val notices = JsonParser.parseString(modes.notices(project, data.string("noticeTitle"))).asJsonArray.map { it.asString }
+            check(notices.any { data.string("intellijNotice") in it }) { "The notices: $notices" }
+        } else {
+            Quiescence.report("$id checks no notice: the project was told before in this session that it builds with Gradle")
+        }
+        val page = JsonParser.parseString(withContext(OnDispatcher.EDT) { modes.page(project) }).asJsonObject
+        val choices = page.getAsJsonObject("choices").entrySet().associate { it.key to it.value.asBoolean }
+        check(choices.filterValues { !it }.keys == setOf(EMBEDDED_CHOICE)) { "The page's choices: $choices" }
+        check(page.getAsJsonArray("comments").any { reason in it.asString }) { "The page's comments: ${page["comments"]}" }
+        val popup = utility(NativePopupChoices::class)
+        focusEditor(editor.editor)
+        invokeAction(SELECT_BUILD_MODE, now = false, component = editor.editor.component)
+        var rows: List<String>? = null
+        check(
+            withinOrFail(HANG_LIMIT, "$id: Select Ecstasy Build Mode shows its choices") {
+                rows = withContext(OnDispatcher.EDT) { popup.listRows() }
+                rows != null
+            },
+        ) { "No Select Ecstasy Build Mode popup; ${Quiescence.stuck}" }
+        dismissPopups()
+        check(rows.orEmpty().any { it.startsWith(data.string("popup")) }) { "Select Ecstasy Build Mode: $rows" }
+    }
+}
+
+/**
+ * Ends what of X366 still runs, which would write into the project root as it goes: its runs' processes, and an import
+ * of the Gradle model, which it cancels; and waits until they have ended.
+ */
+private fun ParityWorkspace.endXdkWork(execution: EmbeddedExecutionProbe) {
+    with(driver) {
+        val project = singleProject()
+        utility(BuildModeProbe::class).endRuns(project)
+        val progress = utility(ProgressUi::class)
+        // the import's Cancel, which its progress's panel shows
+        if (withContext(OnDispatcher.EDT) { progress.visible(project, IMPORT_TITLE) }) {
+            withContext(OnDispatcher.EDT) {
+                progress.show(project)
+                progress.cancel(project, IMPORT_TITLE)
+                progress.hide(project)
+            }
+        }
+        check(
+            withinOrFail(HANG_LIMIT, "$id: the case's runs and import end") {
+                JsonParser.parseString(execution.active(project)).asJsonObject["runs"].asInt == 0 &&
+                    !withContext(OnDispatcher.EDT) { progress.visible(project, IMPORT_TITLE) }
+            },
+        ) { "The case's runs or import still run: ${execution.active(project)}; ${Quiescence.stuck}" }
+    }
+}
+
+/**
+ * Removes X366's builds at the project root, the embedded build's output when the case [madeOutput], or else the
+ * bundled module's in it, the other XDK's repository, the model and the notice.
+ */
+private fun ParityWorkspace.removeXdkBuilds(
+    data: JsonObject,
+    builds: XdkBuilds,
+    madeOutput: Boolean,
+) {
+    val output = projectRoot.resolve(data.string("embeddedOutput"))
+    if (madeOutput) {
+        output.toFile().deleteRecursively()
+    } else {
+        Files.deleteIfExists(output.resolve("lib/${data.getAsJsonObject("bundled").string("module")}.xtc"))
+    }
+    changed(output)
+    removeRootEntries(data)
+    builds.repository(projectRoot).toFile().deleteRecursively()
+    with(driver) {
+        val project = singleProject()
+        withContext(OnDispatcher.EDT) { utility(BuildModeProbe::class).dismiss(project, data.string("noticeTitle")) }
+        withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).clearProjectGraph(project) }
+    }
+    configure(emptyList())
+    refreshBuildModel()
+}
+
+/**
+ * Makes X366's other XDK in the Maven repository [repository]: the XDK [archive] that publishLocal put in mavenLocal, with
+ * its POM [pom], as version [version], with the [marker] file and its text in its javatools.jar too, which makes it another
+ * XDK for the language server, as the revision of javatools.jar is one of what it compares. The copy keeps the archive's
+ * other entries as they are, the Unix modes of its launchers among them.
+ */
+private fun otherXdk(
+    archive: Path,
+    pom: Path,
+    repository: Path,
+    version: String,
+    marker: Pair<String, String>,
+) {
+    val target = Files.createDirectories(repository.resolve("org/xtclang/xdk/$version"))
+    val copy = target.resolve("xdk-$version.zip")
+    Files.copy(archive, copy, StandardCopyOption.REPLACE_EXISTING)
+    FileSystems.newFileSystem(copy, POSIX_ZIP).use { zip ->
+        val jar =
+            Files.walk(zip.getPath("/")).use { paths ->
+                paths.filter { it.toString().endsWith("/javatools/javatools.jar") }.toList().single()
+            }
+        Files.write(jar, withEntry(Files.readAllBytes(jar), marker))
+    }
+    check(launcherModes(copy) == launcherModes(archive)) { "The other XDK's launchers lost their modes: ${launcherModes(copy)}" }
+    val text = Files.readString(pom)
+    val published = checkNotNull(Regex("<version>[^<]+</version>").find(text)) { "A version in $pom" }
+    Files.writeString(target.resolve("xdk-$version.pom"), text.replaceRange(published.range, "<version>$version</version>"))
+}
+
+/** The Unix modes of the launchers in the XDK [archive]'s `bin`, by their names. */
+private fun launcherModes(archive: Path): Map<String, Set<PosixFilePermission>> =
+    FileSystems.newFileSystem(archive, POSIX_ZIP).use { zip ->
+        Files.walk(zip.getPath("/")).use { paths ->
+            paths
+                .filter { it.parent?.fileName?.toString() == "bin" && Files.isRegularFile(it) }
+                .toList()
+                .associate { it.toString() to Files.getPosixFilePermissions(it) }
+        }
+    }
+
+/** The jar [jar] with the [entry] file and its text added, after its own entries. */
+private fun withEntry(
+    jar: ByteArray,
+    entry: Pair<String, String>,
+): ByteArray {
+    val bytes = ByteArrayOutputStream()
+    ZipOutputStream(bytes).use { copy ->
+        ZipInputStream(jar.inputStream()).use { input ->
+            generateSequence { input.nextEntry }.forEach {
+                copy.putNextEntry(ZipEntry(it.name))
+                input.copyTo(copy)
+                copy.closeEntry()
+            }
+        }
+        copy.putNextEntry(ZipEntry(entry.first))
+        copy.write(entry.second.toByteArray())
+        copy.closeEntry()
+    }
+    return bytes.toByteArray()
+}
+
+/** A zip file system's options that read and keep its entries' Unix modes. */
+private val POSIX_ZIP = mapOf("enablePosixFileAttributes" to "true")
+
+/** How the Compiler page says that a Gradle import succeeded. */
+private const val IMPORTED = "Ecstasy compiler inputs imported."
+
+/** The progress of the Compiler page's Refresh Gradle model. */
+private const val IMPORT_TITLE = "Refresh Ecstasy compiler paths"
+
+/** The Build tool window's title of the embedded compiler's Build Project. */
+private const val EMBEDDED_TITLE = "Build Ecstasy modules"
+
+/** The Build and Run page's choice that a project on another XDK does not have. */
+private const val EMBEDDED_CHOICE = "Embedded compiler"
+
+/** Tools › Select Ecstasy Build Mode. */
+private const val SELECT_BUILD_MODE = "xtc.selectBuildMode"
+
+/** Where publishLocal publishes the XTC plugin and the XDK. */
+private val MAVEN_LOCAL: Path = Path.of(System.getProperty("user.home"), ".m2", "repository")
+
+/** Checks that mavenLocal has each of [artifacts] at [version], which case [id] builds with, as publishLocal puts them there. */
+internal fun requireMavenLocal(
+    id: String,
+    artifacts: List<String>,
+    version: String,
+) = artifacts.forEach { artifact ->
+    check(Files.isDirectory(MAVEN_LOCAL.resolve(artifact).resolve(version))) {
+        "$id builds with $artifact $version from mavenLocal; run ./gradlew publishLocal first"
+    }
+}
+
+/** Removes [data]'s root entries, which its case made at the project root, and its shared directories once nothing else is in them. */
+internal fun ParityWorkspace.removeRootEntries(data: JsonObject) {
+    data.strings("rootEntries").map(projectRoot::resolve).forEach {
+        it.toFile().deleteRecursively()
+        changed(it)
+    }
+    // only when nothing else, such as embedded build output, is left in them
+    data.strings("sharedDirectories").forEach { projectRoot.resolve(it).toFile().delete() }
+}
+
+/**
  * Makes a project with the plugin's project creator, as New Project does, at the project root, where Gradle mode runs
  * ./gradlew, with the project in Gradle mode, runs [body] with it, and removes it again, with the mode as it was. Its
  * build takes the XTC Gradle plugin and XDK last published to mavenLocal.
@@ -1339,17 +1798,11 @@ internal fun ParityWorkspace.gradleProject(
         val catalog = Files.readString(projectRoot.resolve(data.string("catalog")))
         val version = Regex(data.string("versionPattern"), RegexOption.MULTILINE).find(catalog)?.groupValues?.get(1)
         checkNotNull(version) { "An XTC version in ${data.string("catalog")}" }
-        data.strings("mavenLocal").forEach { artifact ->
-            check(Files.isDirectory(Path.of(System.getProperty("user.home"), ".m2", "repository", artifact, version))) {
-                "$id builds with $artifact $version from mavenLocal; run ./gradlew publishLocal first"
-            }
-        }
+        requireMavenLocal(id, data.strings("mavenLocal"), version)
         body(project, execution)
     } finally {
         mode(execution, project, previous)
-        rootEntries.forEach { it.toFile().deleteRecursively() }
-        // only when nothing else, such as embedded build output, is left in them
-        data.strings("sharedDirectories").forEach { projectRoot.resolve(it).toFile().delete() }
+        removeRootEntries(data)
         generated.toFile().deleteRecursively()
     }
 }
@@ -1816,6 +2269,30 @@ internal interface RunGutterProbe {
     )
 }
 
+/** What the project's build mode says while the server builds some of it with Gradle; see the IDE-side probe. */
+@Remote("org.xtclang.idea.playbook.probe.BuildModeUi", plugin = "org.xtclang.playbook.probe")
+internal interface BuildModeProbe {
+    fun reasons(project: Project): String
+
+    fun told(project: Project): Boolean
+
+    fun endRuns(project: Project): Int
+
+    fun effective(project: Project): String
+
+    fun notices(
+        project: Project,
+        title: String,
+    ): String
+
+    fun dismiss(
+        project: Project,
+        title: String,
+    )
+
+    fun page(project: Project): String
+}
+
 /** Embedded Build Project and runs, recorded by the IDE-side probe. */
 @Remote("org.xtclang.idea.playbook.probe.EmbeddedExecutionUi", plugin = "org.xtclang.playbook.probe")
 interface EmbeddedExecutionProbe {
@@ -1838,6 +2315,10 @@ interface EmbeddedExecutionProbe {
         project: Project,
         timeoutSeconds: Int,
     ): String
+
+    fun startBuild(project: Project)
+
+    fun buildState(): String
 
     fun run(
         project: Project,

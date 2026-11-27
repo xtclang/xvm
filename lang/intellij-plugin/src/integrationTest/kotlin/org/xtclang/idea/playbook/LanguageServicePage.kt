@@ -52,4 +52,19 @@ interface LanguageServicePage {
         project: Project,
         value: Int,
     ): Int
+
+    fun formatterTags(
+        project: Project,
+        enabled: Boolean,
+    ): Boolean
+
+    fun wrapComments(
+        project: Project,
+        enabled: Boolean,
+    ): Boolean
+
+    fun editorConfig(
+        project: Project,
+        enabled: Boolean,
+    ): Boolean
 }
