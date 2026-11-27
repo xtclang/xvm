@@ -861,26 +861,55 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   overtakes a workspace query, and work that the server retires for a real change answers RequestCancelled where the
   client did not cancel. ContentModified would say what happened, except for diagnostic pulls, which VS Code's client
   asks again only after a cancellation.
-- [ ] Found 2026-11-27 in `run-M6gUDp` (VS Code, the release fix's tip): X130 failed in "redo restores all paths"
-  (30 s). The case asked for Redo at 839 ms, as soon as the files were back on disk. VS Code's Undo had not ended:
-  its `didRenameFiles` came at 848 ms, so Redo found nothing to redo. Neither the server nor the move participant is
-  involved, and the trace has no `willRenameFiles` for the Undo. X130 passed in every kept run before. The case
-  should wait for the Undo's own `didRenameFiles`, which its `ExplorerMoveTrace` records, before Redo, not for the
-  files on disk.
-- [ ] Found 2026-11-27 in `run-GVNl3L`: X194 failed with "locator.focus: Timeout 5000ms exceeded" in
-  `WorkbenchUi.focusEditor` (from `focusTestEditor`, in `discovered`), waiting for the active editor's input; it
-  passed in the four full runs before. A Playwright call with a fixed 5 s bound, not a progress-based wait; cause not
-  looked into.
+- [x] Found 2026-11-27 in `run-M6gUDp` (lagergren/analysis-races): X130 pressed Redo as soon as the folders were back on
+  disk, 9 ms before the Undo's didRenameFiles, and Redo found nothing to redo. Fixed (`aec8651e10`): Undo and Redo each
+  wait for their own didRenameFiles from the case's ExplorerMoveTrace, progress-based; four runs had Redo after it each
+  time.
+- [x] Found 2026-11-27 in the review of `8a5574e683` (VS Code's UI waits): X279's lens wait could end as final in about
+  6 s while VS Code was still due to draw the lens after its own delay; a status request that never answered could hold a
+  case until the hour; a client that gave up restarting counted as starting forever; and the UI wait was missing from
+  the case's waits and the status bar. Fixed (`8a5574e683`): the client counts its code lens work, which X279's lens
+  waits count within VS Code's longest lens delay (62.5 s); the status request is bounded at 2 s, and one that does not
+  answer counts as under way; only `State.Starting` counts as starting; the wait shows among the case's waits. X279 and
+  X194 passed three times each, the 33 helper cases once.
+- [x] Found 2026-11-27: X218 (UP23) made every full VS Code run red. Done (`6f263e7115`): `knownHostFailures.ts` is one
+  table of known host failures, by case, UP id, bug and exact symptom; a case failing with it reports "known host
+  failure: UPxx", apart in results.json and the summary, and the run stays green; any other failure still fails; a case
+  that always meets its bug and passes fails as "UPxx seems fixed". X218/UP23 and X130/UP16 (not always) are on it;
+  `run-nv9IJX` showed X218's, `run-xUmq3r` and `run-nLkl1E` X130's, and a throwaway with X218's Undo working
+  "UP23 seems fixed".
+- [x] Found 2026-11-27: VS Code's harness tests (playbook-wait.test.ts) ran in the extension suite, which CI runs, and
+  not before the playbook or tour runs they serve. Done (`d3c2d67216`): they are `src/test/harness`, which the playbook
+  and the tour run first, and `testPlaybookHarness` alone; the suite has 104 tests, not 112.
+- [x] Found 2026-11-27 in the second review of the VS Code harness series: X218's UP23 check took any final Undo,
+  also one that did not take; a known host failure showed as a pass in Mocha's report and the status bar; X130's wait
+  could go final before VS Code's Undo acted; testPlaybookHarness could overlap testCompilerPlaybook; a broken harness
+  left no results.json; a try's unanswered call counted as nothing under way. Fixed (`6f263e7115`, `aec8651e10`,
+  `d3c2d67216`, `8a5574e683`): UP23's check needs the files as UP23 leaves them (child back, parent's move back failed);
+  a known host failure is Mocha's pending, titled "known host failure: UPxx"; X130 counts an Undo that has answered
+  and not acted as under way; the harness's task runs before the playbook's; a broken harness writes results.json
+  status failed; an unanswered call is under way. X214-X219, X129-X131 three times, the harness with the playbook,
+  a broken-harness throwaway and the suite ran as expected.
+- [x] Found 2026-11-27 in VS Code's full playbook `run-GVNl3L`: X194 failed with "locator.focus: Timeout 5000ms
+  exceeded" in `WorkbenchUi.focusEditor`; it passed in the four full runs before. The focus showed the document once and
+  waited 5 s for its input, and `focusTestWindow` and the playbook's other waits on widgets were single Playwright calls
+  with fixed bounds that decided the case (X145, X260-X272, X279, X286). Fixed (`8a5574e683`): `untilTakes` (uiWait.ts)
+  repeats such an action, each try at most 2 s, while the workbench's events, and for the extension's widgets the
+  server's work, show something under way; it fails at once at three tries with nothing under way and reports every
+  minute. The focus shows the document again at each try. X194 passed in four runs, the 33 cases that use the helpers in
+  `run-NVQStk`. Left: `connectOverCDP`'s 15 s and X145's 70 s `xtc-lsp` restart; the original failure was not
+  reproduced.
 - [ ] Found 2026-11-27 with X216: VS Code's playbook waits other than the type moves' file check still wait a fixed
   30 s (`PLAYBOOK_WAIT_MS`), and each case has a fixed bound (90 s, or its own), which a slow machine can outlast
   while it progresses; only `settles` (the type moves) and the diagnostics waits' finality follow the hang rules.
   `cleanUp`'s restore resets the source graph and restarts the server, but not other settings that a case whose own
   cleanup failed may have left changed; a case body still in a call an hour past its bound is left to itself.
-- [ ] Found 2026-11-27 recording the VS Code tour (`run-cjtCLE`, debugging): "Set a value" failed, "The value box
-  takes the keyboard … nothing under way for 60 s". `TourUi.menu` clicked Set Value, which chose it, and 34 ms later,
-  as the menu was still closing and its item still had the keyboard, pressed Enter for a click that only gave the item
-  the keyboard (`870ce8e0ef`); the Enter went to the value box that had just opened, which took the unchanged value
-  and closed. `menu` needs a sign that the click did not choose, not a menu still showing.
+- [x] Found 2026-11-27 recording the VS Code tour (`run-cjtCLE`, debugging): "Set a value" failed, "The value box takes
+  the keyboard ... nothing under way for 60 s". `TourUi.menu` pressed Enter 34 ms after a click that had chosen Set
+  Value, as the menu still showed: VS Code's menu runs a clicked item in a timer task after the mouse's release, and the
+  Enter went into the value box it had opened. Fixed (`80a4b9ebc8`): each look first lets the window run its pending
+  tasks; only a menu that still shows then gets Enter. Recorded debugging runs `run-eJ4J46` and `run-JW0q4v`: 0 failed,
+  Set Value's box took Ctrl+A with no Enter between.
 - [x] Found 2026-11-26 in the review of the IntelliJ tour's wait fixes, checked for the VS Code tour: its `Activity`
   already leaves out the server's background traffic (the 2-s workspace pull, `$/cancelRequest`, `$/setTrace`,
   `$/progress` and the work under them); a replay of its trace rules over the full `run-UcTGyc` finds no request or
@@ -2476,8 +2505,8 @@ editor, which its probe never measured (the probe item below).
   gate (UP16: X130 and the standalone reproduction; UP17: the large-file probe's decorated
   replacement; UP20: Rename and focus recovery cases; UP24: formatting history without the write
   command; UP29: restart X137/X146/X259 without `UiWaits`).
-- UP23 (VS Code overlapping-move Undo) has no fix; X218 stays a failed assertion and an accepted
-  exception unless the host gains an API for it. Filed as [microsoft/vscode#344765](https://github.com/microsoft/vscode/issues/344765), fixed by our
+- UP23 (VS Code overlapping-move Undo) has no fix; X218 reports it as a known host failure (`6f263e7115`), apart
+  from the passes, and fails as "UP23 seems fixed" once Undo restores the moves, unless the host gains an API for it. Filed as [microsoft/vscode#344765](https://github.com/microsoft/vscode/issues/344765), fixed by our
   [microsoft/vscode#344772](https://github.com/microsoft/vscode/pull/344772) (2026-10-28). To do: get it merged; after a release, X218 passes with child-first moves.
 
 ## 5. Pull requests and the release
