@@ -940,13 +940,13 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   "Debugging" passed, the balloon in both frames (`run-tour-15174852437686858037`, `run-tour-2258179756030299091`).
 - [ ] Found 2026-11-27 in the IntelliJ tour's "Settings and the server" (`run-tour-17520097840937157005`,
   `run-tour-10782924926301660469`): the check "Ctrl+Alt+X, L shows the server's log, and hides it again" pressed the
-  chord (the tour's action log has it) and the Language Servers window never opened, nothing in progress for a minute;
-  2 of the 5 runs of the section alone on 2026-11-27 failed it, 1 of 10 earlier runs in the logs. Not the window's
-  hide from the step before: a wait until `ToolWindow.isVisible` was false before the chord (branch
-  `lagergren/ij-tour-waits-serverlog-attempt`, `216f7bd6f6`) still failed once in three runs. Not the IDE's age at the
-  chord (65.6 s and 70.3 s failed, 68.6 s passed); one failure's chord came with the Starter's screenshot heartbeat,
-  the other's 8 s after one. The IDE log has nothing at the chord. Unknown: the keys (Robot, through X) may not reach
-  the IDE's key dispatcher, or its second stroke may be lost; next, log the key events the IDE gets at the chord.
+  chord (the tour's action log has it) and the Language Servers window never opened, nothing in progress for a minute.
+  Not a hide from the step before that had not taken (a wait for the window to be hidden still failed once in three,
+  `216f7bd6f6`, not landed), not the IDE's age at the chord, not the Starter's screenshot heartbeat; the IDE log has
+  nothing at the chord. Twelve runs since, with a log of the keys, passed it (`run-tour-16779832607197269589` to
+  `run-tour-551983453023407263`), 2 failures in 17 runs of the section that day. Open: the check's failure now says what
+  the IDE got of the keys (`8c084d0e6d`, KeyLog: each key as the IDE's event queue takes it, the focus's moves and the
+  actions that ran), so the next failure shows whether the keys reached the IDE and whether the action ran.
 - [x] Found 2026-11-26: a checkout's copied-back VS Code reports include every run the slot's work volume keeps,
   other checkouts' too, and since the shared queue from both slots; a script that took the newest copied run as its
   own took another agent's tour run (`run-y0hT9c` in wt-video). Fix: copy back only the runs this container made, as
