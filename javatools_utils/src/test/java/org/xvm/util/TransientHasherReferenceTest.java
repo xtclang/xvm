@@ -1,5 +1,7 @@
 package org.xvm.util;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
@@ -10,12 +12,13 @@ import org.junit.jupiter.api.Test;
 import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * A {@link TransientHasherReference} is held by one thread at a time, and only the thread that gave one back takes it
- * again. Two threads hand their steps to each other; nothing is timed.
+ * again, up to as many as the thread keeps. Two threads hand their steps to each other; nothing is timed.
  */
 public class TransientHasherReferenceTest {
     @Test
@@ -47,6 +50,36 @@ public class TransientHasherReferenceTest {
             assertNotSame(held, taken);
             assertSame(other, taken);
             assertSame(held, first.call(() -> TransientHasherReference.of("first", hasher)));
+        }
+    }
+
+    @Test
+    public void aThreadReusesItsSparesForLookupsNestedAsDeepAsItKeepsThem() throws Exception {
+        var hasher = Hasher.<String>natural();
+        try (var agent = new Agent()) {
+            agent.call(() -> {
+                // one more than the thread keeps, held at once as nested lookups hold them, and given back as they
+                // end, the innermost first: the outermost, given back last, finds the thread's spares full
+                var held = new ArrayList<TransientHasherReference<String>>();
+                for (int i = 0; i <= TransientHasherReference.SPARES; ++i) {
+                    held.add(TransientHasherReference.of("level " + i, hasher));
+                }
+                held.reversed().forEach(TransientHasherReference::close);
+
+                // lookups nested as deep again take the spares, the last given back first, and the deepest a new one
+                var again = new ArrayList<TransientHasherReference<String>>();
+                for (int i = 0; i <= TransientHasherReference.SPARES; ++i) {
+                    again.add(TransientHasherReference.of("again " + i, hasher));
+                }
+                for (int i = 0; i < TransientHasherReference.SPARES; ++i) {
+                    assertSame(held.get(i + 1), again.get(i));
+                    assertEquals("again " + i, again.get(i).get());
+                }
+                // by identity: a reference given back has no hasher to compare with
+                assertFalse(held.stream().anyMatch(ref -> ref == again.getLast()));
+                assertFalse(again.stream().anyMatch(ref -> ref == held.getFirst()));
+                return null;
+            });
         }
     }
 
