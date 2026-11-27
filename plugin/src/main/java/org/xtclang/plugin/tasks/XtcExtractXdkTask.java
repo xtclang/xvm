@@ -64,7 +64,9 @@ public abstract class XtcExtractXdkTask extends DefaultTask {
         // If there are no archives, we do not depend on the XDK.
         final var archiveFile = archives.getSingleFile();
 
-        getFileSystemOperations().copy(config -> {
+        // A sync, not a copy: the modules of an XDK extracted here before, which this one lacks, must not stay on the
+        // module path.
+        getFileSystemOperations().sync(config -> {
             logger.info("[plugin] CopySpec: XDK archive file dependency: {}", archiveFile);
             config.from(getArchiveOperations().zipTree(archiveFile));
             config.include(

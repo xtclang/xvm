@@ -1,13 +1,24 @@
 package org.xtclang.plugin;
 
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
+
+import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.FileCollectionDependency;
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
+import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
+import org.gradle.api.artifacts.result.ResolvedComponentResult;
 import org.gradle.api.artifacts.result.ResolvedDependencyResult;
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskProvider;
@@ -94,10 +105,81 @@ final class XtcLspModelIntegration {
             task.getRunProblems().set(run.map(XtcLspRunSettings::problems));
             task.getTestJvmArgs().set(test.map(XtcLspRunSettings::jvmArgs));
             task.getTestProblems().set(test.map(XtcLspRunSettings::problems));
+            // The XDK that the project's compileXtc, runXtc and testXtc take, so that a language server can tell whether it
+            // is its own. The distribution of one from a repository, or of a file dependency, is read, not extracted, as
+            // far as it can be fetched; one that a build of the build tree makes is neither built nor read for the export,
+            // nor is the directory that an earlier build extracted an XDK into; one that does not resolve says why. No
+            // failure to resolve or fetch it fails the export.
+            final var xdk = selectedXdk(project);
+            final var libraries = XtcProjectDelegate.getXdkContentsDir(project);
+            task.getXdkVersion().set(xdk.map(SelectedXdk::version));
+            task.getXdkLibraries().set(xdk.flatMap(selected -> libraries.map(directory -> directoryUri(directory.getAsFile()))));
+            task.getXdkProject().set(xdk.map(SelectedXdk::project));
+            task.getXdkProblem().set(xdk.map(SelectedXdk::problem));
+            Stream.of(XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING).map(project.getConfigurations()::getByName)
+                .forEach(configuration -> {
+                    task.getXdkArchive().from(configuration.getIncoming().artifactView(view -> {
+                        view.lenient(true);
+                        view.componentFilter(ModuleComponentIdentifier.class::isInstance);
+                    }).getFiles());
+                    configuration.getDependencies().withType(FileCollectionDependency.class)
+                        .forEach(dependency -> task.getXdkArchive().from(dependency.getFiles()));
+                });
+            // A problem, such as a download that failed, must not outlive the import that met it: the configuration
+            // cache would keep what was resolved. The export of one writes a new token here, which the next import reads
+            // as it configures the build, so that it configures it again and resolves the XDK anew.
+            final var retry = project.getLayout().getBuildDirectory().file("xtc/lsp/" + sourceSet.getName() + ".xdk-retry");
+            task.getXdkRetry().set(project.getProviders().fileContents(retry).getAsText().getOrElse(""));
+            task.getXdkRetryMarker().set(retry);
             task.getReport().set(project.getLayout().getBuildDirectory().file("xtc/lsp/" + sourceSet.getName() + ".json"));
             task.mustRunAfter(resources);
         });
         aggregate.configure(task -> task.getReports().from(model.flatMap(XtcLspSourceSetTask::getReport)));
         prepare.configure(task -> task.dependsOn(resources));
+    }
+
+    /**
+     * The XDK that {@code project}'s {@code xdkDistribution} dependency selects, or else its {@code xdk} dependency, as
+     * the extraction of the XDK takes either, or asks for where it does not resolve; that of a file dependency, which
+     * names no version; none without one.
+     */
+    private static Provider<SelectedXdk> selectedXdk(final Project project) {
+        final var configurations = project.getConfigurations();
+        final var archives = configurations.getByName(XDK_CONFIG_NAME_INCOMING_ZIP);
+        final var directories = configurations.getByName(XDK_CONFIG_NAME_INCOMING);
+        final var distribution = archives.getIncoming().getResolutionResult().getRootComponent();
+        final var contents = directories.getIncoming().getResolutionResult().getRootComponent();
+        final var filed = Stream.of(archives, directories)
+            .anyMatch(configuration -> !configuration.getDependencies().withType(FileCollectionDependency.class).isEmpty());
+        return distribution.flatMap(archive -> contents.map(directory -> SelectedXdk.of(archive).or(() -> SelectedXdk.of(directory))
+            .orElse(filed ? new SelectedXdk(null, null, null) : null)));
+    }
+
+    /** {@code directory}'s file URI, which ends with a slash also before the directory exists. */
+    private static String directoryUri(final File directory) {
+        final var uri = directory.toURI().toString();
+        return uri.endsWith("/") ? uri : uri + '/';
+    }
+
+    /**
+     * An XDK that a project's dependency selects or asks for: its {@code version}; the path in the build tree of the
+     * {@code project} that makes it, for one that a build of the build tree makes rather than a repository has; and the
+     * {@code problem}, for one that does not resolve.
+     */
+    private record SelectedXdk(String version, String project, String problem) {
+        /** The XDK that {@code root}'s first dependency selects, or asks for where it does not resolve, if it has one. */
+        static Optional<SelectedXdk> of(final ResolvedComponentResult root) {
+            return root.getDependencies().stream().findFirst().map(dependency -> {
+                if (dependency instanceof ResolvedDependencyResult resolved) {
+                    final var selected = resolved.getSelected();
+                    final var version = selected.getModuleVersion() == null ? Project.DEFAULT_VERSION : selected.getModuleVersion().getVersion();
+                    return new SelectedXdk(version,
+                        selected.getId() instanceof ProjectComponentIdentifier built ? built.getBuildTreePath() : null, null);
+                }
+                final var failure = ((UnresolvedDependencyResult) dependency).getFailure().getMessage();
+                return new SelectedXdk(dependency.getRequested() instanceof ModuleComponentSelector asked ? asked.getVersion() : Project.DEFAULT_VERSION,
+                    null, "the import could not resolve it (" + (failure == null ? "no reason given" : failure.lines().findFirst().orElse("")) + ')');
+            });
+        }
     }
 }
