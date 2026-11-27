@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import Mocha from 'mocha';
-import { mustStopPlaybook, PlaybookCleanupFailure, PlaybookFinal, PlaybookTimeout, stopOnUnsafeFailure, waitFor, waitWhile, withPlaybookCleanup } from '../wait';
+import { mustStopPlaybook, PlaybookCleanupFailure, PlaybookFinal, PlaybookTimeout, runCase, stopOnUnsafeFailure, waitFor, waitWhile, withPlaybookCleanup } from '../wait';
 
 suite('Playbook timeout isolation', () => {
     test('condition timeout fails with its last observation', async () => {
@@ -18,7 +18,7 @@ suite('Playbook timeout isolation', () => {
         assert.strictEqual(await waitFor(async () => 'ready', value => value === 'ready', 'Success', 100), 'ready');
     });
 
-    test('Mocha cannot start another case after a timeout or cleanup failure', async () => {
+    test("the extension suite's Mocha starts no other test after a timeout or cleanup failure", async () => {
         for (const operation of [
             () => new Promise<never>(() => {}),
             async () => { throw new PlaybookTimeout('Unfinished editor command'); },
@@ -33,6 +33,22 @@ suite('Playbook timeout isolation', () => {
             assert.strictEqual(failures, 1);
             assert.strictEqual(followingRan, false);
         }
+    });
+
+    test("a playbook case answers its failure, and one past its bound ends at its wait, through its own cleanup", async () => {
+        const failure = new Error('Assertion failed');
+        const none = async () => undefined;
+        assert.strictEqual(await runCase(async () => undefined, 1_000, () => undefined, () => [], none), undefined);
+        assert.strictEqual(await runCase(async () => { throw failure; }, 1_000, () => undefined, () => [], none), failure);
+        // a wait of the whole playbook bound, which the case's bound of 20 ms gives up on at its next look; the wait of
+        // its cleanup, which starts after, waits as it does
+        let restored: string | undefined;
+        const timeout = await runCase(async () => {
+            try { await waitFor(async () => 'still visible', value => value === 'gone', 'Hide hints'); }
+            finally { restored = await waitFor(async () => 'restored', value => value === 'restored', 'Restore the settings'); }
+        }, 20, () => undefined, () => [], none);
+        assert.ok(timeout instanceof PlaybookTimeout && timeout.message.includes('bound of 0.02 s'), String(timeout));
+        assert.strictEqual(restored, 'restored', 'The case has ended through its cleanup as its failure is answered');
     });
 
     test('a wait while something is under way fails at once once nothing is, and goes on while something is', async () => {

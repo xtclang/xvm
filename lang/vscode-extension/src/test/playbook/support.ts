@@ -1,13 +1,14 @@
 import * as assert from 'node:assert';
 import { realpathSync } from 'node:fs';
 import * as path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import * as vscode from 'vscode';
 import { ResponseError } from 'vscode-languageclient/node';
 import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type DiagnosticReport } from '../../lsp-client';
 import { RENAME_OVERTAKEN, RENAME_REFUSED } from '../../rename-proposal';
 import { focusTestEditor } from '../native-focus';
-import { withTestWait } from '../progress';
-import { mustStopPlaybook, PLAYBOOK_WAIT_MS, PlaybookCleanupFailure, waitFor, waitWhile } from '../wait';
+import { waitsUnderWay, withTestWait } from '../progress';
+import { PLAYBOOK_WAIT_MS, PlaybookCleanupFailure, PlaybookTimeout, runCase, waitFor, waitWhile } from '../wait';
 import * as fs from './disk';
 import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
 
@@ -429,17 +430,18 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
     assert.ok(!cases.has(id), `Duplicate playbook case ${id}`);
     cases.set(id, { title, manual, tags: scenarioTags(id) });
     test(`${id}: ${title}`, async function () {
-        this.timeout(timeoutMs);
+        // the case's bound is [runCase]'s: Mocha's would start the next case while this one still runs
+        this.timeout(0);
         const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
         assert.ok(root);
         const workspace = new Workspace(path.join(root, id));
         fs.forgetChanges();
         running = id;
-        try { await body(workspace, scenario.values); }
-        catch (error) {
-            // A timed-out command can still be mutating the disposable editor. The runner aborts;
-            // do not start competing cleanup actions or proceed to another case in that window.
-            if (mustStopPlaybook(error)) throw error;
+        // one case's failure, a timeout too, fails that case only: once it has ended, the editor is restored for the next
+        const error = await runCase(() => body(workspace, scenario.values), timeoutMs, line => progress(`${id} ${line}`), waitsUnderWay,
+            async () => vscode.commands.executeCommand('xtc.restartServer'));
+        running = undefined;
+        if (error !== undefined) {
             const report = process.env.XTC_PLAYBOOK_REPORT_DIR;
             if (report) {
                 for (const document of vscode.workspace.textDocuments.filter(doc => doc.uri.fsPath.startsWith(workspace.directory + path.sep))) {
@@ -448,11 +450,51 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
                     await fs.writeFile(file, document.getText());
                 }
             }
-            try { await workspace.dispose(); }
-            catch (cleanupError) { throw new PlaybookCleanupFailure([error, cleanupError]); }
-            throw error;
         }
-        try { await workspace.dispose(); }
-        catch (error) { throw new PlaybookCleanupFailure([error]); }
+        const failures = await cleanUp(workspace, timeoutMs);
+        if (failures.length) throw new PlaybookCleanupFailure(error === undefined ? failures : [error, ...failures]);
+        if (error !== undefined) throw error;
     });
+}
+
+/**
+ * Disposes of what the case [workspace] made, and, should that fail or not end within [boundMs], the case's bound,
+ * restores the editor as a case finds it: no quick input, unsaved changes reverted, no editors, no source graph, and a
+ * language server that runs, whose restart also ends a request that the disposal waits for. Answers what failed.
+ */
+async function cleanUp(workspace: Workspace, boundMs: number): Promise<unknown[]> {
+    const disposed = await bounded(() => workspace.dispose(), boundMs, "The case's cleanup");
+    if (disposed === undefined) return [];
+    progress(`${path.basename(workspace.directory)} cleanup failed, restoring the editor: ${disposed instanceof Error ? disposed.message : String(disposed)}`);
+    const failures: unknown[] = [disposed];
+    const step = async (what: string, action: () => Thenable<unknown>) => {
+        const failure = await bounded(action, boundMs, what);
+        if (failure !== undefined) failures.push(failure);
+    };
+    await step('Closing the quick input', () => vscode.commands.executeCommand('workbench.action.closeQuickOpen'));
+    for (const document of vscode.workspace.textDocuments.filter(each => each.isDirty)) {
+        await step(`Reverting ${document.uri.fsPath}`, async () => {
+            await vscode.window.showTextDocument(document, { preview: false });
+            await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+        });
+    }
+    await step('Closing the editors', () => vscode.commands.executeCommand('workbench.action.closeAllEditors'));
+    await step('Emptying the source graph', () => vscode.workspace.getConfiguration('xtc.compiler').update('sourceModules', [], vscode.ConfigurationTarget.Workspace));
+    await step('Restarting the language server', async () => {
+        await vscode.commands.executeCommand('xtc.restartServer');
+        await eventually(async () => getClient()?.isRunning(), value => value === true, 'The language server runs after the restore');
+        await client().sendRequest('xtc/healthCheck');
+    });
+    return failures;
+}
+
+/** What [work] fails with, or undefined once it has done, or a [PlaybookTimeout] once it has not ended within [boundMs]. */
+async function bounded(work: () => Thenable<unknown>, boundMs: number, what: string): Promise<unknown> {
+    const timer = new AbortController();
+    try {
+        return await Promise.race([
+            Promise.resolve().then(work).then(() => undefined, (error: unknown) => error ?? new Error(`${what} failed`)),
+            delay(boundMs, undefined, { signal: timer.signal }).then(() => new PlaybookTimeout(`${what} did not end within ${boundMs / 1000} s`), () => undefined),
+        ]);
+    } finally { timer.abort(); }
 }
