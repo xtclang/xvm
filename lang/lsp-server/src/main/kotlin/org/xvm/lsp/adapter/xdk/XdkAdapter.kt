@@ -401,7 +401,8 @@ class XdkAdapter
                 }
             }
 
-        private fun isLibraryDocument(uri: String): Boolean =
+        /** Whether [uri] is a library's document: its source's read-only copy, or a document of a library dependency. */
+        internal fun isLibraryDocument(uri: String): Boolean =
             uri.startsWith("${XdkLibrarySources.SCHEME}:") ||
                 XdkLibrarySources.owns(uri) || synchronized(lifecycle) { dependencies.modules.values.any { uri in it.documents } }
 

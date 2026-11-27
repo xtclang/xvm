@@ -302,7 +302,8 @@ class XtcTextDocumentService(
 
     /**
      * A semantic query owns its backend future, while the module analysis remains shared. Only a request that
-     * [reportsOutOfSync], such as a diagnostic pull, runs for a document that is out of sync.
+     * [reportsOutOfSync], such as a diagnostic pull, runs for a document that is out of sync. A [workspace] query waits
+     * for the analyses of the open documents that it [waitsFor], each of them by default, and their changes overtake it.
      */
     private fun <T, R> queryAsync(
         method: String,
@@ -310,6 +311,7 @@ class XtcTextDocumentService(
         request: () -> CompletableFuture<T>,
         workspace: Boolean = false,
         reportsOutOfSync: Boolean = false,
+        waitsFor: (String) -> Boolean = { true },
         sourceOnly: Boolean = false,
         progress: WorkDoneProgressParams? = null,
         partial: ((R) -> PartialResults.Plan<R>)? = null,
@@ -323,7 +325,8 @@ class XtcTextDocumentService(
             val deferred = CompletableFuture<R>()
             folders.whenComplete { _, _ ->
                 if (deferred.isDone) return@whenComplete
-                val query = startQuery(method, uri, request, true, reportsOutOfSync, sourceOnly, progress, partial, traced, convert)
+                val query =
+                    startQuery(method, uri, request, true, reportsOutOfSync, waitsFor, sourceOnly, progress, partial, traced, convert)
                 // a client cancellation of the deferred request reaches the query
                 deferred.whenComplete { _, _ -> query.cancel(false) }
                 query.whenComplete { value, failure ->
@@ -332,7 +335,7 @@ class XtcTextDocumentService(
             }
             return deferred
         }
-        return startQuery(method, uri, request, workspace, reportsOutOfSync, sourceOnly, progress, partial, traced, convert)
+        return startQuery(method, uri, request, workspace, reportsOutOfSync, waitsFor, sourceOnly, progress, partial, traced, convert)
     }
 
     /**
@@ -377,6 +380,7 @@ class XtcTextDocumentService(
         request: () -> CompletableFuture<T>,
         workspace: Boolean,
         reportsOutOfSync: Boolean,
+        waitsFor: (String) -> Boolean,
         sourceOnly: Boolean,
         progress: WorkDoneProgressParams?,
         partial: ((R) -> PartialResults.Plan<R>)?,
@@ -397,7 +401,7 @@ class XtcTextDocumentService(
                 pendingQueries[result] = uri
                 Triple(
                     openDocuments[uri],
-                    if (workspace) openDocuments.toMap() else null,
+                    if (workspace) openDocuments.filterKeys(waitsFor) else null,
                     diagnosticRevision,
                 )
             }
@@ -410,7 +414,7 @@ class XtcTextDocumentService(
                 (
                     documents != null &&
                         (
-                            openDocuments.keys.any { it !in documents } ||
+                            openDocuments.keys.any { it !in documents && waitsFor(it) } ||
                                 documents.any { (it, then) -> then.basis !== (openDocuments[it]?.basis ?: released[it]) }
                         )
                 )
@@ -1034,10 +1038,16 @@ class XtcTextDocumentService(
             )
         }
         val revision = synchronized(lifecycle) { diagnosticRevision }
+        // a library source's analysis reports on no document of the workspace, so a pull of one waits for none of them:
+        // the whole library's compile that Go to Definition into its source starts can take half a minute
+        val library = (adapter as? XdkAdapter)?.let { compiler -> compiler::isLibraryDocument }
+        val waitsFor: (String) -> Boolean =
+            if (workspace || library == null || library(uri)) { _ -> true } else { other -> !library(other) }
         return queryAsync(
             method,
             uri,
             reportsOutOfSync = true,
+            waitsFor = waitsFor,
             request = {
                 val open = openDocuments[uri]
                 if (!workspace && open != null) {
@@ -1058,7 +1068,7 @@ class XtcTextDocumentService(
                 val all =
                     results +
                         openDocuments
-                            .filterKeys { !diagnosticReports.includes(owned, it) }
+                            .filterKeys { waitsFor(it) && !diagnosticReports.includes(owned, it) }
                             .map { (open, document) -> analyzed(open, document.analysis) }
                             .filter {
                                 workspace || diagnosticReports.includes(it.documentUris, uri)
@@ -1071,8 +1081,8 @@ class XtcTextDocumentService(
 
     /**
      * What [analysis] of the open document [uri] finds, once it ends, or, when it fails, the error that its publication
-     * reports ([analysisFailure]): a pull joins the analyses of every open document, so one that failed would fail each
-     * pull of the others, and the workspace's. A canceled analysis throws, as a later one replaces it.
+     * reports ([analysisFailure]): a pull joins the analyses of the open documents it waits for, so one that failed would
+     * fail each pull of the others, and the workspace's. A canceled analysis throws, as a later one replaces it.
      */
     private fun analyzed(
         uri: String,
