@@ -1387,9 +1387,30 @@ And, after that entry, a new entry:
   Proven by run-4749195041951787387 (X270-X352): X352 failed at once with the refusal instead of hanging. The
   editor and project scoping, from the independent review, had no container run (the coordinator's full catalog
   checks it).
-- [ ] No test drives Refusals' notification path (a move or a file's rename that the IDE refuses) or the rename
-  dialog's error-text path: the probe is not on the unit tests' classpath, and no playbook case has the IDE refuse a
-  move or a dialog. Only the hint path is shown, by run-4749195041951787387's X352.
+- [x] Refusals' notification path and the rename dialog's error-text path are driven (`fcc8d31d3f`), each in an
+  existing case: X128 and X58.
+  - X128's variant with `uncompiledSource` (scenarios.json; VS Code's X128 doesn't read it) gives App.x that text in
+    its editor. It waits for the error and renames Box.x from the project view. The server refuses ("This rename can't
+    be proven while App does not compile"), and the plugin's "Ecstasy Refactoring" notification says so. The wait for
+    the rename's edit fails at once with "the IDE refused it: Rename Box.x failed: ...", which the case checks. It
+    checks that Box.x stayed and expires the notification's balloon (`expireRefusals`). It then mends App.x and renames
+    as before.
+  - X58, after its invalid names, opens the Rename dialog with the new name and changes the source while the dialog is
+    open (`rename(..., whileOpen)`), then presses Refactor. The dialog shows "Source changed; cancel and invoke Rename
+    again." and stays open. The wait for its close fails at once with exactly that. The case cancels the dialog
+    (`cancelRenameDialog`, a withinOrFail wait), checks that nothing else changed, puts the source back, and renames as
+    before.
+
+  Both refusals come from inputs (a module that does not compile, a source changed under the dialog), not from
+  XtcRenameEdit or the server's rename answers. Runs:
+  - The first run found a bug in the error-text path (run-9495072460991611377). X58 failed with "the IDE refused it:
+    Source changed; cancel and ". The error text wraps, getAllTexts gives a text per line, and the wait took the
+    first. fillRenameDialog now joins, in order, the texts that were not shown before Refactor. It takes them only
+    once two reads in a row agree, so a read during the text's layout can't take it short.
+  - run-9729668096903044489 (X58, X128): both passed; the IDE log has the notification's text, and no ERROR.
+  - After the review: run-18305743512258529296, X58 with its refusal step three times (for that run only; the case
+    selector runs a case once) and X128, both passed.
+  - On the final tree, over errs 7d8371a816: run-2596836560129766996, X58 and X128 passed, no ERROR in the IDE log.
 - [x] X352's refusal itself, a product bug (`be43de847b`): XtcRenameEdit's snapshot held every document LSP4IJ had
   connected and asked each for a valid file at the apply. From X337 (Gradle debug) on, LSP4IJ kept
   workspace/src/main/x/GradleDebugged.x connected with no editor (a didOpen 32 ms to 0.7 s after its didClose,
@@ -1453,11 +1474,12 @@ And, after that entry, a new entry:
   after its editor closed, reconnected by the server restart's reconnection). What connected GradleDebugged.x after
   its close is inferred from the trace's order, most likely LSPDebugVariablePositionProvider's
   `getLanguageServers(file)` for the suspended frame's file on workspace/inlineValue/refresh; not proven by a stack.
-- [ ] Open: X131 fails in the full catalog ("textDocument/codeLens failed (-32801): Document changed during analysis"):
+- [x] Was open: X131 fails in the full catalog ("textDocument/codeLens failed (-32801): Document changed during analysis"):
   in the 2026-11-28 run before this work (run-14172711971458691279) and in the full catalog with it
   (run-14742488023735374840, the one failure there). Not part of this work: it is the server's ContentModified for a codeLens,
   which lagergren/own-release reworks (ContentModified says what overtook a request); to look at again once that is
   on errs.
+  Closed: the release series' shared graph queries (`5c0478ec5e`) answer both code lens requests; X131 passed in IntelliJ's full catalog run-14708052808944107397.
 - [x] Found 2026-11-28 in a VS Code X26–X28 run (container xvm-playbook-s2-20261128-142639, which never reached its cases): the harness self-test "a playbook wait goes on while something happened within the minute, and is final once nothing has" waited from 14:28, as its record, on a fake clock that stops, also heard the real window's events, and VS Code's settings change and focus at startup were noted at that clock, "0 s ago" for good. Fixed (`5d5a4958fe`): the record hears only the workbench it is given (the tests' default fires nothing), and no change of the window's focus counts as a playbook wait's work, as it comes from the window manager, not from the work a wait waits for, so a window whose focus keeps changing can't keep a wait going; `focusTestWindow` asks for the focus at each try and checks it itself. A new harness test feeds a focus change at each of the first ten reads and finds the wait final before the tenth. harness-tests/run-gxT17N: 29 passing.
 - [ ] Found 2026-11-28 in the full VS Code catalog on errs `be43de847b` (`run-PP9aKZ`): X27 ("real file-watcher
   creation and deletion refresh the module") failed its last step. Bad.x's error stayed after the case deleted the
@@ -1485,12 +1507,77 @@ And, after that entry, a new entry:
   - Done, `ff2c9d6ae1`: server tests of a watched creation and deletion of a closed member in the workspace's pull,
     in the graph and outside it (one of two modules of a name side by side, as the playbooks' cases are). They guard
     the watcher path; they don't reproduce X27, as the server was fine.
-  - Open: confirm whether VS Code's watcher drops such a subtree, and file it with a reproduction outside the
-    playbook, or rule it out.
-  - Open, the product-side guard to consider: the workspace pull already reads the graph's files again for a change
-    that no watcher reported (`reportedDiagnostics`). It could recheck the sources of the open modules outside the
-    graph too, as a module whose name another module shares is, at the cost of reading their files on every idle
-    pull. Until then, a module outside the graph keeps a deleted member's errors when the watcher misses the deletion.
+- [x] X27's watcher gap, confirmed 2026-11-28 and filed as UP94,
+  [microsoft/vscode#350854](https://github.com/microsoft/vscode/issues/350854). On Linux (VS Code 1.140.0, the
+  container's aarch64 Linux, 8 CPUs), VS Code's recursive watcher can miss a folder made just after its parent. When it
+  does, nothing in that folder is ever reported, nor any later change in it, for the rest of the session. A
+  reproduction in the extension host (`watcher-repro.test.ts`, kept out of the corpus; extension-tests/run-fx65ee)
+  listened with `createFileSystemWatcher('**/*')`, as the language client's registration of the server's watcher does.
+  It made a folder as X27's first write did: `mkdir -p <case>/Project`, then `Project/Child.x`, `Project.x` and
+  `Project/Bad.x`. It then deleted Bad.x. After each step it waited, by progress, for a sentinel file in a watched
+  folder, so every earlier event had come. Results:
+  - Quietly: 2 of 60 lost `Project` with everything in it, Bad.x's deletion included.
+  - With 8 busy loops on the 8 CPUs, as a full catalog's load: 10 of 30 lost the subtree, and 5 of those 30 lost the
+    top folder's own `Project.x` too.
+  - Made outside the workspace and moved in: 5 of 5 lost everything in it, the later deletion included.
+  - Made one folder at a time, each once its event came, as X27 now does: 5 of 5 reported everything.
+
+  The mechanism is in @parcel/watcher's inotify backend, which VS Code uses on Linux. On IN_CREATE or IN_MOVED_TO of a
+  folder it adds an inotify watch for that folder (watchDir) and does not read what is already in it. Whatever was made
+  in it before the watch was added never has an event, and a subfolder made in that window is never watched.
+  - inotify(7) warns of this race.
+  - VS Code's parcelWatcher.ts passes parcel's events on and reads no created folder again.
+  - parcel-bundler/watcher#185, about macOS and Windows, has the maintainer's word that a consumer should assume a
+    created folder may have children.
+
+  The November 18–19 failures left only results.json, no server logs. Their failure, Bad.x's diagnostic never came,
+  is this gap at Bad.x's creation. run-5mcnjm failed X27 run alone, so the gap was not only a full catalog's load.
+- [x] The server's guard for it (`88334b1ea3`): a workspace pull first checks each open module outside the graph
+  against what its analysis read (`XdkAdapter.unwatchedChanges`). That catches a member's file made, deleted or
+  rewritten since. Where its root or member folder differs, the pull takes that as a watcher's event of it
+  (`refreshForFile`) and waits for the new analysis. The graph's own sources are already read again at each pull
+  (`reportedDiagnostics`), so a missed event no longer leaves stale errors in either.
+  - The check lists and reads the module as its analysis did. `XdkFileChanges.changedSources` uses
+    `XdkSources.sourceFiles`, the listing that `capture` now shares, and `XdkSources.read`, as capture reads: no links
+    followed, canonical paths, regular `.x` files only, the open documents' files counted, no byte order mark. An
+    analysis that read the sources is never found changed.
+  - The first version listed them as a watcher event's check does. The independent review found that it never settles:
+    an open member deleted in VS Code's Explorer keeps its tab, with no didClose, and every pull then refreshed and
+    compiled the module again.
+  - A change it found is not found again until the module's analysis has read other sources, so no difference that an
+    analysis doesn't take in asks for a refresh at every pull.
+  - One read budget, 512 entries and 1 MB, covers all the modules of a pull, starting at another module each time.
+  - It skips a module whose analysis is running, and reads nothing while no module outside the graph is open.
+  - It stays on the message thread, as a watcher's event does. The pull must start after the refresh, in order with
+    the documents' changes.
+
+  Its cost per pull, measured on this Mac:
+
+  | Module | Guard | Whole pull |
+  | --- | --- | --- |
+  | X27's module (root and 2 members) | 0.28 ms | 2.9 ms |
+  | 102 members of 1.5 KB | 8.0 ms | 36 ms |
+  | 402 members | 33 ms | 119 ms |
+  | 602 members (past the budget, so no change is reported) | 13 ms | 139 ms |
+
+  These were taken under a load average of about 80. The first version, under less load, took 0.3, 3.7, 13.5 and
+  1.8 ms. Matching capture's listing costs a canonical path per entry. VS Code's client pulls about every 2 s while
+  idle. The other proposal, not taken, would remember each folder reported made and recheck its subtree at each pull.
+  That keeps state, reads every subtree made in the session, build outputs too, and misses a module whose folder was
+  never reported.
+- [x] Tests in XdkPullDiagnosticsTest, each failing without what it guards:
+  - "a closed member of a module outside the graph goes from the workspace's pull once deleted, though no watcher
+    reports it" follows run-PP9aKZ's order: the folder event only, the module's root opened, Bad.x deleted with no
+    event. Without the guard it fails at the last pull, whose report of Bad.x is unchanged.
+  - "an open member deleted with no watcher's event starts no compile or revision at each workspace pull" has an open
+    member deleted with no event and a closed member with a byte order mark. Across two pulls it expects no compile
+    submitted and no new diagnostics revision. A change it found is not found again before an analysis has read
+    others. It fails on the first version, and on a read with the mark.
+
+  X27 still fails when the watcher misses Bad.x's events, as it proves the watcher's path. Runs:
+  - VS Code X26–X28 on the reviewed version: run-RYVtfc, all passed, and the guard fired once in X27, before the
+    watcher's event of Bad.x came.
+  - On the first version: run-fjrQSd. On the final tree: run-r48BIk, all passed; the watcher was in time and the guard did not fire.
 
 ### Playbook cases for formatting from .editorconfig and a folder on another XDK (X361–X366)
 
