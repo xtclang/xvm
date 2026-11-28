@@ -6,6 +6,7 @@ import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
+import com.intellij.driver.sdk.ui.components.common.IdeaFrameUI
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.ideFrame
 import com.intellij.driver.sdk.ui.remote.Window
@@ -46,10 +47,14 @@ interface HeldDialogProbe {
 }
 
 /**
- * Native popups require focus; AppIcon activates the window without Driver's title-bar mouse click.
+ * Native popups require focus; AppIcon activates the window without Driver's title-bar mouse click. The editor is in
+ * [frame], the IDE's one window unless a case has opened a second project's.
  */
-fun Driver.focusEditor(editor: JEditorUiComponent) {
-    val window = cast(ideFrame().component, Window::class)
+fun Driver.focusEditor(
+    editor: JEditorUiComponent,
+    frame: IdeaFrameUI = ideFrame(),
+) {
+    val window = cast(frame.component, Window::class)
     val nativeEditor = editor.editor
     withContext(OnDispatcher.EDT) {
         if (!window.isFocused()) utility(NativeAppFocus::class).getInstance().activate(window)

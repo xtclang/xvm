@@ -298,13 +298,19 @@ object TourUi {
         return groups.isNotEmpty()
     }
 
-    /** The titles of the background tasks that run, such as indexing or a Gradle import; none once the IDE is idle. */
+    /**
+     * The titles of the background tasks that run in the open projects, such as indexing or a Gradle import; none once
+     * the IDE is idle.
+     */
     @JvmStatic
     fun busy(): String =
         onEdt {
-            val bar = WindowManager.getInstance().getStatusBar(project()) as? StatusBarEx
-            val tasks = bar?.backgroundProcessModels.orEmpty().map { it.first.title }
-            (if (DumbService.isDumb(project())) tasks + "indexing" else tasks).joinToString("; ")
+            openProjects()
+                .flatMap { project ->
+                    val bar = WindowManager.getInstance().getStatusBar(project) as? StatusBarEx
+                    val tasks = bar?.backgroundProcessModels.orEmpty().map { it.first.title }
+                    if (DumbService.isDumb(project)) tasks + "indexing" else tasks
+                }.joinToString("; ")
         }
 
     /**
@@ -362,25 +368,40 @@ object TourUi {
             }.toString()
     }
 
-    /** The Ecstasy language server's start, while LSP4IJ starts it; empty otherwise. */
+    /**
+     * The open projects, whose work [work] and [activity] say: the tour's one, or the playbook's, beside which a case can
+     * open a second.
+     */
+    private fun openProjects(): List<Project> = ProjectManager.getInstance().openProjects.toList()
+
+    /** The Ecstasy language server's start, while LSP4IJ starts one of the open projects'; empty otherwise. */
     private fun serverStarting(): String =
         "the language server starting"
             .takeIf {
-                LanguageServiceAccessor
-                    .getInstance(project())
-                    .startedServers
-                    .any { it.serverDefinition.id == SERVER_ID && it.serverStatus == ServerStatus.starting }
+                openProjects().any { project ->
+                    LanguageServiceAccessor
+                        .getInstance(project)
+                        .startedServers
+                        .any { it.serverDefinition.id == SERVER_ID && it.serverStatus == ServerStatus.starting }
+                }
             }.orEmpty()
 
+    /** The language servers' work in hand, each open project's, as [serverActivity] of its server says. */
+    private fun serverActivity(requests: Boolean = true): String =
+        openProjects().map { serverActivity(it, requests) }.filter(String::isNotEmpty).joinToString("; ")
+
     /**
-     * The language server's work in hand, as `xtc/busy` answers: the client's requests it has not answered, unless not
-     * [requests], and its compiler's jobs; empty when it has none, or when no server is started; a server that does not
-     * answer is busy.
+     * The language server's work in hand in [project], as `xtc/busy` answers: the client's requests it has not answered,
+     * unless not [requests], and its compiler's jobs; empty when it has none, or when no server is started; a server that
+     * does not answer is busy.
      */
-    private fun serverActivity(requests: Boolean = true): String {
+    private fun serverActivity(
+        project: Project,
+        requests: Boolean,
+    ): String {
         val server =
             LanguageServiceAccessor
-                .getInstance(project())
+                .getInstance(project)
                 .startedServers
                 .firstOrNull { it.serverDefinition.id == SERVER_ID }
                 ?.languageServer as? XtcServerProtocol ?: return ""
@@ -397,15 +418,23 @@ object TourUi {
     /** What is in progress in the IDE, as [activity] says: its own work, and the selected file's analysis. */
     private fun ideActivity(): String = ideWork(workspaceChecks = true).let { (it.live + listOfNotNull(it.analysis)).joinToString("; ") }
 
+    /** What is in progress in the IDE, as [ideWork] of each open project says. */
+    private fun ideWork(workspaceChecks: Boolean): IdeWork =
+        openProjects()
+            .map { ideWork(it, workspaceChecks) }
+            .let { works -> IdeWork(works.flatMap { it.live }, works.firstNotNullOfOrNull { it.analysis }) }
+
     /**
-     * What is in progress in the IDE, in one round of its EDT: its own work, without the server's checks of the
+     * What is in progress in [project], in one round of the IDE's EDT: its own work, without the server's checks of the
      * workspace, unless [workspaceChecks], which LSP4IJ shows as a task of the server's while it answers one of its
      * pulls; and the selected file's analysis.
      */
-    private fun ideWork(workspaceChecks: Boolean): IdeWork =
+    private fun ideWork(
+        project: Project,
+        workspaceChecks: Boolean,
+    ): IdeWork =
         anyEdt {
-            val bar = WindowManager.getInstance().getStatusBar(project()) as? StatusBarEx
-            val project = project()
+            val bar = WindowManager.getInstance().getStatusBar(project) as? StatusBarEx
             val sessions = XDebuggerManager.getInstance(project).debugSessions
             // a paused program cannot change anything until the tour resumes it
             val paused = sessions.filter { it.isPaused }.map { it.debugProcess.processHandler }
@@ -508,15 +537,20 @@ object TourUi {
                 .toList(),
         )
 
-    /** The Ecstasy language server's status, such as `started`, and its process's ID; empty when it has none. */
+    /**
+     * The Ecstasy language servers' status, each open project's, such as `started`, and its process's ID; empty when
+     * none has one.
+     */
     @JvmStatic
     fun serverState(): String =
-        LanguageServiceAccessor
-            .getInstance(project())
-            .startedServers
-            .firstOrNull { it.serverDefinition.id == SERVER_ID }
-            ?.let { wrapper -> "${wrapper.serverStatus} ${runCatching { wrapper.currentProcessId }.getOrNull() ?: ""}".trim() }
-            .orEmpty()
+        openProjects()
+            .mapNotNull { project ->
+                LanguageServiceAccessor
+                    .getInstance(project)
+                    .startedServers
+                    .firstOrNull { it.serverDefinition.id == SERVER_ID }
+                    ?.let { wrapper -> "${wrapper.serverStatus} ${runCatching { wrapper.currentProcessId }.getOrNull() ?: ""}".trim() }
+            }.joinToString("; ")
 
     /**
      * The Ecstasy language server's state, as [serverState] says it, once the EDT has run what the tour's last action
