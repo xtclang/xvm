@@ -924,15 +924,95 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   in VS Code (VS Code `run-cL0u5W`, IntelliJ `run-2826386146099526655`); X145 passed in both on the first version
   (`run-d3bmjz`, `run-7607434108416040343`).
 
+- [x] Found 2026-11-27 with the above: the open or the close of a document still ended that document's own pending
+  requests (`invalidateQueries`), a workspace request asked of it among them, as if the file moved: X172's move
+  proposal as VS Code opened the file it moves, Organize Imports or xtc/rename of a document as VS Code released it. A
+  document query that a closed file answered ended as the document opened, also with its file's text. An unchanged open
+  still replaced its module's compile, so a cursor query of another document of the module that ran on the replaced
+  compile ended, as with any open. A request whose work the server retired answered "Document changed during
+  analysis", whatever the change was. Fixed:
+  - `9a42c02b37`: an unchanged open still replaces its module's compile, which it needs: the compile it replaces read
+    the document from its file and has no buffer of it, so the document's own cursor queries would answer nothing, and a
+    compile that had not read its sources yet would read the file as it then is. The queries on the replaced compile,
+    which read the same text, go on, on the compile that replaced it (`Request.successor`, `isOvertaken`); an edit of
+    the module still ends them all.
+  - `17d7c94a83`: a pending query is a `PendingQuery`, overtaken when its own document no longer answers for it, by the
+    rules the earlier work made for the other documents of a workspace query (its basis, `released`, `opened`). The
+    release of a member of the graph keeps its own requests, a workspace request asked of it and a document query, which
+    its module's analysis answers; that analysis stays, as the module's last open document closes, while a query that
+    reads it is pending, by the module each query reads (`PendingQuery.scope`, of its open document or the graph): of
+    the document, of a member released before it, or of a closed file of the module (`closeDocumentAndRefresh(uri,
+    unchanged, keep)`); it goes as the last of them or a change ends, and then only the compile that was kept
+    (`releaseKept`, `XdkAdapter.releaseClosed`). A change of the module ends the release; a watcher's report that a file
+    of a module that no document has open changed retires that module's analysis (`XdkAdapter.retireClosed`), which a
+    query of its closed files answered with their old text; and a query of a closed file reads the analysis it chose,
+    and each it goes on to as that one's compile ends unfinished: the compile that replaced it as a member opened with
+    its file's text, a new one, or the open document's (`closedSettled`, `XdkAdapter.answering`,
+    `XdkAdapter.openAnalysis`); once that one is done, a change that retires it or a release that drops it overtakes the
+    query, also while its work runs (`PendingQuery.closedAnalysis`, `XdkAdapter.answersClosed`). A document outside the
+    graph, or a library's source, has no analysis once closed, so its own requests, workspace ones too, still end as it
+    is released. An open with its file's text keeps them, and a query that the closed file answered goes on with the
+    open's compile (`closedSettled`, under the server's lock). Each change, as it ends, ends the pending queries it
+    overtook with ContentModified and what happened ("The text of Lid.x changed", "Lid.x closed with text that its file
+    does not have", "Lid.x opened with text that its file does not have", "Consumer.x changed on disk", "The workspace's
+    module graph changed", and so on), the change that first found each overtaken (`overtakenBy`); a report that newer
+    diagnostics overtook says the first change since it started that made them (`revise`). Retired work answers
+    ContentModified as before, a document's pull RequestCancelled, with the change or newer request that the compiler
+    retired it within on the server's thread, else the last change that retired work since it started
+    (`XdkAdapter.retirements`), else "A newer request took the place of its work". A close with unsaved text, out of
+    sync or of a file that changed on disk, and an open with other text, still overtake; a diagnostic pull still takes
+    any open as a change.
 
-New open entry, after the one above:
+  Tests by ordering: `XdkReleaseServerTest` (87 cases with every case) has Organize Imports, xtc/rename and the move
+  proposal outlasting the release, the open and the open again of the document they are asked of (8), its close with
+  unsaved text and its open with other text ending them (3), a hover of a released member, also its module's last open
+  document (2), and a released Lid's hover outlasting the release of Node0, the module's last open document, after it; a
+  rename of a local of the module's last open document outlasting its release; the kept analysis going as its query
+  ends; a closed file's hover answering its new text once the watcher reports it; a closed file's hover outlasting the
+  end of the query its module's analysis was kept for, and the release of the module's last open document; a closed
+  file's type hierarchy under way ending as its module's analysis is retired, also one that went on to the compile of
+  the file's open with its text, which kept it as the file closed so; a release of a kept analysis dropping no compile
+  that took its place; a released member's hover ending as its module changes; a hover and an Organize Imports of a
+  document outside the graph ending as it is released; a completion outlasting another member's open with its file's
+  text; a workspace pull naming the change that first made new diagnostics; and the reason of each case that overtakes.
+  `RequestsBeforeOpenTest` has a closed file's hover outlasting its open with its file's text, and ending as it opens
+  with other text. Each fix taken out alone fails its tests. The server's test classes and the adapter's nearest, 109
+  classes, 657 tests, pass with none skipped. On the final tree, X5, X130, X132, X143, X145, X172, X216, X352 and X357
+  passed in both editors, and X131 and X146 in VS Code (VS Code `run-EKYfmy`, IntelliJ `run-14989319779442725403` and
+  `run-10834320237095385386`). In IntelliJ, X131 failed both times, as on errs without this series, for the reason the
+  entry below gives, which `5c0478ec5e` fixes.
 
-- [ ] Found 2026-11-27 with the above: the open or the close of a document still ends that document's own pending
-  requests (`invalidateQueries`), a workspace query asked of it among them, as a move of the file that opens. A document
-  query that a closed file answered ends as the document opens, also with its file's text. An unchanged open still
-  replaces its module's compile, so a cursor query of another document of the module that runs on the replaced compile
-  ends, as with any open. A request whose work the server retires answers "Document changed during analysis",
-  whatever the change was.
+  Left open, each for its reason:
+  - A request of a document outside the graph, or of a library's source, still ends as the document is released, now
+    saying "Other.x closed": the server analyzes no closed document outside the graph.
+  - What retired work that ends off the server's thread, as a hover's probe or the workspace's symbols' graph query, is
+    the last change since the query started that retired anything: when a newer request took its place after such a
+    change, the answer names the change.
+  - A rename's or a move's proof that the compiler overtakes still answers its own "The project changed while the
+    rename was proven", which says less than the change.
+
+And, after that entry, a new entry:
+
+- [x] Found 2026-11-28 with the above: IntelliJ's X131 failed now and then, "textDocument/codeLens failed (-32801): A
+  newer request took the place of its work" (`run-14989319779442725403`, `run-10834320237095385386`; on errs without the
+  series "Document changed during analysis"). The playbook's codeLens of Resolve.x and LSP4IJ's own both waited for the
+  client's answer to the server's workspace/configuration request for the code lens settings (`referenceCodeLens`, 7 and
+  11 s there), and then asked the graph for the document's reference lenses one after the other: a graph query is one
+  per kind and document, the second took the first's place (`replacePending`), and the first answered ContentModified,
+  which X131's single query failed on. No change of a document overtook it. Fixed (`5c0478ec5e`): a graph query records
+  what its request asks beyond its key (`ProjectRequest.asks`), and a request that asks the same of a pending query of
+  the same graph, libraries and documents' text shares its answer, each with a future of its own; the work ends with the
+  cancellation of the last request that waits for it. One that asks something else, or of other text, takes its place as
+  before. Code lenses (by their run lenses), navigation, workspace symbols (by the query), references (by the position),
+  renames and rename proposals (by the position and the name, a plain rename's and an edit's apart), file moves (by the
+  files) and code actions (by the diagnostics) share; import completions, which check their own completion's compile,
+  and diagnostic pulls, each with a key of its own, do not. `XdkReleaseServerTest` has two code lens and two Organize
+  Imports requests of a document sharing a pending query, where the first answered ContentModified, and a references
+  query giving way to another question and to the same question of other text, which sharing by the key alone, or
+  without comparing the documents, broke; `XdkProjectQueryLifecycleTest` an equal newer query of references, code lenses
+  and a rename sharing a blocked one. 691 tests in 112 classes pass with none skipped. X5, X130, X131, X132, X143, X145
+  and X352 passed twice in IntelliJ (`run-5263346763069894455`, `run-7484788657474236814`), where X131's two code lens
+  requests shared the query, and X130, X131 and X132 in VS Code (`run-wg6W6T`).
 - [x] Found 2026-11-27 in `run-M6gUDp` (lagergren/analysis-races): X130 pressed Redo as soon as the folders were back on
   disk, 9 ms before the Undo's didRenameFiles, and Redo found nothing to redo. Fixed (`aec8651e10`): Undo and Redo each
   wait for their own didRenameFiles from the case's ExplorerMoveTrace, progress-based; four runs had Redo after it each
