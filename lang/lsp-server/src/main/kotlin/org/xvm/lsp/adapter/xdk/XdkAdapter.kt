@@ -870,6 +870,54 @@ class XdkAdapter
             }
 
         /**
+         * The sources of the open modules outside the graph that are no longer on disk as their analyses read them, each
+         * a module's root or its member folder, for a change that no watcher reported: a workspace pull answers such a
+         * module's closed members from its open document's analysis, and VS Code's watcher can miss every change in a
+         * folder made with its subfolders in one go, as X27's. The pull reads the graph's own sources again each time
+         * ([reportedDiagnostics]); this lists and reads these modules' as their analyses did, within one
+         * [XdkFileChanges.ReadBudget] in all, starting at another module each time. It leaves alone a module whose
+         * analysis runs, which reads them itself, one it can't tell of, as one too large, and one that it found changed
+         * whose analysis has read nothing new since, as the refresh it asked for changed nothing that the analysis reads:
+         * so that no difference that an analysis does not take in asks for a refresh at every pull.
+         */
+        internal fun unwatchedChanges(): List<String> {
+            val analyzed =
+                synchronized(lifecycle) {
+                    val graph = project.modules.values.mapTo(hashSetOf()) { it.uri }
+                    val open = scopes.values.toSet()
+                    unwatchedFound.keys.retainAll(open)
+                    val candidates =
+                        open
+                            .filter { it !in graph && !XdkLibrarySources.isCopy(it) && requests[it]?.result?.isDone != false }
+                            .mapNotNull { scope -> completed[scope]?.sourceInputs?.let { scope to it } }
+                            .filter { (scope, inputs) -> unwatchedFound[scope] != inputs }
+                    if (candidates.isEmpty()) return emptyList()
+                    val turn = (unwatchedTurns++ % candidates.size).toInt()
+                    candidates.drop(turn) + candidates.take(turn)
+                }
+            val openSources =
+                synchronized(lifecycle) { overlays.toMap() }
+                    .mapNotNull { (uri, text) -> XdkSources.file(uri)?.let { it to text } }
+                    .toMap()
+            val budget = XdkFileChanges.ReadBudget()
+            return analyzed
+                .flatMap { (scope, inputs) ->
+                    val root = XdkSources.file(scope) ?: return@flatMap emptyList()
+                    val changed = XdkFileChanges.changedSources(root, inputs, openSources, budget) ?: return@flatMap emptyList()
+                    synchronized(lifecycle) {
+                        if (changed.isEmpty()) unwatchedFound.remove(scope) else unwatchedFound[scope] = inputs
+                    }
+                    changed
+                }.map { file ->
+                    logger.info(
+                        "workspace pull: {} is not on disk as its module's analysis read it, and no watcher's event has said so",
+                        file,
+                    )
+                    file.toURI().toString()
+                }
+        }
+
+        /**
          * Whether a file event at [file] leaves the sources of [request], a running analysis, as it reads them.
          * The watcher reports a change after making it, so an analysis that has not read its sources yet will
          * read the changed files; the watcher's report of a folder the editor just created then cancels nothing.
@@ -3653,6 +3701,15 @@ class XdkAdapter
         private val diagnosticCache = XdkDiagnosticIndex()
         private val navigationIndex = XdkNavigationIndex()
         private val actionCache = XdkCodeActionCache()
+
+        /**
+         * Under lifecycle: the sources that [unwatchedChanges] last found changed, of each open module outside the graph,
+         * which it checks again once the module's analysis has read others.
+         */
+        private val unwatchedFound = mutableMapOf<String, XdkSources.Inputs>()
+
+        /** Under lifecycle: how many times [unwatchedChanges] had modules to check, which turns the module it starts at. */
+        private var unwatchedTurns = 0L
 
         /** The latest revision's compile for code actions, if one was compiled; tests compare its modules' outcomes. */
         internal fun codeActionBase(): XdkCodeActionCache.Base? = actionCache.base()

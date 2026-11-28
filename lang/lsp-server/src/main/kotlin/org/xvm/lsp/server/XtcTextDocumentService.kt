@@ -1447,11 +1447,20 @@ class XtcTextDocumentService(
             )
         }
 
+    /** How many times a change revised the diagnostics ([revise]), for tests of what a change revises. */
+    internal val diagnosticRevisions: Long
+        get() = synchronized(lifecycle) { diagnosticRevision }
+
     /** The documents whose current diagnostics no report has given the client yet, as their canonical URIs. */
     internal fun unreportedDiagnostics(): List<String> = diagnosticReports.unreported()
 
-    internal fun workspaceDiagnostics(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> =
-        pullDiagnostics(
+    internal fun workspaceDiagnostics(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> {
+        // a change of an open module outside the graph that no watcher reported, as VS Code's misses every change in a
+        // folder made with its subfolders in one go, is one on disk as a watcher's would be, whose analysis the pull
+        // waits for; the pull reads the graph's own sources again itself. The check runs here, on the message thread,
+        // as a watcher's event does, so that the pull starts after its refresh and in order with the documents' changes
+        if (server.usesPullDiagnostics) (adapter as? XdkAdapter)?.unwatchedChanges()?.forEach(::refreshForFile)
+        return pullDiagnostics(
             "workspace/diagnostic",
             "",
             params.identifier,
@@ -1478,6 +1487,7 @@ class XtcTextDocumentService(
                 tags = server.presentation.pullDiagnosticTags,
             )
         }
+    }
 
     private fun <T> pullDiagnostics(
         method: String,

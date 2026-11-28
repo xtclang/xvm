@@ -14,6 +14,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.util.Collections
 import java.util.concurrent.CancellationException
+import java.util.stream.Stream
 import java.util.Map.copyOf as immutableMap
 
 /** One module's immutable text and membership, with editor overlays taking precedence over disk. */
@@ -200,6 +201,36 @@ internal class XdkSources
                 return root
             }
 
+            /**
+             * The source files of the module [root] and the folders of its members, as [capture] reads them: the root, each
+             * regular `.x` file and each folder under its member folder by its canonical path while that stays in the
+             * folder, and each of [buffers], the open documents' files, that is in it, whether its file is there or not.
+             * Runs on the compiler worker, and for a workspace pull's check of what an analysis read
+             * ([XdkFileChanges.changedSources]).
+             */
+            fun sourceFiles(
+                root: File,
+                buffers: Collection<File>,
+                cancelled: () -> Boolean,
+            ): Pair<Set<File>, Set<File>> {
+                val directory = File(root.parentFile, root.nameWithoutExtension).toPath()
+                val files = linkedSetOf(root)
+                val directories = linkedSetOf<File>()
+                (if (Files.isDirectory(directory)) Files.walk(directory) else Stream.empty()).use { paths ->
+                    paths.forEach {
+                        if (cancelled()) throw CancellationException()
+                        val file = it.toFile().canonicalFile
+                        when {
+                            !file.toPath().startsWith(directory) -> Unit
+                            Files.isDirectory(it) -> directories += file
+                            Files.isRegularFile(it) && file.extension == "x" -> files += file
+                        }
+                    }
+                }
+                files += buffers.filter { it.toPath().startsWith(directory) }
+                return files to directories
+            }
+
             /** Runs on the compiler worker. No source or temporary file is written by an overlay. */
             fun capture(
                 root: File,
@@ -211,25 +242,7 @@ internal class XdkSources
                     overlays.entries
                         .mapNotNull { (uri, text) -> file(uri)?.let { it to Overlay(uri, text) } }
                         .toMap()
-                val directory = File(root.parentFile, root.nameWithoutExtension).toPath()
-                val files = linkedSetOf(root)
-                val directories = linkedSetOf<File>()
-                if (Files.isDirectory(directory)) {
-                    Files.walk(directory).use { paths ->
-                        paths.forEach {
-                            if (cancelled()) throw CancellationException()
-                            val file = it.toFile().canonicalFile
-                            if (file.toPath().startsWith(directory)) {
-                                if (Files.isDirectory(it)) {
-                                    directories += file
-                                } else if (Files.isRegularFile(it) && file.extension == "x") {
-                                    files += file
-                                }
-                            }
-                        }
-                    }
-                }
-                files += buffers.keys.filter { it.toPath().startsWith(directory) }
+                val (files, directories) = sourceFiles(root, buffers.keys, cancelled)
                 val text =
                     files.associateWith { file ->
                         if (cancelled()) throw CancellationException()

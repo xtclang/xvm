@@ -764,17 +764,23 @@ class XdkPullDiagnosticsTest {
         }
     }
 
+    /**
+     * The module Project in [folder] of [workspace], its root with a member, and returns its root: two of them side by
+     * side, as the editor playbooks' cases have them, leave the graph.
+     */
+    private fun project(
+        workspace: File,
+        folder: String,
+    ): File {
+        workspace.resolve("$folder/Project/Child.x").apply { parentFile.mkdirs() }.writeText("class Child extends Base<String> {}\n")
+        return workspace.resolve("$folder/Project.x").apply { writeText("module Project {\n    class Base<T> {}\n}\n") }
+    }
+
     @Test
     fun `a closed member of a module outside the graph, one of two of a name, comes and goes with the watcher's events`() {
         val workspace = directory.toRealPath().toFile()
-
-        // two modules named Project, as the editor playbooks' cases have them side by side, which leave the graph
-        fun project(folder: String): File {
-            workspace.resolve("$folder/Project/Child.x").apply { parentFile.mkdirs() }.writeText("class Child extends Base<String> {}\n")
-            return workspace.resolve("$folder/Project.x").apply { writeText("module Project {\n    class Base<T> {}\n}\n") }
-        }
-        val first = project("First")
-        val second = project("Second")
+        val first = project(workspace, "First")
+        val second = project(workspace, "Second")
         val child = workspace.resolve("First/Project/Child.x")
         val bad = workspace.resolve("Second/Project/Bad.x")
 
@@ -804,6 +810,64 @@ class XdkPullDiagnosticsTest {
             assertThat(bad.delete()).isTrue()
             watched(session, bad, FileChangeType.Deleted)
             assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Second/Project/Bad.x") }.items).isEmpty()
+        }
+    }
+
+    @Test
+    fun `a closed member of a module outside the graph goes from the workspace's pull once deleted, though no watcher reports it`() {
+        val workspace = directory.toRealPath().toFile()
+        project(workspace, "First")
+        Session().use { session ->
+            session.server.changeCompilerWorkspaceFolders(listOf(workspace.toURI().toString()), emptyList())
+            session.server.discoveryIdle().awaited()
+            val ids = mutableMapOf<String, String>()
+            session.workspacePull(ids)
+
+            // as X27 made its folder with its module in one go, of which VS Code's watcher reported only the folder
+            val second = project(workspace, "Second")
+            val bad = workspace.resolve("Second/Project/Bad.x").apply { writeText("class Bad extends Missing {}") }
+            watched(session, workspace.resolve("Second"), FileChangeType.Created)
+            session.server.discoveryIdle().awaited()
+            session.open(second.toURI().toString(), second.readText(), 1)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Second/Project/Bad.x") }.items).isNotEmpty()
+            // nor anything in the module's folder since, as it watched none of it
+            assertThat(bad.delete()).isTrue()
+            assertThat(session.workspacePull(ids).singleOrNull { it.uri.endsWith("/Second/Project/Bad.x") }?.items)
+                .describedAs("the deleted Bad.x's report, which a pull that reads nothing again leaves unchanged")
+                .isEmpty()
+        }
+    }
+
+    @Test
+    fun `an open member deleted with no watcher's event starts no compile or revision at each workspace pull`() {
+        val workspace = directory.toRealPath().toFile()
+        project(workspace, "First")
+        val second = project(workspace, "Second")
+        val child = workspace.resolve("Second/Project/Child.x")
+        // a closed member with a byte order mark, which the analysis reads without it
+        workspace.resolve("Second/Project/Marked.x").writeText("\uFEFFclass Marked {}\n")
+        Session().use { session ->
+            session.server.changeCompilerWorkspaceFolders(listOf(workspace.toURI().toString()), emptyList())
+            session.server.discoveryIdle().awaited()
+            session.open(second.toURI().toString(), second.readText(), 1)
+            session.open(child.toURI().toString(), child.readText(), 1)
+            val ids = mutableMapOf<String, String>()
+            session.workspacePull(ids)
+            // as VS Code keeps the tab of a file deleted in its Explorer, with no didClose, and no watcher's event came: the
+            // module's analysis reads the open document, as it did
+            assertThat(child.delete()).isTrue()
+            val documents = session.server.textDocumentService as XtcTextDocumentService
+            val compiles = session.adapter.compilerQueueSnapshot()["submittedTotal"]
+            val revision = documents.diagnosticRevisions
+            session.workspacePull(ids)
+            session.workspacePull(ids)
+            assertThat(session.adapter.compilerQueueSnapshot()["submittedTotal"]).describedAs("the compiles submitted").isEqualTo(compiles)
+            assertThat(documents.diagnosticRevisions).describedAs("the diagnostics' revision").isEqualTo(revision)
+
+            // a change that it found, which no analysis has read since, it finds again only once an analysis has read others
+            workspace.resolve("Second/Project/Bad.x").writeText("class Bad {}")
+            assertThat(session.adapter.unwatchedChanges()).hasSize(1)
+            assertThat(session.adapter.unwatchedChanges()).isEmpty()
         }
     }
 
