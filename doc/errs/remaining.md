@@ -1012,7 +1012,13 @@ And, after that entry, a new entry:
   without comparing the documents, broke; `XdkProjectQueryLifecycleTest` an equal newer query of references, code lenses
   and a rename sharing a blocked one. 691 tests in 112 classes pass with none skipped. X5, X130, X131, X132, X143, X145
   and X352 passed twice in IntelliJ (`run-5263346763069894455`, `run-7484788657474236814`), where X131's two code lens
-  requests shared the query, and X130, X131 and X132 in VS Code (`run-wg6W6T`).
+  requests shared the query, and X130, X131 and X132 in VS Code (`run-wg6W6T`). `90e5ed60ab` adds the tests of the count
+  of the requests that share a query, which a share handing each request the query's own future, or never ending the
+  work at the last, passed before: blocked references, code lenses and a rename go on as one of their two requests is
+  canceled, and a shared code lens query leaves the compiler's queue only with the last; and it ends a closed file's
+  query that no analysis answers as its file went, which settled on the retired analysis and answered from none, with
+  ContentModified and what retired it, as a test of a deleted Part.x shows. X130, X131 and X132 passed in IntelliJ on it
+  (`run-15890549843345149800`).
 - [x] Found 2026-11-27 in `run-M6gUDp` (lagergren/analysis-races): X130 pressed Redo as soon as the folders were back on
   disk, 9 ms before the Undo's didRenameFiles, and Redo found nothing to redo. Fixed (`aec8651e10`): Undo and Redo each
   wait for their own didRenameFiles from the case's ExplorerMoveTrace, progress-based; four runs had Redo after it each
