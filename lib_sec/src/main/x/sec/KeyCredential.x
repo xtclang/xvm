@@ -4,7 +4,7 @@ import crypto.Signer;
  * A `KeyCredential` represents a secret key, such as an "API key".
  */
 const KeyCredential
-        extends Credential(Scheme) {
+        extends Credential {
 
     /**
      * "ak" == API Key

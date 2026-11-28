@@ -6,7 +6,7 @@ import io.RTChannel;
  * Native OS FileChannel implementation.
  */
 service OSFileChannel
-        extends RTChannel(rawChannel)
+        extends RTChannel
         implements FileChannel {
 
     construct(RawOSFileChannel rawChannel) {
