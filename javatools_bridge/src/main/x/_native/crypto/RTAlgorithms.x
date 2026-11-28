@@ -35,10 +35,10 @@ service RTAlgorithms {
             algorithms.add(&alg.maskAs(Algorithm));
         }
 
-        for ((String name, KeySize keySize) : macs) {
+        for (String name : macs) {
             (_, Object implementation) = getAlgorithmInfo(name, MAC);
 
-            Algorithm alg = new RTMacAlgorithm(name, keySize, implementation);
+            Algorithm alg = new RTMacAlgorithm(name, implementation);
             algorithms.add(&alg.maskAs(Algorithm));
         }
 
@@ -120,10 +120,10 @@ service RTAlgorithms {
      *
      * (a.k.a "Keyed-Hashing for Message Authentication", a.k.a symmetric private key cryptography).
      */
-    static Tuple<String, KeySize>[] macs = [
-        ("HmacSHA1",    16),
-        ("HmacSHA256", [16, 32, 44]),
-        ("HmacSHA512", [32, 64]),
+    static String[] macs = [
+        "HmacSHA1",
+        "HmacSHA256",
+        "HmacSHA512",
     ];
 
     /**

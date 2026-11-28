@@ -8,14 +8,8 @@ import libcrypto.Verifier;
 /**
  * The native [Signing] [Algorithm] implementation that requires a symmetric key.
  */
-service RTMacAlgorithm(String name, Int|Int[] keySize)
+service RTMacAlgorithm(String name, Object mac)
         implements Algorithm {
-
-    construct(String name, Int|Int[] keySize, Object mac) {
-        this.name    = name;
-        this.keySize = keySize;
-        this.mac     = mac;
-    }
 
     /**
      * The native signature.
@@ -31,7 +25,7 @@ service RTMacAlgorithm(String name, Int|Int[] keySize)
 
     @Override
     conditional Int|Int[] keyRequired() {
-        return True, keySize;
+        return True, Algorithm.VariableKeySize;
     }
 
     @Override
@@ -43,6 +37,7 @@ service RTMacAlgorithm(String name, Int|Int[] keySize)
         switch (key.form) {
         case Secret:
             assert key.is(PrivateKey) as "key must be a PrivateKey";
+            assert:arg key.size > 0 as "a non-empty key is required";
 
             Signer signer = new RTSigner(this, key, key, 0, mac);
             return &signer.maskAs(Signer);
@@ -54,6 +49,6 @@ service RTMacAlgorithm(String name, Int|Int[] keySize)
 
     @Override
     String toString() {
-        return $"{name.quoted()} MAC algorithm with {keySize} bytes keys";
+        return $"{name.quoted()} MAC algorithm with variable-length keys";
     }
 }

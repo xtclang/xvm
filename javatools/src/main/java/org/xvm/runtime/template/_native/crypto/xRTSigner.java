@@ -89,13 +89,7 @@ public class xRTSigner
                 signature.update(abData);
                 abSig = signature.sign();
             } else if (hCipher instanceof MacHandle hMac) {
-                Mac    mac    = hMac.f_mac;
-                byte[] abData = xRTUInt8Delegate.getBytes(haData);
-
-                Key privateKey = xRTAlgorithms.extractKey(frame, hKey,
-                                        mac.getAlgorithm(), KeyForm.PrivateOrSecret);
-                mac.init(privateKey);
-                abSig = mac.doFinal(abData);
+                abSig = computeMac(frame, hMac.f_mac, hKey, xRTUInt8Delegate.getBytes(haData));
             } else {
                 return frame.raiseException(xException.makeObscure(frame, "Invalid cipher"));
             }
@@ -128,11 +122,7 @@ public class xRTSigner
                 return frame.assignValue(iReturn,
                         xBoolean.makeHandle(signature.verify(abSig)));
             } else if (hCipher instanceof MacHandle hMac) {
-                Mac mac        = hMac.f_mac;
-                Key privateKey = xRTAlgorithms.extractKey(frame, hKey,
-                                        mac.getAlgorithm(), KeyForm.Private);
-                mac.init(privateKey);
-                byte[] abSigActual = mac.doFinal(abData);
+                byte[] abSigActual = computeMac(frame, hMac.f_mac, hKey, abData);
 
                 return frame.assignValue(iReturn,
                         xBoolean.makeHandle(MessageDigest.isEqual(abSig, abSigActual)));
@@ -141,6 +131,18 @@ public class xRTSigner
             }
         } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
+        }
+    }
+
+    /**
+     * Compute a MAC with the engine shared by signers for this algorithm.
+     */
+    private static byte[] computeMac(Frame frame, Mac mac, ObjectHandle hKey, byte[] abData)
+            throws GeneralSecurityException {
+        Key secret = xRTAlgorithms.extractKey(frame, hKey, mac.getAlgorithm(), KeyForm.PrivateOrSecret);
+        synchronized (mac) {
+            mac.init(secret);
+            return mac.doFinal(abData);
         }
     }
 }

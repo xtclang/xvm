@@ -57,6 +57,7 @@ module TestCrypto {
         CryptoKey macKey = macKeyGen.generateSecretKey("test-mac-key");
         testSigner(algorithms, "HmacSHA256", macKey, BIG_TEXT);
         testSigner(algorithms, "HmacSHA512", macKey, BIG_TEXT);
+        testRawHmac(algorithms);
 
         PrivateKey privateKeyM = new PrivateKey("test-copy", "DES", 8, random.bytes(8));
         testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
@@ -118,6 +119,41 @@ module TestCrypto {
                                  |acceptable
                                );
         }
+    }
+
+    void testRawHmac(Algorithms algorithms) {
+        Byte[] secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".utf8();
+        Byte[] data   = "hmac test".utf8();
+        for (String name : ["HmacSHA1", "HmacSHA256", "HmacSHA512"]) {
+            PrivateKey key = new PrivateKey("test-raw-key", name, secret.size, secret);
+            assert Signer signer := algorithms.signerFor(name, key);
+            assert Verifier verifier := algorithms.verifierFor(name, key);
+            Signature signature = signer.sign(data);
+            assert signer.verify(signature, data);
+            assert verifier.verify(signature, data);
+            assert !verifier.verify(signature, "changed data".utf8());
+
+            PrivateKey empty = new PrivateKey("test-empty-key", name, 0, []);
+            assert !algorithms.signerFor(name, empty);
+            assert !algorithms.verifierFor(name, empty);
+        }
+
+        // RFC 4231 test case 6 exercises a key larger than the SHA-256 block size
+        // https://www.rfc-editor.org/rfc/rfc4231#section-4.7
+        Byte[] longSecret = new Byte[131](_ -> 0xAA).freeze(inPlace=True);
+        Byte[] longData   = "Test Using Larger Than Block-Size Key - Hash Key First".utf8();
+
+        // HMAC uses the hash of a key that exceeds the hash function's block size
+        assert Signer sha256 := algorithms.hasherFor("SHA-256");
+        Byte[] digest = sha256.sign(longSecret).bytes;
+        PrivateKey hashedKey = new PrivateKey("test-hashed-key", "HmacSHA256", digest.size, digest);
+        assert Signer reference := algorithms.signerFor("HmacSHA256", hashedKey);
+        Byte[] expected = reference.sign(longData).bytes;
+
+        PrivateKey key = new PrivateKey("test-long-key", "HmacSHA256", longSecret.size, longSecret);
+        assert Signer signer := algorithms.signerFor("HmacSHA256", key);
+        assert signer.sign(longData).bytes == expected;
+        assert signer.verify(expected, longData);
     }
 
     static String SMALL_TEXT =
