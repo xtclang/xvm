@@ -38,6 +38,19 @@ class ClientProtocol(
 
     fun capabilities(): JsonElement = copy(server().getServerCapabilitiesSync())
 
+    /**
+     * The status of the installed client's server now, such as `started`, `starting` or `stopping`, without waiting for
+     * one as [server] does; null when the project has none.
+     */
+    fun serverStatus(): String? =
+        with(driver) {
+            service<LanguageClients>(project())
+                .getStartedServers()
+                .firstOrNull()
+                ?.getServerStatus()
+                ?.name()
+        }
+
     /** The language server's account of itself, its `xtc/languageServiceStatus`. */
     fun status(): JsonObject = query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
 

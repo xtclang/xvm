@@ -12,7 +12,6 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.util.ui.UIUtil
 import org.xtclang.idea.run.XtcBuildConfigurable
 import org.xtclang.idea.run.XtcBuildSettings
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.JEditorPane
 import javax.swing.JRadioButton
 
@@ -25,18 +24,6 @@ object BuildModeUi {
     @JvmStatic
     fun reasons(project: Project): String =
         JsonArray().apply { XtcBuildSettings.getInstance(project).gradleReasons.forEach(::add) }.toString()
-
-    /**
-     * Whether [project] has been told that it builds and runs with Gradle, which XtcBuildSettings says once a session:
-     * read from its field, which the plugin keeps to itself.
-     */
-    @JvmStatic
-    fun told(project: Project): Boolean =
-        XtcBuildSettings::class.java
-            .getDeclaredField("told")
-            .apply { isAccessible = true }
-            .get(XtcBuildSettings.getInstance(project))
-            .let { (it as AtomicBoolean).get() }
 
     /** Ends the processes that [project]'s runs started and that still run, as their consoles' Stop does, and answers how many. */
     @JvmStatic
@@ -60,13 +47,6 @@ object BuildModeUi {
             .apply {
                 notifications(project, title).forEach { add(StringUtil.removeHtmlTags(it.content, true).trim()) }
             }.toString()
-
-    /** Expires the notifications titled [title] in [project], as closing them does. */
-    @JvmStatic
-    fun dismiss(
-        project: Project,
-        title: String,
-    ) = notifications(project, title).forEach(Notification::expire)
 
     /**
      * The Build and Run page, Settings | Languages & Frameworks | Ecstasy | Build and Run, as it shows: whether each of its

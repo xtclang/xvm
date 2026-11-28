@@ -10,6 +10,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.ex.ProjectManagerEx
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -18,30 +19,54 @@ import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 
 /** Native project lifetime; no fake language clients or process termination in the assertions. */
 object ProjectLifecycle {
+    /** The last open that [open] started of each path, which [closeAt] lets end first. */
+    private val opening = ConcurrentHashMap<Path, CompletableFuture<Project?>>()
+
     @JvmStatic
     fun open(path: String): CompletableFuture<Project?> =
-        CompletableFuture.supplyAsync {
-            runBlocking {
-                // The driver created this fixture. Trust only its exact path in the disposable IDE.
-                TrustedProjects.setProjectTrusted(Path.of(path), true)
-                ProjectManagerEx.getInstanceEx().openProjectAsync(
-                    Path.of(path),
-                    OpenProjectTask {
-                        forceOpenInNewFrame = true
-                        isNewProject = !Files.exists(Path.of(path, ".idea"))
-                    },
-                )
-            }
-        }
+        CompletableFuture
+            .supplyAsync {
+                runBlocking {
+                    // The driver created this fixture. Trust only its exact path in the disposable IDE.
+                    TrustedProjects.setProjectTrusted(Path.of(path), true)
+                    ProjectManagerEx.getInstanceEx().openProjectAsync(
+                        Path.of(path),
+                        OpenProjectTask {
+                            forceOpenInNewFrame = true
+                            isNewProject = !Files.exists(Path.of(path, ".idea"))
+                        },
+                    )
+                }
+            }.also { opening[Path.of(path)] = it }
 
     @JvmStatic
     fun close(project: Project): CompletableFuture<Boolean> =
         CompletableFuture.supplyAsync {
             runBlocking { ProjectManagerEx.getInstanceEx().forceCloseProjectAsync(project, save = true) }
         }
+
+    /**
+     * Closes the open project at [path], once an open of it that [open] started has ended, however it ended: a wait for
+     * the open that gave up leaves the project to open later. Answers whether a project was open there.
+     */
+    @JvmStatic
+    fun closeAt(path: String): CompletableFuture<Boolean> {
+        val root = Path.of(path)
+        val pending = opening.remove(root) ?: CompletableFuture.completedFuture(null)
+        return pending
+            .handle { _, _ -> }
+            .thenCompose {
+                ProjectManager
+                    .getInstance()
+                    .openProjects
+                    .firstOrNull { project -> project.basePath?.let(Path::of) == root }
+                    ?.let(::close) ?: CompletableFuture.completedFuture(false)
+            }
+    }
 
     @JvmStatic
     fun show(

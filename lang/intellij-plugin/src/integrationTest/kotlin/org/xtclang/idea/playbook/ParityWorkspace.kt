@@ -10,6 +10,7 @@ import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.FileEditorManager
+import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.VirtualFile
 import com.intellij.driver.sdk.getToolWindow
 import com.intellij.driver.sdk.singleProject
@@ -383,8 +384,11 @@ class ParityWorkspace(
         return open(setup.string("root")).also(::clean)
     }
 
-    fun configure(modules: List<SharedScenarios.SourceModule>?) =
-        driver.configure(Gson().toJson(mapOf("xtc" to mapOf("compiler" to mapOf("sourceModules" to modules)))))
+    /** Gives the language server [modules] as the workspace's, with [project]'s trace of it verbose. */
+    fun configure(
+        modules: List<SharedScenarios.SourceModule>?,
+        project: Project = with(driver) { singleProject() },
+    ) = driver.configure(Gson().toJson(mapOf("xtc" to mapOf("compiler" to mapOf("sourceModules" to modules)))), project)
 
     fun dependencies(): Document {
         shared.common.sourceModules.forEach { write(it.uri) }
@@ -416,9 +420,9 @@ class ParityWorkspace(
         return open(data.string("file"))
     }
 
-    /** Refreshes the build model, as the Compiler settings page's Refresh does. */
-    fun refreshBuildModel() =
-        with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).refreshBuildModel(singleProject()) } }
+    /** Refreshes [project]'s build model, as the Compiler settings page's Refresh does. */
+    fun refreshBuildModel(project: Project = with(driver) { singleProject() }) =
+        with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).refreshBuildModel(project) } }
 
     fun configure(modules: JsonElement) =
         configure(
@@ -580,18 +584,20 @@ internal fun workspaceModel(
     root: Path,
 ): String = model.toString().replace("\${workspace}", root.toUri().toString().trimEnd('/'))
 
-/** Gives the language server the settings [content], with LSP4IJ's trace of it verbose. */
-internal fun Driver.configure(content: String) =
-    withContext(OnDispatcher.EDT) {
-        val settings = new(LspServerSettings::class)
-        settings.setConfigurationContent(content)
-        service<LspSettings>().updateSettings("xtcLanguageServer", settings)
-        val traceSettings =
-            new(LspServerSettings::class)
-                .setServerTrace(utility(ClientTraceLevel::class).valueOf("verbose"))
-        service<ProjectLspSettings>(singleProject())
-            .updateSettings("xtcLanguageServer", traceSettings)
-    }
+/** Gives the language server the settings [content], with LSP4IJ's trace of it in [project] verbose. */
+internal fun Driver.configure(
+    content: String,
+    project: Project = singleProject(),
+) = withContext(OnDispatcher.EDT) {
+    val settings = new(LspServerSettings::class)
+    settings.setConfigurationContent(content)
+    service<LspSettings>().updateSettings("xtcLanguageServer", settings)
+    val traceSettings =
+        new(LspServerSettings::class)
+            .setServerTrace(utility(ClientTraceLevel::class).valueOf("verbose"))
+    service<ProjectLspSettings>(project)
+        .updateSettings("xtcLanguageServer", traceSettings)
+}
 
 /**
  * The path IntelliJ gives the editor of a location's URI: its file's, or, for a document that LSP4IJ opens from

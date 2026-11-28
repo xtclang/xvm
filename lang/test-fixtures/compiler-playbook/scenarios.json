@@ -9263,7 +9263,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "The project is made by the New Project wizard's project creator with the plugin's own version, not through the wizard's pages, and copied into the open project. Build Project in Gradle mode goes to the IDE's builder, which needs the Gradle project imported, so the case uses Run: the Ecstasy Application configuration calls ./gradlew runXtc, which compiles the module first."
+          "The project is made by the New Project wizard's project creator with the plugin's own version, not through the wizard's pages; as the wizard does, the case opens it in a window of its own and has IntelliJ import its Gradle build, whose classes and testClasses Build Project then runs."
         ]
       }
     },
@@ -11289,9 +11289,9 @@
         "slow"
       ],
       "manual": [
-        "Needs ./gradlew xdk:installDist and publishLocal first, as X303 does. VS Code's case makes both XDKs from this tree's xdk:installDist, in a Maven repository of its own, each as the distribution archive that publishLocal would publish: as this tree's version, the XDK that the language server bundles, which BundledXdk builds with, and as version otherVersion with one entry more in its javatools.jar, the language server's tell of another XDK, as building a second XDK for the case would take as long as the XDK's whole build. Neither comes from mavenLocal, whose XDK publishLocal of another checkout or of an older tree may have put there. Both projects' builds take the XTC Gradle plugin from mavenLocal, which only publishLocal puts there.",
+        "Needs ./gradlew xdk:installDist and publishLocal first, as X303 does. Each editor's case makes both XDKs from this tree's xdk:installDist, in a Maven repository of its own, each as the distribution archive that publishLocal would publish: as this tree's version, the XDK that the language server bundles, which BundledXdk builds with, and as version otherVersion with one entry more in its javatools.jar, the language server's tell of another XDK, as building a second XDK for the case would take as long as the XDK's whole build. Neither comes from mavenLocal, whose XDK publishLocal of another checkout or of an older tree may have put there. Both projects' builds take the XTC Gradle plugin from mavenLocal, which only publishLocal puts there.",
         "VS Code's case reads the Gradle run's output in the task terminal, as Terminal: Select All and Copy give it, after the run's command line (18a.9), besides the Build and Run tasks' exit codes and that the Gradle build extracted the other XDK.",
-        "VS Code gives the notice once a session for each folder while it is in the window, so the case checks it whatever cases ran before it; IntelliJ gives it once a session for the project, as its limitations say."
+        "Each editor gives the notice once a session for each of its folders or projects: VS Code for each folder while it is in the window, IntelliJ for each project, and IntelliJ's case opens the project on the other XDK as a new one; so the case checks it whatever cases ran before it."
       ],
       "values": {
         "repository": "xdk-repository",
@@ -11359,12 +11359,8 @@
         "embeddedOutput": "build/xtc/embedded"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "IntelliJ has one language server for the project and builds the whole project with Gradle as soon as one of its folders builds with another XDK, as the user guide says, so the project on the bundled XDK is checked first, at the project root, where Gradle mode runs ./gradlew, and then the project on the other XDK in its place, rather than beside it. In Gradle mode Build Project goes to the IDE's own builder, so the case checks only that the embedded compiler does not take it; Run goes through the Gradle wrapper.",
-          "The notice is IntelliJ's once a session for the project: the case checks it only while the project has not been told yet, and else says in its log that it checks the reason alone.",
-          "IntelliJ's case makes the other XDK from the XDK that publishLocal put in mavenLocal, and BundledXdk builds with mavenLocal's XDK, so its bundled half holds only where publishLocal ran from the same tree, as in the container."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "CFG1": {

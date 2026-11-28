@@ -88,25 +88,13 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
         }
     }
 
-    fun openSecond(): Project {
-        val opened = probe.open(directory.toString())
-        awaitUi("second project opens", HANG_LIMIT) { opened.isDone() }
-        val project = requireNotNull(opened.get())
-        awaitUi("both native project frames are visible", HANG_LIMIT) {
-            withContext(OnDispatcher.EDT) { probe.visible(primary) && probe.visible(project) }
-        }
-        return project
-    }
+    fun openSecond(): Project = openBeside(directory).also { check(withContext(OnDispatcher.EDT) { probe.visible(primary) }) }
 
-    fun close(
-        project: Project,
-        pid: Long,
-    ) {
-        val closed = probe.close(project)
-        awaitUi("project closes and owns server retirement", HANG_LIMIT) {
-            closed.isDone() && !utility(ProgressUi::class).alive(pid)
+    fun close(pid: Long) {
+        check(closeBeside(directory)) { "The second project was open" }
+        check(withinOrFail(HANG_LIMIT, "the closed project's server retires") { !utility(ProgressUi::class).alive(pid) }) {
+            "The closed project's server still runs; ${Quiescence.stuck}"
         }
-        check(closed.get())
     }
 
     // LSP4IJ sends an edit once IntelliJ commits the document; a protocol request sent before that reads the old text
@@ -165,7 +153,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
             .asJsonObject["runningSize"]
             .asInt > 0
     }
-    close(secondary, secondPid)
+    close(secondPid)
     awaitUi("closed project's pending reply retires", HANG_LIMIT) { secondPending.isDone() }
     check(first.await("textDocument/references", firstPending).asJsonArray.size() == data.values["methods"].asInt + 1)
     check(first.server().getCurrentProcessId() == firstPid)
@@ -179,7 +167,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
     hover(reconnected, secondFile, "String")
     val reopenedPid = requireNotNull(reconnected.server().getCurrentProcessId())
     check(reopenedPid != secondPid && reopenedPid != firstPid)
-    close(reopened, reopenedPid)
+    close(reopenedPid)
     hover(first, firstFile, "Int")
     Files.writeString(
         root.parent.resolve("project-lifecycle.json"),
@@ -195,6 +183,37 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
             ),
         ) + "\n",
     )
+}
+
+/**
+ * Opens [root] as a project beside the open ones, as File | Open does in a new window, and answers it once it has opened
+ * and its window shows. A wait that gives up leaves the open to [closeBeside], which closes the project once it opens.
+ */
+internal fun Driver.openBeside(root: Path): Project {
+    val lifecycle = utility(ProjectLifecycle::class)
+    val opening = lifecycle.open(root.toString())
+    check(withinOrFail(HANG_LIMIT, "the project ${root.fileName} opens") { opening.isDone() }) {
+        "The project ${root.fileName} did not open; ${Quiescence.stuck}"
+    }
+    val project = requireNotNull(opening.get()) { "No project at $root" }
+    check(
+        withinOrFail(HANG_LIMIT, "the window of ${root.fileName} shows") { withContext(OnDispatcher.EDT) { lifecycle.visible(project) } },
+    ) {
+        "The window of ${root.fileName} does not show; ${Quiescence.stuck}"
+    }
+    return project
+}
+
+/**
+ * Closes the project at [root], which [openBeside] opened or began to open, once that open has ended, and waits until it
+ * has closed; answers whether a project was open there.
+ */
+internal fun Driver.closeBeside(root: Path): Boolean {
+    val closing = utility(ProjectLifecycle::class).closeAt(root.toString())
+    check(withinOrFail(HANG_LIMIT, "the project ${root.fileName} closes") { closing.isDone() }) {
+        "The project ${root.fileName} did not close; ${Quiescence.stuck}"
+    }
+    return closing.get()
 }
 
 /**
@@ -233,6 +252,8 @@ internal interface ProjectLifecycle {
     fun open(path: String): OpenProjectFuture
 
     fun close(project: Project): CloseProjectFuture
+
+    fun closeAt(path: String): CloseProjectFuture
 
     fun show(
         project: Project,
