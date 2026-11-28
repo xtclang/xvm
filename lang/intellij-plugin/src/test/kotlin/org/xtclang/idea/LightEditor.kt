@@ -109,12 +109,30 @@ class LightEditor(
      */
     fun openConnected(file: VirtualFile) {
         runInEdtAndWait { fixture.openFileInEditor(file) }
+        awaitConnected(file)
+    }
+
+    /** Has LSP4IJ connect [file], whether an editor shows it or not, and waits until the server has its text. */
+    fun awaitConnected(file: VirtualFile) {
+        connect(file)
+        await("LSP4IJ opens ${file.name}") { opened(file) }
+    }
+
+    /**
+     * Asks LSP4IJ to connect [file] to the server, as a request about it does, and as selecting its editor does: LSP4IJ
+     * connects a file as its editor is selected only if none of its features has made the file's support yet, and one can
+     * make it first, as under load a second file once never connected (ConnectDocumentToLanguageServerSetupParticipant
+     * connects it as this does, which does nothing for a connected file).
+     */
+    fun connect(file: VirtualFile) {
         ReadAction.runBlocking<RuntimeException> {
             val psi = checkNotNull(PsiManager.getInstance(fixture.project).findFile(file))
             LanguageServiceAccessor.getInstance(fixture.project).getLanguageServers(psi, null, null)
         }
-        await("LSP4IJ opens ${file.name}") { server.texts.keys.any { it.endsWith("/${file.name}") } }
     }
+
+    /** Whether the server has [file]'s text, from LSP4IJ's didOpen of it. */
+    fun opened(file: VirtualFile): Boolean = server.texts.keys.any { it.endsWith("/${file.name}") }
 
     /** Waits until [condition] holds, as [what] says, dispatching the EDT's pending events between its checks. */
     fun await(

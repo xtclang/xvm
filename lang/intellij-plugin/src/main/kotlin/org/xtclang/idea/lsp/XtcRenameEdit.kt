@@ -4,8 +4,11 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.util.LocalTimeCounter
 import com.redhat.devtools.lsp4ij.DocumentContentSynchronizer
 import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
@@ -121,18 +124,26 @@ class XtcRenameEdit
                 UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION
             }
 
-        /** Open buffer and synchronizer identity captured before requesting a rename. */
+        /** Open buffer and synchronizer identity captured before requesting a rename, and whether its file existed then. */
         private data class Buffer(
             val opened: OpenedDocument,
             val synchronizer: DocumentContentSynchronizer,
             val stamp: Long,
             val url: String,
+            val valid: Boolean,
         ) {
+            // TODO LSP4IJ: UP93 — LSP4IJ keeps a document connected that no editor shows once its file is deleted, with no
+            //  didClose, as X337's Gradle debug left GradleDebugged.x in the IntelliJ playbook's full catalog: a file deleted
+            //  before the request has changed nothing since, and stays current while no file has taken its place, which
+            //  LSP4IJ would connect to the stale document whose deleted text the server keeps. Require a valid file again
+            //  once a release we ship closes such a document
             fun isCurrent(): Boolean =
-                opened.file.isValid &&
+                (if (valid) opened.file.isValid else stillDeleted()) &&
                     opened.file.url == url &&
                     opened.synchronizer === synchronizer &&
                     synchronizer.document.modificationStamp == stamp
+
+            private fun stillDeleted(): Boolean = !opened.file.isValid && VirtualFileManager.getInstance().findFileByUrl(url) == null
         }
 
         /** Source file, original modification stamp and proposed destination for a rename. */
@@ -149,19 +160,43 @@ class XtcRenameEdit
                     FileMoveTargets.valid(mapOf(Path.of(file.path) to target))
         }
 
-        /** Connection, buffers and file moves that must remain current while the server proves the rename. */
+        /**
+         * Connection, buffers and file moves that must remain current while the server proves the rename, which [asked]
+         * at that modification count. A document opened since whose text is its file's as the request was asked, as a
+         * library's read-only source or a file that an editor or a request opens, changes no source that the proof read,
+         * and leaves it current.
+         */
         private data class Snapshot(
             val wrapper: LanguageServerWrapper,
             val server: LanguageServer,
             val buffers: List<Buffer>,
+            val asked: Long,
             val moves: List<FileMove> = emptyList(),
         ) {
-            fun isCurrent(): Boolean =
-                !wrapper.isDisposed &&
+            fun isCurrent(): Boolean {
+                val opened = wrapper.openedDocuments.toSet()
+                val captured = buffers.map { it.opened }.toSet()
+                return !wrapper.isDisposed &&
                     wrapper.languageServer === server &&
-                    wrapper.openedDocuments.toSet() == buffers.map { it.opened }.toSet() &&
+                    opened.containsAll(captured) &&
+                    (opened - captured).all(::unchanged) &&
                     buffers.all(Buffer::isCurrent) &&
                     moves.all(FileMove::isCurrent)
+            }
+
+            /**
+             * Whether [opened], a document opened since the request, has the text that the server read then: a library's
+             * read-only source, whose text is the server's own; a document that holds only diagnostics; or one with no
+             * unsaved change whose file has not changed since, which a save or a reload from the disk would have given a
+             * later modification stamp (a document's change and a VFS change take theirs from LocalTimeCounter, and a save
+             * gives the file its document's).
+             */
+            private fun unchanged(opened: OpenedDocument): Boolean {
+                val file = opened.file
+                if (!file.isWritable && !file.isInLocalFileSystem) return true
+                val document = opened.synchronizer?.document ?: return true
+                return !FileDocumentManager.getInstance().isDocumentUnsaved(document) && file.modificationStamp < asked
+            }
 
             fun flush(): CompletableFuture<Void> =
                 CompletableFuture.allOf(
@@ -174,8 +209,9 @@ class XtcRenameEdit
         }
 
         companion object {
-            private fun capture(wrapper: LanguageServerWrapper): Snapshot =
-                Snapshot(
+            private fun capture(wrapper: LanguageServerWrapper): Snapshot {
+                val asked = LocalTimeCounter.currentTime()
+                return Snapshot(
                     wrapper,
                     requireNotNull(wrapper.languageServer),
                     wrapper.openedDocuments.map { opened ->
@@ -188,9 +224,12 @@ class XtcRenameEdit
                             synchronizer,
                             synchronizer.document.modificationStamp,
                             opened.file.url,
+                            opened.file.isValid,
                         )
                     },
+                    asked,
                 )
+            }
 
             /** Rename is the single-source special case of a preflighted file operation. */
             fun requestFileRename(

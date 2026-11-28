@@ -15,12 +15,10 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.problems.ProblemListener
 import com.intellij.problems.WolfTheProblemSolver
-import com.intellij.psi.PsiManager
 import com.intellij.testFramework.runInEdtAndWait
 import com.intellij.util.ui.UIUtil
 import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
-import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticUtils
 import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticsApplier
 import org.assertj.core.api.Assertions.assertThat
@@ -69,7 +67,7 @@ class ClosedFileProblemsTest {
         val child = file("Root/Child.x", "class Child extends Base {}\n")
         server.reported[uri(root)] = emptyList()
         server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
+        editor.openConnected(root)
         refresh()
         // asked for before the refresh was answered: LSP4IJ itself asks for no workspace report
         assertThat(server.requests).contains("workspace/diagnostic")
@@ -90,7 +88,7 @@ class ClosedFileProblemsTest {
         server.pulled[uri(root)] = listOf(error("pulled"))
         server.reported[uri(root)] = listOf(error("reported"))
         server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
+        editor.openConnected(root)
         refresh()
         // the report has Root.x before Root/Child.x, so a publication of Root.x would have come first
         editor.await("Child.x is a problem file") { problems.isProblemFile(child) }
@@ -106,7 +104,7 @@ class ClosedFileProblemsTest {
 
         // fixed by an edit elsewhere, and opened before a report says so: LSP4IJ drops its published error and pulls none
         server.reported[uri(child)] = emptyList()
-        open(child)
+        editor.openConnected(child)
         refresh()
         editor.await("Child.x is no problem file") { !problems.isProblemFile(child) }
         assertThat(openCodes(child)).isEmpty()
@@ -208,7 +206,7 @@ class ClosedFileProblemsTest {
     fun `an error that reaches a file's editor before LSP4IJ connects it goes with the connected document's report`() {
         val root = file("Root.x", "module Root {}\n")
         val child = file("Root/Child.x", "class Child extends Base {}\n")
-        open(root)
+        editor.openConnected(root)
         // fixed by the time LSP4IJ has connected the file, whose own pulls report none
         server.pulled[uri(child)] = emptyList()
         openMarkedBeforeConnection(child, "unknown-type")
@@ -219,7 +217,7 @@ class ClosedFileProblemsTest {
     fun `an error that reaches a file's editor before LSP4IJ connects it goes with an unchanged report of the connected document`() {
         val root = file("Root.x", "module Root {}\n")
         val child = file("Root/Child.x", "class Child extends Base {}\n")
-        open(root)
+        editor.openConnected(root)
         // the error is fixed by the time LSP4IJ has connected the file; the document's report has a result ID, and a pull
         //  that names it is answered as unchanged
         server.pulled[uri(child)] = emptyList()
@@ -291,7 +289,7 @@ class ClosedFileProblemsTest {
     private fun staysMarkedUntilOwnReport(beforeReport: (VirtualFile) -> Unit) {
         val root = file("Root.x", "module Root {}\n")
         val child = file("Root/Child.x", "class Child extends Base {}\n")
-        open(root)
+        editor.openConnected(root)
         server.pulled[uri(child)] = listOf(error("unknown-type"))
         val asked = CompletableFuture<Unit>()
         val answer = CompletableFuture<Unit>()
@@ -339,7 +337,7 @@ class ClosedFileProblemsTest {
         try {
             runInEdtAndWait { editor.fixture.openFileInEditor(file) }
             // on a thread of its own, which the connection holds
-            CompletableFuture.runAsync { connect(file) }
+            CompletableFuture.runAsync { editor.connect(file) }
             editor.await("LSP4IJ connects ${file.name}") { connecting.count == 0L }
             editor.connection().updateDiagnostics(file, "stub", listOf(error(code)), null)
             editor.await("${file.name}'s editor marks the error") { code in marks(file) }
@@ -347,7 +345,7 @@ class ClosedFileProblemsTest {
             setBeforeRegistration(null)
             marked.countDown()
         }
-        editor.await("LSP4IJ opens ${file.name}") { opened(file) }
+        editor.await("LSP4IJ opens ${file.name}") { editor.opened(file) }
     }
 
     /** Runs [hook] as LSP4IJ connects a document, before it registers the document's connection; null runs nothing. */
@@ -391,7 +389,7 @@ class ClosedFileProblemsTest {
         val root = file("Root.x", "module Root {}\n")
         val child = file("Root/Child.x", "class Child extends Base {}\n")
         server.reported[uri(child)] = listOf(error("unknown-type"))
-        open(root)
+        editor.openConnected(root)
         refresh()
         return child
     }
@@ -415,25 +413,6 @@ class ClosedFileProblemsTest {
     private fun uri(file: VirtualFile): String = LSPIJUtils.toUriAsString(file)
 
     private fun error(code: String) = Diagnostic(Range(Position(0, 0), Position(0, 5)), code, DiagnosticSeverity.Error, "stub", code)
-
-    private fun open(file: VirtualFile) {
-        runInEdtAndWait { editor.fixture.openFileInEditor(file) }
-        connect(file)
-        editor.await("LSP4IJ opens ${file.name}") { opened(file) }
-    }
-
-    /** Asks LSP4IJ to connect [file], whose editor is open, to the server. */
-    private fun connect(file: VirtualFile) {
-        // LSP4IJ connects a file as its editor is selected only if none of its features has made the file's support yet,
-        // and one can make it first: under load, a second file once never connected. Connect it as that path does
-        // (ConnectDocumentToLanguageServerSetupParticipant), which does nothing for a connected file
-        ReadAction.runBlocking<RuntimeException> {
-            val psi = checkNotNull(PsiManager.getInstance(editor.fixture.project).findFile(file))
-            LanguageServiceAccessor.getInstance(editor.fixture.project).getLanguageServers(psi, null, null)
-        }
-    }
-
-    private fun opened(file: VirtualFile): Boolean = server.texts.keys.any { it.endsWith("/${file.name}") }
 
     /** The server's refresh, as it sends one after each analysis, answered. */
     private fun refresh() {
