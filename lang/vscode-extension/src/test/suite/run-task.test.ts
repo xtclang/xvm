@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import type { BuildModel, BuildSourceSet } from '../../build-model';
 import { gradleTasks } from '../../gradle-projects';
 import { buildTasks, gradleBuild, gradleRoot } from '../../gradle-root';
-import { createXtcRunTask, gradleBuildTask, runModuleTask, XtcTaskProvider, type XtcTaskDefinition } from '../../task-provider';
+import { createXtcRunTask, gradleBuildTask, moduleRunFolder, runModuleTask, XtcTaskProvider, type XtcTaskDefinition } from '../../task-provider';
 
 /** The command line a shell task runs, its command and its arguments, as the terminal shows it. */
 function commandLine(definition: XtcTaskDefinition): string {
@@ -96,10 +96,38 @@ suite('Run tasks', () => {
         assert.ok(window, 'The suite opens a folder');
         await withFolders(async ({ outer, sub }) => {
             const source = vscode.Uri.joinPath(sub.uri, 'App.x').toString();
-            const task = runModuleTask(() => undefined, source, 'App', 'gradle', uri => uri === source ? sub : undefined);
-            assert.strictEqual(shellOptions(task)?.cwd, outer.uri.fsPath);
+            assert.strictEqual(shellOptions(runModuleTask(() => undefined, source, 'App', 'gradle', sub))?.cwd, outer.uri.fsPath);
             // a source in no folder takes the window's only folder, as the suite's window has one
-            assert.strictEqual(shellOptions(runModuleTask(() => undefined, source, 'App', 'gradle', () => undefined))?.cwd, gradleRoot(window));
+            assert.strictEqual(shellOptions(runModuleTask(() => undefined, source, 'App', 'gradle'))?.cwd, gradleRoot(window));
+        });
+    });
+
+    test("Run Module asks which folder's build runs a module that no folder holds in a window of several, and runs nothing when canceled", async () => {
+        const window = vscode.workspace.workspaceFolders?.[0];
+        assert.ok(window, 'The suite opens a folder');
+        await withFolders(async ({ outer, sub, lone }) => {
+            const asked: string[] = [];
+            const pick = (answer: vscode.WorkspaceFolder | undefined) => () => {
+                asked.push(answer?.name ?? 'canceled');
+                return Promise.resolve(answer);
+            };
+            const chosen = async (source: string | undefined, folders: vscode.WorkspaceFolder[], answer?: vscode.WorkspaceFolder) => {
+                const run = await moduleRunFolder(source, folders, pick(answer));
+                return run && (run.folder?.uri.fsPath ?? 'none');
+            };
+            // the folder of the window's that holds the source, the innermost, or a window's only one, without asking
+            assert.strictEqual(await chosen(vscode.Uri.joinPath(outer.uri, 'App.x').toString(), [outer, lone], lone), outer.uri.fsPath);
+            assert.strictEqual(await chosen(vscode.Uri.joinPath(sub.uri, 'App.x').toString(), [outer, sub], lone), sub.uri.fsPath);
+            assert.strictEqual(await chosen(undefined, [lone], outer), lone.uri.fsPath);
+            assert.strictEqual(await chosen(undefined, [], outer), 'none');
+            assert.deepStrictEqual(asked, []);
+            // a module name typed in, or a source that no folder of the window holds, as one of the suite's own window, in a
+            // window of several: the folder picked, or nothing
+            assert.strictEqual(await chosen(undefined, [outer, lone], lone), lone.uri.fsPath);
+            assert.strictEqual(await chosen(vscode.Uri.joinPath(window.uri, 'App.x').toString(), [outer, lone]), undefined);
+            assert.deepStrictEqual(asked, ['lone', 'canceled']);
+            // and a module name typed in runs in the picked folder's build
+            assert.strictEqual(shellOptions(runModuleTask(() => undefined, undefined, 'App', 'gradle', lone))?.cwd, lone.uri.fsPath);
         });
     });
 
