@@ -1,8 +1,6 @@
 package org.xvm.lsp.lexer
 
-/**
- * Scanner state as a sealed hierarchy - illegal states are unrepresentable.
- */
+/** Scanner state as a sealed hierarchy - illegal states are unrepresentable. */
 sealed interface ScanState {
     val pos: Int
 
@@ -25,9 +23,7 @@ sealed interface ScanState {
     ) : ScanState
 }
 
-/**
- * A single step result: optional token + next state.
- */
+/** A single step result: optional token + next state. */
 private data class Step(
     val token: TemplateScannerToken?,
     val next: ScanState,
@@ -110,6 +106,14 @@ class TemplateScanner {
         val content = StringBuilder()
         var pos = start
 
+        // the content read so far, when there is some, else the template's end, which ends at [end]
+        fun ended(end: Int): Step =
+            if (content.isNotEmpty()) {
+                Step(TemplateScannerToken.content(start, pos, content.toString()), state.copy(pos = pos))
+            } else {
+                Step(TemplateScannerToken.templateEnd(pos, end), ScanState.Normal(end))
+            }
+
         while (pos < source.length) {
             val ch = source[pos]
             when {
@@ -130,17 +134,7 @@ class TemplateScanner {
 
                 // Template end (non-multiline)
                 ch == '"' && !state.multiline -> {
-                    return if (content.isNotEmpty()) {
-                        Step(
-                            TemplateScannerToken.content(start, pos, content.toString()),
-                            state.copy(pos = pos),
-                        )
-                    } else {
-                        Step(
-                            TemplateScannerToken.templateEnd(pos, pos + 1),
-                            ScanState.Normal(pos + 1),
-                        )
-                    }
+                    return ended(pos + 1)
                 }
 
                 // Escape sequence - accumulate unescaped value
@@ -166,17 +160,7 @@ class TemplateScanner {
                         pos = newPos
                     } else {
                         // End of multiline template
-                        return if (content.isNotEmpty()) {
-                            Step(
-                                TemplateScannerToken.content(start, pos, content.toString()),
-                                state.copy(pos = pos),
-                            )
-                        } else {
-                            Step(
-                                TemplateScannerToken.templateEnd(pos, pos),
-                                ScanState.Normal(pos),
-                            )
-                        }
+                        return ended(pos)
                     }
                 }
 
@@ -190,17 +174,7 @@ class TemplateScanner {
 
         // End of input
         return if (state.multiline) {
-            if (content.isNotEmpty()) {
-                Step(
-                    TemplateScannerToken.content(start, pos, content.toString()),
-                    state.copy(pos = pos),
-                )
-            } else {
-                Step(
-                    TemplateScannerToken.templateEnd(pos, pos),
-                    ScanState.Normal(pos),
-                )
-            }
+            ended(pos)
         } else {
             Step(
                 TemplateScannerToken.error(start, pos, "Unterminated template string"),
@@ -261,14 +235,21 @@ class TemplateScanner {
                 skipComment(source, state)
             }
 
-            '\n', '\r' -> {
+            '\n',
+            '\r',
+            -> {
                 if (!state.multiline) {
                     Step(
                         TemplateScannerToken.error(pos, pos, "Newline in template expression"),
                         ScanState.Normal(pos),
                     )
                 } else {
-                    val skip = if (ch == '\r' && pos + 1 < source.length && source[pos + 1] == '\n') 2 else 1
+                    val skip =
+                        if (ch == '\r' && pos + 1 < source.length && source[pos + 1] == '\n') {
+                            2
+                        } else {
+                            1
+                        }
                     Step(null, state.copy(pos = pos + skip))
                 }
             }
@@ -325,9 +306,9 @@ class TemplateScanner {
             '/' -> {
                 // Single-line comment - find end of line
                 val end =
-                    (pos + 2 until source.length)
-                        .firstOrNull { source[it] == '\n' || source[it] == '\r' }
-                        ?: source.length
+                    (pos + 2 until source.length).firstOrNull {
+                        source[it] == '\n' || source[it] == '\r'
+                    } ?: source.length
                 Step(null, state.copy(pos = end))
             }
 

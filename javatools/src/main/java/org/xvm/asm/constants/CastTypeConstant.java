@@ -7,6 +7,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * The Ecstasy cast operator ".as()" is used generally for two purposes. First usage pattern is a
  * type narrowing, analogous to Java's cast operation, overriding the compile-time type validation
@@ -90,15 +93,15 @@ public class CastTypeConstant
         // simplest paths and there is a possibility we need to do something special the
         // "orthogonal" scenario at the bottom
         if (typeBase.isA(typeCast)) {
-            return new JitInfo(this, loader, typeBase, typeBase.ensureTypeInfo().isNewable(false));
+            return new JitInfo(this, loader, typeBase, typeBase.ensureTypeInfo().isNewable(false, silent(PROBE)));
         }
         if (typeCast.isA(typeBase)) {
-            return new JitInfo(this, loader, typeCast, typeCast.ensureTypeInfo().isNewable(false));
+            return new JitInfo(this, loader, typeCast, typeCast.ensureTypeInfo().isNewable(false, silent(PROBE)));
         }
 
         // the types are orthogonal; keep the base, since this is what the JIT compiler knows;
         // it will have to cast the targets...
-        return new JitInfo(this, loader, typeBase, typeBase.ensureTypeInfo().isNewable(false));
+        return new JitInfo(this, loader, typeBase, typeBase.ensureTypeInfo().isNewable(false, silent(PROBE)));
     }
 
     // ----- Constant methods ----------------------------------------------------------------------

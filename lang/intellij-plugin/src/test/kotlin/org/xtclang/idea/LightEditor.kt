@@ -1,0 +1,165 @@
+package org.xtclang.idea
+
+import com.intellij.diagnostic.PluginException
+import com.intellij.openapi.application.AccessToken
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
+import com.intellij.testFramework.ExtensionTestUtil
+import com.intellij.testFramework.LightProjectDescriptor
+import com.intellij.testFramework.LoggedErrorProcessor
+import com.intellij.testFramework.fixtures.CodeInsightTestFixture
+import com.intellij.testFramework.fixtures.IdeaTestFixtureFactory
+import com.intellij.testFramework.fixtures.impl.LightTempDirTestFixtureImpl
+import com.intellij.testFramework.runInEdtAndGet
+import com.intellij.testFramework.runInEdtAndWait
+import com.intellij.util.ui.UIUtil
+import com.redhat.devtools.lsp4ij.LanguageServerWrapper
+import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import com.redhat.devtools.lsp4ij.server.definition.extension.ServerExtensionPointBean
+import org.jetbrains.plugins.textmate.TextMateService
+import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
+import org.junit.jupiter.api.extension.AfterEachCallback
+import org.junit.jupiter.api.extension.BeforeEachCallback
+import org.junit.jupiter.api.extension.ExtensionContext
+import org.xvm.testing.awaitUntil
+import java.nio.file.Files
+import java.nio.file.Path
+
+/**
+ * A light platform test's in-memory project, with the plugin and its dependencies loaded, for what IntelliJ does
+ * in an Ecstasy file. A test registers it with `@RegisterExtension`; each test opens its own file, highlighted by
+ * TextMate's Ecstasy grammar as in the IDE. The language server is [server], a stub in the test's JVM, so that
+ * LSP4IJ's side runs as it does against the real one. The tests share the light project, so each test's server serves
+ * that test's wrappers alone, and the wrappers that a test leaves are disposed as it ends, whether it passed or not.
+ */
+class LightEditor(
+    val server: StubLanguageServer = StubLanguageServer(),
+) : BeforeEachCallback,
+    AfterEachCallback {
+    /** The test's fixture; [open] gives it a file and runs on the EDT, as most tests need. */
+    lateinit var fixture: CodeInsightTestFixture
+        private set
+    private lateinit var errors: AccessToken
+
+    override fun beforeEach(context: ExtensionContext) {
+        val factory = IdeaTestFixtureFactory.getFixtureFactory()
+        val project = factory.createLightFixtureBuilder(LightProjectDescriptor.EMPTY_PROJECT_DESCRIPTOR, context.displayName).fixture
+        fixture = factory.createCodeInsightFixture(project, LightTempDirTestFixtureImpl(true))
+        errors = LoggedErrorProcessor.executeWith(UltimateStartup)
+        runInEdtAndWait { fixture.setUp() }
+        // the plugin's own provider finds no plugin directory here, so the editor would have no TextMate tokens
+        System.getProperty("xtc.test.textmate")?.let { bundle ->
+            TextMateBundleProvider.EP_NAME.point.registerExtension(
+                object : TextMateBundleProvider {
+                    override fun getBundles() = listOf(TextMateBundleProvider.PluginBundle("Ecstasy", Path.of(bundle)))
+                },
+                fixture.testRootDisposable,
+            )
+            TextMateService.getInstance().reloadEnabledBundles()
+        }
+        ExtensionTestUtil.maskExtensions(ServerExtensionPointBean.EP_NAME, listOf(server.extension()), fixture.testRootDisposable, true)
+    }
+
+    override fun afterEach(context: ExtensionContext) {
+        val project = fixture.project
+        try {
+            runInEdtAndWait { fixture.tearDown() }
+        } finally {
+            try {
+                // the next test reuses the light project, and the wrappers that LSP4IJ keeps for it: the removal of this
+                // test's server disposes only its own, and a failed test can leave more
+                runInEdtAndWait { LanguageServiceAccessor.getInstance(project).projectClosing(project) }
+            } finally {
+                errors.finish()
+            }
+        }
+    }
+
+    /** Opens [text] as the file [name] in an editor, with the caret where [text] has `<caret>`, and runs [test] on the EDT. */
+    fun <T> open(
+        name: String,
+        text: String,
+        test: CodeInsightTestFixture.(PsiFile) -> T,
+    ): T = runInEdtAndGet { fixture.test(fixture.configureByText(name, text)) }
+
+    /** The language server connection that LSP4IJ started for the project. */
+    fun connection(): LanguageServerWrapper = LanguageServiceAccessor.getInstance(fixture.project).startedServers.single()
+
+    /**
+     * A file at [path] in [directory] on disk, with [text], which the light project's in-memory files are not, so that
+     * LSP4IJ finds it by its URI.
+     */
+    fun file(
+        directory: Path,
+        path: String,
+        text: String,
+    ): VirtualFile {
+        val file = directory.resolve(path)
+        Files.createDirectories(file.parent)
+        Files.writeString(file, text)
+        return checkNotNull(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(file))
+    }
+
+    /**
+     * Opens [file] in the editor, has LSP4IJ connect it to the language server, and waits until the server has its text.
+     */
+    fun openConnected(file: VirtualFile) {
+        runInEdtAndWait { fixture.openFileInEditor(file) }
+        awaitConnected(file)
+    }
+
+    /** Has LSP4IJ connect [file], whether an editor shows it or not, and waits until the server has its text. */
+    fun awaitConnected(file: VirtualFile) {
+        connect(file)
+        await("LSP4IJ opens ${file.name}") { opened(file) }
+    }
+
+    /**
+     * Asks LSP4IJ to connect [file] to the server, as a request about it does, and as selecting its editor does: LSP4IJ
+     * connects a file as its editor is selected only if none of its features has made the file's support yet, and one can
+     * make it first, as under load a second file once never connected (ConnectDocumentToLanguageServerSetupParticipant
+     * connects it as this does, which does nothing for a connected file).
+     */
+    fun connect(file: VirtualFile) {
+        ReadAction.runBlocking<RuntimeException> {
+            val psi = checkNotNull(PsiManager.getInstance(fixture.project).findFile(file))
+            LanguageServiceAccessor.getInstance(fixture.project).getLanguageServers(psi, null, null)
+        }
+    }
+
+    /** Whether the server has [file]'s text, from LSP4IJ's didOpen of it. */
+    fun opened(file: VirtualFile): Boolean = server.texts.keys.any { it.endsWith("/${file.name}") }
+
+    /** Waits until [condition] holds, as [what] says, dispatching the EDT's pending events between its checks. */
+    fun await(
+        what: String,
+        condition: () -> Boolean,
+    ) {
+        awaitUntil(what) { condition() || false.also { runInEdtAndWait { UIUtil.dispatchAllInvocationEvents() } } }
+    }
+
+    /** The text of [file]'s document. */
+    fun document(file: VirtualFile): String = runInEdtAndGet { checkNotNull(FileDocumentManager.getInstance().getDocument(file)).text }
+
+    /**
+     * The IDE these tests load is IntelliJ IDEA's single distribution, whose licensed part cannot start one of its
+     * startup activities in a test project and logs that as an error, which a test would otherwise fail on.
+     */
+    private object UltimateStartup : LoggedErrorProcessor() {
+        override fun processError(
+            category: String,
+            message: String,
+            details: Array<out String>,
+            t: Throwable?,
+        ): Set<Action> =
+            if (generateSequence(t) { it.cause }.any { (it as? PluginException)?.pluginId?.idString == "com.intellij.modules.ultimate" }) {
+                Action.NONE
+            } else {
+                super.processError(category, message, details, t)
+            }
+    }
+}

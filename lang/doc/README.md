@@ -1,9 +1,18 @@
 # Ecstasy Language Tooling Documentation
 
-## Implementation Plans
+New to the tools? Start with the [user guide](user-guide/README.md): getting started, editing, refactoring, running, testing and debugging in IntelliJ and VS Code, with screenshots.
 
-See [plans/](./plans/) for implementation plans and roadmaps.
+## Build, use and test the language tools
 
-## Architecture Research
+- [Language server](../lsp-server/README.md): compiler and Tree-sitter adapters, supported features and configuration.
+- [IntelliJ plugin](../intellij-plugin/README.md) and [testing](../intellij-plugin/testing.md): native actions, settings and test harnesses.
+- [VS Code extension](../vscode-extension/README.md): installation, commands and native tests.
+- [Manual playbook](manual-test-plan.md): copyable examples, expected behavior, automated selections and client limitations.
+- [Configuration reference](configuration.md): every editor setting, server property, environment variable, build property and path of the tooling, with the code that reads each.
+- [Embedded build and run](../lsp-server/README.md#embedded-build-and-run): building, running, debugging and testing with the language server's compiler in both IDEs.
+- [Compiler architecture](../../javatools/README.md#compiler-architecture-for-language-tooling): why the embedding and source-analysis APIs are needed.
 
-Comprehensive architecture analysis and design documentation: *Internal documentation*
+## Background design notes
+
+The [retained design notes](plans/) describe earlier design work. Use the feature and testing guides
+above for the behavior of the current implementation.

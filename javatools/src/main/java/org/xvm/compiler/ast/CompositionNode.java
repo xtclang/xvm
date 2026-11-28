@@ -29,6 +29,12 @@ public abstract class CompositionNode
         this.type      = type;
     }
 
+    /** Return an independent syntax tree with the same node type. */
+    @Override
+    public CompositionNode copyTree() {
+        return (CompositionNode) super.copyTree();
+    }
+
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -71,10 +77,13 @@ public abstract class CompositionNode
     @Override
     public Source getSource() {
         Source source = super.getSource();
-        if (source == null) {
-            source = condition == null ? type.getSource() : condition.getSource();
+        if (source != null) {
+            return source;
         }
-        return source;
+
+        // Parsed trees may not have parents yet, and a default composition has no type.
+        AstNode child = condition == null ? type : condition;
+        return child == null ? null : child.getSource();
     }
 
     @Override
@@ -265,7 +274,7 @@ public abstract class CompositionNode
         @Override
         public long getEndPosition() {
             return condition == null && args != null && !args.isEmpty()
-                    ? args.get(args.size() - 1).getEndPosition()
+                    ? args.getLast().getEndPosition()
                     : super.getEndPosition();
         }
 
@@ -434,11 +443,10 @@ public abstract class CompositionNode
             if (vers != null) {
                 for (VersionOverride override : vers) {
                     Version ver = override.getVersion();
-                    Boolean BPrevAllow = vtree.get(ver);
+                    Boolean prevAllow = vtree.get(ver);
                     boolean fAllow = override.isAllowed();
-                    if (BPrevAllow != null && fAllow != BPrevAllow.booleanValue()) {
-                        throw new IllegalStateException(
-                                "version " + ver + " is both allowed and disallowed");
+                    if (prevAllow != null && fAllow != prevAllow) {
+                        throw new IllegalStateException("version " + ver + " is both allowed and disallowed");
                     } else {
                         vtree.put(ver, fAllow);
                     }

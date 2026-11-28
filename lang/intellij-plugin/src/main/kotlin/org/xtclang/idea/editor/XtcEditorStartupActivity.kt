@@ -12,6 +12,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.psi.PsiManager
 import com.intellij.util.messages.MessageBusConnection
+import org.xvm.lsp.protocol.ServerProperties
 
 class XtcEditorStartupActivity : ProjectActivity {
     private val logger = logger<XtcEditorStartupActivity>()
@@ -28,7 +29,7 @@ class XtcEditorStartupActivity : ProjectActivity {
 
         val scheme = EditorColorsManager.getInstance().globalScheme.name
         val fileTypeForExtension = FileTypeManager.getInstance().getFileTypeByExtension("x")
-        val semanticTokensProperty = System.getProperty("xtc.lsp.semanticTokens")
+        val semanticTokensProperty = System.getProperty(ServerProperties.SEMANTIC_TOKENS)
         val semanticTokensEnv = System.getenv("XTC_LSP_SEMANTIC_TOKENS")
         logger.warn(
             "Ecstasy editor diagnostics for project '${project.name}': " +
@@ -45,9 +46,11 @@ class XtcEditorStartupActivity : ProjectActivity {
             FileEditorManagerListener.FILE_EDITOR_MANAGER,
             object : FileEditorManagerListener {
                 override fun selectionChanged(event: FileEditorManagerEvent) {
-                    event.newFile?.takeIf { it.extension == "x" }?.let {
-                        logXtcFile(project, it.path, "selectionChanged")
-                    }
+                    event.newFile
+                        ?.takeIf { it.extension == "x" }
+                        ?.let {
+                            logXtcFile(project, it.path, "selectionChanged")
+                        }
                 }
             },
         )

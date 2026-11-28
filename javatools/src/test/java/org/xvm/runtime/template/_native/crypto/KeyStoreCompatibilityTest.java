@@ -5,13 +5,12 @@ import java.io.File;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 
-import java.util.concurrent.TimeUnit;
-
 import javax.crypto.SecretKey;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.io.TempDir;
+import org.xvm.testing.Await;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -92,7 +91,7 @@ public class KeyStoreCompatibilityTest {
         ).redirectErrorStream(true).start();
 
         var output = new String(process.getInputStream().readAllBytes());
-        assertTrue(process.waitFor(10, TimeUnit.SECONDS));
+        assertTrue(Await.waitFor(process));
         assertEquals(0, process.exitValue(), "keytool -list failed: " + output);
         assertTrue(output.contains("compat.example.com"), "keytool should see our CN");
         assertTrue(output.contains("RSA"), "keytool should see RSA key type");
@@ -136,7 +135,7 @@ public class KeyStoreCompatibilityTest {
         ).redirectErrorStream(true).start();
 
         var output = new String(process.getInputStream().readAllBytes());
-        assertTrue(process.waitFor(10, TimeUnit.SECONDS));
+        assertTrue(Await.waitFor(process));
         assertEquals(0, process.exitValue(), "keytool can't read Java's AES key: " + output);
     }
 
@@ -162,7 +161,7 @@ public class KeyStoreCompatibilityTest {
         ).redirectErrorStream(true).start();
 
         var output = new String(process.getInputStream().readAllBytes());
-        assertTrue(process.waitFor(10, TimeUnit.SECONDS));
+        assertTrue(Await.waitFor(process));
         assertEquals(0, process.exitValue(), "openssl can't read Java's PKCS12: " + output);
     }
 
@@ -285,7 +284,7 @@ public class KeyStoreCompatibilityTest {
             var process = new ProcessBuilder("keytool", "-help")
                     .redirectErrorStream(true).start();
             process.getInputStream().readAllBytes();
-            return process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0;
+            return Await.waitFor(process) && process.exitValue() == 0;
         } catch (Exception e) {
             return false;
         }
@@ -296,7 +295,7 @@ public class KeyStoreCompatibilityTest {
             var process = new ProcessBuilder("openssl", "version")
                     .redirectErrorStream(true).start();
             process.getInputStream().readAllBytes();
-            return process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0;
+            return Await.waitFor(process) && process.exitValue() == 0;
         } catch (Exception e) {
             return false;
         }

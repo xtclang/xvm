@@ -1,0 +1,155 @@
+package org.xvm.lsp.server
+
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.AppenderBase
+import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CodeActionCapabilities
+import org.eclipse.lsp4j.CodeActionContext
+import org.eclipse.lsp4j.CodeActionKindCapabilities
+import org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities
+import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeActionTriggerKind
+import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.TextDocumentClientCapabilities
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceEditCapabilities
+import org.eclipse.lsp4j.WorkspaceFolder
+import org.eclipse.lsp4j.WorkspaceSymbolParams
+import org.eclipse.lsp4j.services.LanguageClient
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import org.mockito.Mockito.mock
+import org.slf4j.LoggerFactory
+import org.xvm.lsp.adapter.CompilerTestSupport
+import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibrarySources
+import org.xvm.testing.awaited
+import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
+
+/**
+ * The server's log has one line per code action request as it ends, with the module compiles it ran, and one per project
+ * query that compiles, as it has one per embedded build; the compiles behind them were in the trace file alone.
+ */
+class CodeActionLogTest {
+    @TempDir lateinit var directory: Path
+
+    @Test
+    fun `each code action request and each project query that compiles logs its compiles`() {
+        CompilerTestSupport.configure()
+        val workspace = directory.toRealPath().toFile()
+        val file = workspace.resolve("App.x").apply { writeText(SOURCE) }
+        val uri = file.toURI().toString()
+        val lines =
+            logged {
+                XtcLanguageServer(XdkAdapter()).use { server ->
+                    server.connect(mock(LanguageClient::class.java))
+                    server.initialize(parameters(workspace.toURI().toString())).awaited()
+                    server.initialized(InitializedParams())
+                    val service = server.textDocumentService
+                    service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, SOURCE)))
+                    // `input + 2`, which two extractions prove, as three removals of unused imports and their cleanup do
+                    val selection = Range(Position(9, 15), Position(9, 24))
+                    repeat(2) {
+                        service
+                            .codeAction(
+                                CodeActionParams(
+                                    TextDocumentIdentifier(uri),
+                                    selection,
+                                    CodeActionContext(emptyList()).apply { triggerKind = CodeActionTriggerKind.Invoked },
+                                ),
+                            ).awaited()
+                    }
+                    // a workspace's symbols, which the open file's compile has, so a query that compiles nothing logs
+                    // nothing, then a rename of run, which starts from the revision's compile that the code actions
+                    // made, and compiles the project as renamed
+                    val symbols = server.workspaceService.symbol(WorkspaceSymbolParams("run")).awaited()
+                    // the workspace's own, and then the libraries' of the name
+                    assertThat(symbols.left.filterNot { XdkLibrarySources.owns(it.location.uri) }.map { it.name }).containsExactly("run")
+                    service.rename(RenameParams(TextDocumentIdentifier(uri), Position(7, 9), "go")).awaited()
+                }
+            }
+        // the revision's compile, App, then three import proofs, the cleanup's and two extractions; then all of them cached
+        assertThat(lines.filter { it.startsWith("code actions:") }).containsExactly(
+            "code actions: uri=App.x range=9:15-9:24 trigger=invoked only=[] outcome=answered actions=6 compiles=base 1 + proofs 6 cached-base=false",
+            "code actions: uri=App.x range=9:15-9:24 trigger=invoked only=[] outcome=answered actions=6 compiles=base 0 + proofs 0 cached-base=true",
+        )
+        // the rename's compile of App as renamed, with the query's time, its compiles' time by module and the heap it saw
+        assertThat(lines.filter { it.startsWith("project query:") })
+            .singleElement()
+            .asString()
+            .matches(
+                "project query: kind=rename uri=App\\.x outcome=completed in [0-9.]+ s: compiles=1 in [0-9.]+ s " +
+                    "\\(App [0-9.]+ s\\), heap [0-9]+ MB -> [0-9]+ MB of [0-9]+ MB",
+            )
+    }
+
+    /** The lines that the server's loggers log at INFO while [body] runs. */
+    private fun logged(body: () -> Unit): List<String> {
+        val lines = CopyOnWriteArrayList<String>()
+        val logger = LoggerFactory.getLogger("org.xvm.lsp") as Logger
+        val appender =
+            object : AppenderBase<ILoggingEvent>() {
+                override fun append(event: ILoggingEvent) {
+                    lines += event.formattedMessage
+                }
+            }.apply { start() }
+        logger.addAppender(appender)
+        try {
+            body()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+        return lines
+    }
+
+    private fun parameters(folder: String) =
+        InitializeParams().apply {
+            workspaceFolders = listOf(WorkspaceFolder(folder, "App"))
+            capabilities =
+                ClientCapabilities().apply {
+                    textDocument =
+                        TextDocumentClientCapabilities().apply {
+                            codeAction =
+                                CodeActionCapabilities().apply {
+                                    codeActionLiteralSupport =
+                                        CodeActionLiteralSupportCapabilities(
+                                            CodeActionKindCapabilities(listOf("quickfix", "refactor", "source")),
+                                        )
+                                }
+                        }
+                    // the actions' edits are versioned
+                    workspace =
+                        WorkspaceClientCapabilities().apply { workspaceEdit = WorkspaceEditCapabilities().apply { documentChanges = true } }
+                }
+        }
+
+    private companion object {
+        /** Three imports that every module has implicitly, so each is unused, and a selection, `input + 2`, to extract. */
+        val SOURCE =
+            """
+            module App {
+                import ecstasy.text.StringBuffer;
+                import ecstasy.maps.HashMap;
+                import ecstasy.maps.ListMap;
+
+                StringBuffer buffer() = new StringBuffer();
+
+                Int run(Int input) {
+                    Int unused = input + 1;
+                    return input + 2;
+                }
+            }
+            """.trimIndent() + "\n"
+    }
+}

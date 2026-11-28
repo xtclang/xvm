@@ -20,6 +20,7 @@ simplest possible XTC "HelloWorld" setup, take a look at the examples repository
   - [Launcher Configuration](#launcher-configuration)
 - [Build Lifecycle](#build-lifecycle)
 - [Module Path Resolution](#module-path-resolution)
+- [IDE Model](#ide-model)
 - [Configuration Cache Compatibility](#configuration-cache-compatibility)
 - [Performance Optimization](#performance-optimization)
 - [Troubleshooting](#troubleshooting)
@@ -144,6 +145,24 @@ xtcRun {
 
 The plugin code runs in the Gradle daemon and javatools in the forked JVM, so stepping does not cross from one into
 the other: set a breakpoint where javatools starts, such as `Launcher.launch`.
+
+#### Debugging with an Ecstasy Debugger
+
+To debug the Ecstasy program itself, with breakpoints in its `.x` sources, a run task can run it under
+the launcher's `--debug`, which an IDE's Ecstasy debugger attaches to. The Gradle properties `xtcDebug`
+and `xtcDebugAgent` set it for `runXtc`, the other run tasks and `testXtc`; the `debug` and
+`debugAgent` properties of `xtcRun`, `xtcTest` or a task set it in the build script:
+
+```bash
+./gradlew runXtc --module=MyApp -PxtcDebug=listen:127.0.0.1:5005,suspend
+```
+
+The program then waits for a debugger, such as VS Code's or IntelliJ's Ecstasy Attach configuration on
+port 5005. The IDEs set `xtcDebug` themselves when they debug a module in Gradle mode, with `connect:` to
+their own port. The XDK's javatools has the debugger's agent; `xtcDebugAgent` names a jar with another
+one, which the launcher then loads instead.
+A `DIRECT` run cannot be debugged so, since the agent would run in the Gradle daemon; run it with
+`--mode=ATTACHED`. A debugged `testXtc` always runs, and its results are not cached.
 
 #### Debugging Tips
 
@@ -295,6 +314,25 @@ xtcTest {
     moduleName("myapp")
 }
 ```
+
+**Running Chosen Tests**:
+
+`testXtc` runs all of the test module's tests unless its options choose some, by their paths in the
+module; each option can be given more than once, and xunit runs the tests that any of them selects:
+
+| Option | Effect |
+|--------|--------|
+| `--test-package=<path>` | Runs the tests of a package, such as `tests` |
+| `--test-class=<path>` | Runs the tests of a class, such as `tests.MathTest` |
+| `--test-method=<path>` | Runs one test method, such as `tests.MathTest.adds`, or a module-level test by its name |
+| `--test-report=json` | Also prints xunit's `json` report, an event per line, for a tool that reads the execution from the output, such as an IDE; xunit refuses a report it does not know |
+
+```bash
+./gradlew testXtc --test-class=tests.MathTest --test-method=tests.OtherTest.works
+./gradlew testXtc --module=MyAppTest --test-report=json
+```
+
+The editors' test runs in Gradle mode use these options.
 
 **Skipping Tests**:
 
@@ -454,6 +492,53 @@ dependencies {
   build/xtc/test/
 ]
 ```
+
+## IDE Model
+
+`exportXtcLspModel` writes what the Ecstasy editors' language server needs to know of the build to
+`.gradle/xtc/lsp-model.json` at the root project, one entry per source set: its sources, module
+roots, resources, project dependencies and module path, its project's `xtcRun` and `xtcTest` run
+settings, and the XDK that its project compiles and runs with. `prepareXtcLspModel` also processes
+the resources first. The editors run either task when they import the build; neither compiles a
+module.
+
+A project's XDK is its `xdk` entry, the same in each of its source sets:
+
+```json
+"xdk": {
+  "version": "0.4.4",
+  "libraries": "file:/home/me/app/build/xtc/xdk/lib/",
+  "modules": ["0f3a…", "…"],
+  "javatools": "9c41…"
+}
+```
+
+`version` is the version that the project's `xdkDistribution` or `xdk` dependency resolves to,
+and `libraries` the directory where the plugin extracts that XDK's `ecstasy.xtc` and other core
+modules for `compileXtc`, `runXtc` and `testXtc`. For an XDK from a repository, or of a file
+dependency, which names no version and so has none, the export reads its distribution archive,
+without extracting it, and gives the SHA-256 of each module file in it, in order, as `modules`,
+and the revision of its `javatools.jar`, the compiler and runtime, as `javatools`: the SHA-256 of
+a line `<name>=<SHA-256>` for each file in the jar, in name order, with `build-info.properties`
+taken without its blank lines and its `git.` lines, which name the commit and branch the jar was
+built at and so change with every commit, as javatools' own build leaves them out of its
+classpath's normalization. A language server that compiles and runs modules itself, with the XDK
+it bundles, compares those with its own to tell whether the project builds with the same XDK,
+which a snapshot version alone cannot tell, as every build of it has the same. Where the export
+cannot say what the XDK holds, the entry says why instead of `modules` and `javatools`:
+
+- `project`: the path in the build tree of the project that makes the XDK, for one that a build
+  of the build tree makes, as a composite build's included XDK is. The export neither builds it nor
+  reads what an earlier build extracted, which may be another XDK by now.
+- `problem`: why the import could not resolve the dependency, or fetch or read the archive. No such
+  failure fails the export. For a dependency that does not resolve, `version` is the version it
+  asks for. The export of a problem leaves a new token in `build/xtc/lsp/<source set>.xdk-retry`,
+  which the next export reads as Gradle configures the build, so that it configures it again and
+  resolves the XDK anew, rather than reuse a configuration cache entry that kept the failure.
+
+A project without an XDK dependency, whose core modules come over its module path, has no `xdk`
+entry, as an older plugin's model has none. `extractXdk` syncs the distribution into its
+directory, so that the modules of an XDK extracted there before do not stay on the module path.
 
 ## Configuration Cache Compatibility
 

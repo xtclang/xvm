@@ -359,12 +359,12 @@ val copyNativeLibToResources by tasks.registering(Copy::class) {
 
 ## Summary
 
-| Aspect              | Before (pre-built)   | After (on-demand)        |
-|---------------------|----------------------|--------------------------|
-| Binaries in git     | Yes (~6MB)           | No ✅                    |
-| Staleness check     | Fails build          | Gradle up-to-date ✅     |
-| First build time    | 0s                   | ~3s (Zig cached)         |
-| Subsequent builds   | Instant              | Instant (cached) ✅      |
-| Cross-platform JAR  | Yes (committed)      | Yes (Zig cross-compile) ✅|
-| Zig cache location  | build/zig            | ~/.gradle/caches/zig ✅  |
-| Native lib cache    | None                 | ~/.gradle/caches/tree-sitter-xtc ✅ |
+| Aspect             | Before (pre-built) | After (on-demand)                   |
+|--------------------|--------------------|-------------------------------------|
+| Binaries in git    | Yes (~6MB)         | No ✅                               |
+| Staleness check    | Fails build        | Gradle up-to-date ✅                |
+| First build time   | 0s                 | ~3s (Zig cached)                    |
+| Subsequent builds  | Instant            | Instant (cached) ✅                 |
+| Cross-platform JAR | Yes (committed)    | Yes (Zig cross-compile) ✅          |
+| Zig cache location | build/zig          | ~/.gradle/caches/zig ✅             |
+| Native lib cache   | None               | ~/.gradle/caches/tree-sitter-xtc ✅ |

@@ -1,0 +1,344 @@
+package org.xtclang.idea.run
+
+import com.intellij.execution.process.ProcessEvent
+import com.intellij.execution.process.ProcessListener
+import com.intellij.execution.process.ProcessOutputTypes
+import com.intellij.openapi.util.Key
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import org.xvm.lsp.protocol.BuildResponse
+import org.xvm.lsp.protocol.BuiltModule
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunInputParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.RunParams
+import org.xvm.lsp.protocol.RunResponse
+import org.xvm.lsp.protocol.ServerTest
+import org.xvm.lsp.protocol.StopRunParams
+import org.xvm.lsp.protocol.TestSelector
+import org.xvm.lsp.protocol.XtcServerProtocol
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
+import java.lang.reflect.Proxy
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.LinkedBlockingQueue
+import kotlin.text.Charsets.ISO_8859_1
+import kotlin.text.Charsets.UTF_8
+
+/** Embedded build and run without an IDE: mode resolution, saved configurations, reports and run lifecycle. */
+class EmbeddedExecutionTest {
+    @Test
+    fun `automatic mode builds with Gradle exactly when the project has a Gradle build`(
+        @TempDir root: Path,
+    ) {
+        assertThat(XtcBuildSettings.resolve(XtcBuildMode.AUTOMATIC, root)).isEqualTo(XtcBuildMode.EMBEDDED)
+        assertThat(XtcBuildSettings.resolve(XtcBuildMode.AUTOMATIC, null)).isEqualTo(XtcBuildMode.EMBEDDED)
+        assertThat(XtcBuildSettings.resolve(XtcBuildMode.GRADLE, root)).isEqualTo(XtcBuildMode.GRADLE)
+        Files.writeString(root.resolve("settings.gradle.kts"), "")
+        assertThat(XtcBuildSettings.resolve(XtcBuildMode.AUTOMATIC, root)).isEqualTo(XtcBuildMode.GRADLE)
+        assertThat(XtcBuildSettings.resolve(XtcBuildMode.EMBEDDED, root)).isEqualTo(XtcBuildMode.EMBEDDED)
+    }
+
+    @Test
+    fun `a project whose own modules replace bundled libraries builds with Gradle whatever the mode`(
+        @TempDir root: Path,
+    ) {
+        // from a server that names no folder, the replaced libraries are the reason
+        val replaced = XtcBuildSettings.gradleReasons(listOf("ecstasy.xtclang.org", "json.xtclang.org"), emptyList())
+        assertThat(replaced).containsExactly("replaces the bundled libraries ecstasy.xtclang.org, json.xtclang.org with its own modules")
+        XtcBuildMode.entries.forEach {
+            assertThat(XtcBuildSettings.resolve(it, root, replaced)).describedAs(it.name).isEqualTo(XtcBuildMode.GRADLE)
+        }
+        // the page and the popup show the embedded compiler unavailable, saying why, and keep a choice of it
+        assertThat(XtcBuildMode.entries.filter { XtcBuildSettings.available(it, replaced) })
+            .containsExactly(XtcBuildMode.AUTOMATIC, XtcBuildMode.GRADLE)
+        assertThat(XtcBuildMode.entries.filter { XtcBuildSettings.available(it, emptyList()) }).isEqualTo(XtcBuildMode.entries)
+        assertThat(XtcBuildSettings.unavailable(replaced)).contains("json.xtclang.org", "Gradle", "is kept")
+        assertThat(XtcBuildSettings.gradleReasons(emptyList(), emptyList())).isEmpty()
+    }
+
+    @Test
+    fun `a project on another XDK than the bundled one builds with Gradle whatever the mode, and says which XDK`(
+        @TempDir root: Path,
+    ) {
+        val xdk = "builds with XDK 0.5.0, not the bundled XDK 0.4.4"
+        // the server's reasons, one for each folder, are why; the same reason of two folders is said once
+        val reasons = XtcBuildSettings.gradleReasons(emptyList(), listOf(xdk, xdk))
+        assertThat(reasons).containsExactly(xdk)
+        XtcBuildMode.entries.forEach {
+            assertThat(XtcBuildSettings.resolve(it, root, reasons)).describedAs(it.name).isEqualTo(XtcBuildMode.GRADLE)
+        }
+        assertThat(XtcBuildSettings.unavailable(reasons)).startsWith("Not available while this project $xdk:").contains("is kept")
+        assertThat(XtcBuildSettings.gradleOnly(reasons))
+            .isEqualTo("This project $xdk, and the language server builds and runs only with the bundled XDK")
+        // a folder's reason comes before the replaced libraries of a server that names no folder
+        assertThat(XtcBuildSettings.gradleReasons(listOf("json.xtclang.org"), listOf(xdk))).containsExactly(xdk)
+    }
+
+    @Test
+    fun `embedded is the default, also in a project with a Gradle build, and its runs say which Gradle settings apply`(
+        @TempDir root: Path,
+    ) {
+        Files.writeString(root.resolve("build.gradle.kts"), "")
+        val default = XtcBuildSettings.Options().mode
+        assertThat(default).isEqualTo(XtcBuildMode.EMBEDDED)
+        assertThat(XtcBuildSettings.resolve(default, root)).isEqualTo(XtcBuildMode.EMBEDDED)
+        assertThat(XtcBuildSettings.gradleNotUsed(root)).contains("not the build's", "only xtcRun's method, arguments and JVM options")
+        assertThat(XtcBuildSettings.gradleNotUsed(root.resolve("plain"))).isNull()
+
+        val sessions = EmbeddedRunSessions()
+        val server = FakeServer(sessions)
+        val handler = handler(sessions, server, XtcBuildSettings.gradleNotUsed(root))
+        handler.startNotify()
+        server.requests.awaited()
+        assertThat(handler.text()).contains("with the embedded compiler...\n", "Of the build's settings")
+    }
+
+    @Test
+    fun `the notice links to the settings page that chooses the mode`(
+        @TempDir root: Path,
+    ) {
+        Files.writeString(root.resolve("build.gradle.kts"), "")
+        val before = "Building with the embedded compiler...\n"
+        val notice = checkNotNull(XtcBuildSettings.gradleNotUsed(root)) + "\n"
+        val link = checkNotNull(BuildSettingsLink.applyFilter(notice, before.length + notice.length)).resultItems.single()
+        assertThat((before + notice).substring(link.highlightStartOffset, link.highlightEndOffset))
+            .isEqualTo("Settings | Languages & Frameworks | Ecstasy | Build and Run")
+        assertThat(link.hyperlinkInfo).isNotNull()
+        assertThat(BuildSettingsLink.applyFilter(before, before.length)).isNull()
+    }
+
+    @Test
+    fun `configurations saved with useGradle follow the project unless they ran the command line`() {
+        assertThat(XtcRunConfiguration.runMode(null, "true")).isEqualTo(XtcRunMode.PROJECT)
+        assertThat(XtcRunConfiguration.runMode(null, null)).isEqualTo(XtcRunMode.PROJECT)
+        assertThat(XtcRunConfiguration.runMode(null, "false")).isEqualTo(XtcRunMode.COMMAND_LINE)
+        assertThat(XtcRunConfiguration.runMode("EMBEDDED", "false")).isEqualTo(XtcRunMode.EMBEDDED)
+        assertThat(XtcRunConfiguration.runMode("unknown", null)).isEqualTo(XtcRunMode.PROJECT)
+    }
+
+    @Test
+    fun `a run request names the module's source and also its name, which finds it after the source moved`() {
+        val uri = "file:///work/App.x"
+        assertThat(XtcRunConfiguration.embeddedRequest("App", uri, "greet", "one, two"))
+            .isEqualTo(RunParams(module = uri, method = "greet", args = listOf("one", "two"), moduleName = "App"))
+        // a configuration without a source sends only the name
+        assertThat(XtcRunConfiguration.embeddedRequest("App", "", "", ""))
+            .isEqualTo(RunParams(module = "App", method = null, args = emptyList(), moduleName = null))
+    }
+
+    @Test
+    fun `a configuration's tests read and show as kind and selector, module for all, and go with the run request`() {
+        val tests = listOf(TestSelector("Inner", ServerTest.CLASS), TestSelector("Inner.works", ServerTest.TEST))
+        assertThat(XtcRunConfiguration.testsText(tests)).isEqualTo("class:Inner, test:Inner.works")
+        assertThat(XtcRunConfiguration.testsOf("class:Inner, test:Inner.works")).isEqualTo(tests)
+        // a bare selector is a test's, module: is all of them, and nothing is no tests, an application run
+        assertThat(XtcRunConfiguration.testsOf(" Inner.works ")).containsExactly(TestSelector("Inner.works", ServerTest.TEST))
+        assertThat(XtcRunConfiguration.testsOf("module:")).isEmpty()
+        assertThat(XtcRunConfiguration.testsText(emptyList())).isEqualTo("module:")
+        assertThat(XtcRunConfiguration.testsOf(" , ")).isNull()
+        assertThat(XtcRunConfiguration.testsText(null)).isEmpty()
+
+        assertThat(XtcRunConfiguration.embeddedRequest("Mathy", "file:///work/Mathy.x", "", "", tests).tests).isEqualTo(tests)
+        assertThat(XtcRunConfiguration.embeddedRequest("Mathy", "", "", "").tests).isNull()
+    }
+
+    @Test
+    fun `sessions receive their own run's events until it exits or the server stops`() {
+        val sessions = EmbeddedRunSessions()
+        val first = Recorder()
+        val second = Recorder()
+        sessions.register("a", first)
+        sessions.register("b", second)
+        sessions.output(RunOutputParams("a", "hello"))
+        sessions.output(RunOutputParams("unknown", "lost"))
+        sessions.exited(RunExitedParams("a", 3, null))
+        sessions.output(RunOutputParams("a", "late"))
+        sessions.endAll("server stopped")
+        assertThat(first.events).containsExactly("output hello", "exited 3 null")
+        assertThat(second.events).containsExactly("exited null server stopped")
+    }
+
+    @Test
+    fun `a run streams output and finishes with the program's exit code`() {
+        val sessions = EmbeddedRunSessions()
+        val server = FakeServer(sessions)
+        val handler = handler(sessions, server)
+        handler.startNotify()
+        val request = server.requests.awaited()!!
+        assertThat(request.module).isEqualTo("file:///work/App.x")
+        sessions.output(RunOutputParams(request.runId!!, "Hello, World!\n"))
+        sessions.exited(RunExitedParams(request.runId!!, 7, null))
+        awaitUntil("the run to end") { handler.isProcessTerminated }
+        assertThat(handler.exitCode).isEqualTo(7)
+        assertThat(handler.stdout()).isEqualTo("Hello, World!\n")
+    }
+
+    @Test
+    fun `a failed build reports its diagnostics and runs nothing`() {
+        val sessions = EmbeddedRunSessions()
+        val server = FakeServer(sessions, RunResponse(null, BuildResponse(modules = listOf(BuiltModule("App", "")))))
+        val handler = handler(sessions, server)
+        handler.startNotify()
+        awaitUntil("the run to end") { handler.isProcessTerminated }
+        assertThat(handler.exitCode).isEqualTo(1)
+        assertThat(handler.text()).contains("  ✗ App", "Build failed; nothing was run.")
+    }
+
+    @Test
+    fun `stop asks the server to stop the run and waits for its exit`() {
+        val sessions = EmbeddedRunSessions()
+        val server = FakeServer(sessions)
+        val handler = handler(sessions, server)
+        handler.startNotify()
+        val runId = server.requests.awaited()!!.runId!!
+        server.started.awaited()
+        handler.destroyProcess()
+        assertThat(server.stops.awaited()?.runId).isEqualTo(runId)
+        assertThat(handler.isProcessTerminated).isFalse()
+        sessions.exited(RunExitedParams(runId, null, "Stopped by the user"))
+        awaitUntil("the run to end") { handler.isProcessTerminated }
+        assertThat(handler.text()).contains("Stopped by the user")
+    }
+
+    @Test
+    fun `typed lines reach the server after the run request, and Send EOF ends the input`() {
+        val sessions = EmbeddedRunSessions()
+        val server = FakeServer(sessions)
+        val handler = handler(sessions, server)
+        // typed before the run request exists: it must still follow it
+        handler.processInput.write("Ada ✓\n".toByteArray(UTF_8))
+        handler.startNotify()
+        handler.processInput.write("rest".toByteArray(UTF_8))
+        handler.processInput.close()
+        val runId = server.requests.awaited()!!.runId!!
+
+        assertThat(server.inputs.awaited()).isEqualTo(RunInputParams(runId, "Ada ✓\n", false))
+        assertThat(server.inputs.awaited()).isEqualTo(RunInputParams(runId, "rest", true))
+        assertThat(server.calls).containsExactly("run", "runInput", "runInput")
+    }
+
+    @Test
+    fun `console input forwards each complete line in the console's encoding`() {
+        val sent = mutableListOf<Pair<String?, Boolean>>()
+        RunConsoleInput(ISO_8859_1) { text, end -> sent += text to end }.use { input ->
+            input.write("é\nab\ncd".toByteArray(ISO_8859_1))
+        }
+        assertThat(sent).containsExactly("é\n" to false, "ab\n" to false, "cd" to true)
+    }
+
+    @Test
+    fun `a server that stops ends the run`() {
+        val sessions = EmbeddedRunSessions()
+        val server = FakeServer(sessions)
+        val handler = handler(sessions, server)
+        handler.startNotify()
+        server.requests.awaited()
+        server.started.awaited()
+        sessions.endAll("The Ecstasy language server stopped")
+        awaitUntil("the run to end") { handler.isProcessTerminated }
+        assertThat(handler.exitCode).isEqualTo(1)
+        assertThat(handler.text()).contains("The Ecstasy language server stopped")
+    }
+
+    private fun handler(
+        sessions: EmbeddedRunSessions,
+        server: FakeServer,
+        notice: String? = null,
+    ) = RecordingHandler(
+        EmbeddedRunProcessHandler(sessions, {
+            CompletableFuture.completedFuture(server.proxy)
+        }, RunParams("file:///work/App.x"), "App", notice, consoleCharset = { UTF_8 }),
+    )
+
+    private class Recorder : EmbeddedRunSessions.Session {
+        val events = mutableListOf<String>()
+
+        override fun output(text: String) {
+            events += "output $text"
+        }
+
+        override fun exited(
+            exitCode: Long?,
+            error: String?,
+        ) {
+            events += "exited $exitCode $error"
+        }
+    }
+
+    /** The requests a run makes, answered as a language server would; everything else is unsupported. */
+    private class FakeServer(
+        sessions: EmbeddedRunSessions,
+        private val response: RunResponse? = null,
+    ) {
+        val requests = LinkedBlockingQueue<RunParams>()
+        val stops = LinkedBlockingQueue<StopRunParams>()
+        val inputs = LinkedBlockingQueue<RunInputParams>()
+        val calls = ConcurrentLinkedQueue<String>()
+        val started = CompletableFuture<Unit>()
+
+        val proxy: XtcServerProtocol =
+            Proxy.newProxyInstance(javaClass.classLoader, arrayOf(XtcServerProtocol::class.java)) { _, method, args ->
+                calls += method.name
+                when (method.name) {
+                    "run" -> {
+                        val request = args[0] as RunParams
+                        requests += request
+                        started.complete(Unit)
+                        CompletableFuture.completedFuture(response ?: RunResponse(request.runId, BuildResponse(succeeded = true)))
+                    }
+
+                    "stopRun" -> {
+                        stops += args[0] as StopRunParams
+                        CompletableFuture.completedFuture(true)
+                    }
+
+                    "runInput" -> {
+                        inputs += args[0] as RunInputParams
+                        CompletableFuture.completedFuture(true)
+                    }
+
+                    else -> {
+                        throw UnsupportedOperationException(method.name)
+                    }
+                }
+            } as XtcServerProtocol
+    }
+
+    private class RecordingHandler(
+        private val handler: EmbeddedRunProcessHandler,
+    ) {
+        private val texts = ConcurrentLinkedQueue<Pair<Key<*>, String>>()
+
+        init {
+            handler.addProcessListener(
+                object : ProcessListener {
+                    override fun onTextAvailable(
+                        event: ProcessEvent,
+                        outputType: Key<*>,
+                    ) {
+                        texts += outputType to event.text
+                    }
+                },
+            )
+        }
+
+        val exitCode get() = handler.exitCode
+        val isProcessTerminated get() = handler.isProcessTerminated
+        val processInput get() = handler.processInput
+
+        fun startNotify() = handler.startNotify()
+
+        fun destroyProcess() = handler.destroyProcess()
+
+        fun waitFor(millis: Long) = handler.waitFor(millis)
+
+        fun stdout() = texts.filter { it.first == ProcessOutputTypes.STDOUT }.joinToString("") { it.second }
+
+        fun text() = texts.joinToString("") { it.second }
+    }
+}

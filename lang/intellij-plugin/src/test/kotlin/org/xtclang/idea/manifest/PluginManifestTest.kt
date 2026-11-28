@@ -1,22 +1,31 @@
 package org.xtclang.idea.manifest
 
+import com.google.gson.Gson
+import com.intellij.refactoring.move.MoveHandlerDelegate
 import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
 import org.xtclang.idea.PluginPaths
+import org.xtclang.idea.lsp.EcstasyConfigurable
+import org.xvm.lsp.protocol.TestEvent
+import java.io.InputStream
+import java.net.URI
+import java.nio.file.Path
+import java.util.jar.JarFile
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Self-consistency tests for META-INF/plugin.xml.
  *
- * Counterpart to VS Code's `activation.test.ts` — both guard the same failure
- * mode: an extension point / command / configuration declared in the
- * manifest but referenced from the wrong place in code (or vice versa)
- * silently fails to register at runtime. We can't fully verify
- * runtime registration without `BasePlatformTestCase`, but we can at
- * least guarantee that the manifest carries every extension point our
- * Kotlin code expects, and that the plugin ID matches the single
+ * Counterpart to VS Code's `activation.test.ts` — both guard the same failure mode: an extension
+ * point / command / configuration declared in the manifest but referenced from the wrong place in
+ * code (or vice versa) silently fails to register at runtime. We can't fully verify runtime
+ * registration without `BasePlatformTestCase`, but we can at least guarantee that the manifest
+ * carries every extension point our Kotlin code expects, and that the plugin ID matches the single
  * source of truth in `PluginPaths.PLUGIN_ID`.
  */
 @DisplayName("Plugin manifest (META-INF/plugin.xml)")
@@ -57,7 +66,9 @@ class PluginManifestTest {
     }
 
     @Test
-    @DisplayName("declares all required extension points (newProjectWizard, configurationType, lang.commenter, LSP server, ...)")
+    @DisplayName(
+        "declares all required extension points (newProjectWizard, configurationType, lang.commenter, LSP server, ...)",
+    )
     fun declaresAllRequiredExtensions() {
         // Collect every <extensions defaultExtensionNs="..."> child element name
         // across the entire manifest. We don't care which <extensions> block they
@@ -77,14 +88,26 @@ class PluginManifestTest {
 
         val required =
             setOf(
-                "notificationGroup", // notification group "XTC Language Server" used by XtcLspServerSupportProvider
-                "fileType", // registers *.x as Ecstasy so IntelliJ does not suggest unrelated plugins
+                "notificationGroup", // notification group "Ecstasy Language Server" used by
+                // XtcLspServerSupportProvider
+                "fileType", // registers *.x as Ecstasy so IntelliJ does not suggest unrelated
+                // plugins
+                "lang.syntaxHighlighterFactory", // use the TextMate grammar for our native file type
+                "editorHighlighterProvider", // use TextMate's scope-aware token storage
+                "lang.parserDefinition", // a PSI of the Ecstasy language via XtcParserDefinition
                 "newProjectWizard.generator", // wizard entry created by XtcNewProjectWizard
                 "configurationType", // run-config type created by XtcRunConfigurationType
                 "runConfigurationProducer", // auto-create run configs from .x context
+                "projectTaskRunner", // embedded Build/Rebuild via XtcProjectTaskRunner
                 "iconProvider", // file icons via XtcIconProvider
-                "defaultLiveTemplates", // /liveTemplates/XTC snippets
+                "defaultLiveTemplates", // /liveTemplates/Ecstasy.xml snippets
+                "liveTemplateContext", // the ECSTASY context those snippets apply in
                 "lang.commenter", // Ctrl+/ via XtcCommenter
+                "braceMatcher", // typed brackets stay unpaired, as in plain text, via XtcBraceMatcher
+                "codeInsight.wordCompletionFilter", // the file's words when the server completes nothing
+                "lang.importOptimizer", // Optimize Imports via XtcImportOptimizer
+                "renameHandler", // guarded compiler rename via XtcRenameHandler
+                "refactoring.moveHandler", // compiler preflight before native filesystem mutation
                 "langCodeStyleSettingsProvider", // Settings -> Code Style -> Ecstasy
                 "enterHandlerDelegate", // auto-indent on Enter
                 "postStartupActivity", // XtcEditorStartupActivity
@@ -105,9 +128,183 @@ class PluginManifestTest {
     }
 
     @Test
+    @DisplayName("registers for Ecstasy what LSP4IJ registers for TEXT or TextMate only, or says why not")
+    fun lsp4ijTextFeaturesApplyToEcstasy() {
+        // LSP4IJ registers some features only for the TEXT and TextMate languages. An Ecstasy file's PSI is of the
+        // Ecstasy language since XtcParserDefinition, so each needs a registration for Ecstasy, with LSP4IJ's class
+        // or a class of the plugin's that extends it, unless NOT_FOR_ECSTASY says why not
+        val lsp4ij = lsp4ijPluginXml()
+        val textOnly = registrations(lsp4ij, "TEXT") + registrations(lsp4ij, "textmate")
+        assertThat(textOnly.map { it.first })
+            .contains("lang.foldingBuilder", "lang.psiStructureViewFactory", "codeInsight.parameterInfo")
+        val ecstasy = registrations(pluginXml, "Ecstasy")
+        val missing =
+            textOnly
+                .filterNot { (tag, theirs) ->
+                    tag in NOT_FOR_ECSTASY || ecstasy.any { (ours, by) -> ours == tag && extends(by, theirs) }
+                }.toSet()
+        assertThat(missing).withFailMessage("plugin.xml registers none of these for Ecstasy: %s", missing).isEmpty()
+        assertThat(NOT_FOR_ECSTASY.keys - textOnly.map { it.first }.toSet())
+            .withFailMessage("LSP4IJ no longer registers these for TEXT or TextMate; drop their reasons")
+            .isEmpty()
+    }
+
+    @Test
+    @DisplayName("accounts for each LSP4IJ extension whose code acts in TEXT or TextMate files only")
+    fun lsp4ijTextChecksAreAccountedFor() {
+        // these are registered for every language but act only where LSP4IJ's code finds a TEXT or TextMate file;
+        // TEXT_CHECKS says what an Ecstasy file has instead, so one that LSP4IJ renames or adds needs a look
+        val elements = lsp4ijPluginXml().getElementsByTagName("*")
+        val ids = (0 until elements.length).map { (elements.item(it) as Element).getAttribute("id") }.toSet()
+        assertThat(TEXT_CHECKS.keys - ids).withFailMessage("LSP4IJ has none of these extensions any more").isEmpty()
+    }
+
+    @Test
+    @DisplayName("every settings page stands under Languages & Frameworks | Ecstasy, which links each one")
+    fun settingsPagesShareOneNode() {
+        val elements = pluginXml.getElementsByTagName("*")
+        val pages =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .filter { it.tagName == "applicationConfigurable" || it.tagName == "projectConfigurable" }
+                .filter { it.getAttribute("instance").startsWith("org.xtclang.") }
+                .associateBy { it.getAttribute("id") }
+        assertThat(pages.getValue("xtc").getAttribute("parentId")).isEqualTo("language")
+        // a pointer beside the IDE's build tools leads to the build mode's page
+        assertThat(pages.getValue("xtc.build.pointer").getAttribute("parentId")).isEqualTo("build")
+        val children = pages.filterKeys { it != "xtc" && it != "xtc.build.pointer" }
+        assertThat(children.values.map { it.getAttribute("parentId") }).containsOnly("xtc")
+        assertThat(EcstasyConfigurable.PAGES.associate { it.id to it.name })
+            .isEqualTo(children.mapValues { it.value.getAttribute("displayName") })
+    }
+
+    private fun lsp4ijPluginXml(): Element =
+        javaClass.classLoader
+            .getResources("META-INF/plugin.xml")
+            .toList()
+            .map { url -> parse(url.openStream()) }
+            // the test classpath can hold LSP4IJ's jar more than once
+            .first {
+                it
+                    .getElementsByTagName("id")
+                    .item(0)
+                    ?.textContent
+                    ?.trim() == "com.redhat.devtools.lsp4ij"
+            }
+
+    /** Whether the class [ours] is the class [theirs] or extends it. */
+    private fun extends(
+        ours: String,
+        theirs: String,
+    ): Boolean = ours == theirs || load(theirs).isAssignableFrom(load(ours))
+
+    private fun load(name: String): Class<*> = Class.forName(name, false, javaClass.classLoader)
+
+    /** The extensions of com.intellij that [root] registers for [language], as their tag and class. */
+    private fun registrations(
+        root: Element,
+        language: String,
+    ): Set<Pair<String, String>> {
+        val elements = root.getElementsByTagName("*")
+        return (0 until elements.length)
+            .map { elements.item(it) as Element }
+            .filter {
+                it.getAttribute("language") == language &&
+                    (it.parentNode as? Element)?.getAttribute("defaultExtensionNs") == "com.intellij"
+            }.map { it.tagName to it.getAttribute("implementationClass") }
+            .toSet()
+    }
+
+    private fun parse(input: InputStream): Element =
+        input.use {
+            DocumentBuilderFactory
+                .newInstance()
+                .apply { isNamespaceAware = false }
+                .newDocumentBuilder()
+                .parse(it)
+                .documentElement
+        }
+
+    @Test
+    fun fileMoveUsesThePlatformExtensionPoint() {
+        val elements = pluginXml.getElementsByTagName("*")
+        val registration =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .single {
+                    it.getAttribute("implementation") == "org.xtclang.idea.lsp.XtcFileMoveHandler"
+                }
+        val namespace = (registration.parentNode as Element).getAttribute("defaultExtensionNs")
+        assertThat("$namespace.${registration.tagName}").isEqualTo(MoveHandlerDelegate.EP_NAME.name)
+    }
+
+    @Test
+    @DisplayName("requires only plugins that every JetBrains IDE has, so that the Marketplace offers it for all of them")
+    fun requiresOnlyPluginsOfEveryIde() {
+        val elements = pluginXml.getElementsByTagName("depends")
+        val required =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .filter { it.getAttribute("optional") != "true" }
+                .map { it.textContent.trim() }
+        // the Marketplace derives the supported products from these: a required com.intellij.modules.java or
+        // com.intellij.gradle leaves only IntelliJ IDEA, Android Studio and MPS
+        assertThat(required)
+            .containsExactlyInAnyOrder(
+                "com.intellij.modules.platform",
+                "org.jetbrains.plugins.textmate",
+                "com.redhat.devtools.lsp4ij",
+                "intellij.testRunner.plugin",
+            )
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = ["com.intellij.gradle", "com.intellij.problemsView", "org.editorconfig.editorconfigjetbrains"])
+    @DisplayName(
+        "depends optionally on IntelliJ's Gradle plugin, which only some IDEs have, its Problems view plugin, whose " +
+            "classes Project Errors needs from 2026.3, and its EditorConfig plugin, which a user can disable",
+    )
+    fun optionalDependency(id: String) {
+        val elements = pluginXml.getElementsByTagName("depends")
+        val dependency =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .single { it.textContent.trim() == id }
+        assertThat(dependency.getAttribute("optional")).isEqualTo("true")
+        val config = dependency.getAttribute("config-file")
+        assertThat(javaClass.classLoader.getResource("META-INF/$config")).describedAs(config).isNotNull()
+    }
+
+    @Test
+    @DisplayName("every default shortcut keeps Control on both macOS keymaps, as VS Code and the docs do")
+    fun macShortcutsKeepControl() {
+        val elements = pluginXml.getElementsByTagName("action")
+        val actions = (0 until elements.length).map { elements.item(it) as Element }
+        val checked =
+            actions.mapNotNull { action ->
+                val shortcuts = action.getElementsByTagName("keyboard-shortcut")
+                val byKeymap =
+                    (0 until shortcuts.length)
+                        .map { shortcuts.item(it) as Element }
+                        .associate {
+                            it.getAttribute("keymap") to
+                                (it.getAttribute("first-keystroke") to it.getAttribute("second-keystroke"))
+                        }
+                byKeymap["\$default"]?.let { default ->
+                    // "Mac OS X 10.5+", the default macOS keymap, otherwise turns $default's ctrl into Command
+                    assertThat(byKeymap["Mac OS X"]).describedAs(action.getAttribute("id")).isEqualTo(default)
+                    assertThat(byKeymap["Mac OS X 10.5+"]).describedAs(action.getAttribute("id")).isEqualTo(default)
+                    action.getAttribute("id")
+                }
+            }
+        assertThat(checked).contains("xtc.selectLanguageAdapter", "xtc.selectBuildMode", "xtc.restartLanguageServer", "xtc.toggleServerLog")
+    }
+
+    @Test
     @DisplayName("LSP server registration points at xtcLanguageServer and maps *.x")
     fun lspServerWiring() {
-        // The LSP server element lives inside <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">.
+        // The LSP server element lives inside <extensions
+        // defaultExtensionNs="com.redhat.devtools.lsp4ij">.
         // We look for the <server> child with id="xtcLanguageServer" and the
         // <fileNamePatternMapping> with patterns="*.x".
         val servers = pluginXml.getElementsByTagName("server")
@@ -116,8 +313,9 @@ class PluginManifestTest {
                 .map { servers.item(it) as Element }
                 .firstOrNull { it.getAttribute("id") == "xtcLanguageServer" }
         assertThat(server)
-            .withFailMessage("plugin.xml is missing the LSP4IJ <server id='xtcLanguageServer'> element")
-            .isNotNull
+            .withFailMessage(
+                "plugin.xml is missing the LSP4IJ <server id='xtcLanguageServer'> element",
+            ).isNotNull
 
         val mappings = pluginXml.getElementsByTagName("fileNamePatternMapping")
         val mapping =
@@ -135,13 +333,39 @@ class PluginManifestTest {
     }
 
     @Test
+    @DisplayName("takes the protocol it shares with the server from a jar of its own, which holds no lsp4j, Gson or Kotlin")
+    fun sharedProtocolJar() {
+        // the plugin's lib/ has the protocol's jar, as buildPlugin checks; lsp4j and Gson are LSP4IJ's and the IDE's
+        val protocol = archive(TestEvent::class.java)
+        assertThat(protocol.substringAfterLast('/')).startsWith("protocol-").endsWith(".jar")
+        val bundled =
+            JarFile(Path.of(URI(protocol.removePrefix("jar:"))).toFile()).use { jar ->
+                jar
+                    .entries()
+                    .asSequence()
+                    .map { it.name }
+                    .filter { name -> listOf("org/eclipse/lsp4j/", "com/google/gson/", "kotlin/").any { name.startsWith(it) } }
+                    .toList()
+            }
+        assertThat(bundled).isEmpty()
+        assertThat(archive(JsonRequest::class.java)).isNotEqualTo(protocol)
+        assertThat(archive(Gson::class.java)).isNotEqualTo(protocol)
+    }
+
+    /** The jar that [type] was loaded from, as a `jar:` URL: IntelliJ's test class loader gives a class no code source. */
+    private fun archive(type: Class<*>): String =
+        requireNotNull(type.getResource("${type.simpleName}.class")) { "no class file for $type" }.toString().substringBefore("!/")
+
+    @Test
     @DisplayName("registers .x as the Ecstasy file type")
     fun fileTypeWiring() {
         val fileTypes = pluginXml.getElementsByTagName("fileType")
         val fileType =
             (0 until fileTypes.length)
                 .map { fileTypes.item(it) as Element }
-                .firstOrNull { it.getAttribute("implementationClass") == "org.xtclang.idea.XtcFileType" }
+                .firstOrNull {
+                    it.getAttribute("implementationClass") == "org.xtclang.idea.XtcFileType"
+                }
         assertThat(fileType)
             .withFailMessage(
                 "plugin.xml must register org.xtclang.idea.XtcFileType. Without this, IntelliJ treats .x as " +
@@ -155,18 +379,27 @@ class PluginManifestTest {
             .contains("x")
     }
 
-    @Test
-    @DisplayName("requires only plugins that every JetBrains IDE has, so that the Marketplace offers it for all of them")
-    fun requiresOnlyPluginsOfEveryIde() {
-        val elements = pluginXml.getElementsByTagName("depends")
-        val required =
-            (0 until elements.length)
-                .map { elements.item(it) as Element }
-                .filter { it.getAttribute("optional") != "true" }
-                .map { it.textContent.trim() }
-        // the Marketplace derives the supported products from these: a required com.intellij.modules.java or
-        // com.intellij.gradle leaves only IntelliJ IDEA, Android Studio and MPS
-        assertThat(required)
-            .containsExactlyInAnyOrder("com.intellij.modules.platform", "org.jetbrains.plugins.textmate", "com.redhat.devtools.lsp4ij")
+    private companion object {
+        /** LSP4IJ's registrations for TEXT or TextMate, by tag, that an Ecstasy file needs none of, and why. */
+        val NOT_FOR_ECSTASY =
+            mapOf(
+                "lang.fileViewProviderFactory" to
+                    "a file's view provider comes by its file type's language, Ecstasy before and after the PSI, so " +
+                    "LSP4IJ's, which splits a file without structure by its semantic tokens, never applied",
+            )
+
+        /** LSP4IJ's extensions, by id, that act in TEXT or TextMate files only, and what an Ecstasy file has instead. */
+        val TEXT_CHECKS =
+            mapOf(
+                "LSPEditorImprovementsTypedHandler" to "abstract and TextMate file types only; XtcBraceMatcher",
+                "LSPImprovedTextMateNestedBracesTypedHandler" to "TextMate's file type only; XtcEnterAfterUnmatchedBraceHandler",
+                "LSPClientSideOnTypeFormattingTypedHandler" to "TextMate's brace pairs only; the server's on-type formatting",
+                "LSPEditorImprovementsBackspaceHandler" to "abstract and TextMate file types only; nothing is paired to delete",
+                "LSPEditorImprovementsEnterBetweenBracesHandler" to "abstract and TextMate file types only; XtcEnterHandlerDelegate",
+                "LSPCompletionContributor" to
+                    "outside TEXT and TextMate, a typed prefix is the PSI leaf at the caret, a word by XtcLexer, and " +
+                    "the file's words when the server has nothing come by XtcWordCompletionFilter",
+                "LSPSemanticTokensHighlightVisitor" to "outside TEXT and TextMate, highlights the file's tokens at once, not by element",
+            )
     }
 }

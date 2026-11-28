@@ -1,0 +1,731 @@
+package org.xvm.lsp.adapter.xdk
+
+import org.xvm.asm.ClassStructure
+import org.xvm.asm.Component
+import org.xvm.asm.Component.Format
+import org.xvm.asm.Constant
+import org.xvm.asm.Constants.Access
+import org.xvm.asm.ErrorListener
+import org.xvm.asm.MethodStructure
+import org.xvm.asm.ModuleStructure
+import org.xvm.asm.MultiMethodStructure
+import org.xvm.asm.constants.IdentityConstant
+import org.xvm.asm.constants.MethodConstant
+import org.xvm.asm.constants.PackageConstant
+import org.xvm.asm.constants.PropertyConstant
+import org.xvm.asm.constants.PureIdentityConstant
+import org.xvm.asm.constants.TypeConstant
+import org.xvm.asm.constants.TypeParameterConstant
+import org.xvm.asm.constants.UnionTypeConstant
+import org.xvm.lsp.util.ExecutionTrace
+import java.io.File
+import java.util.UUID
+
+/** Compiler-proven identities copied before an attempt's pool and AST can be released. */
+internal sealed interface ProofIdentity {
+    /** Declaration identity detached from an AST and constant pool, anchored to its source location. */
+    data class Source(
+        val location: SemanticModel.SourceLocation,
+        val format: Constant.Format,
+        val name: String,
+    ) : ProofIdentity
+
+    /** Declaration identity anchored to a particular immutable dependency artifact revision. */
+    data class Binary(
+        val key: XdkDependency.SymbolKey,
+    ) : ProofIdentity
+
+    /** Generated method identities can reuse an artifact signature without occupying its table. */
+    data class Method(
+        val parent: ProofIdentity,
+        val signature: XdkDependency.SymbolKey,
+    ) : ProofIdentity
+
+    /** Value parameter identified by its owning method and parameter slot. */
+    data class Parameter(
+        val method: ProofIdentity,
+        val index: Int,
+    ) : ProofIdentity
+
+    /** Hidden generic binders do not share the visible value-parameter slot namespace. */
+    data class MethodFormal(
+        val method: ProofIdentity,
+        val index: Int,
+    ) : ProofIdentity
+
+    /**
+     * The single constructor that the compiler writes for a class, with no invented declaration span: the shorthand
+     * constructor of a class's primary parameters, or an anonymous class's when the class it extends has none of its
+     * signature to pass to, as for an interface (otherwise an [anonymousConstructor] identifies it).
+     */
+    data class PrimaryConstructor(
+        val owner: ProofIdentity,
+    ) : ProofIdentity
+
+    /**
+     * A member the compiler adds to a written declaration, which has no declaration of its own: a method of a class,
+     * such as the appendTo and estimateStringLength of a const that declares toString, which its class and the
+     * contracts it implements identify, or the formal type Referent of a property that the compiler treats as a class
+     * of its own, which its property identifies, with no contracts ([referentOf]).
+     */
+    data class Generated(
+        val owner: ProofIdentity,
+        val contracts: List<ProofIdentity>,
+    ) : ProofIdentity
+
+    /** A mixin super register is relative to its written method and each adopting host's chain. */
+    data class Super(
+        val method: ProofIdentity,
+    ) : ProofIdentity
+
+    /** A predefined receiver is bound to its compiler-selected class and access view. */
+    data class Receiver(
+        val owner: ProofIdentity,
+        val register: Int,
+    ) : ProofIdentity
+
+    /** A generated forwarding method is identified by its host, written contracts and receivers. */
+    data class Composed(
+        val owner: ProofIdentity,
+        val members: List<ProofIdentity>,
+        val delegates: List<ProofIdentity>,
+        val cycles: List<Composed> = emptyList(),
+        val alternatives: List<ProofIdentity> = emptyList(),
+    ) : ProofIdentity
+
+    /** Unordered alternatives, each retaining its receiver, ordered contracts and delegates. */
+    data class Alternatives(
+        val targets: Set<ProofIdentity>,
+    ) : ProofIdentity
+
+    /** Compiler type structure: base then ordered arguments; relational alternatives are sets. */
+    data class TypeShape(
+        val format: Constant.Format,
+        val components: List<ProofIdentity>,
+    ) : ProofIdentity
+
+    /** Literal annotation arguments retain their constant kind as well as their exact value. */
+    data class Value(
+        val format: Constant.Format,
+        val value: String,
+    ) : ProofIdentity
+
+    /** An implicit package has a directory identity, with no invented source declaration. */
+    data class Directory(
+        val path: String,
+    ) : ProofIdentity
+
+    /** No cross-attempt equivalence is safe when neither a declaration nor artifact proves it. */
+    data class Unproven(
+        val id: UUID = UUID.randomUUID(),
+    ) : ProofIdentity
+}
+
+/** Attempt-owned receiver identity and compiler register used to establish dispatch. */
+internal data class CompilerReceiver(
+    val owner: IdentityConstant,
+    val register: Int,
+)
+
+/**
+ * Detached declarations and contribution chains used to compare bindings across compilation attempts.
+ * Contains no compiler constants, so retaining proof data does not retain an attempt's constant pool.
+ */
+internal class ProofRelations(
+    val declarations: Set<ProofIdentity> = emptySet(),
+    val chains: List<Chain> = emptyList(),
+) {
+    /** Owner and ordered member proofs, including unsupported, cyclic and alternative contributions. */
+    data class Chain(
+        val owner: ProofIdentity,
+        val members: List<ProofIdentity>,
+        val supported: Boolean,
+        val cycles: List<ProofIdentity.Composed> = emptyList(),
+        val alternatives: List<ProofIdentity> = emptyList(),
+    )
+}
+
+/** Attempt-owned inputs; copied into detached identities before leaving the compiler worker. */
+internal data class CompilerExtractionFacts(
+    val types: Map<SemanticModel.SourceLocation, TypeConstant>,
+    val stableValues: Set<SemanticModel.SourceLocation>,
+    val sourceTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+    val plainValues: Set<SemanticModel.SourceLocation> = emptySet(),
+    val injectedValues: Set<SemanticModel.SourceLocation> = emptySet(),
+)
+
+/** Types and stable value reads needed to prove a new helper's signature and captured inputs. */
+internal data class ExtractMethodFacts(
+    val types: Map<SemanticModel.SourceLocation, ProofIdentity> = emptyMap(),
+    val stableValues: Set<SemanticModel.SourceLocation> = emptySet(),
+    val sourceTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+    /** Locals and parameters never held by reference, so only their own method's statements can change them. */
+    val plainValues: Set<SemanticModel.SourceLocation> = emptySet(),
+    /** Locals that @Inject alone annotates: a Ref only to inject a value where they are declared, never changed after. */
+    val injectedValues: Set<SemanticModel.SourceLocation> = emptySet(),
+)
+
+/** Detached comparison facts. Keeping compiler constants here retains every root's entire pool. */
+internal class CompilerRenameFacts(
+    val models: List<SemanticModel>,
+    val constants: Map<SemanticModel.SymbolId, ProofIdentity>,
+    val methods: ProofRelations = ProofRelations(),
+    val properties: ProofRelations = ProofRelations(),
+    val imports: List<XdkAutoImports.Target> = emptyList(),
+    private val modules: Map<String, CompilerRenameFacts> = emptyMap(),
+    val memberActions: List<XdkMemberActions.Candidate> = emptyList(),
+    val typeNames: List<TypeName> = emptyList(),
+    val typePaths: List<TypePath> = emptyList(),
+    val resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
+    val callables: Map<SemanticModel.SourceLocation, ProofIdentity> = emptyMap(),
+    val removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
+    val extraction: ExtractMethodFacts = ExtractMethodFacts(),
+    val missingMethods: List<XdkMissingMethods.Candidate> = emptyList(),
+    val methodSignatures: Map<SemanticModel.SymbolId, XdkMissingMethods.Signature> = emptyMap(),
+    val missingMethodInputs: XdkMissingMethods.Inputs = XdkMissingMethods.Inputs(),
+    val constantProperties: Set<SemanticModel.SourceLocation> = emptySet(),
+    /**
+     * A compilation's module-level package imports: each imported module's name to the package's. A merge holds every
+     * module's, so read one module's through [within].
+     */
+    val packageImports: Map<String, String> = emptyMap(),
+    /**
+     * The project's modules whose artifacts these facts name by revision, for a member with no declaration: facts that
+     * name none of a module's are as true against another artifact of it with the same declarations at the same places
+     * ([XdkMemberUseTracker]).
+     */
+    val binaryModules: Set<String> = emptySet(),
+    /**
+     * The source declarations that modules other than their own can name: those that the compiler makes public, or
+     * protected in a class that another module can extend, held by public classes and packages, not by a method.
+     */
+    val exposed: Set<SemanticModel.SourceLocation> = emptySet(),
+) {
+    /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
+    fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
+
+    /** The facts of the module whose root is [scope], as they were merged, or null for one that was not. */
+    fun module(scope: String): CompilerRenameFacts? = modules[scope]
+
+    companion object {
+        fun merge(modules: Map<String, CompilerRenameFacts>): CompilerRenameFacts {
+            val attempts = modules.values
+            return CompilerRenameFacts(
+                attempts.flatMap { it.models },
+                attempts.flatMap { it.constants.entries }.associate { it.toPair() },
+                ProofRelations(
+                    attempts.flatMapTo(linkedSetOf()) { it.methods.declarations },
+                    attempts.flatMap { it.methods.chains },
+                ),
+                ProofRelations(
+                    attempts.flatMapTo(linkedSetOf()) { it.properties.declarations },
+                    attempts.flatMap { it.properties.chains },
+                ),
+                attempts.flatMap { it.imports }.distinct(),
+                modules,
+                attempts.flatMap { it.memberActions },
+                attempts.flatMap { it.typeNames }.distinct(),
+                attempts.flatMap { it.typePaths }.distinct(),
+                attempts.flatMap { it.resourceValues.entries }.associate { it.toPair() },
+                attempts.flatMap { it.callables.entries }.associate { it.toPair() },
+                attempts.flatMapTo(linkedSetOf()) { it.removableLocals },
+                ExtractMethodFacts(
+                    attempts.flatMap { it.extraction.types.entries }.associate { it.toPair() },
+                    attempts.flatMapTo(linkedSetOf()) { it.extraction.stableValues },
+                    attempts.flatMap { it.extraction.sourceTypes.entries }.associate { it.toPair() },
+                    attempts.flatMapTo(linkedSetOf()) { it.extraction.plainValues },
+                    attempts.flatMapTo(linkedSetOf()) { it.extraction.injectedValues },
+                ),
+                attempts.flatMap { it.missingMethods }.distinct(),
+                attempts.flatMap { it.methodSignatures.entries }.associate { it.toPair() },
+                XdkMissingMethods.Inputs(
+                    attempts.flatMap { it.missingMethodInputs.localTypes.entries }.associate { it.toPair() },
+                    attempts.flatMap { it.missingMethodInputs.receivers.entries }.associate { it.toPair() },
+                ),
+                attempts.flatMapTo(linkedSetOf()) { it.constantProperties },
+                attempts.flatMap { it.packageImports.entries }.associate { it.toPair() },
+                attempts.flatMapTo(sortedSetOf()) { it.binaryModules },
+                attempts.flatMapTo(linkedSetOf()) { it.exposed },
+            )
+        }
+    }
+}
+
+/** Resolve keys by compiler equality, never by a printed signature or type name. */
+internal fun captureRenameFacts(
+    models: List<SemanticModel>,
+    constants: Map<SemanticModel.SymbolId, Constant>,
+    dependencies: XdkDependencies.Open? = null,
+    methods: CompilerMethodRelations = CompilerMethodRelations(emptySet(), emptyList()),
+    properties: CompilerPropertyRelations = CompilerPropertyRelations(),
+    errors: ErrorListener? = null,
+    supers: Map<SemanticModel.SymbolId, MethodConstant> = emptyMap(),
+    members: List<CompilerMemberAction> = emptyList(),
+    receivers: Map<SemanticModel.SymbolId, CompilerReceiver> = emptyMap(),
+    typeNames: List<CompilerTypeName> = emptyList(),
+    resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
+    callables: Map<SemanticModel.SourceLocation, Pair<TypeConstant, MethodConstant>> = emptyMap(),
+    removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
+    extraction: CompilerExtractionFacts? = null,
+    missingMethods: List<CompilerMissingMethod> = emptyList(),
+    missingInputs: CompilerMissingInputs = CompilerMissingInputs(),
+    constantProperties: Set<SemanticModel.SourceLocation> = emptySet(),
+    packageImports: Map<String, String> = emptyMap(),
+    /** The compiled module's name, which is the workspace's own source even when it is a bundled library's. */
+    module: String? = null,
+    /** Each anonymous class, which declares nothing, by the span of the type it constructs, where a proof places it. */
+    anonymousClasses: Map<IdentityConstant, SemanticModel.SourceLocation> = emptyMap(),
+): CompilerRenameFacts {
+    val declarations =
+        models
+            .flatMap { it.symbols }
+            .mapNotNull { symbol ->
+                val source = symbol.declarationSource ?: return@mapNotNull null
+                val range = symbol.declaration ?: return@mapNotNull null
+                constants[symbol.id]?.let { it to SemanticModel.SourceLocation(source, range) }
+            }.toMap()
+    val sourceMethods =
+        models
+            .flatMap { model ->
+                model.symbols.filter {
+                    it.kind == SemanticModel.SymbolKind.METHOD && it.declaration != null &&
+                        it.declarationSource == model.sourceName
+                }
+            }.mapTo(hashSetOf()) { it.id }
+    val identities = mutableMapOf<Constant, ProofIdentity>()
+    val binaryModules = sortedSetOf<String>()
+    // a workspace module of a bundled library's name replaces it (XdkLibraryReplacement) and is proven as the
+    // workspace's sources: the compiled module itself, or a dependency that the server compiled from source; the
+    // bundled libraries' own declarations, which their source copies locate, stay binary
+    val replaced =
+        (
+            dependencies
+                ?.artifacts
+                ?.filterValues { it.fromSource }
+                ?.keys
+                .orEmpty() + setOfNotNull(module)
+        ).intersect(XdkLibraries.moduleNames)
+    val bundled = XdkLibraries.moduleNames - replaced
+
+    fun identity(constant: Constant): ProofIdentity =
+        identities.getOrPut(constant) {
+            val value = constant as? IdentityConstant
+            val module = value?.moduleConstant?.name
+            val location =
+                declarations[constant]
+                    ?: anonymousClasses[constant]
+                    ?: value?.let { dependencies?.declarations?.get(it)?.location }
+            val host = (constant as? MethodConstant)?.namespace
+            val sourceHost =
+                host != null &&
+                    (host in declarations || host in anonymousClasses || dependencies?.declarations?.containsKey(host) == true)
+            val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
+            // a mixin's formal type that the compiler adds for its contribution's is that contribution's
+            val implicit = (constant as? PropertyConstant)?.implicitFormal()
+            val referent = (constant as? PropertyConstant)?.referentOf()
+            when {
+                constant is TypeParameterConstant -> ProofIdentity.MethodFormal(identity(constant.method), constant.register)
+
+                implicit != null -> identity(implicit)
+
+                referent != null -> ProofIdentity.Generated(identity(referent), emptyList())
+
+                // a method that the compiler merges over a union, as a mixin into Box | Bag takes size, is proven by the
+                // union's route through each leg, as a call on such a receiver is
+                constant is MethodConstant && constant.namespace is PureIdentityConstant && errors != null ->
+                    callableIdentity((constant.namespace as PureIdentityConstant).type, constant, errors, ::identity)
+                        ?: ProofIdentity.Unproven()
+
+                // Bundled source navigation must use the same artifact identity as binary-only
+                // views.
+                location != null && module !in bundled ->
+                    ProofIdentity.Source(
+                        location,
+                        constant.format,
+                        requireNotNull(value).name,
+                    )
+
+                constant is PackageConstant &&
+                    module !in bundled &&
+                    (
+                        packageParent is ProofIdentity.Source ||
+                            packageParent is ProofIdentity.Directory
+                    ) -> {
+                    val directory =
+                        when (packageParent) {
+                            is ProofIdentity.Source -> {
+                                packageParent.location.sourceName?.let(::File)?.let {
+                                    File(it.parentFile, it.nameWithoutExtension)
+                                }
+                            }
+
+                            is ProofIdentity.Directory -> File(packageParent.path)
+                        }
+                    directory?.let { ProofIdentity.Directory(File(it, constant.name).path) }
+                        ?: ProofIdentity.Unproven()
+                }
+
+                constant is MethodConstant &&
+                    sourceHost &&
+                    (constant.component as? MethodStructure)?.let {
+                        it.isSynthetic && it.isShorthandConstructor
+                    } == true -> ProofIdentity.PrimaryConstructor(identity(host))
+
+                constant is MethodConstant &&
+                    sourceHost &&
+                    (constant.component as? MethodStructure)?.isAnonymousClassWrapperConstructor == true ->
+                    anonymousConstructor(constant.component as MethodStructure, identity(host), ::identity)
+
+                constant is MethodConstant &&
+                    module !in bundled &&
+                    sourceHost &&
+                    errors != null -> {
+                    val structure = host.component as? ClassStructure
+                    val info =
+                        structure?.let {
+                            ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-provenance)") {
+                                it.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+                            }
+                        }
+                    val route =
+                        info?.let { owner ->
+                            owner.getMethodById(constant)?.let { owner.dispatch(it, errors) }
+                        }
+                    val methods = route?.methods.orEmpty()
+                    val contracts = methods - constant
+                    when {
+                        // A method the compiler adds to the class has no declaration, and every attempt
+                        // adds it again, to the same class and over the same contracts.
+                        (constant.component as? MethodStructure)?.isTransient == true &&
+                            constant in methods &&
+                            contracts.isNotEmpty() -> ProofIdentity.Generated(identity(host), contracts.map(::identity))
+
+                        route == null ||
+                            !route.supported ||
+                            methods.isEmpty() ||
+                            constant in methods -> ProofIdentity.Unproven()
+
+                        else -> route.proof(identity(host), ::identity)
+                    }
+                }
+
+                module != null && module in bundled -> {
+                    val index =
+                        XdkLibraries
+                            .module(module)
+                            .constantPool
+                            .getConstant(constant)
+                            ?.position
+                    when {
+                        index != null -> {
+                            ProofIdentity.Binary(
+                                XdkDependency.SymbolKey(
+                                    module,
+                                    XdkLibraries.revision(module),
+                                    index,
+                                ),
+                            )
+                        }
+
+                        constant is MethodConstant && !constant.isLambda -> {
+                            val signature =
+                                XdkLibraries
+                                    .module(module)
+                                    .constantPool
+                                    .getConstant(constant.signature)
+                                    ?.position
+                            if (signature == null) {
+                                ProofIdentity.Unproven()
+                            } else {
+                                ProofIdentity.Method(
+                                    identity(constant.parentConstant),
+                                    XdkDependency.SymbolKey(
+                                        module,
+                                        XdkLibraries.revision(module),
+                                        signature,
+                                    ),
+                                )
+                            }
+                        }
+
+                        else -> ProofIdentity.Unproven()
+                    }
+                }
+
+                module != null && dependencies?.revisions?.containsKey(module) == true -> {
+                    val index =
+                        dependencies.repository
+                            .loadModule(module)
+                            ?.constantPool
+                            ?.getConstant(constant)
+                            ?.position
+                    if (index == null) {
+                        ProofIdentity.Unproven()
+                    } else {
+                        binaryModules += module
+                        ProofIdentity.Binary(
+                            XdkDependency.SymbolKey(
+                                module,
+                                dependencies.revisions.getValue(module),
+                                index,
+                            ),
+                        )
+                    }
+                }
+
+                else -> ProofIdentity.Unproven()
+            }
+        }
+
+    fun path(value: IdentityConstant): List<String> = value.path.filter { it.format != Constant.Format.Module }.map { it.name }
+
+    fun signatureType(type: CompilerMissingMethod.Type): ProofIdentity? =
+        when (type) {
+            is CompilerMissingMethod.Type.Resolved -> receiverIdentity(type.value, ::identity)
+            is CompilerMissingMethod.Type.Detached -> type.value
+        }
+
+    fun cycle(cycle: CompilerDispatch.Cycle) =
+        ProofIdentity.Composed(
+            receiverIdentity(cycle.receiver, ::identity) ?: ProofIdentity.Unproven(),
+            cycle.contracts.map(::identity),
+            emptyList(),
+        )
+
+    val routedOwners = methods.chains.filter { it.cycles.isNotEmpty() || it.alternatives.isNotEmpty() }.mapTo(hashSetOf()) { it.owner }
+    val callableIdentities =
+        if (errors == null) {
+            emptyMap()
+        } else {
+            callables.values
+                .distinct()
+                .filter { (receiver, _) ->
+                    receiver.resolveTypedefs().removeAccess() is UnionTypeConstant ||
+                        (receiver.isSingleUnderlyingClass(false) && receiver.getSingleUnderlyingClass(false) in routedOwners)
+                }.associateWith { (receiver, method) -> callableIdentity(receiver, method, errors, ::identity) }
+        }
+
+    return CompilerRenameFacts(
+        models,
+        constants.mapValues { identity(it.value) } +
+            models
+                .distinctBy { it.id }
+                .flatMap { model ->
+                    model.parameters.mapNotNull { (id, slot) ->
+                        constants[slot.method]?.let {
+                            id to ProofIdentity.Parameter(identity(it), slot.index)
+                        }
+                    }
+                }.toMap() +
+            supers.mapValues { ProofIdentity.Super(identity(it.value)) } +
+            receivers.mapValues { (_, receiver) -> ProofIdentity.Receiver(identity(receiver.owner), receiver.register) },
+        ProofRelations(
+            methods.declarations.mapTo(linkedSetOf(), ::identity),
+            methods.chains.map {
+                ProofRelations.Chain(
+                    identity(it.owner),
+                    it.methods.map(::identity),
+                    it.supported,
+                    it.cycles.map(::cycle),
+                    it.alternatives.map { choice -> choice.proof(::identity) },
+                )
+            },
+        ),
+        ProofRelations(
+            properties.declarations.mapTo(linkedSetOf(), ::identity),
+            properties.chains.map {
+                ProofRelations.Chain(
+                    identity(it.owner),
+                    it.properties.map(::identity),
+                    it.supported,
+                )
+            },
+        ),
+        constants.values.mapNotNull(XdkAutoImports::target).distinct(),
+        memberActions =
+            members.mapNotNull { member ->
+                val owner =
+                    identity(member.owner) as? ProofIdentity.Source ?: return@mapNotNull null
+                val contract = identity(member.contract)
+                if (
+                    contract !is ProofIdentity.Source &&
+                    contract !is ProofIdentity.Binary &&
+                    !(
+                        contract is ProofIdentity.Method &&
+                            contract.parent is ProofIdentity.Binary
+                    )
+                ) {
+                    return@mapNotNull null
+                }
+                XdkMemberActions.Candidate(
+                    owner.location,
+                    contract,
+                    member.insertion,
+                    member.declaration,
+                    member.implementation,
+                    member.requiredCount,
+                    member.imports,
+                )
+            },
+        typeNames =
+            typeNames.map {
+                TypeName(it.location, it.terminal, identity(it.target), it.target.moduleConstant.name, path(it.target), it.imported)
+            },
+        typePaths =
+            (constants.values.filterIsInstance<IdentityConstant>() + typeNames.map { it.target })
+                .flatMap { it.path }
+                .filter {
+                    it.format in setOf(Constant.Format.Module, Constant.Format.Package, Constant.Format.Class, Constant.Format.Typedef)
+                }.distinct()
+                .map { TypePath(identity(it), it.moduleConstant.name, path(it)) },
+        resourceValues = resourceValues,
+        missingMethods =
+            missingMethods.mapNotNull { method ->
+                val parameters = method.parameters.map { signatureType(it) ?: return@mapNotNull null }
+                val returns = method.returns.map { signatureType(it) ?: return@mapNotNull null }
+                val formals = method.formals.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
+                method.candidate.copy(
+                    signature =
+                        XdkMissingMethods.Signature(
+                            parameters,
+                            returns,
+                            method.candidate.publicOwner != null,
+                            formals,
+                            method.conditional,
+                        ),
+                )
+            },
+        methodSignatures =
+            constants
+                .filterKeys(sourceMethods::contains)
+                .mapNotNull { (id, constant) ->
+                    val method = (constant as? MethodConstant)?.component as? MethodStructure ?: return@mapNotNull null
+                    val parameters = method.params.map { receiverIdentity(it.type, ::identity) ?: return@mapNotNull null }
+                    val returns = method.returnTypes.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
+                    val formals =
+                        method.params
+                            .take(
+                                method.typeParamCount,
+                            ).map { identity(it.asTypeParameterConstant(method.identityConstant)) }
+                    id to
+                        XdkMissingMethods.Signature(
+                            parameters,
+                            returns,
+                            method.access == Access.PUBLIC,
+                            formals,
+                            method.isConditionalReturn,
+                        )
+                }.toMap(),
+        removableLocals = removableLocals,
+        constantProperties = constantProperties,
+        packageImports = packageImports,
+        extraction =
+            ExtractMethodFacts(
+                extraction
+                    ?.types
+                    .orEmpty()
+                    .mapNotNull { (at, type) -> receiverIdentity(type, ::identity)?.let { at to it } }
+                    .toMap(),
+                extraction?.stableValues.orEmpty(),
+                extraction?.sourceTypes.orEmpty(),
+                extraction?.plainValues.orEmpty(),
+                extraction?.injectedValues.orEmpty(),
+            ),
+        callables =
+            callables
+                .mapNotNull { (site, selected) ->
+                    callableIdentities[selected]?.let { site to it }
+                }.toMap(),
+        missingMethodInputs =
+            XdkMissingMethods.Inputs(
+                missingInputs.localTypes.mapValues { (_, type) ->
+                    XdkMissingMethods.LocalType(
+                        type.source,
+                        receiverIdentity(type.type, ::identity) ?: ProofIdentity.Unproven(),
+                        type.destinationSources,
+                    )
+                },
+                missingInputs.receivers,
+                missingInputs.expressions.mapValues { (_, type) ->
+                    XdkMissingMethods.LocalType(
+                        type.source,
+                        receiverIdentity(type.type, ::identity) ?: ProofIdentity.Unproven(),
+                        type.destinationSources,
+                    )
+                },
+            ),
+        exposed = declarations.filterKeys { it is IdentityConstant && exposed(it) }.values.toSet(),
+        // last, once every identity above is made
+        binaryModules = binaryModules.toSortedSet(),
+    )
+}
+
+/**
+ * A constructor that the compiler writes for an anonymous class ([MethodStructure.isAnonymousClassWrapperConstructor]),
+ * of the class [owner] identifies, by the constructor it passes its arguments to, through which their names bind: one
+ * that adds the class's captures to another's parameters by that one (NewExpression.addCaptures); any other by the
+ * constructor of the class it extends that has its signature, which for a construction's arguments is the one that
+ * the compiler selected for them (NewExpression.createPassThroughConstructor); one with neither, as for an interface,
+ * is the class's single constructor.
+ */
+private fun anonymousConstructor(
+    constructor: MethodStructure,
+    owner: ProofIdentity,
+    identity: (Constant) -> ProofIdentity,
+): ProofIdentity {
+    val anonymous = constructor.containingClass
+    val types = constructor.params.map { it.type }
+    val wrapped =
+        (anonymous.getChild("construct") as? MultiMethodStructure)
+            ?.methods()
+            .orEmpty()
+            .filter { it !== constructor && it.isAnonymousClassWrapperConstructor && it.params.size < types.size }
+            .filter { inner -> inner.params.map { it.type } == types.take(inner.params.size) }
+            .maxByOrNull { it.params.size }
+    val passed = wrapped ?: anonymous.getSuper()?.findMethod(constructor.identityConstant.signature)
+    return passed?.let { ProofIdentity.Composed(owner, listOf(identity(it.identityConstant)), emptyList()) }
+        ?: ProofIdentity.PrimaryConstructor(owner)
+}
+
+/**
+ * The property that the compiler adds this formal type to, as Referent, when it treats a property with code of its own or
+ * a Ref annotation, as `@Lazy Int hash.calc()`, as a class of its own, whose formal type it is (TypeConstant's exploded
+ * properties); null for any other. The compiler makes it a constant alone, with no structure, which no source declares,
+ * and the dispatch chain of the property's Referent holds it with the Referent of each of Ref, Var and the property's
+ * annotations, so an unproven identity of it refused every proof but a rename's in a module that declares one of those,
+ * as ecstasy declares Ref's and Var's. Each property has one, which the compiler always names Referent.
+ */
+internal fun PropertyConstant.referentOf(): PropertyConstant? =
+    (parentConstant as? PropertyConstant)?.takeIf { property ->
+        name == "Referent" && property.component != null && component == null
+    }
+
+/**
+ * The formats that a class of another module can extend or implement, and so name the protected members of: a module, a
+ * package or an enum has no subclass in another module.
+ */
+private val extendable =
+    setOf(Format.INTERFACE, Format.CLASS, Format.CONST, Format.ANNOTATION, Format.MIXIN, Format.SERVICE)
+
+/**
+ * Whether modules other than its own can name [identity], as the compiler's access says: it and each class or package
+ * that holds it up to its module is public, or protected in a class that another module can extend, and no method
+ * holds it, as one holds its lambdas and local classes.
+ */
+private fun exposed(identity: IdentityConstant): Boolean {
+    val declared = identity.component ?: return false
+
+    // the class, package or module that holds [component], past the multimethod that groups a class's methods
+    fun holder(component: Component) = generateSequence(component.parent) { it.parent }.firstOrNull { it !is MultiMethodStructure }
+    return generateSequence(declared) { it.parent }
+        .takeWhile { it !is ModuleStructure }
+        .filterNot { it is MultiMethodStructure }
+        .all { component ->
+            (component === declared || component !is MethodStructure) &&
+                when (component.access) {
+                    Access.PUBLIC -> true
+                    Access.PROTECTED -> holder(component)?.format in extendable
+                    else -> false
+                }
+        }
+}

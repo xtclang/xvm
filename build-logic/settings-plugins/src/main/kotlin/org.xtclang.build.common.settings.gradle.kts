@@ -11,6 +11,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver")
 }
 
+@Suppress("UnstableApiUsage")
 toolchainManagement {
     jvm {
         javaRepositories {

@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,6 +34,9 @@ import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A return statement specifies a return with optional values.
  */
@@ -41,11 +45,11 @@ public class ReturnStatement
     // ----- constructors --------------------------------------------------------------------------
 
     public ReturnStatement(Token keyword) {
-        this(keyword, (List) null);
+        this(keyword, (List<Expression>) null);
     }
 
     public ReturnStatement(Token keyword, Expression expr) {
-        this(keyword, Arrays.asList(expr)); // mutable list
+        this(keyword, new ArrayList<>(List.of(expr))); // mutable list
     }
 
     public ReturnStatement(Token keyword, List<Expression> exprs) {
@@ -70,7 +74,7 @@ public class ReturnStatement
 
     @Override
     public long getEndPosition() {
-        return exprs == null ? keyword.getEndPosition() : exprs.get(exprs.size() - 1).getEndPosition();
+        return exprs == null ? keyword.getEndPosition() : exprs.getLast().getEndPosition();
     }
 
     @Override
@@ -145,7 +149,7 @@ public class ReturnStatement
                     if (cExprs == 1) {
                         // allow the (strange) use of T0D0, the return of a void expression
                         // or an invocation that is not void
-                        Expression expr = listExprs.get(0);
+                        Expression expr = listExprs.getFirst();
                         if (expr.isCompletable() && !expr.isVoid() &&
                                 !(expr instanceof InvocationExpression)) {
                             // it is supposed to be a void return; allow a Future<Tuple>
@@ -182,7 +186,7 @@ public class ReturnStatement
                 log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
             }
         } else { // cExprs == 1
-            Expression exprOld = listExprs.get(0);
+            Expression exprOld = listExprs.getFirst();
             Expression exprNew;
 
             TypeConstant typeRequired = cRets >= 1 ? aRetTypes[0] : null;
@@ -197,16 +201,18 @@ public class ReturnStatement
                 ctx = ctx.enterInferring(typeRequired);
             }
 
+            ErrorListener probe = silent(PROBE);
+
             // let's test several possibilities:
             do {
                 // - most likely the expression matches the return types for the method
-                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, false, null).isFit()) {
+                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, false, probe).isFit()) {
                     exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                     break;
                 }
 
                 // - it could be a conditional false
-                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), false, null).isFit()) {
+                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), false, probe).isFit()) {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse()))) {
                         // it's not clear how this could happen; it's more like an assertion
@@ -219,7 +225,7 @@ public class ReturnStatement
                 // - it could be a Future return
                 if (cRets == 1) {
                     TypeConstant typeFuture = pool.ensureFuture(aRetTypes[0]);
-                    if (exprOld.testFit(ctx, typeFuture, false, null).isFit()) {
+                    if (exprOld.testFit(ctx, typeFuture, false, probe).isFit()) {
                         exprNew = exprOld.validate(ctx, typeFuture, errs);
                         m_fFutureReturn = true;
                         break;
@@ -228,7 +234,7 @@ public class ReturnStatement
 
                 // - it could be a tuple return
                 TypeConstant typeTuple = pool.ensureTupleType(aRetTypes);
-                if (exprOld.testFit(ctx, typeTuple, false, null).isFit()) {
+                if (exprOld.testFit(ctx, typeTuple, false, probe).isFit()) {
                     exprNew = exprOld.validate(ctx, typeTuple, errs);
                     m_fTupleReturn = true;
                     break;
@@ -303,15 +309,16 @@ public class ReturnStatement
         int              cExprs    = listExprs == null ? 0 : listExprs.size();
 
         if (m_fTupleReturn) {
-            assert cExprs == 1;
+            assert listExprs != null && cExprs == 1;
 
             // the return statement has a single expression returning a tuple; the caller expects
             // multiple returns
-            Expression expr = listExprs.get(0);
+            Expression expr = listExprs.getFirst();
             Argument   arg  = expr.generateArgument(ctx, code, true, errs);
             code.add(new Return_T(arg));
         } else if (m_fConditionalTernary) {
-            TernaryExpression exprTernary = (TernaryExpression) listExprs.get(0);
+            assert listExprs != null;
+            TernaryExpression exprTernary = (TernaryExpression) listExprs.getFirst();
             exprTernary.generateConditionalReturn(ctx, code, errs);
         } else {
             // Note: it's a responsibility of the conditional return to *not* return anything else
@@ -324,7 +331,7 @@ public class ReturnStatement
             case 1: {
                 // we need to get all the arguments the expression can provide, but
                 // return only as many as the caller expects
-                Expression expr   = listExprs.get(0);
+                Expression expr   = listExprs.getFirst();
                 boolean    fCheck = fConditional && !expr.isConditionalResult();
                 Argument[] aArgs  = expr.generateArguments(ctx, code, true, errs);
                 int        cArgs  = aArgs.length;
@@ -452,7 +459,7 @@ public class ReturnStatement
 
             case 1:
                 sb.append(' ')
-                  .append(exprs.get(0));
+                  .append(exprs.getFirst());
                 break;
 
             default:

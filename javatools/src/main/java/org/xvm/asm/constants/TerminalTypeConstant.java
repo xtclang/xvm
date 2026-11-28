@@ -33,6 +33,9 @@ import org.xvm.runtime.Container;
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writeMagnitude;
 
@@ -1978,7 +1981,7 @@ public class TerminalTypeConstant
                 && !isFunction() && !isMethod()
                 && !getSingleUnderlyingClass(true).equals(getConstantPool().clzClass())
                 && !Builder.isEmbedded(getExplicitClassFormat())
-                && ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+                && ensureTypeInfo().isNewable(false, silent(PROBE));
         return new JitInfo(this, loader, type, fNewable);
     }
 

@@ -5,7 +5,7 @@ import maps.CopyableMap;
  * [OrderedMap] instance as its storage.
  */
 class OrderedMapSet<Element extends Orderable>
-        extends MapSet<Element>(contents)
+        extends MapSet<Element>
         implements OrderedSet<Element> {
 
     typedef CopyableMap<Element, Nullable>+OrderedMap<Element, Nullable> as CopyableOrderedMap;

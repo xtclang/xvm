@@ -141,18 +141,18 @@ VimGenerator(xtcLanguage).generate()  // → "syn keyword xtcControl if else for
 
 ## Files in This Directory
 
-| File                                | Purpose                                                      |
-|-------------------------------------|--------------------------------------------------------------|
-| `XtcLanguage.kt`                    | **The source of truth** - Complete language model definition |
-| `model/LanguageModel.kt`            | Data classes and DSL builders for language model             |
-| `generators/TextMateGenerator.kt`   | Generates TextMate grammar (VS Code, Sublime, etc.)          |
-| `generators/TreeSitterGenerator.kt` | Generates Tree-sitter grammar (Zed, Neovim, GitHub)          |
-| `generators/VimGenerator.kt`        | Generates Vim syntax file                                    |
-| `generators/EmacsGenerator.kt`      | Generates Emacs major mode                                   |
-| `generators/SublimeSyntaxGenerator.kt` | Generates Sublime Text syntax                             |
-| `generators/VSCodeConfigGenerator.kt` | Generates VS Code language configuration                   |
-| `scanner/ScannerSpec.kt`            | Tree-sitter external scanner token definitions               |
-| `scanner/ScannerCGeneratorDsl.kt`   | DSL-based scanner.c generator                                |
+| File                                   | Purpose                                                      |
+|----------------------------------------|--------------------------------------------------------------|
+| `XtcLanguage.kt`                       | **The source of truth** - Complete language model definition |
+| `model/LanguageModel.kt`               | Data classes and DSL builders for language model             |
+| `generators/TextMateGenerator.kt`      | Generates TextMate grammar (VS Code, Sublime, etc.)          |
+| `generators/TreeSitterGenerator.kt`    | Generates Tree-sitter grammar (Zed, Neovim, GitHub)          |
+| `generators/VimGenerator.kt`           | Generates Vim syntax file                                    |
+| `generators/EmacsGenerator.kt`         | Generates Emacs major mode                                   |
+| `generators/SublimeSyntaxGenerator.kt` | Generates Sublime Text syntax                                |
+| `generators/VSCodeConfigGenerator.kt`  | Generates VS Code language configuration                     |
+| `scanner/ScannerSpec.kt`               | Tree-sitter external scanner token definitions               |
+| `scanner/ScannerCGeneratorDsl.kt`      | DSL-based scanner.c generator                                |
 
 ### Pre-Generated Files
 
@@ -660,13 +660,13 @@ All three IDEs connect to the same LSP server, which lives in `lang/lsp-server/s
 
 ### Key Components
 
-| File                          | Purpose                                          |
-|-------------------------------|--------------------------------------------------|
-| `XtcLanguageServer.kt`        | Main server implementing LSP protocol (includes document and workspace services) |
-| `Adapter.kt`                 | Core adapter interface for LSP backends          |
-| `AbstractAdapter.kt`         | Abstract base class with default "not yet implemented" stubs |
-| `TreeSitterAdapter.kt`        | Syntax-aware adapter using tree-sitter           |
-| `MockAdapter.kt`             | Regex-based adapter for testing and fallback     |
+| File                   | Purpose                                                                          |
+|------------------------|----------------------------------------------------------------------------------|
+| `XtcLanguageServer.kt` | Main server implementing LSP protocol (includes document and workspace services) |
+| `Adapter.kt`           | Core adapter interface for LSP backends                                          |
+| `AbstractAdapter.kt`   | Abstract base class with default "not yet implemented" stubs                     |
+| `TreeSitterAdapter.kt` | Syntax-aware adapter using tree-sitter                                           |
+| `MockAdapter.kt`       | Regex-based adapter for testing and fallback                                     |
 
 ### LSP Capabilities Provided
 
@@ -1006,11 +1006,11 @@ frequently.
 
 ### Performance Trade-offs
 
-| Approach                         | Speed     | Accuracy           | Use When                              |
-|----------------------------------|-----------|--------------------|---------------------------------------|
+| Approach                         | Speed      | Accuracy           | Use When                              |
+|----------------------------------|------------|--------------------|---------------------------------------|
 | **Lexer Only**                   | ⚡ Instant | 🔶 Token-level     | Syntax highlighting, bracket matching |
 | **Lexer + Shallow Parse**        | ⚡ Fast    | 🔷 Structure-level | Outline, folding, basic navigation    |
-| **Full Parse + Type Resolution** | 🐌 Slower | ✅ Semantic         | Go-to-def, completion, refactoring    |
+| **Full Parse + Type Resolution** | 🐌 Slower  | ✅ Semantic        | Go-to-def, completion, refactoring    |
 
 ### Practical Example: Highlighting `class`
 

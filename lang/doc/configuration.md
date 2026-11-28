@@ -1,0 +1,610 @@
+# Configuration Reference
+
+Every setting, property, environment variable and configurable path of the language tooling under
+`lang/`, grouped by who sets the value: the editor user, the language server's launcher, the debug
+adapter, the build, and the tests. Each entry names the code that reads it, as `path:line`, so that
+the entry can be checked against the source. A value appears here only if code reads it; values
+that other documents describe but no code reads are listed under
+[Stale in other docs](#stale-in-other-docs).
+
+The feature guides keep their own, partial lists: the [language server](../lsp-server/README.md),
+the [IntelliJ plugin](../intellij-plugin/README.md) and its [testing reference](../intellij-plugin/testing.md),
+the [VS Code extension](../vscode-extension/README.md) and the [manual playbook](manual-test-plan.md).
+
+## Reading the locations
+
+Paths are relative to the repository root. These prefixes shorten the long ones:
+
+| Prefix | Directory |
+|--------|-----------|
+| `lsp/` | `lang/lsp-server/src/main/kotlin/org/xvm/lsp/` |
+| `lspTest/` | `lang/lsp-server/src/test/kotlin/org/xvm/lsp/` |
+| `dap/` | `lang/dap-server/src/main/kotlin/org/xvm/debug/` |
+| `idea/` | `lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/` |
+| `ideaIt/` | `lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/` |
+| `vsc/` | `lang/vscode-extension/src/` |
+
+`logback.xml` alone is the server's, `lang/lsp-server/src/main/resources/logback.xml`.
+
+Three ways of reaching the server recur in the tables:
+
+- **JVM option**: an argument on the server's `java` command line, usually `-D<name>=<value>`; read
+  once at startup, so a change needs a server restart.
+- **Initialization option**: a field of `initializationOptions` in the LSP `initialize` request;
+  also fixed for the life of a connection.
+- **`workspace/configuration`**: a section the server asks the editor for after initialization and
+  again after `workspace/didChangeConfiguration`; these apply without a restart.
+
+## 1. Editor settings
+
+### 1.1 VS Code
+
+The 23 settings in `contributes.configuration` of `lang/vscode-extension/package.json`, whose
+entries start at lines 358 to 653. The six machine-scoped ones, `xtc.java.vmOptions`, `xtc.server.memoryPolicy`, `xtc.server.maxHeap`,
+`xtc.server.compileLibraries`, `xtc.server.replaceLibraries` and `xtc.server.logs`, are read from the user settings only
+(`inspect(...).globalValue`); workspace values of them are ignored.
+
+| Setting | Type, default | What it does | Reaches the server as | Read at |
+|---------|---------------|--------------|-----------------------|---------|
+| `xtc.compiler.sourceModules` | array or null, `null` | The compiler's source graph: `null` discovers the workspace's modules, `[]` turns discovery off, an array lists modules as `{name, uri, dependencies, resourceRoots}`. Window scope; applies without a restart. | `xtcCompiler.sourceModules` initialization option and the `xtc.compiler` section; changes are pushed with `workspace/didChangeConfiguration` | `vsc/rename-proposal.ts:53`, `vsc/lsp-client.ts:83`, `vsc/lsp-client.ts:94` |
+| `xtc.sourceRoots` | string array, `[]` | Extra directories of `.x` sources outside the workspace for the server to index. Machine-overridable; a change restarts the server. | `xtcSourceRoots` initialization option | `vsc/lsp-client.ts:165`, restart key `vsc/lsp-client.ts:37` |
+| `xtc.compiler.libraries` | object, `{"modulePath": null, "sourceAttachments": []}` | Binary libraries (`modulePath`; `null` inherits the Gradle model) and read-only source attachments (`[{module, roots}]`). The bundled XDK is always included. Window scope; applies without a restart. | `xtcCompiler.libraries` initialization option and the `xtc.compiler` section | `vsc/library-settings.ts:6`, `vsc/lsp-client.ts:83` |
+| `xtc.languageService.adapter` | `default`, `compiler` or `treesitter`; `default` | The server's backend. `default` keeps the one built into the server jar. A change restarts the server. | `-Dxtc.lsp.adapter=<value>`, left out for `default` | `vsc/editor-settings.ts:7`, `vsc/lsp-client.ts:133` |
+| `xtc.build.mode` | `auto`, `embedded` or `gradle`; `embedded` | How Build, Run and Rebuild work: the server's embedded compiler, Gradle, or Gradle when the folder has a Gradle build. In a folder that the server says builds and runs with Gradle (`xtc/replacedLibraries`, section 2.2's `xtc.lsp.replaceLibraries`), as its Gradle build has another XDK than the bundled one or its modules are built against libraries the workspace's own modules replace, it is Gradle whatever the setting: the picker says the embedded compiler is not available there, and why, as the status bar item's tooltip does, and a choice of it, by the picker or the settings, warns. Resource scope. | Not sent; a debug launch in Gradle mode carries `buildMode: "gradle"` (section 3.1) | `vsc/embedded-execution.ts:106`, reasons `:59`, `vsc/build-mode-selection.ts:22`, `:75` |
+| `xtc.trace.server` | `off`, `messages` or `verbose`; `off` | Protocol tracing in the output channel. Read by `vscode-languageclient` for the client ID `xtc`. | `trace` in `initialize`, then `$/setTrace` | `vsc/lsp-client.ts:300`, `vsc/lsp-client.ts:400` |
+| `xtc.codeLens.references` | boolean, `true` | Reference-count lenses on declarations. Resource scope; applies immediately. | `xtc.codeLens` section, field `references` | `vsc/lsp-client.ts:228` |
+| `xtc.inlayHints.enabled` | boolean, `true` | Inlay hints. The client drops the request when off; the server is not told. | Not sent | `vsc/lsp-client.ts:204` |
+| `xtc.languageService.textSynchronization` | `full` or `incremental`; `full` | Whether edits are sent as whole documents or as changes. A change restarts the server. | `xtcDocumentSync.incremental` initialization option | `vsc/editor-settings.ts:8`, `vsc/service-settings.ts:32` |
+| `xtc.languageService.saveFormatting` | `editor` or `server`; `editor` | Who formats on save. Native `editor.formatOnSave` wins, so two formatters never run. A change restarts the server. | `xtcDocumentSync.formatOnSave` initialization option | `vsc/editor-settings.ts:9`, `vsc/service-settings.ts:33`, per-save check `vsc/editor-settings.ts:15` |
+| `xtc.formatting.indentSize` | integer 1 to 32, `4` | Spaces per indentation level. | `xtc.formatting` section | `vsc/editor-settings.ts:33` |
+| `xtc.formatting.continuationIndentSize` | integer 1 to 32, `8` | Spaces for continuation lines. | `xtc.formatting` section | `vsc/editor-settings.ts:34` |
+| `xtc.formatting.tabSize` | integer 1 to 32, `4` | Deprecated; nothing reads it (`deprecationMessage` in `package.json`). Use `editor.tabSize`. | Not sent | none |
+| `xtc.formatting.insertSpaces` | boolean, `true` | Spaces instead of tabs. | `xtc.formatting` section | `vsc/editor-settings.ts:36` |
+| `xtc.formatting.maxLineWidth` | integer 1 to 1000, `120` | Target width for the compiler adapter's wrapping. | `xtc.formatting` section | `vsc/editor-settings.ts:35` |
+| `xtc.formatting.formatterTagsEnabled` | boolean, `false` | Formatting leaves the lines from a comment with `formatterOffTag` through the next comment with `formatterOnTag` as they are, as IntelliJ's formatter markers do. | `xtc.formatting` section | `vsc/editor-settings.ts:43` |
+| `xtc.formatting.formatterOffTag` | string, `@formatter:off` | The off marker's text. | `xtc.formatting` section | `vsc/editor-settings.ts:44` |
+| `xtc.formatting.formatterOnTag` | string, `@formatter:on` | The on marker's text. | `xtc.formatting` section | `vsc/editor-settings.ts:45` |
+| `xtc.formatting.formatterTagsAcceptRegexp` | boolean, `false` | The two tags are regular expressions that a comment has a match of. | `xtc.formatting` section | `vsc/editor-settings.ts:46` |
+| `xtc.formatting.wrapComments` | boolean, `false` | The compiler adapter refills the paragraphs of doc and block comments that run past `maxLineWidth`. | `xtc.formatting` section | `vsc/editor-settings.ts:37` |
+| `xtc.java.home` | string, `""` | The Java 25+ installation that runs the server. Empty: `jdk-utils` discovery (`JAVA_HOME`, `PATH`, SDKMAN and others), then a JRE downloaded earlier, then a download from Adoptium. A path without `bin/java` is an error. A change restarts the server. | The `java` executable of the command line | `vsc/java.ts:54`, order `vsc/java.ts:22` |
+| `xtc.java.vmOptions` | string array, `[]` | JVM options, one per item: `-Xms`, `-Xmx`, `-Xss`, `-XX:MaxMetaspaceSize=`, `-XX:ReservedCodeCacheSize=` (K, M or G), `-XX:ActiveProcessorCount=`, `-XX:+UseG1GC`, `UseSerialGC`, `UseParallelGC`, `UseZGC`. Anything else is rejected. Without a collector or `-Xmx` among them, the server runs `-XX:+UseZGC -XX:SoftMaxHeapSize=1G`: ZGC keeps the heap near 1 GB and grows past it only as far as the live data needs. Machine scope. | JVM options | `vsc/runtime-settings.ts:37`, validation `vsc/runtime-settings.ts:4`, default `vsc/runtime-settings.ts:31` |
+| `xtc.server.compileLibraries` | boolean, `true` | Compile an opened XDK source with its whole library, so that navigation works for every name in it. Needs a server heap of about 1 GB. Machine scope. | `-Dxtc.lsp.compileLibraries=<value>` | `vsc/runtime-settings.ts:59` |
+| `xtc.server.memoryPolicy` | `default` or `adaptive`, `default` | How the server's JVM uses memory: `default`, the maximum heap of `xtc.server.maxHeap` or the JVM's own, a quarter of the machine's memory; `adaptive`, ZGC that starts small, keeps near a 1 GB soft target, gives back memory unused for a minute and uses at most three quarters of the machine's. An `-Xmx` or a collector in `xtc.java.vmOptions` overrides it. Machine scope. | `-Xmx<size>`, or `-XX:+UseZGC -Xms64m -XX:SoftMaxHeapSize=1G -XX:MaxRAMPercentage=75 -XX:ZUncommitDelay=60` | `vsc/runtime-settings.ts` |
+| `xtc.server.maxHeap` | string, `""` | The maximum heap with the default policy, such as `4G`; empty for the JVM's own. Machine scope. | `-Xmx<value>` | `vsc/runtime-settings.ts` |
+| `xtc.server.replaceLibraries` | boolean, `true` | Use the workspace's own modules in place of the bundled XDK libraries of their names, as in the XVM repository. Machine scope. | `-Dxtc.lsp.replaceLibraries=<value>` | `vsc/runtime-settings.ts:61` |
+| `xtc.server.logs` | object, `{"historyDays": 7, "maxFileMb": 10, "totalSizeMb": 50, "retainedSessions": 5}` | Server log retention (section 4). Ranges: days 1 to 90, file MB 1 to 100, archive MB from the file MB to 1000, sessions 1 to 20. Machine scope. | `-Dxtc.logs.historyDays`, `-Dxtc.logs.maxFileMb`, `-Dxtc.logs.totalSizeMb`, `-Dxtc.logs.retainedSessions` | `vsc/runtime-settings.ts:52`, `vsc/runtime-settings.ts:55` |
+
+`package.json` also sets editor defaults for `[xtc]` files in `configurationDefaults`, such as
+`editor.tabSize` 4 and `editor.formatOnType` true; those are VS Code's own settings.
+
+### 1.2 IntelliJ
+
+The plugin registers five settings pages (`lang/intellij-plugin/src/main/resources/META-INF/plugin.xml:84`
+to `:88`) and a code style. LSP4IJ's own Language Servers page holds the rest.
+
+**Languages & Frameworks | Ecstasy | Server Runtime and Logs** (`ServerRuntimeConfigurable`). Stored per
+machine in `ecstasy-server-runtime.xml`, excluded from Settings Sync
+(`idea/lsp/ServerRuntimeSettings.kt:13`). Apply saves for the next start; the page's button restarts
+running servers. The server runs on IntelliJ's bundled Java runtime.
+
+| Field | Type, default | Reaches the server as | Read at |
+|-------|---------------|-----------------------|---------|
+| JVM options (`vmOptions`) | text, one option per line, `""`; the same options and the same default as VS Code's `xtc.java.vmOptions` | JVM options | `idea/lsp/ServerRuntimeSettings.kt:21`, validation `idea/lsp/ServerJvmOptions.kt:17`, default `idea/lsp/ServerJvmOptions.kt:14` |
+| Log history (days) (`logHistoryDays`) | 1 to 90, `7` | `-Dxtc.logs.historyDays` | `idea/lsp/ServerRuntimeSettings.kt:22`, `:65` |
+| Each log file (MB) (`logMaxFileMb`) | 1 to 100, `10` | `-Dxtc.logs.maxFileMb` | `idea/lsp/ServerRuntimeSettings.kt:23`, `:66` |
+| Rolled archive cap per stream (MB) (`logTotalSizeMb`) | file MB to 1000, `50` | `-Dxtc.logs.totalSizeMb` | `idea/lsp/ServerRuntimeSettings.kt:24`, `:67` |
+| Retired process sessions to keep (`logRetainedSessions`) | 1 to 20, `5` | `-Dxtc.logs.retainedSessions` | `idea/lsp/ServerRuntimeSettings.kt:25`, `:68` |
+| Compile an XDK library as a whole when one of its sources is opened (`compileLibraries`) | boolean, `true` | `-Dxtc.lsp.compileLibraries` | `idea/lsp/ServerRuntimeSettings.kt:27`, `:67` |
+| Memory policy (`memoryPolicy`) | Default or Adaptive, Default | as VS Code's `xtc.server.memoryPolicy` | `idea/lsp/ServerJvmOptions.kt` (`memory`, `ADAPTIVE`) |
+| Maximum heap, with the Default policy (`maxHeap`) | string, empty | `-Xmx<value>`; empty for the JVM's own | `idea/lsp/ServerRuntimeSettings.kt` |
+| Use the workspace's own modules in place of the bundled XDK libraries of their names (`replaceLibraries`) | boolean, `true` | `-Dxtc.lsp.replaceLibraries` | `idea/lsp/ServerRuntimeSettings.kt:28`, `:67` |
+
+The arguments are inserted before `-jar` at `idea/lsp/XtcLspServerSupportProvider.kt:155`.
+
+**Languages & Frameworks | Ecstasy | Language Service Defaults** (application) and **Ecstasy | Language
+Service** (project) (`LanguageServiceConfigurable`). Stored as JSON under `xtc.languageService` in
+LSP4IJ's settings for the server `xtcLanguageServer`, global or per project
+(`idea/lsp/LanguageServiceSettings.kt:12`); a project value overrides the application default key by key
+(`idea/lsp/LanguageServiceConfiguration.kt:77`).
+
+| Field | Type, default | Reaches the server as | Read at |
+|-------|---------------|-----------------------|---------|
+| Use application language-service defaults | boolean, on for a new project; project page only | Removes the project's `xtc.languageService` | `idea/lsp/LanguageServiceConfigurable.kt:34`, `:199` |
+| Language adapter (`adapter`) | `default`, `compiler` or `treesitter`; `default` | `-Dxtc.lsp.adapter=<value>`, left out for `default`; a change restarts the server | `idea/lsp/LanguageAdapter.kt:13`, `idea/lsp/XtcLspServerSupportProvider.kt:156`, restart `idea/lsp/XtcLanguageClient.kt:74` |
+| Text synchronization (`textSynchronization`) | `full` or `incremental`; `full` | `xtcDocumentSync.incremental` initialization option; a change restarts the server | `idea/lsp/LanguageServiceConfiguration.kt:32` |
+| Save formatting owner (`saveFormatting`) | `editor` or `server`; `editor` | Disabled: LSP4IJ has no `willSaveWaitUntil`, so the plugin always sends `formatOnSave: false` | `idea/lsp/LanguageServiceConfigurable.kt:164`, `idea/lsp/XtcLspServerSupportProvider.kt:190` |
+| Show Ecstasy inlay hints (`inlayHints`) | boolean, `true` | Not sent; the client skips the request | `idea/lsp/XtcClientFeatures.kt:131` |
+| Show Ecstasy reference counts (`referenceCodeLens`) | boolean, `true` | `xtc.codeLens` section, field `references` | `idea/lsp/XtcLanguageClient.kt:388` |
+
+**Languages & Frameworks | Ecstasy | Compiler** (`CompilerProjectConfigurable`). Stored as JSON under
+`xtc.compiler` in LSP4IJ's project settings for `xtcLanguageServer`
+(`idea/lsp/CompilerProjectConfigurable.kt:503`). The plugin answers the `xtc.compiler` section from
+this JSON and adds `buildModels` from the Gradle model file (section 4)
+(`idea/lsp/XtcLanguageClient.kt:225`, `idea/lsp/CompilerBuildModel.kt:113`).
+
+| Field | Type, default | Reaches the server as | Read at |
+|-------|---------------|-----------------------|---------|
+| Use Gradle model or automatic source discovery | boolean, on | `sourceModules: null` | `idea/lsp/CompilerProjectConfigurable.kt:52` |
+| Source modules table (module, root URI or relative path, dependencies, resource roots) | rows, none | `sourceModules: [{name, uri, dependencies, resourceRoots}]` | `idea/lsp/CompilerProjectConfigurable.kt:59`, `idea/lsp/SourceGraphConfiguration.kt:57` |
+| Inherit binary libraries from Gradle | boolean, on | `libraries.modulePath: null` | `idea/lsp/CompilerLibrariesPanel.kt:24`, `:94` |
+| Binary libraries | ordered paths, none | `libraries.modulePath` | `idea/lsp/CompilerLibrariesPanel.kt:94` |
+| Source attachments (module, roots) | rows, none | `libraries.sourceAttachments: [{module, roots}]` | `idea/lsp/CompilerLibrariesPanel.kt:95` |
+
+**Languages & Frameworks | Ecstasy | Build and Run** (`XtcBuildConfigurable`), also linked from **Build, Execution,
+Deployment | Ecstasy** (`XtcBuildPointerConfigurable`). Stored in the project's `ecstasy-build.xml`
+(`idea/run/XtcBuildSettings.kt:56`). Every page of the plugin stands under **Languages & Frameworks | Ecstasy**
+(`idea/lsp/EcstasyConfigurable.kt`), which links each of them.
+
+| Field | Type, default | Reaches the server as | Read at |
+|-------|---------------|-----------------------|---------|
+| Build and run using | Embedded compiler, Automatic (Gradle when the project has a Gradle build), Gradle; Embedded. While the server says the project builds and runs with Gradle (`xtc/replacedLibraries`), as it builds with another XDK than the bundled one or its own modules replace bundled libraries, Embedded is shown not available, with why, here and in Ctrl+Alt+X, B; a choice of it is kept | Not sent; a debug launch in Gradle or command-line mode carries `buildMode` (section 3.1) | `idea/run/XtcBuildSettings.kt:58`, `:186`, reasons `:203` |
+
+**Editor | Code Style | Ecstasy**. IntelliJ's code style, answered as the `xtc.formatting` section
+(`idea/lsp/XtcLanguageClient.kt:240`); defaults from
+`idea/style/XtcLanguageCodeStyleSettingsProvider.kt:38`.
+
+| Field | Default | Reaches the server as |
+|-------|---------|-----------------------|
+| Indent | 4 | `indentSize` |
+| Continuation indent | 8 | `continuationIndentSize` |
+| Tab size | 4 | `tabSize`, which the server does not read |
+| Use tab character | off | `insertSpaces` (inverted) |
+| Hard wrap at (right margin) | 120 | `maxLineWidth` |
+| Comments: Wrap at right margin, on the Wrapping and Braces tab | off | `wrapComments` |
+| Code Style \| General: Formatter, Turn formatter on/off with markers in code comments, with its Off and On tags and Enable regular expressions in formatter markers | off, `@formatter:off`, `@formatter:on`, off | `formatterTagsEnabled`, `formatterOffTag`, `formatterOnTag`, `formatterTagsAcceptRegexp` |
+| Code Style \| General: Enable EditorConfig support (the EditorConfig plugin's; off while that plugin is disabled) | on | `editorConfig` (`idea/lsp/EditorConfigSwitch.kt`) |
+
+**LSP4IJ's Language Servers page** keeps the trace level and the debug port for `xtcLanguageServer`.
+They belong to LSP4IJ: the plugin builds the command with LSP4IJ's `JavaProcessCommandBuilder`, which
+adds the debug options (`idea/lsp/XtcLspServerSupportProvider.kt:146`).
+
+### 1.3 Values the editors pass through from their own process
+
+| Name | Set by | What happens | Read at |
+|------|--------|--------------|---------|
+| `XTC_LOG_LEVEL` | Environment of the VS Code extension host | Passed as `-Dxtc.logLevel=<value>`, `INFO` when unset | `vsc/lsp-client.ts:132`, `vsc/java.ts:292` |
+| `xtc.logLevel`, else `XTC_LOG_LEVEL` | IntelliJ's JVM or environment; `runIde` sets both from `-Plog` | Passed as `-Dxtc.logLevel=<value>`, `INFO` when unset | `idea/lsp/XtcLspServerSupportProvider.kt:136` |
+| `xtc.lsp.semanticTokens`, else `XTC_LSP_SEMANTIC_TOKENS` | IntelliJ's JVM or environment; `runIde` sets both from `-Pxtc.intellij.semanticTokens` | Always passed as `-Dxtc.lsp.semanticTokens=<value>`, `true` when unset, so the jar's built-in default never applies under IntelliJ | `idea/lsp/XtcLspServerSupportProvider.kt:140` |
+| `xtc.trace.directory`, `xtc.trace.level`, `xtc.logs.directory`, `xtc.lsp.test.holdReferences` | IntelliJ's JVM | Each one that is set is passed on as the same `-D` option | `idea/lsp/XtcLspServerSupportProvider.kt:165` |
+
+VS Code starts the server without its own environment map, so the server inherits the extension
+host's environment, including `XTC_SOURCE_ROOTS`, `XTC_LSP_LOG_DIR` and the other variables of
+section 2.3.
+
+## 2. Language server
+
+### 2.1 Command line
+
+The server is `java [JVM options] -jar xtc-lsp-server.jar` and speaks LSP over stdin and stdout
+only (`lsp/server/XtcLanguageServerLauncher.kt:193`). It takes no program arguments: `main` ignores
+them (`lsp/server/XtcLanguageServerLauncher.kt:143`). The main class is
+`org.xvm.lsp.server.XtcLanguageServerLauncherKt` (`lang/lsp-server/build.gradle.kts:458`). The
+adapter is chosen before anything else (`lsp/server/XtcLanguageServerLauncher.kt:151`), and old log
+sessions are pruned at startup (`:161`).
+
+| Option | Added by | Read at |
+|--------|----------|---------|
+| `--enable-native-access=ALL-UNNAMED`, `-Dapple.awt.UIElement=true`, `-Djava.awt.headless=true` | VS Code | `vsc/java.ts:289` |
+| `-Dapple.awt.UIElement=true`, `-Djava.awt.headless=true` | IntelliJ | `idea/lsp/XtcLspServerSupportProvider.kt:158` |
+| `-agentlib:jdwp=...,address=5005` | VS Code, when the extension itself runs in debug mode | `vsc/lsp-client.ts:153` |
+| Debug options | IntelliJ, from LSP4IJ's debug port setting | `idea/lsp/XtcLspServerSupportProvider.kt:146` |
+| Working directory | VS Code: the extension's directory; IntelliJ: the project's base path | `vsc/lsp-client.ts:148`, `idea/lsp/XtcLspServerSupportProvider.kt:175` |
+
+### 2.2 JVM system properties
+
+| Property | Type, default | What it does | Read at |
+|----------|---------------|--------------|---------|
+| `xtc.lsp.adapter` | string, the jar's `lsp.adapter` (`compiler`) | The backend: `compiler` (also `xtc`, `full`), `treesitter` (also `tree-sitter`) or `mock`. Another value fails the start. Tree-sitter falls back to mock when its native library does not load, and the editor is told. | `lsp/server/XtcLanguageServerLauncher.kt:151`, values `:74` |
+| `xtc.lsp.semanticTokens` | boolean, else `XTC_LSP_SEMANTIC_TOKENS`, else the jar's `lsp.semanticTokens` (`true`) | Whether the server offers semantic tokens. | `lsp/server/XtcLanguageServer.kt:401` |
+| `xtc.lsp.compileLibraries` | boolean, `true` | Compile an opened XDK source's read-only copy with its whole library (section 4). Only the exact value `false` turns it off. It also needs a maximum heap of 1 GB less 64 MB; with less, each XDK source compiles alone and a warning is logged once. | `lsp/adapter/xdk/XdkLibrarySources.kt:73`, heap `:80`, `lsp/adapter/xdk/XdkAdapter.kt:746` |
+| `xtc.lsp.replaceLibraries` | boolean, `true` | A workspace module named as a bundled library, such as `json.xtclang.org`, replaces it: the server analyzes it from the workspace's sources, every module that imports it compiles against them, and Go to Definition opens them. The XVM repository's `lib_*` folders replace every library, and a replaced `ecstasy.xtclang.org` is a dependency of every other module. `mack.xtclang.org` and `_native.xtclang.org` are never replaced. The rule holds for discovered modules, Gradle's model and explicit `sourceModules` alike. `false`, or a maximum heap under 1 GB less 64 MB in a workspace with ecstasy's sources, keeps every library bundled and leaves such modules out. A replacement reaches only the modules of the workspace folder that holds the replacing module; other folders' modules import the bundled libraries. The modules built against a replaced library have no embedded builds or runs, which run the bundled XDK, nor have the modules of a project whose Gradle build has another XDK (section 2.6's `buildModels`), nor the modules that depend on either; the XVM repository's `manualTests`, which builds with the XDK that the repository's own `:xdk` makes, is such a module also with this property `false`. The server tells the editors which libraries it replaces, the folders of all those modules and, by folder, why, a replaced library before another XDK, as a refused build does too, as `builds with XDK 0.5.0, not the bundled XDK 0.4.4` or `replaces the bundled libraries json.xtclang.org with its own modules` (`xtc/replacedLibraries`, with `libraries`, `folders` and `reasons`), again when the workspace's folders change, and both then build, run and debug those folders with Gradle whatever the chosen mode, saying why; IntelliJ, with one server per project, takes the whole project, and VS Code, for a run of no folder, as a multi-root workspace's own launch configuration, takes Gradle when one folder has it. `xtc/languageServiceStatus` lists them as `replacedLibraries`, `replacedFolders`, the folders of the modules built against a replaced library, and `gradleFolders`, every such folder with its reason. | `lsp/adapter/xdk/XdkLibraryReplacement.kt:54`, discovery `lsp/adapter/xdk/XdkWorkspaceDiscovery.kt:139`, Gradle's model `lsp/adapter/xdk/XdkBuildModel.kt:169`, explicit `lsp/server/CompilerConfiguration.kt:104`, the modules `lsp/adapter/xdk/XdkSourceModule.kt:131`, their reason `:150`, builds `lsp/adapter/xdk/XdkAdapter.kt:532`, the folders `:167`, the notice `lsp/server/XtcLanguageServer.kt:503` |
+| `xtc.sourceRoots` | path list split on the platform's path separator, none | Extra source roots, merged with `xtcSourceRoots` and `XTC_SOURCE_ROOTS`. | `lsp/server/SourceRootResolver.kt:42` |
+| `xtc.logLevel` | `TRACE`, `DEBUG`, `INFO`, `WARN` or `ERROR`; else `XTC_LOG_LEVEL`, else `INFO` | Level of the `org.xvm.lsp` loggers. Other loggers stay at `WARN`, LSP4J's at `ERROR`. | `lang/lsp-server/src/main/resources/logback.xml:43` |
+| `xtc.logs.directory` | path, else `XTC_LSP_LOG_DIR`, else `~/.xtc/logs/lsp` | Root of the log sessions (section 4). | `lsp/util/ServerLogs.kt:197` |
+| `xtc.logs.historyDays` | integer 1 to 90, `7` | Days of rolled logs kept, and the age after which closed sessions are pruned. | `lsp/util/ServerLogs.kt:46`, `logback.xml:30` |
+| `xtc.logs.maxFileMb` | integer 1 to 100, `10` | Size at which `server.log` and the trace file roll. | `lsp/util/ServerLogs.kt:46`, `logback.xml:29` |
+| `xtc.logs.totalSizeMb` | integer, from `maxFileMb` to 1000, `50` | Cap on each stream's rolled archives. | `lsp/util/ServerLogs.kt:46`, `logback.xml:32` |
+| `xtc.logs.retainedSessions` | integer 1 to 20, `5` | Closed sessions kept by pruning. | `lsp/util/ServerLogs.kt:46` |
+| `xtc.trace.directory` | path, else `XTC_LSP_TRACE_DIR`, else the session directory | Where the execution trace (`lsp-trace-*.jsonl`) is written. | `lsp/util/ServerLogs.kt:206`, `logback.xml:48` |
+| `xtc.trace.level` | logback level, else `XTC_LSP_TRACE_LEVEL`, else `INFO` | Level of the execution trace; `OFF` turns it off. `DEBUG`, which the IntelliJ playbook sets, adds each query's phases as events, what each query answered, once while a document's answer repeats, and each source discovery's parses one by one. | `logback.xml:62` |
+| `xtc.lsp.test.holdReferences` | file name, unset | Test seam: reference searches in the file of that name wait until canceled. The IntelliJ playbook's X145 sets it. | `lsp/server/XtcTextDocumentService.kt:172`, `:1193` |
+
+Non-integer `xtc.logs.*` values fall back to the default (`lsp/util/ServerLogs.kt:45`); values out of
+range are rejected (`lsp/util/ServerLogs.kt:35`). Both editors check the same ranges before they start
+the server. The JDK's `java.io.tmpdir` and `user.home` place the files of section 4.
+
+### 2.3 Environment variables
+
+| Variable | Default | What it does | Read at |
+|----------|---------|--------------|---------|
+| `XTC_LSP_SEMANTIC_TOKENS` | unset | As `xtc.lsp.semanticTokens`, which wins over it. | `lsp/server/XtcLanguageServer.kt:404` |
+| `XTC_SOURCE_ROOTS` | unset | As `xtc.sourceRoots`; all three sources are merged. | `lsp/server/SourceRootResolver.kt:43` |
+| `XTC_LOG_LEVEL` | unset | As `xtc.logLevel`, which wins over it. | `logback.xml:43` |
+| `XTC_LSP_LOG_DIR` | unset | As `xtc.logs.directory`, which wins over it. | `lsp/util/ServerLogs.kt:199` |
+| `XTC_LSP_TRACE_DIR` | unset | As `xtc.trace.directory`, which wins over it. | `lsp/util/ServerLogs.kt:206`, `logback.xml:48` |
+| `XTC_LSP_TRACE_LEVEL` | unset | As `xtc.trace.level`, which wins over it. | `logback.xml:62` |
+
+### 2.4 Defaults built into the jar
+
+The build writes `lsp-version.properties` into the jar (`lang/lsp-server/build.gradle.kts:96`); section 5
+says how to set its inputs.
+
+| Key | Default | Used for | Read at |
+|-----|---------|----------|---------|
+| `lsp.adapter` | `compiler` | The backend when `-Dxtc.lsp.adapter` is absent | `lsp/server/XtcLanguageServerLauncher.kt:151` |
+| `lsp.semanticTokens` | `true` | Semantic tokens when neither override is set | `lsp/server/XtcLanguageServer.kt:405` |
+| `lsp.version` | the project version | The startup banner and the service status | `lsp/server/XtcLanguageServer.kt:399` |
+| `lsp.build.time` | the build's time, or `sourceDateEpoch` | The startup banner | `lsp/server/XtcLanguageServer.kt:400` |
+
+### 2.5 Initialization options
+
+| Field | Type, default | What it does | Sent by | Read at |
+|-------|---------------|--------------|---------|---------|
+| `xtcDocumentSync.incremental` | boolean, `false` | Incremental rather than full document synchronization. A non-boolean fails `initialize`. | Both editors | `lsp/server/DocumentSynchronization.kt:45` |
+| `xtcDocumentSync.formatOnSave` | boolean, `false` | The server formats on save. | VS Code; IntelliJ always sends `false` | `lsp/server/DocumentSynchronization.kt:46` |
+| `xtcSourceRoots` | string array, `[]` | Extra source roots (section 2.2). | VS Code | `lsp/server/SourceRootResolver.kt:45` |
+| `xtcCompiler` | object, absent | The first compiler configuration, the shape of the `xtc.compiler` section (2.6). Invalid content fails `initialize` with `InvalidParams`. | VS Code | `lsp/server/CompilerConfiguration.kt:17`, `lsp/server/XtcLanguageServer.kt:484` |
+| `xtcCodeActions.quickFixesPerDiagnostic` | boolean, `false` | Quick fixes are asked for per diagnostic. | IntelliJ (`true`) | `lsp/server/ClientPresentation.kt:151`, sent at `idea/lsp/XtcLspServerSupportProvider.kt:113` |
+| `trace` (LSP's own) | `off`, `messages` or `verbose` | The server's protocol trace; `$/setTrace` changes it later. | Both | `lsp/server/XtcLanguageServer.kt:472`, `:168` |
+
+### 2.6 `workspace/configuration` sections
+
+The server asks only when the client declares `workspace.configuration`.
+
+| Section and field | Type, default | What it does | Requested at, parsed at |
+|-------------------|---------------|--------------|-------------------------|
+| `xtc.compiler` `sourceModules` | null or array, `null` | `null` discovers modules (from `buildModels` when present), `[]` none; each entry is `{name, uri, dependencies, resourceRoots}`. Relative URIs need exactly one workspace folder. | `lsp/server/XtcLanguageServer.kt:753`, `lsp/server/CompilerConfiguration.kt:55` |
+| `xtc.compiler` `buildModels` | array, absent | Gradle source sets from `.gradle/xtc/lsp-model.json`; used when `sourceModules` is `null`. Each source set's `run` has its project's `xtcRun` `jvmArgs`, by module name the `methodName` and `moduleArgs` it runs each module with, and `problems`, what the export could not read and left out; its `test` has `xtcTest`'s `jvmArgs` and `problems`. Settings made only on the `runXtc` or `testXtc` task are not in it: the export reads the extensions, without configuring the tasks. Embedded runs take them (section 3.3); a model without them, from an older plugin, gives none, and a malformed one of them is left out with a warning in the log, never making the model refused. Each source set's `xdk` has its project's XDK, as the project's `xdkDistribution` or `xdk` dependency selects it: its `version`, `libraries`, the directory where the XTC plugin extracts its core modules (`build/xtc/xdk/lib/`), and, for an XDK from a repository or of a file dependency, which has no `version`, what the plugin's export read from its distribution archive, without extracting it: the SHA-256 of each module file, `modules`, and the revision of its `javatools.jar`, `javatools`, the SHA-256 of a line `<name>=<SHA-256>` for each file of the jar, in name order, with `build-info.properties` taken without its blank and `git.` lines, as those name the commit and branch it was built at. The server compares those with the SHA-256 of its bundled module files and the revision of the javatools jar it bundles, which its build records alike in its module index (`modules.properties`), as a snapshot version does not tell two builds apart; it reads no file for it. An XDK whose files differ, one that a project of the build tree makes, which the entry names as `project` and the export neither builds nor reads, one the import could not resolve or fetch, which the entry's `problem` says, and a malformed `xdk`, which the log warns of, are another XDK: its modules, and those that depend on them, have no embedded builds, runs or debug sessions, and their folders build and run with Gradle (section 2.2's `xtc.lsp.replaceLibraries`). The export of a problem writes a new token to `build/xtc/lsp/<source set>.xdk-retry`, which the next import reads as Gradle configures the build, so that a configuration cache entry does not keep the problem. A source set without `xdk`, from an older plugin or of a project without an XDK dependency, builds embedded with the bundled XDK, as before. | `lsp/server/CompilerConfiguration.kt:39`, `lsp/adapter/xdk/XdkBuildModel.kt:330`, the XDK `:374`, `:217`, `:38`, the comparison `lsp/adapter/xdk/XdkLibraries.kt:101`, the record `lang/lsp-server/build.gradle.kts:249`, the export `plugin/src/main/java/org/xtclang/plugin/XtcLspModelIntegration.java:113`, `plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspSourceSetTask.java:243`, its revision of javatools `:273` |
+| `xtc.compiler` `libraries.modulePath` | null or path array, `null` | Binary libraries; `null` inherits the build model's. | `lsp/server/CompilerLibraries.kt:109` |
+| `xtc.compiler` `libraries.sourceAttachments` | array, `[]` | `[{module, roots}]`: read-only sources for binary modules. | `lsp/server/CompilerLibraries.kt:111` |
+| `xtc.formatting` `indentSize` | integer 1 to 32, `4` | Formatter indent. | `lsp/server/XtcLanguageServer.kt:850`, `lsp/server/EditorFormattingState.kt:76` |
+| `xtc.formatting` `continuationIndentSize` | integer 1 to 32, `8` | Continuation indent. | `lsp/server/EditorFormattingState.kt:77` |
+| `xtc.formatting` `insertSpaces` | boolean, `true` | Spaces or tabs. | `lsp/server/EditorFormattingState.kt:78` |
+| `xtc.formatting` `maxLineWidth` | integer 1 to 1000, `120` | Wrapping width. | `lsp/server/EditorFormattingState.kt:79` |
+| `xtc.formatting` `editorConfig` | boolean, `true` | `false`: formatting reads no `.editorconfig` file. IntelliJ sends its EditorConfig switch; VS Code sends nothing. | `lsp/server/EditorFormattingState.kt:81`, `lsp/adapter/EditorConfig.kt:61` |
+| `xtc.formatting` `formatterTagsEnabled`, `formatterOffTag`, `formatterOnTag`, `formatterTagsAcceptRegexp` | boolean `false`, strings `@formatter:off` and `@formatter:on`, boolean `false` | The formatter markers: both adapters' formatting drops every edit to the lines from a comment with the off tag through the next comment with the on tag, or to the end (`lsp/adapter/FormatterTags.kt`); an empty tag matches nothing, and a tag that is not a regular expression is taken as text. | `lsp/server/EditorFormattingState.kt:93` |
+| `xtc.formatting` `wrapComments` | boolean, `false` | Refills a comment's paragraphs that run past `maxLineWidth`: in a comment with `/**` or `/*` and `*/` on lines of their own and a `*` starting each line between, keeping `@param` lines, list items and code as they are laid out. | `lsp/server/EditorFormattingState.kt:80`, `lsp/adapter/xdk/XdkCommentReflow.kt` |
+| `xtc.codeLens` `references` | boolean, `true` | Reference-count lenses, asked per document (`scopeUri`); after 10 seconds without an answer the lenses are off. | `lsp/server/XtcLanguageServer.kt:427`, `lsp/server/CodeLensSettings.kt:11` |
+
+For a `file:` document, each formatting request also reads the file's `.editorconfig` files, from its directory up to
+one with `root = true`, and sets what they give over `xtc.formatting` and the request's options: `indent_style`,
+`indent_size`, `tab_width`, `max_line_length` (`off` wraps nothing), `trim_trailing_whitespace`, `insert_final_newline`,
+`ij_ecstasy_continuation_indent_size` (or `ij_continuation_indent_size`, or `continuation_indent_size`),
+`ij_ecstasy_wrap_comments`, and the markers' `ij_formatter_tags_enabled`, `ij_formatter_off_tag`, `ij_formatter_on_tag`
+and `ij_formatter_tags_accept_regexp`; `unset` keeps
+the editor's value, and a value out of range is skipped with a warning (`lsp/adapter/EditorConfig.kt:61`).
+`xtc/endOfLine` (`{ "uri": ... }`) answers the file's `end_of_line`, `lf`, `crlf` or `cr`, or null, for the client to
+apply, as a text edit cannot change a document's line endings: VS Code's extension adds `TextEdit.setEndOfLine` to
+Format Document (`vsc/end-of-line.ts`). IntelliJ's own EditorConfig support gives `end_of_line` only to new files, so
+the plugin asks for it beside a whole file's Reformat Code and gives the file that separator, as File | File
+Properties | Line Separators does: it saves the document when the format changed its text, which keeps the format to
+undo, and converts the file when it did not (`idea/lsp/XtcFormattingService.kt`).
+
+On `workspace/didChangeConfiguration` the server asks for `xtc.formatting` again, refreshes inlay
+hints and lenses, and takes `settings.xtc.compiler` as given; when the notification has only
+`formatting`, `presentation` or `languageService` under `xtc`, the compiler configuration stays, and
+otherwise the server asks for `xtc.compiler` (`lsp/server/XtcWorkspaceService.kt:51`,
+`lsp/server/CompilerConfiguration.kt:22`, `lsp/server/XtcLanguageServer.kt:725`). An invalid
+compiler configuration after initialization keeps the previous one and shows an error.
+
+## 3. Debug adapter and run workers
+
+The debug adapter (`lang/dap-server`) is a library of the language server: each debug session runs
+in the server's process (`lang/dap-server/build.gradle.kts:15`). Programs run in a separate worker
+JVM; tests run as an `xtc test` process.
+
+### 3.1 Launch and attach arguments
+
+VS Code declares these in `contributes.debuggers` of `package.json`; IntelliJ's run configurations
+send the same request.
+
+| Argument | Request | Type, default | What it does | Read at |
+|----------|---------|---------------|--------------|---------|
+| `module` | launch | string | The module to run; required unless `moduleUri` is given. | `dap/XtcDebugServer.kt:1585` |
+| `moduleUri` | launch | URI | The module's source; wins over `module`. | `dap/XtcDebugServer.kt:1586` |
+| `method` | launch | string; the method that the module's Gradle `xtcRun` runs it with, where the imported model has one, else `run` | Method to invoke. | `dap/XtcDebugServer.kt:1598`, `lsp/server/EmbeddedRuns.kt:683` |
+| `args` | launch | array, or comma-separated string; those that the module's Gradle `xtcRun` runs it with, where the imported model has them, else none | Program arguments; an empty list takes Gradle's too. | `dap/XtcDebugServer.kt:1589`, `lsp/server/EmbeddedRuns.kt:684` |
+| `workingDirectory`, else `cwd` | launch | path; the build's workspace folder | Working directory. VS Code's default is `${workspaceFolder}`. | `dap/XtcDebugServer.kt:1600` |
+| `tests` | launch | array of `{selector, kind}`; absent | Run tests instead of `run`; `kind` is `module`, `package`, `class` or `test`. | `dap/XtcDebugServer.kt:1601`, `:1613` |
+| `stopOnEntry` | launch, attach | boolean, `false` | Stop at the program's first line. | `dap/XtcDebugServer.kt:661`, `:736` |
+| `noDebug` | launch | boolean, `false` | Run without the debugger; not allowed with `buildMode`. | `dap/XtcDebugServer.kt:651`, `:657` |
+| `evaluationRunsProgram` | launch | boolean, `false` | The rest of the program runs while console code runs. | `dap/XtcDebugServer.kt:658` |
+| `evaluationTimeLimit` | launch, attach | milliseconds, 100 to 60000; the session's limit, 2000 (section 3.2) | How long code that the Debug Console or Evaluate Expression runs may take before it is ended. VS Code declares it with that range; IntelliJ's Ecstasy Application and Ecstasy Attach configurations set it as **Evaluation time limit (ms)**, 100 to 30000, as IntelliJ cannot cancel an evaluation, and send it only when it is not 2000. Out of range or not a number, the launch or attach is refused. | `dap/XtcDebugServer.kt:323`, `:1541`, `:1551`, used at `:1083`; IntelliJ `idea/run/EvaluationLimits.kt:19`, `:27`, `:37`, sent at `idea/dap/XtcDebugAdapterFactory.kt:110`, `idea/run/XtcAttachConfiguration.kt:63`; VS Code `lang/vscode-extension/package.json:746`, `:784` |
+| `lazyValueTimeLimit` | launch, attach | milliseconds, 100 to 30000; the debugger's own, 1000 (section 3.2) | How long the code that computes a lazy value in the Variables view, such as a getter or `toString()`, may take before it is ended. It goes to the program's debugger with its setup, for embedded, Gradle, command-line and attached runs alike. IntelliJ: **Lazy value time limit (ms)**, sent only when it is not 1000. | `dap/XtcDebugServer.kt:326`, `:1541`, `:1551`, sent at `:680`, `:780`; `lsp/run/DebugRecords.kt:33`; `javatools/src/main/java/org/xvm/runtime/debug/DebugCommands.java:130`; IntelliJ `idea/run/EvaluationLimits.kt:20`, `:27`, `:37`; VS Code `lang/vscode-extension/package.json:753`, `:791` |
+| `buildMode` | launch | `gradle` or `commandLine`; absent | The editor runs the program (`runXtc`, or `xtc run`) with `--debug connect:`; absent, the server builds and runs it. | `dap/XtcDebugServer.kt:650`, `dap/DebugRuns.kt:61` |
+| `port` | attach | 1 to 65535; VS Code default 5005 | The port of the program's `--debug` option; required. | `dap/XtcDebugServer.kt:1572` |
+| `host` | attach | string, `localhost` | Where the program listens. | `dap/XtcDebugServer.kt:1578` |
+| `token` | attach | string, none | The token of the program's `--debug` option. | `dap/XtcDebugServer.kt:1580` |
+
+### 3.2 Fixed limits
+
+These are constants in the code; no setting changes them, but for the two debugger limits that a launch or an
+attach may set (section 3.1).
+
+| Limit | Value | Read at |
+|-------|-------|---------|
+| Programs running at once in the worker | 4 | `lsp/run/RunWorkerProcess.kt:93` |
+| Worker startup | 60 seconds | `lsp/run/RunWorkerProcess.kt:94` |
+| Worker stop | 10 seconds | `lsp/run/RunWorkerProcess.kt:95` |
+| Idle worker kept | 10 minutes | `lsp/run/RunWorkerProcess.kt:96` |
+| Heap in use after a run, above which the worker serves no further run | 512 MB | `lsp/run/RunWorkerProcess.kt:97` |
+| Threads after a run, above which the worker serves no further run | 200 | `lsp/run/RunWorkerProcess.kt:98` |
+| Lazy-value computation in a debugged program | the debugger's own `ON_DEMAND`, 1 second, unless the launch's `lazyValueTimeLimit` sets another | `lsp/run/RunWorkerProcess.kt:99`, `javatools/src/main/java/org/xvm/runtime/SessionDebugger.java:308` |
+| A connection to a worker's port showing its token | 5 seconds for each connection, while others are taken, under the worker startup limit | `lsp/run/RunWorkerProcess.kt:833` |
+| Stop of a run inside the worker | 5 seconds | `lsp/run/RunWorker.kt:60` |
+| Program output per event, and held while waiting | 16,384 characters, sent after 20 ms | `lsp/run/RunWorker.kt:452`, `:455` |
+| Debug console code on a stopped fiber | 2 seconds, unless the launch's `evaluationTimeLimit` sets another | `dap/XtcDebugServer.kt:320` |
+| Connecting to an attached program | 10 seconds | `lsp/run/AttachedProgram.kt:128` |
+
+The server's own instance uses the defaults (`lsp/server/XtcLanguageServer.kt:144`).
+
+### 3.3 Child processes
+
+| Process | Command | Read at |
+|---------|---------|---------|
+| Run worker | The server's own `java` executable, `-Dfile.encoding=UTF-8 [JVM options] -cp <server class path> org.xvm.lsp.run.RunWorker`, in the server's working directory. The JVM options are those of the run's module's Gradle `xtcRun`, from the imported model, none without one, but those that the worker cannot run with: a class path or main class of their own, a Java debugger's agent, options that print and exit, argument and option files and empty items, which the run's output names. A relative path in an option resolves against the server's working directory, not the project's as Gradle's runs resolve it; the run's output names the options that hold one. Its commands go to its standard input; its events come over a connection to a loopback port, 127.0.0.1 and an ephemeral port, that the server listens at for it alone, given in its environment as `XTC_RUN_WORKER_PORT`, with a random token, `XTC_RUN_WORKER_TOKEN`, which the connection's first line must show, within 5 seconds of its own while the server takes others, so that one that sends nothing holds up none; the server takes one such connection, under the startup limit, and none once the worker has ended. The address is the literal 127.0.0.1 on both sides, whatever the worker's JVM options prefer. What the worker's JVM itself writes to its standard output and error, for an option such as `-Xlog` or `-XX:+PrintCompilation` too, goes to the output of the run it hosts, between the program's lines; it cannot break the worker's events. Outside a run, the log has the first 20 lines of its standard output at debug, and the first 20 of its standard error as warnings, with the last 20 of the rest once the worker exits, as an idle worker's crash says why there. A worker serves only runs with its own options; one idle worker is kept, so a run with other options retires an idle one with others. | `lsp/run/RunWorkerProcess.kt:842`, `:350`, `:507`, `:598`, `:239`, `lsp/run/RunWorker.kt:82`, `lsp/run/JvmOptions.kt:62` |
+| Test run | `xtc test` through the server's class path, with the JVM options of the module's Gradle `xtcTest` as the run worker has `xtcRun`'s: `-L` the bundled libraries' directory (section 4) and the build's module path, `--no-recompile`, `-x <workspace>/build/xtc/embedded/xunit`, `-I xvm.xunit.report=<json>`, then `-p`, `-c` or `-t` per selected test, and `--debug` when debugged; run in the workspace folder | `lsp/run/TestProcess.kt:58`, `lsp/server/EmbeddedRuns.kt:554`, `:1110` |
+
+## 4. Files and directories
+
+| What | Default location | Lifetime | What moves it | Code |
+|------|------------------|----------|---------------|------|
+| Log root | `~/.xtc/logs/lsp` | Kept | `-Dxtc.logs.directory`, `XTC_LSP_LOG_DIR` | `lsp/util/ServerLogs.kt:195` |
+| Session directory | `<log root>/server-<pid>-<start millis>/` | Pruned at a later server's start, when closed and beyond `retainedSessions` or older than `historyDays`; a directory with unknown files or symbolic links is kept | The log root | `lsp/util/ServerLogs.kt:201`, `:228`, `lsp/util/TraceProcessId.kt` |
+| Server log | `<session>/server.log`, rolled to `server.<date>.<n>.log` | Rolled by `xtc.logs.*` | The log root | `lang/lsp-server/src/main/resources/logback.xml:26` |
+| Execution trace | `<session>/lsp-trace-<pid>-<start>.jsonl`, rolled the same way | As the log | `xtc.trace.directory`, `XTC_LSP_TRACE_DIR` | `logback.xml:50`, `lsp/util/ServerLogs.kt:206` |
+| Session lock | `<session>/server.lock` | OS lock held while the server runs; pruning keeps a locked session | The log root | `lsp/util/ServerLogs.kt:204` |
+| Pruning lock | `<log root>/.retention.lock` | Kept | The log root | `lsp/util/ServerLogs.kt:235` |
+| Temporary root | `<base>/xtc-lsp-<user.name>/`, where the base is, on Linux, `$XDG_RUNTIME_DIR`, else `~/.cache`, each where it is a directory of the user's that no one else can write, else `java.io.tmpdir`, which is the only base elsewhere; a base that anyone can write without the sticky bit is refused. The root is made for its owner alone (`rwx------`, or an owner-only ACL on Windows), and at each use must be a directory, not a link, of the server's user, that its group and others cannot write (by its mode, whose group bits are a Linux ACL's mask, or by its ACL entries); else, as when another user made it first in a shared `/tmp`, or again after a cleaner of old files deleted it, the server says why in its log and uses `<base>/xtc-lsp-<user.name>-<random>/` of its own from then on. Deletes and writes there never follow a link, and touch only the user's files in the root as it is then | Shared by the user's servers and kept; a server's own is deleted when its JVM exits | `XDG_RUNTIME_DIR`, `user.home`, `java.io.tmpdir` | `lsp/util/UserTemporary.kt:64`, `:77`, `:101`, `:234` |
+| Library source copies | `<temporary root>/xtc-library-sources-<random>/`: read-only copies of the bundled XDK sources that navigation opens, each written new and only while its folder is in the root in use | Deleted when the JVM exits; a killed server's directory is deleted by the next server | As the root | `lsp/adapter/xdk/XdkLibrarySources.kt:58`, `lsp/util/ProcessDirectories.kt:17` |
+| Library root | `<copies>/<module>.x`, with every source of that library and the resources they name (`implicit.x`, empty files for others) written beside it, when `xtc.lsp.compileLibraries` is on | As the copies | As the copies | `lsp/adapter/xdk/XdkLibrarySources.kt:306` |
+| Attached source snapshots | `<temporary root>/xtc-attached-sources-<random>/` | As the copies | As the root | `lsp/adapter/xdk/XdkAttachedSources.kt:21` |
+| Locks of the two above | `<directory>.lock` beside each; `.xtc-library-sources-lock` and `.xtc-attached-sources-lock` in the temporary root | As the copies | As the root | `lsp/util/ProcessDirectories.kt:19`, `lsp/util/ServerLogs.kt:69` |
+| Bundled libraries | `<temporary root>/xtc-lsp-xdk-<16 hex digits of the bundle's fingerprint>/`, the `-L` of test runs, checked at each launch: used where its files are the bundle's alone, by their SHA-256, else written again | Shared by all servers of one build and kept; a server deletes other builds' directories that no process holds | As the root | `lsp/adapter/xdk/XdkLibraries.kt:141`, `:183` |
+| Its locks | `xtc-lsp-xdk-<hash>.lock` (shared lock, taken again where its file is gone) and `.xtc-lsp-xdk-lock` in the temporary root | Kept | As the root | `lsp/adapter/xdk/XdkLibraries.kt:143`, `:146` |
+| Tree-sitter native libraries | `<java.io.tmpdir>/libtree-sitter<random>.<ext>` and `tree-sitter-xtc<random>.<ext>` | Deleted when the JVM exits | `java.io.tmpdir` | `lsp/treesitter/TreeSitterLibraryLookup.kt:30`, `lsp/treesitter/XtcParser.kt:149` |
+| Embedded build output | `<workspace folder>/build/xtc/embedded/lib/<module>.xtc`, `dependencies/` and `manifest.json` | Rewritten by each build; a module that failed has no file | Nothing; the folder that owns the module | `lsp/adapter/xdk/XdkBuild.kt:75` |
+| Embedded test results | `<workspace folder>/build/xtc/embedded/xunit` | Rewritten by each test run | Nothing | `lsp/server/EmbeddedRuns.kt:1110` |
+| Gradle model | `<Gradle root>/.gradle/xtc/lsp-model.json` and `lsp-workspace.json`, written by the init script `lang/gradle/compiler-model.init.gradle` when an editor imports | Rewritten by each import | Nothing | `lang/gradle/compiler-model.init.gradle:68`, read at `vsc/build-model.ts:21`, `idea/lsp/CompilerBuildModel.kt:26`, `idea/lsp/CompilerWorkspaceModels.kt:15` |
+| Editor control | `~/.xtc/editor-control/<id>.json`, owner-only, one per editor session, for the `xtc-lsp` restart command | Removed when the session ends | Nothing for the editors; `XTC_EDITOR_CONTROL_DIR` for `xtc-lsp` | `idea/lsp/ServerControlStartup.kt:18`, `idea/lsp/ServerControlEndpoint.kt:34`, `vsc/extension.ts:138`, `lang/scripts/xtc-lsp:87` |
+| Downloaded Java runtime | `<VS Code global storage>/jre` | Kept | Nothing; `xtc.java.home` makes it unused | `vsc/java.ts:68` |
+| IntelliJ settings | `ecstasy-server-runtime.xml` (application, not synced), `ecstasy-build.xml` (project), LSP4IJ's server settings (`xtc.languageService`, `xtc.compiler`), and the workspace file for the last launch's support log | Kept | IntelliJ's configuration directories | `idea/lsp/ServerRuntimeSettings.kt:13`, `idea/run/XtcBuildSettings.kt:29`, `idea/lsp/ServerSupportLogs.kt:22` |
+| Log export | `ecstasy-server-<pid>-<start>.zip`, at most 512 KB per file and 4 MB in all; VS Code proposes `~/ecstasy-server-logs.zip` | Written on request | The save dialog | `lsp/util/ServerLogs.kt:210`, `:377`, `vsc/extension.ts:179` |
+
+`lang/scripts/xtc-lsp`, shipped in both plugins' `bin` directories, restarts a server through its
+editor: `xtc-lsp list`, and `xtc-lsp restart` with `--project` (default: the current directory),
+`--ide intellij` or `vscode`, `--session <id>` and `--timeout <seconds>` (default 65, at most 600)
+(`lang/scripts/xtc-lsp:79`).
+
+The editors' JVM option settings accept no `-D` options (`vsc/runtime-settings.ts:6`,
+`idea/lsp/ServerJvmOptions.kt:5`), so neither editor setting moves `java.io.tmpdir` or `user.home`.
+`lang/dap-server/src/main/resources/logback.xml` names `~/.xtc/logs/dap-server.log`, but the server jar
+keeps the first `logback.xml` it is given, the server's own (`lang/lsp-server/build.gradle.kts:428`,
+`:433`): debug sessions log to the server log, and the `org.xvm.debug` loggers stay at `WARN`.
+
+## 5. Build properties
+
+Most `lang/` properties go through `xdkProperties`, which takes the first of: the environment
+variable of the key in upper snake case (`lsp.adapter` is `LSP_ADAPTER`), the Gradle property, the
+Gradle property with dots as underscores, the JVM system property, and the composite root's
+`gradle.properties`, `xdk.properties` and `version.properties`
+(`build-logic/common-plugins/src/main/kotlin/ProjectXdkProperties.kt:14`). The rows below marked
+`providers` read only the Gradle property (`-P`, `gradle.properties` or
+`ORG_GRADLE_PROJECT_<name>`).
+
+### 5.1 Composite and lang build
+
+| Property | Default | What it does | Read at |
+|----------|---------|--------------|---------|
+| `includeBuildLang` | `true` when unset; this branch's `gradle.properties` sets `true`, master's `false` | Include `lang` as a composite build (`providers`). | `settings.gradle.kts:91`, `gradle.properties:114` |
+| `includeBuildAttachLang` | `true` when unset; this branch's `gradle.properties` sets `true`, master's `false` | Attach lang's `build`, `check`, `assemble` and `clean` to the root's (`providers`). Any included build has such a flag, `includeBuildAttach<Name>`. | `build-logic/aggregator/src/main/kotlin/org.xtclang.build.aggregator.gradle.kts:28`, `gradle.properties:115` |
+| `includeBuildAttachIntellijPlugin` | `false` | Attach the IntelliJ plugin to lang's lifecycle (`build` runs `buildPlugin`) (`providers`). | `lang/build.gradle.kts:134` |
+| `includeBuildAttachVsCodeExtension` | `false` | Attach the VS Code extension to lang's lifecycle (`providers`). | `lang/build.gradle.kts:140` |
+| `idePluginsDir` | unset | `assembleIdePlugins` also copies both plugin packages there; relative to the directory `gradlew` runs in (`providers`). | `lang/build.gradle.kts:214` |
+| `CI` (environment) | unset | When set, `check` runs `spotlessCheck` instead of `spotlessApply`, and the IntelliJ build keeps its IDE downloads in the checkout. | `lang/build.gradle.kts:31`, `lang/intellij-plugin/build.gradle.kts:495` |
+| `org.xtclang.java.jdk` | `25` (`version.properties`) | The JDK toolchain of every lang project. | `build-logic/common-plugins/src/main/kotlin/org.xtclang.build.xdk.properties.gradle.kts:53`, `version.properties:26` |
+| `XTC_COMPILER_IMPORT_ID` (environment) | `""` | Set by the editors when they import a Gradle model; the init script records it in the model. | `lang/gradle/compiler-model.init.gradle:67`, set at `vsc/compiler-paths.ts:71`, `idea/lsp/CompilerBuildModel.kt:259` |
+
+### 5.2 Language server
+
+| Property | Default | What it does | Read at |
+|----------|---------|--------------|---------|
+| `lsp.adapter` | `compiler` | The jar's default backend (`treesitter`, `compiler` or `mock`); with `compiler`, `xtc` or `full`, `check` also runs `compilerStdioTest`. | `lang/lsp-server/build.gradle.kts:59`, `:486` |
+| `lsp.semanticTokens` | `true` | The jar's default for semantic tokens. | `lang/lsp-server/build.gradle.kts:60` |
+| `log` | `XTC_LOG_LEVEL`, else `INFO` | Log level of the server tests (`xtc.logLevel`, `XTC_LOG_LEVEL`). | `lang/lsp-server/build.gradle.kts:65`, `:388` |
+| `sourceDateEpoch`, else `SOURCE_DATE_EPOCH` | the build's time | The jar's `lsp.build.time`, for reproducible builds (`providers`). | `lang/lsp-server/build.gradle.kts:80` |
+| `lspTests` | `default` | Which tests run: `default` leaves out the `slow` and `heavy` tags and runs only the first case of each parameterized test; `all` runs everything; any other value is a JUnit tag expression, with every case (`providers`). | `lang/lsp-server/build.gradle.kts:352` |
+| `lspTestForks` | half the processors, 1 to 8 | Test JVMs in parallel (`providers`). | `lang/lsp-server/build.gradle.kts:337` |
+| `lsp.retentionCycles` | `120` | Cycles of the retention test (`providers`). | `lang/lsp-server/build.gradle.kts:358` |
+| `lsp.soakRounds` | `5` | Rounds of the execution soak test (`providers`). | `lang/lsp-server/build.gradle.kts:362` |
+
+### 5.3 IntelliJ plugin
+
+| Property | Default | What it does | Read at |
+|----------|---------|--------------|---------|
+| `lsp4ijPlugin` | unset | An absolute path to a built LSP4IJ plugin directory, used instead of the Marketplace release; excludes the next two (`providers`). | `lang/intellij-plugin/build.gradle.kts:56` |
+| `lsp4ijChannel` | unset | The newest LSP4IJ of a Marketplace channel, such as `nightly` (`providers`). | `lang/intellij-plugin/build.gradle.kts:70` |
+| `lsp4ijVersion` | the catalog's version | An LSP4IJ version from the Marketplace (`providers`). | `lang/intellij-plugin/build.gradle.kts:73` |
+| `log` | `XTC_LOG_LEVEL`, else `INFO` | Passed to `runIde`'s IDE as `xtc.logLevel` and `XTC_LOG_LEVEL`, which the plugin forwards to the server. | `lang/intellij-plugin/build.gradle.kts:116`, `:922` |
+| `xtc.intellij.semanticTokens` | `true` | Passed to `runIde`'s IDE as `xtc.lsp.semanticTokens` and `XTC_LSP_SEMANTIC_TOKENS`. | `lang/intellij-plugin/build.gradle.kts:125`, `:924` |
+| `XTC_LSP_LOG_DIR` (environment) | `~/.xtc/logs/lsp` | The directory whose server log `runIde` tails into its console. | `lang/intellij-plugin/build.gradle.kts:903` |
+| `lsp.buildSearchableOptions` | `false` (also in the root `gradle.properties`) | Build the settings search index. | `lang/intellij-plugin/build.gradle.kts:628` |
+| `org.xtclang.idea.home` | unset; required by `installPlugin` | The installed IntelliJ that `installPlugin` and `installIntellijPlugin` install into; it must be closed (`providers`). | `lang/intellij-plugin/build.gradle.kts:689` |
+| `org.xtclang.idea.pluginsDir` | the plugins directory from the IDE's own log | Its plugins directory, when the IDE's report of it fails (`providers`). | `lang/intellij-plugin/build.gradle.kts:690`, `build-logic/common-plugins/src/main/kotlin/InstallIntellijPluginTask.kt:83` |
+| `enablePublish` | `false` | Allow `publishPlugin` (`providers`). | `lang/intellij-plugin/build.gradle.kts:89` |
+| `xdk.intellij.release.channel` | `alpha` | The Marketplace channel to publish to. | `lang/intellij-plugin/build.gradle.kts:40` |
+| `jetbrains.token` | `""` | The Marketplace token; the environment variable is `JETBRAINS_TOKEN`. | `lang/intellij-plugin/build.gradle.kts:95` |
+| `jetbrains.publish.suffix` | `""`; required for a published snapshot | Suffix of a snapshot's Marketplace version. | `lang/intellij-plugin/build.gradle.kts:96` |
+| `JETBRAINS_CERTIFICATE_CHAIN`, `JETBRAINS_PRIVATE_KEY`, `JETBRAINS_PRIVATE_KEY_PASSWORD` (environment) | unset | Plugin signing. | `lang/intellij-plugin/build.gradle.kts:541` |
+
+### 5.4 VS Code extension and Tree-sitter
+
+| Property | Default | What it does | Read at |
+|----------|---------|--------------|---------|
+| `vscode.version.suffix` | `""` | A pre-release suffix for the packaged version (letters, digits, dots, hyphens) (`providers`). | `lang/vscode-extension/build.gradle.kts:170` |
+| `vscode.marketplace.build` | `""`; required for a Marketplace package | The build number that replaces the patch version (`providers`). | `lang/vscode-extension/build.gradle.kts:187` |
+| `testFiles` | unset | Comma-separated patterns that limit `testTreeSitterParse` (`providers`). | `lang/tree-sitter/build.gradle.kts:872` |
+| `showTiming` | timing shown | `false` hides `testTreeSitterParse`'s timing (`providers`). | `lang/tree-sitter/build.gradle.kts:873` |
+
+The Tree-sitter build caches Zig and the native libraries in Gradle's user home, under
+`caches/zig` and `caches/tree-sitter-xtc` (`lang/tree-sitter/build.gradle.kts:77`).
+
+## 6. Tests, playbooks, tours and the container
+
+### 6.1 Language server tests
+
+The test tasks set these JVM properties for the test code.
+
+| Property | Set from | Read at |
+|----------|----------|---------|
+| `xtc.lsp.parameterizedCases` | `-PlspTests`: `first` for `default`, else `all` (`lang/lsp-server/build.gradle.kts:355`) | `lspTest/ParameterizedCases.kt:40` |
+| `xtc.lsp.retentionCycles` | `-Plsp.retentionCycles` (`:356`) | `lspTest/adapter/XdkRetentionTest.kt:226` |
+| `xtc.lsp.soakRounds` | `-Plsp.soakRounds` (`:360`) | `lspTest/run/EmbeddedExecutionTest.kt:2661` |
+| `xtc.composite.root` | The directory with `version.properties` above lsp-server (`:397`) | `lspTest/server/LspIntegrationTest.kt:146` |
+| `xtc.lsp.jar` | The fat jar, for the process tests (`:408`, `:481`) | `lspTest/server/LspProcessLifecycleTest.kt:49` |
+| `xtc.logs.directory` | `lang/lsp-server/build/reports/server-logs` for tests, `build/reports/library-playbook/server-logs` for `prepareLibraryPlaybook` (`:258`, `:545`) | `lsp/util/ServerLogs.kt:197` |
+
+The test JVMs get a 1 GB heap, so that the library compile of `xtc.lsp.compileLibraries` runs
+(`lang/lsp-server/build.gradle.kts:343`).
+
+### 6.2 IntelliJ playbook and tour
+
+`testCompilerPlaybook` (`lang/intellij-plugin/build.gradle.kts:1062`) turns Gradle properties into JVM
+properties of the Starter test JVM. All are `providers` properties.
+
+| Gradle property | System property | Default | What it does | Read at |
+|-----------------|-----------------|---------|--------------|---------|
+| `intellijPlaybookCases` | `xtc.playbook.cases` | all cases | Comma-separated case IDs. | `ideaIt/CompilerPlaybookTest.kt:210` |
+| `intellijPlaybookIde` | `xtc.playbook.ideVersion` | `2026.2.3`, the IDE the plugin builds against | The IntelliJ the playbook drives: the default, or `2026.3`, with IDE Starter and its driver for that IDE (the `lang-intellij-next-*` versions in `gradle/libs.versions.toml`). The plugin still builds against the default; only the playbook's IDE changes. | `lang/intellij-plugin/build.gradle.kts:259`, `ideaIt/PlaybookIde.kt:38` |
+| `intellijPlaybookHang` | `xtc.playbook.hang` | ten minutes | Seconds before a case counts as hung, in the playbook and in the IDE's probes; shorter only for a quicker look at a case that hangs. | `lang/intellij-plugin/build.gradle.kts:1083`, `lang/intellij-plugin/src/playbookProbe/kotlin/org/xtclang/idea/playbook/probe/HangLimit.kt:15` |
+| `intellijPlaybookReplacementGates` | `xtc.playbook.replacementGates` | none | Upstream replacement gates to run; needs `-Plsp4ijPlugin` or `-Plsp4ijChannel`. | `ideaIt/CompilerPlaybookTest.kt:201` |
+| `intellijLargeFileProbe` | `xtc.playbook.largeFileProbe` | `false` | Run the large-file editing probe. | `ideaIt/CompilerPlaybookTest.kt:25` |
+| `intellijTour` | `xtc.tour` | `false` | Run the tour, which records and checks the plugin's features. | `ideaIt/TourTest.kt:20` |
+| `intellijTourSections` | `xtc.tour.sections` | all sections | Sections of the tour to run. | `ideaIt/TourTest.kt:27` |
+| `intellijTourVisible` | `xtc.tour.visible` | `false` | Show the pointer, keys and typing without a recording. | `ideaIt/TourTest.kt:44` |
+| `intellijTourHang` | `xtc.tour.hang` | the playbook's, ten minutes | Seconds before a tour step counts as hung. | `ideaIt/Tour.kt:439` |
+| `lsp.adapter` | `xtc.playbook.adapter` | `compiler` | The adapter the playbook expects; `treesitter` only for the settings-persistence session. | `ideaIt/CompilerPlaybookTest.kt:29` |
+| `lsp4ijPlugin`, `lsp4ijVersion`, `lsp4ijChannel` | `xtc.playbook.lsp4ijPlugin`, `xtc.playbook.lsp4ijVersion`, `xtc.playbook.lsp4ijChannel` | the release | The LSP4IJ the test IDE installs. | `ideaIt/PlaybookIde.kt:39`, `:42`, `:43` |
+| none | `xtc.playbook.scenarios`, `xtc.playbook.manual`, `xtc.playbook.reports`, `allure.results.directory` | from the build | `lang/test-fixtures/compiler-playbook/scenarios.json`, `lang/doc/manual-test-plan.md`, and `build/reports/compiler-playbook` | `ideaIt/CompilerPlaybookTest.kt:33`, `:36`, `:39` |
+| `playbookRetainedRuns` | none | `5` | Completed run directories kept under `build/reports/compiler-playbook`; also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1056`, `lang/vscode-extension/build.gradle.kts:339` |
+| `playbookRetainedFailedRuns` | none | `10` | The newest failed runs, which keep their payloads and traces also when they are not among the `playbookRetainedRuns` newest; older failed runs keep their results only. Also for VS Code's reports. | `lang/intellij-plugin/build.gradle.kts:1057`, `lang/vscode-extension/build.gradle.kts:340` |
+| `playbookReports` | none | `build/reports/compiler-playbook` | The directory of runs that `pruneCompilerPlaybookReports` prunes; the playbook container passes its copies'. | `lang/intellij-plugin/build.gradle.kts:1053`, `lang/intellij-plugin/container/in-container.sh:159` |
+
+| Name | Kind | What it does | Read at |
+|------|------|--------------|---------|
+| `XTC_RECORD_VIDEO` | environment | `1`: the tour shows its actions for the screen recording. | `ideaIt/TourTest.kt:44` |
+| `XTC_RECORDING_START_FILE` | environment, default `/out/screen.start` | The recording's start time, for the tour's clips. | `ideaIt/TourTest.kt:62` |
+| `xtc.test.textmate` | system property, set by `test` | The TextMate bundle for the light platform tests. | `lang/intellij-plugin/build.gradle.kts:1019`, `lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/LightEditor.kt:46` |
+
+After the run, compose its captures with the IntelliJ narration using the command in section 6.3 and
+`narration-intellij.md`. The tour test and its recording settings are the same for silent and narrated videos.
+
+### 6.3 VS Code tests
+
+`testCompilerPlaybook` passes its Gradle properties to `npm run test:playbook` or `test:tour`
+(`lang/vscode-extension/build.gradle.kts:369`); all are `providers` properties.
+
+| Gradle property | Runner argument | Default | What it does |
+|-----------------|-----------------|---------|--------------|
+| `compilerPlaybookCases` | `--cases=<ids>` | all cases; without it, the task also runs the server's tests | Cases to run |
+| `compilerPlaybookMultiRoot` | `--multi-root` | `false` | A two-folder workspace |
+| `compilerPlaybookCancelUi` | `--cancel-ui` | `false` | Cancel through the UI; needs X145 |
+| `vscodeTour` | `--tour` | `false` | Run the tour instead of the playbook |
+| `vscodeTourSections` | `--tour-sections=<ids>` | all sections | Sections of the tour |
+| `vscodeTourHang` | `--tour-hang=<seconds>` | an hour | Seconds before a tour step counts as hung |
+
+The runner (`vsc/test/runTest.ts:20`) also takes `--theme=<name>` (default `Default Dark Modern`,
+`:57`), `--lexical-baseline` (X277 without semantic highlighting), `--project-lifecycle` with
+`--shared-process`, `--explorer-move-probe` with `--refresh-during-move`, and
+`--settings-persistence`. On Linux without `DISPLAY` it runs under `xvfb-run`
+(`lang/vscode-extension/scripts/run-vscode-tests.cjs:35`).
+
+Each run gets a new profile and workspace. The profile's user settings set `workbench.colorTheme`
+and `chat.disableAIFeatures: true`; the workspace's `.vscode/settings.json` sets `files.autoSave: off`,
+`editor.semanticHighlighting.enabled: true`, `editor.inlayHints.enabled: on`, and for `[xtc]`
+semantic highlighting except under `--lexical-baseline` (`vsc/test/runTest.ts:84`, `:93`).
+
+The runners hand these environment variables to the test code in VS Code:
+
+| Variable | Set at | Read at |
+|----------|--------|---------|
+| `XTC_PLAYBOOK_REPORT_DIR`, `XTC_PLAYBOOK_CASES`, `XTC_PLAYBOOK_CANCEL_UI`, `XTC_PLAYBOOK_UI_PORT` | `vsc/test/runTest.ts:125` | `vsc/test/playbook/index.ts:32`, `:34`, `:62`, `vsc/test/workbenchUi.ts:11` |
+| `XTC_COMMIT`, `XTC_PLAYBOOK_DIRTY` | `vsc/test/runTest.ts:131`, from the environment when set (the container), else from git | `vsc/test/playbook/index.ts:60` |
+| `XTC_LSP_LOG_DIR` | `vsc/test/runTest.ts:126`, `vsc/test/runTour.ts:71`: the run's `server-logs` | The server, `lsp/util/ServerLogs.kt:199`; `vsc/test/tour/tour.ts:205` |
+| `XTC_TOUR_REPORT_DIR`, `XTC_TOUR_SECTIONS`, `XTC_TOUR_HANG`, `XTC_TOUR_FIXTURE` | `vsc/test/runTour.ts:61` | `vsc/test/tour/index.ts:15`, `:19`, `vsc/test/tour/tour.ts:146`, `vsc/test/tour/index.ts:16` |
+| `XTC_RECORD_VIDEO`, `XTC_RECORDING_START_FILE` | `vsc/test/runTour.ts:69`, from the environment | `vsc/test/tour/ui.ts:28`, `vsc/test/tour/index.ts:31` |
+| `XTC_LIFECYCLE_ROLE`, `XTC_LIFECYCLE_REPORT`, `XTC_LIFECYCLE_SHARED_PROCESS` | `vsc/test/runLifecycle.ts:68` | `vsc/test/lifecycle/index.ts:21`, `:11`, `:12` |
+| `XTC_EXPLORER_PROBE_REPORT`, `XTC_EXPLORER_PROBE_REFRESH` | `vsc/test/runTest.ts:133` | `vsc/test/explorer-probe/index.ts:14`, `:16` |
+| `XTC_SETTINGS_PHASE` | `vsc/test/runTest.ts:134` | `vsc/test/settings-persistence/index.ts:11` |
+| `XTC_VSCODE_TEST_CACHE` | The user, or the container (`lang/intellij-plugin/container/in-container.sh:30`) | `vsc/test/vscodeCache.ts:42`; without it, `$XDG_CACHE_HOME`, `~/Library/Caches` or `%LOCALAPPDATA%`, then `xtclang/vscode-test` |
+
+#### Composing either editor's tour with narration
+
+From the repository root, give the shared composer the editor's script, one or more saved run directories,
+and an output directory. This example uses the British English Jenny voice with a locally installed Piper model.
+
+```bash
+tour=lang/intellij-plugin/tour
+python3 "$tour/compose.py" --narration "$tour/narration-vscode.md" \
+    --tts piper --piper-model ~/.local/share/piper-voices/en_GB-jenny_dioco-medium.onnx \
+    "$run_dir" "$out_dir"
+```
+
+For IntelliJ, use `narration-intellij.md` and an IntelliJ run directory. The composer needs Pillow, python-pptx,
+ffmpeg and ffprobe. Piper needs an installed `piper` executable and the model's matching `.onnx.json` beside it.
+On macOS, omit the Piper options to use `say`, with `--voice Daniel` or another installed voice.
+Speech is synthesized offline and cached per paragraph, voice, engine and pacing under
+`$XDG_CACHE_HOME/xtc-tour/speech` (default `~/.cache/xtc-tour/speech`).
+
+The first narrated step in each section speaks its introduction, pauses for one second, then speaks the step.
+`--sentence-pause` adds a pause between sentences (default 0.75 seconds). A long paragraph extends the final
+frame until `--narration-pad` seconds after the speech (default 0.6). New steps without text are silent.
+The composer lists missing step text and unused script entries in the console and in `failures.md`.
+A partial run therefore lists unused paragraphs from the other sections. Both engines pronounce XTC as “Ecstasy,”
+including in commands and Gradle task names. The subtitles and slides retain the original spelling.
+
+Alongside the narrated MP4, the composer writes matching `.srt` and `.vtt` files and puts the narration
+in the slide notes. Pass `--burn-subtitles` to draw subtitles into the picture. Omit `--narration` to
+compose a silent video from the same captures.
+
+### 6.4 The playbook container
+
+The root build's `containerPlaybook`, `containerPlaybookImage`, `containerPlaybookBuild`,
+`containerPlaybookIntellij` and `containerPlaybookVsCode` run
+`lang/intellij-plugin/container/playbook.sh` (`build.gradle.kts:235`).
+
+| Name | Kind, default | What it does | Read at |
+|------|---------------|--------------|---------|
+| `playbookCases` | Gradle property (`providers`), `all` | Cases for the IntelliJ and VS Code container tasks. | `build.gradle.kts:233` |
+| `org.xtclang.docker.command` | `xdkProperties`, `docker` (`xdk.properties:17`) | The container engine, such as `podman`; passed as `XTC_CONTAINER_COMMAND`. | `build.gradle.kts:232`, `:240` |
+| `XTC_CONTAINER_COMMAND` | environment; else `docker`, or `podman` when `docker` is not installed | The engine `playbook.sh` runs. | `lang/intellij-plugin/container/playbook.sh:41` |
+| `XTC_CONTAINER_MEMORY` | environment; else `14g`, or on a smaller machine its memory less 1 GiB, with a warning | A run's container memory limit; the IntelliJ playbook and tours need `14g` (with `7g` the kernel killed the IDE). | `lang/intellij-plugin/container/playbook.sh:144`, `:265` |
+| `XTC_CONTAINER_SLOTS` | environment; else the fewer of the engine's memory over a run's and its CPUs over 4, at least 1 | How many container runs go at once: two on a 32 GiB, 8-CPU Podman machine with `14g` runs, one on a 16 GiB one. | `lang/intellij-plugin/container/playbook.sh:153` |
+| `XTC_CONTAINER_SLOT` | environment; else none: a run takes the first slot that is free when its turn comes | Pins a run to that slot: it waits for that slot only, while the runs behind it that may take another slot take it when it is free. | `lang/intellij-plugin/container/playbook.sh:161` |
+| `XTC_RECORD_VIDEO` | environment, empty | `1` records the virtual display to `/out/screen.mp4`; passed into the container. | `lang/intellij-plugin/container/playbook.sh:268`, `lang/intellij-plugin/container/in-container.sh:63` |
+| `XTC_COMMIT`, `XTC_BRANCH`, `XTC_PLAYBOOK_DIRTY` | set by `playbook.sh` from git, since the export has no `.git` | The commit, branch and uncommitted paths, for javatools' build information and the VS Code playbook. | `lang/intellij-plugin/container/playbook.sh:266`, `javatools/build.gradle.kts:172`, `:174` |
+| `XTC_XDK_FINGERPRINT` | set by `playbook.sh` from git: the tree hashes at `HEAD` of what `xdk:installDist` and `publishLocal` build from (javatools, the XDK's libraries, the XDK, the plugin, the build logic, `gradle/` and the root's build scripts and properties) and a hash of their uncommitted changes | Compared in the container with `xdk/build/xdk-fingerprint`, which the last build wrote in the work volume: a run that tests builds the XDK first when they differ, the marker is missing, or the XDK changed after it, and logs `xdk: rebuilding, as ...` or `xdk: not rebuilt, ...`. | `lang/intellij-plugin/container/playbook.sh:102`, `:267`, `lang/intellij-plugin/container/in-container.sh:83`, `:91` |
+| `XTC_VSCODE_TEST_CACHE`, `XTC_RECORDING_START_FILE` | set inside the container | The VS Code download cache on the Gradle volume; the recording's start file. | `lang/intellij-plugin/container/in-container.sh:30`, `:68` |
+| `PLAYBOOK_WM` | environment inside the container, `openbox` | Window manager on Xvfb; `playbook.sh` does not pass it in, so it stays `openbox`. | `lang/intellij-plugin/container/in-container.sh:49` |
+
+Inside the container, Gradle runs with `/gradle/gradle.properties`: `org.gradle.jvmargs=-Xmx2g
+-XX:MaxMetaspaceSize=768m`, `kotlin.daemon.jvmargs=-Xmx1g`, `org.gradle.workers.max=4`, no file watching
+(`lang/intellij-plugin/container/in-container.sh:33`). The volumes `xvm-playbook-gradle`, `xvm-playbook-work` and
+`xvm-playbook-m2`, each with `-sN` in slot N, keep caches between runs (a slot can't share another's Gradle user
+home); one run at a time in each slot holds its lock, `xvm-playbook-container.lock` for slot 1 and
+`xvm-playbook-container.lock.sN` for slot N, in the repository's common git directory
+(`lang/intellij-plugin/container/playbook.sh:166`). A waiting run holds a ticket in the queue of each slot it may
+take, `xvm-playbook-queue` for slot 1 and `xvm-playbook-queue.sN` for slot N, beside the locks, and takes the first
+free slot whose queue it heads (`lang/intellij-plugin/container/playbook.sh:209`): so a run takes the first slot that
+frees, in the order runs asked, and a pinned run keeps no other from a free slot. A run of an older `playbook.sh`
+waits in one queue only, slot 1's, or the one its checkout's path hashes to. `playbook.sh playbook` and
+`playbook.sh vscode` take further Gradle arguments, such as `-Plsp4ijChannel`; the root tasks pass none.
+
+## Stale in other docs
+
+None known. The survey behind this page found six statements in other documents that the code no longer bore
+out, and they were corrected on 2026-11-11: `XTC_JAVA_HOME` in the manual test plan, which nothing reads; the
+`-Dxtc.debug.lsp` toggle in the IntelliJ testing guide, which is code to add, not a property the plugin reads;
+`xtc.formatting.tabSize` in the VS Code README, deprecated and unread; the lang build flags' defaults in the
+language server's README and `lang/README.md`, which `gradle.properties` turns on; the launcher's `--socket`
+option, which it never had; and the DAP server's `logback.xml`, which applies only to that server's own tests.

@@ -41,9 +41,11 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 - Always included: `javatools`, `javatools_jitbridge`, `javatools_utils`, `javatools_unicode`, `plugin`, `xdk`, `docker`,
   `manualTests`; all of them are attached to the root lifecycle.
 - `lang` is optional: included by `includeBuildLang` (visibility) and attached to the root lifecycle by
-  `includeBuildAttachLang`. Both default to `false`.
+  `includeBuildAttachLang`. `gradle.properties` leaves both off, and so do CI's push and pull request builds; a manual
+  run of `commit.yml` turns them on with its `include-lang` input.
 - `manualTests` is a fake third-party consumer build that verifies published/composite plugin+XDK behavior.
-- Running any `:lang:*` task from root needs BOTH flags (either one alone fails with "project ':lang' not found"):
+- Running any `:lang:*` task from root needs BOTH flags on (either one alone fails with "project ':lang' not
+  found"), so pass them:
 
 ```bash
 ./gradlew :lang:<task> -PincludeBuildLang=true -PincludeBuildAttachLang=true
@@ -106,6 +108,9 @@ Non-`clean` combinations are fine: `./gradlew build installDist`, `./gradlew tes
 - When fixing bugs in existing code, do not perform broad modernization rewrites unless they are needed for the fix or make
   the touched code materially safer or clearer.
 - Keep the style of the code you add to an existing class consistent with its current style.
+- Match inline comment capitalization and punctuation to the surrounding method/class. In Java code
+  that uses lowercase comment openings without trailing periods, follow that convention; keep normal
+  sentence formatting for Javadoc.
 
 
 ## General

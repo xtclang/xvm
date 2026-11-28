@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Consumer;
+import java.util.function.ObjIntConsumer;
 
 import java.util.stream.Stream;
 
@@ -192,7 +193,6 @@ public class FileStructure
 
         m_kind    = that.m_kind;
         m_fLinked = that.m_fLinked;
-        m_errs    = that.m_errs;
         resetModified();
     }
 
@@ -382,8 +382,24 @@ public class FileStructure
      */
     public void writeApiTo(OutputStream out)
             throws IOException {
+        writeApiTo(out, (method, flags) -> {});
+    }
+
+    /**
+     * Strip this FileStructure down to its API, and write the API to the provided OutputStream,
+     * as {@link #writeApiTo(OutputStream)} does, telling the provided consumer of each method's
+     * flags as the method is stripped.
+     *
+     * @param out          the stream to write to
+     * @param methodFlags  receives each method and whether it was abstract, native and had code,
+     *                     as {@link MethodStructure#stripToApi} returns them
+     *
+     * @throws IOException  if an IOException occurs while writing the API
+     */
+    void writeApiTo(OutputStream out, ObjIntConsumer<MethodStructure> methodFlags)
+            throws IOException {
         try (var ignored = ConstantPool.withPool(getConstantPool())) {
-            byte[] abFlags = stripToApi();
+            byte[] abFlags = stripToApi(methodFlags);
             writeTo(out);
             out.write(abFlags);
         }
@@ -396,11 +412,28 @@ public class FileStructure
      *         holds the methods, which is the same for two files whose other contents are the same
      */
     byte[] stripToApi() {
+        return stripToApi((method, flags) -> {});
+    }
+
+    /**
+     * Remove what the API leaves out from each module in this FileStructure, telling the provided
+     * consumer of each method's flags as the method is stripped.
+     *
+     * @param methodFlags  receives each method and whether it was abstract, native and had code
+     *
+     * @return for each method, whether it is abstract, native or has code, in the order the file
+     *         holds the methods, which is the same for two files whose other contents are the same
+     */
+    byte[] stripToApi(ObjIntConsumer<MethodStructure> methodFlags) {
         ByteArrayOutputStream outFlags = new ByteArrayOutputStream();
         for (Component component : apiTree(this).toList()) {
             switch (component) {
             case ModuleStructure module -> module.stripToApi();
-            case MethodStructure method -> outFlags.write(method.stripToApi());
+            case MethodStructure method -> {
+                int nFlags = method.stripToApi();
+                methodFlags.accept(method, nFlags);
+                outFlags.write(nFlags);
+            }
             default -> {
             }
             }
@@ -413,7 +446,7 @@ public class FileStructure
      *         variants, in the order the file holds them; unlike {@link #visitChildren}, this
      *         also descends into the variants that are not the eldest sibling
      */
-    private static Stream<Component> apiTree(Component component) {
+    static Stream<Component> apiTree(Component component) {
         return Stream.concat(Stream.of(component), component.children().stream()
                 .flatMap(child -> Stream.<Component>iterate(child, Objects::nonNull,
                         Component::getNextSibling))
@@ -1518,29 +1551,6 @@ public class FileStructure
         return true;
     }
 
-    @Override
-    public ErrorListener getErrorListener() {
-        ErrorListener errs = m_errs;
-        if (errs == null) {
-            // getCurrentPool() is an AMBIENT thread-local: it is null on any thread that has not had
-            // a pool pushed onto it, which is every thread driving the compiler or runtime from
-            // ordinary Java code. Dereferencing it unconditionally turned this diagnostic accessor
-            // into an NPE source. Ownership belongs in a parameter, not a thread-local - see the PR
-            // discussion - but the null guard is the minimal, behaviour-preserving fix.
-            ConstantPool poolCurrent = ConstantPool.getCurrentPool();
-            if (poolCurrent != null && poolCurrent != m_pool) {
-                errs = poolCurrent.getErrorListener();
-            }
-        }
-        return errs == null ? ErrorListener.RUNTIME : errs;
-    }
-
-    @Override
-    public void setErrorListener(ErrorListener errs) {
-        // this is not considered a "mutation" of the FileStructure
-        m_errs = errs;
-    }
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -1715,10 +1725,4 @@ public class FileStructure
      */
     private transient AssemblerContext m_ctx;
 
-    /**
-     * Holds an ErrorListener explicitly provided to this FileStructure. An absence of an
-     * ErrorListener implies that either the ErrorListener from the ConstantPool associated with
-     * the current thread should be used, or failing that, the runtime ErrorListener should be used.
-     */
-    private transient ErrorListener m_errs;
 }

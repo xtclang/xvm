@@ -1,0 +1,590 @@
+import * as assert from 'node:assert';
+import { realpathSync } from 'node:fs';
+import * as path from 'node:path';
+import * as vscode from 'vscode';
+import { ResponseError } from 'vscode-languageclient/node';
+import { diagnosticReport, getClient, pullsDiagnostics, pullsInFlight, type DiagnosticReport } from '../../lsp-client';
+import { RENAME_OVERTAKEN, RENAME_REFUSED } from '../../rename-proposal';
+import { focusTestEditor } from '../native-focus';
+import { waitsUnderWay, withTestWait } from '../progress';
+import { recordSettings, restoreSettings, type RecordedSettings } from '../settings';
+import { terminateTask } from '../../task-termination';
+import { leftOver, liveSessions, playbookWork, whileUnderWay } from '../uiWait';
+import { caseRuns, PlaybookCleanupFailure, PlaybookLeftRunning, progress, runCase, waitReport, waitWhile } from '../wait';
+import * as fs from './disk';
+import { knownHostFailure, seemsFixed } from './knownHostFailures';
+import { catalog, ScenarioId, scenarioTags, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
+
+export const manualPath = path.resolve(__dirname, '../../../../doc/manual-test-plan.md');
+export const cases = new Map<string, { title: string; manual: string[]; tags: string[] }>();
+/** The cases that failed with a known host bug's symptom ([knownHostFailure]), by their IDs: the bug's UP ID and the failure. */
+export const knownFailures = new Map<string, { up: string; error: unknown }>();
+let fixtures: Map<string, string>;
+
+export function client() {
+    const result = getClient();
+    assert.ok(result?.initializeResult && result.isRunning(), 'Compiler language client must be running');
+    return result;
+}
+
+/** What the language server's xtc/languageServiceStatus answers, or nothing while the client is not running, as in a restart. */
+export async function serviceStatus<T>(): Promise<T | undefined> {
+    const current = getClient();
+    if (!current?.isRunning()) return undefined;
+    try { return await current.sendRequest<T>('xtc/languageServiceStatus'); }
+    catch { return undefined; }
+}
+
+/** The data of the server's error for a rename that it can't prove while the workspace is as it is, as while a module does not compile. */
+export const RENAME_UNPROVEN = 'unproven';
+
+/**
+ * [rename]'s edit, or none while the server does not make it yet: until discovery and the watcher have settled, it
+ * answers a rename with no edit, which the extension shows as [RENAME_REFUSED], with ContentModified, as a change of the
+ * project overtook it ([RENAME_OVERTAKEN]), or says that it can't prove it while a module has not compiled
+ * ([RENAME_UNPROVEN]), so a case that asks again takes each as not yet.
+ */
+export async function renameOrNone<T>(rename: T | Thenable<T>): Promise<T | undefined> {
+    try {
+        return await rename;
+    } catch (error) {
+        if (error instanceof Error && [RENAME_REFUSED, RENAME_OVERTAKEN].includes(error.message)) return undefined;
+        if (error instanceof ResponseError && error.data === RENAME_UNPROVEN) return undefined;
+        throw error;
+    }
+}
+
+export { progress };
+
+/**
+ * Waits until [read]'s value satisfies [accept], for as long as anything that could make it is under way, or [read] has
+ * not answered, and fails at once once the value is final ([whileUnderWay]); it says every minute in the run's progress
+ * what it waits for.
+ */
+export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string): Promise<T> {
+    return whileUnderWay(read, accept, message);
+}
+
+/**
+ * Waits until [read]'s value satisfies [accept] while anything that could change it is under way, as [underWay] names
+ * it for each value read, and fails at once once the value is final: [waitWhile]'s way, which says every minute in the
+ * run's progress what it waits for.
+ */
+export async function settles<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string,
+    underWay: (value: T) => Promise<string[]> | string[]): Promise<T> {
+    return withTestWait(message, () => waitWhile(read, accept, message, underWay, waitReport),
+        'while under way');
+}
+
+/**
+ * What changes the files under [directory] as it comes, which [take] answers once, since it last did: VS Code's edits,
+ * opens, closes and saves of their documents, its moves, and the disk's events.
+ */
+export class FileChanges implements vscode.Disposable {
+    private seen: string[] = [];
+    private readonly subscriptions: vscode.Disposable[];
+
+    constructor(private readonly directory: string) {
+        const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(directory), '**'));
+        const noted = (what: string) => (uri: vscode.Uri) => {
+            if (uri.scheme === 'file' && uri.fsPath.startsWith(directory + path.sep)) this.seen.push(`${path.relative(directory, uri.fsPath)} ${what}`);
+        };
+        this.subscriptions = [watcher, watcher.onDidCreate(noted('made')), watcher.onDidChange(noted('written')), watcher.onDidDelete(noted('deleted')),
+            vscode.workspace.onDidChangeTextDocument(event => { if (event.contentChanges.length > 0) noted('edited')(event.document.uri); }),
+            vscode.workspace.onDidOpenTextDocument(document => noted('opened')(document.uri)),
+            vscode.workspace.onDidCloseTextDocument(document => noted('closed')(document.uri)),
+            vscode.workspace.onDidSaveTextDocument(document => noted('saved')(document.uri)),
+            vscode.workspace.onDidRenameFiles(event => event.files.forEach(file => noted('moved here')(file.newUri)))];
+    }
+
+    take(): string[] {
+        const seen = this.seen;
+        this.seen = [];
+        return seen;
+    }
+
+    dispose(): void {
+        this.subscriptions.forEach(subscription => subscription.dispose());
+    }
+}
+
+export async function loadFixtures(): Promise<void> {
+    const manual = await fs.readFile(manualPath, 'utf8');
+    const blocks = [...manual.matchAll(/```xtc\n([\s\S]*?)\n```/g)].map(match => match[1]);
+    fixtures = new Map();
+    for (const { file, pattern } of catalog.common.fixtures) {
+        const matches = blocks.filter(text => new RegExp(pattern, 'm').test(text));
+        assert.strictEqual(matches.length, 1, `One canonical ${file} fixture in playbook`);
+        fixtures.set(file, matches[0] + '\n');
+    }
+    validateSharedFixtures(fixture);
+    assert.deepStrictEqual([...cases.keys()], sharedScenarioIds, 'Every shared case must have exactly one VS Code implementation');
+    const ids = [...manual.matchAll(/^\| (X\d+) \|/gm)].map(match => match[1]);
+    assert.deepStrictEqual([...cases.keys()].filter(id => /^X\d+$/.test(id)), ids,
+        'Every XdkAdapter playbook row must have exactly one registered case, in playbook order');
+}
+
+/** The server's message on the uses in modules outside the workspace that a rename, move or safe delete leaves alone. */
+export function outsideUsesMessage(uses: string): string {
+    return `Ecstasy: ${uses}. To include them, run Ecstasy: Configure Compiler Paths and choose Add consumers from folders.`;
+}
+
+export function fixture(file: string): string {
+    const text = fixtures.get(file);
+    assert.ok(text, `Missing fixture ${file}`);
+    return text;
+}
+
+export function position(document: vscode.TextDocument, text: string, offset = 0, last = false): vscode.Position {
+    const index = last ? document.getText().lastIndexOf(text) : document.getText().indexOf(text);
+    assert.ok(index >= 0, `Missing anchor ${JSON.stringify(text)} in ${document.uri.fsPath}`);
+    return document.positionAt(index + offset);
+}
+
+export function label(item: vscode.CompletionItem): string {
+    return typeof item.label === 'string' ? item.label : item.label.label;
+}
+
+export function symbolNames(symbols: vscode.DocumentSymbol[]): string[] {
+    return symbols.flatMap(symbol => [symbol.name, ...symbolNames(symbol.children ?? [])]);
+}
+
+export async function symbols(document: vscode.TextDocument): Promise<vscode.DocumentSymbol[]> {
+    // This also acts as an analysis barrier after sibling edits or explicit close/reopen.
+    // The execute command caches results at an unchanged editor version, so ask the
+    // registered provider directly when the module snapshot may have changed.
+    const provider = client().getFeature('textDocument/documentSymbol').getProvider(document);
+    assert.ok(provider, 'Registered Ecstasy document-symbol provider');
+    const token = new vscode.CancellationTokenSource();
+    try { return await provider.provideDocumentSymbols(document, token.token) as vscode.DocumentSymbol[] ?? []; }
+    finally { token.dispose(); }
+}
+
+export async function hover(document: vscode.TextDocument, at: vscode.Position): Promise<string> {
+    const result = await vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider', document.uri, at);
+    return (result ?? []).flatMap(item => item.contents.map(content => typeof content === 'string' ? content : content.value)).join('\n');
+}
+
+export async function targets(document: vscode.TextDocument, kind: 'Definition' | 'Declaration' | 'TypeDefinition' | 'Implementation', at: vscode.Position) {
+    const result = await vscode.commands.executeCommand<(vscode.Location | vscode.LocationLink)[]>(`vscode.execute${kind}Provider`, document.uri, at);
+    return (result ?? []).map(item => 'targetUri' in item
+        ? new vscode.Location(item.targetUri, item.targetSelectionRange ?? item.targetRange)
+        : item);
+}
+
+export async function targetNames(locations: vscode.Location[]): Promise<string[]> {
+    return Promise.all(locations.map(async location => (await vscode.workspace.openTextDocument(location.uri)).getText(location.range)));
+}
+
+export async function noErrors(uri: vscode.Uri): Promise<void> {
+    await diagnostics(uri, values => values.length === 0, 'Expected no diagnostics');
+}
+
+/**
+ * Waits until what VS Code shows of a document's diagnostics satisfies [accept], and returns it. For an open document
+ * whose diagnostics the server's report gives, only a report of the document's current version counts, once VS Code
+ * shows it: an earlier one, as from before an edit, may still be shown. A document that is not open in a tab, or a
+ * server that pushes its diagnostics, has no such version; what VS Code shows is taken as it is.
+ */
+export async function diagnostics(uri: vscode.Uri, accept: (values: vscode.Diagnostic[]) => boolean, message: string) {
+    // a report of the current text that does not do is final once nothing could make another: no change on disk the
+    // server has still to hear of, no compile, no request the server is answering, no pull of the client's, no items of
+    // the document's that the server has still to report, and no compile submitted since, three times in a row
+    let settled = 0;
+    let submitted: number | undefined;
+    const shown = await eventually(async () => {
+        const state = currentDiagnostics(uri);
+        const total = state.current && !accept(state.values) ? await quiet(uri) : undefined;
+        settled = total !== undefined && (settled === 0 || total === submitted) ? settled + 1 : 0;
+        submitted = total;
+        if (settled >= 3) {
+            throw new Error(`${message} in ${uri.fsPath}: the report of its current text is final, with nothing under way that `
+                + `could change it, and has ${JSON.stringify(state.values.map(item => `${diagnosticCode(item)} ${item.message}`))}`);
+        }
+        return state;
+    }, state => state.current && accept(state.values), `${message} in ${uri.fsPath}`);
+    return shown.values;
+}
+
+/**
+ * The compiles the server has had submitted, when nothing could change the diagnostics of the document [uri]: the server
+ * has heard of every change the case made on disk, no compile is queued or running, nor any request or pull, and the
+ * server has given the client the document's current items; undefined while anything is.
+ */
+async function quiet(uri: vscode.Uri): Promise<number | undefined> {
+    if (pullsInFlight() > 0) return undefined;
+    const status = await client().sendRequest<{ compilerQueue?: Record<string, number>; openRequests?: string[];
+        unreportedDiagnostics?: string[]; watchedFileChanges?: Record<string, number> }>('xtc/languageServiceStatus');
+    const queue = status.compilerQueue;
+    const compiling = !!queue && (queue.queueSize > 0 || queue.debouncingSize > 0 || queue.runningSize > 0);
+    // the server names a document by its canonical URI
+    const unreported = (status.unreportedDiagnostics ?? []).some(each => canonical(vscode.Uri.parse(each)) === canonical(uri));
+    const unheard = fs.unheardChanges(status.watchedFileChanges ?? {});
+    return unheard || compiling || unreported || (status.openRequests ?? []).length > 0 || pullsInFlight() > 0
+        ? undefined : queue?.submittedTotal ?? 0;
+}
+
+/** The real path of the file [uri], or its path as it is, if it is not a file or there is none. */
+function canonical(uri: vscode.Uri): string {
+    if (uri.scheme !== 'file') return uri.toString();
+    try {
+        return realpathSync(uri.fsPath);
+    } catch {
+        return uri.fsPath;
+    }
+}
+
+/**
+ * Whether the language client pulls the document's diagnostics: it pulls those of the documents in a tab or a visible
+ * editor, as a peek is, and VS Code keeps a document whose tab was closed among its text documents for a while.
+ */
+function shown(uri: vscode.Uri): boolean {
+    const key = uri.toString();
+    const inTab = vscode.window.tabGroups.all.flatMap(group => group.tabs).some(tab => {
+        const input = tab.input;
+        const tabUri = input instanceof vscode.TabInputTextDiff ? input.modified
+            : input instanceof vscode.TabInputText || input instanceof vscode.TabInputCustom || input instanceof vscode.TabInputNotebook
+                ? input.uri : undefined;
+        return tabUri?.toString() === key;
+    });
+    return inTab || vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() === key);
+}
+
+/** What VS Code shows of a document's diagnostics, and whether it is the server's report for the current version. */
+function currentDiagnostics(uri: vscode.Uri): { values: vscode.Diagnostic[]; current: boolean; version?: number; report?: DiagnosticReport } {
+    const values = vscode.languages.getDiagnostics(uri);
+    const document = vscode.workspace.textDocuments.find(item => item.uri.toString() === uri.toString());
+    if (!document || !pullsDiagnostics() || !shown(uri)) return { values, current: true };
+    const report = diagnosticReport(uri);
+    // the client shows a report once it has it, and drops one that the document has moved past
+    const current = report?.version === document.version && report.items === values.length;
+    return { values, current, version: document.version, report };
+}
+
+export function diagnosticCode(item: vscode.Diagnostic): string {
+    return String(typeof item.code === 'object' ? item.code.value : item.code);
+}
+
+export async function nextProblem(document: vscode.TextDocument, values: vscode.Diagnostic[]): Promise<void> {
+    await vscode.commands.executeCommand('workbench.actions.view.problems');
+    // marker navigation is a native editor action: like Undo, it acts only in a focused window and editor
+    await focusTestEditor(document);
+    const editor = await vscode.window.showTextDocument(document, { preview: false });
+    editor.selection = new vscode.Selection(0, 0, 0, 0);
+    await vscode.commands.executeCommand('editor.action.marker.nextInFiles');
+    await eventually(async () => vscode.window.activeTextEditor,
+        current => current?.document.uri.toString() === document.uri.toString() && values.some(item => item.range.contains(current.selection.start)),
+        'Next problem selects the diagnostic source location');
+    await vscode.commands.executeCommand('closeMarkersNavigation');
+}
+
+/**
+ * Waits until the server has heard that the file or folder [uri] was [what] at [since]: until it has received a
+ * watched-file event of it, itself, after then. A change that VS Code's file watcher never reports fails the wait, which
+ * says so.
+ */
+export async function heard(uri: vscode.Uri, since: number, what: string): Promise<void> {
+    const name = vscode.workspace.asRelativePath(uri);
+    await eventually(async () => fs.receivedAt((await serviceStatus<{ watchedFileChanges?: Record<string, number> }>())?.watchedFileChanges ?? {}, uri.fsPath),
+        time => time !== undefined && time > since, `VS Code's file watcher reports ${name} ${what} to the server`);
+}
+
+export class Workspace {
+    private readonly detached = new Set<string>();
+
+    constructor(readonly directory: string) {}
+
+    uri(file: string): vscode.Uri { return vscode.Uri.file(path.join(this.directory, file)); }
+
+    async write(file: string, text = fixture(file)): Promise<void> {
+        const uri = this.uri(file);
+        await fs.mkdir(path.dirname(uri.fsPath), { recursive: true });
+        await fs.writeFile(uri.fsPath, text);
+    }
+
+    /**
+     * Makes the folders of [file] that are not there yet one at a time, each once the server has heard of the one before:
+     * VS Code's recursive watcher can miss a subtree made in one go before it watches its top folder, and with it every
+     * later change in it: X27 has heard of its new folder, and of nothing in it, not even its member's deletion.
+     */
+    async folders(file: string): Promise<void> {
+        const missing: string[] = [];
+        for (let folder = path.dirname(this.uri(file).fsPath); !await fs.stat(folder).catch(() => undefined); folder = path.dirname(folder)) {
+            missing.unshift(folder);
+        }
+        for (const folder of missing) {
+            const made = Date.now();
+            await fs.mkdir(folder);
+            await heard(vscode.Uri.file(folder), made, 'made');
+        }
+    }
+
+    async open(file: string, text?: string): Promise<vscode.TextDocument> {
+        if (text !== undefined) { await this.write(file, text); }
+        else if (!await fs.stat(this.uri(file).fsPath).catch(() => undefined)) { await this.write(file); }
+        let document = await vscode.workspace.openTextDocument(this.uri(file));
+        if (document.languageId !== 'xtc') { document = await vscode.languages.setTextDocumentLanguage(document, 'xtc'); }
+        await vscode.window.showTextDocument(document, { preview: false });
+        if (this.detached.delete(document.uri.toString())) {
+            const provider = client().getFeature('textDocument/didOpen').getProvider(document);
+            assert.ok(provider, 'Registered document-open synchronization');
+            await provider.send(document);
+        }
+        await eventually(() => symbols(document), values => values.length > 0, 'Initial document structure');
+        return document;
+    }
+
+    async replace(document: vscode.TextDocument, text: string, settle = true): Promise<void> {
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(document.uri, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), text);
+        assert.ok(await vscode.workspace.applyEdit(edit));
+        if (settle) { await symbols(document); }
+    }
+
+    async marked(file: string, text: string): Promise<{ document: vscode.TextDocument; at: vscode.Position }> {
+        const index = text.indexOf('§');
+        assert.ok(index >= 0, 'Missing cursor marker');
+        const document = await this.open(file);
+        await this.replace(document, text.replace('§', ''));
+        return { document, at: document.positionAt(index) };
+    }
+
+    async editing(body: string, inspect = false, transform: (text: string) => string = text => text) {
+        const setup = catalog.common.editing;
+        const anchor = inspect ? setup.inspect : setup.run;
+        const text = transform(fixture(setup.file)).replace(anchor, anchor.replace('{}', `{ ${body} }`));
+        return this.marked(setup.file, text);
+    }
+
+    async completion(document: vscode.TextDocument, at: vscode.Position): Promise<vscode.CompletionItem[]> {
+        const result = await vscode.commands.executeCommand<vscode.CompletionList>('vscode.executeCompletionItemProvider', document.uri, at);
+        return result?.items ?? [];
+    }
+
+    async accept(document: vscode.TextDocument, item: vscode.CompletionItem): Promise<void> {
+        assert.ok(item.range, `Completion ${label(item)} must provide its source replacement range`);
+        const range = item.range instanceof vscode.Range ? item.range : item.range.replacing;
+        const value = item.insertText ?? label(item);
+        if (value instanceof vscode.SnippetString) {
+            assert.strictEqual(item.additionalTextEdits?.length ?? 0, 0, 'Snippet fixtures must not discard additional edits');
+            await vscode.window.showTextDocument(document);
+            // insertSnippet always adjusts indentation. The runner's snippet-edit API can retain
+            // the provider's keepWhitespace choice, as native completion acceptance does.
+            const snippet = Object.assign(vscode.SnippetTextEdit.replace(range, value), { keepWhitespace: item.keepWhitespace });
+            const edit = new vscode.WorkspaceEdit();
+            edit.set(document.uri, [snippet]);
+            assert.ok(await vscode.workspace.applyEdit(edit));
+            await symbols(document);
+            return;
+        }
+        assert.strictEqual(typeof value, 'string', 'These fixtures expect plain completion text');
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(document.uri, range, value as string);
+        for (const additional of item.additionalTextEdits ?? []) {
+            edit.replace(document.uri, additional.range, additional.newText);
+        }
+        assert.ok(await vscode.workspace.applyEdit(edit));
+        await symbols(document);
+    }
+
+    /** Accepts the completion [name], which must be offered at [at]. */
+    async acceptNamed(document: vscode.TextDocument, at: vscode.Position, name: string): Promise<void> {
+        const item = (await this.completion(document, at)).find(value => label(value) === name);
+        assert.ok(item, `${name} is offered`);
+        await this.accept(document, item);
+    }
+
+    async signature(document: vscode.TextDocument, at: vscode.Position): Promise<vscode.SignatureHelp | undefined> {
+        return vscode.commands.executeCommand<vscode.SignatureHelp>('vscode.executeSignatureHelpProvider', document.uri, at);
+    }
+
+    /** Writes [source] to [file] as the module [name], the graph's only one, opens it, and waits until it has no errors. */
+    async module(file: string, source: string, name: string): Promise<vscode.TextDocument> {
+        await this.write(file, source);
+        await this.configure([{ name, uri: this.uri(file).toString() }]);
+        const document = await this.open(file);
+        await noErrors(document.uri);
+        return document;
+    }
+
+    async project(): Promise<vscode.TextDocument> {
+        await this.write(catalog.common.project.member);
+        const document = await this.open(catalog.common.project.root);
+        await noErrors(document.uri);
+        return document;
+    }
+
+    async configure(modules: { name: string; uri: string; dependencies?: string[]; resourceRoots?: string[] }[]): Promise<void> {
+        await vscode.workspace.getConfiguration('xtc.compiler').update('sourceModules', modules, vscode.ConfigurationTarget.Workspace);
+    }
+
+    async dependencies(): Promise<vscode.TextDocument> {
+        for (const module of shared.sourceModules) { await this.write(module.uri); }
+        await this.configureSharedGraph();
+        const document = await this.open(shared.dependencyNavigation.file);
+        await noErrors(document.uri);
+        return document;
+    }
+
+    async configureSharedGraph(): Promise<void> {
+        await this.configure(shared.sourceModules.map(module => ({ ...module, uri: this.uri(module.uri).toString() })));
+    }
+
+    async discard(document: vscode.TextDocument): Promise<void> {
+        await vscode.window.showTextDocument(document, { preview: false });
+        await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+        // Closing a tab can retain a hidden model. Use the client's public synchronization
+        // provider so the server and client's synced-document map both observe didClose.
+        if (!document.isClosed && !this.detached.has(document.uri.toString())) {
+            const provider = client().getFeature('textDocument/didClose').getProvider(document);
+            assert.ok(provider, 'Registered document-close synchronization');
+            await provider.send(document);
+            this.detached.add(document.uri.toString());
+        }
+        await client().sendRequest('xtc/healthCheck');
+    }
+
+    async dispose(): Promise<void> {
+        // Every buffer and setting belongs to this test's isolated VS Code workspace.
+        await eventually(async () => getClient()?.isRunning(), running => running === true, 'Client ready for fixture cleanup');
+        for (const document of vscode.workspace.textDocuments.filter(doc => doc.uri.fsPath.startsWith(this.directory + path.sep) && doc.languageId === 'xtc')) {
+            await this.discard(document);
+        }
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+        await this.configure([]);
+    }
+}
+
+export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspace, data: ScenarioValues<K>) => Promise<void>): void {
+    const scenario = catalog.cases[id];
+    assert.ok(scenario, `Case ${id} is missing from the shared catalog`);
+    const { title, manual } = scenario;
+    assert.ok(!cases.has(id), `Duplicate playbook case ${id}`);
+    cases.set(id, { title, manual, tags: scenarioTags(id) });
+    test(`${id}: ${title}`, async function (this: Mocha.Context) {
+        // the case goes on while it progresses, as [runCase] has it: Mocha's bound would start the next case while this
+        // one still runs
+        this.timeout(0);
+        const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+        assert.ok(root);
+        const workspace = new Workspace(path.join(root, id));
+        // every setting as the case finds it, which its cleanup puts back
+        const recorded = await recordSettings();
+        fs.forgetChanges();
+        caseRuns(id);
+        // one case's failure, a timeout too, fails that case only: once it has ended, the editor is restored for the next
+        const error = await runCase(() => body(workspace, scenario.values), line => progress(`${id} ${line}`), waitsUnderWay, playbookWork,
+            restartServer);
+        caseRuns(undefined);
+        reportLeftOver(id);
+        if (error !== undefined) {
+            const report = process.env.XTC_PLAYBOOK_REPORT_DIR;
+            if (report) {
+                for (const document of vscode.workspace.textDocuments.filter(doc => doc.uri.fsPath.startsWith(workspace.directory + path.sep))) {
+                    const file = path.join(report, 'failure-sources', id, path.relative(workspace.directory, document.uri.fsPath));
+                    await fs.mkdir(path.dirname(file), { recursive: true });
+                    await fs.writeFile(file, document.getText());
+                }
+            }
+        }
+        // a case left to itself still acts on the editor: no cleanup races it, and the runner runs no other case
+        if (error instanceof PlaybookLeftRunning) throw error;
+        const failures = await cleanUp(workspace, recorded, error !== undefined);
+        if (failures.length) throw new PlaybookCleanupFailure(error === undefined ? failures : [error, ...failures]);
+        // a known host bug's exact symptom is no failure of the run, nor a pass: Mocha has it as pending, by a title that
+        // says so, and the runner reports it apart; any other failure fails
+        const known = error === undefined ? undefined : knownHostFailure(id, error);
+        if (known) {
+            knownFailures.set(id, { up: known.up, error });
+            this.test!.title = `${this.test!.title} — known host failure: ${known.up}`;
+            this.skip();
+        } else if (error !== undefined) throw error;
+        else {
+            const fixed = seemsFixed(id);
+            if (fixed) throw fixed;
+        }
+    });
+}
+
+/** Restarts the language server, which also ends a request of the server's that a case is stuck in. */
+async function restartServer(): Promise<unknown> {
+    return vscode.commands.executeCommand('xtc.restartServer');
+}
+
+/** Says in the run's progress what the case or step [what] left under way, which no later one counts ([leftOver]). */
+function reportLeftOver(what: string): void {
+    const left = leftOver();
+    if (left.length) progress(`${what} left calls that have not answered, which count for no later case: ${left.join('; ')}`);
+}
+
+/**
+ * Restarts the language server and waits until it runs and answers: the extension's restart, which one that is under
+ * way joins, ends only once each change that came while it ran is applied.
+ */
+async function restartAndRun(): Promise<void> {
+    await restartServer();
+    await eventually(async () => getClient()?.isRunning(), value => value === true, 'The language server runs after the restart');
+    await client().sendRequest('xtc/healthCheck');
+}
+
+/**
+ * Ends the debug sessions and tasks that the case left running, whose output would be a later case's to count, and
+ * disposes of what the case [workspace] made; then puts back every setting that the case changed, as [recorded] has it
+ * at its start, but the source graph, which the disposal empties, and restarts the server when one of them applies
+ * only on restart, or changed in a case that [failed], or waits for the extension's own restart for one of the
+ * connection's. Should the disposal fail, it restores the editor as a case finds it: no quick input, unsaved changes
+ * reverted, no editors, every setting as recorded, the source graph too, and a language server that runs, whose
+ * restart also ends a request that the disposal waits for. Each step goes on while it progresses ([runCase]); one that
+ * is left to itself ends the cleanup, and what does not end, as a session whose stop does not take, is its failure.
+ * Answers what failed.
+ */
+export async function cleanUp(workspace: Pick<Workspace, 'directory' | 'dispose'>, recorded: RecordedSettings, failed: boolean): Promise<unknown[]> {
+    const id = path.basename(workspace.directory);
+    const failures: unknown[] = [];
+    const step = async (what: string, action: () => Thenable<unknown>) => {
+        if (failures.some(failure => failure instanceof PlaybookLeftRunning)) return;
+        const failure = await runCase(async () => { await action(); }, line => progress(`${id} cleanup: ${what}: ${line}`), waitsUnderWay,
+            playbookWork, restartServer);
+        reportLeftOver(`${id} cleanup: ${what}`);
+        if (failure !== undefined) failures.push(failure);
+    };
+    await step("Ending the case's debug sessions and tasks", async () => {
+        const running = () => [...liveSessions().map(session => `the debug session ${session.name}`),
+            ...vscode.tasks.taskExecutions.map(execution => `the task ${execution.task.name}`)];
+        if (running().length === 0) return;
+        progress(`${id} cleanup ends what the case left running: ${running().join(', ')}`);
+        await vscode.debug.stopDebugging();
+        vscode.tasks.taskExecutions.forEach(terminateTask);
+        await eventually(async () => running(), left => left.length === 0, "The case's debug sessions and tasks end");
+    });
+    const before = failures.length;
+    await step('Disposing of the case', () => workspace.dispose());
+    const disposed = failures.length === before;
+    if (!disposed) {
+        const failure = failures[failures.length - 1];
+        progress(`${id} cleanup failed, restoring the editor: ${failure instanceof Error ? failure.message : String(failure)}`);
+        await step('Closing the quick input', () => vscode.commands.executeCommand('workbench.action.closeQuickOpen'));
+        for (const document of vscode.workspace.textDocuments.filter(each => each.isDirty)) {
+            await step(`Reverting ${document.uri.fsPath}`, async () => {
+                await vscode.window.showTextDocument(document, { preview: false });
+                await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+            });
+        }
+        await step('Closing the editors', () => vscode.commands.executeCommand('workbench.action.closeAllEditors'));
+    }
+    let restored: string[] = [];
+    await step('Restoring the settings', async () => {
+        // the server's restart, after a failed disposal, is the next step's
+        restored = await restoreSettings(recorded, { kept: key => disposed && key === 'xtc.compiler.sourceModules', failed,
+            restart: disposed ? restartAndRun : undefined });
+    });
+    if (restored.length) progress(`${id} cleanup put back the settings the case left changed: ${restored.join(', ')}`);
+    if (!disposed) {
+        await step('Restarting the language server', async () => {
+            await restartAndRun();
+            // and the notice of the runtime's settings that the restore may have brought
+            await vscode.commands.executeCommand('notifications.clearAll');
+        });
+    }
+    return failures;
+}

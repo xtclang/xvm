@@ -1,46 +1,52 @@
 package org.xvm.lsp.adapter
 
 /**
- * Formatting configuration for XTC source files.
+ * Formatting configuration for Ecstasy source files.
  *
  * Resolution order (highest priority first):
- * 1. `xtc-format.toml` in the project tree (not yet implemented)
- * 2. Editor config from `workspace/configuration` (IntelliJ Code Style settings)
+ * 1. The file's `.editorconfig` files, which [EditorConfig] reads at each formatting request
+ * 2. Editor config from `workspace/configuration` (IntelliJ Code Style settings, VS Code's `xtc.formatting`)
  * 3. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
- * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
+ * 4. Ecstasy defaults (4-space indent, 8-space continuation, no tabs)
  */
 data class FormattingConfig(
     val indentSize: Int = 4,
     val continuationIndentSize: Int = 8,
     val insertSpaces: Boolean = true,
     val maxLineWidth: Int = 120,
+    /** Whether formatting refills a doc or block comment's paragraphs that run past [maxLineWidth]. */
+    val wrapComments: Boolean = false,
+    /** Whether formatting reads a file's `.editorconfig` files; IntelliJ says no while its EditorConfig support is off. */
+    val editorConfig: Boolean = true,
+    /** Whether IntelliJ's formatter markers keep the lines between them as they are ([FormatterTags]). */
+    val formatterTagsEnabled: Boolean = false,
+    val formatterOffTag: String = "@formatter:off",
+    val formatterOnTag: String = "@formatter:on",
+    /** Whether the formatter markers' tags are regular expressions. */
+    val formatterTagsAcceptRegexp: Boolean = false,
 ) {
     companion object {
         /** XTC's opinionated defaults, matching lib_ecstasy conventions. */
-        val DEFAULT = FormattingConfig()
+        val DEFAULT: FormattingConfig = FormattingConfig()
 
         /**
-         * Resolve the effective formatting config for a file.
+         * Resolve the effective formatting config from settings supplied by the caller.
          *
-         * Priority: xtc-format.toml (future) > editor config > LSP options > defaults.
+         * Priority: editor config > LSP options > defaults. This function performs no file lookup;
+         * [EditorConfig.formatting] sets a file's `.editorconfig` settings over its result.
          *
-         * @param fileUri the file being formatted (for future config file discovery)
          * @param lspOptions the LSP FormattingOptions from the current request
          * @param editorConfig editor-provided config from `workspace/configuration`, or null
          */
         fun resolve(
-            fileUri: String,
             lspOptions: FormattingOptions,
             editorConfig: FormattingConfig? = null,
         ): FormattingConfig {
-            // TODO Phase 4: check for xtc-format.toml before other sources.
             if (editorConfig != null) return editorConfig
             return fromLspOptions(lspOptions)
         }
 
-        /**
-         * Create from LSP FormattingOptions (editor fallback).
-         */
+        /** Create from LSP FormattingOptions (editor fallback). */
         fun fromLspOptions(options: FormattingOptions): FormattingConfig =
             DEFAULT.copy(
                 indentSize = if (options.insertSpaces) options.tabSize else DEFAULT.indentSize,

@@ -4,13 +4,21 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
+
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import java.util.stream.Collectors;
 
 import org.xvm.api.Connector;
+import org.xvm.api.DebuggerProvider;
 import org.xvm.api.InterpreterConnector;
 
 import org.xvm.asm.ConstantPool;
@@ -29,6 +37,8 @@ import org.xvm.tool.LauncherOptions.RunnerOptions;
 
 import org.xvm.util.Handy;
 
+import static java.util.Objects.requireNonNull;
+
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.tool.ModuleInfo.isExplicitEcstasyFile;
 import static org.xvm.util.Handy.checkReadable;
@@ -38,8 +48,6 @@ import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.WARNING;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * The "execute" command:
@@ -51,14 +59,24 @@ import static java.util.Objects.requireNonNull;
 public class Runner extends Launcher<RunnerOptions> {
 
     /**
+     * The option of {@code --debug} that names the jar of the debugger provider.
+     */
+    private static final String AGENT = "agent=";
+
+    /**
+     * The debugging of the program that {@code --debug} asked for, while the program runs.
+     */
+    private DebuggerProvider.Session m_debug;
+
+    /**
      * Runner constructor for programmatic use.
      *
-     * @param options     pre-configured runner options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured runner options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Runner(RunnerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Runner(RunnerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**
@@ -119,10 +137,19 @@ public class Runner extends Launcher<RunnerOptions> {
             }
             checkErrors("module identification");
 
-            fileBin   = requireNonNull(info).getBinaryFile();
+            // a test module in its project's test source directory, as "xtc init" makes one, imports
+            // the project's modules: they load from the project's binary directory, and the compiler
+            // compiles them with it, as "xtc build" does; when one of them changed, it compiles again
+            List<File> modulePath = requireNonNull(info).withProjectBinaries(opts.getModulePath());
+            if (!modulePath.equals(opts.getModulePath())) {
+                repo = configureLibraryRepo(modulePath);
+            }
+            boolean fProjectChanged = !opts.isCompileDisabled() && info.isProjectChanged();
+
+            fileBin   = info.getBinaryFile();
             binExists = fileBin != null && fileBin.exists();
 
-            boolean fCompile = false;
+            boolean fCompile = fProjectChanged;
             if (!binExists) {
                 String qualName = info.getQualifiedModuleName();
                 module = repo.loadModule(qualName);
@@ -178,7 +205,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 info      = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
-                repo      = configureLibraryRepo(opts.getModulePath());
+                repo      = configureLibraryRepo(info.withProjectBinaries(opts.getModulePath()));
                 module    = repo.loadModule(info.getQualifiedModuleName());
             }
 
@@ -219,6 +246,23 @@ public class Runner extends Launcher<RunnerOptions> {
 
         log(INFO, "Executing {} from {}", sName, binLocDesc);
 
+        var debug = opts.getDebug();
+        return debug.isPresent()
+                ? debug(debug.get(), repo, module, sName)
+                : execute(repo, module, sName);
+    }
+
+    /**
+     * Run the program's method, which the options name, in a new connector.
+     *
+     * @param repo    the repository of the program's modules
+     * @param module  the program's module
+     * @param sName   the program's name, for messages
+     *
+     * @return the program's exit code
+     */
+    private int execute(ModuleRepository repo, ModuleStructure module, String sName) {
+        var       opts      = options();
         Connector connector = createConnector(repo, module);
 
         ConstantPool pool = connector.getConstantPool();
@@ -250,6 +294,105 @@ public class Runner extends Launcher<RunnerOptions> {
             log(FATAL, e, "Unhandled exception");
             return 1;  // Unreachable - log(FATAL) throws
         }
+    }
+
+    /**
+     * Run the program under a debugger outside it, as {@code --debug} asks, with a debugger
+     * provider: the one in the jar that the option's {@code agent=<jar>} names, or else one on the
+     * class path, such as javatools' own {@link org.xvm.runtime.debug.DebugAgent}. The debugger is
+     * installed in the program's runtime when its connector is made, before the program starts,
+     * and the jar is closed once the debugging has ended.
+     *
+     * @param options  the options of {@code --debug}
+     * @param repo     the repository of the program's modules
+     * @param module   the program's module
+     * @param sName    the program's name, for messages
+     *
+     * @return the program's exit code, or the errors' if the debugging cannot start
+     */
+    private int debug(String options, ModuleRepository repo, ModuleStructure module, String sName) {
+        if (options().isJit()) {
+            log(ERROR, "--debug is not supported with --jit");
+            return checkErrors("debugger start");
+        }
+        var parts = new ArrayList<>(List.of(options.split(",")));
+        var agent = parts.stream().filter(part -> part.startsWith(AGENT)).findFirst()
+                .map(part -> new File(part.substring(AGENT.length())));
+        parts.removeIf(part -> part.startsWith(AGENT));
+        if (agent.isPresent() && !agent.get().isFile()) {
+            log(ERROR, "--debug names an agent {} that is not a file", quoted(agent.get()));
+            return checkErrors("debugger start");
+        }
+
+        ClassLoader    classes = getClass().getClassLoader();
+        URLClassLoader jar;
+        try {
+            jar = agent.isPresent() ? new URLClassLoader(new URL[] {agent.get().toURI().toURL()}, classes) : null;
+        } catch (MalformedURLException e) {
+            log(ERROR, "--debug names an agent {} that cannot be loaded: {}", quoted(agent.get()), e.getMessage());
+            return checkErrors("debugger start");
+        }
+        try {
+            // the class path's providers come first, javatools' own among them, so the one the jar's
+            // own service file names goes ahead of them, by its name: its class may come from a
+            // class loader above the jar's, so where it was loaded from does not tell
+            Set<String> named;
+            try {
+                named = jar == null ? Set.of() : providerNames(jar);
+            } catch (IOException e) {
+                log(ERROR, "--debug names an agent {} that cannot be read: {}", quoted(agent.get()), e.getMessage());
+                return checkErrors("debugger start");
+            }
+            var providers = ServiceLoader.load(DebuggerProvider.class, jar == null ? classes : jar).stream().toList();
+            var provider  = providers.stream().filter(found -> named.contains(found.type().getName()))
+                    .findFirst().or(() -> providers.stream().findFirst()).map(ServiceLoader.Provider::get);
+            if (provider.isEmpty()) {
+                log(ERROR, "--debug needs a debugger provider; name its jar with agent=<jar>, or put it on the class path");
+                return checkErrors("debugger start");
+            }
+            DebuggerProvider.Session session;
+            try {
+                session = provider.get().start(String.join(",", parts), repo, module);
+            } catch (IOException | IllegalArgumentException e) {
+                log(ERROR, "The debugger could not start: {}", e.getMessage());
+                return checkErrors("debugger start");
+            }
+            try (session) {
+                m_debug = session;
+                int code = execute(repo, module, sName);
+                session.ended(code);
+                return code;
+            } finally {
+                m_debug = null;
+            }
+        } finally {
+            if (jar != null) {
+                try {
+                    jar.close();
+                } catch (IOException e) {
+                    log(WARNING, e, "The agent {} could not be closed", quoted(agent.get()));
+                }
+            }
+        }
+    }
+
+    /**
+     * @return the debugger providers that the agent jar's own service file names, read as
+     *         {@code ServiceLoader} reads it: a class name on each line, after which {@code #}
+     *         starts a comment
+     */
+    private static Set<String> providerNames(URLClassLoader jar) throws IOException {
+        Set<String> names = new LinkedHashSet<>();
+        var         files = jar.findResources("META-INF/services/" + DebuggerProvider.class.getName());
+        while (files.hasMoreElements()) {
+            try (var in = files.nextElement().openStream()) {
+                new String(in.readAllBytes(), StandardCharsets.UTF_8).lines()
+                        .map(line -> line.replaceFirst("#.*", "").strip())
+                        .filter(name -> !name.isEmpty())
+                        .forEach(names::add);
+            }
+        }
+        return names;
     }
 
     /**
@@ -337,14 +480,23 @@ public class Runner extends Launcher<RunnerOptions> {
 
     /**
      * Create the base Connector instance (with or without JIT).
-     * Helper method for subclasses that need to customize connector setup.
+     * Helper method for subclasses that need to customize connector setup. An interpreted one
+     * gets the debugger that {@code --debug} started, before the program starts.
      *
      * @param repo  the module repository
      * @param isJit true to use JIT connector, false for interpreted
      * @return a new Connector (not yet started)
      */
     protected Connector createBaseConnector(ModuleRepository repo, boolean isJit) {
-        return isJit ? new JitConnector(repo) : new InterpreterConnector(repo);
+        if (isJit) {
+            return new JitConnector(repo);
+        }
+        var connector = new InterpreterConnector(repo);
+        var debug     = m_debug;
+        if (debug != null) {
+            connector.setDebugger(debug.debugger());
+        }
+        return connector;
     }
 
     @Override

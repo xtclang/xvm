@@ -1,0 +1,1417 @@
+package org.xvm.lsp.server
+
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.DiagnosticCapabilities
+import org.eclipse.lsp4j.DiagnosticWorkspaceCapabilities
+import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidChangeWatchedFilesParams
+import org.eclipse.lsp4j.DidCloseTextDocumentParams
+import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DocumentDiagnosticParams
+import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.FileChangeType
+import org.eclipse.lsp4j.FileEvent
+import org.eclipse.lsp4j.HoverParams
+import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.PreviousResultId
+import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.ServerCapabilities
+import org.eclipse.lsp4j.TextDocumentClientCapabilities
+import org.eclipse.lsp4j.TextDocumentContentChangeEvent
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceDocumentDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceFullDocumentDiagnosticReport
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import org.eclipse.lsp4j.services.LanguageClient
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.mock
+import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.adapter.CompilerTestSupport
+import org.xvm.lsp.adapter.hookedAdapter
+import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibrarySources
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.util.ProcessDirectories
+import org.xvm.lsp.util.UserTemporary
+import org.xvm.testing.awaitUntil
+import org.xvm.testing.awaited
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * Checks negotiated document/workspace pull diagnostics alongside the push fallback. Closed roots can be
+ * diagnosed without becoming editor buffers, and result IDs must reflect repaired or changed analyses.
+ */
+class XdkPullDiagnosticsTest {
+    @TempDir lateinit var directory: Path
+
+    @Test
+    fun `opening closed rename consumers and editing their dependency keeps analyses available`() {
+        val sources =
+            mapOf(
+                "Contracts" to "module Contracts { interface Mapper<T> { T map(T value); } }",
+                "Uses" to
+                    "module Uses { package api import Contracts; class Mapper implements api.Mapper<String> { @Override String map(String value) = value; } String run(api.Mapper<String> mapper) = mapper.map(\"a\"); }",
+                "Dormant" to
+                    "module Dormant { package api import Contracts; String run(api.Mapper<String> mapper) = mapper.map(\"b\"); }",
+            )
+        val uris =
+            sources.mapValues { (name, source) ->
+                directory
+                    .resolve("$name.x")
+                    .toFile()
+                    .apply { writeText(source) }
+                    .toPath()
+                    .toUri()
+                    .toString()
+            }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                uris.map { (name, uri) ->
+                    XdkSourceModule(
+                        name,
+                        uri,
+                        if (name == "Contracts") emptySet() else setOf("Contracts"),
+                    )
+                },
+            )
+            session.open(uris.getValue("Contracts"), sources.getValue("Contracts"), 1)
+            assertThat(session.pull(uris.getValue("Contracts")).left.items).isEmpty()
+            sources
+                .filterKeys { it != "Contracts" }
+                .forEach { (name, source) ->
+                    session.open(uris.getValue(name), source, 1)
+                }
+            sources.forEach { (name, source) ->
+                session.change(uris.getValue(name), source.replace("map(", "convert("), 2)
+            }
+            uris.values.forEach { uri ->
+                assertThat(session.pull(uri).left.items).isEmpty()
+                assertThat(
+                    session.server.textDocumentService
+                        .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                        .awaited(),
+                ).isNotEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `callers in a module's other files, opened one after another, pull the error that their callee's edit made`() {
+        CompilerTestSupport.configure()
+        Path
+            .of(System.getProperty("xtc.composite.root"), "lang/test-fixtures/tour/cardGame/src/main/x")
+            .toFile()
+            .copyRecursively(directory.toFile())
+
+        // the files' real paths, as an editor has them: the temporary directory can be a link
+        fun uri(name: String) =
+            directory
+                .resolve(name)
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
+
+        fun text(name: String) = directory.resolve(name).toFile().readText()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("cardGame", uri("cardGame.x"))))
+            val player = "cardGame/Player.x"
+            session.open(uri(player), text(player), 1)
+            assertThat(session.pull(uri(player)).left.items).isEmpty()
+            val changed =
+                text(player).replace(
+                    "static Boolean cardMatches(Card card1, Card card2)",
+                    "static Boolean cardMatches(Card card1, Card card2, Boolean strict)",
+                )
+            session.change(uri(player), changed, 2)
+            assertThat(
+                session
+                    .pull(uri(player))
+                    .left.items
+                    .map { it.message.left },
+            ).anyMatch { "cardMatches" in it }
+            // as the IntelliJ tour opens them: one, its pull, then the next
+            listOf("cardGame/FirstMatch.x", "cardGame/SaveEights.x").forEach { caller ->
+                session.open(uri(caller), text(caller), 1)
+                assertThat(
+                    session
+                        .pull(uri(caller))
+                        .left.items
+                        .map { it.message.left },
+                ).`as`(caller)
+                    .anyMatch { "cardMatches" in it }
+            }
+        }
+    }
+
+    @Test
+    fun `pull negotiates one channel and unchanged reports become full after repair`() {
+        Session().use { session ->
+            assertThat(session.capabilities.diagnosticProvider.identifier).isEqualTo("xtc")
+            session.open(URI, BROKEN, 1)
+            val first = session.pull(URI).left
+            assertThat(first.items).isNotEmpty()
+            assertThat(first.resultId).isNotBlank()
+            assertThat(session.pull(URI, first.resultId).right.resultId).isEqualTo(first.resultId)
+            session.change(URI, VALID, 2)
+            val repaired = session.pull(URI, first.resultId).left
+            assertThat(repaired.items).isEmpty()
+            assertThat(repaired.resultId).isNotEqualTo(first.resultId)
+            awaitUntil { session.refreshes.get() > 0 }
+            assertThat(session.published).isEmpty()
+        }
+    }
+
+    @Test
+    fun `unnegotiated clients keep push diagnostics and cannot pull`() {
+        Session(pull = false).use { session ->
+            assertThat(session.capabilities.diagnosticProvider).isNull()
+            session.open(URI, BROKEN, 1)
+            awaitUntil { session.published.isNotEmpty() }
+            assertThat(session.published.last().diagnostics).isNotEmpty()
+            assertThatThrownBy { session.pull(URI) }.hasMessageContaining("not negotiated")
+            assertThat(session.refreshes.get()).isZero()
+        }
+    }
+
+    @Test
+    fun `a library source that the debugger opens has no diagnostics, pushed or pulled, and keeps its outline`() {
+        CompilerTestSupport.configure()
+        // the read-only copy that a stack frame in the XDK names, which the client opens as a step goes into it: on its
+        // own its file include, $/implicit.x, and its imports of the library's own names do not resolve
+        val copy = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", "ecstasy/reflect/TypeSystem.x")))
+        val uri = copy.toUri().toString()
+        val text = copy.toFile().readText()
+
+        // its compile on its own still gives its outline
+        fun outline(session: Session) =
+            assertThat(
+                session.server.textDocumentService
+                    .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                    .awaited(),
+            ).isNotEmpty()
+        Session(pull = false).use { session ->
+            session.open(uri, text, 1)
+            awaitUntil("the open library source's diagnostics are published") { session.published.any { it.uri == uri } }
+            assertThat(session.published.filter { it.uri == uri }.flatMap { it.diagnostics }).isEmpty()
+            outline(session)
+        }
+        Session().use { session ->
+            session.open(uri, text, 1)
+            assertThat(session.pull(uri).left.items).isEmpty()
+            assertThat(
+                session
+                    .workspace()
+                    .items
+                    .mapNotNull { it.left }
+                    .filter { it.uri == uri }
+                    .flatMap { it.items },
+            ).isEmpty()
+            assertThat(session.published.filter { it.uri == uri }.flatMap { it.diagnostics }).isEmpty()
+            outline(session)
+        }
+    }
+
+    @Test
+    fun `a library source that a compile named before the debugger opens it keeps its outline`() {
+        CompilerTestSupport.configure()
+        val copy = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", "ecstasy/reflect/TypeTemplate.x")))
+        val uri = copy.toUri().toString()
+        // a compile that names one of its declarations parses it, as navigation into it does: any earlier compile in
+        // the server's process, which is how CI's run of the case above met it
+        XdkAdapter().use {
+            it.compile("file:///Named.x", "module Named { import ecstasy.reflect.TypeTemplate; Int count(TypeTemplate type) = 0; }")
+        }
+        assertThat(XdkLibrarySources.owns(uri)).isTrue()
+        Session(pull = false).use { session ->
+            session.open(uri, copy.toFile().readText(), 1)
+            awaitUntil("the open library source's diagnostics are published") { session.published.any { it.uri == uri } }
+            assertThat(session.published.filter { it.uri == uri }.flatMap { it.diagnostics }).isEmpty()
+            assertThat(
+                session.server.textDocumentService
+                    .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                    .awaited(),
+            ).isNotEmpty()
+        }
+    }
+
+    @Test
+    fun `a document's pull waits for no library source's compile, as the one that Go to Definition into the library starts`() {
+        CompilerTestSupport.configure()
+        // as X5 does: an edit's parse error, then Go to Definition opens a library source, whose compile holds, as the
+        // whole library's took 14 to over 30 seconds in the playbook's container
+        val copy = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", "ecstasy/text/String.x")))
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val uri = file.toURI().toString()
+        val hold = AtomicBoolean()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val held = AtomicBoolean()
+        val adapter =
+            hookedAdapter {
+                if (hold.compareAndSet(true, false)) {
+                    held.set(true)
+                    entered.countDown()
+                    try {
+                        check(release.awaited())
+                    } finally {
+                        held.set(false)
+                    }
+                }
+            }
+        try {
+            Session(adapter = adapter).use { session ->
+                session.open(uri, VALID, 1)
+                assertThat(session.pull(uri).left.items).isEmpty()
+                session.change(uri, BROKEN, 2)
+                val broken = session.pull(uri).left.items
+                assertThat(broken).isNotEmpty()
+                hold.set(true)
+                session.open(copy.toUri().toString(), copy.toFile().readText(), 1)
+                assertThat(entered.awaited()).isTrue()
+                // the document's own analysis has its error, and the library's reports on none of the workspace's documents
+                assertThat(session.pull(uri).left.items).isEqualTo(broken)
+                assertThat(held).describedAs("the library's compile holds as the document's pull answers").isTrue()
+                // let the library's compile go before the server closes, which waits for its compiles to end
+                release.countDown()
+            }
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
+    fun `another server's copy of a library source, opened again after a restart, is this server's copy as its folder goes`() {
+        CompilerTestSupport.configure()
+        // this server's copies first: the folder that its first copy makes deletes the folders that no server holds
+        val own = Path.of(requireNotNull(XdkLibrarySources.file("ecstasy.xtclang.org", ARRAY)))
+        // the copies of the server before a restart, which holds their folder until its exit deletes it, while the client
+        // opens them again here; as the library compiles as a whole, that folder has the module file too
+        val other = ProcessDirectories.create("xtc-library-sources-")
+        val copy = other.resolve(ARRAY)
+        Files.createDirectories(copy.parent)
+        Files.copy(own, copy)
+        Files.writeString(other.resolve("ecstasy.x"), "module ecstasy.xtclang.org {}\n")
+        val copyUri =
+            copy
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
+        // a file of that folder whose source this server does not have, as a server of another build may have written
+        val unknownUri =
+            other
+                .resolve("ecstasy/Unknown.x")
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
+        val text = own.toFile().readText()
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        val uri = file.canonicalFile.toURI().toString()
+        // the compiles wait until the folder is gone, as the server before deletes it while this one starts
+        val debounces = Executors.newSingleThreadExecutor()
+        val held = mutableListOf<FutureTask<Unit>>()
+        var holding = true
+        val support = EmbeddingSupport.instance()
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors -> support.compileModule(sources, repository, errors) },
+                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+                { work ->
+                    FutureTask(work, Unit).also { task -> synchronized(held) { if (holding) held += task else debounces.execute(task) } }
+                },
+            )
+        try {
+            Session(adapter = adapter).use { session ->
+                session.open(uri, BROKEN, 1)
+                session.open(copyUri, text, 1)
+                session.open(unknownUri, "class Unknown {}", 1)
+                assertThat(ProcessDirectories.delete(other)).isTrue()
+                synchronized(held) {
+                    holding = false
+                    held.forEach(debounces::execute)
+                }
+
+                // the module's error is pulled, and the copy's library reports none: compiled as a module of its own, the
+                // copy's root was the other folder's ecstasy.x, which its compile did not find, and each pull failed
+                assertThat(
+                    session
+                        .pull(uri)
+                        .left.items
+                        .map { it.message.left },
+                ).anyMatch { "missing" in it }
+                assertThat(session.pull(copyUri).left.items).isEmpty()
+                assertThat(
+                    session
+                        .workspace()
+                        .items
+                        .mapNotNull { it.left }
+                        .filter { it.uri == copyUri }
+                        .flatMap { it.items },
+                ).isEmpty()
+                // the copy is this server's copy of the source, compiled with this server's library, and answers as it
+                assertThat(XdkLibrarySources.isCopy(copyUri)).isTrue()
+                assertThat(adapter.analysisScope(copyUri)).isEqualTo(adapter.analysisScope(own.toUri().toString()))
+                val row = text.lines().indexOfFirst { it.startsWith("class Array<") }
+                val hover =
+                    session.server.textDocumentService
+                        .hover(HoverParams(TextDocumentIdentifier(copyUri), Position(row, "class ".length)))
+                        .awaited()
+                assertThat(hover?.contents?.right?.value).contains("Array")
+                // and the file without a source is a library document too, which no compile takes as a module's
+                assertThat(session.pull(unknownUri).left.items).isEmpty()
+            }
+        } finally {
+            debounces.shutdownNow()
+            if (Files.exists(other)) ProcessDirectories.delete(other)
+        }
+    }
+
+    @Test
+    fun `a module in a temporary folder whose name only starts as a server's folder of copies keeps its errors`() {
+        CompilerTestSupport.configure()
+        // a server's folder is the prefix and the digits that Files.createTempDirectory adds; this one is a user's
+        val folder = UserTemporary.current.root().resolve("xtc-library-sources-myapp")
+        Files.createDirectories(folder)
+        val file = folder.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        val uri = file.canonicalFile.toURI().toString()
+        try {
+            assertThat(XdkLibrarySources.owns(uri)).isFalse()
+            Session().use { session ->
+                session.open(uri, BROKEN, 1)
+                assertThat(
+                    session
+                        .pull(uri)
+                        .left.items
+                        .map { it.message.left },
+                ).anyMatch { "missing" in it }
+            }
+        } finally {
+            UserTemporary.current.delete(folder)
+        }
+    }
+
+    @Test
+    fun `an open document whose analysis fails pulls that error, and fails no other document's pull`() {
+        CompilerTestSupport.configure()
+        val support = EmbeddingSupport.instance()
+        // the compile of one module throws, as one did that read the files of a folder as it went
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    check(sources.sourceFile.name != "Failing.x") { "the compile failed" }
+                    support.compileModule(sources, repository, errors)
+                },
+                { source, _, cursor, repository, errors -> support.analyzeIncomplete(source, cursor, repository, errors) },
+            )
+        val failing = directory.resolve("Failing.x").toFile().apply { writeText(FAILING) }
+        val failingUri = failing.canonicalFile.toURI().toString()
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        val uri = file.canonicalFile.toURI().toString()
+        Session(adapter = adapter).use { session ->
+            session.open(failingUri, FAILING, 1)
+            session.open(uri, BROKEN, 1)
+
+            assertThat(
+                session
+                    .pull(uri)
+                    .left.items
+                    .map { it.message.left },
+            ).anyMatch { "missing" in it }
+            assertThat(
+                session
+                    .pull(failingUri)
+                    .left.items
+                    .map { it.code.left },
+            ).containsExactly("ANALYSIS-FAILED")
+            val workspace = session.workspace().items.mapNotNull { it.left }
+            assertThat(workspace.filter { it.uri == failingUri }.flatMap { it.items }.map { it.code.left })
+                .containsExactly("ANALYSIS-FAILED")
+            assertThat(workspace.filter { it.uri == uri }.flatMap { it.items }).isNotEmpty()
+        }
+    }
+
+    @Test
+    fun `workspace pull diagnoses unopened roots and does not install editor buffers`() {
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(XdkSourceModule("Pull", file.toURI().toString())),
+            )
+            val first =
+                session
+                    .workspace()
+                    .items
+                    .single()
+                    .left
+            assertThat(first.items).isNotEmpty()
+            assertThat(first.version == null).isTrue()
+            assertThat(session.adapter.getCachedResult(first.uri)).isNull()
+            assertThat(
+                session
+                    .workspace(listOf(PreviousResultId(first.uri, first.resultId)))
+                    .items
+                    .single()
+                    .right
+                    .resultId,
+            ).isEqualTo(first.resultId)
+            // No watcher notification: a read-only query still recaptures and compares disk inputs.
+            file.writeText(VALID)
+            val fixed =
+                session
+                    .workspace(listOf(PreviousResultId(first.uri, first.resultId)))
+                    .items
+                    .single()
+                    .left
+            assertThat(fixed.items).isEmpty()
+            assertThat(fixed.resultId).isNotEqualTo(first.resultId)
+        }
+    }
+
+    @Test
+    fun `idle workspace pulls of an unchanged graph lex, parse and queue nothing after the first`() {
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {\n    static Int value() = Util.ONE;\n}\n") }
+        directory.resolve("Lib").toFile().mkdirs()
+        val util = directory.resolve("Lib/Util.x").toFile().apply { writeText("class Util {\n    static Int ONE = 1;\n}\n") }
+        val app =
+            directory.resolve("App.x").toFile().apply {
+                writeText("module App {\n    package lib import Lib;\n\n    Int run() = lib.value() / 1;\n}\n")
+            }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Lib", lib.toURI().toString()),
+                    XdkSourceModule("App", app.toURI().toString(), setOf("Lib")),
+                ),
+            )
+            val first = session.workspace().items.map { it.left }
+            assertThat(first.map { it.uri.substringAfterLast('/') }).containsExactlyInAnyOrder("App.x", "Lib.x", "Util.x")
+            val previous = first.map { PreviousResultId(it.uri, it.resultId) }
+            TraceRecording().use { trace ->
+                // VS Code pulls again every 2 s with the result IDs it has, and IntelliJ's closed-file bridge with none
+                repeat(3) {
+                    assertThat(session.workspace(previous).items.map { it.right.resultId })
+                        .containsExactlyInAnyOrderElementsOf(first.map { it.resultId })
+                }
+                repeat(2) {
+                    assertThat(session.workspace().items.map { it.left }).containsExactlyInAnyOrderElementsOf(first)
+                }
+                assertThat(trace.count("Lexer.lex(presentation)")).isZero()
+                assertThat(trace.count("Parser.parseModuleName(snapshot)")).isZero()
+                assertThat(trace.count("project-DIAGNOSTICS", "submitted")).isZero()
+            }
+            // a change on disk with no watcher notification still reaches the next pull, which then queues its job
+            TraceRecording().use { trace ->
+                util.writeText("class Util {\n    static Int ONE = missing;\n}\n")
+                val changed =
+                    session
+                        .workspace(previous)
+                        .items
+                        .filter { it.isLeft }
+                        .map { it.left }
+                assertThat(changed.single { it.uri.endsWith("Util.x") }.items).isNotEmpty()
+                assertThat(trace.count("project-DIAGNOSTICS", "submitted")).isEqualTo(1)
+            }
+        }
+    }
+
+    @Test
+    fun `a closed test module's tests are listed from the workspace pull's compile, and follow its file`() {
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {\n    Int one() = 1;\n}\n") }
+        val tests = directory.resolve("LibTest.x").toFile().apply { writeText(libTest("adds")) }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Lib", lib.toURI().toString()),
+                    XdkSourceModule("LibTest", tests.toURI().toString(), setOf("Lib")),
+                ),
+            )
+
+            fun listed() =
+                session.server
+                    .tests()
+                    .awaited()
+                    .single()
+                    .tests.children
+                    .map { it.selector to it.location?.startLine }
+
+            val first =
+                TraceRecording().use { trace ->
+                    // no editor has had its file open: the listing compiles the graph, as a workspace pull would, once
+                    assertThat(listed()).containsExactly("adds" to 4)
+                    val pulled = session.workspace().items.map { it.left }
+                    assertThat(trace.count("EmbeddingSupport.compileModule(tree)")).isEqualTo(2)
+                    pulled
+                }
+            assertThat(session.adapter.getCachedResult(tests.toURI().toString())).isNull()
+
+            // a test added to the closed file, which no watcher reports, is in the next listing, and the next pull
+            // reports the file anew, with the same diagnostics, which is what a client lists its tests again on
+            tests.writeText(libTest("adds", "subtracts"))
+            assertThat(listed()).containsExactly("adds" to 4, "subtracts" to 9)
+            val again = session.workspace(first.map { PreviousResultId(it.uri, it.resultId) }).items
+            val changed = again.single { it.isLeft && it.left.uri.endsWith("LibTest.x") }.left
+            assertThat(changed.items).isEmpty()
+            assertThat(changed.resultId).isNotEqualTo(first.single { it.uri.endsWith("LibTest.x") }.resultId)
+            assertThat(again.single { it.isRight }.right.uri).endsWith("Lib.x")
+        }
+    }
+
+    @Test
+    fun `a test added to an open test module makes its own pull a new report, with the same diagnostics`() {
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {\n    Int one() = 1;\n}\n") }
+        val tests = directory.resolve("LibTest.x").toFile().apply { writeText(libTest("adds")) }
+        val uri = tests.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Lib", lib.toURI().toString()),
+                    XdkSourceModule("LibTest", uri, setOf("Lib")),
+                ),
+            )
+            session.open(uri, libTest("adds"), 1)
+            val first = session.pull(uri).left
+            assertThat(first.items).isEmpty()
+            assertThat(session.pull(uri, first.resultId).right.resultId).isEqualTo(first.resultId)
+
+            // VS Code takes an open document's report from its own pulls, not from the workspace's: the test the edit
+            // adds, which leaves the diagnostics as they were, must make that report new, which is what the Testing
+            // view lists its tests again on (the VS Code tour's "A new test", run-ETDL65)
+            session.change(uri, libTest("adds", "subtracts"), 2)
+            val added = session.pull(uri, first.resultId).left
+            assertThat(added.items).isEmpty()
+            assertThat(added.resultId).isNotEqualTo(first.resultId)
+            assertThat(session.pull(uri, added.resultId).right.resultId).isEqualTo(added.resultId)
+            assertThat(
+                session.server
+                    .tests()
+                    .awaited()
+                    .single { it.module == "LibTest" }
+                    .tests.children
+                    .map { it.selector },
+            ).containsExactly("adds", "subtracts")
+        }
+    }
+
+    @Test
+    fun `a listing of the tests whose compile a document's close retires answers from the compile after it`() {
+        CompilerTestSupport.configure()
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {\n    Int one() = 1;\n}\n") }
+        val tests = directory.resolve("LibTest.x").toFile().apply { writeText(libTest("adds")) }
+        val uri = lib.toURI().toString()
+        // the graph's compile for the listing holds until the close has come, which VS Code's X342 had in run-Rf8Tt8
+        val hold = AtomicBoolean()
+        val held = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> EmbeddingSupport.instance().compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    if (hold.compareAndSet(true, false)) {
+                        held.countDown()
+                        check(release.awaited())
+                    }
+                    EmbeddingSupport.instance().compileModule(sources, repository, errors)
+                },
+                { _, _, _, _, _ -> error("No cursor analysis") },
+            )
+        try {
+            Session(adapter = adapter).use { session ->
+                session.server.replaceCompilerSourceModules(
+                    listOf(
+                        XdkSourceModule("Lib", uri),
+                        XdkSourceModule("LibTest", tests.toURI().toString(), setOf("Lib")),
+                    ),
+                )
+                session.open(uri, lib.readText(), 1)
+                assertThat(session.pull(uri).left.items).isEmpty()
+                hold.set(true)
+                val listing = session.server.tests()
+                assertThat(held.awaited()).isTrue()
+                assertThat(adapter.compilerQueueSnapshot()["runningJobs"].toString()).contains("project-DIAGNOSTICS")
+                // the close retires the graph's compile, which the listing waits for and which no client canceled
+                session.server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri)))
+                release.countDown()
+                assertThat(
+                    listing
+                        .awaited()
+                        .single()
+                        .tests.children
+                        .map { it.selector },
+                ).containsExactly("adds")
+            }
+        } finally {
+            release.countDown()
+        }
+    }
+
+    /** A test module of Lib's with a test, each [names]d, that calls it. */
+    private fun libTest(vararg names: String) =
+        "module LibTest {\n    package lib import Lib;\n" +
+            names.joinToString("") { "\n    @Test\n    void $it() {\n        assert lib.one() == 1;\n    }\n" } + "}\n"
+
+    /** The trace's [event]s of [operation]: the compiler's lexes and parses, and the compiler queue's jobs. */
+    private fun TraceRecording.count(
+        operation: String,
+        event: String = "start",
+    ): Int = entries.count { it["operation"]?.asString == operation && it["event"]?.asString == event }
+
+    @Test
+    fun `closed member pulls retain standalone module errors and follow watched file changes`() {
+        val root = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val members = directory.resolve("Pull").toFile().apply { mkdirs() }
+        val member = members.resolve("Bad.x")
+        val uri = member.toPath().toUri().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(emptyList())
+            session.open(root.toURI().toString(), VALID, 1)
+            assertThat(session.pull(root.toURI().toString()).left.items).isEmpty()
+
+            fun watched(type: FileChangeType) =
+                session.server.workspaceService.didChangeWatchedFiles(
+                    DidChangeWatchedFilesParams(listOf(FileEvent(uri, type))),
+                )
+
+            member.writeText("class Bad extends Missing {}")
+            watched(FileChangeType.Created)
+            val broken = session.pull(uri).left
+            assertThat(broken.items).isNotEmpty()
+            assertThat(
+                broken.items
+                    .first()
+                    .range.start.character,
+            ).isEqualTo(18)
+            assertThat(session.pull(member.toURI().toString(), broken.resultId).right.resultId)
+                .isEqualTo(broken.resultId)
+
+            member.writeText("class Bad {}")
+            watched(FileChangeType.Changed)
+            val repaired = session.pull(uri, broken.resultId).left
+            assertThat(repaired.items).isEmpty()
+            assertThat(repaired.resultId).isNotEqualTo(broken.resultId)
+
+            member.writeText("class Bad extends Missing {}")
+            watched(FileChangeType.Changed)
+            val brokenAgain = session.pull(uri).left
+            assertThat(brokenAgain.items).isNotEmpty()
+            assertThat(member.delete()).isTrue()
+            watched(FileChangeType.Deleted)
+            assertThat(session.pull(uri, brokenAgain.resultId).left.items).isEmpty()
+        }
+    }
+
+    /**
+     * The workspace's pull as VS Code's client asks it, with the result ID of each document's report before, which [ids]
+     * keeps: its full reports.
+     */
+    private fun Session.workspacePull(ids: MutableMap<String, String>): List<WorkspaceFullDocumentDiagnosticReport> {
+        val items = workspace(ids.map { PreviousResultId(it.key, it.value) }).items
+        items.forEach { if (it.isLeft) ids[it.left.uri] = it.left.resultId else ids[it.right.uri] = it.right.resultId }
+        return items.mapNotNull { it.left }
+    }
+
+    /** What [session]'s watcher reports of [file], as VS Code's does once it watches the file's folder. */
+    private fun watched(
+        session: Session,
+        file: File,
+        type: FileChangeType,
+    ) = session.server.workspaceService.didChangeWatchedFiles(
+        DidChangeWatchedFilesParams(listOf(FileEvent(file.toURI().toString(), type))),
+    )
+
+    @Test
+    fun `a closed member of the graph comes and goes in the workspace's pull as the watcher reports it created and deleted`() {
+        val workspace = directory.toRealPath().toFile()
+        val root = workspace.resolve("Project.x").apply { writeText("module Project {}\n") }
+        workspace.resolve("Project/Member.x").apply { parentFile.mkdirs() }.writeText("class Member {}\n")
+        val bad = workspace.resolve("Project/Bad.x")
+        Session().use { session ->
+            session.server.changeCompilerWorkspaceFolders(listOf(workspace.toURI().toString()), emptyList())
+            session.server.discoveryIdle().awaited()
+            session.open(root.toURI().toString(), root.readText(), 1)
+            val ids = mutableMapOf<String, String>()
+            assertThat(session.workspacePull(ids).map { it.uri }).noneMatch { it.endsWith("/Bad.x") }
+
+            bad.writeText("class Bad extends Missing {}")
+            watched(session, bad, FileChangeType.Created)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Bad.x") }.items).isNotEmpty()
+            assertThat(bad.delete()).isTrue()
+            watched(session, bad, FileChangeType.Deleted)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Bad.x") }.items).isEmpty()
+        }
+    }
+
+    /**
+     * The module Project in [folder] of [workspace], its root with a member, and returns its root: two of them side by
+     * side, as the editor playbooks' cases have them, leave the graph.
+     */
+    private fun project(
+        workspace: File,
+        folder: String,
+    ): File {
+        workspace.resolve("$folder/Project/Child.x").apply { parentFile.mkdirs() }.writeText("class Child extends Base<String> {}\n")
+        return workspace.resolve("$folder/Project.x").apply { writeText("module Project {\n    class Base<T> {}\n}\n") }
+    }
+
+    @Test
+    fun `a closed member of a module outside the graph, one of two of a name, comes and goes with the watcher's events`() {
+        val workspace = directory.toRealPath().toFile()
+        val first = project(workspace, "First")
+        val second = project(workspace, "Second")
+        val child = workspace.resolve("First/Project/Child.x")
+        val bad = workspace.resolve("Second/Project/Bad.x")
+
+        fun Session.didClose(file: File) =
+            server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(file.toURI().toString())))
+        Session().use { session ->
+            session.server.changeCompilerWorkspaceFolders(listOf(workspace.toURI().toString()), emptyList())
+            session.server.discoveryIdle().awaited()
+            val ids = mutableMapOf<String, String>()
+            // the first module's root and a member that an edit breaks, mends and closes, as the case before does
+            session.open(first.toURI().toString(), first.readText(), 1)
+            session.workspacePull(ids)
+            session.open(child.toURI().toString(), child.readText(), 1)
+            session.change(child.toURI().toString(), "class Child extends Missing {}\n", 2)
+            assertThat(session.pull(child.toURI().toString()).left.items).isNotEmpty()
+            session.change(child.toURI().toString(), child.readText(), 3)
+            session.didClose(child)
+            session.workspacePull(ids)
+            session.didClose(first)
+            session.workspacePull(ids)
+
+            session.open(second.toURI().toString(), second.readText(), 1)
+            session.workspacePull(ids)
+            bad.writeText("class Bad extends Missing {}")
+            watched(session, bad, FileChangeType.Created)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Second/Project/Bad.x") }.items).isNotEmpty()
+            assertThat(bad.delete()).isTrue()
+            watched(session, bad, FileChangeType.Deleted)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Second/Project/Bad.x") }.items).isEmpty()
+        }
+    }
+
+    @Test
+    fun `a closed member of a module outside the graph goes from the workspace's pull once deleted, though no watcher reports it`() {
+        val workspace = directory.toRealPath().toFile()
+        project(workspace, "First")
+        Session().use { session ->
+            session.server.changeCompilerWorkspaceFolders(listOf(workspace.toURI().toString()), emptyList())
+            session.server.discoveryIdle().awaited()
+            val ids = mutableMapOf<String, String>()
+            session.workspacePull(ids)
+
+            // as X27 made its folder with its module in one go, of which VS Code's watcher reported only the folder
+            val second = project(workspace, "Second")
+            val bad = workspace.resolve("Second/Project/Bad.x").apply { writeText("class Bad extends Missing {}") }
+            watched(session, workspace.resolve("Second"), FileChangeType.Created)
+            session.server.discoveryIdle().awaited()
+            session.open(second.toURI().toString(), second.readText(), 1)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Second/Project/Bad.x") }.items).isNotEmpty()
+            // nor anything in the module's folder since, as it watched none of it
+            assertThat(bad.delete()).isTrue()
+            assertThat(session.workspacePull(ids).singleOrNull { it.uri.endsWith("/Second/Project/Bad.x") }?.items)
+                .describedAs("the deleted Bad.x's report, which a pull that reads nothing again leaves unchanged")
+                .isEmpty()
+        }
+    }
+
+    @Test
+    fun `an open member deleted with no watcher's event starts no compile or revision at each workspace pull`() {
+        val workspace = directory.toRealPath().toFile()
+        project(workspace, "First")
+        val second = project(workspace, "Second")
+        val child = workspace.resolve("Second/Project/Child.x")
+        // a closed member with a byte order mark, which the analysis reads without it
+        workspace.resolve("Second/Project/Marked.x").writeText("\uFEFFclass Marked {}\n")
+        Session().use { session ->
+            session.server.changeCompilerWorkspaceFolders(listOf(workspace.toURI().toString()), emptyList())
+            session.server.discoveryIdle().awaited()
+            session.open(second.toURI().toString(), second.readText(), 1)
+            session.open(child.toURI().toString(), child.readText(), 1)
+            val ids = mutableMapOf<String, String>()
+            session.workspacePull(ids)
+            // as VS Code keeps the tab of a file deleted in its Explorer, with no didClose, and no watcher's event came: the
+            // module's analysis reads the open document, as it did
+            assertThat(child.delete()).isTrue()
+            val documents = session.server.textDocumentService as XtcTextDocumentService
+            val compiles = session.adapter.compilerQueueSnapshot()["submittedTotal"]
+            val revision = documents.diagnosticRevisions
+            session.workspacePull(ids)
+            session.workspacePull(ids)
+            assertThat(session.adapter.compilerQueueSnapshot()["submittedTotal"]).describedAs("the compiles submitted").isEqualTo(compiles)
+            assertThat(documents.diagnosticRevisions).describedAs("the diagnostics' revision").isEqualTo(revision)
+
+            // a change that it found, which no analysis has read since, it finds again only once an analysis has read others
+            workspace.resolve("Second/Project/Bad.x").writeText("class Bad {}")
+            assertThat(session.adapter.unwatchedChanges()).hasSize(1)
+            assertThat(session.adapter.unwatchedChanges()).isEmpty()
+        }
+    }
+
+    @Test
+    fun `related closed documents and failed dependencies survive document pull`() {
+        val lib =
+            directory.resolve("Library.x").toFile().apply {
+                writeText("module Library { MissingType value; }")
+            }
+        val app =
+            directory.resolve("Pull.x").toFile().apply {
+                writeText("module Pull { package lib import Library; }")
+            }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", lib.toURI().toString()),
+                    XdkSourceModule("Pull", app.toURI().toString(), setOf("Library")),
+                ),
+            )
+            session.open(app.toURI().toString(), app.readText(), 7)
+            val report = session.pull(app.toURI().toString()).left
+            assertThat(report.items.map { it.code.left }).contains("DEPENDENCY-FAILED")
+            assertThat(
+                report.relatedDocuments
+                    .getValue(lib.canonicalFile.toURI().toString())
+                    .left
+                    .items,
+            ).isNotEmpty()
+            val workspace = session.workspace().items.map { it.left }
+            assertThat(workspace.single { it.uri == app.toURI().toString() }.version).isEqualTo(7)
+            assertThat(
+                workspace.single { it.uri == app.toURI().toString() }.items.map { it.code.left },
+            ).contains("DEPENDENCY-FAILED")
+            assertThat(
+                workspace.single { it.uri == lib.canonicalFile.toURI().toString() }.version ==
+                    null,
+            ).isTrue()
+        }
+    }
+
+    @Test
+    fun `a query traces its start and one end with its phases' times and its outcome, and at DEBUG each phase and its answer`() {
+        val app = directory.resolve("Pull.x").toFile().apply { writeText("module Pull { MissingType value; }") }
+        val uri = app.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("Pull", uri)))
+            session.open(uri, app.readText(), 1)
+            TraceRecording().use { trace ->
+                session.pull(uri)
+
+                fun query() = trace.entries.filter { it["kind"].asString == "lsp-query" && it["uri"]?.asString == uri }
+                // a query's end is written once its result is complete, which the pull's caller can hear of first
+                awaitUntil("the pull's query has ended in the trace") { query().any { it["event"].asString == "end" } }
+                val query = query()
+                assertThat(query.map { it["event"].asString }).containsExactly("start", "end")
+                val end = query.last()
+                assertThat(end["outcome"].asString).isEqualTo("completed")
+                val phases = listOf("analysisReadyMs", "startedMs", "backendCompleteMs", "convertedMs").map { end[it].asDouble }
+                assertThat(phases).isSorted().allSatisfy { assertThat(it).isBetween(0.0, end["elapsedMs"].asDouble) }
+                assertThat(end.has("report")).isFalse()
+            }
+            // at DEBUG, each phase is an event too, as it is reached, so that a query that never ends shows how far it came
+            TraceRecording(details = true).use { trace ->
+                session.pull(uri)
+
+                fun query() = trace.entries.filter { it["kind"].asString == "lsp-query" && it["uri"]?.asString == uri }
+                awaitUntil("the pull's query has ended in the trace") { query().any { it["event"].asString == "end" } }
+                assertThat(query().map { it["event"].asString })
+                    .containsExactly("start", "analysis-ready", "started", "backend-complete", "converted", "end")
+                assertThat(query().last().has("report")).isTrue()
+            }
+        }
+    }
+
+    @Test
+    fun `the trace says what each pull answered, by result IDs and item codes, once for answers that repeat`() {
+        val lib =
+            directory.resolve("Library.x").toFile().apply {
+                writeText("module Library { MissingType value; }")
+            }
+        val app =
+            directory.resolve("Pull.x").toFile().apply {
+                writeText("module Pull { package lib import Library; }")
+            }
+        val uri = app.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", lib.toURI().toString()),
+                    XdkSourceModule("Pull", uri, setOf("Library")),
+                ),
+            )
+            session.open(uri, app.readText(), 1)
+            TraceRecording(details = true).use { trace ->
+                val full = session.pull(uri).left
+                session.pull(uri, full.resultId)
+                session.pull(uri, full.resultId)
+                session.workspace()
+                session.workspace()
+
+                // in the order the queries came, by their spans' IDs, which they take as they start: a query's end,
+                // which has its answer, is written once its result is complete, which the pull's caller can hear of
+                // first, so the next query's end can come before it
+                fun answers() =
+                    trace.entries
+                        .filter { it["kind"].asString == "lsp-query" && it["event"].asString == "end" }
+                        .sortedBy { it["id"].asLong }
+                awaitUntil("the pulls' queries have ended in the trace") { answers().size == 5 }
+                val answers = answers()
+                val pulls = answers.filter { it["operation"].asString == "textDocument/diagnostic" }
+                assertThat(pulls).hasSize(3)
+                pulls[0].let {
+                    assertThat(it["report"].asString).isEqualTo("full")
+                    assertThat(it["resultId"].asString).isEqualTo(full.resultId)
+                    assertThat(it["items"].toString()).contains("Error:DEPENDENCY-FAILED")
+                    // a related document's report by its result ID and number of items
+                    val related = full.relatedDocuments.getValue(lib.canonicalFile.toURI().toString()).left
+                    assertThat(it["related"].asJsonObject[lib.canonicalFile.toURI().toString()].asString)
+                        .isEqualTo("${related.resultId}, ${related.items.size} items")
+                }
+                pulls[1].let {
+                    assertThat(it["previousResultId"].asString).isEqualTo(full.resultId)
+                    assertThat(it["report"].asString).isEqualTo("unchanged")
+                }
+                // an answer that repeats the document's previous one says only what it was asked
+                pulls[2].let {
+                    assertThat(it["previousResultId"].asString).isEqualTo(full.resultId)
+                    assertThat(it["answer"].asString).isEqualTo("repeated")
+                    assertThat(it.has("report")).isFalse()
+                }
+                val workspace = answers.filter { it["operation"].asString == "workspace/diagnostic" }
+                assertThat(workspace).hasSize(2)
+                assertThat(workspace[0]["full"].asJsonObject[uri].asString).contains("Error:DEPENDENCY-FAILED")
+                assertThat(workspace[1]["answer"].asString).isEqualTo("repeated")
+                assertThat(workspace[1].has("full")).isFalse()
+                // the items' codes, never their messages, which can quote the source
+                assertThat(answers.toString()).doesNotContain("Dependencies unavailable", "MissingType")
+            }
+        }
+    }
+
+    @Test
+    fun `closing an unsaved buffer restores disk diagnostics and removed roots clear old reports`() {
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val uri = file.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("Pull", uri)))
+            session.open(uri, BROKEN, 3)
+            val broken = session.pull(uri).left
+            session.server.textDocumentService.didClose(
+                DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
+            )
+            assertThat(session.pull(uri, broken.resultId).left.items).isEmpty()
+            file.writeText(BROKEN)
+            val previous =
+                session
+                    .workspace()
+                    .items
+                    .single()
+                    .left
+            session.server.replaceCompilerSourceModules(emptyList())
+            val removed =
+                session
+                    .workspace(listOf(PreviousResultId(uri, previous.resultId)))
+                    .items
+                    .single()
+                    .left
+            assertThat(removed.items).isEmpty()
+            assertThat(removed.version == null).isTrue()
+        }
+    }
+
+    @Test
+    fun `a deleted file whose diagnostics came from its own pulls is cleared by the next workspace pull`() {
+        val root = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val member =
+            directory.resolve("Pull/Bad.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Bad extends Missing {}")
+            }
+        val uri = member.toURI().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("Pull", root.toURI().toString())))
+            session.open(uri, member.readText(), 1)
+            assertThat(session.pull(uri).left.items).isNotEmpty()
+            // as VS Code's client closes a document: one last pull of it, then it forgets the document's result IDs,
+            // so that a later workspace pull names none for it
+            session.server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri)))
+            assertThat(session.pull(uri).left.items).isNotEmpty()
+            assertThat(member.delete()).isTrue()
+            session.server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(listOf(FileEvent(uri, FileChangeType.Deleted))),
+            )
+            val reports =
+                session
+                    .workspace()
+                    .items
+                    .map { it.left }
+                    .filter { it.uri.endsWith("/Bad.x") }
+            assertThat(reports).describedAs("the deleted file's report").hasSize(1)
+            assertThat(reports.single().items).isEmpty()
+            // once: the report is the client's last of it
+            assertThat(
+                session
+                    .workspace()
+                    .items
+                    .map { it.left?.uri ?: it.right.uri },
+            ).noneMatch { it.endsWith("/Bad.x") }
+        }
+    }
+
+    @Test
+    fun `a moved file's old report is cleared once, and is unchanged in the pulls that name its result ID`() {
+        val root = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val member =
+            directory.resolve("Pull/Bad.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Bad extends Missing {}")
+            }
+        val moved = File(member.parentFile, "Moved.x")
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(listOf(XdkSourceModule("Pull", root.toURI().toString())))
+            // as VS Code's client pulls: each pull names every document's result ID that the reports so far gave it
+            val known = linkedMapOf<String, String>()
+
+            fun pull() =
+                session.workspace(known.map { (uri, id) -> PreviousResultId(uri, id) }).items.onEach { report ->
+                    report.left?.let { known[it.uri] = it.resultId }
+                    report.right?.let { known[it.uri] = it.resultId }
+                }
+
+            fun full(
+                items: List<WorkspaceDocumentDiagnosticReport>,
+                name: String,
+            ) = items.mapNotNull { it.left }.filter { it.uri.endsWith("/$name") }
+            assertThat(full(pull(), "Bad.x").single().items).isNotEmpty()
+            // as VS Code renames a closed file: the file moves, and the watcher reports the old one deleted and the
+            // new one created
+            assertThat(member.renameTo(moved)).isTrue()
+            session.server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(
+                    listOf(
+                        FileEvent(member.toURI().toString(), FileChangeType.Deleted),
+                        FileEvent(moved.toURI().toString(), FileChangeType.Created),
+                    ),
+                ),
+            )
+            val cleared = full(pull(), "Bad.x")
+            assertThat(cleared).describedAs("the old file's report").hasSize(1)
+            assertThat(cleared.single().items).isEmpty()
+            // the client names the cleared report's result ID in each pull after it: nothing has changed since
+            repeat(3) { round ->
+                assertThat(pull().filter { it.isLeft }.map { it.left.uri })
+                    .describedAs("the full reports of pull ${round + 3}")
+                    .isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `result identifiers are scoped to a document and a server`() {
+        val id =
+            Session().use { session ->
+                session.open(URI, VALID, 1)
+                val first = session.pull(URI).left.resultId
+                assertThat(session.pull("file:///Elsewhere.x", first).isLeft).isTrue()
+                first
+            }
+        Session(related = false).use { session ->
+            session.open(URI, VALID, 1)
+            val report = session.pull(URI, id).left
+            assertThat(report.resultId).isNotEqualTo(id)
+            assertThat(report.relatedDocuments).isNull()
+            assertThatThrownBy { session.pull(URI, identifier = "unknown") }
+                .hasMessageContaining("not negotiated")
+        }
+    }
+
+    @Test
+    fun `a member that opens with its file's text, which changed on disk since the analyses read it, analyzes its consumers again`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val lib = directory.resolve("Lib.x").toFile().apply { writeText("module Lib {}\n") }
+        val part =
+            directory.resolve("Lib/Part.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Part {}\n")
+            }
+        val appText = "module App { package lib import Lib; lib.Part make() = new lib.Part(); }\n"
+        val app = directory.resolve("App.x").toFile().apply { writeText(appText) }
+        Session().use { session ->
+            val appUri = app.toURI().toString()
+            session.server.replaceCompilerSourceModules(
+                listOf(XdkSourceModule("Lib", lib.toURI().toString()), XdkSourceModule("App", appUri, setOf("Lib"))),
+            )
+            session.open(appUri, appText, 1)
+            assertThat(session.pull(appUri).left.items).isEmpty()
+            // Part changes on disk, as a checkout changes it, and an editor opens it with its new text before any watcher
+            // reports the change: App's analysis read Part as it was, and its use of Part no longer compiles
+            part.writeText("class Piece {}\n")
+            session.open(part.toURI().toString(), part.readText(), 1)
+            assertThat(session.pull(appUri).left.items).isNotEmpty()
+        }
+    }
+
+    @Test
+    fun `a pull is overtaken by the open of a member with its file's text, whose analysis it did not wait for`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val nodeText = "module Node0 { class Box {} }\n"
+        val consumerText = "module Consumer { package lib import Node0; class Child extends lib.Box {} }\n"
+        val node = directory.resolve("Node0.x").toFile().apply { writeText(nodeText) }
+        val consumer = directory.resolve("Consumer.x").toFile().apply { writeText(consumerText) }
+        val holdNode = AtomicBoolean()
+        val holdConsumer = AtomicBoolean()
+        val nodeEntered = CountDownLatch(1)
+        val nodeRelease = CountDownLatch(1)
+        val consumerRelease = CountDownLatch(1)
+        val adapter =
+            hookedAdapter { sources ->
+                if (holdNode.compareAndSet(true, false)) {
+                    nodeEntered.countDown()
+                    check(nodeRelease.awaited())
+                } else if (holdConsumer.get() && "Consumer" in (sources.qualifiedModuleName ?: sources.fileName)) {
+                    check(consumerRelease.awaited())
+                }
+            }
+        try {
+            Session(adapter = adapter).use { session ->
+                val nodeUri = node.toURI().toString()
+                val consumerUri = consumer.toURI().toString()
+                session.server.replaceCompilerSourceModules(
+                    listOf(XdkSourceModule("Node0", nodeUri), XdkSourceModule("Consumer", consumerUri, setOf("Node0"))),
+                )
+                session.open(nodeUri, nodeText, 1)
+                session.pull(nodeUri)
+                holdNode.set(true)
+                holdConsumer.set(true)
+                // Node0's analysis of its edit holds, and its pull waits for it
+                session.change(nodeUri, "module Node0 { class Box {} class Lid {} }\n", 2)
+                assertThat(nodeEntered.awaited()).isTrue()
+                val pull = session.server.textDocumentService.diagnostic(DocumentDiagnosticParams(TextDocumentIdentifier(nodeUri)))
+                // a member opens with its file's text, whose compile will hold: the pull, which answers under the lock,
+                // joined its analysis, which it did not wait for, and held every request and notification until it ended
+                session.open(consumerUri, consumerText, 1)
+                nodeRelease.countDown()
+                // it answers while Consumer's compile still holds, which ends only after the test
+                assertThatThrownBy { pull.awaited() }
+                    .rootCause()
+                    .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                        assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                    }
+            }
+        } finally {
+            nodeRelease.countDown()
+            consumerRelease.countDown()
+        }
+    }
+
+    @Test
+    fun `a document's pull whose analysis the compiler retires is canceled, and the workspace's answers ContentModified`() {
+        CompilerTestSupport.configure()
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val adapter =
+            XdkAdapter { source, errors ->
+                started.countDown()
+                check(release.awaited())
+                EmbeddingSupport.instance().compileModule(source, null, errors)
+            }
+        try {
+            Session(adapter = adapter).use { session ->
+                session.open(URI, VALID, 1)
+                assertThat(started.awaited()).isTrue()
+                val document = session.server.textDocumentService.diagnostic(DocumentDiagnosticParams(TextDocumentIdentifier(URI)))
+                val workspace = session.server.workspaceDiagnostics(WorkspaceDiagnosticParams(emptyList()))
+                // the compiler retires the analysis that both pulls wait for, as it retires the analyses of the modules
+                // that a change elsewhere affects, and the server has no other
+                session.adapter.compileAsync(URI, VALID)
+                release.countDown()
+                // VS Code's client pulls a document's diagnostics again after a cancellation, where it takes ContentModified
+                // as an empty report; the workspace's it pulls again after ContentModified, where it counts a cancellation
+                // as a failure, and after the sixth it pulls no more
+                assertThatThrownBy { document.awaited() }
+                assertThat(document.isCancelled).isTrue()
+                assertThatThrownBy { workspace.awaited() }
+                    .rootCause()
+                    .isInstanceOfSatisfying(ResponseErrorException::class.java) {
+                        assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                    }
+            }
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
+    fun `canceling a waiting pull preserves shared compilation and an edit rejects late reports`() {
+        CompilerTestSupport.configure()
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val adapter =
+            XdkAdapter { source, errors ->
+                started.countDown()
+                check(release.awaited())
+                EmbeddingSupport.instance().compileModule(source, null, errors)
+            }
+        try {
+            Session(adapter = adapter).use { session ->
+                session.open(URI, BROKEN, 1)
+                assertThat(started.awaited()).isTrue()
+                val params = DocumentDiagnosticParams(TextDocumentIdentifier(URI))
+                val canceled = session.server.textDocumentService.diagnostic(params)
+                assertThat(canceled.cancel(false)).isTrue()
+                val stale = session.server.textDocumentService.diagnostic(params)
+                session.change(URI, VALID, 2)
+                release.countDown()
+                assertThatThrownBy { stale.awaited() }
+                    .hasMessageContaining("The text of Pull.x changed")
+                assertThat(session.pull(URI).left.items).isEmpty()
+                assertThat(canceled.isCancelled).isTrue()
+            }
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
+    fun `closed document pulls preserve error ranges across equivalent file URI spellings`() {
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(XdkSourceModule("Pull", file.toURI().toString())),
+            )
+            val first = session.pull(file.toPath().toUri().toString()).left
+            assertThat(first.items).isNotEmpty()
+            assertThat(
+                first.items
+                    .first()
+                    .range.start.character,
+            ).isEqualTo(BROKEN.indexOf("missing"))
+            assertThat(first.items.first().relatedInformation).isNull()
+            val second = session.pull(file.canonicalFile.toURI().toString(), first.resultId)
+            assertThat(second.right.resultId).isEqualTo(first.resultId)
+        }
+    }
+
+    /** Negotiates pull capabilities and records push reports and refreshes for comparison. */
+    private class Session(
+        pull: Boolean = true,
+        related: Boolean = true,
+        val adapter: XdkAdapter = XdkAdapter(),
+    ) : AutoCloseable {
+        val server = XtcLanguageServer(adapter)
+        val published = CopyOnWriteArrayList<PublishDiagnosticsParams>()
+        val refreshes = AtomicInteger()
+        val capabilities: org.eclipse.lsp4j.ServerCapabilities
+
+        init {
+            val client = mock(LanguageClient::class.java)
+            doAnswer {
+                published += it.getArgument<PublishDiagnosticsParams>(0)
+                null
+            }.`when`(client)
+                .publishDiagnostics(any())
+            doAnswer {
+                refreshes.incrementAndGet()
+                CompletableFuture.completedFuture<Void>(null)
+            }.`when`(client)
+                .refreshDiagnostics()
+            server.connect(client)
+            capabilities =
+                server
+                    .initialize(
+                        InitializeParams().apply {
+                            capabilities =
+                                ClientCapabilities().apply {
+                                    textDocument =
+                                        TextDocumentClientCapabilities().apply {
+                                            if (pull) {
+                                                diagnostic =
+                                                    DiagnosticCapabilities().apply {
+                                                        relatedDocumentSupport = related
+                                                    }
+                                            }
+                                        }
+                                    workspace =
+                                        WorkspaceClientCapabilities().apply {
+                                            diagnostics =
+                                                DiagnosticWorkspaceCapabilities().apply {
+                                                    refreshSupport = true
+                                                }
+                                        }
+                                }
+                        },
+                    ).awaited()
+                    .capabilities
+            server.initialized(InitializedParams())
+        }
+
+        fun open(
+            uri: String,
+            text: String,
+            version: Int,
+        ) = server.textDocumentService.didOpen(
+            DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", version, text)),
+        )
+
+        fun change(
+            uri: String,
+            text: String,
+            version: Int,
+        ) = server.textDocumentService.didChange(
+            DidChangeTextDocumentParams(
+                VersionedTextDocumentIdentifier(uri, version),
+                listOf(TextDocumentContentChangeEvent(text)),
+            ),
+        )
+
+        fun pull(
+            uri: String,
+            previous: String? = null,
+            identifier: String? = null,
+        ) = server.textDocumentService
+            .diagnostic(
+                DocumentDiagnosticParams(TextDocumentIdentifier(uri)).apply {
+                    previousResultId = previous
+                    this.identifier = identifier
+                },
+            ).awaited()
+
+        fun workspace(previous: List<PreviousResultId> = emptyList()) =
+            server.workspaceService.diagnostic(WorkspaceDiagnosticParams(previous)).awaited()
+
+        override fun close() = server.close()
+    }
+
+    private companion object {
+        const val URI = "file:///Pull.x"
+        const val VALID = "module Pull { Int run() = 1; }"
+        const val BROKEN = "module Pull { Int run() = missing; }"
+        const val ARRAY = "ecstasy/collections/Array.x"
+        const val FAILING = "module Failing { Int run() = 1; }"
+    }
+}

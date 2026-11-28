@@ -18,14 +18,12 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -40,8 +38,12 @@ import org.xvm.compiler.ast.StatementBlock.RootContext;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
+
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A method declaration.
@@ -130,6 +132,11 @@ public class MethodDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /** @return the written documentation text, or null when no documentation comment is present */
+    public String getDocumentation() {
+        return TypeCompositionStatement.extractDocumentation(doc);
+    }
+
     /**
      * @return true iff this statement represents a constructor
      */
@@ -207,7 +214,7 @@ public class MethodDeclarationStatement
     /**
      * @return the simple name for this statement
      */
-    private String getName() {
+    public String getName() {
         if (name != null) {
             return name.getValueText();
         }
@@ -216,6 +223,24 @@ public class MethodDeclarationStatement
         return struct == null
                 ? "???"
                 : struct.getName();
+    }
+
+    /**
+     * @return the declared name token, or null for an implicit method without a source name
+     */
+    public Token getNameToken() {
+        return name;
+    }
+
+    /**
+     * The written return values, each with its type and its name, if it has one. The method's
+     * structure holds them in the same order, after the Boolean of a conditional return.
+     *
+     * @return the written return values, or null when the declaration writes none, as for a
+     *         constructor or a property's shorthand method
+     */
+    public List<Parameter> getReturns() {
+        return returns;
     }
 
     @Override
@@ -253,9 +278,9 @@ public class MethodDeclarationStatement
             return null;
         }
 
-        Statement stmtFirst = list.get(0);
+        Statement stmtFirst = list.getFirst();
         if (stmtFirst instanceof ReturnStatement stmtRet && stmtRet.exprs.size() == 1) {
-            return stmtRet.exprs.get(0);
+            return stmtRet.exprs.getFirst();
         }
 
         return null;
@@ -361,8 +386,8 @@ public class MethodDeclarationStatement
                 if (fValidator) {
                     if (modifiers != null && !modifiers.isEmpty()) {
                         Token tok = modifiers.getFirst();
-                        errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, null,
-                            getSource(), tok.getStartPosition(), tok.getEndPosition());
+                        errs.error(Compiler.ILLEGAL_MODIFIER, in(
+                            getSource(), tok.getStartPosition(), tok.getEndPosition()));
                         return;
                     }
                     if (params != null && !params.isEmpty()) {
@@ -443,6 +468,11 @@ public class MethodDeclarationStatement
                 }
 
                 setComponent(method);
+
+                // documentation, which a tool reads from the structure, as from a class's
+                if (doc != null) {
+                    method.setDocumentation(getDocumentation());
+                }
             } else {
                 log(errs, Severity.ERROR, Compiler.METHOD_UNEXPECTED, sName, container);
                 return;
@@ -465,7 +495,7 @@ public class MethodDeclarationStatement
             String    sName     = getName();
             if (container != null && container.isMethodContainer()) {
                 if (returns == null && container instanceof PropertyStructure property) {
-                    // this is a short-hand property method
+                    // this is a shorthand property method
                     List<AnnotationExpression> annotations =
                         ((PropertyDeclarationStatement) getParent().getParent()).annotations;
 
@@ -539,6 +569,13 @@ public class MethodDeclarationStatement
 
         MethodStructure method = (MethodStructure) getComponent();
         if (method != null) {
+            if (typeParams != null) {
+                for (int i = 0; i < typeParams.size(); ++i) {
+                    typeParams.get(i).setResolvedTarget(
+                            method.getParam(i).asTypeParameterConstant(method.getIdentityConstant()));
+                }
+            }
+
             // methods are opaque, so everything inside the curlies can be deferred until we get to the
             // validateContent() stage
             mgr.processChildrenExcept((child) -> child == body);
@@ -586,7 +623,7 @@ public class MethodDeclarationStatement
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
         MethodStructure method = (MethodStructure) getComponent();
-        if (method == null || !catchUpChildren(errs)) {
+        if (method == null || !catchUpChildren(errs, mgr.getInvocationBindings(), mgr.getCursorBindings())) {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
             return;
@@ -725,7 +762,7 @@ public class MethodDeclarationStatement
                     shuffle(atypeInto,  iFound, iNext);
                     shuffle(atypeAnno, iFound, iNext);
 
-                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, ErrorListener.BLACKHOLE)) {
+                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, silent(PROBE))) {
                         fReordered = true;
                         break Validate;
                     }
@@ -891,7 +928,7 @@ public class MethodDeclarationStatement
         if (cDefaults > 0) {
             StatementBlock block = adopt(new StatementBlock(Collections.emptyList()));
 
-            RootContext ctxMethod = new RootContext(block, method);
+            RootContext ctxMethod = new RootContext(block, method, mgr.getInvocationBindings(), mgr.getCursorBindings());
             Context     ctx       = ctxMethod.validatingContext();
 
             int cParamExprs = params.size();
@@ -928,7 +965,7 @@ public class MethodDeclarationStatement
     }
 
     protected void compileBody(StageMgr mgr, MethodStructure method, ErrorListener errs) {
-        if (body != null && !body.compileMethod(method.createCode(), errs)) {
+        if (body != null && !body.compileMethod(method.createCode(), errs, mgr.getInvocationBindings(), mgr.getCursorBindings())) {
             // the compilation has failed; no further progress is possible
             mgr.deferChildren();
         }
@@ -1011,7 +1048,7 @@ public class MethodDeclarationStatement
 
     /**
      * Find a method on the Ref class or any of the annotations that matches the specified
-     * name and parameters of a "short-hand" property method declaration.
+     * name and parameters of a "shorthand" property method declaration.
      *
      * @param property     the property structure
      * @param annotations  the annotations on the property
@@ -1029,7 +1066,7 @@ public class MethodDeclarationStatement
             // no class for "Ref" yet; come back later
             return null;
         }
-        MethodStructure method = findMethod(pool, clzRef, sMethName, params);
+        MethodStructure method = findMethod(clzRef, sMethName, params);
         if (method != null) {
             return method;
         }
@@ -1039,7 +1076,7 @@ public class MethodDeclarationStatement
             // no class for "Var" yet; come back later
             return null;
         }
-        method = findMethod(pool, clzVar, sMethName, params);
+        method = findMethod(clzVar, sMethName, params);
         if (method != null) {
             return method;
         }
@@ -1059,7 +1096,7 @@ public class MethodDeclarationStatement
                     continue;
                 }
 
-                method = findMethod(pool, clzMixin, sMethName, params);
+                method = findMethod(clzMixin, sMethName, params);
                 if (method != null) {
                     break;
                 }
@@ -1072,15 +1109,13 @@ public class MethodDeclarationStatement
     /**
      * Find a method on the specified ClassStructure that matches the specified name and parameters.
      *
-     * @param pool        the constant pool
      * @param clz         the class structure
      * @param sMethName   the method name
      * @param parameters  the parameters
      *
      * @return the matching method structure
      */
-    protected MethodStructure findMethod(ConstantPool pool, ClassStructure clz,
-            String sMethName, List<Parameter> parameters) {
+    protected MethodStructure findMethod(ClassStructure clz, String sMethName, List<Parameter> parameters) {
         Component child = clz.getChild(sMethName);
         if (child instanceof MultiMethodStructure mms) {
             for (Component c : mms.children()) {
@@ -1100,15 +1135,6 @@ public class MethodDeclarationStatement
 
     // ----- debugging assistance ------------------------------------------------------------------
 
-    /**
-     * Used only for setting up conditional break points.
-     */
-    private String path() {
-        MethodConstant  idMethod = ((MethodStructure) getComponent()).getIdentityConstant();
-        ModuleStructure module   = (ModuleStructure) idMethod.getModuleConstant().getComponent();
-        return module.getName() + "/" + idMethod.getPathString();
-    }
-
     public String toSignatureString() {
         if (name == null) {
             MethodStructure struct = (MethodStructure) getComponent();
@@ -1119,19 +1145,7 @@ public class MethodDeclarationStatement
 
         var sb = new StringBuilder();
 
-        if (modifiers != null) {
-            for (Token token : modifiers) {
-                sb.append(token.getId().TEXT)
-                        .append(' ');
-            }
-        }
-
-        if (annotations != null) {
-            for (AnnotationExpression annotation : annotations) {
-                sb.append(annotation)
-                        .append(' ');
-            }
-        }
+        appendDeclarationPrefix(sb, modifiers, annotations);
 
         if (typeParams != null) {
             sb.append('<')
@@ -1146,7 +1160,7 @@ public class MethodDeclarationStatement
         } else if (returns.isEmpty()) {
             sb.append("void ");
         } else if (returns.size() == 1) {
-            sb.append(returns.get(0))
+            sb.append(returns.getFirst())
                     .append(' ');
         } else {
             sb.append(" (")
@@ -1185,13 +1199,7 @@ public class MethodDeclarationStatement
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        if (doc != null) {
-            String sDoc = String.valueOf(doc.getValue());
-            if (sDoc.length() > 100) {
-                sDoc = sDoc.substring(0, 97) + "...";
-            }
-            appendString(sb.append("/*"), sDoc).append("*/\n");
-        }
+        appendDocComment(sb, doc);
 
         sb.append(toSignatureString());
 

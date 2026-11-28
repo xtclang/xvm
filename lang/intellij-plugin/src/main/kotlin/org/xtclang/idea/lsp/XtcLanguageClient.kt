@@ -1,61 +1,258 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.application.options.CodeStyle
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.psi.codeStyle.CodeStyleSettingsListener
+import com.intellij.util.concurrency.SequentialTaskExecutor
+import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
-import org.eclipse.lsp4j.ConfigurationItem
-import org.eclipse.lsp4j.ConfigurationParams
+import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
+import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.xtclang.idea.XtcIntelliJLanguage
+import org.xtclang.idea.dap.DebugSessions
+import org.xtclang.idea.dap.DebugTasks
+import org.xtclang.idea.run.EmbeddedRunSessions
+import org.xtclang.idea.run.RunGutterIcons
+import org.xtclang.idea.run.TestGutterIcons
+import org.xtclang.idea.run.XtcBuildSettings
+import org.xvm.lsp.protocol.ConfigurationSections
+import org.xvm.lsp.protocol.DebugMessageParams
+import org.xvm.lsp.protocol.DebugTaskParams
+import org.xvm.lsp.protocol.DebugTaskResult
+import org.xvm.lsp.protocol.GradleProjectsParams
+import org.xvm.lsp.protocol.ReplacedLibrariesParams
+import org.xvm.lsp.protocol.RunExitedParams
+import org.xvm.lsp.protocol.RunOutputParams
+import org.xvm.lsp.protocol.TestEventParams
+import org.xvm.lsp.protocol.XtcClientProtocol
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Custom LSP language client that bridges IntelliJ Code Style settings to the XTC LSP server.
+ * Refreshes compiler semantic caches and bridges Ecstasy Code Style settings. Compiler source
+ * modules use LSP4IJ's server Configuration settings under `xtc.compiler`; the base client owns
+ * section lookup, change notifications and listener disposal.
  *
  * When the LSP server sends a `workspace/configuration` request for section `"xtc.formatting"`,
- * this client reads the current IntelliJ Code Style settings for the Ecstasy language and
- * returns them as a JSON-compatible map. This implements Phase 3 of the formatting plan:
- * IntelliJ Code Style settings flow to the LSP server as a fallback when no `xtc-format.toml`
- * config file is present.
- *
- * Resolution chain (highest priority first):
- * 1. `xtc-format.toml` in the project tree (not yet implemented)
- * 2. IntelliJ Code Style settings (this client provides them)
- * 3. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
- * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
+ * this client reads the current IntelliJ Code Style settings for the Ecstasy language and returns
+ * them as a JSON-compatible map. Code Style changes refresh the server's immutable formatting
+ * snapshot. Compiler mode uses the right margin for bounded expression/list wrapping;
+ * `xtc-format.toml` is not implemented.
  */
 class XtcLanguageClient(
     project: Project,
-) : LanguageClientImpl(project) {
-    /**
-     * Handle `workspace/configuration` requests from the LSP server.
-     *
-     * The server requests configuration sections after initialization. For each
-     * [ConfigurationItem] with section `"xtc.formatting"`, we return the IntelliJ
-     * Code Style settings for XTC. Unknown sections get `null`.
-     */
-    override fun configuration(params: ConfigurationParams): CompletableFuture<List<Any?>> {
-        logger.info("workspace/configuration: ${params.items.map { it.section }}")
-        val results = params.items.map { item -> resolveConfigSection(item) }
-        return CompletableFuture.completedFuture(results)
+) : LanguageClientImpl(project),
+    XtcClientProtocol {
+    private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
+    private val updateQueued = AtomicBoolean()
+    private val settingsStores =
+        listOf(LanguageServiceSettings.store(null), LanguageServiceSettings.store(project))
+    private val settingsListener =
+        LanguageServerSettingsListener { event ->
+            if (
+                event.languageServerId() == CompilerSettings.SERVER_ID &&
+                event.configurationContentChanged()
+            ) {
+                if (updateQueued.compareAndSet(false, true)) {
+                    ApplicationManager.getApplication().invokeLater {
+                        updateQueued.set(false)
+                        if (!isDisposed && !project.isDisposed) {
+                            val next = LanguageServiceSettings.validated(project)
+                            val before = preferences.getAndSet(next)
+                            if (next.requiresRestart(before)) {
+                                LanguageServiceAccessor
+                                    .getInstance(project)
+                                    .startedServers
+                                    .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
+                                    .forEach { it.restart() }
+                            } else {
+                                if (before.inlayHints != next.inlayHints) refreshInlayHints()
+                                if (before.referenceCodeLens != next.referenceCodeLens) refreshCodeLenses()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    init {
+        settingsStores.forEach { it.addSettingsListener(settingsListener) }
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                CodeStyleSettingsListener.TOPIC,
+                CodeStyleSettingsListener {
+                    if (!isDisposed && !project.isDisposed) triggerChangeConfiguration()
+                },
+            )
+        EditorConfigSwitch.EP_NAME.extensionList.forEach { switch ->
+            switch.onChange(project, this) { if (!isDisposed && !project.isDisposed) triggerChangeConfiguration() }
+        }
     }
 
-    private fun resolveConfigSection(item: ConfigurationItem): Any? =
-        when (item.section) {
-            FORMATTING_SECTION -> {
-                readFormattingSettings()
+    override fun dispose() {
+        settingsStores.forEach { it.removeSettingsListener(settingsListener) }
+        if (!project.isDisposed) {
+            EmbeddedRunSessions.getInstance(project).endAll("The Ecstasy language server stopped")
+            // a project that never debugged has no sessions, and its service is not created while it closes
+            project.getServiceIfCreated(DebugSessions::class.java)?.endAll("The Ecstasy language server stopped, ending the debug session")
+            // as LSP4IJ clears the problem files of the documents it held for the server
+            project.getServiceIfCreated(ProjectErrors::class.java)?.disconnected()
+            // the next server says again which libraries the project's modules replace, why the project builds with
+            // Gradle, and its modules' Gradle projects
+            project.getServiceIfCreated(XtcBuildSettings::class.java)?.let {
+                it.replaced(project, emptyList(), emptyList())
+                it.gradleProjects = emptyMap()
             }
+        }
+        super.dispose()
+    }
 
-            else -> {
-                logger.info("workspace/configuration: unknown section '${item.section}', returning null")
-                null
+    /** Output of an embedded run, for the console registered under its run ID. */
+    override fun runOutput(params: RunOutputParams) {
+        if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).output(params)
+    }
+
+    /** An event of the tests of an embedded run, for the test console registered under its run ID. */
+    override fun testEvent(params: TestEventParams) {
+        if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).tested(params)
+    }
+
+    /**
+     * The bundled libraries this project's own modules replace, and why its folders build and run with Gradle, as one of
+     * them builds with another XDK than the bundled one: either makes the project's builds and runs use Gradle.
+     */
+    override fun replacedLibraries(params: ReplacedLibrariesParams) {
+        if (!project.isDisposed) XtcBuildSettings.getInstance(project).replaced(project, params.libraries, params.reasons.values)
+    }
+
+    /** The Gradle project of each of this project's source modules, from its imported Gradle model, where runs run its tasks. */
+    override fun gradleProjects(params: GradleProjectsParams) {
+        if (!project.isDisposed) XtcBuildSettings.getInstance(project).gradleProjects = params.projects
+    }
+
+    override fun runExited(params: RunExitedParams) {
+        if (!project.isDisposed) EmbeddedRunSessions.getInstance(project).exited(params)
+    }
+
+    /** A DAP message of a debug session, for the process its debugger connects through. */
+    override fun debugMessage(params: DebugMessageParams) {
+        if (!project.isDisposed) DebugSessions.getInstance(project).receive(params)
+    }
+
+    /** Runs a Gradle-mode debug session's module with its Gradle task, and answers once the task has ended. */
+    override fun debugTask(params: DebugTaskParams): CompletableFuture<DebugTaskResult> = DebugTasks.run(project, params)
+
+    /** Once the server has started, record where it logs, which only it can name, for an export after it stops. */
+    override fun handleServerStatusChanged(serverStatus: ServerStatus) {
+        super.handleServerStatusChanged(serverStatus)
+        if (serverStatus == ServerStatus.started && !project.isDisposed) {
+            (languageServer as? XtcServerProtocol)?.languageServiceStatus()?.whenComplete { status, failure ->
+                if (project.isDisposed) return@whenComplete
+                if (failure == null) {
+                    project.getService(ServerSupportLogs::class.java).remember(status)
+                } else if (!isDisposed) {
+                    logger.warn("Could not record the Ecstasy server's log session", failure)
+                }
             }
+        }
+    }
+
+    // Rename/file-operation listeners can hold the IDE write lock while awaiting an LSP reply.
+    // Never acquire a read lock on the transport thread. Use the shared application pool and
+    // preserve notification order without creating a dedicated thread per connection.
+    private val semanticUpdates =
+        SequentialTaskExecutor.createSequentialApplicationPoolExecutor("Ecstasy semantic updates")
+
+    // UP13, by design upstream: LSP4IJ keeps server configuration in its global store and
+    // leaves other sources to clients through createSettings. The Ecstasy project settings
+    // page writes project configuration, so the store that owns the compiler graph wins here.
+    override fun createSettings(): Any? =
+        CompilerBuildModel.settings(
+            project,
+            CompilerSettings
+                .store(project, serverDefinition.id)
+                .getLanguageServerSettings(serverDefinition.id)
+                ?.getLanguageServerConfiguration(project),
+        )
+
+    override fun publishDiagnostics(params: PublishDiagnosticsParams) {
+        semanticUpdate {
+            val file = clientFeatures.findFileByUri(params.uri)
+            super.publishDiagnostics(params)
+            // a publication follows each analysis, which is what decides whether the module can run
+            file?.let {
+                RunGutterIcons.refresh(project, it)
+                TestGutterIcons.refresh(project, it)
+            }
+        }.exceptionally { failure ->
+            if (!isDisposed && !project.isDisposed) {
+                logger.warn("Failed to publish Ecstasy diagnostics", failure)
+            }
+            null
+        }
+    }
+
+    override fun refreshDiagnostics(): CompletableFuture<Void> =
+        semanticUpdate {
+            // IntelliJ pulls diagnostics, so this refresh, not a publication, follows each analysis
+            refreshRunIcons()
+        }.thenCompose {
+            if (isDisposed || project.isDisposed) {
+                CompletableFuture.completedFuture(null)
+            } else {
+                super<LanguageClientImpl>.refreshDiagnostics()
+            }
+        }
+
+    override fun refreshCodeLenses(): CompletableFuture<Void> {
+        refreshRunIcons()
+        return super<LanguageClientImpl>.refreshCodeLenses()
+    }
+
+    /** The gutter Run icons follow the Run lenses, from the same analysis, and the test icons its tests. */
+    private fun refreshRunIcons() =
+        FileEditorManager.getInstance(project).openFiles.forEach {
+            RunGutterIcons.refresh(project, it)
+            TestGutterIcons.refresh(project, it)
+        }
+
+    private fun semanticUpdate(update: () -> Unit): CompletableFuture<Void> =
+        CompletableFuture.runAsync(
+            { if (!isDisposed && !project.isDisposed) update() },
+            semanticUpdates,
+        )
+
+    /**
+     * Specialize editor formatting and reference-lens preferences. Other sections preserve compiler graphs,
+     * null entries for unknown sections and the base client's asynchronous response ordering.
+     */
+    override fun findSettings(section: String?): Any? =
+        when (section) {
+            FORMATTING_SECTION -> readFormattingSettings()
+            ConfigurationSections.CODE_LENS -> mapOf("references" to LanguageServiceSettings.validated(project).referenceCodeLens)
+            else -> super.findSettings(section)
         }
 
     private fun readFormattingSettings(): Map<String, Any> {
         val settings = CodeStyle.getProjectOrDefaultSettings(project)
         val commonSettings = settings.getCommonSettings(XtcIntelliJLanguage)
         val indentOptions = commonSettings.indentOptions
+        // Code Style | General: the EditorConfig switch and the formatter markers, the same for every language
+        val general =
+            mapOf(
+                "editorConfig" to EditorConfigSwitch.enabled(settings),
+                "formatterTagsEnabled" to settings.FORMATTER_TAGS_ENABLED,
+                "formatterOffTag" to settings.FORMATTER_OFF_TAG,
+                "formatterOnTag" to settings.FORMATTER_ON_TAG,
+                "formatterTagsAcceptRegexp" to settings.FORMATTER_TAGS_ACCEPT_REGEXP,
+            )
 
         val config =
             if (indentOptions != null) {
@@ -65,7 +262,8 @@ class XtcLanguageClient(
                     "tabSize" to indentOptions.TAB_SIZE,
                     "insertSpaces" to !indentOptions.USE_TAB_CHARACTER,
                     "maxLineWidth" to commonSettings.RIGHT_MARGIN,
-                )
+                    "wrapComments" to commonSettings.WRAP_COMMENTS,
+                ) + general
             } else {
                 mapOf(
                     "indentSize" to 4,
@@ -73,7 +271,8 @@ class XtcLanguageClient(
                     "tabSize" to 4,
                     "insertSpaces" to true,
                     "maxLineWidth" to 120,
-                )
+                    "wrapComments" to false,
+                ) + general
             }
         logger.info("workspace/configuration: returning formatting config: $config")
         return config
@@ -83,6 +282,6 @@ class XtcLanguageClient(
         private val logger = logger<XtcLanguageClient>()
 
         /** The configuration section name for XTC formatting settings. */
-        const val FORMATTING_SECTION = "xtc.formatting"
+        const val FORMATTING_SECTION = ConfigurationSections.FORMATTING
     }
 }

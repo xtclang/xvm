@@ -121,9 +121,26 @@ public class ParserTest {
     }
 
     @Test
+    public void testPartialAnalysisCannotRecoverPastNestingLimit() {
+        int       cNesting = Parser.MAX_NESTING_DEPTH * 64;
+        ErrorList errlist  = new ErrorList(5);
+        Parser    parser   = Parser.forPartialAnalysis(new Source("""
+                module TestSimple {
+                    void damaged(%sInt%s value) {}
+                    void sibling() {}
+                }
+                """.formatted("List<".repeat(cNesting), ">".repeat(cNesting))), errlist);
+
+        assertThrows(CompilerException.class, parser::parseSource);
+
+        assertEquals(1, errlist.getSeriousErrorCount());
+        assertEquals(Parser.NESTING_TOO_DEEP, errlist.getErrors().getFirst().getCode());
+    }
+
+    @Test
     public void testDeeplyNestedTypeIsReported() {
         // types recurse through their own chain, not through the expression chain. The code is
-        // not asserted here: a type is parsed inside a SafeLookAhead, which discards the errors
+        // not asserted here: a type is parsed inside an Attempt, which discards the errors
         // of an attempt that fails, so what survives is the token error the caller reports
         // instead. What matters is that the parse ends in a CompilerException rather than a
         // StackOverflowError, which assertThrows already pins, since an Error is not a
@@ -166,7 +183,7 @@ public class ParserTest {
         ErrorList errlist = new ErrorList(5);
         Parser    parser  = new Parser(new Source("name \"\\q\""), errlist);
 
-        try (Parser.SafeLookAhead attempt = parser.new SafeLookAhead()) {
+        try (Parser.Attempt attempt = parser.attempt()) {
             assertThrows(CompilerException.class, parser::next);
         }
 

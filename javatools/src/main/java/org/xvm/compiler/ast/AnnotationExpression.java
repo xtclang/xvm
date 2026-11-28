@@ -40,6 +40,9 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A type annotation is used for type annotations with an optional argument list.
  */
@@ -59,6 +62,12 @@ public class AnnotationExpression
         this.m_node    = node;
         this.lStartPos = node.getStartPosition();
         this.lEndPos   = node.getEndPosition();
+    }
+
+    /** Return an independent syntax tree with the same node type. */
+    @Override
+    public AnnotationExpression copyTree() {
+        return (AnnotationExpression) super.copyTree();
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -300,7 +309,7 @@ public class AnnotationExpression
                         if (exprNew instanceof NameExpression exprName &&
                                 exprName.getMeaning() == NameExpression.Meaning.Method) {
                             MethodConstant idMethod = (MethodConstant)
-                                exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+                                exprName.resolveRawArgument(ctx, false, silent(PROBE));
                             method = (MethodStructure) idMethod.getComponent();
                         } else if (exprNew instanceof LambdaExpression exprLambda) {
                             method = exprLambda.getLambda();

@@ -16,8 +16,8 @@ import kotlin.time.measureTimedValue
 /**
  * Unit tests for AST-aware document formatting (`textDocument/formatting`) in [TreeSitterAdapter].
  *
- * Each test provides an XTC source with incorrect indentation and asserts the formatter
- * produces the correctly indented version.
+ * Each test provides an XTC source with incorrect indentation and asserts the formatter produces
+ * the correctly indented version.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -27,7 +27,8 @@ class DocumentFormattingTest {
     private var adapter: TreeSitterAdapter? = null
     private val uriCounter = AtomicInteger(0)
 
-    private val ts: TreeSitterAdapter get() = adapter!!
+    private val ts: TreeSitterAdapter
+        get() = adapter!!
 
     private fun freshUri(): String = "file:///docfmt${uriCounter.incrementAndGet()}.x"
 
@@ -56,14 +57,12 @@ class DocumentFormattingTest {
     // Test helpers
     // ========================================================================
 
-    /**
-     * Compile [input], format the whole document, apply edits, and return the result.
-     */
+    /** Compile [input], format the whole document, apply edits, and return the result. */
     private fun formatWhole(input: String): String {
         val uri = freshUri()
         ts.compile(uri, input)
         val edits = ts.formatDocument(uri, input, defaultOptions)
-        return applyEdits(input, edits)
+        return apply(input, edits)
     }
 
     /**
@@ -82,12 +81,10 @@ class DocumentFormattingTest {
                 end = Position(endLine, 0),
             )
         val edits = ts.formatRange(uri, input, range, defaultOptions)
-        return applyEdits(input, edits)
+        return apply(input, edits)
     }
 
-    /**
-     * Compile [input], format, assert that no edits are returned.
-     */
+    /** Compile [input], format, assert that no edits are returned. */
     private fun assertNoEdits(input: String) {
         val uri = freshUri()
         ts.compile(uri, input)
@@ -96,9 +93,9 @@ class DocumentFormattingTest {
     }
 
     /**
-     * Compile [input], format, and assert the result equals [expected].
-     * Automatically appends `\n` to [expected] if it doesn't already end with one,
-     * since the formatter always ensures a final newline.
+     * Compile [input], format, and assert the result equals [expected]. Automatically appends `\n`
+     * to [expected] if it doesn't already end with one, since the formatter always ensures a final
+     * newline.
      */
     private fun assertFormatsTo(
         input: String,
@@ -107,52 +104,6 @@ class DocumentFormattingTest {
         val result = formatWhole(input)
         val expectedWithNewline = if (expected.endsWith("\n")) expected else expected + "\n"
         assertThat(result).isEqualTo(expectedWithNewline)
-    }
-
-    /**
-     * Apply text edits to source. Edits are applied in reverse order (bottom-to-top,
-     * right-to-left) to preserve positions of earlier edits.
-     */
-    private fun applyEdits(
-        source: String,
-        edits: List<TextEdit>,
-    ): String {
-        if (edits.isEmpty()) return source
-        val lines = source.split("\n").toMutableList()
-
-        // Sort edits in reverse document order so we can apply them without shifting positions.
-        val sorted =
-            edits.sortedWith(
-                compareByDescending<TextEdit> { it.range.start.line }
-                    .thenByDescending { it.range.start.column },
-            )
-
-        for (edit in sorted) {
-            val startLine = edit.range.start.line
-            val startCol = edit.range.start.column
-            val endLine = edit.range.end.line
-            val endCol = edit.range.end.column
-
-            if (startLine == endLine) {
-                // Single-line edit: replace within the line
-                val line = lines[startLine]
-                lines[startLine] = line.substring(0, startCol) + edit.newText + line.substring(endCol)
-            } else {
-                // Multi-line edit: splice lines
-                val prefix = lines[startLine].substring(0, startCol)
-                val suffix = lines[endLine].substring(endCol)
-                val newContent = prefix + edit.newText + suffix
-                val newLines = newContent.split("\n")
-
-                // Remove old lines and insert new ones
-                for (i in endLine downTo startLine) {
-                    lines.removeAt(i)
-                }
-                lines.addAll(startLine, newLines)
-            }
-        }
-
-        return lines.joinToString("\n")
     }
 
     // ========================================================================
@@ -315,7 +266,7 @@ class DocumentFormattingTest {
     @DisplayName("Switch/case indentation")
     inner class SwitchCaseTests {
         @Test
-        @DisplayName("case labels at same indent as switch keyword")
+        @DisplayName("a switch expression's case labels are one level inside it, as in the XDK")
         fun caseLabelsAtSwitchLevel() {
             val input =
                 """
@@ -333,14 +284,12 @@ class DocumentFormattingTest {
             val result = formatWhole(input)
             val lines = result.trimEnd('\n').split("\n")
 
-            val caseLine = lines.firstOrNull { it.trimStart().startsWith("case") }
+            val caseLine = lines.first { it.trimStart().startsWith("case") }
             val switchLine = lines.first { it.trimStart().startsWith("return switch") }
-            if (caseLine != null) {
-                val caseIndent = caseLine.takeWhile { it == ' ' }.length
-                val switchIndent = switchLine.takeWhile { it == ' ' }.length
-                // Case at same indent as the switch, or handled by general depth
-                assertThat(caseIndent).isEqualTo(switchIndent)
-            }
+            val caseIndent = caseLine.takeWhile { it == ' ' }.length
+            val switchIndent = switchLine.takeWhile { it == ' ' }.length
+            // a switch statement's labels align with it instead (SwitchFormattingTest)
+            assertThat(caseIndent).isEqualTo(switchIndent + 4)
         }
     }
 
@@ -514,8 +463,18 @@ class DocumentFormattingTest {
 
             // Default options have insertFinalNewline = true
             val edits = ts.formatDocument(uri, input, defaultOptions)
-            val result = applyEdits(input, edits)
+            val result = apply(input, edits)
             assertThat(result).endsWith("\n")
+        }
+
+        @Test
+        @DisplayName("trimTrailingWhitespace=false keeps a whole document's trailing whitespace")
+        fun keepsTrailingWhitespace() {
+            val input = "module myapp {   \n    class Foo {}  \n}\n"
+            val uri = freshUri()
+            ts.compile(uri, input)
+            val options = FormattingOptions(tabSize = 4, insertSpaces = true, trimTrailingWhitespace = false)
+            assertThat(apply(input, ts.formatDocument(uri, input, options))).isEqualTo(input)
         }
 
         @Test
@@ -532,7 +491,7 @@ class DocumentFormattingTest {
                     insertFinalNewline = false,
                 )
             val edits = ts.formatDocument(uri, input, options)
-            val result = applyEdits(input, edits)
+            val result = apply(input, edits)
 
             // User explicitly opted out of final newline
             assertThat(result).doesNotEndWith("\n")

@@ -1,5 +1,7 @@
 package org.xvm.lsp.server
 
+import com.google.gson.JsonPrimitive
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -8,6 +10,7 @@ import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
 import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeActionTriggerKind
 import org.eclipse.lsp4j.CodeLens
 import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.Command
@@ -21,6 +24,8 @@ import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.DocumentDiagnosticParams
+import org.eclipse.lsp4j.DocumentDiagnosticReport
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.DocumentHighlightParams
@@ -28,8 +33,10 @@ import org.eclipse.lsp4j.DocumentLink
 import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.DocumentRangesFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.Hover
@@ -37,6 +44,15 @@ import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.InlineCompletionItem
+import org.eclipse.lsp4j.InlineCompletionList
+import org.eclipse.lsp4j.InlineCompletionParams
+import org.eclipse.lsp4j.InlineCompletionTriggerKind
+import org.eclipse.lsp4j.InlineValue
+import org.eclipse.lsp4j.InlineValueParams
+import org.eclipse.lsp4j.InlineValueVariableLookup
+import org.eclipse.lsp4j.InsertTextFormat
+import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.LinkedEditingRangeParams
 import org.eclipse.lsp4j.LinkedEditingRanges
 import org.eclipse.lsp4j.Location
@@ -44,28 +60,47 @@ import org.eclipse.lsp4j.LocationLink
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.ParameterInformation
+import org.eclipse.lsp4j.PartialResultParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameDefaultBehavior
 import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.PrepareRenameResult
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameFile
+import org.eclipse.lsp4j.RenameFileOptions
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SemanticTokens
+import org.eclipse.lsp4j.SemanticTokensDelta
+import org.eclipse.lsp4j.SemanticTokensDeltaParams
 import org.eclipse.lsp4j.SemanticTokensParams
+import org.eclipse.lsp4j.SemanticTokensRangeParams
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.TextDocumentEdit
+import org.eclipse.lsp4j.TextDocumentPositionAndWorkDoneProgressAndPartialResultParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.TypeDefinitionParams
 import org.eclipse.lsp4j.TypeHierarchyItem
 import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WillSaveTextDocumentParams
+import org.eclipse.lsp4j.WorkDoneProgressParams
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceDiagnosticReportPartialResult
 import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.WorkspaceSymbol
+import org.eclipse.lsp4j.WorkspaceSymbolLocation
+import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.Either3
@@ -74,27 +109,56 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.AdapterCapability
+import org.xvm.lsp.adapter.CodeActionCompiles
+import org.xvm.lsp.adapter.CodeLensCommand
+import org.xvm.lsp.adapter.FormattingConfig
+import org.xvm.lsp.adapter.InlineCompletionContext
+import org.xvm.lsp.adapter.RenameRefused
+import org.xvm.lsp.adapter.mapCancellable
+import org.xvm.lsp.adapter.mapFailureCancellable
+import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkRenameProposal
+import org.xvm.lsp.adapter.xdk.XdkSources
+import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fmt
 import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
+import org.xvm.lsp.protocol.RenameProposal
+import org.xvm.lsp.protocol.RenameScope
+import org.xvm.lsp.protocol.ServerProperties
+import org.xvm.lsp.protocol.SourceGraphReplacement
+import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.lsp.util.snapshot
+import java.io.File
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
-import org.xvm.lsp.adapter.CallHierarchyIncomingCall as AdapterCallHierarchyIncomingCall
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
-import org.xvm.lsp.adapter.CallHierarchyOutgoingCall as AdapterCallHierarchyOutgoingCall
+import org.xvm.lsp.adapter.CodeAction.CodeActionKind as AdapterCodeActionKind
+import org.xvm.lsp.adapter.CodeLens as AdapterCodeLens
 import org.xvm.lsp.adapter.CompletionItem as AdapterCompletionItem
+import org.xvm.lsp.adapter.DocumentLink as AdapterDocumentLink
 import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
 import org.xvm.lsp.adapter.SelectionRange as AdapterSelectionRange
+import org.xvm.lsp.adapter.TextEdit as AdapterTextEdit
 import org.xvm.lsp.adapter.TypeHierarchyItem as AdapterTypeHierarchyItem
+import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
+import org.xvm.lsp.model.Location as AdapterLocation
+import org.xvm.lsp.model.Location as DiagnosticLocation
 
 /**
- * Text document service for Ecstasy Language Server.
- * Handles document synchronization and language features.
+ * Text document service for Ecstasy Language Server. Handles document synchronization and language
+ * features.
  */
 class XtcTextDocumentService(
     private val server: XtcLanguageServer,
@@ -102,92 +166,1429 @@ class XtcTextDocumentService(
 ) : TextDocumentService {
     companion object {
         private val logger = LoggerFactory.getLogger(XtcTextDocumentService::class.java)
+
+        /**
+         * A test seam: the name of the file whose reference searches wait until they are canceled, from the system
+         * property `xtc.lsp.test.holdReferences`. The IntelliJ playbook's X145 sets it, so that no machine finishes
+         * a search before the case shows its progress and cancels it. Unset, as outside that case, every search runs.
+         */
+        private val heldReferences: String? = System.getProperty(ServerProperties.HOLD_REFERENCES)
+
+        /** The fields of a query's traced answer that say what it was asked, which a repeated answer keeps. */
+        private val ASKED = setOf("previousResultId")
+
+        /** What a query that the server's shutdown ends answers. */
+        private const val SHUT_DOWN = "The language server shut down"
+
+        /** What a query that a check of its own finds overtaken answers, when no change since it started says why. */
+        private const val OVERTAKEN = "A document that it reads changed"
+
+        /** What a query whose work the compiler retired answers, when no change since it started retired any. */
+        private const val NEWER_REQUEST = "A newer request took the place of its work"
+
+        /** What a code action's command that names no action's title answers, as a resolve handle that expired does. */
+        private const val UNTITLED = "The code action's command names no title; request a fresh list"
+
+        /** What a code action whose edit the client can't apply answers, as of versioned edits or file renames. */
+        private const val UNAPPLIED = "The action's edit is not one that the client applies"
+
+        /** What a query that a change of the workspace's build overtook answers: its build model or its libraries. */
+        internal const val BUILD_CHANGED = "The workspace's build changed"
+
+        /** What a query that a change of the workspace's module graph overtook answers, as its files are discovered. */
+        internal const val GRAPH_CHANGED = "The workspace's module graph changed"
+
+        /** What a query that a change of the libraries that the host gives the workspace overtook answers. */
+        internal const val LIBRARIES_CHANGED = "The workspace's libraries changed"
     }
 
-    // ConcurrentHashMap is required because didOpen/didChange/didClose write on the LSP
-    // message thread, while documentSymbol, formatting, documentLink, etc. read from
-    // CompletableFuture.supplyAsync handlers on the ForkJoinPool.
-    private val openDocuments = ConcurrentHashMap<String, String>()
+    /** Open-buffer revision and the analysis future associated with that exact content and module scope. */
+    private class Document(
+        val content: String,
+        val version: Int,
+        val scope: String,
+        val analysis: CompletableFuture<CompilationResult>,
+        /**
+         * What the document's queries answer for: a new one with each change of its text or its module's, and kept by
+         * a new analysis that changes no text, as a member's didOpen with its text on disk starts.
+         */
+        val basis: Any = Any(),
+    )
+
+    // Completion callbacks and notifications must agree on which document may publish.
+    private val lifecycle = Any()
+    private val openDocuments = ConcurrentHashMap<String, Document>()
+
+    /**
+     * Open documents whose last edits could not be applied. Their server text no longer matches the editor,
+     * so they report only [Diagnostic.Codes.DOCUMENT_OUT_OF_SYNC] and refuse queries until a full-text
+     * change, or close and reopen, resynchronizes them.
+     */
+    private val outOfSync = mutableSetOf<String>()
+    private var closed = false
+    private val diagnosticReports = DiagnosticReports()
+
+    /** The last answer the trace has of each document's queries, by method and URI, at DEBUG: see [repeated]. */
+    private val tracedAnswers = ConcurrentHashMap<String, Map<String, Any?>>()
+    private val semanticTokenReports = SemanticTokenReports()
+    private val completionReports = ResolveReports<String>()
+    private val actionReports = ResolveReports<AdapterWorkspaceEdit>()
+    private val lensReports = ResolveReports<CodeLensCommand>()
+    private val linkReports = ResolveReports<AdapterDocumentLink>()
+    private val hintReports = ResolveReports<String>()
+    private val symbolReports = ResolveReports<AdapterLocation>()
+
+    /**
+     * What the resolve handles were made from: a new one with each change of a text that the server reads, and not with
+     * a document's open or close that leaves its text as the file has it, as [diagnosticRevision] has.
+     */
+    private var resolveRevision = 0L
+
+    private fun clearResolveReports() {
+        resolveRevision++
+        listOf(
+            completionReports,
+            actionReports,
+            lensReports,
+            linkReports,
+            hintReports,
+            symbolReports,
+        ).forEach { it.clear() }
+    }
+
+    private fun requireResolve(
+        enabled: Boolean,
+        feature: String,
+    ) {
+        if (!enabled) {
+            throw ResponseErrorException(
+                ResponseError(
+                    ResponseErrorCode.MethodNotFound,
+                    "$feature resolution was not negotiated",
+                    null,
+                ),
+            )
+        }
+    }
+
+    private var diagnosticRevision = 0L
+    private val publishedByScope = mutableMapOf<String, Set<String>>()
+    private val pendingQueries = mutableMapOf<CompletableFuture<*>, PendingQuery>()
+
+    /**
+     * What the server does as it holds the lock, a change or a newer query's start, which a query whose work the compiler
+     * retires within it answers for ([PendingQuery.retirement]).
+     */
+    private var activity: String? = null
+
+    /** How many changes the server has handled ([change]). */
+    private var changes = 0L
+
+    /**
+     * The modules whose analysis the compiler keeps, though none of their documents is open, for the pending queries that
+     * read it as one of them closed with its file's text ([didClose]); let go as the last of them ends ([releaseKept]).
+     */
+    private val keptModules = mutableSetOf<String>()
+
+    /**
+     * The last change that retired work in the compiler, which a query whose work the compiler retired off the server's
+     * thread since it started answers for, as a hover that joins a probe, or the workspace's symbols that join their graph
+     * query ([PendingQuery.retirement]).
+     */
+    private var lastRetirement: Change? = null
+
+    /** What a change was, as [reason] says, and how many the server had handled with it, [serial]. */
+    private class Change(
+        val reason: String,
+        val serial: Long,
+    )
+
+    /**
+     * What each document that closed with its text as the file has it, by URI, while queries were pending, closed with:
+     * as VS Code releases a document that no editor shows, some minutes after an extension or a navigation opened it. Of
+     * one outside the graph, or of a member of the graph ([didClose]), no analysis and no graph query reads anything else
+     * for it, so a workspace query that started while it was open still answers for what it started with, by its basis
+     * ([PendingQuery.overtaken]), and so do its own queries, of a member. Cleared as the last pending query ends, and for
+     * a URI as its file changes on disk ([refreshForFile]), as it opens with other text than it closed with, or as its
+     * module's text changes ([refreshScopes]).
+     */
+    private val released = mutableMapOf<String, Release>()
+
+    /**
+     * The [bases] that a released document closed at, each of the times it closed with its file's text since it first
+     * did, as it opened again with that text between, and, of a member of the graph, that [text]; and its module,
+     * [scope].
+     */
+    private class Release(
+        val bases: List<Any>,
+        val text: String?,
+        val scope: String,
+    )
+
+    /**
+     * The basis of each member of the graph that opened with its text as the file has it, by URI, while queries were
+     * pending: as VS Code opens a document for a peek or a search, or the language client opens again each document
+     * that VS Code holds as the server restarts. The graph's queries and the analyses of its modules read the file
+     * already, so a workspace query answers for what it started with, as if the document had not opened, until the
+     * document changes ([PendingQuery.overtaken]), and so does a query of the document that its closed file answered.
+     * Cleared as the last pending query ends.
+     */
+    private val opened = mutableMapOf<String, Any>()
 
     private fun <R> supplyAsync(
         method: String,
         logParams: String,
         logResult: (R) -> String = { "completed" },
+        uri: String? = null,
+        sourceOnly: Boolean = false,
+        progress: WorkDoneProgressParams? = null,
+        partial: ((R) -> PartialResults.Plan<R>)? = null,
         block: () -> R,
-    ): CompletableFuture<R> = server.supplyAsync(method, logParams, logResult, block)
-
-    /**
-     * LSP: textDocument/didOpen
-     * @see org.eclipse.lsp4j.services.TextDocumentService.didOpen
-     */
-    override fun didOpen(params: DidOpenTextDocumentParams) {
-        val uri = params.textDocument.uri
-        val content = params.textDocument.text
-
-        logger.info("textDocument/didOpen: {} ({} bytes)", uri, content.length)
-        openDocuments[uri] = content
-
-        val result = adapter.compile(uri, content)
-        logger.info("textDocument/didOpen: compiled, {} diagnostics", result.diagnostics.size)
-        server.publishDiagnostics(uri, result.diagnostics)
-    }
-
-    /**
-     * LSP: textDocument/didChange
-     * @see org.eclipse.lsp4j.services.TextDocumentService.didChange
-     */
-    override fun didChange(params: DidChangeTextDocumentParams) {
-        val uri = params.textDocument.uri
-        val changes = params.contentChanges
-        if (changes.isNullOrEmpty()) {
-            logger.warn("textDocument/didChange: no content changes for: {}", uri)
-            return
-        }
-        logger.info(
-            "textDocument/didChange: {} change(s): {}",
-            changes.size,
-            changes.joinToString(" | ") { change ->
-                val rangeText = change.range?.fmt() ?: "<full>"
-                val preview =
-                    change.text
-                        .replace("\n", "\\n")
-                        .replace("\t", "\\t")
-                        .take(80)
-                "range=$rangeText len=${change.text.length} text='$preview'"
+    ): CompletableFuture<R> =
+        queryAsync(
+            method,
+            uri.orEmpty(),
+            request = { query ->
+                server.supplyAsync(method, logParams, logResult) {
+                    if (adapter.concurrentQueries) {
+                        // queryAsync rechecks currency before publishing, so the lock guards only this check
+                        synchronized(lifecycle) { query.check() }
+                        block()
+                    } else {
+                        synchronized(lifecycle) {
+                            query.check()
+                            block()
+                        }
+                    }
+                }
             },
+            workspace = uri == null,
+            sourceOnly = sourceOnly,
+            progress = progress,
+            partial = partial,
+        ) {
+            it
+        }
+
+    /**
+     * A semantic query owns its backend future, while the module analysis remains shared. Only a request that
+     * [reportsOutOfSync], such as a diagnostic pull, runs for a document that is out of sync. A [workspace] query waits
+     * for the analyses of the open documents that it [waitsFor], each of them by default, and their changes overtake it.
+     * Backend work that the server retires for a change of what it reads, as the compiler retires a graph query when a
+     * member's text changes, answers ContentModified, as a change that the query's own checks find does; one that
+     * [cancelsWhenRetired], a document's diagnostic pull, answers RequestCancelled, after which VS Code's client pulls
+     * again, where it takes ContentModified as an empty report. Either way the ContentModified says what overtook it
+     * ([PendingQuery]). The [request] starts the query's work, which can check the query itself as it runs.
+     */
+    private fun <T, R> queryAsync(
+        method: String,
+        uri: String,
+        request: (PendingQuery) -> CompletableFuture<T>,
+        workspace: Boolean = false,
+        reportsOutOfSync: Boolean = false,
+        waitsFor: (String) -> Boolean = { true },
+        cancelsWhenRetired: Boolean = false,
+        sourceOnly: Boolean = false,
+        progress: WorkDoneProgressParams? = null,
+        partial: ((R) -> PartialResults.Plan<R>)? = null,
+        traced: (R) -> Map<String, Any?> = { emptyMap() },
+        convert: (T) -> R,
+    ): CompletableFuture<R> {
+        // File events are applied before the next message is read, but the folders a client adds are walked off
+        // the reader thread. A workspace-wide request sent after them starts once they are discovered.
+        val folders = if (workspace) server.folderDiscovery() else null
+        if (folders != null && !folders.isDone) {
+            val deferred = CompletableFuture<R>()
+            folders.whenComplete { _, _ ->
+                if (deferred.isDone) return@whenComplete
+                val query =
+                    startQuery(
+                        method,
+                        uri,
+                        request,
+                        true,
+                        reportsOutOfSync,
+                        waitsFor,
+                        cancelsWhenRetired,
+                        sourceOnly,
+                        progress,
+                        partial,
+                        traced,
+                        convert,
+                    )
+                // a client cancellation of the deferred request reaches the query
+                deferred.whenComplete { _, _ -> query.cancel(false) }
+                query.whenComplete { value, failure ->
+                    if (failure == null) deferred.complete(value) else deferred.completeExceptionally(failure)
+                }
+            }
+            return deferred
+        }
+        return startQuery(
+            method,
+            uri,
+            request,
+            workspace,
+            reportsOutOfSync,
+            waitsFor,
+            cancelsWhenRetired,
+            sourceOnly,
+            progress,
+            partial,
+            traced,
+            convert,
         )
-        val content = changes.first().text
-
-        logger.info("textDocument/didChange: {} ({} bytes)", uri, content.length)
-        openDocuments[uri] = content
-
-        val result = adapter.compile(uri, content)
-        logger.info("textDocument/didChange: compiled, {} diagnostics", result.diagnostics.size)
-        server.publishDiagnostics(uri, result.diagnostics)
     }
 
     /**
-     * LSP: textDocument/didClose
-     * @see org.eclipse.lsp4j.services.TextDocumentService.didClose
+     * Called under lifecycle. Analyzes again each open document whose analysis was retired, as the compiler
+     * retires the analyses of the modules a change elsewhere affects, and that nothing replaced: a query waiting
+     * on it would end as retired work does ([queryAsync]), and so would every later one, while a client that pulls
+     * diagnostics asks again at once, without end. A replacement installs its analysis before it retires the old one, under this
+     * lock, so a query never finds a retired analysis that is about to be replaced.
      */
+    private fun reanalyzeRetired() {
+        for (uri in openDocuments.keys.snapshot()) {
+            val document = openDocuments[uri] ?: continue
+            if (uri !in outOfSync && document.analysis.isCancelled) {
+                logger.info("analysis of {} was retired without a replacement; analyzing it again", uri)
+                change("The analysis of ${name(uri)} was retired, and it is analyzed again") {
+                    analyzeOne(uri, document.content, document.version)
+                }
+            }
+        }
+    }
+
+    /**
+     * [details], what a query of [method] for [uri] answered, at DEBUG; or, when they are what its previous answer's
+     * were, only what it was asked ([ASKED]) and that the answer is repeated: a client that pulls a document's
+     * diagnostics every few seconds gets the same answer most times, which the trace then names once.
+     */
+    private fun repeated(
+        method: String,
+        uri: String,
+        details: Map<String, Any?>,
+    ): Map<String, Any?> {
+        if (details.isEmpty()) return details
+        val answer = details - ASKED
+        return if (tracedAnswers.put("$method $uri", answer) == answer) {
+            details.filterKeys { it in ASKED } + ("answer" to "repeated")
+        } else {
+            details
+        }
+    }
+
+    private fun <T, R> startQuery(
+        method: String,
+        uri: String,
+        request: (PendingQuery) -> CompletableFuture<T>,
+        workspace: Boolean,
+        reportsOutOfSync: Boolean,
+        waitsFor: (String) -> Boolean,
+        cancelsWhenRetired: Boolean,
+        sourceOnly: Boolean,
+        progress: WorkDoneProgressParams?,
+        partial: ((R) -> PartialResults.Plan<R>)?,
+        traced: (R) -> Map<String, Any?>,
+        convert: (T) -> R,
+    ): CompletableFuture<R> {
+        val result = CompletableFuture<R>()
+        val trace = ExecutionTrace.span("lsp-query", method, uri)
+        // the query's start, and one end that says how long each phase took and what it answered at DEBUG
+        val phases = ExecutionTrace.Phases(trace)
+        val answer = AtomicReference<Map<String, Any?>>(emptyMap())
+        ExecutionTrace.event(trace, "start")
+        val (query, revision) =
+            synchronized(lifecycle) {
+                if (closed) return CompletableFuture.failedFuture(contentModified(SHUT_DOWN))
+                if (uri in outOfSync && !reportsOutOfSync) return CompletableFuture.failedFuture(outOfSyncFailure(uri))
+                reanalyzeRetired()
+                val query =
+                    PendingQuery(
+                        uri,
+                        openDocuments[uri],
+                        if (workspace) openDocuments.filterKeys(waitsFor) else null,
+                        reportsOutOfSync,
+                        waitsFor,
+                        changes,
+                        sourceOnly,
+                        // the module whose analysis it reads, which matters only of a member of the graph ([keeps])
+                        if (sourceOnly || uri.isEmpty()) null else openDocuments[uri]?.scope ?: (adapter as? XdkAdapter)?.graphScope(uri),
+                    )
+                pendingQueries[result] = query
+                query to diagnosticRevision
+            }
+
+        // work that the server retired, not the client, whose cancel completes the result first ([queryAsync])
+        fun retired() = if (cancelsWhenRetired) result.cancel(false) else result.completeExceptionally(contentModified(query.retirement()))
+        val started = System.nanoTime()
+        logger.info("{}: {}", method, uri)
+        // A JSON-RPC cancellation can complete this future under the transport's request lock.
+        // Release that thread before entering either the document or compiler lifecycle.
+        result.whenCompleteAsync { _, failure ->
+            val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.lastOrNull()
+            val outcome =
+                when {
+                    cause == null -> "completed"
+                    cause is CancellationException -> "canceled"
+                    cause is ResponseErrorException && cause.responseError.code != ResponseErrorCode.InternalError.value -> "rejected"
+                    else -> "failed"
+                }
+            if (outcome == "failed") logger.error("$method: request failed for $uri", cause)
+            ExecutionTrace.event(trace, "end", mapOf("outcome" to outcome) + phases.fields() + answer.get())
+            server.answered()
+            logger.info(
+                "{}: {} in {}",
+                method,
+                outcome,
+                (System.nanoTime() - started).nanoseconds,
+            )
+        }
+        val ready =
+            if (sourceOnly) {
+                CompletableFuture.completedFuture(null)
+            } else if (query.documents != null) {
+                CompletableFuture.allOf(*query.documents.map { (it, document) -> settled(it, document.analysis) }.toTypedArray())
+            } else {
+                // a document that is not open is answered from its text on disk, as its module analyzes it, until its
+                // didOpen, after which the editor's text wins, unless it is its file's: a restarted client asks before it
+                // opens its files again
+                query.document?.let { settled(uri, it.analysis) }
+                    ?: (adapter as? XdkAdapter)?.let { compiler ->
+                        synchronized(lifecycle) { compiler.closedAnalysis(uri)?.also { query.closedAnalysis = it } }
+                            ?.let { closedSettled(compiler, uri, it, query, result) }
+                    }
+                    ?: CompletableFuture.completedFuture(null)
+            }
+        ready
+            .handle { _, _ -> phases.reached("analysisReady") }
+            .thenRunAsync {
+                val work =
+                    synchronized(lifecycle) {
+                        if (result.isDone) return@thenRunAsync
+                        query.check()
+                        phases.reached("started")
+                        // as the compiler retires an older query's work of the same kind, which this one's takes the place of
+                        during("A newer $method request took the place of its work") { ExecutionTrace.within(trace) { request(query) } }
+                    }
+                // what retired the work, when the compiler did on the server's thread, within a change or a query's start
+                work.whenComplete { _, failure ->
+                    if (failure != null && Thread.holdsLock(lifecycle)) activity?.let { query.retiredBy.compareAndSet(null, it) }
+                }
+                // Register after starting work: prior cancellation still schedules backend cleanup.
+                result.whenCompleteAsync { _, failure -> if (failure != null) work.cancel(false) }
+                // Do not occupy the compiler worker while acquiring the publication lock: a
+                // synchronous navigation request can hold it while awaiting that same worker.
+                work.whenCompleteAsync { value, failure ->
+                    phases.reached("backendComplete")
+                    synchronized(lifecycle) {
+                        if (!result.isDone) {
+                            when {
+                                query.overtaken() -> result.completeExceptionally(contentModified(query.reason()))
+
+                                failure != null -> {
+                                    val cause =
+                                        generateSequence(failure) {
+                                            (it as? CompletionException)?.cause
+                                        }.last()
+                                    if (cause is CancellationException) {
+                                        retired()
+                                    } else {
+                                        result.completeExceptionally(cause)
+                                    }
+                                }
+
+                                // newer diagnostics overtake a diagnostic report, as the change that made them says
+                                reportsOutOfSync && diagnosticRevision != revision ->
+                                    result.completeExceptionally(contentModified(query.revisedBy ?: OVERTAKEN))
+
+                                else -> {
+                                    try {
+                                        val converted = convert(value)
+                                        phases.reached("converted")
+                                        answer.set(repeated(method, uri, ExecutionTrace.details { traced(converted) }))
+                                        result.complete(converted)
+                                    } catch (e: Exception) {
+                                        // as a pull's join of an analysis that the compiler retired
+                                        if (cancellation(e)) retired() else result.completeExceptionally(e)
+                                    } catch (e: Error) {
+                                        result.completeExceptionally(e)
+                                        throw e
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }.whenComplete { _, failure ->
+                if (failure != null) {
+                    if (cancellation(failure)) retired() else result.completeExceptionally(failure)
+                }
+            }
+        val publication =
+            if (partial == null) {
+                result
+            } else {
+                server.partialResults.publish(
+                    (progress as? PartialResultParams)?.partialResultToken,
+                    result,
+                    {
+                        synchronized(lifecycle) {
+                            // newer diagnostics overtake a diagnostic report, the one kind that reports out-of-sync
+                            // documents; another answer's batches stay current while its query does
+                            query.check()
+                            if (reportsOutOfSync && diagnosticRevision != revision) throw contentModified(query.revisedBy ?: OVERTAKEN)
+                        }
+                    },
+                    partial,
+                )
+            }
+        // pending while its batches stream too, which a document's release must not end either
+        publication.whenCompleteAsync { _, _ ->
+            synchronized(lifecycle) {
+                pendingQueries.remove(result)
+                releaseKept()
+                if (pendingQueries.isEmpty()) {
+                    released.clear()
+                    opened.clear()
+                }
+            }
+        }
+        return server.observeQuery(method, progress, publication, uri)
+    }
+
+    /**
+     * A query as it started: of [uri], whose [document] it answers for, open then or not, and, of the workspace, the open
+     * [documents] whose analyses it waits for ([waitsFor]); after [since] [changes]. One that is [sourceOnly] reads no
+     * analysis; one of a document reads its module's, [scope]'s.
+     */
+    private inner class PendingQuery(
+        val uri: String,
+        val document: Document?,
+        val documents: Map<String, Document>?,
+        val reportsOutOfSync: Boolean,
+        val waitsFor: (String) -> Boolean,
+        val since: Long,
+        val sourceOnly: Boolean,
+        val scope: String?,
+    ) {
+        /** What retired its work as the compiler did on the server's thread: a change, or a newer query's start ([activity]). */
+        val retiredBy = AtomicReference<String>()
+
+        /** Under lifecycle: the change that first found the query [overtaken], also once its answer is done ([change]). */
+        var overtakenBy: String? = null
+
+        /**
+         * Under lifecycle: the analysis of its module that a query of a closed file waits for and then reads, as it chose
+         * it and each one it went on to ([closedSettled]).
+         */
+        var closedAnalysis: XdkAdapter.ClosedAnalysis? = null
+
+        /** Under lifecycle: of a diagnostic report, what made the diagnostics new first since it started ([revise]). */
+        var revisedBy: String? = null
+
+        /**
+         * Called under lifecycle: whether the query no longer answers for what it started with. It stays current while its
+         * own document answers for it ([answers]), also when another member's didOpen replaces the analysis; a workspace
+         * query while no document opens but a member with its file's text, which a pull takes as a change, and each
+         * document it started with is kept.
+         */
+        fun overtaken(): Boolean =
+            closed ||
+                !answers() ||
+                closedAnalysis?.let { it.result.isDone && !it.result.isCancelled && !(adapter as XdkAdapter).answersClosed(it) } == true ||
+                (
+                    documents != null &&
+                        (
+                            openDocuments.any { (it, now) ->
+                                it !in documents && waitsFor(it) && (reportsOutOfSync || now.basis !== opened[it])
+                            } ||
+                                documents.any { (it, then) -> !kept(it, then) }
+                        )
+                )
+
+        /** Called under lifecycle: fails the work of the query, as a check of its own finds it [overtaken]. */
+        fun check() {
+            if (overtaken()) throw contentModified(reason())
+        }
+
+        /**
+         * Called under lifecycle: what overtook the query, as a check of its own finds it, as of a partial answer's
+         * batches after the answer: the change that did ([overtakenBy]), which ends it first.
+         */
+        fun reason(): String = overtakenBy ?: if (closed) SHUT_DOWN else OVERTAKEN
+
+        /**
+         * Called under lifecycle: what retired its work: the change or newer query that did on the server's thread;
+         * else the last change since it started that retired work; else a newer query, which takes the place of an older
+         * one's work off the server's thread too, as a hover's probe does.
+         */
+        fun retirement(): String = retiredBy.get() ?: lastRetirement?.takeIf { it.serial > since }?.reason ?: NEWER_REQUEST
+
+        /**
+         * Whether its own document answers for it still, as the others do ([kept]), one that its closed file answered
+         * also once it opened with that text; a query of one that closed needs its module's analysis, which answers a
+         * closed member of the graph: a closed document outside the graph has none, which a workspace query of it, such
+         * as its Organize Imports, reads too.
+         */
+        private fun answers(): Boolean {
+            val now = openDocuments[uri]
+            return if (document == null) {
+                now == null || (now.basis === opened[uri] && !reportsOutOfSync)
+            } else {
+                kept(uri, document) && (now != null || released[uri]?.text != null)
+            }
+        }
+
+        /**
+         * Whether the document [other] still answers for what it was, [then], as the query started: at the same basis, as
+         * also one that had opened with its file's text before, or, while it is closed or since it opened again with its
+         * file's text, which the query reads of a closed member too, at one it was released at. A diagnostic pull joins
+         * the analyses of the open documents as it answers, under the lock, so it takes a document that opened since it
+         * started as a change, as it did not wait for its analysis.
+         */
+        private fun kept(
+            other: String,
+            then: Document,
+        ): Boolean {
+            val now = openDocuments[other]
+            if (now?.basis === then.basis) return true
+            val again = now == null || (now.basis === opened[other] && !reportsOutOfSync)
+            return again && released[other]?.bases?.any { it === then.basis } == true
+        }
+    }
+
+    /** Whether [failure] is a cancellation, also in the completions that carry it. */
+    private fun cancellation(failure: Throwable): Boolean =
+        generateSequence(failure) { (it as? CompletionException)?.cause }.last() is CancellationException
+
+    /**
+     * Whether a document, [now], no longer answers for what a query started with, [then]: it was opened, closed or
+     * edited, or its module's text changed.
+     */
+    private fun changed(
+        then: Document?,
+        now: Document?,
+    ): Boolean = then?.basis !== now?.basis
+
+    /**
+     * Completes once [uri]'s current analysis has: [analysis], or the one that replaced it, as an analysis of its module
+     * replaces the analysis of every open member, also of one whose text stays as it was. Off the thread that ended
+     * [analysis]: the compiler retires it while a didOpen holds the lock, before the didOpen installs its replacement.
+     */
+    private fun settled(
+        uri: String,
+        analysis: CompletableFuture<*>,
+    ): CompletableFuture<*> =
+        analysis
+            .handleAsync { _, _ -> synchronized(lifecycle) { openDocuments[uri]?.analysis?.takeIf { it !== analysis } } }
+            .thenCompose { replacement -> replacement?.let { settled(uri, it) } ?: CompletableFuture.completedFuture(null) }
+
+    /**
+     * Completes once the analysis that answers [uri], a document that was not open, has: [analysis], which the [query]
+     * reads as it ends, as a change that then retires it overtakes it ([PendingQuery.closedAnalysis]). When the compiler
+     * ended it unfinished, it goes on to the one that answers it now, which it reads instead: the compile that replaced
+     * it as a member opened with its file's text, or, once a change retired it, a new one of its module, or, as the
+     * document opened since, the open document's, while the query's [result] is pending; when none answers it, as its
+     * file went, the query answers ContentModified with what retired the analysis. Off the thread that ended
+     * [analysis], which can hold the compiler's lock, and under this one: the compiler ends it as the document's didOpen
+     * holds it, before the didOpen installs the document's analysis.
+     */
+    private fun closedSettled(
+        compiler: XdkAdapter,
+        uri: String,
+        analysis: XdkAdapter.ClosedAnalysis,
+        query: PendingQuery,
+        result: CompletableFuture<*>,
+    ): CompletableFuture<*> =
+        analysis.result
+            .handleAsync { _, _ ->
+                synchronized(lifecycle) {
+                    if (!analysis.result.isCancelled || result.isDone) {
+                        null
+                    } else {
+                        val next =
+                            (compiler.answering(analysis) ?: compiler.closedAnalysis(uri) ?: compiler.openAnalysis(uri))
+                                ?.takeIf { it.result !== analysis.result }
+                        // none answers the document now, as its file went: the change that retired its analysis overtook
+                        // the query, which would read no analysis
+                        if (next == null) {
+                            result.completeExceptionally(contentModified(query.retirement()))
+                        } else {
+                            query.closedAnalysis = next
+                        }
+                        next
+                    }
+                }
+            }.thenCompose { next ->
+                next?.let { closedSettled(compiler, uri, it, query, result) } ?: CompletableFuture.completedFuture(null)
+            }
+
+    private fun outOfSyncFailure(uri: String) =
+        ResponseErrorException(
+            ResponseError(
+                ResponseErrorCode.RequestFailed,
+                "$uri is out of sync with the editor; close and reopen it",
+                null,
+            ),
+        )
+
+    /** A query's answer that [reason], what overtook it, says the content it was asked of changed. */
+    private fun contentModified(reason: String) =
+        ResponseErrorException(
+            ResponseError(
+                ResponseErrorCode.ContentModified,
+                reason,
+                null,
+            ),
+        )
+
+    /**
+     * Called under lifecycle: [block], as what [reason] says the server does ([activity]), which a query whose work the
+     * compiler retires within it answers for.
+     */
+    private inline fun <T> during(
+        reason: String,
+        block: () -> T,
+    ): T {
+        val previous = activity
+        activity = reason
+        try {
+            return block()
+        } finally {
+            activity = previous
+        }
+    }
+
+    /**
+     * Called under lifecycle: [block], a change of a document or of the workspace that [reason] says, after which each
+     * pending query that it overtook ends, with ContentModified and that reason, even if a backend ignores cancellation;
+     * a query whose work the compiler retired within it answers for it too, and so, once it retired any, does a query
+     * whose work the compiler retired off the server's thread ([PendingQuery.retirement]).
+     */
+    private inline fun <T> change(
+        reason: String,
+        block: () -> T,
+    ): T {
+        val compiler = adapter as? XdkAdapter
+        val retirements = compiler?.retirements()
+        try {
+            return during(reason, block)
+        } finally {
+            val serial = ++changes
+            if (compiler == null || compiler.retirements() != retirements) lastRetirement = Change(reason, serial)
+            pendingQueries
+                .filter { (_, query) -> query.overtakenBy == null && query.overtaken() }
+                .forEach { (result, query) ->
+                    query.overtakenBy = reason
+                    result.completeExceptionally(contentModified(reason))
+                }
+            releaseKept()
+        }
+    }
+
+    /**
+     * Called under lifecycle, within a [change]: the diagnostics are new, as the change says, which overtakes each pending
+     * diagnostic report, as the first change since it started that made them new does.
+     */
+    private fun revise() {
+        diagnosticRevision++
+        pendingQueries.values.filter { it.reportsOutOfSync && it.revisedBy == null }.forEach { it.revisedBy = activity ?: OVERTAKEN }
+    }
+
+    /**
+     * Called under lifecycle, as a query or a change ends: lets go of each module analysis that the compiler keeps for the
+     * queries that read it, once none of them is pending; the compiler drops it unless a document of the module is open
+     * again, or another compile has taken its place.
+     */
+    private fun releaseKept() {
+        val served =
+            pendingQueries
+                .filter { (result, query) -> !result.isDone && !query.sourceOnly }
+                .values
+                .mapNotNullTo(hashSetOf()) { it.scope }
+        val unserved = keptModules - served
+        keptModules -= unserved
+        unserved.forEach { (adapter as XdkAdapter).releaseClosed(it) }
+    }
+
+    /** The name of [uri]'s file, as an answer that a change of it overtook says. */
+    private fun name(uri: String): String = uri.substringAfterLast('/')
+
+    override fun didOpen(params: DidOpenTextDocumentParams) {
+        synchronized(lifecycle) {
+            if (closed) return
+            val uri = params.textDocument.uri
+            logger.info(
+                "textDocument/didOpen: {} version={}",
+                uri,
+                params.textDocument.version,
+            )
+            outOfSync.remove(uri)
+            // as a client opens its files again after a restart: the module's analyses already read this text
+            val edited = !onDisk(uri, params.textDocument.text)
+            // and the graph's queries too, of a member of the graph, as VS Code opens one for a peek or a search, unless
+            // the document closed with other text while they were pending, or the analyses read other text of the file:
+            // it changed on disk since, which no watcher has reported yet
+            val compiler = adapter as? XdkAdapter
+            val unchanged =
+                !edited &&
+                    released[uri].let { it == null || it.text == params.textDocument.text } &&
+                    compiler?.opensUnchanged(uri, params.textDocument.text) == true
+            val member = compiler?.hasProject(uri) == true
+            val reason =
+                when {
+                    edited -> "${name(uri)} opened with text that its file does not have"
+                    member && !unchanged -> "${name(uri)} opened with text that its module's analyses did not read"
+                    else -> "${name(uri)} opened"
+                }
+            change(reason) {
+                if (!unchanged) {
+                    released.remove(uri)
+                    opened.remove(uri)
+                }
+                analyze(uri, params.textDocument.text, params.textDocument.version, edited = edited, unchanged = unchanged)
+                if (unchanged && pendingQueries.isNotEmpty()) openDocuments[uri]?.let { opened[uri] = it.basis }
+            }
+        }
+    }
+
+    /** Whether [text] is what the file of [uri] holds on disk, which the analyses of its module read while it was closed. */
+    private fun onDisk(
+        uri: String,
+        text: String,
+    ): Boolean = XdkSources.file(uri)?.takeIf(File::isFile)?.let { runCatching { XdkSources.read(it) == text }.getOrNull() } == true
+
+    override fun didChange(params: DidChangeTextDocumentParams) {
+        synchronized(lifecycle) {
+            if (closed) return
+            val uri = params.textDocument.uri
+            val previous = openDocuments[uri] ?: return
+            val version = params.textDocument.version
+            if (version <= previous.version) return
+            val changes = params.contentChanges
+            if (changes.isNullOrEmpty()) return
+            change("The text of ${name(uri)} changed") {
+                // Out of sync, only a full-text change (and the edits after it) gives the editor's text again.
+                val resync = changes.indexOfLast { it.range == null }
+                if (uri in outOfSync && resync < 0) {
+                    openDocuments[uri] = Document(previous.content, version, previous.scope, previous.analysis)
+                    return
+                }
+                val content =
+                    try {
+                        if (uri in outOfSync) {
+                            DocumentText(changes[resync].text).change(changes.drop(resync + 1), server.synchronization.incremental)
+                        } else {
+                            DocumentText(previous.content).change(changes, server.synchronization.incremental)
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        desynchronize(uri, previous, version, e.message)
+                        return
+                    }
+                if (outOfSync.remove(uri)) logger.info("textDocument/didChange: {} is in sync again", uri)
+                analyze(uri, content, version)
+            }
+        }
+        // outside the lock, as it tells a debug session, once the adapter has the text
+        server.sourceChanged(params.textDocument.uri)
+    }
+
+    /**
+     * Called under lifecycle. The editor applied changes the server could not, so neither text the server
+     * has is the editor's: report that, and refuse queries, rather than answer for the wrong text.
+     */
+    private fun desynchronize(
+        uri: String,
+        previous: Document,
+        version: Int,
+        reason: String?,
+    ) {
+        logger.warn("textDocument/didChange: cannot apply changes to {}, now out of sync: {}", uri, reason)
+        val result = CompilationResult.failure(uri, listOf(outOfSyncDiagnostic(uri)))
+        change("${name(uri)} went out of sync with the editor") {
+            openDocuments[uri] = Document(previous.content, version, previous.scope, CompletableFuture.completedFuture(result))
+            revise()
+        }
+        clearResolveReports()
+        diagnosticReports.record(uri, result.diagnostics)
+        server.publishDiagnostics(uri, result.diagnostics, version)
+        server.refreshDiagnostics()
+        server.refreshSemanticFeatures()
+        if (outOfSync.add(uri)) {
+            server.showWarning(
+                "Ecstasy: edits to ${uri.substringAfterLast('/')} could not be applied, so the language server " +
+                    "no longer has its current text. Close and reopen the file to resynchronize.",
+            )
+        }
+    }
+
+    /** A result whose documents are out of sync reports only that, never diagnostics for stale text. */
+    private fun reportOutOfSync(result: CompilationResult): CompilationResult {
+        val stale = result.documentUris.filter { it in outOfSync }
+        if (stale.isEmpty()) return result
+        return result.copy(diagnostics = result.diagnostics.filter { it.location.uri !in stale } + stale.map(::outOfSyncDiagnostic))
+    }
+
+    private fun outOfSyncDiagnostic(uri: String) =
+        Diagnostic(
+            location = DiagnosticLocation(uri, 0, 0, 0, 0),
+            severity = Diagnostic.Severity.ERROR,
+            message = "This file is out of sync with the language server; close and reopen it to resynchronize",
+            code = Diagnostic.Codes.DOCUMENT_OUT_OF_SYNC,
+            source = Diagnostic.SOURCE,
+        )
+
+    /**
+     * Refresh the changed module, then open source consumers in dependency order. Unless the module's text [edited], the
+     * queries of documents whose text stays as it was wait for the new analyses instead of failing as stale. A member of
+     * the graph that opens [unchanged], with its file's text, which the graph's queries and the analyses of its module's
+     * consumers read already, retires neither, nor a diagnostic report: only its module is analyzed, with its document.
+     */
+    private fun analyze(
+        uri: String,
+        content: String,
+        version: Int,
+        edited: Boolean = true,
+        unchanged: Boolean = false,
+    ) {
+        if (!unchanged) revise()
+        // an open with the text on disk, as a close with it, leaves what a listed action was made from as it was
+        if (edited) clearResolveReports()
+        val compiler = adapter as? XdkAdapter
+        val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
+        analyzeOne(uri, content, version, edited = edited, unchanged = unchanged)
+        val consumers = if (unchanged) emptySet() else compiler?.affectedSourceScopes(uri) ?: adapter.affectedAnalysisScopes(uri)
+        refreshScopes((changedGraph + consumers) - adapter.analysisScope(uri), edited)
+    }
+
+    private fun refreshScopes(
+        scopes: Set<String>,
+        edited: Boolean = true,
+    ) {
+        if (scopes.isEmpty()) return
+        // a released member stands for its module's text too, which changed, also of a module that no editor has open
+        if (edited) released.values.removeIf { it.text != null && it.scope in scopes }
+        val ownership = analysisScopes()
+        scopes
+            .mapNotNull { scope ->
+                // a document that is out of sync keeps its report; its text cannot start an analysis
+                openDocuments.entries.firstOrNull {
+                    it.key !in outOfSync && (it.value.scope == scope || ownership[it.key] == scope)
+                }
+            }.distinctBy { ownership[it.key] }
+            .forEach { (uri, document) ->
+                analyzeOne(uri, document.content, document.version, ownership, edited)
+            }
+    }
+
+    private fun analysisScopes(): Map<String, String> =
+        if (adapter is XdkAdapter) {
+            adapter.analysisScopes(openDocuments.keys)
+        } else {
+            openDocuments.keys.associateWith(adapter::analysisScope)
+        }
+
+    /**
+     * A member edit replaces the analysis future for every open document in that module, and the pending queries of
+     * them are stale, and so are those of its released members. Unless the module's text [edited]: then only the queries
+     * of a document whose text changed are. A member of the graph [unchanged] retires nothing in the compiler
+     * ([XdkAdapter.compileAsync]), and its queries go on ([PendingQuery.overtaken]).
+     */
+    private fun analyzeOne(
+        uri: String,
+        content: String,
+        version: Int,
+        ownership: Map<String, String>? = null,
+        edited: Boolean = true,
+        unchanged: Boolean = false,
+    ) {
+        val analysis =
+            if (unchanged) {
+                (adapter as XdkAdapter).compileAsync(
+                    uri,
+                    content,
+                    unchanged = true,
+                )
+            } else {
+                adapter.compileAsync(uri, content)
+            }
+        val scope = adapter.analysisScope(uri)
+        val currentScopes = ownership ?: analysisScopes()
+        val affected =
+            openDocuments.filter { (otherUri, document) ->
+                otherUri !in outOfSync && (otherUri == uri || document.scope == scope || currentScopes[otherUri] == scope)
+            }
+        val current =
+            affected
+                .mapValues { (_, document) ->
+                    Document(document.content, document.version, scope, analysis, if (edited) Any() else document.basis)
+                }.toMutableMap()
+        current[uri] = Document(content, version, scope, analysis)
+        openDocuments.putAll(current)
+        if (edited) released.values.removeIf { it.text != null && it.scope == scope }
+        affected.values
+            .map { it.analysis }
+            .distinct()
+            .filter { it !== analysis }
+            .forEach { it.cancel(false) }
+        // Publication must not block the compiler worker behind a queued navigation request.
+        analysis.whenCompleteAsync { result, failure ->
+            synchronized(lifecycle) {
+                if (!closed && publishes(current)) {
+                    if (failure == null) {
+                        publish(scope, result)
+                    } else if (failure !is CancellationException) {
+                        logger.error("analysis failed: uri={}, version={}", uri, version, failure)
+                        publish(scope, analysisFailure(uri))
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Called under lifecycle: whether the analysis of [current], the open documents it was made for, publishes as it ends:
+     * one of them is still open, and each that is still has it. A document that closed since leaves the others to publish
+     * for: one that closed with its file's text analyzes nothing again, and another's close analyzes the others again,
+     * which replaces this analysis.
+     */
+    private fun publishes(current: Map<String, Document>): Boolean =
+        current.keys.any(openDocuments::containsKey) &&
+            current.all { (uri, document) -> openDocuments[uri].let { it == null || it === document } }
+
+    /** A source closure publishes together; artifact-only foreign sources remain related info. */
+    private fun publish(
+        scope: String,
+        result: CompilationResult,
+    ) {
+        val previous = publishedByScope.put(scope, result.documentUris).orEmpty()
+        clearUnowned(previous - result.documentUris)
+        result.documentUris.forEach { uri ->
+            val diagnostics =
+                if (uri in outOfSync) {
+                    // a module analysis used this file's last applied text, not the editor's
+                    listOf(outOfSyncDiagnostic(uri))
+                } else {
+                    result.diagnostics.filter {
+                        it.location.uri == uri ||
+                            (uri == result.uri && it.location.uri !in result.documentUris)
+                    }
+                }
+            diagnosticReports.record(uri, diagnostics)
+            server.publishDiagnostics(uri, diagnostics, openDocuments[uri]?.version)
+        }
+        server.refreshDiagnostics()
+        server.refreshSemanticFeatures()
+        // Root discovery can change after file creation/removal; release publications of old
+        // scopes.
+        val inactive =
+            publishedByScope.keys.filter { key -> openDocuments.values.none { it.scope == key } }
+        inactive.forEach { key ->
+            clearUnowned(publishedByScope.remove(key).orEmpty() - result.documentUris)
+        }
+    }
+
+    private fun clearUnowned(uris: Set<String>) {
+        uris
+            .filter { uri -> publishedByScope.values.none { uri in it } }
+            .forEach {
+                diagnosticReports.record(it, emptyList())
+                server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version)
+            }
+    }
+
     override fun didClose(params: DidCloseTextDocumentParams) {
-        val uri = params.textDocument.uri
-        logger.info("textDocument/didClose: {}", uri)
+        synchronized(lifecycle) {
+            val uri = params.textDocument.uri
+            // a document that is not open closes nothing, as a second didClose of one, which a client that closed it
+            // itself sends again as VS Code releases it, minutes later, as the playbook's cleanup does
+            val open = openDocuments[uri]
+            if (open == null) {
+                logger.info("textDocument/didClose: {} is not open; nothing to close", uri)
+                return
+            }
+            logger.info("textDocument/didClose: {}", uri)
+            val compiler = adapter as? XdkAdapter
+            // a close that leaves the text as the file has it, as VS Code's release of a document that no editor
+            // shows, three minutes after an extension or a navigation opened it, changes nothing that a listed action
+            // or lens was made from: a click on an action listed before it still applies the action; nor does the close
+            // of a library's document, whose text never changes, as the ecstasy-library content that Go to Definition opens
+            val clean = uri !in outOfSync && onDisk(uri, open.content)
+            val kept = clean || (uri !in outOfSync && compiler?.isLibraryDocument(uri) == true)
+            val member = compiler?.hasProject(uri) == true
+            // nor, of a member of the graph, any text that its module's analyses or the graph's queries read
+            val unchanged = clean && member
+            // nor, for a document outside the graph, anything that an analysis of another or a graph query reads
+            val release = kept && (unchanged || !member)
+            change(closing(uri, kept)) {
+                val keep = unchanged && keeps(open.scope)
+                val affected = forget(uri, open, kept, unchanged, release, member)
+                val retired =
+                    if (compiler != null) {
+                        compiler.closeDocumentAndRefresh(uri, unchanged, keep)
+                    } else {
+                        adapter.closeDocument(uri)
+                        emptySet()
+                    }
+                if (closed) return
+                if (keep && openDocuments.values.none { it.scope == open.scope }) keptModules += open.scope
+                afterClose(uri, open, unchanged, affected, retired)
+            }
+        }
+    }
+
+    /** Called under lifecycle: what the close of [uri] is, as an answer that it overtakes says, which [kept] its text or not. */
+    private fun closing(
+        uri: String,
+        kept: Boolean,
+    ): String =
+        when {
+            uri in outOfSync -> "${name(uri)} closed out of sync with the editor"
+            !kept -> "${name(uri)} closed with text that its file does not have"
+            else -> "${name(uri)} closed"
+        }
+
+    /**
+     * Called under lifecycle, as the last open document of [scope], a module of the graph, closes with its file's text:
+     * whether the module's analysis stays, as a query that reads it is pending, of the document, of a member released
+     * before it, or of a closed file of the module, which go on. One that has answered, or that reads only text, keeps
+     * nothing.
+     */
+    private fun keeps(scope: String): Boolean =
+        pendingQueries.any { (result, query) -> !result.isDone && !query.sourceOnly && query.scope == scope }
+
+    /**
+     * Called under lifecycle, as [open] of [uri] closes: what was made from its text goes, unless the close [kept] its text
+     * as its file has it, and the analyses and the diagnostic reports that read it, unless it closed [unchanged], a member
+     * of the graph with its file's text; a pending workspace query keeps the document by its basis when the close is a
+     * [release] ([released]), with its text if it is a [member], and so do its own queries, of a member, which its
+     * module's analysis answers; any other close ends them ([change]). Returns the scopes whose open documents are
+     * analyzed again, those that read its text.
+     */
+    private fun forget(
+        uri: String,
+        open: Document,
+        kept: Boolean,
+        unchanged: Boolean,
+        release: Boolean,
+        member: Boolean,
+    ): Set<String> {
+        if (!unchanged) revise()
+        if (!kept) clearResolveReports()
+        if (release && pendingQueries.isNotEmpty()) {
+            // a document that opened again with its file's text since it was released keeps each basis it closed at
+            val earlier = released[uri]?.takeIf { open.basis === opened[uri] }?.bases.orEmpty()
+            released[uri] = Release(earlier + open.basis, open.content.takeIf { member }, open.scope)
+        }
+        val affected = if (unchanged) emptySet() else adapter.affectedAnalysisScopes(uri)
+        semanticTokenReports.retire(uri)
         openDocuments.remove(uri)
-        adapter.closeDocument(uri)
-        server.publishDiagnostics(uri, emptyList())
+        outOfSync.remove(uri)
+        // the analysis of a module that a member closes unchanged from goes on, for its other documents and queries
+        if (!unchanged) open.analysis.cancel(false)
+        return affected
     }
 
     /**
-     * LSP: textDocument/didSave
-     * @see org.eclipse.lsp4j.services.TextDocumentService.didSave
+     * Called under lifecycle, once [document] of [uri] has closed and the compiler [retired] what read it: the document's
+     * diagnostics go, unless it closed [unchanged] while another document of its module publishes them; the client
+     * refreshes, unless nothing changed; the open documents of the [affected] and [retired] scopes are analyzed again;
+     * and the module's diagnostics go once no document of it is open.
      */
+    private fun afterClose(
+        uri: String,
+        document: Document,
+        unchanged: Boolean,
+        affected: Set<String>,
+        retired: Set<String>,
+    ) {
+        val published = openDocuments.values.any { it.scope == document.scope }
+        // the closed member's diagnostics stay its module's, which an open document of it still publishes
+        if (!unchanged || !published) {
+            diagnosticReports.record(uri, emptyList())
+            server.publishDiagnostics(uri, emptyList(), document.version)
+        }
+        if (!unchanged || retired.isNotEmpty()) {
+            server.refreshDiagnostics()
+            server.refreshSemanticFeatures()
+        }
+        refreshScopes(affected + retired)
+        if (!published) {
+            clearUnowned(publishedByScope.remove(document.scope).orEmpty() - uri)
+        }
+    }
+
+    /** Re-read closed files and module membership after filesystem notifications. */
+    fun refreshForFile(uri: String) {
+        synchronized(lifecycle) {
+            // An open buffer is authoritative, including when its disk file is created or
+            // deleted. Recompiling identical overlays here cancels otherwise current queries.
+            // didChange already propagates edits; didClose re-reads disk and membership.
+            if (closed || openDocuments.containsKey(uri)) return
+            change("${name(uri)} changed on disk") {
+                // a released document whose file no longer has the text it closed with, which pending workspace queries read
+                released[uri]?.text?.takeUnless { onDisk(uri, it) }?.let { released.remove(uri) }
+                val affected =
+                    (adapter as? XdkAdapter)?.changedFileScopes(uri)
+                        ?: adapter.affectedAnalysisScopes(uri)
+                if (affected.isEmpty()) return
+                revise()
+                // the analysis of a module whose files no editor has open, which a query of one of them answers from,
+                // read the file's old text
+                (adapter as? XdkAdapter)?.retireClosed(affected)
+                clearResolveReports()
+                server.refreshDiagnostics()
+                server.refreshSemanticFeatures()
+                refreshScopes(affected + publishedByScope.filterValues { uri in it }.keys)
+            }
+        }
+    }
+
+    /**
+     * Dependency replacement and versioned reanalysis share the diagnostic publication lock; a query that the replacement
+     * overtakes answers what [reason] says changed, as one whose work it retires does.
+     */
+    internal fun refreshDependencies(
+        reason: String,
+        replace: () -> Set<String>,
+    ) {
+        synchronized(lifecycle) {
+            if (closed) return
+            change(reason) {
+                val affected = replace()
+                if (affected.isEmpty()) return
+                revise()
+                clearResolveReports()
+                refreshScopes(affected)
+                server.refreshDiagnostics()
+                server.refreshSemanticFeatures()
+            }
+        }
+    }
+
+    fun close() {
+        synchronized(lifecycle) {
+            change(SHUT_DOWN) {
+                closed = true
+                val documents = openDocuments.toMap()
+                openDocuments.clear()
+                publishedByScope.clear()
+                diagnosticReports.clear()
+                semanticTokenReports.clear()
+                clearResolveReports()
+                documents.forEach { (uri, document) ->
+                    document.analysis.cancel(false)
+                    adapter.closeDocument(uri)
+                }
+            }
+        }
+    }
+
+    /** The pre-save notification is observational; only didSave refreshes filesystem inputs. */
+    override fun willSave(params: WillSaveTextDocumentParams) {
+        logger.info("textDocument/willSave: {} reason={}", params.textDocument.uri, params.reason)
+    }
+
+    // Saving does not wait for compilation. The formatter uses the captured source and the same
+    // version guard as formatting requests; returned edits are applied only by the client.
+    override fun willSaveWaitUntil(params: WillSaveTextDocumentParams): CompletableFuture<List<TextEdit>> =
+        supplyAsync(
+            "textDocument/willSaveWaitUntil",
+            params.textDocument.uri,
+            { "${it.size} edits" },
+            uri = params.textDocument.uri,
+            sourceOnly = true,
+        ) {
+            requireResolve(server.synchronization.waitUntil, "Save edits")
+            if (!server.synchronization.formatOnSave) return@supplyAsync emptyList()
+            val uri = params.textDocument.uri
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
+            val config = server.editorFormattingConfig ?: FormattingConfig.DEFAULT
+            adapter
+                .formatDocument(
+                    uri,
+                    content,
+                    AdapterFormattingOptions(
+                        tabSize = config.indentSize,
+                        insertSpaces = config.insertSpaces,
+                    ),
+                ).map { it.toLsp() }
+        }
+
     override fun didSave(params: DidSaveTextDocumentParams) {
         logger.info("textDocument/didSave: {}", params.textDocument.uri)
+        refreshForFile(params.textDocument.uri)
     }
+
+    override fun diagnostic(params: DocumentDiagnosticParams): CompletableFuture<DocumentDiagnosticReport> =
+        pullDiagnostics(
+            "textDocument/diagnostic",
+            params.textDocument.uri,
+            params.identifier,
+            workspace = false,
+            progress = params,
+            traced = { it.traced(params.previousResultId) },
+        ) { results ->
+            // a module's tests are part of its root document's report here too: VS Code takes an open document's report
+            // from its own pulls, not from the workspace's, so a test added to an open module, which leaves its
+            // diagnostics as they were, makes a new report only here, which its Testing view lists the tests again on
+            val current = diagnosticReports.record(results, (adapter as? XdkAdapter)?.testsByRoot().orEmpty())
+            // Unknown or removed documents have an empty report, never an old cached error.
+            if (!diagnosticReports.includes(current, params.textDocument.uri)) {
+                diagnosticReports.record(params.textDocument.uri, emptyList())
+            }
+            diagnosticReports.document(
+                params.textDocument.uri,
+                params.previousResultId,
+                if (server.supportsRelatedDiagnostics) current else emptySet(),
+                relatedInformation = server.presentation.pullDiagnosticRelatedInformation,
+                tags = server.presentation.pullDiagnosticTags,
+            )
+        }
+
+    /** How many times a change revised the diagnostics ([revise]), for tests of what a change revises. */
+    internal val diagnosticRevisions: Long
+        get() = synchronized(lifecycle) { diagnosticRevision }
+
+    /** The documents whose current diagnostics no report has given the client yet, as their canonical URIs. */
+    internal fun unreportedDiagnostics(): List<String> = diagnosticReports.unreported()
+
+    internal fun workspaceDiagnostics(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> {
+        // a change of an open module outside the graph that no watcher reported, as VS Code's misses every change in a
+        // folder made with its subfolders in one go, is one on disk as a watcher's would be, whose analysis the pull
+        // waits for; the pull reads the graph's own sources again itself. The check runs here, on the message thread,
+        // as a watcher's event does, so that the pull starts after its refresh and in order with the documents' changes
+        if (server.usesPullDiagnostics) (adapter as? XdkAdapter)?.unwatchedChanges()?.forEach(::refreshForFile)
+        return pullDiagnostics(
+            "workspace/diagnostic",
+            "",
+            params.identifier,
+            workspace = true,
+            progress = params,
+            partial = { report ->
+                PartialResults.Plan(
+                    report.items
+                        .chunked(PartialResults.BATCH_SIZE)
+                        .map(::WorkspaceDiagnosticReportPartialResult),
+                    WorkspaceDiagnosticReport(emptyList()),
+                )
+            },
+            traced = { it.traced() },
+        ) { results ->
+            // a module's tests are part of its root document's report, so that a client that lists them again as its
+            // diagnostics change, as VS Code's Testing view does, follows a change to them in closed files too
+            val current = diagnosticReports.record(results, (adapter as? XdkAdapter)?.testsByRoot().orEmpty())
+            diagnosticReports.workspace(
+                current,
+                params.previousResultIds.orEmpty().associate { it.uri to it.value },
+                openDocuments.mapValues { it.value.version },
+                relatedInformation = server.presentation.pullDiagnosticRelatedInformation,
+                tags = server.presentation.pullDiagnosticTags,
+            )
+        }
+    }
+
+    private fun <T> pullDiagnostics(
+        method: String,
+        uri: String,
+        identifier: String?,
+        workspace: Boolean,
+        progress: WorkDoneProgressParams,
+        partial: ((T) -> PartialResults.Plan<T>)? = null,
+        traced: (T) -> Map<String, Any?>,
+        convert: (List<CompilationResult>) -> T,
+    ): CompletableFuture<T> {
+        if (!server.usesPullDiagnostics || (identifier != null && identifier != XtcLanguageServer.PULL_DIAGNOSTICS_IDENTIFIER)) {
+            return CompletableFuture.failedFuture(
+                ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.InvalidParams,
+                        "Compiler pull diagnostics were not negotiated for this provider",
+                        null,
+                    ),
+                ),
+            )
+        }
+        // a library source's analysis reports on no document of the workspace, so a pull of one waits for none of them:
+        // the whole library's compile that Go to Definition into its source starts can take half a minute
+        val library = (adapter as? XdkAdapter)?.let { compiler -> compiler::isLibraryDocument }
+        val waitsFor: (String) -> Boolean =
+            if (workspace || library == null || library(uri)) { _ -> true } else { other -> !library(other) }
+        return queryAsync(
+            method,
+            uri,
+            reportsOutOfSync = true,
+            waitsFor = waitsFor,
+            // VS Code's client pulls a document's diagnostics again after a cancellation, and takes ContentModified as an
+            // empty report; it pulls the workspace's again after ContentModified, and counts a cancellation as a failure:
+            // it pulls again while it has counted five or fewer, so after the sixth it pulls no more; LSP4IJ 0.30.1 pulls
+            // the workspace's no more after one until a refresh
+            cancelsWhenRetired = !workspace,
+            request = {
+                val open = openDocuments[uri]
+                if (!workspace && open != null) {
+                    CompletableFuture.completedFuture(listOf(analyzed(uri, open.analysis)))
+                } else {
+                    (adapter as XdkAdapter).workspaceDiagnosticsAsync()
+                }
+            },
+            progress = progress,
+            partial = partial,
+            traced = traced,
+            convert = { results ->
+                val owned = results.flatMap { it.documentUris }.toSet()
+                // A closed member can belong to an open standalone module, outside the
+                // configured graph. Preserve that module's current analysis for document pulls
+                // too, without including unrelated standalone modules in the report.
+                val all =
+                    results +
+                        openDocuments
+                            .filterKeys { waitsFor(it) && !diagnosticReports.includes(owned, it) }
+                            .map { (open, document) -> analyzed(open, document.analysis) }
+                            .filter {
+                                workspace || diagnosticReports.includes(it.documentUris, uri)
+                            }
+                convert(all.map(::reportOutOfSync))
+            },
+            workspace = true,
+        )
+    }
+
+    /**
+     * What [analysis] of the open document [uri] finds, once it ends, or, when it fails, the error that its publication
+     * reports ([analysisFailure]): a pull joins the analyses of the open documents it waits for, so one that failed would
+     * fail each pull of the others, and the workspace's. A canceled analysis throws, as a later one replaces it.
+     */
+    private fun analyzed(
+        uri: String,
+        analysis: CompletableFuture<CompilationResult>,
+    ): CompilationResult =
+        try {
+            analysis.join()
+        } catch (failure: CompletionException) {
+            if (failure.cause is CancellationException) throw failure
+            analysisFailure(uri)
+        }
+
+    /** What a failed analysis of [uri] reports, pushed or pulled: an error at the document's start, whose cause the log has. */
+    private fun analysisFailure(uri: String): CompilationResult =
+        CompilationResult.failure(
+            uri,
+            listOf(
+                Diagnostic(
+                    location = DiagnosticLocation(uri, 0, 0, 0, 0),
+                    severity = Diagnostic.Severity.ERROR,
+                    message = "Ecstasy analysis failed; see the language server log for details",
+                    code = Diagnostic.Codes.ANALYSIS_FAILED,
+                    source = Diagnostic.SOURCE,
+                ),
+            ),
+        )
 
     /**
      * LSP: textDocument/hover
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.hover
      */
     override fun hover(params: HoverParams): CompletableFuture<Hover?> =
@@ -195,44 +1596,133 @@ class XtcTextDocumentService(
             "textDocument/hover",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> if (result == null) "no result" else "found symbol" },
+            uri = params.textDocument.uri,
         ) {
-            adapter.getHoverInfo(params.textDocument.uri, params.position.line, params.position.character)?.let {
-                Hover().apply {
-                    contents =
-                        Either.forRight(
-                            MarkupContent().apply {
-                                kind = MarkupKind.MARKDOWN
-                                value = it
-                            },
-                        )
+            adapter
+                .getHoverInfo(
+                    params.textDocument.uri,
+                    params.position.line,
+                    params.position.character,
+                )?.let {
+                    Hover().apply {
+                        contents = Either.forRight(server.presentation.hover(it))
+                    }
                 }
-            }
         }
 
     /**
      * LSP: textDocument/completion
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.completion
      */
     override fun completion(params: CompletionParams): CompletableFuture<Either<List<CompletionItem>, CompletionList>> =
-        supplyAsync(
+        queryAsync(
             "textDocument/completion",
-            "${params.textDocument.uri} at ${params.position.fmt()} trigger=${params.context?.triggerKind}/${params.context?.triggerCharacter}",
-            { result ->
-                val items = result.left
-                val preview = items.take(5).joinToString { it.label }
-                "${items.size} items${if (preview.isNotEmpty()) " [$preview]" else ""}"
+            params.textDocument.uri,
+            {
+                adapter.getCompletionsAsync(
+                    params.textDocument.uri,
+                    params.position.line,
+                    params.position.character,
+                    params.context?.triggerCharacter,
+                )
             },
-        ) {
-            val trigger = params.context?.triggerCharacter
+            progress = params,
+        ) { completions ->
             val items =
-                adapter.getCompletions(params.textDocument.uri, params.position.line, params.position.character, trigger).map { c ->
+                completions.map { c ->
                     CompletionItem(c.label).apply {
-                        kind = toCompletionItemKind(c.kind)
+                        kind = server.presentation.completionKind(toCompletionItemKind(c.kind))
+                        val snippet = c.snippet?.takeIf { server.presentation.completionSnippets }
+
+                        fun insertion(text: String) = if (c.snippet == null) text else server.presentation.completionTemplate(text)
+                        insertTextFormat = if (snippet == null) InsertTextFormat.PlainText else InsertTextFormat.Snippet
+                        if (c.snippet != null && server.presentation.completionAsIs) insertTextMode = InsertTextMode.AsIs
                         detail = c.detail
-                        insertText = c.insertText
+                        insertText = insertion(snippet ?: c.insertText)
+                        val handle =
+                            c.documentation
+                                ?.takeIf { server.resolvesCompletionDocumentation }
+                                ?.let {
+                                    completionReports.remember(
+                                        resolveRevision,
+                                        c.label,
+                                        it,
+                                        it.length,
+                                    )
+                                }
+                        if (handle == null) {
+                            documentation = c.documentation?.let { Either.forLeft(it) }
+                        } else {
+                            data = handle
+                        }
+                        sortText = c.sortText
+                        textEdit =
+                            c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), insertion(snippet ?: it.newText))) }
+                        additionalTextEdits = c.additionalTextEdits.map { it.toLsp() }
                     }
                 }
             Either.forLeft(items)
+        }
+
+    override fun inlineCompletion(
+        params: InlineCompletionParams,
+    ): CompletableFuture<Either<List<InlineCompletionItem>, InlineCompletionList>> {
+        if (!server.presentation.inlineCompletion || AdapterCapability.INLINE_COMPLETION !in adapter.capabilities) {
+            return CompletableFuture.failedFuture(
+                ResponseErrorException(ResponseError(ResponseErrorCode.MethodNotFound, "Inline completion was not negotiated", null)),
+            )
+        }
+        val context =
+            InlineCompletionContext(
+                automatic = params.context.triggerKind == InlineCompletionTriggerKind.Automatic,
+                selectedCompletion =
+                    params.context.selectedCompletionInfo?.let {
+                        AdapterTextEdit(toAdapterRange(it.range), it.text)
+                    },
+            )
+        return queryAsync(
+            "textDocument/inlineCompletion",
+            params.textDocument.uri,
+            {
+                adapter.getInlineCompletionsAsync(
+                    params.textDocument.uri,
+                    AdapterPosition(params.position.line, params.position.character),
+                    context,
+                )
+            },
+            progress = params,
+        ) { edits ->
+            Either.forRight(
+                InlineCompletionList(
+                    edits.map { edit ->
+                        InlineCompletionItem(Either.forLeft(edit.newText)).apply {
+                            range = edit.range.toLsp()
+                            filterText = edit.newText
+                        }
+                    },
+                ),
+            )
+        }
+    }
+
+    override fun resolveCompletionItem(item: CompletionItem): CompletableFuture<CompletionItem> =
+        supplyAsync("completionItem/resolve", item.label) {
+            if (!server.resolvesCompletionDocumentation) {
+                throw ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.MethodNotFound,
+                        "Completion resolution was not negotiated",
+                        null,
+                    ),
+                )
+            }
+            if (item.data != null) {
+                val documentation =
+                    completionReports.resolve(item.data, resolveRevision, item.label)
+                if (item.documentation == null) item.documentation = Either.forLeft(documentation)
+            }
+            item
         }
 
     private fun toCompletionItemKind(kind: AdapterCompletionItem.CompletionKind): CompletionItemKind =
@@ -244,10 +1734,13 @@ class XtcTextDocumentService(
             AdapterCompletionItem.CompletionKind.VARIABLE -> CompletionItemKind.Variable
             AdapterCompletionItem.CompletionKind.KEYWORD -> CompletionItemKind.Keyword
             AdapterCompletionItem.CompletionKind.MODULE -> CompletionItemKind.Module
+            AdapterCompletionItem.CompletionKind.VALUE -> CompletionItemKind.Value
+            AdapterCompletionItem.CompletionKind.SNIPPET -> CompletionItemKind.Snippet
         }
 
     /**
      * LSP: textDocument/definition
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.definition
      */
     override fun definition(params: DefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
@@ -262,39 +1755,92 @@ class XtcTextDocumentService(
                     "found ${loc.uri.substringAfterLast('/')}@${loc.range.start.fmt()}"
                 }
             },
+            uri = params.textDocument.uri,
+            progress = params,
+            partial = PartialResults::eitherLists,
         ) {
-            adapter.findDefinition(params.textDocument.uri, params.position.line, params.position.character)?.let {
-                Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
-            } ?: Either.forLeft(emptyList())
+            adapter
+                .findDefinition(
+                    params.textDocument.uri,
+                    params.position.line,
+                    params.position.character,
+                )?.let {
+                    Either.forLeft(listOf(it.toLsp()))
+                } ?: Either.forLeft(emptyList())
         }
 
     /**
      * LSP: textDocument/references
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.references
      */
     override fun references(params: ReferenceParams): CompletableFuture<List<Location>> =
-        supplyAsync(
-            "textDocument/references",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result ->
-                val preview =
-                    result.take(5).joinToString { loc ->
-                        "${loc.uri.substringAfterLast('/')}@${loc.range.start.fmt()}"
+        askedAgain { first ->
+            queryAsync(
+                "textDocument/references",
+                params.textDocument.uri,
+                {
+                    if (heldReferences != null && params.textDocument.uri.endsWith("/$heldReferences")) {
+                        // ends only when the client cancels it, or the server stops
+                        CompletableFuture<List<AdapterLocation>>()
+                    } else {
+                        adapter.findReferencesAsync(
+                            params.textDocument.uri,
+                            params.position.line,
+                            params.position.character,
+                            params.context.isIncludeDeclaration,
+                        )
                     }
-                "${result.size} references${if (preview.isNotEmpty()) " [$preview]" else ""}"
-            },
-        ) {
-            adapter
-                .findReferences(
-                    params.textDocument.uri,
-                    params.position.line,
-                    params.position.character,
-                    params.context.isIncludeDeclaration,
-                ).map { it.toLsp() }
+                },
+                workspace = true,
+                progress = params.takeIf { first },
+                partial = PartialResults::list,
+            ) { references ->
+                references.map { it.toLsp() }
+            }
         }
 
     /**
+     * What [query] answers, asked again when documents only opened or closed while it ran: a workspace query ends when
+     * any document opens or closes, as when an editor releases a document that no editor shows, some minutes after it
+     * opened it, and so does the compiler's graph query it waits on. The client did not cancel the request, and an answer
+     * that says the content changed, or that the request was cancelled, shows it nothing, as an empty Find References;
+     * an edit of an open document still ends it so. An attempt after the first is asked without the request's progress,
+     * which the first reported. The client's cancellation of the returned future ends the attempt that runs.
+     */
+    private fun <T> askedAgain(query: (first: Boolean) -> CompletableFuture<T>): CompletableFuture<T> {
+        val answer = CompletableFuture<T>()
+
+        fun ask(first: Boolean) {
+            val documents = synchronized(lifecycle) { openDocuments.toMap() }
+            val attempt = query(first)
+            answer.whenComplete { _, _ -> attempt.cancel(false) }
+            attempt.whenCompleteAsync { value, failure ->
+                val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.lastOrNull()
+                val ended =
+                    cause is CancellationException ||
+                        (cause is ResponseErrorException && cause.responseError.code == ResponseErrorCode.ContentModified.value)
+                when {
+                    answer.isDone -> Unit
+                    cause == null -> answer.complete(value)
+                    ended && synchronized(lifecycle) { !closed && onlyOpenedOrClosed(documents) } -> ask(false)
+                    cause is CancellationException -> answer.cancel(false)
+                    else -> answer.completeExceptionally(cause)
+                }
+            }
+        }
+        ask(true)
+        return answer
+    }
+
+    /** Called under lifecycle. Whether, since [then], documents opened or closed, and none of those open then and now changed. */
+    private fun onlyOpenedOrClosed(then: Map<String, Document>): Boolean =
+        then.keys != openDocuments.keys &&
+            then.none { (uri, document) -> openDocuments.containsKey(uri) && changed(document, openDocuments[uri]) }
+
+    /**
      * LSP: textDocument/documentSymbol
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.documentSymbol
      */
     override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> =
@@ -302,22 +1848,39 @@ class XtcTextDocumentService(
             "textDocument/documentSymbol",
             params.textDocument.uri,
             { result -> "${result.size} symbols" },
+            uri = params.textDocument.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             val uri = params.textDocument.uri
-            val result =
-                adapter.getCachedResult(uri) ?: openDocuments[uri]?.let { content ->
-                    adapter.compile(uri, content)
-                } ?: return@supplyAsync emptyList()
+            val result = adapter.getCachedResult(uri) ?: return@supplyAsync emptyList()
 
-            result.symbols.map { symbol ->
-                Either.forRight(toDocumentSymbol(symbol))
+            if (server.presentation.hierarchicalSymbols) {
+                result.symbols.map { Either.forRight(toDocumentSymbol(it)) }
+            } else {
+                flatSymbols(result.symbols).map { Either.forLeft(it) }
             }
+        }
+
+    private fun flatSymbols(
+        symbols: List<SymbolInfo>,
+        container: String? = null,
+    ): List<SymbolInformation> =
+        symbols.flatMap { symbol ->
+            listOf(
+                SymbolInformation(
+                    symbol.name,
+                    server.presentation.symbolKind(symbol.kind.toLsp()),
+                    symbol.location.toLsp(),
+                    container,
+                ),
+            ) + flatSymbols(symbol.children, symbol.name)
         }
 
     private fun toDocumentSymbol(symbol: SymbolInfo): DocumentSymbol =
         DocumentSymbol().apply {
             name = symbol.name
-            kind = symbol.kind.toLsp()
+            kind = server.presentation.symbolKind(symbol.kind.toLsp())
             range = symbol.location.toRange()
             selectionRange = symbol.location.toRange()
             if (symbol.typeSignature != null) {
@@ -330,6 +1893,7 @@ class XtcTextDocumentService(
 
     /**
      * LSP: textDocument/documentHighlight
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.documentHighlight
      */
     override fun documentHighlight(params: DocumentHighlightParams): CompletableFuture<List<DocumentHighlight>> =
@@ -337,6 +1901,7 @@ class XtcTextDocumentService(
             "textDocument/documentHighlight",
             "${params.textDocument.uri} pos=${params.position.fmt()}",
             { result -> "${result.size} highlights" },
+            uri = params.textDocument.uri,
         ) {
             adapter
                 .getDocumentHighlights(
@@ -353,6 +1918,7 @@ class XtcTextDocumentService(
 
     /**
      * LSP: textDocument/selectionRange
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.selectionRange
      */
     override fun selectionRange(params: SelectionRangeParams): CompletableFuture<List<SelectionRange>> =
@@ -360,19 +1926,23 @@ class XtcTextDocumentService(
             "textDocument/selectionRange",
             "${params.textDocument.uri} positions=${params.positions.map { it.fmt() }}",
             { result -> "${result.size} ranges" },
+            uri = params.textDocument.uri,
         ) {
             val adapterPositions = params.positions.map { AdapterPosition(it.line, it.character) }
-            adapter.getSelectionRanges(params.textDocument.uri, adapterPositions).map { toLspSelectionRange(it) }
+            adapter.getSelectionRanges(params.textDocument.uri, adapterPositions).map {
+                toLspSelectionRange(it)
+            }
         }
 
-    private fun toLspSelectionRange(range: AdapterSelectionRange): org.eclipse.lsp4j.SelectionRange =
-        org.eclipse.lsp4j.SelectionRange().apply {
+    private fun toLspSelectionRange(range: AdapterSelectionRange): SelectionRange =
+        SelectionRange().apply {
             this.range = range.range.toLsp()
             this.parent = range.parent?.let { toLspSelectionRange(it) }
         }
 
     /**
      * LSP: textDocument/foldingRange
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.foldingRange
      */
     override fun foldingRange(params: FoldingRangeRequestParams): CompletableFuture<List<FoldingRange>> =
@@ -380,16 +1950,20 @@ class XtcTextDocumentService(
             "textDocument/foldingRange",
             params.textDocument.uri,
             { result -> "${result.size} ranges" },
+            uri = params.textDocument.uri,
         ) {
             adapter.getFoldingRanges(params.textDocument.uri).map { r ->
                 FoldingRange(r.startLine, r.endLine).apply {
                     kind = r.kind?.toLsp()
+                    startCharacter = r.startCharacter
+                    endCharacter = r.endCharacter
                 }
             }
         }
 
     /**
      * LSP: textDocument/documentLink
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.documentLink
      */
     override fun documentLink(params: DocumentLinkParams): CompletableFuture<List<DocumentLink>> =
@@ -397,52 +1971,85 @@ class XtcTextDocumentService(
             "textDocument/documentLink",
             params.textDocument.uri,
             { result -> "${result.size} links" },
+            uri = params.textDocument.uri,
         ) {
             val uri = params.textDocument.uri
-            val content = openDocuments[uri] ?: return@supplyAsync emptyList()
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
             adapter.getDocumentLinks(uri, content).map { l ->
                 DocumentLink().apply {
                     range = l.range.toLsp()
-                    target = l.target
-                    tooltip = l.tooltip
+                    val handle =
+                        if (server.resolvesDocumentLinkTarget) {
+                            linkReports.remember(
+                                resolveRevision,
+                                range.fmt(),
+                                l,
+                                (l.target?.length ?: 0) + (l.tooltip?.length ?: 0),
+                            )
+                        } else {
+                            null
+                        }
+                    if (handle == null) {
+                        target = l.target?.let(server.readOnlyDocuments::present)
+                        tooltip = l.tooltip.takeIf { server.presentation.linkTooltips }
+                    } else {
+                        data = handle
+                    }
                 }
             }
         }
 
     /**
      * LSP: textDocument/signatureHelp
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.signatureHelp
      */
     override fun signatureHelp(params: SignatureHelpParams): CompletableFuture<SignatureHelp?> =
-        supplyAsync(
+        queryAsync(
             "textDocument/signatureHelp",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> if (result == null) "no result" else "${result.signatures.size} signatures" },
-        ) {
-            adapter.getSignatureHelp(params.textDocument.uri, params.position.line, params.position.character)?.let { help ->
+            params.textDocument.uri,
+            {
+                adapter.getSignatureHelpAsync(
+                    params.textDocument.uri,
+                    params.position.line,
+                    params.position.character,
+                )
+            },
+            progress = params,
+        ) { result ->
+            result?.let { help ->
                 SignatureHelp().apply {
                     signatures =
                         help.signatures.map { s ->
                             SignatureInformation().apply {
                                 label = s.label
                                 documentation = s.documentation?.let { Either.forLeft(it) }
+                                activeParameter =
+                                    s.activeParameter.takeIf {
+                                        server.presentation.signatureActiveParameters
+                                    }
+                                // without parameter metadata, no parameters: an empty list would say the signature takes none
                                 parameters =
-                                    s.parameters.map { p ->
+                                    s.parameters.takeIf { it.isNotEmpty() }?.map { p ->
                                         ParameterInformation().apply {
                                             label = Either.forLeft(p.label)
-                                            documentation = p.documentation?.let { Either.forLeft(it) }
+                                            documentation =
+                                                p.documentation?.let { Either.forLeft(it) }
                                         }
                                     }
                             }
                         }
                     activeSignature = help.activeSignature
-                    activeParameter = help.activeParameter
+                    activeParameter =
+                        help.signatures.getOrNull(help.activeSignature)?.activeParameter
+                            ?: help.activeParameter
                 }
             }
         }
 
     /**
      * LSP: textDocument/prepareRename
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.prepareRename
      */
     override fun prepareRename(
@@ -452,104 +2059,428 @@ class XtcTextDocumentService(
             "textDocument/prepareRename",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { _ -> "valid" },
+            uri = params.textDocument.uri,
         ) {
-            adapter.prepareRename(params.textDocument.uri, params.position.line, params.position.character)?.let { result ->
-                Either3.forSecond<Range, PrepareRenameResult, PrepareRenameDefaultBehavior>(
-                    PrepareRenameResult().apply {
-                        range = result.range.toLsp()
-                        placeholder = result.placeholder
-                    },
+            adapter
+                .prepareRename(
+                    params.textDocument.uri,
+                    params.position.line,
+                    params.position.character,
+                )?.let { result ->
+                    Either3.forSecond(
+                        PrepareRenameResult().apply {
+                            range = result.range.toLsp()
+                            placeholder = result.placeholder
+                        },
+                    )
+                }
+                ?: throw ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.InvalidParams,
+                        if (adapter.readOnlyDocument(params.textDocument.uri) != null) {
+                            "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it."
+                        } else {
+                            "Rename not allowed at this position"
+                        },
+                        null,
+                    ),
                 )
-            } ?: throw ResponseErrorException(
-                ResponseError(
-                    ResponseErrorCode.InvalidParams,
-                    "Rename not allowed at this position",
-                    null,
-                ),
+        }
+
+    /**
+     * LSP: textDocument/rename. No edit for a rename that its proof refuses; a request failure with the reason for one the
+     * adapter refuses, also for one it can't prove while a module does not compile, and ContentModified for one that a
+     * change of the project overtook, which the client may ask again ([RenameRefused.asResponseError]).
+     *
+     * @see org.eclipse.lsp4j.services.TextDocumentService.rename
+     */
+    override fun rename(params: RenameParams): CompletableFuture<WorkspaceEdit?> {
+        val uri = params.textDocument.uri
+        val line = params.position.line
+        val column = params.position.character
+        // the compiler's rename says what modules outside the workspace may use, as xtc/rename does
+        val compiler = adapter as? XdkAdapter
+        return queryAsync(
+            "textDocument/rename",
+            uri,
+            {
+                (
+                    compiler?.plainRenameAsync(uri, line, column, params.newName)
+                        ?: adapter.renameAsync(uri, line, column, params.newName).mapCancellable { it?.let(::XdkRenameProposal) }
+                ).mapFailureCancellable(RenameRefused::asResponseError)
+            },
+            workspace = true,
+            progress = params,
+        ) { proposal ->
+            proposal?.let { protocolEdit(it.edit)?.to(it) }
+        }.mapCancellable { answer -> answer?.let { (edit, proposal) -> notes("rename", proposal, edit) } }
+    }
+
+    /**
+     * Same lifecycle/version checks as standard Rename; settings are never installed by a proposal. A rename of what
+     * modules outside the workspace may use says so as it answers, before the client applies the edit.
+     */
+    fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> {
+        val compiler =
+            adapter as? XdkAdapter ?: return rename(params).mapCancellable { it?.let(::RenameProposal) }
+        return queryAsync(
+            "xtc/rename",
+            params.textDocument.uri,
+            {
+                // a refusal reaches the client with its reason, and an overtaken proof as ContentModified, as
+                // textDocument/rename's do, not as an internal error
+                compiler
+                    .renameProposalAsync(
+                        params.textDocument.uri,
+                        params.position.line,
+                        params.position.character,
+                        params.newName,
+                    ).mapFailureCancellable(RenameRefused::asResponseError)
+            },
+            workspace = true,
+        ) { proposal -> proposal?.let { protocolProposal(it)?.to(it) } }.mapCancellable { answer ->
+            answer?.let { (protocol, proposal) -> notes("rename", proposal, protocol) }
+        }
+    }
+
+    /**
+     * [answer], once the client is shown what [proposal]'s edit leaves as it is: modules outside the workspace that may use
+     * what it changes ([outsideUses]), and the string literals and comments that spell the old name.
+     */
+    private fun <T> notes(
+        operation: String,
+        proposal: XdkRenameProposal,
+        answer: T,
+    ): T = outsideUses(operation, proposal.outsideUses, answer).also { proposal.unchangedSpellings?.let(server::showInfo) }
+
+    /**
+     * [answer], once the client is shown that the edit leaves modules outside the workspace as they are when it changes
+     * [names], which they may use: as the server answers, before the client applies the edit.
+     */
+    private fun <T> outsideUses(
+        operation: String,
+        names: List<String>,
+        answer: T,
+    ): T {
+        if (names.isNotEmpty()) server.showInfo(server.presentation.outsideUses(operation, names))
+        return answer
+    }
+
+    private fun protocolProposal(proposal: XdkRenameProposal): RenameProposal? =
+        protocolEdit(proposal.edit)?.let { edit ->
+            RenameProposal(
+                edit,
+                proposal.sourceModules?.let { modules ->
+                    SourceGraphReplacement(
+                        requireNotNull(proposal.previousSourceModules).map { it.toProtocol() },
+                        modules.map { it.toProtocol() },
+                    )
+                },
+                proposal.scope?.let { scope ->
+                    RenameScope(scope.boundary.name, scope.modules.map { it.toProtocol() }, scope.sourceUris, scope.revision)
+                },
+                // the text that each document's changes were computed against, an editor's buffer or the file on the
+                // disk, as the client checks it before it applies them: a closed file has no version to say it changed
+                proposal.edit.texts
+                    .takeIf { it.isNotEmpty() }
+                    ?.mapValues { (_, text) -> RenameProposal.textHash(text) },
             )
         }
 
     /**
-     * LSP: textDocument/rename
-     * @see org.eclipse.lsp4j.services.TextDocumentService.rename
+     * Unlike willRenameFiles, this proposal includes the requested moves and host graph update. As a rename's, a move
+     * that can't be proven while a module does not compile answers a request failure with the reason, and one that a
+     * change of the project overtook ContentModified ([RenameRefused.asResponseError]); one that its proof refuses no edit.
      */
-    override fun rename(params: RenameParams): CompletableFuture<WorkspaceEdit?> =
-        supplyAsync(
-            "textDocument/rename",
-            "${params.textDocument.uri} at ${params.position.fmt()} -> '${params.newName}'",
-            { result -> if (result == null) "no edit" else "${result.changes?.size ?: 0} files changed" },
+    internal fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?> {
+        val compiler = adapter as? XdkAdapter ?: return CompletableFuture.completedFuture(null)
+        val first = params.files.firstOrNull() ?: return CompletableFuture.completedFuture(null)
+        if (!server.supportsVersionedEdits || !server.supportsFileRenames ||
+            params.files
+                .map { it.oldUri }
+                .distinct()
+                .size != params.files.size
         ) {
-            adapter
-                .rename(
-                    params.textDocument.uri,
-                    params.position.line,
-                    params.position.character,
-                    params.newName,
-                )?.let { edit ->
-                    WorkspaceEdit().apply {
-                        changes =
-                            edit.changes.mapValues { (_, edits) ->
-                                edits.map { e ->
-                                    TextEdit().apply {
-                                        range = e.range.toLsp()
-                                        newText = e.newText
-                                    }
-                                }
-                            }
-                    }
-                }
+            return CompletableFuture.completedFuture(null)
         }
-
-    /**
-     * LSP: textDocument/codeAction
-     * @see org.eclipse.lsp4j.services.TextDocumentService.codeAction
-     */
-    override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> =
-        supplyAsync(
-            "textDocument/codeAction",
-            "${params.textDocument.uri} range=${params.range.fmt()} diagnostics=${params.context.diagnostics?.size ?: 0}",
-            { result ->
-                val titles =
-                    result.take(5).joinToString { either ->
-                        either.right?.title ?: either.left?.title ?: "<unknown>"
-                    }
-                "${result.size} actions${if (titles.isNotEmpty()) " [$titles]" else ""}"
+        return queryAsync(
+            "xtc/renameFiles",
+            first.oldUri,
+            {
+                compiler
+                    .renameFilesProposalAsync(params.files.associate { it.oldUri to it.newUri })
+                    .mapFailureCancellable { RenameRefused.asResponseError(it, fileOperation(params)) }
             },
-        ) {
-            val adapterDiagnostics = params.context.diagnostics.map { Diagnostic.fromLsp(params.textDocument.uri, it) }
+            workspace = true,
+        ) { proposal -> proposal?.let { protocolProposal(it)?.to(it.outsideUses) } }.mapCancellable { answer ->
+            answer?.let { (protocol, names) -> outsideUses(fileOperation(params), names, protocol) }
+        }
+    }
 
-            adapter
-                .getCodeActions(
-                    params.textDocument.uri,
-                    toAdapterRange(params.range),
-                    adapterDiagnostics,
-                ).map { a ->
-                    Either.forRight(
-                        CodeAction().apply {
-                            title = a.title
-                            kind = a.kind.toLsp()
-                            isPreferred = a.isPreferred
-                            a.edit?.let { e ->
-                                edit =
-                                    WorkspaceEdit().apply {
-                                        changes =
-                                            e.changes.mapValues { (_, edits) ->
-                                                edits.map { te ->
-                                                    TextEdit().apply {
-                                                        this.range = te.range.toLsp()
-                                                        newText = te.newText
-                                                    }
-                                                }
-                                            }
-                                    }
-                            }
-                        },
+    /** A rename when every file of [params] stays in its folder, as a type or module renamed with its file; else a move. */
+    private fun fileOperation(params: RenameFilesParams): String =
+        if (params.files.all { XdkSources.file(it.oldUri)?.parentFile == XdkSources.file(it.newUri)?.parentFile }) "rename" else "move"
+
+    /** workspace/willRenameFiles' edit, which answers as [renameFilesProposal] does. */
+    internal fun renameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> {
+        val compiler = adapter as? XdkAdapter ?: return CompletableFuture.completedFuture(null)
+        val first = params.files.firstOrNull() ?: return CompletableFuture.completedFuture(null)
+        if (
+            !server.supportsVersionedEdits ||
+            params.files
+                .map { it.oldUri }
+                .distinct()
+                .size != params.files.size
+        ) {
+            return CompletableFuture.completedFuture(null)
+        }
+        return queryAsync(
+            "workspace/willRenameFiles",
+            first.oldUri,
+            {
+                compiler
+                    .plainRenameFilesAsync(params.files.associate { it.oldUri to it.newUri })
+                    .mapFailureCancellable { RenameRefused.asResponseError(it, fileOperation(params)) }
+            },
+            workspace = true,
+        ) { proposal ->
+            proposal?.let { protocolEdit(it.edit)?.to(it.outsideUses) }
+        }.mapCancellable { answer -> answer?.let { (edit, names) -> outsideUses(fileOperation(params), names, edit) } }
+    }
+
+    private fun canConvertEdit(edit: AdapterWorkspaceEdit): Boolean =
+        (!edit.versioned || server.supportsVersionedEdits) &&
+            (
+                edit.renames.isEmpty() ||
+                    (edit.versioned && server.supportsVersionedEdits && server.supportsFileRenames)
+            )
+
+    /** Called while the document lifecycle is locked, after the query's version checks. */
+    private fun protocolEdit(edit: AdapterWorkspaceEdit): WorkspaceEdit? {
+        if (!canConvertEdit(edit)) return null
+        val changes =
+            edit.changes.mapValues { (_, edits) ->
+                edits.map { it.toLsp() }
+            }
+        return WorkspaceEdit().apply {
+            if (edit.versioned) {
+                this.changes = null
+                documentChanges =
+                    changes.map { (uri, edits) ->
+                        Either.forLeft<TextDocumentEdit, ResourceOperation>(
+                            TextDocumentEdit(
+                                VersionedTextDocumentIdentifier(uri, openDocuments[uri]?.version),
+                                edits.map { Either.forLeft(it) },
+                            ),
+                        )
+                    } +
+                    edit.renames.map { (from, to) ->
+                        Either.forRight(
+                            RenameFile(from, to, RenameFileOptions(false, false)),
+                        )
+                    }
+            } else {
+                this.changes = changes
+            }
+        }
+    }
+
+    override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> {
+        // a quick fix names the diagnostics it resolves; answer with the client's own diagnostic objects
+        val context = params.context.diagnostics.orEmpty()
+        val originals = context.associateBy { Diagnostic.fromLsp(params.textDocument.uri, it) }
+        // LSP lets a server leave uncomputed the kinds that `only` leaves out; the client filters them out anyway
+        // TODO LSP4IJ: UP68 — its intention list, an Automatic request with no only, hides the quick fixes it asks for per
+        // diagnostic with only quickfix, so that request leaves them out rather than prove them for nothing.
+        val hidden =
+            params.context.only == null &&
+                params.context.triggerKind == CodeActionTriggerKind.Automatic &&
+                server.presentation.quickFixesPerDiagnostic
+        val kinds =
+            AdapterCodeActionKind.entries.filterTo(linkedSetOf()) {
+                ClientPresentation.matchesActionKind(it.toLsp(), params.context.only) && !(hidden && it == AdapterCodeActionKind.QUICKFIX)
+            }
+        // what the adapter compiled for the answer, which the request's line in the log reports
+        val compiles = AtomicReference<CodeActionCompiles?>()
+        return queryAsync(
+            "textDocument/codeAction",
+            params.textDocument.uri,
+            {
+                val uri = params.textDocument.uri
+                val range = toAdapterRange(params.range)
+                val diagnostics = originals.keys.toList()
+                // only the compiler's adapter compiles for its actions
+                (adapter as? XdkAdapter)?.getCodeActionsAsync(uri, range, diagnostics, kinds) { compiles.set(it) }
+                    ?: adapter.getCodeActionsAsync(uri, range, diagnostics, kinds)
+            },
+            workspace = true,
+            progress = params,
+        ) { actions ->
+            if (!server.presentation.codeActions) return@queryAsync emptyList()
+            actions.mapNotNull { action ->
+                val kind = action.kind.toLsp()
+                if (!ClientPresentation.matchesActionKind(kind, params.context.only)) {
+                    return@mapNotNull null
+                }
+                val edit = action.edit
+                if (edit != null && !canConvertEdit(edit)) return@mapNotNull null
+                // TODO LSP4IJ: UP85 — 0.30.1 resolves an action only when it has neither an edit nor a command, and runs
+                // the command of one with a command alone, so an action with a command carries its edit
+                val handle =
+                    edit
+                        ?.takeIf {
+                            (server.resolvesCodeActionEdit && action.outsideUses == null) || !server.presentation.actionLiterals
+                        }?.let {
+                            actionReports.remember(
+                                resolveRevision,
+                                action.title,
+                                it,
+                                it.changes.values.sumOf { edits ->
+                                    edits.sumOf { change -> change.newText.length + 64 }
+                                },
+                            )
+                        }
+                if (!server.presentation.actionLiterals) {
+                    // Legacy clients receive a bounded opaque handle, never an arbitrary edit to
+                    // execute.
+                    if (handle == null) return@mapNotNull null
+                    return@mapNotNull Either.forLeft(
+                        Command(
+                            action.title,
+                            ClientPresentation.APPLY_CODE_ACTION,
+                            listOf(handle, action.title),
+                        ),
                     )
                 }
+                val proposed = if (handle == null) edit?.let(::protocolEdit) else null
+                Either.forRight(
+                    CodeAction().apply {
+                        title = action.title
+                        this.kind = action.kind.toLsp()
+                        diagnostics =
+                            action.diagnostics
+                                .mapNotNull(originals::get)
+                                .distinct()
+                                .ifEmpty { null }
+                        isPreferred =
+                            action.isPreferred.takeIf { server.presentation.preferredActions }
+                        this.edit = proposed
+                        data = handle
+                        // the client runs it after the edit, so the message comes as the edit applies, not as listed
+                        command =
+                            action.outsideUses?.let {
+                                Command(
+                                    action.title,
+                                    ClientPresentation.OUTSIDE_USES,
+                                    listOf(server.presentation.outsideUses("safe delete", listOf(it))),
+                                )
+                            }
+                    },
+                )
+            }
+        }.also { answer -> answer.whenComplete { actions, failure -> logCodeActions(params, actions?.size, failure, compiles.get()) } }
+    }
+
+    /**
+     * One line per code action request as it ends, as `embedded build:` has one per build: what it asked for, how it
+     * ended, how many actions it answered, and the module compiles that its revision's compile and its proofs ran.
+     */
+    private fun logCodeActions(
+        params: CodeActionParams,
+        actions: Int?,
+        failure: Throwable?,
+        compiles: CodeActionCompiles?,
+    ) {
+        val cause = failure?.let { generateSequence(it) { thrown -> (thrown as? CompletionException)?.cause }.last() }
+        val range = params.range
+        logger.info(
+            "code actions: uri={} range={} trigger={} only={} outcome={} actions={} compiles={} cached-base={}",
+            params.textDocument.uri.substringAfterLast('/'),
+            "${range.start.line}:${range.start.character}-${range.end.line}:${range.end.character}",
+            params.context.triggerKind
+                ?.name
+                ?.lowercase() ?: "none",
+            params.context.only.orEmpty(),
+            when {
+                cause == null -> "answered"
+                cause is CancellationException -> "cancelled"
+                cause is ResponseErrorException && cause.responseError.code == ResponseErrorCode.ContentModified.value -> "content-modified"
+                else -> "failed"
+            },
+            actions ?: 0,
+            compiles?.let { "base ${it.base} + proofs ${it.proofs}" } ?: "none",
+            compiles?.cachedBase ?: "none",
+        )
+    }
+
+    internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> =
+        queryAsync(
+            "workspace/executeCommand",
+            "",
+            sourceOnly = true,
+            request = {
+                requireResolve(
+                    server.presentation.applyEdit &&
+                        !server.presentation.actionLiterals &&
+                        params.command == ClientPresentation.APPLY_CODE_ACTION,
+                    "Code action command",
+                )
+                val arguments = params.arguments.orEmpty()
+                val title =
+                    when (val value = arguments.getOrNull(1)) {
+                        is String -> value
+                        is JsonPrimitive -> value.takeIf { it.isString }?.asString
+                        else -> null
+                    } ?: throw contentModified(UNTITLED)
+                val edit =
+                    actionReports.resolve(
+                        arguments.firstOrNull(),
+                        resolveRevision,
+                        title,
+                        consume = true,
+                    )
+                val proposed = protocolEdit(edit) ?: throw contentModified(UNAPPLIED)
+                // Do not hold the document lifecycle while entering the JSON-RPC transport.
+                CompletableFuture
+                    .supplyAsync {
+                        server.applyEdit(ApplyWorkspaceEditParams(proposed, title))
+                    }.thenCompose { it }
+                    .orTimeout(10, SECONDS)
+            },
+        ) { response ->
+            if (!response.isApplied) {
+                throw ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.RequestFailed,
+                        response.failureReason ?: "Client refused the code action",
+                        null,
+                    ),
+                )
+            }
+            response
+        }
+
+    override fun resolveCodeAction(action: CodeAction): CompletableFuture<CodeAction> =
+        supplyAsync("codeAction/resolve", action.title) {
+            if (!server.resolvesCodeActionEdit) {
+                throw ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.MethodNotFound,
+                        "Code action resolution was not negotiated",
+                        null,
+                    ),
+                )
+            }
+            if (action.data != null) {
+                val edit = actionReports.resolve(action.data, resolveRevision, action.title)
+                if (action.edit == null) action.edit = protocolEdit(edit) ?: throw contentModified(UNAPPLIED)
+            }
+            action
         }
 
     /**
      * LSP: textDocument/semanticTokens/full
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.semanticTokensFull
      */
     override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens?> =
@@ -557,18 +2488,72 @@ class XtcTextDocumentService(
             "textDocument/semanticTokens/full",
             params.textDocument.uri,
             { result ->
-                if (result == null) "no tokens" else "${result.data.size} items (${result.data.size / 5} tokens)"
+                if (result == null) {
+                    "no tokens"
+                } else {
+                    "${result.data.size} items (${result.data.size / 5} tokens)"
+                }
             },
+            uri = params.textDocument.uri,
         ) {
             adapter.getSemanticTokens(params.textDocument.uri)?.let { tokens ->
-                SemanticTokens().apply {
-                    data = tokens.data
-                }
+                semanticTokenReports.full(params.textDocument.uri, tokens.data)
             }
+        }
+
+    override fun semanticTokensFullDelta(
+        params: SemanticTokensDeltaParams,
+    ): CompletableFuture<Either<SemanticTokens, SemanticTokensDelta>?> =
+        supplyAsync(
+            "textDocument/semanticTokens/full/delta",
+            params.textDocument.uri,
+            uri = params.textDocument.uri,
+        ) {
+            server.requireSemanticTokenRequest(delta = true)
+            semanticTokenReports.delta(
+                params.textDocument.uri,
+                params.previousResultId,
+                adapter.getSemanticTokens(params.textDocument.uri)?.data.orEmpty(),
+            )
+        }
+
+    override fun semanticTokensRange(params: SemanticTokensRangeParams): CompletableFuture<SemanticTokens?> =
+        supplyAsync(
+            "textDocument/semanticTokens/range",
+            params.textDocument.uri,
+            uri = params.textDocument.uri,
+        ) {
+            server.requireSemanticTokenRequest(delta = false)
+            SemanticTokenReports.range(
+                adapter.getSemanticTokens(params.textDocument.uri)?.data.orEmpty(),
+                params.range,
+            )
+        }
+
+    /**
+     * LSP: textDocument/inlineValue
+     *
+     * The variables whose values the editor shows beside the code while the program is stopped, each a lookup by name,
+     * which the editor makes in the stopped frame; the server reads no values.
+     *
+     * @see org.eclipse.lsp4j.services.TextDocumentService.inlineValue
+     */
+    override fun inlineValue(params: InlineValueParams): CompletableFuture<List<InlineValue>> =
+        supplyAsync(
+            "textDocument/inlineValue",
+            "${params.textDocument.uri} range=${params.range.fmt()}",
+            { result -> "${result.size} values" },
+            uri = params.textDocument.uri,
+        ) {
+            val stopped = params.context.stoppedLocation.start
+            adapter
+                .getInlineValues(params.textDocument.uri, toAdapterRange(params.range), AdapterPosition(stopped.line, stopped.character))
+                .map { InlineValue(InlineValueVariableLookup(it.range.toLsp(), true, it.name)) }
         }
 
     /**
      * LSP: textDocument/inlayHint
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.inlayHint
      */
     override fun inlayHint(params: InlayHintParams): CompletableFuture<List<InlayHint>> =
@@ -576,6 +2561,7 @@ class XtcTextDocumentService(
             "textDocument/inlayHint",
             "${params.textDocument.uri} range=${params.range.fmt()}",
             { result -> "${result.size} hints" },
+            uri = params.textDocument.uri,
         ) {
             adapter.getInlayHints(params.textDocument.uri, toAdapterRange(params.range)).map { h ->
                 InlayHint().apply {
@@ -584,12 +2570,32 @@ class XtcTextDocumentService(
                     kind = h.kind.toLsp()
                     paddingLeft = h.paddingLeft
                     paddingRight = h.paddingRight
+                    val handle =
+                        h.tooltip
+                            ?.takeIf { server.resolvesInlayHintTooltip }
+                            ?.let {
+                                hintReports.remember(
+                                    resolveRevision,
+                                    hintKey(this),
+                                    it,
+                                    it.length,
+                                )
+                            }
+                    if (handle == null) {
+                        tooltip =
+                            h.tooltip?.let {
+                                Either.forRight(MarkupContent(MarkupKind.MARKDOWN, it))
+                            }
+                    } else {
+                        data = handle
+                    }
                 }
             }
         }
 
     /**
      * LSP: textDocument/formatting
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.formatting
      */
     override fun formatting(params: DocumentFormattingParams): CompletableFuture<List<TextEdit>> =
@@ -597,20 +2603,17 @@ class XtcTextDocumentService(
             "textDocument/formatting",
             params.textDocument.uri,
             { result -> "${result.size} edits" },
+            uri = params.textDocument.uri,
         ) {
             val uri = params.textDocument.uri
-            val content = openDocuments[uri] ?: return@supplyAsync emptyList()
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
             val options = toAdapterFormattingOptions(params.options)
-            adapter.formatDocument(uri, content, options).map { e ->
-                TextEdit().apply {
-                    range = e.range.toLsp()
-                    newText = e.newText
-                }
-            }
+            adapter.formatDocument(uri, content, options).map { it.toLsp() }
         }
 
     /**
      * LSP: textDocument/rangeFormatting
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.rangeFormatting
      */
     override fun rangeFormatting(params: DocumentRangeFormattingParams): CompletableFuture<List<TextEdit>> =
@@ -618,65 +2621,89 @@ class XtcTextDocumentService(
             "textDocument/rangeFormatting",
             "${params.textDocument.uri} range=${params.range.fmt()}",
             { result -> "${result.size} edits" },
+            uri = params.textDocument.uri,
         ) {
             val uri = params.textDocument.uri
-            val content = openDocuments[uri] ?: return@supplyAsync emptyList()
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
             val options = toAdapterFormattingOptions(params.options)
-            adapter.formatRange(uri, content, toAdapterRange(params.range), options).map { e ->
-                TextEdit().apply {
-                    this.range = e.range.toLsp()
-                    newText = e.newText
-                }
+            adapter.formatRange(uri, content, toAdapterRange(params.range), options).map { it.toLsp() }
+        }
+
+    override fun rangesFormatting(params: DocumentRangesFormattingParams): CompletableFuture<List<TextEdit>> =
+        supplyAsync(
+            "textDocument/rangesFormatting",
+            params.textDocument.uri,
+            { "${it.size} edits" },
+            uri = params.textDocument.uri,
+        ) {
+            val uri = params.textDocument.uri
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
+            val text = DocumentText(content)
+            try {
+                params.ranges.forEach { text.bounds(it) }
+                val options = toAdapterFormattingOptions(params.options)
+                text.nonOverlapping(
+                    params.ranges.flatMap { range ->
+                        adapter.formatRange(uri, content, toAdapterRange(range), options).map { it.toLsp() }
+                    },
+                )
+            } catch (e: IllegalArgumentException) {
+                // a range outside the document, or overlapping edits from the formatter: the client gets the reason,
+                // which LSP4J's ResponseErrorException cannot carry a cause for, so the log keeps the trace
+                logger.warn("textDocument/rangesFormatting: refused for {}: {}", uri, e.message, e)
+                throw ResponseErrorException(
+                    ResponseError(ResponseErrorCode.InvalidParams, e.message, null),
+                )
             }
         }
 
     /**
      * LSP: textDocument/declaration
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.declaration
      */
     override fun declaration(params: DeclarationParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
-        supplyAsync(
-            "textDocument/declaration",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> if (result.left.isEmpty()) "no result" else "found" },
-        ) {
-            adapter.findDeclaration(params.textDocument.uri, params.position.line, params.position.character)?.let {
-                Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
-            } ?: Either.forLeft(emptyList())
-        }
+        locationsAt("textDocument/declaration", params, adapter::findDeclarations)
 
     /**
      * LSP: textDocument/typeDefinition
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.typeDefinition
      */
     override fun typeDefinition(params: TypeDefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
-        supplyAsync(
-            "textDocument/typeDefinition",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> if (result.left.isEmpty()) "no result" else "found" },
-        ) {
-            adapter.findTypeDefinition(params.textDocument.uri, params.position.line, params.position.character)?.let {
-                Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
-            } ?: Either.forLeft(emptyList())
-        }
+        locationsAt("textDocument/typeDefinition", params, adapter::findTypeDefinitions)
 
     /**
      * LSP: textDocument/implementation
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.implementation
      */
     override fun implementation(params: ImplementationParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
+        locationsAt("textDocument/implementation", params, adapter::findImplementation) { result -> "${result.left.size} locations" }
+
+    /** A request for the locations that [find] gives at the request's position, sent in parts when the client asks. */
+    private fun locationsAt(
+        method: String,
+        params: TextDocumentPositionAndWorkDoneProgressAndPartialResultParams,
+        find: (uri: String, line: Int, column: Int) -> List<AdapterLocation>,
+        logResult: (Either<List<Location>, List<LocationLink>>) -> String = { result ->
+            if (result.left.isEmpty()) "no result" else "found"
+        },
+    ): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
         supplyAsync(
-            "textDocument/implementation",
+            method,
             "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> "${result.left.size} locations" },
+            logResult,
+            uri = params.textDocument.uri,
+            progress = params,
+            partial = PartialResults::eitherLists,
         ) {
-            Either.forLeft(
-                adapter.findImplementation(params.textDocument.uri, params.position.line, params.position.character).map { it.toLsp() },
-            )
+            Either.forLeft(find(params.textDocument.uri, params.position.line, params.position.character).map { it.toLsp() })
         }
 
     /**
      * LSP: typeHierarchy/prepareTypeHierarchy
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.prepareTypeHierarchy
      */
     override fun prepareTypeHierarchy(params: TypeHierarchyPrepareParams): CompletableFuture<List<TypeHierarchyItem>> =
@@ -684,14 +2711,21 @@ class XtcTextDocumentService(
             "typeHierarchy/prepare",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> "${result.size} items" },
+            uri = params.textDocument.uri,
         ) {
-            adapter.prepareTypeHierarchy(params.textDocument.uri, params.position.line, params.position.character).map {
-                it.toLsp(params.textDocument.uri)
-            }
+            adapter
+                .prepareTypeHierarchy(
+                    params.textDocument.uri,
+                    params.position.line,
+                    params.position.character,
+                ).map {
+                    it.toLsp(params.textDocument.uri)
+                }
         }
 
     /**
      * LSP: typeHierarchy/supertypes
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.typeHierarchySupertypes
      */
     override fun typeHierarchySupertypes(params: TypeHierarchySupertypesParams): CompletableFuture<List<TypeHierarchyItem>> =
@@ -699,12 +2733,16 @@ class XtcTextDocumentService(
             "typeHierarchy/supertypes",
             params.item.name,
             { result -> "${result.size} items" },
+            uri = params.item.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             adapter.getSupertypes(params.item.toAdapter()).map { it.toLsp(params.item.uri) }
         }
 
     /**
      * LSP: typeHierarchy/subtypes
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.typeHierarchySubtypes
      */
     override fun typeHierarchySubtypes(params: TypeHierarchySubtypesParams): CompletableFuture<List<TypeHierarchyItem>> =
@@ -712,12 +2750,16 @@ class XtcTextDocumentService(
             "typeHierarchy/subtypes",
             params.item.name,
             { result -> "${result.size} items" },
+            uri = params.item.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             adapter.getSubtypes(params.item.toAdapter()).map { it.toLsp(params.item.uri) }
         }
 
     /**
      * LSP: callHierarchy/prepare
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.prepareCallHierarchy
      */
     override fun prepareCallHierarchy(params: CallHierarchyPrepareParams): CompletableFuture<List<CallHierarchyItem>> =
@@ -725,6 +2767,7 @@ class XtcTextDocumentService(
             "callHierarchy/prepare",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> "${result.size} items" },
+            uri = params.textDocument.uri,
         ) {
             adapter
                 .prepareCallHierarchy(
@@ -736,6 +2779,7 @@ class XtcTextDocumentService(
 
     /**
      * LSP: callHierarchy/incomingCalls
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.callHierarchyIncomingCalls
      */
     override fun callHierarchyIncomingCalls(params: CallHierarchyIncomingCallsParams): CompletableFuture<List<CallHierarchyIncomingCall>> =
@@ -743,6 +2787,9 @@ class XtcTextDocumentService(
             "callHierarchy/incomingCalls",
             params.item.name,
             { result -> "${result.size} calls" },
+            uri = params.item.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             adapter.getIncomingCalls(params.item.toAdapterCallItem()).map { c ->
                 CallHierarchyIncomingCall().apply {
@@ -754,6 +2801,7 @@ class XtcTextDocumentService(
 
     /**
      * LSP: callHierarchy/outgoingCalls
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.callHierarchyOutgoingCalls
      */
     override fun callHierarchyOutgoingCalls(params: CallHierarchyOutgoingCallsParams): CompletableFuture<List<CallHierarchyOutgoingCall>> =
@@ -761,6 +2809,9 @@ class XtcTextDocumentService(
             "callHierarchy/outgoingCalls",
             params.item.name,
             { result -> "${result.size} calls" },
+            uri = params.item.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             adapter.getOutgoingCalls(params.item.toAdapterCallItem()).map { c ->
                 CallHierarchyOutgoingCall().apply {
@@ -772,26 +2823,174 @@ class XtcTextDocumentService(
 
     /**
      * LSP: textDocument/codeLens
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.codeLens
      */
     override fun codeLens(params: CodeLensParams): CompletableFuture<List<CodeLens>> =
-        supplyAsync(
+        queryAsync(
             "textDocument/codeLens",
             params.textDocument.uri,
-            { result -> "${result.size} lenses" },
-        ) {
-            adapter.getCodeLenses(params.textDocument.uri).map { l ->
+            { codeLensWork(params.textDocument.uri) },
+            workspace = true,
+        ) { lenses ->
+            lenses.map { l ->
                 CodeLens().apply {
                     range = l.range.toLsp()
                     l.command?.let { cmd ->
-                        command = Command(cmd.title, cmd.command)
+                        val handle =
+                            if (server.resolvesCodeLensCommand) {
+                                lensReports.remember(
+                                    resolveRevision,
+                                    range.fmt(),
+                                    cmd.copy(arguments = cmd.arguments.toList()),
+                                    cmd.title.length +
+                                        cmd.command.length +
+                                        cmd.arguments.sumOf { it.toString().length },
+                                )
+                            } else {
+                                null
+                            }
+                        if (handle == null) {
+                            command = Command(cmd.title, cmd.command, cmd.arguments.toList())
+                        } else {
+                            data = handle
+                        }
                     }
                 }
             }
         }
 
+    private fun codeLensWork(uri: String): CompletableFuture<List<AdapterCodeLens>> {
+        val result = CompletableFuture<List<AdapterCodeLens>>()
+        val settings = server.referenceCodeLens(uri)
+        result.whenComplete { _, failure -> if (failure != null) settings.cancel(false) }
+        settings.whenComplete { enabled, failure ->
+            if (!result.isDone) {
+                if (failure != null) {
+                    result.completeExceptionally(failure)
+                } else {
+                    try {
+                        val work = adapter.getCodeLensesAsync(uri, enabled)
+                        result.whenComplete { _, error -> if (error != null) work.cancel(false) }
+                        work.whenComplete { lenses, error ->
+                            if (error == null) result.complete(lenses) else result.completeExceptionally(error)
+                        }
+                    } catch (error: Exception) {
+                        result.completeExceptionally(error)
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    override fun resolveCodeLens(lens: CodeLens): CompletableFuture<CodeLens> =
+        supplyAsync("codeLens/resolve", lens.range.fmt()) {
+            requireResolve(server.resolvesCodeLensCommand, "Code lens")
+            if (lens.data != null) {
+                val command = lensReports.resolve(lens.data, resolveRevision, lens.range.fmt())
+                lens.command = Command(command.title, command.command, command.arguments.toList())
+            }
+            lens
+        }
+
+    override fun documentLinkResolve(link: DocumentLink): CompletableFuture<DocumentLink> =
+        supplyAsync("documentLink/resolve", link.range.fmt()) {
+            requireResolve(server.resolvesDocumentLinkTarget, "Document link")
+            if (link.data != null) {
+                val resolved = linkReports.resolve(link.data, resolveRevision, link.range.fmt())
+                link.target = resolved.target?.let(server.readOnlyDocuments::present)
+                link.tooltip = resolved.tooltip.takeIf { server.presentation.linkTooltips }
+            }
+            link
+        }
+
+    private fun hintKey(hint: InlayHint) = "${hint.position.fmt()}:${hint.label}"
+
+    override fun resolveInlayHint(hint: InlayHint): CompletableFuture<InlayHint> =
+        supplyAsync("inlayHint/resolve", hint.position.fmt()) {
+            requireResolve(server.resolvesInlayHintTooltip, "Inlay hint")
+            if (hint.data != null) {
+                hint.tooltip =
+                    Either.forRight(
+                        MarkupContent(
+                            MarkupKind.MARKDOWN,
+                            hintReports.resolve(hint.data, resolveRevision, hintKey(hint)),
+                        ),
+                    )
+            }
+            hint
+        }
+
+    internal fun workspaceSymbols(
+        params: WorkspaceSymbolParams,
+    ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
+        supplyAsync(
+            "workspace/symbol",
+            params.query,
+            progress = params,
+            partial = PartialResults::eitherLists,
+        ) {
+            // the workspace's own first, then the libraries'
+            val symbols = adapter.findWorkspaceSymbols(params.query) + adapter.findLibrarySymbols(params.query)
+            if (!server.resolvesWorkspaceSymbolRange) {
+                return@supplyAsync Either.forLeft(
+                    symbols.map {
+                        SymbolInformation(
+                            it.name,
+                            server.presentation.symbolKind(it.kind.toLsp(), workspace = true),
+                            it.location.toLsp(),
+                        )
+                    },
+                )
+            }
+            Either.forRight(
+                symbols.map { symbol ->
+                    WorkspaceSymbol().apply {
+                        name = symbol.name
+                        kind = server.presentation.symbolKind(symbol.kind.toLsp(), workspace = true)
+                        val handle =
+                            if (server.resolvesWorkspaceSymbolRange) {
+                                symbolReports.remember(
+                                    resolveRevision,
+                                    "$name:$kind",
+                                    symbol.location,
+                                    symbol.location.uri.length + 64,
+                                )
+                            } else {
+                                null
+                            }
+                        if (handle == null) {
+                            location = Either.forLeft(symbol.location.toLsp())
+                        } else {
+                            location = Either.forRight(WorkspaceSymbolLocation(server.readOnlyDocuments.present(symbol.location.uri)))
+                            data = handle
+                        }
+                    }
+                },
+            )
+        }
+
+    internal fun resolveWorkspaceSymbol(symbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol> =
+        supplyAsync("workspaceSymbol/resolve", symbol.name) {
+            requireResolve(server.resolvesWorkspaceSymbolRange, "Workspace symbol")
+            if (symbol.data != null) {
+                symbol.location =
+                    Either.forLeft(
+                        symbolReports
+                            .resolve(
+                                symbol.data,
+                                resolveRevision,
+                                "${symbol.name}:${symbol.kind}",
+                            ).toLsp(),
+                    )
+            }
+            symbol
+        }
+
     /**
      * LSP: textDocument/onTypeFormatting
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.onTypeFormatting
      */
     override fun onTypeFormatting(params: DocumentOnTypeFormattingParams): CompletableFuture<List<TextEdit>> =
@@ -804,15 +3003,16 @@ class XtcTextDocumentService(
                 } else {
                     val preview =
                         result.take(2).joinToString("; ") { edit ->
-                            val text =
-                                edit.newText
-                                    .replace("\n", "\\n")
-                                    .replace("\t", "\\t")
+                            val text = edit.newText.replace("\n", "\\n").replace("\t", "\\t")
                             "${edit.range.start.line}:${edit.range.start.character}-${edit.range.end.line}:${edit.range.end.character}='$text'"
                         }
                     "${result.size} edits [$preview]"
                 }
             },
+            uri = params.textDocument.uri,
+            // Typing does not wait for compilation: the formatter reads the text as sent, and LSP4IJ waits for
+            // the answer 500 ms in the editor's write action, then drops it
+            sourceOnly = true,
         ) {
             val options =
                 AdapterFormattingOptions(
@@ -826,16 +3026,12 @@ class XtcTextDocumentService(
                     params.position.character,
                     params.ch,
                     options,
-                ).map { e ->
-                    TextEdit().apply {
-                        range = e.range.toLsp()
-                        newText = e.newText
-                    }
-                }
+                ).map { it.toLsp() }
         }
 
     /**
      * LSP: textDocument/linkedEditingRange
+     *
      * @see org.eclipse.lsp4j.services.TextDocumentService.linkedEditingRange
      */
     override fun linkedEditingRange(params: LinkedEditingRangeParams): CompletableFuture<LinkedEditingRanges> =
@@ -843,6 +3039,7 @@ class XtcTextDocumentService(
             "textDocument/linkedEditingRange",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> "${result.ranges?.size ?: 0} ranges" },
+            uri = params.textDocument.uri,
         ) {
             adapter
                 .getLinkedEditingRanges(
@@ -861,21 +3058,26 @@ class XtcTextDocumentService(
     // Conversion helpers for hierarchy types
     // ====================================================================
 
-    private fun AdapterTypeHierarchyItem.toLsp(defaultUri: String): org.eclipse.lsp4j.TypeHierarchyItem {
+    private fun AdapterLocation.toLsp(): Location =
+        Location(server.readOnlyDocuments.present(uri), Range(Position(startLine, startColumn), Position(endLine, endColumn)))
+
+    private fun AdapterTextEdit.toLsp(): TextEdit = TextEdit(range.toLsp(), newText)
+
+    private fun AdapterTypeHierarchyItem.toLsp(defaultUri: String): TypeHierarchyItem {
         val resolvedUri = this.uri.ifEmpty { defaultUri }
-        return org.eclipse.lsp4j
-            .TypeHierarchyItem(
-                this.name,
-                this.kind.toLsp(),
-                resolvedUri,
-                this.range.toLsp(),
-                this.selectionRange.toLsp(),
-            ).apply {
-                this.detail = this@toLsp.detail
-            }
+        return TypeHierarchyItem(
+            this.name,
+            this.kind.toLsp(),
+            server.readOnlyDocuments.present(resolvedUri),
+            this.range.toLsp(),
+            this.selectionRange.toLsp(),
+        ).apply {
+            this.detail = this@toLsp.detail
+            this.data = this@toLsp.data
+        }
     }
 
-    private fun org.eclipse.lsp4j.TypeHierarchyItem.toAdapter(): AdapterTypeHierarchyItem =
+    private fun TypeHierarchyItem.toAdapter(): AdapterTypeHierarchyItem =
         AdapterTypeHierarchyItem(
             name = name,
             kind = SymbolInfo.SymbolKind.CLASS,
@@ -883,22 +3085,29 @@ class XtcTextDocumentService(
             range = toAdapterRange(range),
             selectionRange = toAdapterRange(selectionRange),
             detail = detail,
+            data =
+                when (val value = data) {
+                    is String -> value
+                    is JsonPrimitive -> if (value.isString) value.asString else null
+                    else -> null
+                },
         )
 
-    private fun AdapterCallHierarchyItem.toLspCallItem(): org.eclipse.lsp4j.CallHierarchyItem {
+    private fun AdapterCallHierarchyItem.toLspCallItem(): CallHierarchyItem {
         val result =
-            org.eclipse.lsp4j.CallHierarchyItem(
+            CallHierarchyItem(
                 this.name,
                 this.kind.toLsp(),
-                this.uri,
+                server.readOnlyDocuments.present(this.uri),
                 this.range.toLsp(),
                 this.selectionRange.toLsp(),
             )
         result.detail = this.detail
+        result.data = this.data
         return result
     }
 
-    private fun org.eclipse.lsp4j.CallHierarchyItem.toAdapterCallItem(): AdapterCallHierarchyItem =
+    private fun CallHierarchyItem.toAdapterCallItem(): AdapterCallHierarchyItem =
         AdapterCallHierarchyItem(
             name = name,
             kind = SymbolInfo.SymbolKind.METHOD,
@@ -906,9 +3115,15 @@ class XtcTextDocumentService(
             range = toAdapterRange(range),
             selectionRange = toAdapterRange(selectionRange),
             detail = detail,
+            data =
+                when (val value = data) {
+                    is String -> value
+                    is JsonPrimitive -> value.takeIf { it.isString }?.asString
+                    else -> null
+                },
         )
 
-    private fun toAdapterRange(range: org.eclipse.lsp4j.Range) =
+    private fun toAdapterRange(range: Range) =
         AdapterRange(
             AdapterPosition(range.start.line, range.start.character),
             AdapterPosition(range.end.line, range.end.character),

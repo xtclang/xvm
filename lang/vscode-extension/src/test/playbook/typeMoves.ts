@@ -1,0 +1,161 @@
+import * as assert from 'node:assert';
+import * as fs from './disk';
+import * as vscode from 'vscode';
+import { compilerSettingsLocation, compilerSourceModules } from '../../rename-proposal';
+import { SourceModule, sourceGraphKey } from '../../source-graph-configuration';
+import { focusTestWindow } from '../native-focus';
+import { withPlaybookCleanup } from '../wait';
+import { discovered } from './liveWorkspace';
+import { client, eventually, FileChanges, noErrors, outsideUsesMessage, playbook, settles, symbols } from './support';
+
+export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172' | 'X173' | 'X174' | 'X175' | 'X176' | 'X216' | 'X217' | 'X218' | 'X219' | 'X335')[] = ['X161', 'X162', 'X163']): void {
+    ids.forEach(id => playbook(id, async (workspace, data) => {
+        for (const file of data.files) await workspace.write(file.file, file.source);
+        if ('directories' in data) {
+            for (const directory of data.directories) await vscode.workspace.fs.createDirectory(workspace.uri(directory));
+        }
+        const graph = (modules: SourceModule[]) => modules.map(module => ({
+            ...module, uri: workspace.uri(module.uri).toString(),
+            resourceRoots: module.resourceRoots?.map(root => workspace.uri(root).toString())
+        }));
+        await workspace.configure(graph(data.modules));
+        const document = await workspace.open(data.root);
+        await symbols(document);
+        await noErrors(document.uri);
+        if ('consumer' in data) {
+            assert.ok(!vscode.window.tabGroups.all.flatMap(group => group.tabs).some(tab =>
+                tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === workspace.uri(data.consumer).toString()), 'Consumer stays closed before Move');
+        }
+        const moves = 'moves' in data ? data.moves : [{ from: data.from, to: data.to }];
+        if ('refused' in data && data.refused) {
+            const beforeGraph = sourceGraphKey(compilerSourceModules());
+            const proposal = await client().sendRequest('xtc/renameFiles', { files: moves.map(move => ({
+                oldUri: workspace.uri(move.from).toString(), newUri: workspace.uri(move.to).toString()
+            })) });
+            assert.strictEqual(proposal, null, 'A colliding member rejects the complete proposal');
+            for (const file of data.files) assert.strictEqual(await fs.readFile(workspace.uri(file.file).fsPath, 'utf8'), file.source);
+            for (const move of moves) assert.strictEqual(await fs.stat(workspace.uri(move.to).fsPath).catch(() => null), null);
+            assert.strictEqual(sourceGraphKey(compilerSourceModules()), beforeGraph);
+            await noErrors(document.uri);
+            return;
+        }
+        // X335 moves as the Explorer does, not as a refactoring, so nothing saves the moved file's edits: with
+        // files.refactoring.autoSave off and the moved files open in editors.
+        const explorer = 'explorerMove' in data && data.explorerMove;
+        const refactoring = vscode.workspace.getConfiguration('files.refactoring');
+        if (explorer) {
+            for (const file of data.files.filter(value => value.destination !== value.file)) {
+                await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(workspace.uri(file.file)), { preview: false });
+            }
+            await vscode.window.showTextDocument(document, { preview: false });
+            await refactoring.update('autoSave', false, vscode.ConfigurationTarget.Global);
+        }
+        // what changes the case's files: the move, its Undo and Redo, and VS Code's events of them, which come after
+        const changes = new FileChanges(workspace.directory);
+        await withPlaybookCleanup(async () => {
+            const move = new vscode.WorkspaceEdit();
+            for (const item of moves) move.renameFile(workspace.uri(item.from), workspace.uri(item.to), { overwrite: false });
+            // the server's message on modules outside the workspace, which it shows as it answers the move's participant,
+            // before VS Code applies the edit
+            const shown: string[] = [];
+            const observer = 'outsideUses' in data
+                ? client().onNotification('window/showMessage', (params: { message: string }) => { shown.push(params.message); })
+                : undefined;
+            try { assert.ok(await vscode.workspace.applyEdit(move, explorer ? undefined : { isRefactoring: true })); }
+            finally { observer?.dispose(); }
+            if ('outsideUses' in data) {
+                const message = outsideUsesMessage(data.outsideUses);
+                const notes = shown.filter(note => note.includes('modules outside the workspace'));
+                // a proof that a change of the project overtook and that ran again says it again
+                assert.ok(notes.length > 0 && notes.every(note => note === message), JSON.stringify(notes));
+            }
+
+            const verify = async (moved: boolean) => {
+                // VS Code has made the move, its Undo or Redo, as it answers: the files agree once its events of them
+                // have come, and while they come, however long they take; once none comes, what they have is final
+                let read: string[] | undefined;
+                await settles(async () => Promise.all(data.files.map(async file => {
+                    const uri = workspace.uri(moved ? file.destination : file.file);
+                    const buffer = vscode.workspace.textDocuments.find(value => !value.isClosed && value.uri.toString() === uri.toString());
+                    return buffer?.getText() ?? fs.readFile(uri.fsPath, 'utf8').catch(() => '');
+                })), texts => texts.every((text, index) => text === (moved ? data.files[index].expected : data.files[index].source)),
+                `Move ${moved ? 'applied' : 'undone'}: all sources and resources agree`, texts => {
+                    const changed = read !== undefined && texts.some((text, index) => text !== read![index]);
+                    read = texts;
+                    return [...changes.take(), ...(changed ? ['the files read otherwise than at the last look'] : [])];
+                });
+                for (const file of data.files.filter(value => value.destination !== value.file)) {
+                    assert.strictEqual(await fs.stat(workspace.uri(moved ? file.file : file.destination).fsPath).catch(() => null), null);
+                }
+                if ('afterModules' in data) {
+                    const expected = sourceGraphKey(graph(moved ? data.afterModules : data.modules));
+                    await eventually(async () => sourceGraphKey(compilerSourceModules()), value => value === expected, 'Persisted graph follows Move/Undo/Redo');
+                    await noErrors((await workspace.open(moved ? data.afterRoot : data.root)).uri);
+                    await noErrors((await workspace.open(data.consumer)).uri);
+                } else {
+                    await symbols(document);
+                    await noErrors(document.uri);
+                }
+            };
+            await verify(true);
+            for (const [action, moved] of [['undo', false], ['redo', true]] as const) {
+                // Graph moves also edit settings. Use the settings editor
+                // as the undo context so the native transaction includes its file operations as well.
+                if ('afterModules' in data) {
+                    await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(compilerSettingsLocation()!.uri), { preview: false });
+                }
+                await focusTestWindow();
+                await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+                await vscode.commands.executeCommand(action);
+                // X218's Undo fails as known host failure UP23 (knownHostFailures.ts)
+                await verify(moved);
+            }
+        }, async () => {
+            changes.dispose();
+            if (explorer) await refactoring.update('autoSave', undefined, vscode.ConfigurationTarget.Global);
+            // gives back the language client's own handler of the messages, which observing them took
+            if ('outsideUses' in data) await vscode.commands.executeCommand('xtc.restartServer');
+        });
+    }));
+}
+
+/**
+ * X302: a module root moved to another folder in the discovered graph of the case's own folder. The server moves the
+ * companion folder with it; nothing is configured, so discovery alone must find the module afterwards.
+ */
+export function discoveredRootMoveCases(ids: readonly 'X302'[]): void {
+    for (const id of ids) playbook(id, async (workspace, data) => {
+        for (const file of data.files) await workspace.write(file.file, file.source);
+        for (const directory of data.directories) await vscode.workspace.fs.createDirectory(workspace.uri(directory));
+        await discovered(workspace, async () => {
+            const root = await workspace.open(data.root);
+            await symbols(root);
+            await noErrors(root.uri);
+            const move = new vscode.WorkspaceEdit();
+            move.renameFile(workspace.uri(data.from), workspace.uri(data.to), { overwrite: false });
+            assert.ok(await vscode.workspace.applyEdit(move, { isRefactoring: true }));
+            const verify = async (moved: boolean) => {
+                for (const file of data.files) {
+                    const path = workspace.uri(moved ? file.destination : file.file).fsPath;
+                    await eventually(() => fs.readFile(path, 'utf8').catch(() => ''), text => text === file.source,
+                        `${file.file} ${moved ? 'moved' : 'restored'} unchanged`);
+                    if (file.destination !== file.file) {
+                        assert.strictEqual(await fs.stat(workspace.uri(moved ? file.file : file.destination).fsPath).catch(() => null), null);
+                    }
+                }
+                await noErrors((await workspace.open(data.consumer)).uri);
+                // the root's editor stays active, so Undo and Redo act on the move, which involves its file
+                const current = await workspace.open(moved ? data.afterRoot : data.root);
+                await symbols(current);
+                await noErrors(current.uri);
+            };
+            await verify(true);
+            for (const [action, moved] of [['undo', false], ['redo', true]] as const) {
+                await focusTestWindow();
+                await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+                await vscode.commands.executeCommand(action);
+                await verify(moved);
+            }
+        });
+    });
+}

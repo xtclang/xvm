@@ -1,0 +1,36 @@
+# Exact internal API dependencies of the compiler-backed LSP4IJ integration.
+# These are risk exceptions, not public API guarantees. Keep the verifier's complete reports.
+# Revisit on every LSP4IJ upgrade; do not add package wildcards or IntelliJ Platform APIs.
+# Parameter names are omitted because they depend on available debug information.
+# Missing classes/methods and other binary incompatibilities still fail verifyPlugin.
+#
+# LanguageServiceAccessor / server wrappers: identify our live connection without starting
+# unrelated servers; preserve lifecycle ownership for custom requests and refactorings.
+# Public LanguageServerManager start/stop APIs cannot replace these connection hooks.
+# Remove entries when upstream exposes equivalent public APIs and the adapter migrates.
+lsp4ij=0.30.1
+
+Internal class com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+Internal method com.redhat.devtools.lsp4ij.LanguageServerItem.getServerWrapper() : com.redhat.devtools.lsp4ij.LanguageServerWrapper
+Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getInstance(com.intellij.openapi.project.Project) : com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getLanguageServers(com.intellij.psi.PsiFile, java.util.function.Predicate, java.util.function.Predicate) : java.util.concurrent.CompletableFuture
+Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.getStartedServers() : java.util.Set
+Internal method com.redhat.devtools.lsp4ij.LanguageServiceAccessor.hasAny(com.intellij.psi.PsiFile, java.util.function.Predicate) : boolean
+Internal method com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures.getServerWrapper() : com.redhat.devtools.lsp4ij.LanguageServerWrapper
+
+# OpenedTextRepair (UP83): a lifecycle listener sees the didOpen notifications that go to the server, the only way to
+# learn that LSP4IJ 0.30.1 opened a document with older text than it has. Remove with OpenedTextRepair once a
+# release has redhat-developer/lsp4ij#2127.
+Internal interface com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener
+Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleLSPMessage(org.eclipse.lsp4j.jsonrpc.messages.Message, org.eclipse.lsp4j.jsonrpc.MessageConsumer, com.redhat.devtools.lsp4ij.LanguageServerWrapper) : void
+Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleError(com.redhat.devtools.lsp4ij.LanguageServerWrapper, java.lang.Throwable) : void
+Internal method com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener.handleStatusChanged(com.redhat.devtools.lsp4ij.LanguageServerWrapper) : void
+
+# LateHoverDocumentation (UP82): the hover at an offset, which LSP4IJ answers with the request its own documentation
+# provider made, and LSP4IJ's documentation targets of it once it has the answer, so that a hover that takes more
+# than 500 ms still shows. Remove with LateHoverDocumentation once a release has redhat-developer/lsp4ij#2130.
+Internal class com.redhat.devtools.lsp4ij.LSPFileSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getSupport(com.intellij.psi.PsiFile) : com.redhat.devtools.lsp4ij.LSPFileSupport
+Internal method com.redhat.devtools.lsp4ij.LSPFileSupport.getHoverSupport() : com.redhat.devtools.lsp4ij.features.documentation.LSPHoverSupport
+Internal method com.redhat.devtools.lsp4ij.features.documentation.LSPDocumentationTargetProvider.getHoverTargets(com.intellij.psi.PsiFile, int) : java.util.List
+Internal method com.redhat.devtools.lsp4ij.features.documentation.LSPDocumentationTarget.getHtml() : java.lang.String

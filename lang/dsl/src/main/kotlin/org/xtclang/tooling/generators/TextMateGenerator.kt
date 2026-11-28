@@ -210,60 +210,22 @@ class TextMateGenerator(
                     // Operators - generated from model
                     putJsonObject("operators") {
                         putJsonArray("patterns") {
-                            // Assignment operators from model
-                            val assignmentOps = operatorsByCategory(OperatorCategory.ASSIGNMENT)
-                            if (assignmentOps.isNotEmpty()) {
-                                addJsonObject {
-                                    put("name", "keyword.operator.assignment.xtc")
-                                    put("match", assignmentOps.sortedByDescending { it.length }.joinToString("|"))
-                                }
-                            }
-                            // Comparison operators from model
-                            val comparisonOps = operatorsByCategory(OperatorCategory.COMPARISON)
-                            if (comparisonOps.isNotEmpty()) {
-                                addJsonObject {
-                                    put("name", "keyword.operator.comparison.xtc")
-                                    put("match", comparisonOps.sortedByDescending { it.length }.joinToString("|"))
-                                }
-                            }
-                            // Logical operators from model
-                            val logicalOps = operatorsByCategory(OperatorCategory.LOGICAL)
-                            if (logicalOps.isNotEmpty()) {
-                                addJsonObject {
-                                    put("name", "keyword.operator.logical.xtc")
-                                    put("match", logicalOps.sortedByDescending { it.length }.joinToString("|"))
-                                }
-                            }
-                            // Bitwise operators from model
-                            val bitwiseOps = operatorsByCategory(OperatorCategory.BITWISE)
-                            if (bitwiseOps.isNotEmpty()) {
-                                addJsonObject {
-                                    put("name", "keyword.operator.bitwise.xtc")
-                                    put("match", bitwiseOps.sortedByDescending { it.length }.joinToString("|"))
-                                }
-                            }
-                            // Arithmetic operators from model
-                            val arithmeticOps = operatorsByCategory(OperatorCategory.ARITHMETIC)
-                            if (arithmeticOps.isNotEmpty()) {
-                                addJsonObject {
-                                    put("name", "keyword.operator.arithmetic.xtc")
-                                    put("match", arithmeticOps.sortedByDescending { it.length }.joinToString("|"))
-                                }
-                            }
-                            // Member access operators from model
-                            val memberAccessOps = operatorsByCategory(OperatorCategory.MEMBER_ACCESS)
-                            if (memberAccessOps.isNotEmpty()) {
-                                addJsonObject {
-                                    put("name", "keyword.operator.access.xtc")
-                                    put("match", memberAccessOps.sortedByDescending { it.length }.joinToString("|"))
-                                }
-                            }
-                            // Other operators from model (range, etc.)
-                            val otherOps = operatorsByCategory(OperatorCategory.OTHER)
-                            if (otherOps.isNotEmpty()) {
-                                addJsonObject {
-                                    put("name", "keyword.operator.other.xtc")
-                                    put("match", otherOps.sortedByDescending { it.length }.joinToString("|"))
+                            // each category's operators from the model, longest first, as one pattern named for the category
+                            listOf(
+                                OperatorCategory.ASSIGNMENT to "assignment",
+                                OperatorCategory.COMPARISON to "comparison",
+                                OperatorCategory.LOGICAL to "logical",
+                                OperatorCategory.BITWISE to "bitwise",
+                                OperatorCategory.ARITHMETIC to "arithmetic",
+                                OperatorCategory.MEMBER_ACCESS to "access",
+                                OperatorCategory.OTHER to "other",
+                            ).forEach { (category, scope) ->
+                                val ops = operatorsByCategory(category)
+                                if (ops.isNotEmpty()) {
+                                    addJsonObject {
+                                        put("name", "keyword.operator.$scope.xtc")
+                                        put("match", ops.sortedByDescending { it.length }.joinToString("|"))
+                                    }
                                 }
                             }
                         }
@@ -283,7 +245,10 @@ class TextMateGenerator(
                     // Class declarations
                     putJsonObject("class-declaration") {
                         put("name", "meta.class.xtc")
-                        put("begin", "\\b(class|interface|mixin|service|const|enum)\\s+([A-Z][a-zA-Z0-9_]*)")
+                        put(
+                            "begin",
+                            "\\b(class|interface|mixin|service|const|enum)\\s+([A-Z][a-zA-Z0-9_]*)",
+                        )
                         put("end", "(?=\\{|$)")
                         putJsonObject("beginCaptures") {
                             putJsonObject("1") {
@@ -316,7 +281,10 @@ class TextMateGenerator(
                     // Property declaration
                     putJsonObject("property-declaration") {
                         put("name", "meta.property.xtc")
-                        put("match", "\\b([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+([a-z_][a-zA-Z0-9_]*)\\s*(?=[=;])")
+                        put(
+                            "match",
+                            "\\b([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+([a-z_][a-zA-Z0-9_]*)\\s*(?=[=;])",
+                        )
                         putJsonObject("captures") {
                             putJsonObject("1") {
                                 put("name", "support.type.property.xtc")
@@ -365,7 +333,9 @@ class TextMateGenerator(
                                 "([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+" +
                                 "([a-z_][a-zA-Z0-9_]*)\\s*(?=\\()",
                         )
-                        put("end", "(?=\\{|;)")
+                        // An expression body starts at =; leaving it in the header can strand
+                        // a template closing quote and miscolor following declarations.
+                        put("end", "(?=\\{|;|=)")
                         putJsonObject("beginCaptures") {
                             putJsonObject("1") {
                                 put("name", "storage.modifier.xtc")
@@ -418,7 +388,8 @@ class TextMateGenerator(
 
     private fun controlFlowKeywords(): List<String> {
         val control = model.keywordsByCategory(KeywordCategory.CONTROL)
-        val exception = model.keywordsByCategory(KeywordCategory.EXCEPTION).filter { !it.contains(":") }
+        val exception =
+            model.keywordsByCategory(KeywordCategory.EXCEPTION).filter { !it.contains(":") }
         return control + exception
     }
 

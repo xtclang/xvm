@@ -123,28 +123,7 @@ dependencies {
     testImplementation(libs.javatools.utils)
     testEcstasyModule(libs.xdk.ecstasy)
     xdkJavaToolsJitBridge(libs.javatools.jitbridge)
-    xtcModule(libs.xdk.ecstasy)
-    xtcModule(libs.xdk.aggregate)
-    xtcModule(libs.xdk.cli)
-    xtcModule(libs.xdk.collections)
-    xtcModule(libs.xdk.convert)
-    xtcModule(libs.xdk.crypto)
-    xtcModule(libs.xdk.json)
-    xtcModule(libs.xdk.jsondb)
-    xtcModule(libs.xdk.metrics)
-    xtcModule(libs.xdk.net)
-    xtcModule(libs.xdk.oodb)
-    xtcModule(libs.xdk.runner)
-    xtcModule(libs.xdk.sec)
-    xtcModule(libs.xdk.web)
-    xtcModule(libs.xdk.webauth)
-    xtcModule(libs.xdk.webcli)
-    xtcModule(libs.xdk.xenia)
-    xtcModule(libs.xdk.xml)
-    xtcModule(libs.xdk.xunit)
-    xtcModule(libs.xdk.xunit.db)
-    xtcModule(libs.xdk.xunit.engine)
-    xtcModule(libs.javatools.bridge)
+    xtcModule(libs.bundles.xdk.libraries)
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
@@ -403,7 +382,10 @@ distributions {
             }
 
             // Include launcher scripts directly in bin/
-            from(prepareDistributionScripts.flatMap { it.destinationDirectory }) {
+            from(prepareDistributionScripts.flatMap {
+                @Suppress("UnstableApiUsage")
+                it.destinationDirectory
+            }) {
                 include("xcc")
                 include("xcc.bat")
                 include("xec")

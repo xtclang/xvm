@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -65,12 +66,7 @@ public class SwitchStatement
             // record the jump that will either fall-through to the next case group or (if this is
             // the last case group) break out of this switch statement by recording its assignment
             // impact (a delta of assignment information)
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
-            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, m_labelContinue));
+            m_listContinues.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, m_labelContinue));
         }
 
         return m_labelContinue;
@@ -169,7 +165,7 @@ public class SwitchStatement
                             cCases  += stmtCase.getExpressionCount();
                         }
                         if (cCases == 1) {
-                            mgr.addTypeInference(ctxBlock, stmtCase, errs);
+                            mgr.addTypeInference(ctxBlock);
                         }
                     }
 
@@ -229,7 +225,7 @@ public class SwitchStatement
         }
 
         // notify the case manager that we're finished collecting everything
-        fValid &= mgr.validateEnd(ctxSwitch, errs);
+        fValid &= mgr.validateEnd(errs);
 
         if (m_listContinues != null) {
             // the last "continue" is translated as a "break"
@@ -246,7 +242,7 @@ public class SwitchStatement
             m_listBreaks.clear();
         }
 
-        ctx = ctxSwitch.exit();
+        ctxSwitch.exit();
 
         return fValid ? this : null;
     }
@@ -367,11 +363,7 @@ public class SwitchStatement
         sb.append("switch (");
 
         if (conds != null) {
-            sb.append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
+            sb.append(conds.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append(")\n")
@@ -388,7 +380,7 @@ public class SwitchStatement
      */
     protected static class SwitchContext
             extends Context {
-        protected SwitchContext(Context ctxOuter, CaseManager mgr) {
+        protected SwitchContext(Context ctxOuter, CaseManager<CaseGroup> mgr) {
             super(ctxOuter, true);
 
             f_mgr = mgr;
@@ -437,7 +429,7 @@ public class SwitchStatement
 
             if (cBlocks == 1) {
                 // degenerated case - just take all the only block has
-                listBlocks.get(0).promoteNarrowedTypes();
+                listBlocks.getFirst().promoteNarrowedTypes();
                 return;
             }
 
@@ -453,7 +445,7 @@ public class SwitchStatement
 
             // now only process arguments that were narrowed by *every* block
             Map<String, Argument> mapThis = ensureNameMap();
-            CaseBlockContext      ctx0    = listBlocks.get(0);
+            CaseBlockContext      ctx0    = listBlocks.getFirst();
             for (Entry<String, Integer> entry : mapAllNames.entrySet()) {
                 String sName = entry.getKey();
                 if (entry.getValue() != cBlocks) {
@@ -549,7 +541,7 @@ public class SwitchStatement
             }
         }
 
-        private final CaseManager            f_mgr;
+        private final CaseManager<CaseGroup> f_mgr;
         private final List<CaseBlockContext> f_listBlocks = new ArrayList<>();
     }
 

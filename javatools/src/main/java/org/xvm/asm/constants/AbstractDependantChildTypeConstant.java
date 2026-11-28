@@ -18,6 +18,9 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.javajit.ModuleLoader;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A base class for TypeConstants based on the parent's type and a child class structure.
  */
@@ -73,7 +76,7 @@ public abstract class AbstractDependantChildTypeConstant
     @Override
     protected JitInfo buildJitInfo(ModuleLoader loader) {
         TypeConstant type = removeAutoNarrowing();
-        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false));
+        return new JitInfo(this, loader, type, type.ensureTypeInfo().isNewable(false, silent(PROBE)));
     }
 
     // ----- TypeConstant methods ------------------------------------------------------------------
