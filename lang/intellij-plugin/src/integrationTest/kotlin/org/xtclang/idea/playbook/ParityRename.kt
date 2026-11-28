@@ -131,6 +131,7 @@ internal fun ParityScenarios.renameCases() {
                 name
             }
         }
+        refusedRenameDialog(document, document.at(data.string("anchor")), data.string("newName"))
         applyRename(document, document.at(data.string("anchor")), data.string("newName"))
     }
 }
@@ -187,6 +188,29 @@ internal fun ParityWorkspace.applyRename(
     settle(document)
     clean(document)
 }
+
+/**
+ * That the installed Rename dialog refuses a rename whose source changed while it was open, with its error text, and that
+ * the wait for its close fails at once with those words; the dialog is then canceled and the source put back.
+ */
+internal fun ParityWorkspace.refusedRenameDialog(
+    document: ParityWorkspace.Document,
+    at: Int,
+    name: String,
+) {
+    val before = document.text
+    val refusal = runCatching { with(driver) { rename(document.editor, at, name) { replace(document, "$before\n", settle = false) } } }
+    check(refusal.exceptionOrNull()?.message == "rename dialog closes: the IDE refused it: $SOURCE_CHANGED") {
+        refusal.exceptionOrNull() ?: "The rename dialog closed though its source changed"
+    }
+    with(driver) { cancelRenameDialog() }
+    check(document.text == "$before\n") { "The refused rename changed ${document.file}" }
+    replace(document, before)
+    clean(document)
+}
+
+/** The rename dialog's error text for a source that changed while it was open (XtcRenameHandler). */
+private const val SOURCE_CHANGED = "Source changed; cancel and invoke Rename again."
 
 internal fun ParityWorkspace.awaitRetired(
     method: String,

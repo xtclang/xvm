@@ -4383,6 +4383,7 @@
           {
             "root": "file/App.x",
             "source": "module App { Box make() = new Box(); }",
+            "uncompiledSource": "module App { Int broken( Box make() = new Box(); }",
             "member": "file/App/Box.x",
             "memberSource": "class Box {}",
             "from": "file/App/Box.x",

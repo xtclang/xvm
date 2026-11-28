@@ -21,12 +21,14 @@ import java.time.temporal.ChronoUnit
 
 /**
  * Exercise the installed Rename handler and its dialog, including ordered resource operations; answers what the IDE
- * refuses from the time the action is invoked, for the wait for the rename's edit.
+ * refuses from the time the action is invoked, for the wait for the rename's edit. [whileOpen] runs once the dialog has
+ * the new name, before Refactor.
  */
 fun Driver.rename(
     editor: JEditorUiComponent,
     at: Int,
     replacement: String,
+    whileOpen: () -> Unit = {},
 ): IdeRefusals {
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
@@ -55,12 +57,15 @@ fun Driver.rename(
     }
     // Exercise the focus observation with the actual modal dialog already open as well.
     restorePopupFocus(editor.editor)
-    fillRenameDialog(replacement)
+    fillRenameDialog(replacement, whileOpen)
     return refusals
 }
 
-/** Submit the installed Rename dialog without synthesizing text edits in the driver. */
-fun Driver.fillRenameDialog(replacement: String) {
+/** Submit the installed Rename dialog without synthesizing text edits in the driver; [whileOpen] runs before Refactor. */
+fun Driver.fillRenameDialog(
+    replacement: String,
+    whileOpen: () -> Unit = {},
+) {
     val dialog = ui.dialog(title = "Rename")
     awaitUi("native rename dialog opens", HANG_LIMIT) { dialog.present() }
     val input =
@@ -70,14 +75,48 @@ fun Driver.fillRenameDialog(replacement: String) {
     input.text = replacement
     val button = cast(dialog.button("Refactor").component, NativeButton::class)
     awaitUi("rename accepts the new name", HANG_LIMIT) { button.isEnabled() }
-    val shown = texts(dialog).orEmpty()
+    whileOpen()
+    val shown = texts(dialog).orEmpty().toSet()
     withContext(OnDispatcher.EDT) { button.doClick() }
     // the dialog refuses, and stays open with its error text, when the source changed while it was open
-    awaitApplied("rename dialog closes", { texts(dialog)?.minus(shown)?.firstOrNull() }) { dialog.notPresent() }
+    awaitApplied("rename dialog closes", steady { texts(dialog)?.let { said(it, shown) } }) { dialog.notPresent() }
 }
 
-/** The texts that [component] shows, or null once it has gone. */
-private fun texts(component: UiComponent): Set<String>? = runCatching { component.getAllTexts().map { it.text }.toSet() }.getOrNull()
+/** Cancels the installed Rename dialog, as one that refused its Refactor stays open, and waits until it has closed. */
+fun Driver.cancelRenameDialog() {
+    val dialog = ui.dialog(title = "Rename")
+    withContext(OnDispatcher.EDT) { cast(dialog.button("Cancel").component, NativeButton::class).doClick() }
+    check(withinOrFail(HANG_LIMIT, "the rename dialog closes on Cancel") { dialog.notPresent() }) {
+        "The rename dialog stays open after Cancel; ${Quiescence.stuck}"
+    }
+}
+
+/**
+ * What [read] says once two reads in a row say it, or null: a dialog's error text shows line by line as the dialog lays
+ * it out, and a read between two of its lines would take the text short.
+ */
+private fun <T : Any> steady(read: () -> T?): () -> T? {
+    var last: T? = null
+    return { read().let { now -> now.takeIf { it == last }.also { last = now } } }
+}
+
+/** The texts that [component] shows, in their order, or null once it has gone. */
+private fun texts(component: UiComponent): List<String>? = runCatching { component.getAllTexts().map { it.text } }.getOrNull()
+
+/**
+ * What a dialog's [texts] say that it did not show among [shown], as one text, or null: an error text that wraps shows as
+ * a text for each of its lines, as the rename dialog's "Source changed; cancel and " and "invoke Rename again." do.
+ */
+private fun said(
+    texts: List<String>,
+    shown: Set<String>,
+): String? =
+    texts
+        .filter { it !in shown }
+        .joinToString(" ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+        .ifEmpty { null }
 
 /**
  * What the IDE refuses from the time this is made, as the test IDE's [Refusals][RefusalsProbe] hears it: an error hint
@@ -117,10 +156,15 @@ internal fun awaitApplied(
     check(held) { "${errorMessage()}; ${Quiescence.stuck}" }
 }
 
+/** Expires the refactorings' notifications in the project, once a case has read its refusal, so that their balloons go. */
+internal fun Driver.expireRefusals() = withContext(OnDispatcher.EDT) { utility(RefusalsProbe::class).expire(singleProject()) }
+
 /** Hears what the IDE refuses: editors' error hints and refactorings' notifications, in the order they show. */
 @Remote("org.xtclang.idea.playbook.probe.Refusals", plugin = "org.xtclang.playbook.probe")
 internal interface RefusalsProbe {
     fun mark(project: Project): Int
+
+    fun expire(project: Project)
 
     fun notices(
         mark: Int,
