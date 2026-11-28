@@ -29,7 +29,7 @@ internal object XdkConsumerDiscovery {
         val catalog =
             XdkWorkspaceDiscovery.traced("consumers") {
                 graph.fold(XdkWorkspaceDiscovery.Catalog().rescan(folders, overlays, cancelled)) { catalog, module ->
-                    val text = overlays[module.uri] ?: module.root.takeIf(File::isFile)?.readText()
+                    val text = overlays[module.uri] ?: module.root.takeIf(File::isFile)?.let(XdkSources::read)
                     catalog.withSource(module.root.canonicalFile, text, cancelled)
                 }
             }

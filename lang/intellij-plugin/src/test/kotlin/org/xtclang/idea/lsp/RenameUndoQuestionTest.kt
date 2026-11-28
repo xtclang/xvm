@@ -27,7 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class RenameUndoQuestionTest {
     @JvmField
     @RegisterExtension
-    val editor = LightEditor(StubLanguageServer(client = ::XtcLanguageClient))
+    val editor = LightEditor(StubLanguageServer(xtc = true, client = ::XtcLanguageClient))
 
     @TempDir
     lateinit var directory: Path

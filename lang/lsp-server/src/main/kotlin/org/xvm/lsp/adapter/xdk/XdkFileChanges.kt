@@ -38,7 +38,7 @@ internal object XdkFileChanges {
             if (
                 sourceEntries.any {
                     Files.isRegularFile(it) &&
-                        (overlays[it.toFile()] ?: Files.readString(it)) != inputs.text[it.toFile()]
+                        (overlays[it.toFile()] ?: XdkSources.read(it.toFile())) != inputs.text[it.toFile()]
                 }
             ) {
                 return@runCatching false

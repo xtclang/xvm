@@ -7,6 +7,7 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.tool.ModuleInfo
 import org.xvm.tool.ResourceDir
+import org.xvm.util.Handy
 import java.io.File
 import java.io.IOException
 import java.net.URI
@@ -160,6 +161,14 @@ internal class XdkSources
                 runCatching { URI(name).takeIf { it.isAbsolute }?.toString() }.getOrNull()
                     ?: file(name)?.toURI()?.toString()
 
+            /**
+             * The text of the source [file] on the disk as the compiler reads one (Handy.readFileChars): without a byte
+             * order mark, which an editor's document of it does not have either, in the encoding that the mark names, or
+             * else the platform's, UTF-8 since Java 18. With the mark, U+FEFF would start its text, which is no token,
+             * and count in its first line's columns.
+             */
+            fun read(file: File): String = String(Handy.readFileChars(file))
+
             /** Canonical paths join editor URIs, compiler source names and filesystem notifications. */
             fun file(name: String): File? =
                 runCatching {
@@ -224,7 +233,7 @@ internal class XdkSources
                 val text =
                     files.associateWith { file ->
                         if (cancelled()) throw CancellationException()
-                        buffers[file]?.text ?: file.readText()
+                        buffers[file]?.text ?: read(file)
                     }
                 return XdkSources(
                     root,

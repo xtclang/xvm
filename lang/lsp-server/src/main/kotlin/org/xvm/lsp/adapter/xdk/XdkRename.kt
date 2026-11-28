@@ -8,6 +8,7 @@ import org.xvm.compiler.Token
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.TextEdit
+import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.IdentityHashMap
 import java.util.UUID
@@ -123,6 +124,24 @@ internal object XdkRename {
                     val text = original.getValue(source)
                     TextEdit(Range(position(text, edit.start), position(text, edit.end)), edit.text)
                 }
+
+        /**
+         * The versioned edit of these changes, each source's by the URI that [uri] gives it, with the text that each
+         * source's changes were computed against, which the client checks before it applies them, and the [renames] to
+         * make after them.
+         */
+        inline fun workspaceEdit(
+            renames: Map<String, String> = emptyMap(),
+            uri: (String) -> String,
+        ): WorkspaceEdit {
+            val documents = edits.keys.associateWith(uri)
+            return WorkspaceEdit(
+                documents.entries.associate { (source, document) -> document to textEdits(source) },
+                versioned = true,
+                renames = renames,
+                texts = documents.entries.associate { (source, document) -> document to original.getValue(source) },
+            )
+        }
 
         fun callStart(
             source: String,

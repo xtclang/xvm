@@ -49,6 +49,7 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.uncompiledRename
 import org.xvm.lsp.logged
 import org.xvm.lsp.protocol.DiscoverConsumersParams
+import org.xvm.lsp.protocol.RenameProposal
 import org.xvm.lsp.protocol.SourceModuleConfiguration
 import org.xvm.testing.awaitUntil
 import org.xvm.testing.awaited
@@ -891,6 +892,156 @@ class XdkRenameServerTest {
             assertThat(consumerEdit.textDocument.version).isEqualTo(3)
             assertThat(consumerEdit.edits).hasSize(2)
             assertThat(consumer.readText()).isEqualTo(use)
+        } finally {
+            server.shutdown().awaited()
+        }
+    }
+
+    /**
+     * xtc/rename names, for each document its edit changes, the hash of the text that the server computed the changes
+     * against, which the client checks before it applies them: an open document's buffer, which is not its file's text
+     * here, and a closed file's text on the disk, whose CRLF line breaks hash as an editor's LF ones do. A rename of a
+     * local, which the module's own compile proves, names its document's buffer too.
+     */
+    @Test
+    fun `a rename proposal names the hash of the text each document had as the server read it, a buffer or the disk`() {
+        directory = directory.toRealPath()
+        val library = directory.resolve("Library.x").toFile()
+        val consumer = directory.resolve("Consumer.x").toFile()
+        val text = "module Library { class Box { Int pick(Int value) = value; Int run() { Int local = 1; return local; } } }"
+        val buffer = "// edited\n$text"
+        val use = "module Consumer {\r\n    package lib import Library;\r\n    Int run(lib.Box box) = box.pick(1);\r\n}\r\n"
+        library.writeText(text)
+        consumer.writeText(use)
+        val uri = library.toURI().toString()
+        val consumerUri = consumer.toURI().toString()
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(parameters()).awaited()
+            server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", uri),
+                    XdkSourceModule("Consumer", consumerUri, setOf("Library")),
+                ),
+            )
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, buffer)))
+            documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).awaited()
+            val document = TextDocumentIdentifier(uri)
+            val rename =
+                requireNotNull(server.renameProposal(RenameParams(document, Position(1, text.indexOf("pick")), "choose")).awaited())
+            assertThat(rename.edit.documentChanges.map { it.left.textDocument.uri }).containsExactlyInAnyOrder(uri, consumerUri)
+            assertThat(rename.textHashes)
+                .containsExactlyInAnyOrderEntriesOf(
+                    mapOf(uri to RenameProposal.textHash(buffer), consumerUri to RenameProposal.textHash(use.replace("\r\n", "\n"))),
+                )
+            val local = requireNotNull(server.renameProposal(RenameParams(document, Position(1, text.indexOf("local")), "count")).awaited())
+            assertThat(local.edit.documentChanges.map { it.left.textDocument.uri }).containsExactly(uri)
+            assertThat(local.textHashes).containsExactlyEntriesOf(mapOf(uri to RenameProposal.textHash(buffer)))
+            assertThat(library.readText()).isEqualTo(text)
+            assertThat(consumer.readText()).isEqualTo(use)
+        } finally {
+            server.shutdown().awaited()
+        }
+    }
+
+    /**
+     * A closed file with a UTF-8 byte order mark is read as the compiler reads it, without the mark, which an editor's
+     * document does not have either: its module compiles, the rename changes it, its hash is of the text without the
+     * mark, and the columns of its edit on its first line do not count the mark.
+     */
+    @Test
+    fun `a rename reaches a closed file with a byte order mark, as its text without the mark`() {
+        directory = directory.toRealPath()
+        val library = directory.resolve("Library.x").toFile()
+        val consumer = directory.resolve("Consumer.x").toFile()
+        val text = "module Library { class Box { Int pick(Int value) = value; } }"
+        val use = "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }"
+        library.writeText(text)
+        consumer.writeBytes(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) + use.toByteArray())
+        val uri = library.toURI().toString()
+        val consumerUri = consumer.toURI().toString()
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(parameters()).awaited()
+            server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("Library", uri),
+                    XdkSourceModule("Consumer", consumerUri, setOf("Library")),
+                ),
+            )
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
+            documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).awaited()
+            val document = TextDocumentIdentifier(uri)
+            val rename =
+                requireNotNull(server.renameProposal(RenameParams(document, Position(0, text.indexOf("pick")), "choose")).awaited())
+            val edit =
+                rename.edit.documentChanges
+                    .single { it.left.textDocument.uri == consumerUri }
+                    .left
+            assertThat(edit.edits.map { it.left.range })
+                .containsExactly(Range(Position(0, use.indexOf("pick")), Position(0, use.indexOf("pick") + "pick".length)))
+            assertThat(rename.textHashes?.get(consumerUri)).isEqualTo(RenameProposal.textHash(use))
+        } finally {
+            server.shutdown().awaited()
+        }
+    }
+
+    /**
+     * xtc/renameFiles names the hash of the text that each document its edit changes had as the server read it, as a
+     * rename's proposal does: a file renamed where it is renames its type, in its own closed file and in an open document
+     * whose buffer is not its file's text.
+     */
+    @Test
+    fun `a move proposal names the hash of the text each document had as the server read it, a buffer or the disk`() {
+        directory = directory.toRealPath()
+        val text = "module App { Item make() = new Item(); }"
+        val buffer = "// edited\n$text"
+        val root = directory.resolve("App.x").toFile().apply { writeText(text) }
+        val member =
+            directory.resolve("App/Item.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Item {}")
+            }
+        val uri = root.toURI().toString()
+        val memberUri = member.toURI().toString()
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server
+                .initialize(
+                    parameters().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(directory.toUri().toString(), "workspace"))
+                        capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
+                        capabilities.workspace.fileOperations = FileOperationsWorkspaceCapabilities().apply { willRename = true }
+                    },
+                ).awaited()
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, buffer)))
+            documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).awaited()
+            val renamed =
+                directory
+                    .resolve("App/Renamed.x")
+                    .toFile()
+                    .toURI()
+                    .toString()
+            val proposal = requireNotNull(server.renameFilesProposal(RenameFilesParams(listOf(FileRename(memberUri, renamed)))).awaited())
+            assertThat(
+                proposal.edit.documentChanges
+                    .filter { it.isLeft }
+                    .map { it.left.textDocument.uri },
+            ).containsExactlyInAnyOrder(uri, memberUri)
+            assertThat(proposal.textHashes)
+                .containsExactlyInAnyOrderEntriesOf(
+                    mapOf(
+                        uri to RenameProposal.textHash(buffer),
+                        memberUri to RenameProposal.textHash("class Item {}"),
+                    ),
+                )
+            assertThat(member.readText()).isEqualTo("class Item {}")
         } finally {
             server.shutdown().awaited()
         }

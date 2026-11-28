@@ -957,7 +957,7 @@ class XtcTextDocumentService(
     private fun onDisk(
         uri: String,
         text: String,
-    ): Boolean = XdkSources.file(uri)?.takeIf(File::isFile)?.let { runCatching { it.readText() == text }.getOrNull() } == true
+    ): Boolean = XdkSources.file(uri)?.takeIf(File::isFile)?.let { runCatching { XdkSources.read(it) == text }.getOrNull() } == true
 
     override fun didChange(params: DidChangeTextDocumentParams) {
         synchronized(lifecycle) {
@@ -2169,6 +2169,11 @@ class XtcTextDocumentService(
                 proposal.scope?.let { scope ->
                     RenameScope(scope.boundary.name, scope.modules.map { it.toProtocol() }, scope.sourceUris, scope.revision)
                 },
+                // the text that each document's changes were computed against, an editor's buffer or the file on the
+                // disk, as the client checks it before it applies them: a closed file has no version to say it changed
+                proposal.edit.texts
+                    .takeIf { it.isNotEmpty() }
+                    ?.mapValues { (_, text) -> RenameProposal.textHash(text) },
             )
         }
 

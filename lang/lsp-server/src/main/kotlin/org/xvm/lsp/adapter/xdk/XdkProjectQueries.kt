@@ -516,7 +516,7 @@ internal class XdkProjectQueries(
             val after = compile(plan.proposed, reuse = base) ?: return null
             if (!preservesBindings(before, after, plan)) return null
             return XdkRenameProposal(
-                WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                plan.workspaceEdit { uri },
                 scope = renameScope(),
                 unchangedSpellings = unchangedSpellings(alias.name, plan),
             )
@@ -644,9 +644,7 @@ internal class XdkProjectQueries(
         val after = compile(plan.proposed, moves = moves.paths, graph = graph, reuse = base) ?: return null
         if (!preservesBindings(before, after, plan)) return null
         return XdkRenameProposal(
-            WorkspaceEdit(
-                plan.edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
-                versioned = true,
+            plan.workspaceEdit(
                 renames =
                     moves.resources.entries.associate { (from, to) ->
                         // Directory URIs must have the same shape even before the destination
@@ -654,7 +652,7 @@ internal class XdkProjectQueries(
                         (uris[from] ?: File(from).toURI().toString().removeSuffix("/")) to
                             File(to).toURI().toString().removeSuffix("/")
                     },
-            ),
+            ) { uris.getValue(it) },
             graph.modules.values.toList().takeIf {
                 renamedModule != null && !discoverImports && !project.sameConfiguration(graph)
             },
@@ -1056,7 +1054,6 @@ internal class XdkProjectQueries(
             return if (shadowed.size > importing.size) proven(shadowed) else null
         }
         val (move, plan, after) = proven(emptySet()) ?: return null
-        val edits = plan.edits
         if (!move.provesDestinations(after) || !preservesBindings(before, after, plan, graph)) return null
         // the moved inputs' bytes, and the resources that the modules read, changed on disk while the move was proven
         if (!movedInputs.isCurrent(cancelled) || resourceSnapshots != captureResources()) throw RenameOvertaken()
@@ -1071,14 +1068,12 @@ internal class XdkProjectQueries(
                     declaredIn(before, file)?.let { (name, identity) -> outsideUses(before, name, listOf(identity)) }
                 }
         return XdkRenameProposal(
-            WorkspaceEdit(
-                edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
-                versioned = true,
+            plan.workspaceEdit(
                 renames =
                     resources.entries.associate { (from, to) ->
                         from.toURI().toString().removeSuffix("/") to to.toURI().toString().removeSuffix("/")
                     },
-            ),
+            ) { uris.getValue(it) },
             graph.modules.values
                 .toList()
                 .takeIf { replacement },

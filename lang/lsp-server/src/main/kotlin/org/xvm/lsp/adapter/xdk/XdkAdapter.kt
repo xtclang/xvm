@@ -688,7 +688,7 @@ class XdkAdapter
          */
         fun sourceText(file: File): String? =
             synchronized(lifecycle) { overlays.entries.firstOrNull { XdkSources.file(it.key) == file }?.value }
-                ?: runCatching { file.readText() }.getOrNull()
+                ?: runCatching { XdkSources.read(file) }.getOrNull()
 
         /**
          * The tests of each source module, from its latest compilation: its own while an editor has one of its files
@@ -1958,7 +1958,7 @@ class XdkAdapter
                             !settings.explicit &&
                                 XdkWorkspaceDiscovery.includes(settings.folders, it) &&
                                 it.isFile
-                        }?.readText()
+                        }?.let(XdkSources::read)
                 } catch (_: IOException) {
                     null
                 }
@@ -3361,12 +3361,7 @@ class XdkAdapter
                     ) ?: return null
                 val after = compile(plan.proposed) ?: return null
                 if (!XdkRename.preservesBindings(before, after, plan)) return null
-                return WorkspaceEdit(
-                    plan.edits.keys.associate { name ->
-                        (module.sourceUri(name) ?: return null) to plan.textEdits(name)
-                    },
-                    versioned = true,
-                )
+                return plan.workspaceEdit { name -> module.sourceUri(name) ?: return null }
             }
             val edit = proven()
             // A closed file can change without a watcher event. An answer of that old snapshot, an edit or a refusal, is

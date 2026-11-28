@@ -53,6 +53,20 @@ class XdkFileChangesTest {
         assertThat(XdkFileChanges.unchanged(member, root, inputs)).isFalse()
     }
 
+    @Test
+    fun `a source with a byte order mark is read without it, and an event of it unchanged matches its compiled input`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("App.x").toFile().apply { writeText("module App {}") }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeBytes(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) + "class Box {}".toByteArray())
+            }
+        val inputs = XdkSources.capture(root, emptyMap()) { false }.inputs
+        assertThat(inputs.text[member]).isEqualTo("class Box {}")
+        assertThat(XdkFileChanges.unchanged(member, root, inputs)).isTrue()
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `incomplete overlay owns no-op proofs while real closed source and resource changes retire them`(resourceChange: Boolean) {
