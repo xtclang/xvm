@@ -24,7 +24,7 @@ class XtcProtocolEndpointsTest {
     fun `the server's proxy has each xtc message of the protocol once`() {
         assertThat(
             messages(XtcServerProtocol::class.java),
-        ).contains("xtc/build", "xtc/run", "xtc/tests").hasSize(16)
+        ).contains("xtc/build", "xtc/run", "xtc/tests", "xtc/endOfLine").hasSize(17)
     }
 
     /** The `xtc/` messages of [type], as an endpoint finds them, which fails on one that two of its methods have. */
