@@ -1,25 +1,25 @@
 package org.xvm.util;
 
-import java.util.concurrent.atomic.AtomicReferenceArray;
-
 /**
- * A pooled {@link HasherReference} intended for use in short-lived operations.
+ * A reusable {@link HasherReference} intended for use in short-lived operations.
  *
- * <p>{@link TransientHasherReference} are obtained from the pool via {@link #of} and returned to the pool via
- * {@link #close}.
+ * <p>{@link TransientHasherReference}s are obtained via {@link #of} and given back via {@link #close}. Each thread
+ * keeps a few spare references, which only that thread takes and gives back, so a reference is never held by two
+ * threads at once: one thread's close() would reset the key of the other's map operation under it. A thread keeps up to
+ * {@link #SPARES} of them, so that lookups nested that deep, such as a lookup in a hasher's own code, reuse theirs too.
  */
 public class TransientHasherReference<T>
         extends HasherReference<T> implements AutoCloseable {
     /**
-     * Stacks of {@link TransientHasherReference}s.
+     * How many spare references a thread keeps.
      */
-    private static final AtomicReferenceArray<TransientHasherReference<?>> HEADS =
-            new AtomicReferenceArray<>(Integer.highestOneBit(Runtime.getRuntime().availableProcessors()) << 1);
+    static final int SPARES = 4;
 
     /**
-     * The next in our stack
+     * Each thread's spare {@link TransientHasherReference}s, made when the thread first gives one back, so that a
+     * thread that never does, such as a short-lived virtual thread, makes none.
      */
-    private TransientHasherReference<?> next;
+    private static final ThreadLocal<Spares> SPARES_OF_THREAD = new ThreadLocal<>();
 
     /**
      * Construct a {@link TransientHasherReference}.
@@ -32,40 +32,65 @@ public class TransientHasherReference<T>
     }
 
     /**
-     * Return a {@link TransientHasherReference}.
+     * Return a {@link TransientHasherReference}: one of the calling thread's spares, or a new one if it has none left.
      *
      * @param referent the referent
      * @return the reference
      */
     public static <T> TransientHasherReference<T> of(T referent, Hasher<? super T> hasher) {
-        int slot = Thread.currentThread().hashCode() & (HEADS.length() - 1);
-        TransientHasherReference<?> ref = HEADS.get(slot);
-        while (ref != null && !HEADS.compareAndSet(slot, ref, ref.next)) {
-            ref = HEADS.get(slot);
-        }
-
-        if (ref == null) {
+        var spares = SPARES_OF_THREAD.get();
+        var spare  = spares == null ? null : spares.take();
+        if (spare == null) {
             return new TransientHasherReference<>(referent, hasher);
         }
 
         @SuppressWarnings("unchecked")
-        TransientHasherReference<T> keyRef = (TransientHasherReference<T>) ref;
+        TransientHasherReference<T> keyRef = (TransientHasherReference<T>) spare;
 
-        keyRef.next = null;
         keyRef.reset(referent, hasher);
         return keyRef;
     }
 
     /**
-     * Recycle this ref.
+     * Recycle this ref, as one of the calling thread's spares unless it already keeps {@link #SPARES}.
      */
     @Override
     public void close() {
         reset(null, null);
-        int slot = Thread.currentThread().hashCode() & (HEADS.length() - 1);
-        next = HEADS.get(slot);
-        while (!HEADS.compareAndSet(slot, next, this)) {
-            next = HEADS.get(slot);
+        var spares = SPARES_OF_THREAD.get();
+        if (spares == null) {
+            spares = new Spares();
+            SPARES_OF_THREAD.set(spares);
         }
+        spares.give(this);
+    }
+
+    /**
+     * One thread's spare references, a stack of at most {@link #SPARES}, which only that thread uses.
+     */
+    private static final class Spares {
+        /**
+         * Take the spare given back last, or null when there is none.
+         */
+        TransientHasherReference<?> take() {
+            if (count == 0) {
+                return null;
+            }
+            var spare = refs[--count];
+            refs[count] = null;
+            return spare;
+        }
+
+        /**
+         * Keep {@code ref} as a spare, unless there are {@link #SPARES} already.
+         */
+        void give(TransientHasherReference<?> ref) {
+            if (count < refs.length) {
+                refs[count++] = ref;
+            }
+        }
+
+        private final TransientHasherReference<?>[] refs = new TransientHasherReference<?>[SPARES];
+        private int count;
     }
 }
