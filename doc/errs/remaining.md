@@ -1578,6 +1578,7 @@ And, after that entry, a new entry:
   - VS Code X26–X28 on the reviewed version: run-RYVtfc, all passed, and the guard fired once in X27, before the
     watcher's event of Bad.x came.
   - On the first version: run-fjrQSd. On the final tree: run-r48BIk, all passed; the watcher was in time and the guard did not fire.
+- [ ] Found 2026-11-28 on `lagergren/own-xdk-embedded` (code it doesn't touch): EmbeddedExecutionTest's soak ("repeated builds, runs, stops and debug sessions on one worker") failed once with "one worker served every run: 2": the worker reported "1 ended runs still tracked" after a debug session was terminated while console code ran, in round 1, so the next round got a new worker. It passed on rerun and in the whole suite. The worker's count of a terminated run's debugger is the suspect; see whether it shares a cause with the CI close hang of 2026-11-23 (`SessionDebuggerTest`, R5–R13's one open item).
 
 ### Playbook cases for formatting from .editorconfig and a folder on another XDK (X361–X366)
 
