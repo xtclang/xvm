@@ -3,6 +3,8 @@ package org.xtclang._native.numbers;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
+import java.security.SecureRandom;
+
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -16,7 +18,11 @@ import org.xtclang.ecstasy.numbers.Dec64;
 import org.xtclang.ecstasy.numbers.Int64;
 import org.xtclang.ecstasy.numbers.IntLiteral;
 
+import org.xtclang.ecstasy.text.String;
+
 import org.xvm.javajit.Ctx;
+
+import org.xvm.util.Lazy;
 
 /**
  * Native implementation for RTRandom.
@@ -205,9 +211,16 @@ public class RTRandom extends nService {
     // ------ injection support --------------------------------------------------------------------
 
     /**
-     * Create an RTRandom.
+     * Supply a generator for injection.
      */
-    public static RTRandom $create(java.lang.Object opts) {
+    public static RTRandom $create(Ctx ctx, java.lang.Object opts) {
+        if (opts instanceof String mode) {
+            if (!"secure".equals(mode.toString())) {
+                throw Exception.$illegalArg(ctx, "Random string option must be \"secure\"");
+            }
+            return SECURE_RANDOM.get();
+        }
+
         if (opts instanceof Int64 int64) {
             return new RTRandom(new Random(int64.$value));
         }
@@ -216,19 +229,11 @@ public class RTRandom extends nService {
             return new RTRandom(new Random(lit.magnitude.toInt64$p(null, false, false)));
         }
 
-        RTRandom random = THREAD_LOCAL;
-        if (random != null) {
-            return random;
-        }
-
-        synchronized (RTRandom.class) {
-            random = THREAD_LOCAL;
-            if (random == null) {
-                random = THREAD_LOCAL = new RTRandom(null);
-            }
-            return random;
-        }
+        return THREAD_LOCAL.get();
     }
 
-    static private RTRandom THREAD_LOCAL;
+    private static final Lazy<RTRandom> THREAD_LOCAL =
+            Lazy.of(() -> new RTRandom(null));
+    private static final Lazy<RTRandom> SECURE_RANDOM =
+            Lazy.of(() -> new RTRandom(new SecureRandom()));
 }

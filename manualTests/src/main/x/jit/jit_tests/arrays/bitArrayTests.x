@@ -7,6 +7,7 @@ package bitArrayTests {
         shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
         shouldCreateRandomArray();
+        shouldAcceptSecureRandomOption();
         shouldBeEmpty();
         shouldAddElement();
         shouldAddElementUsingOperator();
@@ -57,6 +58,11 @@ package bitArrayTests {
                 assert bits[i] == expected[i];
             }
         }
+    }
+
+    void shouldAcceptSecureRandomOption() {
+        @Inject(opts="secure") Random rnd;
+        assert rnd.bits(13).size == 13;
     }
 
     void shouldBeEmpty() {

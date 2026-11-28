@@ -1,6 +1,12 @@
 /**
- * Random number generator. Injected with an optional (Int | IntLiteral) seed value to produce
- * a "repetitive" pseudo-random values.
+ * Native random number generator available through `@Inject Random random` or `@Inject Random rnd`.
+ *
+ * Omitting the injection option selects Java's `ThreadLocalRandom`.
+ *
+ * Using `@Inject(opts=N)` where N is a nonzero `Int` or `IntLiteral` seeds a reproducible
+ * pseudo-random sequence.
+ *
+ * Using `@Inject(opts="secure")` selects Java's cryptographically secure `SecureRandom`.
  */
 service RTRandom
         implements Random {
