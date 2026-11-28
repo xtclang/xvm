@@ -14,7 +14,10 @@ module TestIO {
     import ecstasy.io.Writer;
     import ecstasy.io.UTF8Reader;
 
-    package json import json.xtclang.org;
+    package convert import convert.xtclang.org;
+    package json    import json.xtclang.org;
+
+    import convert.formats.Base64Format;
 
     import json.Doc;
     import json.ElementInput;
@@ -36,6 +39,7 @@ module TestIO {
     @Inject Console console;
 
     void run() {
+        testBase64Url();
         testInputStream();
         testPacked();
         testJavaUTF();
@@ -50,6 +54,38 @@ module TestIO {
         testMap();
         testMetadata();
         testPointers();
+    }
+
+    void testBase64Url() {
+        Byte[] bytes = #FBFF;
+        Base64Format standard = Base64Format.Instance;
+        Base64Format url      = new Base64Format(urlSafe=True);
+        Base64Format padded   = new Base64Format(pad=True, urlSafe=True);
+
+        assert standard.encode(bytes, pad=True) == "+/8=";
+        assert standard.decode("+/8=") == bytes;
+        assert url.encode(bytes) == "-_8";
+        assert url.decode("-_8") == bytes;
+        assert padded.encode(bytes) == "-_8=";
+
+        StringBuffer output = new StringBuffer();
+        padded.write(bytes, output, lineLength=2);
+        String wrapped = output.toString();
+        assert wrapped == "-_\r\n8=";
+        assert padded.read(wrapped.iterator()) == bytes;
+        assert padded.decode(wrapped) == bytes;
+
+        assert !Base64Format.isBase64('-', urlSafe=False);
+        assert !Base64Format.isBase64('+', urlSafe=True);
+        assert Base64Format.valOf('_', urlSafe=True) == 63;
+
+        Boolean rejected = False;
+        try {
+            url.decode("+/8");
+        } catch (IllegalState _) {
+            rejected = True;
+        }
+        assert rejected;
     }
 
     void testInputStream() {
