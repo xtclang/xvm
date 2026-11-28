@@ -1,3 +1,5 @@
+import libconv.formats.Base64Format;
+
 import libnet.Host;
 import libnet.IPAddress;
 import libnet.SocketAddress;
@@ -5,8 +7,10 @@ import libnet.Uri;
 
 import libweb.Header;
 import libweb.HttpMethod;
+import libweb.HttpStatus;
 import libweb.Protocol;
 import libweb.Scheme;
+import libweb.WebSocket;
 
 import libweb.http.HostInfo;
 
@@ -424,19 +428,77 @@ service RequestInfoImpl(RTServer       server,
     }
 
     @Override
-    void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
-        notifyObservers(status);
+    void upgradeWebSocket(WebSocket<String|Byte[]> socket, String? protocol, Int maxMessageSize,
+                          String[] headerNames, String[] headerValues) {
+        String[] names  = new String[];
+        String[] values = new String[];
+        for (Int i : 0..<headerNames.size) {
+            String name = headerNames[i];
+            if (!eqInsens(name, "Connection") && !eqInsens(name, "Upgrade") &&
+                    !eqInsens(name, Header.ContentLength) &&
+                    !name.toLowercase().startsWith("sec-websocket-")) {
+                names.add(name);
+                values.add(headerValues[i]);
+            }
+        }
+
+        if (!(16 < maxMessageSize < 16Mi)) {
+            respond(BadRequest, [], [], $"Invalid WebSocket message size limit: {maxMessageSize}");
+            return;
+        }
+
+        if (!validWebSocketKey()) {
+            respond(BadRequest, [], [], "Missing or invalid Sec-WebSocket-Key");
+            return;
+        }
+
+        if (protocol != Null) {
+            String[] offered = getHeaderValuesForName("Sec-WebSocket-Protocol") ?: [];
+            if (!offered.any(value -> value.split(',', omitEmpty=True, trim=True)
+                    .any(name -> name == protocol))) {
+                respond(BadRequest, [], [], "Required WebSocket subprotocol was not offered");
+                return;
+            }
+        }
+
+        if (server.upgradeWebSocket(context, socket, protocol, maxMessageSize,
+                names.freeze(inPlace=True), values.freeze(inPlace=True))) {
+            notifyObservers(SwitchingProtocols);
+        } else {
+            respond(UpgradeRequired, [], [], "Invalid WebSocket upgrade request");
+        }
+    }
+
+    /**
+     * A 16-byte WebSocket nonce has 22 Base64 characters, optionally followed by two padding chars.
+     */
+    private Boolean validWebSocketKey() {
+        if (String[] keys := getHeaderValuesForName("Sec-WebSocket-Key"), keys.size == 1) {
+            String key = keys[0];
+            if (key.size == 24 && key.endsWith("==")) {
+                key = key[0..<22];
+            }
+            return key.size == 22 && key.chars.all(ch -> Base64Format.isBase64(ch));
+        }
+        return False;
+    }
+
+    @Override
+    void respond(HttpStatus|Int status, String[] headerNames, String[] headerValues, Byte[]|String body) {
+        Int    code  = status.is(HttpStatus) ? status.code : status;
+        Byte[] bytes = body.is(String) ? body.utf8() : body;
+
+        notifyObservers(code);
 
         try {
-            server.setHeaders(context, status, headerNames, headerValues, body.empty ? -1 : body.size);
-            server.setBodyBytes(context, body, final=True);
+            server.setHeaders(context, code, headerNames, headerValues, bytes.empty ? -1 : bytes.size);
+            server.setBodyBytes(context, bytes, final=True);
         } catch (Exception ignore) {}
     }
 
     @Override
     void setHeaders(Int status, String[] headerNames, String[] headerValues, Int responseLength) {
         notifyObservers(status);
-
         server.setHeaders(context, status, headerNames, headerValues, responseLength);
     }
 
@@ -456,10 +518,11 @@ service RequestInfoImpl(RTServer       server,
     /**
      * Notify the observers and clear the observers list.
      */
-    private void notifyObservers(Int status) {
+    private void notifyObservers(HttpStatus|Int status) {
+        Int code = status.is(HttpStatus) ? status.code : status;
         for (Notify notify : observers) {
             try {
-                notify(status);
+                notify(code);
             } catch (Exception ignore) {}
         }
         observers = [];

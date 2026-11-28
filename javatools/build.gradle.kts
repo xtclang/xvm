@@ -49,6 +49,7 @@ dependencies {
     compileOnly(libs.jetbrains.annotations)
     implementation(libs.javatools.utils)
     implementation(libs.jetty.server)
+    implementation(libs.jetty.websocket.server)
     implementation(libs.jline)
     implementation(libs.apache.commons.cli)
     implementation(libs.gson)

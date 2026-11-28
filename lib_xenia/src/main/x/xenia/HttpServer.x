@@ -6,8 +6,10 @@ import net.SocketAddress;
 
 import web.Header;
 import web.HttpMethod;
+import web.HttpStatus;
 import web.Protocol;
 import web.Scheme;
+import web.WebSocket;
 
 import web.http.HostInfo;
 
@@ -323,6 +325,25 @@ interface HttpServer
         void observe(function void(Int) notify);
 
         /**
+         * Upgrade this HTTP connection to [WebSocket] and attach it to the application socket. If
+         * the transport rejects the handshake, it sends an HTTP error response and leaves the
+         * application socket unconnected.
+         *
+         * @param socket          the application service whose callbacks receive connection events
+         * @param protocol        the subprotocol to negotiate, which the client must have offered;
+         *                        Null selects no subprotocol
+         * @param maxMessageSize  the maximum size of a complete incoming text or binary message, in
+         *                        bytes; must be positive and at most 16 MiB (16*1024*1024 bytes)
+         * @param headerNames     additional HTTP handshake response header names; Connection,
+         *                        Upgrade, Content-Length, and Sec-WebSocket-* headers are managed
+         *                        by the transport and ignored in this array
+         * @param headerValues    the corresponding header values, in the same order and with the
+         *                        same number of entries as headerNames
+         */
+        void upgradeWebSocket(WebSocket<String|Byte[]> socket, String? protocol, Int maxMessageSize,
+                              String[] headerNames, String[] headerValues);
+
+        /**
          * Instruct the server to send a response to a previously received request.
          *
          * @param status        the response `Status-Code`, as defined by rfc2616
@@ -334,9 +355,11 @@ interface HttpServer
          *                    exception; it is important to understand that the lack of an exception
          *                    does **not** indicate a successful response to a client
          */
-        void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
-            setHeaders(status, headerNames, headerValues, body.empty ? -1 : body.size);
-            setBodyBytes(body);
+        void respond(HttpStatus|Int status, String[] headerNames, String[] headerValues, Byte[]|String body) {
+            Int    code  = status.is(HttpStatus) ? status.code : status;
+            Byte[] bytes = body.is(String) ? body.utf8() : body;
+            setHeaders(code, headerNames, headerValues, bytes.empty ? -1 : bytes.size);
+            setBodyBytes(bytes);
         }
 
         /**

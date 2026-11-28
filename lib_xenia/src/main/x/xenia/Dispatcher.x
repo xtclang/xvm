@@ -10,6 +10,7 @@ import web.HttpStatus;
 import web.RequestAborted;
 
 import web.responses.SimpleResponse;
+import web.responses.WebSocketResponse;
 
 import web.security.Authenticator;
 import web.security.Authenticator.Attempt;
@@ -59,7 +60,7 @@ service Dispatcher {
         try {
             fullUri = requestInfo.uri;
         } catch (Exception e) {
-            requestInfo.respond(HttpStatus.BadRequest.code, [], [], []);
+            requestInfo.respond(BadRequest, [], [], []);
             return;
         }
 
@@ -208,14 +209,20 @@ service Dispatcher {
                                    |"{requestInfo.uriString}": {e}
                                  );
 
-                    requestInfo.respond(HttpStatus.InternalServerError.code, [], [], []);
+                    requestInfo.respond(InternalServerError, [], [], []);
                     return;
                 }
             }
 
-            (Int status, String[] names, String[] values, Int responseLength) =
-                Http1Response.prepare(requestInfo.method, r);
             try {
+                (Int status, String[] names, String[] values, Int responseLength) =
+                    Http1Response.prepare(requestInfo.method, r);
+
+                if (r.is(WebSocketResponse), status == HttpStatus.SwitchingProtocols.code) {
+                    requestInfo.upgradeWebSocket(r.socket, r.protocol, r.maxMessageSize, names, values);
+                    return;
+                }
+
                 if (responseLength > 0) {
                     // fixed size body
                     requestInfo.respond(status, names, values, r.body?.bytes) : assert;

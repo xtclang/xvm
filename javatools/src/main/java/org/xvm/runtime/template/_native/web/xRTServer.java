@@ -17,6 +17,8 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
+import java.time.Duration;
+
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
@@ -60,6 +62,8 @@ import org.eclipse.jetty.util.IO;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
+import org.eclipse.jetty.websocket.server.ServerWebSocketContainer;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -79,6 +83,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -98,6 +103,8 @@ import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.runtime.template._native.web.WebSocketConnection.WebSocketHandle;
 
 import org.xvm.util.Handy;
 
@@ -125,6 +132,12 @@ public class xRTServer
         markNativeMethod("setHeaders"      , null, VOID);
         markNativeMethod("setBodyBytes"    , null, VOID);
         markNativeMethod("closeImpl"       , VOID, VOID);
+
+        markNativeMethod("upgradeWebSocketImpl",    null, null);
+        markNativeMethod("connectWebSocket",        null, VOID);
+        markNativeMethod("sendWebSocket",           null, VOID);
+        markNativeMethod("isWebSocketOpen",         null, BOOLEAN);
+        markNativeMethod("closeWebSocket",          null, VOID);
 
         markNativeMethod("getReceivedAtAddress",   null, null);
         markNativeMethod("getReceivedFromAddress", null, null);
@@ -169,6 +182,10 @@ public class xRTServer
     public int invokeNative1(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         switch (method.getName()) {
+        case "isWebSocketOpen":
+            return frame.assignValue(iReturn,
+                    xBoolean.makeHandle(((WebSocketHandle) hArg).f_connection.isOpen()));
+
         case "getProtocolString":
             return invokeGetProtocol(frame, (HttpContextHandle) hArg, iReturn);
 
@@ -217,6 +234,21 @@ public class xRTServer
         case "readBody":
             return frame.f_context == hServer.f_context
                     ? invokeReadBody(frame, ahArg, iReturn)
+                    : xRTFunction.makeAsyncNativeHandle(method).
+                            call1(frame, hServer, ahArg, iReturn);
+
+        case "connectWebSocket":
+            return invokeWebSocketConnect(frame, ahArg);
+
+        case "upgradeWebSocketImpl":
+            return frame.f_context == hServer.f_context
+                    ? invokeUpgradeWebSocket(frame, ahArg, iReturn)
+                    : xRTFunction.makeAsyncNativeHandle(method).call1(frame, hServer, ahArg, iReturn);
+
+        case "sendWebSocket":
+        case "closeWebSocket":
+            return frame.f_context == hServer.f_context
+                    ? invokeWebSocketSend(frame, method.getName(), ahArg)
                     : xRTFunction.makeAsyncNativeHandle(method).
                             call1(frame, hServer, ahArg, iReturn);
 
@@ -274,6 +306,7 @@ public class xRTServer
         Server  server  = new Server(pool);
         Binding binding = new Binding(server, router, null);
         server.setHandler(router);
+        ServerWebSocketContainer.ensure(server);
         hServer.setBinding(binding);
 
         try {
@@ -682,7 +715,91 @@ public class xRTServer
         });
     }
 
+    /**
+     * Implementation of "Object? upgradeWebSocketImpl(RequestContext context,
+     *      String? protocol, Int maxMessageSize, String[] headerNames, String[] headerValues,
+     *      Int idleMillis)"
+     * method.
+     *
+     * <p/>Return a {@code Null} context object on failure.
+     */
+    private int invokeUpgradeWebSocket(Frame frame, ObjectHandle[] ahArg, int iReturn) {
+        HttpContextHandle hCtx      = (HttpContextHandle) ahArg[0];
+        String            sProtocol = ahArg[1] instanceof StringHandle hS ? hS.getStringValue() : null;
+        long              cbMax     = ((JavaLong) ahArg[2]).getValue();
+        String[]          asNames   = getStrings((ArrayHandle) ahArg[3]);
+        String[]          asValues  = getStrings((ArrayHandle) ahArg[4]);
+        Duration          idleTime  = Duration.ofMillis(((JavaLong) ahArg[5]).getValue());
+
+        CompletableFuture<WebSocketHandle> cf =
+                hCtx.upgradeWebSocket(sProtocol, cbMax, asNames, asValues, idleTime);
+        return frame.waitForIO(cf, frameCaller -> {
+            try {
+                WebSocketHandle hSocket = cf.get();
+                return frameCaller.assignValue(iReturn, hSocket == null ? xNullable.NULL : hSocket);
+            } catch (Exception e) {
+                return raiseIOException(frameCaller, e);
+            }
+        });
+    }
+
+    /**
+     * Implementation of "void connectWebSocket(Object context, WebSocket implementation)" method.
+     * Message delivery starts after the implementation's {@code onConnect()} call completes.
+     */
+    private int invokeWebSocketConnect(Frame frame, ObjectHandle[] ahArg) {
+        WebSocketHandle  hSocket = (WebSocketHandle) ahArg[0];
+        ServiceHandle    hImpl   = (ServiceHandle) ahArg[1];
+        WebSocketHandler handler = new WebSocketHandler(hSocket.f_connection, hImpl.f_context,
+                bindWebSocketCallback(frame, hImpl, "onConnect", 0),
+                bindWebSocketCallback(frame, hImpl, "onMessage", 1),
+                bindWebSocketCallback(frame, hImpl, "onError", 1),
+                bindWebSocketCallback(frame, hImpl, "onDisconnect", 2));
+        hSocket.f_connection.connect(handler);
+        return Op.R_NEXT;
+    }
+
+    /**
+     * Implementation of "void sendWebSocket(Object context, String|Byte[] message)" and
+     * "void closeWebSocket(Object context, UInt16 code, String reason)" methods.
+     * Suspends the calling fiber until the Jetty send or close callback completes.
+     */
+    private int invokeWebSocketSend(Frame frame, String sMethod, ObjectHandle[] ahArg) {
+        WebSocketConnection connection = ((WebSocketHandle) ahArg[0]).f_connection;
+        CompletableFuture<Void> cf;
+        try {
+            if (sMethod.equals("sendWebSocket")) {
+                Object message = ahArg[1] instanceof StringHandle hText ? hText.getStringValue()
+                        : xByteArray.getBytes((ArrayHandle) ahArg[1]);
+                cf = connection.send(message);
+            } else {
+                int    nCode   = (int) ((JavaLong) ahArg[1]).getValue();
+                String sReason = ((StringHandle) ahArg[2]).getStringValue();
+                cf = connection.close(nCode, sReason);
+            }
+        } catch (Exception e) {
+            return raiseIOException(frame, e);
+        }
+        return frame.waitForIO(cf, frameCaller -> {
+            try {
+                cf.get();
+                return Op.R_NEXT;
+            } catch (Exception e) {
+                return raiseIOException(frameCaller, e);
+            }
+        });
+    }
+
     // ----- helper methods ------------------------------------------------------------------------
+
+    private static String[] getStrings(ArrayHandle hArray) {
+        StringArrayHandle hValues = (StringArrayHandle) hArray.m_hDelegate;
+        String[]          asValue = new String[(int) hValues.m_cSize];
+        for (int i = 0; i < asValue.length; i++) {
+            asValue[i] = hValues.get(i);
+        }
+        return asValue;
+    }
 
     private static int raiseIOException(Frame frame, Exception e) {
         Throwable cause = e instanceof ExecutionException ? e.getCause() : e;
@@ -704,6 +821,16 @@ public class xRTServer
     private static int extractHostPort(HostPortHttpField host, boolean fTls) {
         int nDefaultPort = fTls ? 443 : 80;
         return host == null ? nDefaultPort : host.getPort(nDefaultPort);
+    }
+
+    /**
+     * Bind a callback on the native RTWebSocket service.
+     */
+    private static FunctionHandle bindWebSocketCallback(Frame frame, ServiceHandle hRTSocket,
+                                                        String name, int cParams) {
+        MethodStructure method = hRTSocket.getTemplate().getStructure().
+                findMethodDeep(name, m -> m.getParamCount() == cParams);
+        return xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hRTSocket);
     }
 
     // ----- helper classes ------------------------------------------------------------------------
@@ -1022,6 +1149,52 @@ public class xRTServer
             request.addFailureListener(this::complete);
         }
 
+        protected CompletableFuture<WebSocketHandle> upgradeWebSocket(String sProtocol,
+                long cbMax, String[] asNames, String[] asValues, Duration idleTime) {
+            WebSocketConnection                conn = new WebSocketConnection((int) cbMax, idleTime);
+            CompletableFuture<WebSocketHandle> cf   = conn.getOpenedFuture();
+            try {
+                synchronized (this) {
+                    if (m_stage != Stage.OPEN || m_fReading) {
+                        throw new IOException("HTTP request already has a response or pending read");
+                    }
+                    m_fUpgrading = true;
+                    m_stage      = Stage.FINAL_WRITE_PENDING;
+                }
+
+                Callback callback = Callback.from(() -> complete(null), e -> {
+                    cf.completeExceptionally(e);
+                    complete(e);
+                });
+
+                ServerWebSocketContainer sockets = ServerWebSocketContainer.get(f_request.getContext());
+                boolean fAccepted = sockets.upgrade((request, response, cb) -> {
+                    for (int i = 0; i < asNames.length; i++) {
+                        response.getHeaders().add(asNames[i], asValues[i]);
+                    }
+                    if (sProtocol != null) {
+                        response.setAcceptedSubProtocol(sProtocol);
+                    }
+                    return conn;
+                }, f_request, f_response, callback);
+
+                if (!fAccepted) {
+                    synchronized (this) {
+                        if (m_stage == Stage.COMPLETED) {
+                            throw new IOException("HTTP exchange already completed");
+                        }
+                        m_stage      = Stage.OPEN;
+                        m_fUpgrading = false;
+                    }
+                    cf.complete(null);
+                }
+            } catch (Exception e) {
+                complete(e);
+                cf.completeExceptionally(e);
+            }
+            return cf;
+        }
+
         /**
          * Read at most the requested number of body bytes using Jetty's blocking input stream.
          * Wait for the requested byte count or the end of the body. A partly consumed chunk is
@@ -1031,7 +1204,7 @@ public class xRTServer
                 throws IOException {
             InputStream in;
             synchronized (this) {
-                if (cb < 0 || m_fReading || m_stage == Stage.COMPLETED) {
+                if (cb < 0 || m_fReading || m_stage == Stage.COMPLETED || m_fUpgrading) {
                     throw new IOException("Invalid HTTP body read");
                 }
                 if (cb == 0) {
@@ -1138,6 +1311,7 @@ public class xRTServer
         private Stage        m_stage = Stage.OPEN;
         private InputStream  m_in;
         private boolean      m_fReading;
+        private boolean      m_fUpgrading;
     }
 
     private enum Stage {OPEN, HEADERS_SET, FINAL_WRITE_PENDING, COMPLETED}

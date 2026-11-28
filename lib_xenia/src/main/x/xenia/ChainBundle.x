@@ -33,9 +33,11 @@ import web.QueryParam;
 import web.Registry;
 import web.TrustLevel;
 import web.UriParam;
+import web.WebSocket;
 
 import web.responses.SimpleResponse;
 import web.responses.StreamResponse;
+import web.responses.WebSocketResponse;
 
 import web.security.Authenticator;
 import web.security.Authenticator.Attempt;
@@ -785,8 +787,17 @@ service ChainBundle {
                                     );
         }
 
-        // check for special return types (`HttpStatus` or `ResponseOut`)
+        // check for special return types (`WebSocket`, `HttpStatus`, or `ResponseOut`)
         switch (type.is(_), cond) {
+        case (Type<WebSocket>, False):
+            return (request, result) ->
+                new WebSocketResponse(result[0].as(WebSocket<String|Byte[]>));
+
+        case (Type<WebSocket>, True):
+            return (request, result) -> result[0].as(Boolean)
+                    ? new WebSocketResponse(result[1].as(WebSocket<String|Byte[]>))
+                    : new SimpleResponse(NotFound);
+
         case (Type<ResponseOut>, False):
             return (request, result) -> result[0].as(ResponseOut);
 
@@ -827,6 +838,16 @@ service ChainBundle {
                                         |arbitrary union types are not currently supported
                                         );
             }
+        }
+
+        if (type.is(Type<WebSocket>)) {
+            return (request, result) -> {
+                Object value = result[0];
+                if (value.is(WebSocket<String|Byte[]>)) {
+                    return new WebSocketResponse(value);
+                }
+                return value.is(ResponseOut) ? value : new SimpleResponse(value.as(HttpStatus));
+            };
         }
 
         MediaType|MediaType[] produces = endpoint.produces;
