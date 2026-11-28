@@ -3,8 +3,10 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { gradleRoot } from '../../gradle-root';
-import { createXtcRunTask, runModuleTask, type XtcTaskDefinition } from '../../task-provider';
+import type { BuildModel, BuildSourceSet } from '../../build-model';
+import { gradleTasks } from '../../gradle-projects';
+import { buildTasks, gradleBuild, gradleRoot } from '../../gradle-root';
+import { createXtcRunTask, gradleBuildTask, runModuleTask, XtcTaskProvider, type XtcTaskDefinition } from '../../task-provider';
 
 /** The command line a shell task runs, its command and its arguments, as the terminal shows it. */
 function commandLine(definition: XtcTaskDefinition): string {
@@ -38,6 +40,25 @@ async function withFolders(body: (folders: Record<'outer' | 'sub' | 'included' |
     } finally {
         await fs.rm(root, { recursive: true, force: true });
     }
+}
+
+/**
+ * A source set of the project [projectPath] of the Gradle build at [build], whose path in the build tree that the import
+ * ran in is [buildTreePath], as an import's model has it, with a project id as the XTC plugin makes it.
+ */
+function sourceSet(build: vscode.Uri, projectPath: string, buildTreePath: string): BuildSourceSet {
+    const directory = projectPath === ':' ? build : vscode.Uri.joinPath(build, ...projectPath.slice(1).split(':'));
+    return {
+        projectId: `${build}/#${projectPath}`, projectPath, buildTreePath, projectDirectory: `${directory}/`,
+        buildFile: vscode.Uri.joinPath(directory, 'build.gradle.kts').toString(), sourceSet: 'main', sourceRoots: [], sourceFiles: [],
+        moduleRoots: [], resourceSourceRoots: [], resourceRoots: [], resourceTask: `${projectPath}:processXtcResources`,
+        projectDependencies: [], modulePath: [],
+    };
+}
+
+/** The model that an import writes: its [sourceSets], and its [builds], the build it ran in first, as file URIs. */
+function buildModel(builds: readonly vscode.Uri[], sourceSets: BuildSourceSet[]): BuildModel {
+    return { schemaVersion: 1, sourceSets, buildRoots: builds.map(build => `${build}/`) };
 }
 
 suite('Run tasks', () => {
@@ -88,6 +109,65 @@ suite('Run tasks', () => {
             assert.strictEqual(gradleRoot(sub), outer.uri.fsPath);
             assert.strictEqual(gradleRoot(included), included.uri.fsPath);
             assert.strictEqual(gradleRoot(lone), lone.uri.fsPath);
+        });
+    });
+
+    test("an included build without a wrapper runs from the build that includes it, as the imported model says, with its own projects' tasks", async () => {
+        await withFolders(async ({ outer, sub, included, lone }) => {
+            // outer includes the build in its directory and lone, beside it; outer's import wrote outer's model
+            const projects = [sourceSet(outer.uri, ':', ':'), sourceSet(outer.uri, ':sub', ':sub'), sourceSet(included.uri, ':', ':included'),
+                sourceSet(included.uri, ':app', ':included:app'), sourceSet(lone.uri, ':', ':lone')];
+            const outers = [buildModel([outer.uri, included.uri, lone.uri], projects)];
+            const build = gradleBuild(included, outers);
+            assert.deepStrictEqual(build, { root: outer.uri.fsPath, projects: [':included', ':included:app'] });
+            assert.deepStrictEqual(buildTasks(build, ['clean', 'build']), [':included:clean', ':included:app:clean', ':included:build', ':included:app:build']);
+            assert.deepStrictEqual(gradleBuild(lone, outers), { root: outer.uri.fsPath, projects: [':lone'] });
+            // the build that includes them, and a project of it, are no included builds
+            assert.deepStrictEqual(gradleBuild(outer, outers), { root: outer.uri.fsPath });
+            assert.deepStrictEqual(buildTasks(gradleBuild(sub, outers), ['build']), ['build']);
+            // with the included builds' own models alone, which name no build that includes them: the nearest wrapper above,
+            // which lone, beside outer, has none of, so it runs at its own root, as without a model
+            const own = [buildModel([included.uri], projects.slice(2, 4)), buildModel([lone.uri], projects.slice(4))];
+            assert.deepStrictEqual(gradleBuild(included, own), { root: outer.uri.fsPath, projects: [':included', ':included:app'] });
+            assert.deepStrictEqual(gradleBuild(lone, own), { root: lone.uri.fsPath });
+            // and a model of an older plugin, without the paths in the build tree, says nothing of it
+            const older = projects.map(entry => ({ ...entry, buildTreePath: undefined }));
+            assert.strictEqual(gradleRoot(included, [buildModel([outer.uri, included.uri, lone.uri], older)]), included.uri.fsPath);
+            // a report of a run of the build on its own, left over, names its projects by their paths in it, which are no
+            // paths in the build tree of the build that includes it, and a root project's tasks are `:build`
+            const alone = buildModel([included.uri], [sourceSet(included.uri, ':', ':'), sourceSet(included.uri, ':app', ':app')]);
+            assert.deepStrictEqual(gradleBuild(included, [alone, ...outers]), build);
+            assert.deepStrictEqual(gradleBuild(included, [alone, ...own]), build);
+            assert.deepStrictEqual(buildTasks({ root: outer.uri.fsPath, projects: [':'] }, ['build']), [':build']);
+            // with a wrapper of its own, the build that no model says another includes, as one whose model was left over from
+            // a build that included it once, runs on its own; a build that a model says outer includes still runs from outer
+            await fs.writeFile(path.join(included.uri.fsPath, 'gradlew'), '#!/bin/sh\n');
+            assert.deepStrictEqual(gradleBuild(included, own), { root: included.uri.fsPath });
+            assert.deepStrictEqual(gradleBuild(included, outers), build);
+        });
+    });
+
+    test("a folder's Build, Rebuild, Test and Clean run where its Gradle build does, an included build's addressed to its projects", async () => {
+        await withFolders(async ({ outer, included }) => {
+            const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+            const build = gradleBuild(included, [buildModel([outer.uri, included.uri],
+                [sourceSet(included.uri, ':', ':included'), sourceSet(included.uri, ':app', ':included:app')])]);
+            const shell = (task: vscode.Task | undefined) => {
+                assert.ok(task?.execution instanceof vscode.ShellExecution, 'A Gradle task of the folder is a shell task');
+                return { line: task.execution.commandLine, cwd: task.execution.options?.cwd };
+            };
+            // Ecstasy: Build and Rebuild in Gradle mode, which run the task that the folder's Build is
+            const at = outer.uri.fsPath;
+            assert.deepStrictEqual(shell(gradleBuildTask(included, false, build)), { line: `${gradlew} :included:build :included:app:build`, cwd: at });
+            assert.deepStrictEqual(shell(gradleBuildTask(included, true, build)),
+                { line: `${gradlew} :included:clean :included:app:clean :included:build :included:app:build`, cwd: at });
+            // the folder's Test and Clean, which a folder with a Gradle build has in either mode, and a folder without one has not
+            const tasks = (gradle: typeof build | undefined) => new XtcTaskProvider(() => undefined).folderTasks(included, gradle)
+                .filter(task => task.execution instanceof vscode.ShellExecution);
+            const named = (name: string) => tasks(build).find(task => task.name === name);
+            assert.deepStrictEqual(shell(named('Test')), { line: `${gradlew} ${gradleTasks('testXtc').join(' ')}`, cwd: at });
+            assert.deepStrictEqual(shell(named('Clean')), { line: `${gradlew} :included:clean :included:app:clean`, cwd: at });
+            assert.deepStrictEqual(tasks(undefined), []);
         });
     });
 

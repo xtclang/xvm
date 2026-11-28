@@ -5,7 +5,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, createEmbeddedBuildTask, createEmbeddedRunTask, type BuildMode } from './embedded-execution';
 import { gradleProjects, gradleTask, gradleTasks } from './gradle-projects';
-import { gradleRoot } from './gradle-root';
+import { buildTasks, gradleBuild, gradleRoot, type GradleBuild } from './gradle-root';
 
 export interface XtcTaskDefinition extends vscode.TaskDefinition {
     moduleName: string;
@@ -29,28 +29,30 @@ export class XtcTaskProvider implements vscode.TaskProvider {
     constructor(private readonly client: ClientAccess) {}
 
     provideTasks(): vscode.ProviderResult<vscode.Task[]> {
+        return (vscode.workspace.workspaceFolders ?? []).flatMap(folder => this.folderTasks(folder));
+    }
+
+    /**
+     * The tasks of [folder]: its embedded Build and Rebuild in embedded mode; for a folder with a Gradle build, whose tasks
+     * run where [build] says, its Gradle Build in Gradle mode, and its Test and Clean in either, as embedded mode has none.
+     */
+    folderTasks(folder: vscode.WorkspaceFolder,
+        build = fs.existsSync(path.join(folder.uri.fsPath, 'build.gradle.kts')) ? gradleBuild(folder) : undefined): vscode.Task[] {
         const tasks: vscode.Task[] = [];
-        const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-
-        for (const folder of vscode.workspace.workspaceFolders ?? []) {
-            const gradle = fs.existsSync(path.join(folder.uri.fsPath, 'build.gradle.kts'));
-            if (buildMode(folder) === 'embedded') {
-                tasks.push(
-                    createEmbeddedBuildTask(this.client, folder, false),
-                    createEmbeddedBuildTask(this.client, folder, true)
-                );
-            } else if (gradle) {
-                tasks.push(this.createLifecycleTask('Build', `${gradlew} build`, folder, vscode.TaskGroup.Build));
-            }
-            // embedded mode has no tests or clean of its own, so a Gradle build offers them in either mode
-            if (gradle) {
-                tasks.push(
-                    this.createLifecycleTask('Test', `${gradlew} ${gradleTasks('testXtc').join(' ')}`, folder, vscode.TaskGroup.Test),
-                    this.createLifecycleTask('Clean', `${gradlew} clean`, folder, vscode.TaskGroup.Clean)
-                );
-            }
+        if (buildMode(folder) === 'embedded') {
+            tasks.push(
+                createEmbeddedBuildTask(this.client, folder, false),
+                createEmbeddedBuildTask(this.client, folder, true)
+            );
+        } else if (build) {
+            tasks.push(gradleBuildTask(folder, false, build));
         }
-
+        if (build) {
+            tasks.push(
+                lifecycleTask('Test', gradleTasks('testXtc'), folder, build, vscode.TaskGroup.Test),
+                lifecycleTask('Clean', buildTasks(build, ['clean']), folder, build, vscode.TaskGroup.Clean)
+            );
+        }
         return tasks;
     }
 
@@ -62,25 +64,34 @@ export class XtcTaskProvider implements vscode.TaskProvider {
         }
         return undefined;
     }
+}
 
-    private createLifecycleTask(
-        name: string,
-        command: string,
-        folder: vscode.WorkspaceFolder,
-        group: vscode.TaskGroup
-    ): vscode.Task {
-        const task = new vscode.Task(
-            { type: XtcTaskProvider.type, moduleName: `_lifecycle_${name.toLowerCase()}`, mode: 'gradle' } as XtcTaskDefinition,
-            folder,
-            name,
-            'xtc',
-            new vscode.ShellExecution(command),
-            name === 'Build' || name === 'Test' ? ['$xtc'] : []
-        );
-        task.group = group;
-        task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Shared };
-        return task;
-    }
+/** The Gradle wrapper that a folder's Gradle tasks run. */
+const GRADLEW = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+
+/**
+ * [folder]'s Gradle Build, or with [rebuild] its Rebuild, which Ecstasy: Build and Rebuild run in Gradle mode, as the
+ * folder's own Build task is: its build's `build`, after `clean` for Rebuild, of an included build's projects
+ * ([buildTasks]), where [build] says its tasks run.
+ */
+export function gradleBuildTask(folder: vscode.WorkspaceFolder, rebuild: boolean, build: GradleBuild = gradleBuild(folder)): vscode.Task {
+    return lifecycleTask(rebuild ? 'Rebuild' : 'Build', buildTasks(build, rebuild ? ['clean', 'build'] : ['build']), folder, build, vscode.TaskGroup.Build);
+}
+
+/** The task [name] of [folder]'s Gradle build, [build], in [group]: the wrapper with [tasks], where [build] says its tasks run. */
+function lifecycleTask(name: string, tasks: readonly string[], folder: vscode.WorkspaceFolder, build: GradleBuild, group: vscode.TaskGroup): vscode.Task {
+    const lifecycle = group === vscode.TaskGroup.Test ? 'test' : group === vscode.TaskGroup.Clean ? 'clean' : 'build';
+    const task = new vscode.Task(
+        { type: XtcTaskProvider.type, moduleName: `_lifecycle_${lifecycle}`, mode: 'gradle' } as XtcTaskDefinition,
+        folder,
+        name,
+        'xtc',
+        new vscode.ShellExecution(`${GRADLEW} ${tasks.join(' ')}`, { cwd: build.root }),
+        group === vscode.TaskGroup.Clean ? [] : ['$xtc']
+    );
+    task.group = group;
+    task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Shared };
+    return task;
 }
 
 /**

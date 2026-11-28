@@ -65,8 +65,8 @@ export function gradleReasonIn(folder: string | undefined, scope: ReplacedLibrar
     return named === undefined ? undefined : scope.reasons[named] ?? libraries ?? 'is not built or run by the language server';
 }
 
-// the server's folders are canonical, as /private/tmp for macOS's /tmp
-function realPath(file: string): string {
+/** The real path of [file], without a trailing separator: the server's folders are canonical, as /private/tmp for macOS's /tmp. */
+export function realPath(file: string): string {
     const trimmed = file.replace(/[\\/]+$/, '');
     try {
         return fs.realpathSync.native(trimmed);
