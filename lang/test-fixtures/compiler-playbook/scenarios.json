@@ -11292,9 +11292,9 @@
         "slow"
       ],
       "manual": [
-        "Needs ./gradlew xdk:installDist and publishLocal first, as X303 does: the case makes the other XDK from the XDK that publishLocal put in mavenLocal, as version otherVersion with one entry more in its javatools.jar, the language server's tell of another XDK, and publishes it to a Maven repository of its own, as building a second XDK for the case would take as long as the XDK's whole build. Both projects' builds take the XTC Gradle plugin from mavenLocal.",
-        "The Gradle run's output in VS Code's task terminal is read manually (18a.9); the case checks the Build and Run tasks' exit codes, and that the Gradle build extracted the other XDK.",
-        "The notice, which each editor gives once a session, is checked only when X366's reason is the session's first, as in the container's runs; after another folder's reason, as an older mavenLocal XDK gives X260 or X303 on a desktop, or in a retry of X366 in the same editor, the case checks the reason and says in its log that it checks no notice."
+        "Needs ./gradlew xdk:installDist and publishLocal first, as X303 does. VS Code's case makes both XDKs from this tree's xdk:installDist, in a Maven repository of its own, each as the distribution archive that publishLocal would publish: as this tree's version, the XDK that the language server bundles, which BundledXdk builds with, and as version otherVersion with one entry more in its javatools.jar, the language server's tell of another XDK, as building a second XDK for the case would take as long as the XDK's whole build. Neither comes from mavenLocal, whose XDK publishLocal of another checkout or of an older tree may have put there. Both projects' builds take the XTC Gradle plugin from mavenLocal, which only publishLocal puts there.",
+        "VS Code's case reads the Gradle run's output in the task terminal, as Terminal: Select All and Copy give it, after the run's command line (18a.9), besides the Build and Run tasks' exit codes and that the Gradle build extracted the other XDK.",
+        "VS Code gives the notice once a session for each folder while it is in the window, so the case checks it whatever cases ran before it; IntelliJ gives it once a session for the project, as its limitations say."
       ],
       "values": {
         "repository": "xdk-repository",
@@ -11302,12 +11302,13 @@
         "marker": "META-INF/xtc-playbook-other-xdk.txt",
         "markerText": "The X366 playbook case's other XDK: this tree's, with this file more in its javatools.jar.\n",
         "mavenLocal": [
-          "org/xtclang/xtc-plugin",
-          "org/xtclang/xdk"
+          "org/xtclang/xtc-plugin"
         ],
+        "installed": "xdk/build/install/xdk",
+        "pom": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\">\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>org.xtclang</groupId>\n  <artifactId>xdk</artifactId>\n  <version>${0}</version>\n  <packaging>zip</packaging>\n</project>\n",
         "versionFile": "version.properties",
         "versionPattern": "^xdk\\.version=(.+)$",
-        "settings": "rootProject.name = \"${0}\"\n\npluginManagement {\n    repositories {\n        mavenLocal()\n        gradlePluginPortal()\n    }\n}\n\ndependencyResolutionManagement {\n    repositories {\n        // the XDK that the case makes, then this tree's, which publishLocal publishes\n        maven { url = uri(\"${1}\") }\n        mavenLocal()\n        mavenCentral()\n    }\n}\n",
+        "settings": "rootProject.name = \"${0}\"\n\npluginManagement {\n    repositories {\n        mavenLocal()\n        gradlePluginPortal()\n    }\n}\n\ndependencyResolutionManagement {\n    repositories {\n        // the XDKs that the case makes, which come first, then mavenLocal's, which publishLocal publishes\n        maven { url = uri(\"${1}\") }\n        mavenLocal()\n        mavenCentral()\n    }\n}\n",
         "build": "plugins {\n    id(\"org.xtclang.xtc-plugin\") version \"${0}\"\n}\n\ndependencies {\n    xdkDistribution(\"org.xtclang:xdk:${1}\")\n}\n\nxtcRun {\n    module {\n        moduleName = \"${2}\"\n    }\n}\n",
         "wrapper": [
           "gradlew",
@@ -11364,7 +11365,8 @@
         "coverage": "partial",
         "limitations": [
           "IntelliJ has one language server for the project and builds the whole project with Gradle as soon as one of its folders builds with another XDK, as the user guide says, so the project on the bundled XDK is checked first, at the project root, where Gradle mode runs ./gradlew, and then the project on the other XDK in its place, rather than beside it. In Gradle mode Build Project goes to the IDE's own builder, so the case checks only that the embedded compiler does not take it; Run goes through the Gradle wrapper.",
-          "The notice is IntelliJ's once a session for the project: the case checks it only while the project has not been told yet, and else says in its log that it checks the reason alone."
+          "The notice is IntelliJ's once a session for the project: the case checks it only while the project has not been told yet, and else says in its log that it checks the reason alone.",
+          "IntelliJ's case makes the other XDK from the XDK that publishLocal put in mavenLocal, and BundledXdk builds with mavenLocal's XDK, so its bundled half holds only where publishLocal ran from the same tree, as in the container."
         ]
       }
     },
