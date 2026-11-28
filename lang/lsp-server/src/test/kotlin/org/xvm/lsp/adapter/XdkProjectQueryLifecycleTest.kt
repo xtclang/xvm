@@ -201,6 +201,22 @@ class XdkProjectQueryLifecycleTest {
 
     @ParameterizedTest
     @EnumSource(Feature::class)
+    fun `blocked work that two requests share goes on as one of them is canceled`(feature: Feature) {
+        Session().use { session ->
+            session.hold.set(true)
+            val old = session.request(feature)
+            assertThat(session.entered.awaited()).isTrue()
+            val current = session.request(feature)
+            // as LSP4IJ cancels its own request of a document's code lenses, which the playbook's shares
+            old.cancel(true)
+            assertThat(current).isNotDone()
+            session.release.countDown()
+            assertThat(current.awaited()).isNotNull()
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(Feature::class)
     fun `an equal newer query shares blocked work, and both answer`(feature: Feature) {
         Session().use { session ->
             session.hold.set(true)
