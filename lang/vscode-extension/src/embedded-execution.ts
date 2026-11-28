@@ -37,8 +37,12 @@ export interface ReplacedLibraries {
 }
 
 let replaced: ReplacedLibraries = { libraries: [], folders: [], reasons: {} };
-/** Whether the user was told that folders build and run with Gradle, once per session. */
-let told = false;
+/**
+ * What the notice told the user builds and runs with Gradle ([gradleNotice]): each folder once a session while it is in
+ * the window, so that one that comes into the window again is told of again ([watchNoticedFolders]), as is one whose
+ * reason comes after another folder's, and the workspace once a session.
+ */
+const told = new Set<string>();
 const replacedChanges = new vscode.EventEmitter<ReplacedLibraries>();
 
 /** Fires when the folders that build and run with Gradle whatever their mode, or why, change. */
@@ -83,18 +87,43 @@ export function forgetReplacedLibraries(): void {
 function replace(scope: ReplacedLibraries): void {
     replaced = scope;
     replacedChanges.fire(scope);
-    const reasons = scope.folders.length === 0
-        ? [gradleReasonIn(undefined, scope)].filter(reason => reason !== undefined).map(reason => `This workspace ${reason}`)
+    const notice = gradleNotice(scope, told, new Set((vscode.workspace.workspaceFolders ?? []).map(folder => realPath(folder.uri.fsPath))));
+    if (notice !== undefined) {
+        void vscode.window.showInformationMessage(notice);
+    }
+}
+
+/**
+ * The notice of what [scope] says builds and runs with Gradle, as far as [told] has not had it: [told] takes the folders
+ * it tells of, by their real paths, and `''` for the workspace, whose reason the server gives for it as a whole, and
+ * forgets each folder that is not of [open], the real paths of the window's folders, any more, as one whose directory
+ * went before it left the window ([forgetFolders]). None when it has had all.
+ */
+export function gradleNotice(scope: ReplacedLibraries, told: Set<string>, open: ReadonlySet<string>): string | undefined {
+    for (const whom of told) if (whom !== '' && !open.has(whom)) told.delete(whom);
+    const reasons: [whom: string, text: string][] = scope.folders.length === 0
+        ? [gradleReasonIn(undefined, scope)].filter(reason => reason !== undefined).map(reason => ['', `This workspace ${reason}`])
         : scope.folders.map(uri => {
             const folder = vscode.Uri.parse(uri).fsPath;
-            return `The folder ${path.basename(folder)} ${gradleReasonIn(folder, scope) ?? ''}`;
+            return [realPath(folder), `The folder ${path.basename(folder)} ${gradleReasonIn(folder, scope) ?? ''}`];
         });
-    if (reasons.length > 0 && !told) {
-        told = true;
-        void vscode.window.showInformationMessage(
-            `${reasons.join('; ')}, and the language server builds and runs only with the bundled XDK, so Ecstasy builds, `
-            + 'runs and debug sessions there use Gradle.');
-    }
+    const untold = reasons.filter(([whom]) => !told.has(whom));
+    untold.forEach(([whom]) => told.add(whom));
+    return untold.length === 0 ? undefined : `${untold.map(([, text]) => text).join('; ')}, and the language server builds and runs `
+        + 'only with the bundled XDK, so Ecstasy builds, runs and debug sessions there use Gradle.';
+}
+
+/** Forgets, in [told], the [folders] that leave the window, so that the notice tells of each again when it comes back. */
+export function forgetFolders(told: Set<string>, folders: readonly vscode.WorkspaceFolder[]): void {
+    folders.forEach(folder => told.delete(realPath(folder.uri.fsPath)));
+}
+
+/**
+ * Forgets the notice's folders as they leave the window ([forgetFolders]), whether a server says anything then or not,
+ * as while it is stopped, or before its notice for the window's new folders comes.
+ */
+export function watchNoticedFolders(): vscode.Disposable {
+    return vscode.workspace.onDidChangeWorkspaceFolders(event => forgetFolders(told, event.removed));
 }
 
 /**
