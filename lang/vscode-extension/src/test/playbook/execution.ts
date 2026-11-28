@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import * as vscode from 'vscode';
 import { buildModeStatus, buildModeTooltip } from '../../build-mode-selection';
 import { refreshCompilerBuild } from '../../compiler-paths';
-import { buildMode, gradleReason, onDidChangeReplacedLibraries, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
+import { buildMode, gradleReason, onDidUpdateExecution, type ExecutionUpdate } from '../../embedded-execution';
 import { gradleProjects } from '../../gradle-projects';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
 import { createXtcRunTask } from '../../task-provider';
@@ -21,7 +21,7 @@ import { WorkbenchUi } from '../workbenchUi';
 import { discovered } from './liveWorkspace';
 import { gradleModel, withGradleModel } from './platform';
 import { scenarioText, sharedScenarioPath } from './shared';
-import { client, diagnosticCode, eventually, noErrors, playbook, progress, serviceStatus, type Workspace } from './support';
+import { client, diagnosticCode, eventually, noErrors, playbook, serviceStatus, type Workspace } from './support';
 
 /** Records what each embedded build or run terminal shows, keyed by kind and label. */
 class Executions implements vscode.Disposable {
@@ -1791,42 +1791,64 @@ async function caseProcess(command: string, args: string[], cwd?: string): Promi
 }
 
 /**
- * Makes the other XDK of X366 in the Maven repository [repository]: the XDK [archive] that publishLocal put in mavenLocal,
- * with its POM [pom], as version [version], with [marker] in its javatools.jar too, which makes it another XDK for the
- * language server, as the revision of javatools.jar is one of what it compares.
+ * Makes X366's XDKs in the Maven repository [repository] from this tree's, as xdk:installDist put it in [installed], each
+ * a distribution archive, as publishLocal makes it, with the POM [pom] gives: as [bundled], this tree's version, the XDK
+ * that the language server bundles, and as [other], with [marker] in its javatools.jar too, which makes it another XDK for
+ * the server, as the revision of javatools.jar is one of what it compares. Neither is mavenLocal's, which publishLocal of
+ * another checkout, or of an older tree, may have put there.
  */
-async function otherXdk(archive: string, pom: string, repository: string, version: string, marker: { file: string; text: string }): Promise<void> {
-    const target = path.join(repository, 'org', 'xtclang', 'xdk', version);
-    await files.mkdir(target, { recursive: true });
-    const work = await files.mkdtemp(path.join(os.tmpdir(), 'xtc-other-xdk-'));
+async function caseXdks(installed: string, repository: string, pom: string, [bundled, other]: readonly [string, string],
+    marker: { file: string; text: string }): Promise<void> {
+    const work = await files.mkdtemp(path.join(os.tmpdir(), 'xtc-case-xdk-'));
     try {
-        await caseProcess('unzip', ['-q', archive, '*/javatools/javatools.jar', '-d', work]);
-        const [top] = await files.readdir(work);
-        const jar = path.join(top, 'javatools', 'javatools.jar');
+        // the archive of the XDK's directory in work, with the launchers' modes, as its version's distribution
+        const publish = async (version: string) => {
+            const target = path.join(repository, 'org', 'xtclang', 'xdk', version);
+            await files.mkdir(target, { recursive: true });
+            await caseProcess('zip', ['-qr', path.join(target, `xdk-${version}.zip`), `xdk-${version}`], work);
+            await files.writeFile(path.join(target, `xdk-${version}.pom`), scenarioText(pom, version));
+        };
+        await files.cp(installed, path.join(work, `xdk-${bundled}`), { recursive: true });
+        await publish(bundled);
+        await files.rename(path.join(work, `xdk-${bundled}`), path.join(work, `xdk-${other}`));
         const entries = path.join(work, 'entries');
         await files.mkdir(path.join(entries, path.dirname(marker.file)), { recursive: true });
         await files.writeFile(path.join(entries, marker.file), marker.text);
-        await caseProcess('zip', ['-q', path.join(work, jar), marker.file], entries);
-        const copy = path.join(target, `xdk-${version}.zip`);
-        await files.copyFile(archive, copy);
-        await caseProcess('zip', ['-q', copy, jar], work);
-        const published = /<version>([^<]+)<\/version>/.exec(await files.readFile(pom, 'utf8'));
-        assert.ok(published, `A version in ${pom}`);
-        await files.writeFile(path.join(target, `xdk-${version}.pom`),
-            (await files.readFile(pom, 'utf8')).replace(published[0], `<version>${version}</version>`));
+        await caseProcess('zip', ['-q', path.join(work, `xdk-${other}`, 'javatools', 'javatools.jar'), marker.file], entries);
+        await publish(other);
     } finally {
         await files.rm(work, { recursive: true, force: true });
     }
 }
 
 /**
- * Whether a folder of the window has had a reason to build and run with Gradle in this session, which the extension
- * says once a session, in its notice: X366 checks the notice only when its reason is the session's first.
+ * Clears each terminal of the window, scrollback too, as VS Code's Terminal: Clear does, so that what a task prints next
+ * is all that its terminal shows, also a terminal that an earlier task left, as an earlier try of the case.
  */
-let gradleReasonBefore = false;
-onDidChangeReplacedLibraries(scope => {
-    if (scope.folders.length > 0 || scope.libraries.length > 0) gradleReasonBefore = true;
-});
+async function clearTerminals(): Promise<void> {
+    for (const terminal of vscode.window.terminals) {
+        terminal.show(true);
+        await vscode.commands.executeCommand('workbench.action.terminal.clear');
+    }
+}
+
+/**
+ * What each terminal of the window shows, its whole buffer, as VS Code's Terminal: Select All and Copy give it, through
+ * the clipboard: commands, which read a task's terminal whatever its shell, with or without shell integration.
+ */
+async function terminalTexts(): Promise<string[]> {
+    const texts: string[] = [];
+    for (const terminal of vscode.window.terminals) {
+        terminal.show(true);
+        // an empty terminal copies nothing, which must not read as the terminal before's text
+        await vscode.env.clipboard.writeText('');
+        await vscode.commands.executeCommand('workbench.action.terminal.selectAll');
+        await vscode.commands.executeCommand('workbench.action.terminal.copySelection');
+        await vscode.commands.executeCommand('workbench.action.terminal.clearSelection');
+        texts.push(await vscode.env.clipboard.readText());
+    }
+    return texts;
+}
 
 /**
  * Runs each of [steps], a cleanup's, on its own, so that one that fails leaves the next to run, and fails with what failed,
@@ -1859,9 +1881,10 @@ export function otherXdkCases(): void {
         const tree = path.resolve(path.dirname(sharedScenarioPath), '../../..');
         const version = new RegExp(data.versionPattern, 'm').exec(await files.readFile(path.join(tree, data.versionFile), 'utf8'))?.[1];
         assert.ok(version, `An XDK version in ${data.versionFile}`);
+        const installed = path.join(tree, data.installed);
+        assert.ok(await exists(path.join(installed, 'javatools', 'javatools.jar')), `X366 makes its XDKs from ${data.installed}; run ./gradlew xdk:installDist first`);
+        // the XTC plugin
         await requireMavenLocal('X366', data.mavenLocal, version);
-        // the extension's one notice of the session is X366's only when no folder had a reason before
-        const notice = !gradleReasonBefore;
         const projects: [XdkProject, string][] = [[data.other, data.otherVersion], [data.bundled, version]];
         const uris = projects.map(([project]) => vscode.Uri.file(path.join(base, project.project)));
         const ours = () => (vscode.workspace.workspaceFolders ?? []).filter(folder => uris.some(uri => uri.toString() === folder.uri.toString()));
@@ -1884,11 +1907,9 @@ export function otherXdkCases(): void {
             return status === undefined ? undefined : Object.values(status.gradleFolders ?? {});
         };
         await withPlaybookCleanup(async () => {
-            // the other XDK, from this tree's, in a Maven repository of the case's own
+            // this tree's XDK and the other, from it, in a Maven repository of the case's own
             const repository = path.join(base, data.repository);
-            const published = path.join(os.homedir(), '.m2', 'repository', 'org', 'xtclang', 'xdk', version);
-            await otherXdk(path.join(published, `xdk-${version}.zip`), path.join(published, `xdk-${version}.pom`), repository, data.otherVersion,
-                { file: data.marker, text: data.markerText });
+            await caseXdks(installed, repository, data.pom, [version, data.otherVersion], { file: data.marker, text: data.markerText });
             // the two Gradle builds, each with this tree's wrapper, and the XTC plugin from mavenLocal
             for (const [[project, xdk], uri] of projects.map((each, index) => [each, uris[index]] as const)) {
                 const root = (file: string) => path.join(uri.fsPath, file);
@@ -1917,16 +1938,13 @@ export function otherXdkCases(): void {
             assert.strictEqual(gradleReason(bundled), undefined, 'BundledXdk has no reason to build with Gradle');
             assert.deepStrictEqual([buildMode(other), buildMode(bundled)], ['gradle', 'embedded']);
 
-            // the notice, and the picker's embedded compiler, which is not available there
+            // the notice, which the folder gets once while it is in the window, and the picker's embedded compiler, which is
+            // not available there
             const ui = await WorkbenchUi.connect();
             try {
-                if (notice) {
-                    await vscode.commands.executeCommand('notifications.showList');
-                    await ui.shows(ui.page.locator('.notification-list-item').filter({ hasText: data.vscodeNotice }).first(), 'The notice that OtherXdk builds with Gradle');
-                    await vscode.commands.executeCommand('notifications.hideList');
-                } else {
-                    progress('X366 checks no notice: a folder had a reason to build with Gradle before in this session, which took the extension\'s one notice');
-                }
+                await vscode.commands.executeCommand('notifications.showList');
+                await ui.shows(ui.page.locator('.notification-list-item').filter({ hasText: data.vscodeNotice }).first(), 'The notice that OtherXdk builds with Gradle');
+                await vscode.commands.executeCommand('notifications.hideList');
                 const picking = vscode.commands.executeCommand('xtc.selectBuildMode', undefined, other.uri);
                 try {
                     await ui.shows(ui.page.locator('.quick-input-widget:visible .monaco-list-row').filter({ hasText: data.picker }).first(),
@@ -1957,8 +1975,14 @@ export function otherXdkCases(): void {
             // unzip lists the entry, and fails when the jar has none
             const extracted = await caseProcess('unzip', ['-l', root(data.other.javatools), data.marker]).then(() => true, () => false);
             assert.ok(extracted, `The Gradle build extracted the other XDK, whose javatools.jar has ${data.marker}`);
+            // what the program printed, after the run's command line, which VS Code shows first, in a terminal cleared before
+            const ran = `--module=${data.other.module}`;
+            const printed = (text: string) => text.lastIndexOf(ran) >= 0 && text.indexOf(data.other.output, text.lastIndexOf(ran)) >= 0;
+            await clearTerminals();
+            assert.ok(!(await terminalTexts()).some(printed), 'No terminal shows an earlier run of OtherXdk once cleared');
             assert.strictEqual(await shellTaskExit(`Run ${data.other.module}`,
                 () => vscode.commands.executeCommand('xtc.runModule', otherModule.uri.toString(), data.other.module)), 0, 'Gradle run exit code');
+            await eventually(terminalTexts, texts => texts.some(printed), "The Gradle run's output in its task terminal");
 
             // and BundledXdk, beside it, builds and runs embedded
             const bundledModule = await show(bundled, data.bundled);
