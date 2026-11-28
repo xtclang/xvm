@@ -6,7 +6,7 @@ import { State, type LanguageClient } from 'vscode-languageclient/node';
 import { terminateTask } from '../../task-termination';
 import { waitsUnderWay } from '../progress';
 import { recordSettings, restoreSettings } from '../settings';
-import { answered, Happenings, leftOver, playbookWork, taskTerminal, untilTakes, whileUnderWay } from '../uiWait';
+import { answered, Happenings, leftOver, playbookWork, taskTerminal, untilTakes, whileUnderWay, type Workbench } from '../uiWait';
 import { PlaybookFinal, progress, QUIET_MS, runCase } from '../wait';
 
 /**
@@ -28,15 +28,29 @@ function windowTest(title: string, body: () => Promise<void>): void {
     });
 }
 
-/** A record of what happened whose clock, terminal, client and starting server the test gives it. */
+/**
+ * A record of what happened whose clock, terminal, client, starting server and workbench the test gives it, which hears
+ * only what the test feeds it: by default a workbench of which nothing fires ([quietWorkbench]). A real event, such as
+ * the window's, noted at a test's clock that has stopped, would be under way for good.
+ */
 function record(sources: ConstructorParameters<typeof Happenings>[0] = {}): Happenings {
-    return new Happenings({ terminal: async () => undefined, language: () => undefined, ...sources });
+    return new Happenings({ terminal: async () => undefined, language: () => undefined, workbench: quietWorkbench(), ...sources });
+}
+
+/** VS Code's workbench as a test gives a record: none of its events fires but those that [given] holds, the test's. */
+function quietWorkbench(given: { window?: object; workspace?: object; languages?: object } = {}): Workbench {
+    const never: vscode.Event<unknown> = () => new vscode.Disposable(() => undefined);
+    const quiet = (events: object = {}): object => new Proxy(events, {
+        get: (target, name) => Reflect.get(target, name) ?? (name === 'tabGroups' ? quiet() : never),
+    });
+    return { window: quiet(given.window), workspace: quiet(given.workspace), languages: quiet(given.languages) } as unknown as Workbench;
 }
 
 if (!tourWindow) suite("What the playbook's waits count as under way, in the window", () => {
     windowTest('what happened counts for a minute, a response is nothing that happened, and an event is', async () => {
         let clock = 0;
-        const happenings = record({ now: () => clock });
+        // the settings' real event, and no other of the window's
+        const happenings = record({ now: () => clock, workbench: quietWorkbench({ workspace: { onDidChangeConfiguration: vscode.workspace.onDidChangeConfiguration } }) });
         const recorded = await recordSettings();
         try {
             clock = 1_000;
@@ -177,6 +191,31 @@ if (!tourWindow) suite("What the playbook's waits count as under way, in the win
             assert.deepStrictEqual(work, ["the server's compiles, asked 1 times"]);
         } finally {
             happenings.dispose();
+        }
+    });
+
+    windowTest("a playbook wait is final though the window's focus keeps changing", async () => {
+        // a minute after the record began; the window's focus changes at each of the first ten reads, as a window manager's
+        //  or another window's can, while the clock goes on by a tenth of a minute a read
+        let clock = 0;
+        const focus = new vscode.EventEmitter<vscode.WindowState>();
+        const happenings = record({ now: () => clock, workbench: quietWorkbench({ window: { onDidChangeWindowState: focus.event } }) });
+        try {
+            // its first look notes the client it finds, none, which is then a minute old too
+            await happenings.look();
+            clock = QUIET_MS;
+            let reads = 0;
+            await assert.rejects(whileUnderWay(async () => {
+                clock += QUIET_MS / 10;
+                if (++reads <= 10) focus.fire({ focused: reads % 2 === 0, active: reads % 2 === 0 });
+                return 'not yet';
+            }, value => value === 'done', 'The harness waits', { seen: happenings, server: async () => [] }),
+            error => error instanceof PlaybookFinal);
+            // a focus change that counted would have kept it going through the tenth read, and a minute after
+            assert.ok(reads < 10, `${reads} reads: the focus's changes kept it going`);
+        } finally {
+            happenings.dispose();
+            focus.dispose();
         }
     });
 
