@@ -5,9 +5,11 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.Editor
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
+import com.intellij.driver.sdk.ui.components.UiComponent
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
@@ -17,12 +19,15 @@ import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
-/** Exercise the installed Rename handler and its dialog, including ordered resource operations. */
+/**
+ * Exercise the installed Rename handler and its dialog, including ordered resource operations; answers what the IDE
+ * refuses from the time the action is invoked, for the wait for the rename's edit.
+ */
 fun Driver.rename(
     editor: JEditorUiComponent,
     at: Int,
     replacement: String,
-) {
+): IdeRefusals {
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
 
@@ -31,24 +36,27 @@ fun Driver.rename(
             utility(NativeEditorUi::class).renameAvailable(editor.editor)
         }
     awaitUi("installed Rename handler is available", HANG_LIMIT) { available() }
+    val refusals = IdeRefusals(this, editor.editor)
     invokeAction("RenameElement", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Rename")
-    awaitUi(
+    // the handler refuses, with an error hint and no dialog, a symbol that can't be renamed or whose source changed
+    awaitApplied(
         "native rename dialog",
-        HANG_LIMIT,
+        refusals::first,
         errorMessage = {
             withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
                 utility(NativeEditorUi::class).renameState(editor.editor)
             }
         },
     ) {
-        if (dialog.present()) return@awaitUi true
+        if (dialog.present()) return@awaitApplied true
         restorePopupFocus(editor.editor)
         false
     }
     // Exercise the focus observation with the actual modal dialog already open as well.
     restorePopupFocus(editor.editor)
     fillRenameDialog(replacement)
+    return refusals
 }
 
 /** Submit the installed Rename dialog without synthesizing text edits in the driver. */
@@ -62,8 +70,68 @@ fun Driver.fillRenameDialog(replacement: String) {
     input.text = replacement
     val button = cast(dialog.button("Refactor").component, NativeButton::class)
     awaitUi("rename accepts the new name", HANG_LIMIT) { button.isEnabled() }
+    val shown = texts(dialog).orEmpty()
     withContext(OnDispatcher.EDT) { button.doClick() }
-    awaitUi("rename dialog closes", HANG_LIMIT) { dialog.notPresent() }
+    // the dialog refuses, and stays open with its error text, when the source changed while it was open
+    awaitApplied("rename dialog closes", { texts(dialog)?.minus(shown)?.firstOrNull() }) { dialog.notPresent() }
+}
+
+/** The texts that [component] shows, or null once it has gone. */
+private fun texts(component: UiComponent): Set<String>? = runCatching { component.getAllTexts().map { it.text }.toSet() }.getOrNull()
+
+/**
+ * What the IDE refuses from the time this is made, as the test IDE's [Refusals][RefusalsProbe] hears it: an error hint
+ * in [editor], the action's, such as the rename's "Sources changed; invoke Rename again." or LSP4IJ's refusal of a code
+ * action's edit, or the notification of a refactoring that runs in the background, such as a move's, in the project.
+ * Without an editor, as for a file's rename or a move from the project view, only the notifications.
+ */
+class IdeRefusals(
+    driver: Driver,
+    private val editor: Editor? = null,
+) {
+    private val probe = driver.utility(RefusalsProbe::class)
+    private val project = driver.singleProject()
+    private val mark = probe.mark(project)
+
+    /** The first refusal since this was made, or null. */
+    fun first(): String? = (editor?.let { probe.refusals(mark, project, it) } ?: probe.notices(mark, project)).firstOrNull()
+}
+
+/**
+ * Waits as [withinOrFail] does until [applied] holds, the effect of an action that the IDE may refuse instead, which
+ * [refused] says: a refusal fails the wait at once with the IDE's reason, and a wait with nothing in progress fails by
+ * the idle rule, not at [HANG_LIMIT]; [errorMessage] begins the message of a wait that fails without a refusal.
+ */
+internal fun awaitApplied(
+    what: String,
+    refused: () -> String?,
+    errorMessage: () -> String = { "Failed: $what" },
+    applied: () -> Boolean,
+) {
+    val held =
+        withinOrFail(HANG_LIMIT, what) {
+            if (applied()) return@withinOrFail true
+            refused()?.let { reason -> error("$what: the IDE refused it: $reason") }
+            false
+        }
+    check(held) { "${errorMessage()}; ${Quiescence.stuck}" }
+}
+
+/** Hears what the IDE refuses: editors' error hints and refactorings' notifications, in the order they show. */
+@Remote("org.xtclang.idea.playbook.probe.Refusals", plugin = "org.xtclang.playbook.probe")
+internal interface RefusalsProbe {
+    fun mark(project: Project): Int
+
+    fun notices(
+        mark: Int,
+        project: Project,
+    ): List<String>
+
+    fun refusals(
+        mark: Int,
+        project: Project,
+        editor: Editor,
+    ): List<String>
 }
 
 /** Select the reference-preserving XTC scope when another plugin also offers plain file rename. */
@@ -179,23 +247,29 @@ fun Driver.chooseTargets(
     awaitUi("selected declaration closes the chooser", HANG_LIMIT) { rows() == null }
 }
 
+/**
+ * Applies the intention [title] at [at], or on the selection to [selectionEnd]; answers what the IDE refuses from the
+ * time the menu is asked for, for the wait for the intention's edit.
+ */
 fun Driver.quickFix(
     editor: JEditorUiComponent,
     at: Int,
     title: String,
     selectionEnd: Int = at,
-) {
+): IdeRefusals {
     focusEditor(editor)
     withContext(OnDispatcher.EDT) {
         editor.editor.getSelectionModel().removeSelection()
         editor.editor.getCaretModel().moveToOffset(at)
         if (selectionEnd != at) editor.editor.getSelectionModel().setSelection(at, selectionEnd)
     }
+    val refusals = IdeRefusals(this, editor.editor)
     // Dispatch through the UI queue so the platform handles ProcessCanceledException normally;
     // the popup wait may reopen an unapplied inspection, never replay a chosen edit.
     choosePopup(editor, listOf(title), title) {
         invokeAction("ShowIntentionActions", now = false, component = editor.component)
     }
+    return refusals
 }
 
 /** Inspect the rendered native hierarchy, then the result of the native references action. */

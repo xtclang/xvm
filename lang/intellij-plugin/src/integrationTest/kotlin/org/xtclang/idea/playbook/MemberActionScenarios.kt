@@ -50,8 +50,8 @@ fun Driver.memberActions(
         } else {
             // Let the native intention own its request. A separate protocol probe can supersede
             // that request and leave the native client holding its canceled result.
-            quickFix(editor, at, title)
-            awaitUi("generated member matches shared source", HANG_LIMIT) {
+            val refusals = quickFix(editor, at, title)
+            awaitApplied("generated member matches shared source", refusals::first) {
                 editor.text == expected
             }
             diagnostics(editor, false)
