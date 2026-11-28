@@ -726,6 +726,54 @@ the few worth revisiting are under [beyond the current scope](#beyond-the-curren
   between, and a process's threads take a kind's guard one at a time, by a monitor: a second thread's attempt at the
   guard failed, as the first's lock was the process's, and closing its channel released that lock, after which it made
   its directory unguarded.
+- [x] Found 2026-11-28 in a review of the server's temporary files, not in a failure: on Linux, where /tmp is every
+  user's, another user could take over or delete the server's temporary directories, whose names anyone can predict.
+  The bundled libraries' directory for `xtc test`'s `-L` (`XdkLibraries`) was `/tmp/xtc-lsp-xdk-<16 hex digits>` and
+  was reused whenever its `.complete` file was there, whoever owned it, so another user's directory at that name
+  with their own module files ran their code as the user at each embedded test run. Its deletes used Kotlin's
+  `File.deleteRecursively()`, and `ProcessDirectories.delete` `File.walkBottomUp()`, both of which follow a link to a
+  directory, so a directory at such a name with a link to the user's home made the server delete the user's files,
+  and `setWritable(true)` followed a link to a file. Another user's directory or lock file at those names locked the
+  user out (the guard files `.xtc-lsp-xdk-lock`, `.xtc-library-sources-lock` and `.xtc-attached-sources-lock` were
+  in /tmp too). The review of the first fix found that a check made once is not enough: a server runs for weeks, as
+  a VS Code Remote server does, while systemd-tmpfiles or tmpwatch age out its untouched files and its empty root,
+  which another user can then make again, with modules at the bundle's name or a link where the copies are written,
+  which `createDirectories` and `writeString` followed. macOS and Windows give each user a temporary directory of
+  their own. Fixed (2026-11-28, `a424b997f2`): every temporary directory the server makes, and every lock file of
+  theirs, is in one root per user, `<base>/xtc-lsp-<user.name>/` (`UserTemporary`), whose base is, on Linux,
+  `$XDG_RUNTIME_DIR`, which is never aged out, else `~/.cache`, else `java.io.tmpdir`, the only base elsewhere; a
+  base that anyone can write without the sticky bit is refused. The root is made `rwx------` (an owner-only ACL on
+  Windows) and checked at each use: a directory, not a link, owned by the process's user (`Files.getOwner`, compared
+  with the owner of a file the process makes), that its group and others cannot write, by its mode, whose group bits
+  are a Linux ACL's mask, or by its ACL entries; else the server says why in its log and uses a fresh private
+  directory of its own from then on, which it deletes as it exits. Deletes (`UserTemporary.delete`) never follow a
+  link and delete nothing outside the root in use, nor the root, nor another user's; writes (`UserTemporary.write`)
+  make their folders one at a time, none a link, and their file new and not through a link, in the root as it is
+  then. The bundled libraries' directory is checked again at each launch of `xtc test`, used only where its files are
+  the bundle's and nothing else, each a regular file whose SHA-256 is the bundle's file's, and written again
+  otherwise; `.complete` is gone. The library source copies, their resource files and the attached source snapshots
+  are written by `UserTemporary.write`. Tests, each failing without its check: `UserTemporaryTest` (8: the root's
+  link, file, other owner, injected, and group- or others-writable cases, the process's own root kept, the sticky
+  bit, the name's characters, the real owner check, the Linux base, deletes and writes through links and outside the
+  root), `ProcessDirectoriesTest` (a directory's links survive its delete) and `XdkLibrariesTest` (a module's other
+  content, a module more or less, a module that is a link, a folder at a module's name or more, and a root deleted
+  and made again, by the user or by another, after the directory was used). On Linux, the container ran
+  `UserTemporaryTest`, `ProcessDirectoriesTest`, `XdkLibrariesTest` and `EmbeddedTestRunsTest` as a user of its own,
+  29 tests, none skipped, and X344's embedded test run passed in IntelliJ (`run-16714976571227627132`) and VS Code (`run-RuGX6t`).
+- [ ] Open, what the root leaves: directories that servers before it left in `java.io.tmpdir` itself
+  (`xtc-lsp-xdk-*`, `xtc-library-sources-*`, `xtc-attached-sources-*` and their locks) are no longer deleted by any
+  server, as a delete there is what the fix keeps from shared directories; a user removes them once by hand. A
+  server whose root is refused keeps its directories in its own, which no other server finds: a server that was
+  killed leaves it behind, a server of the same build writes the bundle again rather than sharing it, and its copies
+  and snapshots, whose folders were in the root it had, are refused from then on. `$XDG_RUNTIME_DIR` goes when the
+  user's last session ends without lingering, so a server that outlives it, as a VS Code Remote server after a
+  disconnect, has no root until the next login makes it again. Between the bundle's check and `xtc test`'s read of
+  it nothing but a cleaner can change the root. The real owner check is tested only against `/`, other owners by an
+  injected check; Windows has no POSIX permissions, so its ACL and junction rules are untested, and macOS ACLs are
+  not read, where the user's own temporary directory keeps others out anyway. javatools' `DirRepository` keeps its
+  module cache in `<java.io.tmpdir>/xvm-dir-repository/<hash>.cache`, shared the same way (another user's directory
+  there can feed a repository a forged module-name index or keep it from writing one); that is javatools, not the
+  server, and is not changed here.
 - [x] Found 2026-11-25 in a full run of the plugin's unit tests, not when the class runs alone (8 of 8 passed):
   `XtcCompletionTest`'s "a typed prefix that the server completes with nothing lists the file's words" got ScoreCard,
   Scoreboard and size from the server, which completed the line without the typed "Tal". The test typed as soon as
