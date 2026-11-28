@@ -5,7 +5,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 
 import { buildMode, createEmbeddedBuildTask, createEmbeddedRunTask, type BuildMode } from './embedded-execution';
 import { gradleProjects, gradleTask, gradleTasks } from './gradle-projects';
-import { buildTasks, gradleBuild, gradleRoot, type GradleBuild } from './gradle-root';
+import { buildTasks, gradleBuild, gradleRoot, within, type GradleBuild } from './gradle-root';
 
 export interface XtcTaskDefinition extends vscode.TaskDefinition {
     moduleName: string;
@@ -118,12 +118,31 @@ function runMode(definition: XtcTaskDefinition, scope?: vscode.WorkspaceFolder):
 }
 
 /**
+ * The folder whose build runs Ecstasy: Run Module's module, of the source [source], or of none, as for a module name
+ * typed in: the folder of [folders], the window's, that holds the source, or the window's only one. In a window of
+ * several, for a source that none of them holds, or none, the one that [pick], VS Code's folder picker, answers, as the
+ * module's name does not tell which folder's build has it: the server names a module's project by its path in its build
+ * tree, which two builds' root projects share as `:`. Undefined when the pick is canceled; no folder in a window without.
+ */
+export async function moduleRunFolder(source: string | undefined, folders: readonly vscode.WorkspaceFolder[] = vscode.workspace.workspaceFolders ?? [],
+    pick: () => Thenable<vscode.WorkspaceFolder | undefined> = () => vscode.window.showWorkspaceFolderPick({ placeHolder: 'The folder whose build runs the module' })):
+    Promise<{ folder?: vscode.WorkspaceFolder } | undefined> {
+    const file = source === undefined ? undefined : vscode.Uri.parse(source);
+    // the innermost of them, as VS Code takes a file's folder
+    const owner = file && folders.filter(folder => folder.uri.scheme === file.scheme && within(file.fsPath, folder.uri.fsPath))
+        .sort((one, other) => other.uri.fsPath.length - one.uri.fsPath.length)[0];
+    if (owner || folders.length < 2) return { folder: owner ?? folders[0] };
+    const picked = await pick();
+    return picked && { folder: picked };
+}
+
+/**
  * Ecstasy: Run Module's task, from a Run lens, an editor or the command: the module [moduleName] of the source [source],
- * in [mode]. An embedded run takes the source itself; every run takes the folder of the source ([folderOf], by default
- * [runFolder]) as its task's, where it runs, as a module's name alone does not tell it in a window of several folders.
+ * in [mode]. An embedded run takes the source itself; every run takes [folder], by default the folder of the source
+ * ([runFolder]), as its task's, where it runs, as a module's name alone does not tell it in a window of several folders.
  */
 export function runModuleTask(client: ClientAccess, source: string | undefined, moduleName: string, mode: BuildMode,
-    folderOf: (uri: string | undefined) => vscode.WorkspaceFolder | undefined = uri => runFolder(uri)): vscode.Task {
+    folder: vscode.WorkspaceFolder | undefined = runFolder(source)): vscode.Task {
     const definition: XtcTaskDefinition = {
         type: XtcTaskProvider.type,
         moduleName,
@@ -131,7 +150,7 @@ export function runModuleTask(client: ClientAccess, source: string | undefined, 
         mode,
         quietMode: true,
     };
-    return createXtcRunTask(definition, client, folderOf(source));
+    return createXtcRunTask(definition, client, folder);
 }
 
 /** The task that runs [definition]'s module, in the build mode of its folder, or of [scope], the folder its task is of. */

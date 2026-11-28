@@ -177,7 +177,8 @@ available in embedded mode, since it has no counterpart for them.
 A folder's Gradle tasks run at the nearest directory at or above it with the Gradle wrapper or a
 build's settings. A folder whose imported Gradle model says it is an included build of another runs
 them from the build that includes it, addressed to its own projects by their paths in the build tree,
-as `:included:app:build`.
+as `:included:app:build`. In a window of several folders, **Ecstasy: Run Module** asks which folder's
+build runs a module whose name you type, or a file that no folder holds.
 
 Embedded builds and runs compile the editor's text, saved or not; the extension saves no files. VS Code
 saves them before the build or run task as `task.saveBeforeRun` says (`always` by default).

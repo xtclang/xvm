@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient, Location, Position } from 'vscode-languageclient/node';
 
 import { buildMode, createEmbeddedBuildTask } from './embedded-execution';
-import { gradleBuildTask, runFolder, runModuleTask } from './task-provider';
+import { gradleBuildTask, moduleRunFolder, runModuleTask } from './task-provider';
 
 const MODULE_NAME_REGEX = /^[a-zA-Z_]\w*$/;
 
@@ -62,8 +62,13 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
             let moduleName = typeof name === 'string' ? name : undefined;
             const document = uri ? vscode.workspace.textDocuments.find(each => each.uri.toString() === uri) : activeEcstasyDocument();
             const source = uri ?? document?.uri.toString();
-            // the module's folder; for a module name typed in, which no open editor declares, none in a window of several
-            const mode = buildMode(runFolder(source));
+            // the folder whose build runs it, and whose build mode it takes: the source's, or in a window of several
+            // folders, for a module name typed in or a source that no folder holds, the one picked; nothing runs without
+            const chosen = await moduleRunFolder(source);
+            if (!chosen) {
+                return;
+            }
+            const mode = buildMode(chosen.folder);
             moduleName ??= document ? declaredModule(document) : undefined;
             if (!moduleName && !(mode === 'embedded' && source)) {
                 moduleName = await vscode.window.showInputBox({
@@ -75,7 +80,8 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
                 }
             }
 
-            await vscode.tasks.executeTask(runModuleTask(client, source, moduleName ?? path.basename(vscode.Uri.parse(source!).fsPath, '.x'), mode));
+            await vscode.tasks.executeTask(runModuleTask(client, source, moduleName ?? path.basename(vscode.Uri.parse(source!).fsPath, '.x'), mode,
+                chosen.folder));
         }),
 
         vscode.commands.registerCommand('xtc.build', () => runBuild(client, false)),
