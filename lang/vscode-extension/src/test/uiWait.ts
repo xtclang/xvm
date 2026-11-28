@@ -40,27 +40,35 @@ function processTask(execution: vscode.TaskExecution): boolean {
 /** What a terminal shows, and the tasks that print into it. */
 export interface TerminalShows { tasks: string[]; text: string }
 
+/** VS Code's namespaces whose events [watchWorkbench] hears, which a test gives it instead. */
+export interface Workbench {
+    window: typeof vscode.window;
+    workspace: typeof vscode.workspace;
+    languages: typeof vscode.languages;
+}
+
 /**
- * Notes, by [noted], what VS Code's workbench does as it comes: its editors, tabs and window, its documents' opens,
- * closes and edits, but a log's, the diagnostics and the settings.
+ * Notes, by [noted], what VS Code's [workbench] does as it comes: its editors and tabs, its documents' opens, closes
+ * and edits, but a log's, the diagnostics and the settings. Not the window's focus: it changes with what the window
+ * manager and other windows do, not with the work that a wait waits for, so a window whose focus kept changing would
+ * keep any wait going; and no wait needs it, as one for the focus asks for it again at each try ([focusTestWindow]).
  */
-function watchWorkbench(noted: (what: string) => void): vscode.Disposable[] {
+function watchWorkbench(noted: (what: string) => void, { window, workspace, languages }: Workbench = vscode): vscode.Disposable[] {
     const name = (uri: vscode.Uri) => path.basename(uri.path);
     // a log, as the language server's, grows with each request the server logs, which is no work of the window's
     const log = (document: vscode.TextDocument) => document.uri.scheme === 'output' || document.uri.path.endsWith('.log');
     return [
-        vscode.window.onDidChangeActiveTextEditor(() => noted('the active editor changed')),
-        vscode.window.onDidChangeVisibleTextEditors(() => noted('the visible editors changed')),
-        vscode.window.tabGroups.onDidChangeTabs(() => noted('the tabs changed')),
-        vscode.window.tabGroups.onDidChangeTabGroups(() => noted('the editor groups changed')),
-        vscode.window.onDidChangeWindowState(state => noted(`the window is ${state.focused ? 'focused' : 'not focused'}`)),
-        vscode.workspace.onDidOpenTextDocument(document => { if (!log(document)) noted(`${name(document.uri)} opened`); }),
-        vscode.workspace.onDidCloseTextDocument(document => { if (!log(document)) noted(`${name(document.uri)} closed`); }),
-        vscode.workspace.onDidChangeTextDocument(event => {
+        window.onDidChangeActiveTextEditor(() => noted('the active editor changed')),
+        window.onDidChangeVisibleTextEditors(() => noted('the visible editors changed')),
+        window.tabGroups.onDidChangeTabs(() => noted('the tabs changed')),
+        window.tabGroups.onDidChangeTabGroups(() => noted('the editor groups changed')),
+        workspace.onDidOpenTextDocument(document => { if (!log(document)) noted(`${name(document.uri)} opened`); }),
+        workspace.onDidCloseTextDocument(document => { if (!log(document)) noted(`${name(document.uri)} closed`); }),
+        workspace.onDidChangeTextDocument(event => {
             if (event.contentChanges.length > 0 && !log(event.document)) noted(`an edit of ${name(event.document.uri)}`);
         }),
-        vscode.languages.onDidChangeDiagnostics(event => noted(`the diagnostics of ${event.uris.map(name).join(', ')}`)),
-        vscode.workspace.onDidChangeConfiguration(() => noted('the settings changed')),
+        languages.onDidChangeDiagnostics(event => noted(`the diagnostics of ${event.uris.map(name).join(', ')}`)),
+        workspace.onDidChangeConfiguration(() => noted('the settings changed')),
     ];
 }
 
@@ -74,6 +82,11 @@ export interface HappeningsSources {
     language?: () => LanguageClient | undefined;
     /** What grows while the starting server [client] works: its process's time, and its session's log ([serverSigns]). */
     starting?: (client: LanguageClient) => Promise<number>;
+    /**
+     * The workbench whose events it hears ([watchWorkbench]): a test gives its own, whose events only the test fires,
+     * and the record then hears nothing else of the window's, so that only what the test feeds it happens.
+     */
+    workbench?: Workbench;
 }
 
 /**
@@ -112,13 +125,17 @@ export class Happenings implements vscode.Disposable {
     private readonly starting: (client: LanguageClient) => Promise<number>;
     private readonly subscriptions: vscode.Disposable[];
 
-    constructor({ now = Date.now, terminal = taskTerminal, language = getClient, starting = serverSigns }: HappeningsSources = {}) {
+    constructor({ now = Date.now, terminal = taskTerminal, language = getClient, starting = serverSigns, workbench }: HappeningsSources = {}) {
         this.now = now;
         this.terminal = terminal;
         this.language = language;
         this.starting = starting;
         this.last = { what: 'the playbook started', at: now() };
         const noted = (what: string) => this.happened(what);
+        if (workbench) {
+            this.subscriptions = watchWorkbench(noted, workbench);
+            return;
+        }
         const name = (uri: vscode.Uri) => path.basename(uri.path);
         const files = vscode.workspace.createFileSystemWatcher('**/*');
         this.subscriptions = [...watchWorkbench(noted), files,
