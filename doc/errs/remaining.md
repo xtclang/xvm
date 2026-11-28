@@ -1358,6 +1358,83 @@ And, after that entry, a new entry:
   accident, and keep `__pycache__` out of the repository: `6a4684a033` (2026-11-11), which also
   ignores `*.pyc`.
 
+- [x] X66's modal "Error: No Implementation found." in the full catalog (`4f12a760f7`): a harness ordering problem behind
+  UP80. LSP4IJ 0.30.1 shows "No … found" in a modal dialog when the Go to's editor is gone (UP80, lsp4ij#2093, fixed
+  for 0.30.2 by #2096). X66's last Go to Implementation's progress ended at 11:27:19,265 and the case closed
+  Properties.x at 11:27:19,269, before the EDT ran the empty answer that LSP4IJ's task had queued, which then found
+  its editor disposed. UP80's workaround waited only for the task's progress to end; LSP4IJ queues its answer with
+  invokeLater, under the write-intent lock, and the EDT's queue (NonBlockingFlushQueue) keeps order only among events
+  of the same modality and lock, so the driver's later calls, which take no lock (invokeAndWaitRelaxed:
+  dismissPopups, closeEditors), can run first, as they do while a write action holds the lock. The full catalog makes
+  that likely: every case's file writes and VFS refreshes run write actions, and the library views that X35 and X101
+  open (String.x, xml's Document.x) stay open for the rest of the run and take the selection and the IDE's work
+  whenever a case closes its files. The native Go to check now also waits, once the progress has ended, for the EDT
+  to run a non-modal event under the lock queued after the answer (probe NonModalEvents.drain). Runs:
+  run-5429425584297970773 (X35, X101, X64-X66, X350-X352), the full catalog run-14742488023735374840 (X66 and X352 passed; a second full catalog, stopped on
+  request after X131, passed X66 too).
+- [x] X352's hour in applyRename (`9606e85878`): a wait for a refactoring's edit with HANG_LIMIT as its only bound, while
+  the IDE had refused the rename at once ("Sources changed; invoke Rename again."). Such waits now go through
+  awaitApplied: withinOrFail's idle rule and work (the hour only as the last bound), and a failure at once with the
+  IDE's words when the probe Refusals has heard, since a mark set before the action, an editor's error hint
+  (EditorHintListener, error icon) or an "Ecstasy Refactoring" notification. Covered: the rename handler's dialog and
+  the rename dialog's close (its error text), and the edits of renames (X53-X58, X102-X104, X352, the rename
+  families, START_FOCUS), intentions (local refactorings, X105, X122, X278, START_FOCUS), X128's file rename and the
+  moves (X130, X170-X176, X216-X219); the type moves' verify serves their Undo and Redo too. The other Undo/Redo,
+  formatting, typing and completion waits are unchanged: the IDE refuses none of them with a word. A refusal counts
+  only where the action is: an error hint in the action's editor (rename, quickFix) and an "Ecstasy Refactoring"
+  notification in the playbook's project, so that another editor's hint (LSP4IJ's "No Implementation found." of a Go
+  to that does not drain, a debugger's exception hint) fails no wait; the probe holds no project or editor alive.
+  Proven by run-4749195041951787387 (X270-X352): X352 failed at once with the refusal instead of hanging. The
+  editor and project scoping, from the independent review, had no container run (the coordinator's full catalog
+  checks it).
+- [ ] No test drives Refusals' notification path (a move or a file's rename that the IDE refuses) or the rename
+  dialog's error-text path: the probe is not on the unit tests' classpath, and no playbook case has the IDE refuse a
+  move or a dialog. Only the hint path is shown, by run-4749195041951787387's X352.
+- [x] X352's refusal itself, a product bug (`be43de847b`): XtcRenameEdit's snapshot held every document LSP4IJ had
+  connected and asked each for a valid file at the apply. From X337 (Gradle debug) on, LSP4IJ kept
+  workspace/src/main/x/GradleDebugged.x connected with no editor (a didOpen 32 ms to 0.7 s after its didClose,
+  following the server's workspace/inlineValue/refresh during the debug session), and once the case's cleanup
+  deleted it, its file was invalid: every rename and move after X337 was refused, every time. The library view that
+  X350 opened was not the cause: diagnostics in the apply (run-4749195041951787387) showed the same four documents
+  before and after, String.x unchanged, only GradleDebugged.x invalid. A captured buffer now records whether its file
+  existed and stays current while that holds and no file has taken its place (`// TODO LSP4IJ: UP93`); a document
+  opened since leaves the proof current when it has the text the server read: a library's read-only source, a
+  document with only diagnostics, or one without unsaved changes whose file's modification stamp is older than the
+  LocalTimeCounter mark the snapshot takes (a save or a VFS change after the request gives a later stamp). One opened
+  with other text, a file edited and saved or rewritten on the disk since, a file closed or deleted since, or one
+  recreated in a deleted file's place still refuses. RenameProofTest (7 tests): the two tolerance tests fail without
+  the change, and the three that the independent review found (edited and saved, rewritten on the disk, a file in a
+  deleted one's place) fail on the first version. LightEditor.connect/awaitConnected replace the copies in
+  ClosedFileProblemsTest and RenameProofTest. The first version was proven by run-2970648368237136826 (X270-X352,
+  all passed or partial), the full catalog run-14742488023735374840 (X66 and X352 passed; a second full catalog, stopped on
+  request after X131, passed X66 too).
+- [x] A rename's edit of a document with unsaved changes that the server never read (`11933a4334`), from a review of
+  be43de847b: a file with unsaved changes and no connection as the rename is asked is proved against its disk text;
+  an autosave while the server works gives the file its document's stamp from the edit, older than the snapshot's
+  mark, so an open of it afterwards, or the edit of it closed, went through. The snapshot now records, under the
+  request's read action, the unsaved documents that no captured buffer holds; a document opened since that was one of
+  them refuses, and UnsavedClosedTargets refuses an edit of one, open or closed, saved or not. The proof also refuses
+  once LocalTimeCounter (24 bits) has wrapped since the request. RenameProofTest (9 tests): the two new tests apply on
+  be43de847b. Container: X53-X58, X169 and X352 all passed (run-8952449847676642991).
+- [ ] Open, the stamp rule's known gaps, not new: a file deleted and recreated outside the IDE with other text gets a
+  new VFS entry with stamp 0 (only executeTouch sets one), and a change on the disk that the VFS has not refreshed yet
+  loads cached text with an unchanged stamp; either, opened since the request, passes. The proper follow-up is a
+  server-side proof: a hash of the text proved for each edited URI in RenameProposal, which the apply checks against
+  the document.
+- [ ] UP93, upstream, to file (LSP4IJ, against 0.30.1; needs a reproduction): a document connected without an
+  editor stays connected for good, after its file is deleted too: `getOpenedDocuments()` keeps an OpenedDocument whose
+  file is invalid, no didClose is sent, and its diagnostics are still pulled; a file created again at its URL is
+  connected to that stale document (`connectDocument` reuses it through `getConnectedSynchronizer`), whose deleted
+  text the server keeps (the trace pulls textDocument/diagnostic for X281's BuildLibrary.x long
+  after its editor closed, reconnected by the server restart's reconnection). What connected GradleDebugged.x after
+  its close is inferred from the trace's order, most likely LSPDebugVariablePositionProvider's
+  `getLanguageServers(file)` for the suspended frame's file on workspace/inlineValue/refresh; not proven by a stack.
+- [ ] Open: X131 fails in the full catalog ("textDocument/codeLens failed (-32801): Document changed during analysis"):
+  in the 2026-11-28 run before this work (run-14172711971458691279) and in the full catalog with it
+  (run-14742488023735374840, the one failure there). Not part of this work: it is the server's ContentModified for a codeLens,
+  which lagergren/own-release reworks (ContentModified says what overtook a request); to look at again once that is
+  on errs.
+
 ### Playbook cases for formatting from .editorconfig and a folder on another XDK (X361–X366)
 
 Features with unit tests and no check in a real editor, now in both editors' compiler playbooks
@@ -1520,7 +1597,7 @@ BuildModePageTest), `--rerun-tasks`: 23 tests, 0 skipped, 0 failures; verifyPlug
 - [ ] X303 still makes its project with the New Project wizard's creator, not through the wizard's pages (partial).
 - [ ] TourUi.kt, the tour's probe, changed in `77172bbfec` (work, activity, busy and serverState over every open
   project): a tour change to the same functions would meet it in a merge.
-- [ ] None of X361–X366 has been in a full-catalog run yet.
+- [x] X361–X366 in full-catalog runs (2026-11-28, errs at `be43de847b`, the series with the release race and the IntelliJ catalog fixes): all six passed in both editors. IntelliJ run-14708052808944107397, 355 passed, 10 partial and 2 not implemented as their coverage says, none failed; VS Code run-PP9aKZ, 358 of 359 passed, X27 failing on a regression of the release series' watcher path, fixed apart.
 
 Runs, in the container, on errs at `a28850efbb` with the series uncommitted, after an independent review's fixes: VS
 Code run-aAfbLu and run-FVJvz1, X288, X289, X290, X303 and X361–X366, 10 of 10 passed in each, the harness's 28 tests
