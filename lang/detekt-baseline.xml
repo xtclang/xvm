@@ -425,7 +425,6 @@
     <ID>NestedBlockDepth:StartupRegistrationTest.kt:StartupRegistrationTest$@Test fun `watcher requests wait for initialized and require negotiated dynamic registration`</ID>
     <ID>NestedBlockDepth:XdkMemberUseTracker.kt:XdkMemberUseTracker$fun decide: Decision</ID>
     <ID>NestedBlockDepth:XdkRename.kt:XdkRename$private fun edges: Map&lt;Site, Target&gt;?</ID>
-    <ID>NestedBlockDepth:XdkSources.kt:XdkSources.Companion$fun capture: XdkSources</ID>
     <ID>NestedBlockDepth:XdkStdioTest.kt:XdkStdioTest$@Test fun `an invalid packaged backend setting fails startup explicitly`</ID>
     <ID>NestedBlockDepth:XdkSyntaxCompletionProtocolTest.kt:XdkSyntaxCompletionProtocolTest$private fun params</ID>
     <ID>NestedBlockDepth:XtcLanguageServer.kt:XtcLanguageServer$private fun buildServerCapabilities: ServerCapabilities</ID>

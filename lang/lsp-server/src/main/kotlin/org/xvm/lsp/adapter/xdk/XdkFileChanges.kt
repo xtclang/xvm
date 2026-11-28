@@ -59,6 +59,40 @@ internal object XdkFileChanges {
             current == expectedResources
         }.getOrDefault(false)
 
+    /** What one workspace pull's [changedSources] may read in all: [MAX_ENTRIES] entries and [MAX_BYTES] bytes. */
+    class ReadBudget {
+        var entries = MAX_ENTRIES
+        var bytes = MAX_BYTES
+    }
+
+    /**
+     * Which of the module [root]'s sources are certainly not those of [inputs], which its analysis read, with [overlays],
+     * the open documents' texts: [root], its member folder, or both, as a source made, deleted or written since; none when
+     * they are those. Listed and read as XdkSources.capture lists and reads them ([XdkSources.sourceFiles]), so that an
+     * analysis that read them is never found changed. Null when it can't tell, as when the read would take more than is
+     * left of [budget], which it takes what it read from, or a file goes while it is read.
+     */
+    fun changedSources(
+        root: File,
+        inputs: XdkSources.Inputs,
+        overlays: Map<File, String>,
+        budget: ReadBudget,
+    ): List<File>? =
+        runCatching {
+            val (files, directories) = XdkSources.sourceFiles(root, overlays.keys) { --budget.entries < 0 }
+            budget.bytes -= files.filter { it !in overlays }.sumOf(File::length)
+            if (budget.bytes < 0) return@runCatching null
+
+            fun differs(file: File) = (overlays[file] ?: XdkSources.read(file)) != inputs.text[file]
+            val members = files - root
+            listOfNotNull(
+                root.takeIf { differs(root) },
+                root.parentFile.resolve(root.nameWithoutExtension).takeIf {
+                    members != inputs.text.keys - root || directories != inputs.directories || members.any(::differs)
+                },
+            )
+        }.getOrNull()
+
     private fun Path.overlaps(other: Path) = startsWith(other) || other.startsWith(this)
 
     private fun entries(root: Path): List<Path> =
