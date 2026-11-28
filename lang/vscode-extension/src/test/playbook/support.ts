@@ -278,6 +278,17 @@ export async function nextProblem(document: vscode.TextDocument, values: vscode.
     await vscode.commands.executeCommand('closeMarkersNavigation');
 }
 
+/**
+ * Waits until the server has heard that the file or folder [uri] was [what] at [since]: until it has received a
+ * watched-file event of it, itself, after then. A change that VS Code's file watcher never reports fails the wait, which
+ * says so.
+ */
+export async function heard(uri: vscode.Uri, since: number, what: string): Promise<void> {
+    const name = vscode.workspace.asRelativePath(uri);
+    await eventually(async () => fs.receivedAt((await serviceStatus<{ watchedFileChanges?: Record<string, number> }>())?.watchedFileChanges ?? {}, uri.fsPath),
+        time => time !== undefined && time > since, `VS Code's file watcher reports ${name} ${what} to the server`);
+}
+
 export class Workspace {
     private readonly detached = new Set<string>();
 
@@ -289,6 +300,23 @@ export class Workspace {
         const uri = this.uri(file);
         await fs.mkdir(path.dirname(uri.fsPath), { recursive: true });
         await fs.writeFile(uri.fsPath, text);
+    }
+
+    /**
+     * Makes the folders of [file] that are not there yet one at a time, each once the server has heard of the one before:
+     * VS Code's recursive watcher can miss a subtree made in one go before it watches its top folder, and with it every
+     * later change in it: X27 has heard of its new folder, and of nothing in it, not even its member's deletion.
+     */
+    async folders(file: string): Promise<void> {
+        const missing: string[] = [];
+        for (let folder = path.dirname(this.uri(file).fsPath); !await fs.stat(folder).catch(() => undefined); folder = path.dirname(folder)) {
+            missing.unshift(folder);
+        }
+        for (const folder of missing) {
+            const made = Date.now();
+            await fs.mkdir(folder);
+            await heard(vscode.Uri.file(folder), made, 'made');
+        }
     }
 
     async open(file: string, text?: string): Promise<vscode.TextDocument> {

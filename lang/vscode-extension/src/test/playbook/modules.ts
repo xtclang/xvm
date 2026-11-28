@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { CompletionItem, CompletionList, TypeHierarchyItem } from 'vscode-languageclient/node';
 import { getClient } from '../../lsp-client';
 import { scenarioRegex, scenarioText } from './shared';
-import { client, diagnostics, diagnosticCode, eventually, fixture, label, noErrors, playbook, position, symbols, targets } from './support';
+import { client, diagnostics, diagnosticCode, eventually, fixture, heard, label, noErrors, playbook, position, symbols, targets } from './support';
 
 export async function hierarchy(document: vscode.TextDocument, at: vscode.Position): Promise<TypeHierarchyItem[]> {
     return await client().sendRequest<TypeHierarchyItem[] | null>('textDocument/prepareTypeHierarchy', {
@@ -108,11 +108,17 @@ export function moduleCases(): void {
     });
 
     playbook('X27', async (workspace, data) => {
+        // the member's folder is one that the watcher watches, and each change of the member is the watcher's to report
+        await workspace.folders(data.file);
         await workspace.project();
-        await workspace.write(data.file, data.text);
         const uri = workspace.uri(data.file);
+        const created = Date.now();
+        await workspace.write(data.file, data.text);
+        await heard(uri, created, 'created');
         await diagnostics(uri, values => values.length > 0, 'Closed created member diagnostic');
+        const deleted = Date.now();
         await fs.unlink(uri.fsPath);
+        await heard(uri, deleted, 'deleted');
         await noErrors(uri);
     });
 
