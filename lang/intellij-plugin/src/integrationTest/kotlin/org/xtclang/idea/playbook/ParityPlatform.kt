@@ -819,21 +819,38 @@ internal fun ParityScenarios.platformCases() {
             )
             val document = open(variant.string("root"))
             clean(document)
-            with(driver) {
-                val refusals = IdeRefusals(this)
-                withContext(OnDispatcher.EDT) {
-                    utility(FileTreeOperations::class)
-                        .rename(
-                            singleProject(),
-                            directory.resolve(variant.string("from")).toString(),
-                        )
+
+            fun renameFile() =
+                with(driver) {
+                    val refusals = IdeRefusals(this)
+                    withContext(OnDispatcher.EDT) {
+                        utility(FileTreeOperations::class)
+                            .rename(
+                                singleProject(),
+                                directory.resolve(variant.string("from")).toString(),
+                            )
+                    }
+                    chooseXtcFileRename()
+                    fillRenameDialog(variant.string("newName"))
+                    awaitApplied("native file rename updates references", refusals::first) {
+                        document.text == variant.string("expected")
+                    }
                 }
-                chooseXtcFileRename()
-                fillRenameDialog(variant.string("newName"))
-                awaitApplied("native file rename updates references", refusals::first) {
-                    document.text == variant.string("expected")
-                }
+            variant["uncompiledSource"]?.let { uncompiled ->
+                // the server refuses a file's rename that it can't prove while the module does not compile, which the
+                // plugin says in a notification, as the rename ran in the background: the wait for its edit fails at once
+                replace(document, uncompiled.asString)
+                errors(document)
+                val from = directory.resolve(variant.string("from"))
+                val refusal = runCatching(::renameFile).exceptionOrNull()?.message.orEmpty()
+                val refused = "native file rename updates references: the IDE refused it: Rename ${from.fileName} failed: "
+                check(refusal.startsWith(refused) && "does not compile" in refusal) { refusal.ifEmpty { "The file rename applied" } }
+                check(Files.exists(from)) { "The refused rename moved $from" }
+                with(driver) { expireRefusals() }
+                replace(document, variant.string("source"))
+                clean(document)
             }
+            renameFile()
             check(open(variant.string("target")).text == variant.string("targetSource"))
             clean(document)
         }

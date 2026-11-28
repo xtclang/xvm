@@ -5,6 +5,7 @@ import com.intellij.codeInsight.hint.HintUtil
 import com.intellij.icons.AllIcons
 import com.intellij.notification.Notification
 import com.intellij.notification.Notifications
+import com.intellij.notification.NotificationsManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -82,6 +83,15 @@ object Refusals {
         }
         return said.size
     }
+
+    /** Expires the refactorings' notifications in [project], as closing them does, so that their balloons go. */
+    @JvmStatic
+    fun expire(project: Project) =
+        NotificationsManager
+            .getNotificationsManager()
+            .getNotificationsOfType(Notification::class.java, project)
+            .filter { it.title == REFACTORING }
+            .forEach(Notification::expire)
 
     /** The refactorings' notifications in [project] since [mark], the oldest first. */
     @JvmStatic
