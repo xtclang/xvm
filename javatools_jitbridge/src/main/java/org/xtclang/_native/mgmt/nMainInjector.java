@@ -89,9 +89,10 @@ public class nMainInjector
         TypeConstant consoleType = pool.ensureEcstasyTypeConstant("io.Console");
         suppliers.put(new Resource(consoleType, "console"), TerminalConsole::$create);
 
-        TypeConstant randomType = pool.ensureEcstasyTypeConstant("numbers.Random");
-        suppliers.put(new Resource(randomType, "rnd"),    RTRandom::$create);
-        suppliers.put(new Resource(randomType, "random"), RTRandom::$create);
+        TypeConstant               randomType     = pool.ensureEcstasyTypeConstant("numbers.Random");
+        Function<Object, RTRandom> randomSupplier = opts -> RTRandom.$create(xvm.getCtx(), opts);
+        suppliers.put(new Resource(randomType, "rnd"),    randomSupplier);
+        suppliers.put(new Resource(randomType, "random"), randomSupplier);
 
         TypeConstant clockType = pool.ensureEcstasyTypeConstant("temporal.Clock");
         suppliers.put(new Resource(clockType, "clock"),      LocalClock::$createUtcClock);
