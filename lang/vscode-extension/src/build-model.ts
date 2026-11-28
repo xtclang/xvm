@@ -3,8 +3,14 @@ import * as path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
 export interface BuildSourceSet {
+    /** The project's build's root directory, as a file URI, and its path in that build, as `file:///outer/included/#:app`. */
     projectId: string;
     projectPath: string;
+    /**
+     * The project's path in the whole build tree that the import ran in, as `:included:app` for the project `:app` of an
+     * included build; absent from an older plugin's model.
+     */
+    buildTreePath?: string;
     projectDirectory: string;
     buildFile: string;
     sourceSet: string;

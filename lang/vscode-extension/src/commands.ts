@@ -3,8 +3,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient, Location, Position } from 'vscode-languageclient/node';
 
 import { buildMode, createEmbeddedBuildTask } from './embedded-execution';
-import { gradleRoot } from './gradle-root';
-import { runFolder, runModuleTask, XtcTaskDefinition, XtcTaskProvider } from './task-provider';
+import { gradleBuildTask, runFolder, runModuleTask } from './task-provider';
 
 const MODULE_NAME_REGEX = /^[a-zA-Z_]\w*$/;
 
@@ -40,13 +39,7 @@ async function runBuild(client: () => LanguageClient | undefined, rebuild: boole
         await vscode.tasks.executeTask(createEmbeddedBuildTask(client, folder, rebuild));
         return;
     }
-    const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-    const task = new vscode.Task(
-        { type: XtcTaskProvider.type, moduleName: '_lifecycle_build', mode: 'gradle' } as XtcTaskDefinition,
-        folder, rebuild ? 'Rebuild' : 'Build', 'xtc',
-        new vscode.ShellExecution(rebuild ? `${gradlew} clean build` : `${gradlew} build`, { cwd: gradleRoot(folder) }), ['$xtc']);
-    task.group = vscode.TaskGroup.Build;
-    await vscode.tasks.executeTask(task);
+    await vscode.tasks.executeTask(gradleBuildTask(folder, rebuild));
 }
 
 export function registerCommands(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel,

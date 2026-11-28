@@ -58,7 +58,7 @@ export function noticeMissingTask(line: string): void {
     }
 }
 
-// a root project's path is ":", whose task is ":runXtc"
-function taskOf(project: string, task: string): string {
+/** [task] of the project at [project], its path in the build tree: a root project's path is `:`, whose task is `:runXtc`. */
+export function taskOf(project: string, task: string): string {
     return project === ':' ? `:${task}` : `${project}:${task}`;
 }
