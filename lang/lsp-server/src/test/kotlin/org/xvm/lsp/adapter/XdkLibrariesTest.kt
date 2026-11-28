@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
@@ -10,13 +11,17 @@ import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.util.UserTemporary
 import java.io.File
 import java.net.URI
+import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 import java.security.MessageDigest
 import java.util.HexFormat
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.zip.ZipFile
 
 /**
@@ -132,6 +137,77 @@ class XdkLibrariesTest {
         assertThat(XdkLibraries.bundles(modules, sha256("another javatools".toByteArray()))).isFalse()
         assertThat(XdkLibraries.bundles(modules, null)).isFalse()
     }
+
+    @Test
+    fun `the bundled libraries' directory is written again, not used, where its files are not the bundle's`() {
+        assumeTrue("posix" in FileSystems.getDefault().supportedFileAttributeViews(), "links and POSIX permissions")
+        val temporary = UserTemporary(directory, "tester")
+        val written = XdkLibraries.bundled(temporary)
+        assertThat(written.parent).isEqualTo(temporary.root())
+        assertThat(revisions(written)).isEqualTo(bundled)
+        // `xtc test` loads every module in it: a bundled module's file with other content, and a module more, are not
+        //  to be loaded
+        val module = written.resolve(XdkLibraries.packagedResources.first())
+        Files.writeString(module, "another module")
+        Files.writeString(written.resolve("planted.xtc"), "a module more")
+        assertThat(XdkLibraries.bundled(temporary)).isEqualTo(written)
+        assertThat(revisions(written)).isEqualTo(bundled)
+        // nor is a directory without one of them, as a server that was killed while it wrote them left it
+        Files.delete(module)
+        assertThat(revisions(XdkLibraries.bundled(temporary))).describedAs("A module less").isEqualTo(bundled)
+        // nor one whose module is a link, though to a file of the module's very bytes, which can change under it
+        val copy = Files.copy(module, directory.resolve("copy.xtc"))
+        Files.delete(module)
+        Files.createSymbolicLink(module, copy)
+        assertThat(revisions(XdkLibraries.bundled(temporary))).describedAs("A module that is a link").isEqualTo(bundled)
+        // nor one with a folder at a module's name, or a folder more
+        Files.delete(module)
+        Files.createDirectory(module)
+        assertThat(revisions(XdkLibraries.bundled(temporary))).describedAs("A folder at a module's name").isEqualTo(bundled)
+        Files.createDirectory(written.resolve("planted"))
+        assertThat(revisions(XdkLibraries.bundled(temporary))).describedAs("A folder more").isEqualTo(bundled)
+    }
+
+    @Test
+    fun `the bundled libraries' directory is checked again at each use, as a cleaner of old files can delete its root`() {
+        assumeTrue("posix" in FileSystems.getDefault().supportedFileAttributeViews(), "POSIX permissions")
+        // the root that is made again is another user's once this is set, as one who makes it after the cleaner
+        val stranger = AtomicBoolean()
+        val temporary = UserTemporary(directory, "tester") { !(stranger.get() && it.fileName.toString() == "xtc-lsp-tester") }
+        val written = XdkLibraries.bundled(temporary)
+        // the root is gone, and made again with other modules at the bundle's directory: the next launch's is checked
+        remade(written)
+        assertThat(XdkLibraries.bundled(temporary)).isEqualTo(written)
+        assertThat(revisions(written)).isEqualTo(bundled)
+        // and where another user made it again, theirs is not used at all
+        stranger.set(true)
+        remade(written)
+        val own = XdkLibraries.bundled(temporary)
+        assertThat(own.parent).isNotEqualTo(written.parent).isEqualTo(temporary.root())
+        assertThat(revisions(own)).isEqualTo(bundled)
+        assertThat(revisions(written)).describedAs("Another user's directory, which the server leaves as it is").isNotEqualTo(bundled)
+    }
+
+    /** The SHA-256 of each bundled module's file, as the server's resources have it, by its name. */
+    private val bundled by lazy {
+        XdkLibraries.packagedResources.associateWith { name ->
+            sha256(checkNotNull(javaClass.getResourceAsStream("/org/xvm/lsp/xdk/$name")).use { it.readBytes() })
+        }
+    }
+
+    /** Deletes the root of [written], as a cleaner of old files does, and makes [written] again, with other modules. */
+    private fun remade(written: Path) {
+        check(written.parent.toFile().deleteRecursively())
+        Files.createDirectories(written)
+        XdkLibraries.packagedResources.forEach { Files.writeString(written.resolve(it), "another module") }
+    }
+
+    /** The SHA-256 of each file in [directory], by its name; an entry that is no file, not followed, has none. */
+    private fun revisions(directory: Path): Map<String, String?> =
+        Files.list(directory).use { files -> files.toList() }.associate {
+            it.fileName.toString() to
+                it.takeIf { Files.isRegularFile(it, NOFOLLOW_LINKS) }?.let { file -> sha256(Files.readAllBytes(file)) }
+        }
 
     private fun sha256(bytes: ByteArray): String = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
 

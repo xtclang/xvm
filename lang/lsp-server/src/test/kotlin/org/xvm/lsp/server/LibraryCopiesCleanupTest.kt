@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.lsp.util.UserTemporary
 import org.xvm.testing.awaited
 import java.net.URI
 import java.nio.file.Files
@@ -41,9 +42,12 @@ class LibraryCopiesCleanupTest {
     fun `the server deletes its library copies when it exits`(shutdown: Boolean) {
         val jar = Path.of(requireNotNull(System.getProperty("xtc.lsp.jar")) { "Run compilerStdioTest" })
         val temporary = Files.createDirectory(directory.resolve("tmp"))
+        // the user's root in it, as another server of the user's made it, which the server takes as its own
+        //  (UserTemporary.base: with no runtime directory, nor a cache in its home)
+        val root = UserTemporary(temporary).root()
         // the copies of a server that was killed: the system released its lock, and left its lock file beside them
-        val killed = Files.createDirectories(temporary.resolve("xtc-library-sources-1/ecstasy"))
-        Files.createFile(temporary.resolve("xtc-library-sources-1.lock"))
+        val killed = Files.createDirectories(root.resolve("xtc-library-sources-1/ecstasy"))
+        Files.createFile(root.resolve("xtc-library-sources-1.lock"))
         val workspace = Files.createDirectory(directory.resolve("workspace"))
         val source = "module Copies { String text = \"value\"; }"
         val uri = Files.writeString(workspace.resolve("Copies.x"), source).toUri().toString()
@@ -62,6 +66,8 @@ class LibraryCopiesCleanupTest {
                 "-jar",
                 jar.toString(),
             ).redirectError(stderr.toFile())
+                // on Linux the user's runtime directory would come first, and the -Duser.home has no cache
+                .apply { environment().remove("XDG_RUNTIME_DIR") }
                 .start()
         val executor = Executors.newVirtualThreadPerTaskExecutor()
         try {
@@ -87,7 +93,7 @@ class LibraryCopiesCleanupTest {
                     .single()
             val copy = Path.of(URI(target.uri))
             assertThat(copy).exists()
-            assertThat(copy.startsWith(temporary.toRealPath())).describedAs("$copy is in $temporary").isTrue()
+            assertThat(copy.startsWith(root.toRealPath())).describedAs("$copy is in $root").isTrue()
             // writing its own copies, the server deleted those
             assertThat(killed.parent).doesNotExist()
 
@@ -98,7 +104,7 @@ class LibraryCopiesCleanupTest {
                 process.outputStream.close()
             }
             assertThat(process.awaited()).describedAs("The server exits\n${Files.readString(stderr)}").isTrue()
-            assertThat(Files.list(temporary).use { entries -> entries.map { it.fileName.toString() }.toList() })
+            assertThat(Files.list(root).use { entries -> entries.map { it.fileName.toString() }.toList() })
                 .noneMatch { it.startsWith("xtc-library-sources-") }
         } finally {
             if (process.isAlive) process.destroyForcibly()

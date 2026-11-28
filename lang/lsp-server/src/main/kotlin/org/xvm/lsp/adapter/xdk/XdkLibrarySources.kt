@@ -13,9 +13,12 @@ import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.protocol.ServerProperties
 import org.xvm.lsp.util.ProcessDirectories
+import org.xvm.lsp.util.UserTemporary
 import java.io.File
 import java.net.URI
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
@@ -420,13 +423,16 @@ internal object XdkLibrarySources {
                 }
             val target = directory.resolve(base).resolve(relative).normalize()
             val source = target.startsWith(directory.resolve(name)) && relative.endsWith(".x")
-            if (target.startsWith(directory) && !source && !Files.exists(target)) {
-                Files.createDirectories(target.parent)
+            if (target.startsWith(directory) && !source && Files.notExists(target, NOFOLLOW_LINKS)) {
                 val implicit = prefix == "$" && relative == "implicit.x"
                 val content =
                     (if (implicit) XdkLibrarySources::class.java.getResourceAsStream("/implicit.x")?.use { it.readBytes() } else null)
                         ?: ByteArray(0)
-                Files.write(target, content)
+                try {
+                    UserTemporary.current.write(target, content)
+                } catch (_: FileAlreadyExistsException) {
+                    // another library's resource of that name, written meanwhile, or a link, which nothing is written through
+                }
             }
         }
     }
@@ -439,8 +445,8 @@ internal object XdkLibrarySources {
         copies.computeIfAbsent(path) {
             val file = directory.resolve(path).normalize()
             require(file.startsWith(directory)) { "Invalid bundled source path" }
-            Files.createDirectories(file.parent)
-            Files.writeString(file, entry.text)
+            // in the root as it is now, never through a link
+            UserTemporary.current.write(file, entry.text.toByteArray())
             check(file.toFile().setReadOnly()) { "Cannot protect bundled source $path" }
             file.toFile().canonicalFile.toPath()
         }

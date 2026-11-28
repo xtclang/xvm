@@ -5,13 +5,17 @@ import org.xvm.asm.FileStructure
 import org.xvm.compiler.BuildRepository
 import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.lsp.util.SessionLock
+import org.xvm.lsp.util.UserTemporary
 import java.io.File
+import java.io.IOException
 import java.nio.channels.FileLock
 import java.nio.file.Files
+import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.Properties
+import java.util.concurrent.ConcurrentHashMap
 import java.util.Set.copyOf as immutableSet
 
 /** The compiler and its matching libraries travel together in the language server. */
@@ -72,16 +76,18 @@ internal object XdkLibraries {
     }
 
     /**
-     * The revisions of the bundled modules' files, as [revision] has each: read from the bundle's files alone, without
-     * the modules in them, which a comparison with a Gradle build's XDK needs no more of.
+     * The revision of each bundled module's file, as [revision] has it, by the file's name: read from the bundle's files
+     * alone, without the modules in them.
      */
-    internal val revisions: Set<String> by lazy {
-        immutableSet(
-            packagedResources.map { name ->
-                resource(name).use { revision(it.readBytes()) }
-            },
-        )
+    private val files: Map<String, String> by lazy {
+        packagedResources.associateWith { name -> resource(name).use { revision(it.readBytes()) } }
     }
+
+    /**
+     * The revisions of the bundled modules' files ([files]), which a comparison with a Gradle build's XDK needs no more
+     * of.
+     */
+    internal val revisions: Set<String> by lazy { immutableSet(files.values) }
 
     /**
      * The revision of the javatools jar that the server bundles, its compiler and runtime, as its build recorded it: over
@@ -115,50 +121,74 @@ internal object XdkLibraries {
 
     /**
      * A directory with the bundled libraries' files, for a launcher in a process of its own, such as `xtc test`'s for
-     * an embedded test run, whose module path takes directories: written once for the bundle, under the temporary
-     * directory, by its fingerprint, and complete once its `.complete` file is there.
+     * an embedded test run, whose module path takes directories: [bundled] in this user's temporary root
+     * ([UserTemporary]), checked again at each use, as at each launch.
      */
-    internal val directory: File get() = shared.directory
+    internal val directory: File get() = bundled(UserTemporary.current).toFile()
 
     /**
-     * [directory], which every server of the bundle shares and holds a shared [SessionLock] on, [SessionLock.beside]
-     * it, while it runs; it stays for the next one. Making it, a server deletes those of other bundles that no process holds ([SessionLock.unheld]),
-     * which servers of other builds left.
+     * This process's shared [SessionLock] on each bundle's directory that it used, [SessionLock.beside] it, which the
+     * references keep while the process runs.
      */
-    private val shared by lazy {
-        val temporary = Path.of(System.getProperty("java.io.tmpdir"))
-        val dir = temporary.resolve("$PREFIX${fingerprint.take(16)}").toFile()
-        SessionLock.guard(temporary.resolve(".${PREFIX}lock")) { guarded ->
-            if (!File(dir, COMPLETE).isFile) {
-                val staging = Files.createTempDirectory(temporary, "${dir.name}.").toFile()
-                packagedResources.forEach { name -> resource(name).use { input -> File(staging, name).outputStream().use(input::copyTo) } }
-                File(staging, COMPLETE).writeText(fingerprint)
-                // another server may have written it meanwhile, or left it incomplete
-                if (!File(dir, COMPLETE).isFile) dir.deleteRecursively()
-                if (!staging.renameTo(dir)) staging.deleteRecursively()
-            }
-            val lock = SessionLock.share(SessionLock.beside(dir.toPath()))
+    private val shares = ConcurrentHashMap<Path, FileLock>()
+
+    /**
+     * The bundle's directory in [temporary]'s root, taken once for the call, as [written] has it, which every server of
+     * the bundle shares and holds a shared [SessionLock] on while it runs; it stays for the next one. Its lock is taken
+     * again where its file is gone, as a cleaner of old files in the temporary directory deletes it. A server deletes
+     * the directories of other bundles that no process holds ([SessionLock.unheld]), which servers of other builds left.
+     */
+    internal fun bundled(temporary: UserTemporary): Path {
+        val root = temporary.root()
+        return SessionLock.guard(root.resolve(".${PREFIX}lock")) { guarded ->
+            val dir = written(temporary, root)
+            val lock = SessionLock.beside(dir)
+            if (!shares.containsKey(dir) || !Files.isRegularFile(lock, NOFOLLOW_LINKS)) SessionLock.share(lock)?.let { shares[dir] = it }
             if (guarded) {
-                SessionLock.unheld(dir.toPath(), "$PREFIX*").forEach {
-                    it.toFile().deleteRecursively()
-                    Files.deleteIfExists(SessionLock.beside(it))
+                SessionLock.unheld(dir, "$PREFIX*").forEach {
+                    temporary.delete(it)
+                    temporary.delete(SessionLock.beside(it))
                 }
             }
-            Shared(dir, lock)
+            dir
         }
     }
 
-    /** The bundle's directory, and this process's shared hold on it, which the reference keeps while the process runs. */
-    private class Shared(
-        val directory: File,
-        val lock: FileLock?,
-    )
+    /**
+     * The bundle's directory in [root], [temporary]'s, by its fingerprint, with the bundle's files and nothing else, as
+     * their revisions tell ([holds]): `xtc test` loads every module in it, so one with other files or other content, as
+     * a server that was killed while it wrote it leaves, or a cleaner of old files, is written again rather than used.
+     */
+    private fun written(
+        temporary: UserTemporary,
+        root: Path,
+    ): Path {
+        val dir = root.resolve("$PREFIX${fingerprint.take(16)}")
+        if (!holds(dir)) {
+            val staging = Files.createTempDirectory(root, "${dir.fileName}.")
+            files.keys.forEach { name -> resource(name).use { Files.copy(it, staging.resolve(name)) } }
+            // another server may have written it meanwhile, where the guard is no lock
+            if (!holds(dir)) temporary.delete(dir)
+            try {
+                Files.move(staging, dir)
+            } catch (_: IOException) {
+                temporary.delete(staging)
+            }
+        }
+        check(holds(dir)) { "Cannot write the bundled libraries to $dir" }
+        return dir
+    }
 
-    /** The prefix of each bundle's directory in the temporary directory. */
+    /** Whether [dir] is a directory with the bundle's files alone, each a file, not a link, of the bundle's revision. */
+    private fun holds(dir: Path): Boolean {
+        if (!Files.isDirectory(dir, NOFOLLOW_LINKS)) return false
+        val entries = Files.list(dir).use { it.toList() }
+        return entries.map { it.fileName.toString() }.toSet() == files.keys &&
+            entries.all { Files.isRegularFile(it, NOFOLLOW_LINKS) && revision(Files.readAllBytes(it)) == files[it.fileName.toString()] }
+    }
+
+    /** The prefix of each bundle's directory in this user's temporary root. */
     private const val PREFIX = "xtc-lsp-xdk-"
-
-    /** The file that marks [directory] complete. */
-    private const val COMPLETE = ".complete"
 
     /** Bundled compiler repository and the SHA-256 revision of each bundled module's file, by module name. */
     private data class Bundle(
