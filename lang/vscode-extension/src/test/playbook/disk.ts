@@ -80,6 +80,18 @@ export function unheardChanges(received: Record<string, number>): boolean {
     return unheard.size > 0;
 }
 
+/**
+ * When the server received the latest watched-file event of [file] itself, as [received] tells, by URI, in milliseconds
+ * since the epoch; undefined when it received none.
+ */
+export function receivedAt(received: Record<string, number>, file: string): number | undefined {
+    const target = real(file);
+    const times = Object.entries(received)
+        .filter(([uri]) => uri.startsWith('file:') && real(fileURLToPath(uri)) === target)
+        .map(([, time]) => time);
+    return times.length > 0 ? Math.max(...times) : undefined;
+}
+
 function changed(...targets: unknown[]): void {
     const time = Date.now();
     for (const target of targets) {
