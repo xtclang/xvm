@@ -6,7 +6,8 @@ import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { buildModeChoices, buildModeStatusText, embeddedUnavailable } from '../../build-mode-selection';
 import {
-    attachEmbeddedExecution, buildMode, forgetReplacedLibraries, gradleReason, gradleReasonIn, GRADLE_NOT_USED, hasGradleBuild,
+    attachEmbeddedExecution, buildMode, forgetFolders, forgetReplacedLibraries, gradleNotice, gradleReason, gradleReasonIn, GRADLE_NOT_USED,
+    hasGradleBuild,
 } from '../../embedded-execution';
 import { createXtcRunTask, runFolder } from '../../task-provider';
 
@@ -42,6 +43,42 @@ suite('Build mode', () => {
             assert.strictEqual(gradleReasonIn(xdk, { ...scope, reasons: {} }), reason);
             // no folders: every folder, as from a server that names none
             assert.strictEqual(gradleReasonIn(other, { libraries: ['json.xtclang.org'], folders: [], reasons: {} }), reason);
+        } finally {
+            fs.rmSync(root, { recursive: true, force: true });
+        }
+    });
+    test('the notice tells of each folder that builds with Gradle once while it is in the window, and of the workspace once', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'xtc-notice-'));
+        try {
+            // the server names its folders canonically, as file URIs with a trailing slash
+            const [first, second] = ['first', 'second'].map(name => {
+                fs.mkdirSync(path.join(root, name));
+                return fs.realpathSync.native(path.join(root, name));
+            });
+            const uri = (folder: string) => `${vscode.Uri.file(folder).toString()}/`;
+            const reason = 'builds with XDK 0.5.0, not the bundled XDK 0.4.4';
+            const scope = (...folders: string[]) => ({ libraries: [], folders: folders.map(uri), reasons: Object.fromEntries(folders.map(folder => [uri(folder), reason])) });
+            const told = new Set<string>();
+            const window = new Set([first, second]);
+            assert.match(gradleNotice(scope(first), told, window) ?? '', /^The folder first builds with XDK 0\.5\.0, not the bundled XDK 0\.4\.4, and .* use Gradle\.$/);
+            // once, also after a server's restart, which says it again
+            assert.strictEqual(gradleNotice(scope(first), told, window), undefined);
+            // a reason that comes after another folder's: that folder alone
+            const later = gradleNotice(scope(first, second), told, window) ?? '';
+            assert.match(later, /^The folder second builds/);
+            assert.ok(!later.includes('The folder first'), later);
+            // a folder that leaves the window and comes into it again
+            assert.strictEqual(gradleNotice(scope(second), told, new Set([second])), undefined);
+            assert.match(gradleNotice(scope(first, second), told, window) ?? '', /^The folder first builds/);
+            // also when the server says nothing while it is out of the window, as while the server is stopped, or before the
+            // server's notice for the window's new folders: the window's change of its folders forgets it
+            forgetFolders(told, [{ uri: vscode.Uri.file(path.join(root, 'first')), name: 'first', index: 0 }]);
+            assert.match(gradleNotice(scope(first, second), told, window) ?? '', /^The folder first builds/);
+            assert.strictEqual(gradleNotice(scope(first, second), told, window), undefined);
+            // the workspace's own reason, once
+            const libraries = { libraries: ['json.xtclang.org'], folders: [], reasons: {} };
+            assert.match(gradleNotice(libraries, told, window) ?? '', /^This workspace replaces the bundled libraries json\.xtclang\.org/);
+            assert.strictEqual(gradleNotice(libraries, told, new Set()), undefined);
         } finally {
             fs.rmSync(root, { recursive: true, force: true });
         }

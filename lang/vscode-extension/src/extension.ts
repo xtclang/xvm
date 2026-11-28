@@ -15,6 +15,7 @@ import { createStatusBar, updateStatusBar } from './status-bar';
 import { startLanguageClient, restartLanguageClient, stopLanguageClient, updateCompilerConfiguration, updateEditorConfiguration, getClient, connectionSettingsChanged } from './lsp-client';
 import { selectLanguageAdapter } from './adapter-selection';
 import { createBuildModeStatus, selectBuildMode, watchEmbeddedChoice } from './build-mode-selection';
+import { watchNoticedFolders } from './embedded-execution';
 import { XtcTaskProvider } from './task-provider';
 import { registerDebugOption, registerValueFormat, XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
@@ -113,6 +114,7 @@ export function activate(context: vscode.ExtensionContext): void {
         statusBar,
         createBuildModeStatus(),
         watchEmbeddedChoice(),
+        watchNoticedFolders(),
         vscode.commands.registerCommand('xtc.selectBuildMode', selectBuildMode),
         vscode.tasks.registerTaskProvider(XtcTaskProvider.type, new XtcTaskProvider(getClient)),
         vscode.debug.registerDebugAdapterDescriptorFactory('xtc', new XtcDebugAdapterDescriptorFactory(getClient)),
