@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -78,7 +79,7 @@ class XtcRenameEdit
                     ) {
                         false
                     } else {
-                        if (UnsavedClosedTargets.refuse(project, edit)) return@compute false
+                        if (UnsavedClosedTargets.refuse(project, edit, snapshot.unread)) return@compute false
                         graph?.beforeApply()
                         // TODO LSP4IJ: UP03 — 0.21 only renames the basename, ignoring a changed parent URI.
                         // Apply resource moves through VFS inside this same undo command.
@@ -162,15 +163,17 @@ class XtcRenameEdit
 
         /**
          * Connection, buffers and file moves that must remain current while the server proves the rename, which [asked]
-         * at that modification count. A document opened since whose text is its file's as the request was asked, as a
-         * library's read-only source or a file that an editor or a request opens, changes no source that the proof read,
-         * and leaves it current.
+         * at that modification count, and the documents with unsaved changes that the server did not read then, [unread]:
+         * it proved the rename against their files on the disk. A document opened since whose text is its file's as the
+         * request was asked, as a library's read-only source or a file that an editor or a request opens, changes no
+         * source that the proof read, and leaves it current.
          */
         private data class Snapshot(
             val wrapper: LanguageServerWrapper,
             val server: LanguageServer,
             val buffers: List<Buffer>,
             val asked: Long,
+            val unread: Set<Document>,
             val moves: List<FileMove> = emptyList(),
         ) {
             fun isCurrent(): Boolean {
@@ -178,6 +181,8 @@ class XtcRenameEdit
                 val captured = buffers.map { it.opened }.toSet()
                 return !wrapper.isDisposed &&
                     wrapper.languageServer === server &&
+                    // the counter's stamps wrap, and a stamp below the mark would then not be older
+                    LocalTimeCounter.currentTime() > asked &&
                     opened.containsAll(captured) &&
                     (opened - captured).all(::unchanged) &&
                     buffers.all(Buffer::isCurrent) &&
@@ -186,16 +191,19 @@ class XtcRenameEdit
 
             /**
              * Whether [opened], a document opened since the request, has the text that the server read then: a library's
-             * read-only source, whose text is the server's own; a document that holds only diagnostics; or one with no
-             * unsaved change whose file has not changed since, which a save or a reload from the disk would have given a
-             * later modification stamp (a document's change and a VFS change take theirs from LocalTimeCounter, and a save
-             * gives the file its document's).
+             * read-only source, whose text is the server's own; a document that holds only diagnostics; or one that had no
+             * unsaved change then and has none now, whose file has not changed since, which a reload from the disk would
+             * have given a later modification stamp (a document's change and a VFS change take theirs from
+             * LocalTimeCounter). A save gives the file the stamp of its document's last change, which can be older than
+             * the request: a document that had unsaved changes then, [unread], may have been saved since.
              */
             private fun unchanged(opened: OpenedDocument): Boolean {
                 val file = opened.file
                 if (!file.isWritable && !file.isInLocalFileSystem) return true
                 val document = opened.synchronizer?.document ?: return true
-                return !FileDocumentManager.getInstance().isDocumentUnsaved(document) && file.modificationStamp < asked
+                return document !in unread &&
+                    !FileDocumentManager.getInstance().isDocumentUnsaved(document) &&
+                    file.modificationStamp < asked
             }
 
             fun flush(): CompletableFuture<Void> =
@@ -209,11 +217,10 @@ class XtcRenameEdit
         }
 
         companion object {
+            /** Captures the request's sources, under the read action that the request takes. */
             private fun capture(wrapper: LanguageServerWrapper): Snapshot {
                 val asked = LocalTimeCounter.currentTime()
-                return Snapshot(
-                    wrapper,
-                    requireNotNull(wrapper.languageServer),
+                val buffers =
                     wrapper.openedDocuments.map { opened ->
                         val synchronizer =
                             requireNotNull(opened.synchronizer) {
@@ -226,9 +233,15 @@ class XtcRenameEdit
                             opened.file.url,
                             opened.file.isValid,
                         )
-                    },
-                    asked,
-                )
+                    }
+                val read = buffers.map { it.synchronizer.document }.toSet()
+                val unread =
+                    FileDocumentManager
+                        .getInstance()
+                        .unsavedDocuments
+                        .filterNot { it in read }
+                        .toSet()
+                return Snapshot(wrapper, requireNotNull(wrapper.languageServer), buffers, asked, unread)
             }
 
             /** Rename is the single-source special case of a preflighted file operation. */

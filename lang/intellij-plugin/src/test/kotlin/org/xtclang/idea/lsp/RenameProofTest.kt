@@ -24,7 +24,8 @@ import java.nio.file.Path
  * file had as the rename was asked, or one that LSP4IJ keeps connected after its file was deleted before the rename,
  * changes none of them, as the IntelliJ playbook's full catalog had it from X337 on, whose Gradle debug left such a
  * document. A document opened since with other text, or with its file's text that changed since, by a save or on the
- * disk, a file deleted since, and a file that takes a deleted one's place refuse the rename.
+ * disk, a document with unsaved changes that the server never read, however it has been saved or opened since, a file
+ * deleted since, and a file that takes a deleted one's place refuse the rename.
  */
 class RenameProofTest {
     @JvmField
@@ -70,9 +71,31 @@ class RenameProofTest {
             rename {
                 editor.openConnected(other)
                 edit(other)
-                runInEdtAndWait { FileDocumentManager.getInstance().saveAllDocuments() }
+                save()
             },
         ).isFalse()
+    }
+
+    @Test
+    fun `a rename is refused once a file whose unsaved changes the server never read is saved and opened`() {
+        val other = file("Other.x", OTHER)
+        edit(other)
+        assertThat(editor.opened(other)).isFalse()
+        assertThat(
+            rename {
+                save()
+                editor.openConnected(other)
+            },
+        ).isFalse()
+    }
+
+    @Test
+    fun `a rename is refused that edits a closed file whose unsaved changes the server never read, saved since`() {
+        val other = file("Other.x", OTHER)
+        edit(other)
+        assertThat(rename(mapOf(other to listOf(TextEdit(Range(Position(0, 6), Position(0, 11)), "Another")))) { save() })
+            .isFalse()
+        assertThat(editor.document(other)).isEqualTo("// edited\n$OTHER")
     }
 
     @Test
@@ -102,14 +125,16 @@ class RenameProofTest {
     }
 
     /**
-     * Asks the server for the rename of `announce` in a connected Root.x, runs [meanwhile] once it has answered, and
-     * answers whether the rename applies, which it does in Root.x then.
+     * Asks the server for the rename of `announce` in a connected Root.x, whose edit also changes [others], runs
+     * [meanwhile] once it has answered, and answers whether the rename applies, which it does in Root.x then.
      */
-    private fun rename(meanwhile: () -> Unit): Boolean {
+    private fun rename(
+        others: Map<VirtualFile, List<TextEdit>> = emptyMap(),
+        meanwhile: () -> Unit,
+    ): Boolean {
         val root = file("Root.x", ROOT)
-        editor.server.renameEdit = {
-            WorkspaceEdit(mapOf(LSPIJUtils.toUriAsString(root) to listOf(TextEdit(Range(Position(2, 8), Position(2, 16)), "declare"))))
-        }
+        val edits = mapOf(root to listOf(TextEdit(Range(Position(2, 8), Position(2, 16)), "declare"))) + others
+        editor.server.renameEdit = { WorkspaceEdit(edits.mapKeys { (file, _) -> LSPIJUtils.toUriAsString(file) }) }
         editor.openConnected(root)
         val request = XtcRenameEdit.request(editor.connection(), root, ROOT.indexOf("announce"), "declare")
         editor.await("the server proves the rename") { request.isDone }
@@ -126,6 +151,9 @@ class RenameProofTest {
                 checkNotNull(FileDocumentManager.getInstance().getDocument(file)).insertString(0, "// edited\n")
             }
         }
+
+    /** Saves every document, as IntelliJ's autosave does while it is idle or as its window loses the focus. */
+    private fun save() = runInEdtAndWait { FileDocumentManager.getInstance().saveAllDocuments() }
 
     private fun delete(file: VirtualFile) = runInEdtAndWait { WriteAction.run<Exception> { file.delete(this) } }
 
