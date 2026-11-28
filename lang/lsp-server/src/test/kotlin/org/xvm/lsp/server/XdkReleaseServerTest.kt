@@ -904,6 +904,32 @@ class XdkReleaseServerTest {
     }
 
     @Test
+    fun `a closed file's query whose analysis goes with the file ends, and says what retired it`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        Session(directory).use { session ->
+            // no document of Node0 is open: Part's type hierarchy waits for the analysis of Node0's closed files, whose
+            // compile holds
+            session.close("Node0")
+            session.hold.set(true)
+            val hierarchy =
+                session.server.textDocumentService.prepareTypeHierarchy(
+                    TypeHierarchyPrepareParams(
+                        TextDocumentIdentifier(session.uri("Node0/Part")),
+                        Session.position(SOURCES.getValue("Node0/Part"), "Part"),
+                    ),
+                )
+            assertThat(session.entered.awaited()).isTrue()
+            // Part's file goes: the watcher's report retires the analysis, and no other answers for Part
+            check(directory.resolve("Node0/Part.x").toFile().delete())
+            session.watched("Node0/Part")
+            // its graph query would run now, and answer no hierarchy
+            session.release.countDown()
+            assertContentModified(hierarchy, "Part.x changed on disk")
+        }
+    }
+
+    @Test
     fun `the release of an analysis kept for a query drops no compile that took its place`() =
         waiting(
             "the type hierarchy",
@@ -944,6 +970,23 @@ class XdkReleaseServerTest {
             session.release.countDown()
             assertThat(first.awaited() as List<*>).isNotEmpty()
             assertThat(second.awaited()).isNotEmpty()
+        }
+
+    @Test
+    fun `a graph query that two requests share ends with the cancellation of the last of them`() =
+        waiting(
+            "the code lenses",
+            ask = { session -> session.adapter.getCodeLensesAsync(session.uri("Node0"), true) },
+            queued = "project-CODE_LENSES",
+        ) { session, first ->
+            val second = session.adapter.getCodeLensesAsync(session.uri("Node0"), true)
+
+            @Suppress("UNCHECKED_CAST")
+            fun queued() = (session.adapter.compilerQueueSnapshot()["queuedJobs"] as List<String>).any { "project-CODE_LENSES" in it }
+            first.cancel(true)
+            assertThat(queued()).describedAs("the graph query, which the second request waits for").isTrue()
+            second.cancel(true)
+            assertThat(queued()).describedAs("the graph query, which no request waits for").isFalse()
         }
 
     @Test

@@ -789,7 +789,8 @@ class XtcTextDocumentService(
      * reads as it ends, as a change that then retires it overtakes it ([PendingQuery.closedAnalysis]). When the compiler
      * ended it unfinished, it goes on to the one that answers it now, which it reads instead: the compile that replaced
      * it as a member opened with its file's text, or, once a change retired it, a new one of its module, or, as the
-     * document opened since, the open document's, while the query's [result] is pending. Off the thread that ended
+     * document opened since, the open document's, while the query's [result] is pending; when none answers it, as its
+     * file went, the query answers ContentModified with what retired the analysis. Off the thread that ended
      * [analysis], which can hold the compiler's lock, and under this one: the compiler ends it as the document's didOpen
      * holds it, before the didOpen installs the document's analysis.
      */
@@ -806,9 +807,17 @@ class XtcTextDocumentService(
                     if (!analysis.result.isCancelled || result.isDone) {
                         null
                     } else {
-                        (compiler.answering(analysis) ?: compiler.closedAnalysis(uri) ?: compiler.openAnalysis(uri))
-                            ?.takeIf { it.result !== analysis.result }
-                            ?.also { query.closedAnalysis = it }
+                        val next =
+                            (compiler.answering(analysis) ?: compiler.closedAnalysis(uri) ?: compiler.openAnalysis(uri))
+                                ?.takeIf { it.result !== analysis.result }
+                        // none answers the document now, as its file went: the change that retired its analysis overtook
+                        // the query, which would read no analysis
+                        if (next == null) {
+                            result.completeExceptionally(contentModified(query.retirement()))
+                        } else {
+                            query.closedAnalysis = next
+                        }
+                        next
                     }
                 }
             }.thenCompose { next ->

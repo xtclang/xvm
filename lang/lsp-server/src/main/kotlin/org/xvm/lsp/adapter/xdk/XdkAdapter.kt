@@ -1404,13 +1404,7 @@ class XdkAdapter
                         }
                 }
             request.result.whenComplete { value, failure ->
-                if (failure ==
-                    null
-                ) {
-                    answer.complete(value)
-                } else {
-                    answer.completeExceptionally(failure)
-                }
+                if (failure == null) answer.complete(value) else answer.completeExceptionally(failure)
             }
             return answer
         }
