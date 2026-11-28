@@ -1212,10 +1212,12 @@ class XdkAdapter
 
         /**
          * Project query with captured dependencies and overlays, executed against those inputs on the
-         * compiler worker.
+         * compiler worker. It answers what a request [asks] beyond its [key], as a position or a name; a request
+         * that asks the same of the same inputs while it is pending shares it ([projectQuery]).
          */
         private class ProjectRequest<T>(
             val key: ProjectQueryKey,
+            val asks: Any,
             val project: XdkProject,
             val dependencies: XdkDependencies,
             val overlays: Map<String, String>,
@@ -1224,6 +1226,9 @@ class XdkAdapter
         ) : QueryWork {
             override val result = CompletableFuture<T>()
             override val task = trace.task("project-${key.kind}", key.uri, result) { work(this) }
+
+            /** Under lifecycle: how many requests wait for its answer; the last one's cancellation ends it ([share]). */
+            var waiting = 0
         }
 
         /** Cursor query and source position bound to one compilation request. */
@@ -1286,14 +1291,18 @@ class XdkAdapter
          * The graph's answer to [query], on the compiler worker, or [unavailable] when the graph has none: discovery has a
          * problem, or [key]'s document is in no module of the graph. With [refusal], such a query fails instead, with what
          * it makes of discovery's problem, or of none when the document is in no module, as a rename tells its client why.
+         * A request that [asks] what a pending query of [key] asks, of the same graph, libraries and documents, shares
+         * that query's answer, as an editor and a client of its own ask a document's code lenses at once; one that asks
+         * something else, or of other inputs, takes its place. By default a request asks something of its own.
          */
         private fun <T> projectQuery(
             key: ProjectQueryKey,
             unavailable: T,
             refusal: ((problem: String?) -> Throwable)? = null,
+            asks: Any = Any(),
             query: (XdkProjectQueries) -> T,
         ): CompletableFuture<T> {
-            val (request, previous) =
+            val (answer, previous) =
                 synchronized(lifecycle) {
                     if (closed) return closedAdapter()
                     val problem = discovery.get().problem
@@ -1301,8 +1310,14 @@ class XdkAdapter
                         return refusal?.let { CompletableFuture.failedFuture(it(problem)) }
                             ?: CompletableFuture.completedFuture(unavailable)
                     }
+                    @Suppress("UNCHECKED_CAST")
+                    (projectQueries[key] as ProjectRequest<T>?)
+                        ?.takeIf {
+                            it.waiting > 0 && !it.result.isDone && it.asks == asks && it.project === project &&
+                                it.dependencies === dependencies && it.overlays == overlays
+                        }?.let { return share(it) }
                     val request =
-                        ProjectRequest(key, project, dependencies, overlays.toMap(), queueTrace) { work: ProjectRequest<T> ->
+                        ProjectRequest(key, asks, project, dependencies, overlays.toMap(), queueTrace) { work: ProjectRequest<T> ->
                             fun stale(): Boolean = projectQueries[key] !== work || work.result.isCancelled
                             var queries: XdkProjectQueries? = null
                             val started = System.nanoTime()
@@ -1367,10 +1382,37 @@ class XdkAdapter
                                 }
                             }
                         }
-                    request to replacePending(projectQueries, key, request)
+                    // its answer waits for the query's before the worker can end it
+                    share(request) to replacePending(projectQueries, key, request)
                 }
             previous?.result?.cancel(false)
-            return request.result
+            return answer
+        }
+
+        /**
+         * Called under lifecycle: a request's own future of [request]'s answer, which another request that asks the same
+         * of it can share. A request's cancellation, as the server's as the request ends, ends the query's work only once
+         * none of the requests that share it waits for it.
+         */
+        private fun <T> share(request: ProjectRequest<T>): CompletableFuture<T> {
+            request.waiting++
+            val answer =
+                object : CompletableFuture<T>() {
+                    override fun cancel(mayInterruptIfRunning: Boolean): Boolean =
+                        super.cancel(mayInterruptIfRunning).also { canceled ->
+                            if (canceled && synchronized(lifecycle) { --request.waiting == 0 }) request.result.cancel(false)
+                        }
+                }
+            request.result.whenComplete { value, failure ->
+                if (failure ==
+                    null
+                ) {
+                    answer.complete(value)
+                } else {
+                    answer.completeExceptionally(failure)
+                }
+            }
+            return answer
         }
 
         /** The future for a request made after [close]. */
@@ -2613,7 +2655,7 @@ class XdkAdapter
         ): CompletableFuture<List<CodeLens>> {
             val run = runLenses(uri)
             return if (references && hasProject(uri) && !isLibraryDocument(uri)) {
-                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_LENSES), emptyList()) {
+                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_LENSES), emptyList(), asks = run) {
                     run + it.referenceLenses(uri)
                 }
             } else {
@@ -2732,7 +2774,7 @@ class XdkAdapter
                     .flatMap { flatten(it.symbols) }
                     .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
             } else {
-                projectQuery(ProjectQueryKey(root, ProjectQueryKind.SYMBOLS), emptyList()) {
+                projectQuery(ProjectQueryKey(root, ProjectQueryKind.SYMBOLS), emptyList(), asks = query) {
                     it.symbols(query)
                 }.join()
             }
@@ -2870,7 +2912,11 @@ class XdkAdapter
             includeDeclaration: Boolean,
         ): CompletableFuture<List<Location>> =
             if (synchronized(lifecycle) { project.scope(uri) != null }) {
-                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.REFERENCES), emptyList()) {
+                projectQuery(
+                    ProjectQueryKey(uri, ProjectQueryKind.REFERENCES),
+                    emptyList(),
+                    asks = listOf(line, column, includeDeclaration),
+                ) {
                     it.references(uri, line, column, includeDeclaration)
                 }
             } else {
@@ -3011,7 +3057,12 @@ class XdkAdapter
             newName: String,
         ): CompletableFuture<XdkRenameProposal?> =
             if (isProjectRename(uri, line, column)) {
-                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME_PROPOSAL), null, ::projectRenameRefusal) {
+                projectQuery(
+                    ProjectQueryKey(uri, ProjectQueryKind.RENAME_PROPOSAL),
+                    null,
+                    ::projectRenameRefusal,
+                    asks = listOf(line, column, newName),
+                ) {
                     it.renameProposal(uri, line, column, newName)
                 }
             } else {
@@ -3029,7 +3080,12 @@ class XdkAdapter
             newName: String,
         ): CompletableFuture<XdkRenameProposal?> =
             if (isProjectRename(uri, line, column)) {
-                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME), null, ::projectRenameRefusal) {
+                projectQuery(
+                    ProjectQueryKey(uri, ProjectQueryKind.RENAME),
+                    null,
+                    ::projectRenameRefusal,
+                    asks = listOf("plainRename", line, column, newName),
+                ) {
                     it.plainRename(uri, line, column, newName)
                 }
             } else {
@@ -3104,7 +3160,7 @@ class XdkAdapter
                             }
                     }
                 } ?: return CompletableFuture.completedFuture(null)
-            return projectQuery(ProjectQueryKey(scope, ProjectQueryKind.FILE_RENAME), null) {
+            return projectQuery(ProjectQueryKey(scope, ProjectQueryKind.FILE_RENAME), null, asks = files) {
                 it.renameFilesProposal(files)
             }
         }
@@ -3134,7 +3190,8 @@ class XdkAdapter
             if (kinds.isEmpty()) {
                 CompletableFuture.completedFuture(emptyList())
             } else if (hasProject(uri)) {
-                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range, kinds = kinds), emptyList()) {
+                // a request that shares another's answer compiles nothing of its own, which its report says
+                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range, kinds = kinds), emptyList(), asks = diagnostics) {
                     it.codeActions(uri, range, diagnostics, kinds, compiled)
                 }
             } else {
@@ -3175,6 +3232,7 @@ class XdkAdapter
                     ProjectQueryKey(uri, ProjectQueryKind.RENAME),
                     null,
                     ::projectRenameRefusal,
+                    asks = listOf("rename", line, column, newName),
                 ) {
                     it.rename(uri, line, column, newName)
                 }
@@ -3370,6 +3428,7 @@ class XdkAdapter
             projectQuery<XdkWorkspaceNavigation?>(
                 ProjectQueryKey(uri, ProjectQueryKind.NAVIGATION),
                 null,
+                asks = Unit,
             ) {
                 it.navigation()
             }.join()
