@@ -146,7 +146,7 @@ The formatter takes each setting from the first of these that sets it:
 | Refill comments | **Wrapping and Braces: Comments, Wrap at right margin** | `xtc.formatting.wrapComments` | `ij_ecstasy_wrap_comments`: `true` or `false` |
 | Trailing whitespace | What the editor sends with the request | What the editor sends with the request | `trim_trailing_whitespace`: `true` or `false` |
 | Final newline | What the editor sends with the request | What the editor sends with the request | `insert_final_newline`: `true` or `false` |
-| Line endings | IntelliJ's own: it applies `end_of_line` itself | **Format Document** sets the document's | `end_of_line`: `lf` or `crlf` |
+| Line endings | **Reformat Code** sets the file's, as **File \| File Properties \| Line Separators** does | **Format Document** sets the document's | `end_of_line`: `lf`, `crlf` or `cr` |
 | Formatter markers | **Code Style \| General: Turn formatter on/off with markers in code comments** | `xtc.formatting.formatterTagsEnabled` | `ij_formatter_tags_enabled`: `true` or `false` |
 | Off and on tags | The same page's **Off** and **On** | `xtc.formatting.formatterOffTag`, `xtc.formatting.formatterOnTag` | `ij_formatter_off_tag`, `ij_formatter_on_tag` |
 | Tags as regular expressions | The same page's **Enable regular expressions in formatter markers** | `xtc.formatting.formatterTagsAcceptRegexp` | `ij_formatter_tags_accept_regexp` |
@@ -174,9 +174,13 @@ The server reads the standard `indent_style`, `indent_size` (`tab` indents by th
 standard has no name for, it reads the names IntelliJ gives them in `.editorconfig`, so a file that IntelliJ exports
 from its code style works in both editors, and for the continuation indent also the EditorConfig wiki's
 `continuation_indent_size`. A formatting edit cannot change a file's line endings,
-as both editors give the text it inserts the document's own, so `end_of_line` is applied by the editor: IntelliJ
-applies it itself while its EditorConfig support is on, and in VS Code, **Format Document**, and `editor.formatOnSave`,
-converts the document to the `lf` or `crlf` that the server reads (VS Code has no `cr`). `charset` stays with the editor, and other
+as both editors give the text it inserts the document's own, so `end_of_line` is applied by the editor, to the `lf`,
+`crlf` or `cr` that the server reads. In IntelliJ, **Reformat Code** of a whole file converts it, as **File | File
+Properties | Line Separators** does, which saves the file, and a format on save writes it with them; IntelliJ's own
+EditorConfig support gives the separator only to new files. As with that action, a file whose line separator, as the
+status bar shows it, is already the one asked for keeps its line endings, mixed ones too, and a read-only file keeps
+them. In VS Code, **Format Document**, and
+`editor.formatOnSave`, converts the document (VS Code has no `cr`). `charset` stays with the editor, and other
 properties are not read. A value the formatter cannot use, such as `indent_size = 0` or `indent_style = spaces`, is
 skipped, with a warning in the language server's log.
 

@@ -275,7 +275,10 @@ and `ij_formatter_tags_accept_regexp`; `unset` keeps
 the editor's value, and a value out of range is skipped with a warning (`lsp/adapter/EditorConfig.kt:61`).
 `xtc/endOfLine` (`{ "uri": ... }`) answers the file's `end_of_line`, `lf`, `crlf` or `cr`, or null, for the client to
 apply, as a text edit cannot change a document's line endings: VS Code's extension adds `TextEdit.setEndOfLine` to
-Format Document (`vsc/end-of-line.ts`); IntelliJ applies `end_of_line` itself.
+Format Document (`vsc/end-of-line.ts`). IntelliJ's own EditorConfig support gives `end_of_line` only to new files, so
+the plugin asks for it beside a whole file's Reformat Code and gives the file that separator, as File | File
+Properties | Line Separators does: it saves the document when the format changed its text, which keeps the format to
+undo, and converts the file when it did not (`idea/lsp/XtcFormattingService.kt`).
 
 On `workspace/didChangeConfiguration` the server asks for `xtc.formatting` again, refreshes inlay
 hints and lenses, and takes `settings.xtc.compiler` as given; when the notification has only

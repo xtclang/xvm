@@ -1,17 +1,18 @@
 package org.xtclang.idea.playbook
 
 import com.google.gson.JsonObject
+import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import org.xtclang.idea.playbook.probe.HANG_LIMIT
 import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * X361–X365, registered after X360 in catalog order: what a file's .editorconfig sets over the editor's formatting
- * settings, the formatter markers, comment reflow and trailing whitespace. X364, line endings, is VS Code's only:
- * IntelliJ applies end_of_line itself.
+ * settings, the formatter markers, comment reflow, line endings and trailing whitespace.
  */
 internal fun ParityScenarios.formattingCases() {
     case("X361") { data ->
@@ -94,7 +95,7 @@ internal fun ParityScenarios.formattingCases() {
     case("X363") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
-        check(formatting(document).isEmpty()) { "Without wrapping of comments the comment stays as it is" }
+        reformatUnchanged(document, data, "source", "without wrapping of comments the comment stays as it is")
         val previous = codeStyle { page, project -> page.wrapComments(project, true) }
         try {
             serverFormats("wrapComments", true)
@@ -103,10 +104,36 @@ internal fun ParityScenarios.formattingCases() {
                 data.string("expected"),
                 "the paragraph is refilled at the margin, and the @param lines and the code keep their layout",
             )
-            check(formatting(document).isEmpty()) { "A second format changes nothing" }
+            reformatUnchanged(document, data, "expected", "a second format changes nothing")
         } finally {
             codeStyle { page, project -> page.wrapComments(project, previous) }
             serverFormats("wrapComments", previous)
+        }
+    }
+
+    case("X364") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        clean(document)
+        val file = directory.resolve(data.string("file"))
+        check(lineSeparator(file) == "\n") { "The file has LF line endings: ${lineSeparator(file)}" }
+        withEditorConfig(data) { write ->
+            write(data.string("settings"))
+            // the line ending that the server reads from .editorconfig, which no text edit can give a document, and which
+            // the plugin gives the file as IntelliJ's File | File Properties | Line Separators does, saving it
+            val expected = data.string("expected")
+            reformat(document, expected.replace("\r\n", "\n"), "Reformat Code indents the module")
+            check(withinOrFail(HANG_LIMIT, "$id: the file has CRLF line endings") { Files.readString(file) == expected }) {
+                "The file on disk: ${Files.readString(file)}; ${Quiescence.stuck}"
+            }
+            check(lineSeparator(file) == "\r\n") { "IntelliJ says the file has ${lineSeparator(file)}" }
+            // the conversion's save and write of the file keep the format's command, which Undo undoes
+            with(driver) {
+                focusEditor(document.editor)
+                invokeAction("\$Undo", now = false, component = document.editor.component)
+            }
+            check(withinOrFail(HANG_LIMIT, "$id: Undo undoes Reformat Code") { document.text == data.string("source") }) {
+                "After Undo, the source is ${document.text}; ${Quiescence.stuck}"
+            }
         }
     }
 
@@ -165,9 +192,33 @@ private fun ParityWorkspace.reformat(
     }
 }
 
-/** The server's formatting edits for [document], with IntelliJ's options, which LSP4IJ sends: tab size and spaces. */
-private fun ParityWorkspace.formatting(document: ParityWorkspace.Document): List<JsonObject> =
-    query("textDocument/formatting", document, extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true))).rows()
+/**
+ * Reformats [document], as [data]'s [key] with the indentation taken out of its line that begins with [data]'s
+ * `reindented`, and waits until it is [key] again: the format changes nothing else, as [what] says. A Reformat Code that
+ * changes nothing cannot be told from one that has not run yet; one that puts back an indentation can.
+ */
+private fun ParityWorkspace.reformatUnchanged(
+    document: ParityWorkspace.Document,
+    data: JsonObject,
+    key: String,
+    what: String,
+) {
+    val text = data.string(key)
+    val line = data.string("reindented")
+    check(text.split(line).size == 2) { "$key has '$line' once" }
+    replace(document, text.replace(line, line.trimStart()))
+    reformat(document, text, what)
+}
+
+/** The line separator that IntelliJ gives the file at [path], as its status bar's widget shows it. */
+private fun ParityWorkspace.lineSeparator(path: Path): String? =
+    with(driver) { cast(requireNotNull(refresh(path)), SeparatedFile::class).getDetectedLineSeparator() }
+
+/** A file's line separator, as IntelliJ detected it or a change of it set it. */
+@Remote("com.intellij.openapi.vfs.VirtualFile")
+internal interface SeparatedFile {
+    fun getDetectedLineSeparator(): String?
+}
 
 /** Waits until the language server formats with [key] [value], as its status says, after a change of the Code Style. */
 private fun ParityWorkspace.serverFormats(
