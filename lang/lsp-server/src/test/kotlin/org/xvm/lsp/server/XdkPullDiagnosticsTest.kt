@@ -44,6 +44,7 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.util.ProcessDirectories
+import org.xvm.lsp.util.UserTemporary
 import org.xvm.testing.awaitUntil
 import org.xvm.testing.awaited
 import java.io.File
@@ -393,7 +394,7 @@ class XdkPullDiagnosticsTest {
     fun `a module in a temporary folder whose name only starts as a server's folder of copies keeps its errors`() {
         CompilerTestSupport.configure()
         // a server's folder is the prefix and the digits that Files.createTempDirectory adds; this one is a user's
-        val folder = Path.of(System.getProperty("java.io.tmpdir")).resolve("xtc-library-sources-myapp")
+        val folder = UserTemporary.current.root().resolve("xtc-library-sources-myapp")
         Files.createDirectories(folder)
         val file = folder.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
         val uri = file.canonicalFile.toURI().toString()
@@ -409,7 +410,7 @@ class XdkPullDiagnosticsTest {
                 ).anyMatch { "missing" in it }
             }
         } finally {
-            folder.toFile().deleteRecursively()
+            UserTemporary.current.delete(folder)
         }
     }
 

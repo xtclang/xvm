@@ -1,46 +1,62 @@
 package org.xvm.lsp.util
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.testing.awaitUntil
 import org.xvm.testing.awaited
-import java.io.File
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
- * Checks the cleanup of the directories a server process owns in the temporary directory, such as its read-only copies
- * of library sources: it deletes its own when its JVM exits, and those of servers that were killed. A running server
- * is one that holds its directory's lock, which a [SessionOwner] in a process of its own does here.
+ * Checks the cleanup of the directories a server process owns in this user's temporary root ([UserTemporary]), such
+ * as its read-only copies of library sources: it deletes its own when its JVM exits, and those of servers that were
+ * killed. A running server is one that holds its directory's lock, which a [SessionOwner] in a process of its own does
+ * here. The directories that the cases make are of kinds of their own, by this JVM, as a server deletes only in the
+ * root, which every test JVM of this user's shares.
  */
 class ProcessDirectoriesTest {
     @TempDir lateinit var directory: Path
 
     @Test
-    fun `a directory is deleted with the read-only files in it`() {
-        val copies = copies("xtc-library-sources-1")
+    fun `a directory is deleted with the read-only files in it, and not what a link in it names`() {
+        assumeTrue("posix" in FileSystems.getDefault().supportedFileAttributeViews(), "links")
+        val copies = copies("${ABANDONED}1").also { Files.createFile(SessionLock.beside(it)) }
+        // links in it to a folder and a file outside the root, which a delete that followed them would empty
+        val kept = Files.writeString(Files.createDirectory(directory.resolve("kept")).resolve("kept.txt"), "kept")
+        Files.createSymbolicLink(copies.resolve("folder"), kept.parent)
+        Files.createSymbolicLink(copies.resolve("file"), kept)
         assertThat(ProcessDirectories.delete(copies)).isTrue()
         assertThat(copies).doesNotExist()
+        assertThat(SessionLock.beside(copies)).doesNotExist()
+        assertThat(kept).hasContent("kept")
     }
 
     @Test
     fun `a path is held by a directory of a kind only where the directory is named as a server names it`() {
-        val temporary = File(System.getProperty("java.io.tmpdir")).canonicalFile.toPath()
-        val made = temporary.resolve("xtc-library-sources-5366563676160639398")
+        val root =
+            UserTemporary.current
+                .root()
+                .toFile()
+                .canonicalFile
+                .toPath()
+        val made = root.resolve("xtc-library-sources-5366563676160639398")
         assertThat(ProcessDirectories.holder(made.resolve("ecstasy/collections/Array.x"), PREFIX)).isEqualTo(made)
         // a user's folder whose name only starts with the prefix, or is the prefix alone, is not one
-        assertThat(ProcessDirectories.holder(temporary.resolve("xtc-library-sources-myapp/App.x"), PREFIX)).isNull()
-        assertThat(ProcessDirectories.holder(temporary.resolve("xtc-library-sources-/App.x"), PREFIX)).isNull()
-        // nor is the directory itself, or a folder of that name below another folder
+        assertThat(ProcessDirectories.holder(root.resolve("xtc-library-sources-myapp/App.x"), PREFIX)).isNull()
+        assertThat(ProcessDirectories.holder(root.resolve("xtc-library-sources-/App.x"), PREFIX)).isNull()
+        // nor is the directory itself, a folder of that name below another folder, or one in the temporary directory itself
         assertThat(ProcessDirectories.holder(made, PREFIX)).isNull()
         assertThat(ProcessDirectories.holder(directory.resolve("xtc-library-sources-1/App.x"), PREFIX)).isNull()
+        assertThat(ProcessDirectories.holder(root.resolveSibling("xtc-library-sources-1/App.x"), PREFIX)).isNull()
     }
 
     @Test
     fun `a directory stays held for other processes when its process makes another of its kind`() {
-        // in the temporary directory, where a server makes its own, under a prefix of this test's
+        // in this user's temporary root, where a server makes its own, under a prefix of this test's
         val first = ProcessDirectories.create(HELD)
         try {
             assertThat(lockable(first)).describedAs("Another process takes the first directory's lock").isFalse()
@@ -74,7 +90,7 @@ class ProcessDirectoriesTest {
         val guard = owner("guard")
         try {
             guard.outputWriter().apply {
-                write("${Path.of(System.getProperty("java.io.tmpdir")).resolve(".${CONCURRENT}lock")}\n")
+                write("${UserTemporary.current.root().resolve(".${CONCURRENT}lock")}\n")
                 flush()
             }
             assertThat(guard.inputReader().readLine()).describedAs("The other process holds the kind's guard").isEqualTo("true")
@@ -135,15 +151,15 @@ class ProcessDirectoriesTest {
 
     @Test
     fun `a server deletes the directories of a server that was killed, not those of a running or an older server`() {
-        val own = copies("xtc-library-sources-1")
+        val own = copies("${ABANDONED}1")
         val lock = SessionLock.hold(own, SessionLock.beside(own))
         // the system released the killed server's lock, and left its lock file
-        val killed = copies("xtc-library-sources-2").also { Files.createFile(SessionLock.beside(it)) }
+        val killed = copies("${ABANDONED}2").also { Files.createFile(SessionLock.beside(it)) }
         // an older server took no lock beside it
-        val older = copies("xtc-library-sources-3").also { Files.createFile(it.resolve(SessionLock.NAME)) }
+        val older = copies("${ABANDONED}3").also { Files.createFile(it.resolve(SessionLock.NAME)) }
         // which reads every file in its directory once it holds it, as a compile fingerprinting resources does: had
         // the lock been in the directory, that would have released it
-        val running = copies("xtc-library-sources-4")
+        val running = copies("${ABANDONED}4")
         val owner =
             ProcessBuilder(
                 ProcessHandle
@@ -164,7 +180,7 @@ class ProcessDirectoriesTest {
             }
             assertThat(owner.inputReader().readLine()).describedAs("The other process holds its directory").isEqualTo("true")
 
-            ProcessDirectories.deleteAbandoned(own, "xtc-library-sources-")
+            ProcessDirectories.deleteAbandoned(own, ABANDONED)
 
             assertThat(killed).doesNotExist()
             assertThat(SessionLock.beside(killed)).doesNotExist()
@@ -173,12 +189,13 @@ class ProcessDirectoriesTest {
             owner.outputStream.close()
             if (!owner.awaited()) owner.destroyForcibly()
             lock?.channel()?.close()
+            listOf(own, older, running).forEach(ProcessDirectories::delete)
         }
     }
 
-    /** A directory of copies, as a server writes it, with read-only copies. */
+    /** A directory of copies in this user's temporary root, as a server writes it, with read-only copies. */
     private fun copies(name: String): Path =
-        Files.createDirectories(directory.resolve(name)).also { copies ->
+        Files.createDirectories(UserTemporary.current.root().resolve(name)).also { copies ->
             listOf("ecstasy.x", COLLECTION).forEach { path ->
                 val file = copies.resolve(path)
                 Files.createDirectories(file.parent)
@@ -191,11 +208,14 @@ class ProcessDirectoriesTest {
         const val COLLECTION = "ecstasy/collections/Collection.x"
         const val PREFIX = "xtc-library-sources-"
 
-        /** The kind of this test's own directories in the temporary directory, apart from the servers'. */
+        /** The kind of this test's own directories in this user's temporary root, apart from the servers'. */
         const val HELD = "xtc-held-test-"
 
         /** The kind of the directories that two threads make at once, apart from [HELD]'s. */
         const val CONCURRENT = "xtc-concurrent-test-"
+
+        /** The kind of the directories that the cases of deletion make, this JVM's alone, apart from other test JVMs'. */
+        val ABANDONED = "xtc-abandoned-test-${ProcessHandle.current().pid()}-"
 
         /** How many directories each of the two threads makes. */
         const val ROUNDS = 20

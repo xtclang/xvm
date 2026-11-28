@@ -8,9 +8,11 @@ import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.MultiMethodConstant
 import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.util.ProcessDirectories
+import org.xvm.lsp.util.UserTemporary
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
+import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.HexFormat
@@ -59,10 +61,10 @@ internal object XdkAttachedSources {
                         val text = XdkSources.read(source)
                         val revision = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.toByteArray()))
                         val snapshot = directory.resolve(dependency.revision).resolve(revision).resolve(relative)
-                        Files.createDirectories(snapshot.parent)
                         synchronized(directory) {
-                            if (!Files.exists(snapshot)) {
-                                Files.writeString(snapshot, text)
+                            // in the root as it is now, never through a link
+                            if (Files.notExists(snapshot, NOFOLLOW_LINKS)) {
+                                UserTemporary.current.write(snapshot, text.toByteArray())
                                 check(snapshot.toFile().setReadOnly()) { "Cannot protect attached source $sourcePath" }
                             }
                         }
