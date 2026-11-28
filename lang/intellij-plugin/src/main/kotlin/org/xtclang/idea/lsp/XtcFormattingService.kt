@@ -1,13 +1,19 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.codeStyle.AbstractConvertLineSeparatorsAction
 import com.intellij.formatting.service.AsyncFormattingRequest
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.util.ProgressIndicatorUtils
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
@@ -15,10 +21,22 @@ import com.redhat.devtools.lsp4ij.client.features.LSPFormattingFeature
 import com.redhat.devtools.lsp4ij.features.formatting.LSPFormattingAndRangeBothService
 import com.redhat.devtools.lsp4ij.features.formatting.LSPFormattingParams
 import com.redhat.devtools.lsp4ij.features.formatting.LSPFormattingSupport
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.services.LanguageServer
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Format asynchronously with version-checked, undoable edits, including closed tabs. */
+/**
+ * Format asynchronously with version-checked, undoable edits, including closed tabs, and give a whole-file format's file
+ * the line separator that its `.editorconfig` asks for, which IntelliJ's EditorConfig support makes only new files' and
+ * no text edit can give a document (`xtc/endOfLine`), for a file that File | File Properties | Line Separators converts:
+ * Reformat Code gives it the separator and saves it, or converts it as that action does when the format changes no text,
+ * and a synchronous format, on save or headless, sets the separator when a save writes the document after it, as it does
+ * when the document has changes. A file whose separator, as IntelliJ detected it, is the one asked for keeps its line
+ * endings, mixed ones too, as that action does.
+ */
 class XtcFormattingService : LSPFormattingAndRangeBothService() {
     override fun canSupportFormatting(
         feature: LSPFormattingFeature,
@@ -76,8 +94,18 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
                         support.getFeatureData(
                             LSPFormattingParams(ranges, document, server, options),
                         )
+                    // a file that IntelliJ's own Line Separators action converts: local, writable, a text file it does not ignore
+                    val convertible =
+                        ranges.isEmpty() && source.isInLocalFileSystem && AbstractConvertLineSeparatorsAction.shouldProcess(source)
+                    val ending = if (convertible) endOfLine(server.server, source) else null
                     if (cancelled.get()) support.cancel()
                     val edits = result?.let { ProgressIndicatorUtils.awaitWithCheckCanceled(it) }
+                    // the separator to give the file, when it has another
+                    val separator =
+                        ending
+                            ?.let { ProgressIndicatorUtils.awaitWithCheckCanceled(it) }
+                            ?.let(LINE_SEPARATORS::get)
+                            ?.takeIf { it != FileDocumentManager.getInstance().getLineSeparator(source, file.project) }
                     if (!ReadAction.computeBlocking<Boolean, RuntimeException>(::current)) {
                         request.onTextReady(null)
                     } else {
@@ -85,9 +113,16 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
                         val snapshot = EditorFactory.getInstance().createDocument(original)
                         val formatted = LSPIJUtils.applyEdits(snapshot, edits ?: emptyList())
                         when {
-                            formatted == original -> request.onTextReady(null)
+                            formatted == original && separator == null -> request.onTextReady(null)
 
-                            synchronous -> request.onTextReady(formatted)
+                            synchronous -> {
+                                // the save after it writes the file with the separator, which it does only when the
+                                // document has changes, as the format's or the user's
+                                separator
+                                    ?.takeIf { formatted != original || FileDocumentManager.getInstance().isDocumentUnsaved(document) }
+                                    ?.let { source.detectedLineSeparator = it }
+                                request.onTextReady(formatted.takeIf { it != original })
+                            }
 
                             else -> {
                                 // TODO LSP4IJ: UP24 — IDEA's asynchronous formatting application is
@@ -96,12 +131,16 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
                                 // short write command without waiting for the server on the EDT.
                                 application.invokeLater({
                                     try {
-                                        WriteCommandAction
-                                            .writeCommandAction(file.project)
-                                            .withName("Format Ecstasy")
-                                            .run<RuntimeException> {
-                                                if (current()) document.setText(formatted)
+                                        // nothing on the EDT changes the document between the check and the edits
+                                        if (current()) {
+                                            if (formatted != original) {
+                                                WriteCommandAction
+                                                    .writeCommandAction(file.project)
+                                                    .withName("Format Ecstasy")
+                                                    .run<RuntimeException> { document.setText(formatted) }
                                             }
+                                            separator?.let { lineSeparator(file.project, source, document, it, formatted != original) }
+                                        }
                                         request.onTextReady(null)
                                     } catch (failure: RuntimeException) {
                                         request.onError("Ecstasy formatting error", failure.message ?: "Formatting failed")
@@ -133,3 +172,43 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
         }
     }
 }
+
+/**
+ * Gives [file] of [project] the line [separator] after Reformat Code, on the EDT: after a format that [changed] the text of
+ * [document], the file's separator for the save that writes the document, which keeps the format to undo, as a rewrite of
+ * the file outside the save does not; after one that changed nothing, as File | File Properties | Line Separators does,
+ * which saves the file and writes it again with them.
+ */
+private fun lineSeparator(
+    project: Project,
+    file: VirtualFile,
+    document: Document,
+    separator: String,
+    changed: Boolean,
+) {
+    if (changed) {
+        file.detectedLineSeparator = separator
+        FileDocumentManager.getInstance().saveDocument(document)
+    } else {
+        AbstractConvertLineSeparatorsAction.changeLineSeparators(project, file, separator)
+    }
+}
+
+/** The line separators by the names that `.editorconfig`'s `end_of_line` gives them, as `xtc/endOfLine` answers. */
+private val LINE_SEPARATORS = mapOf("lf" to "\n", "crlf" to "\r\n", "cr" to "\r")
+
+/**
+ * The line ending that [file]'s `.editorconfig` files ask for, as [server] answers `xtc/endOfLine`: none when they ask
+ * for none, or while IntelliJ's EditorConfig support is off, which the server is told. A failure leaves the file's
+ * separator as it is, and the format goes on.
+ */
+private fun endOfLine(
+    server: LanguageServer,
+    file: VirtualFile,
+): CompletableFuture<String?>? =
+    (server as? XtcServerProtocol)
+        ?.endOfLine(TextDocumentIdentifier(LSPIJUtils.toUriAsString(file)))
+        ?.exceptionally { failure ->
+            logger<XtcFormattingService>().warn("Could not read the line ending of ${file.path}", failure)
+            null
+        }

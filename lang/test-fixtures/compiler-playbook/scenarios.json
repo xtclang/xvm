@@ -11241,13 +11241,12 @@
       "values": {
         "file": "Reflow.x",
         "source": "module Reflow {\n    /**\n     * Adds two numbers, which may be negative, and returns their sum, which may overflow when both of the numbers are very large, as an Int has 64 bits.\n     *\n     * @param first   the first number,\n     *                to add\n     * @param second  the second number\n     *\n     *     Int sum = add(1, 2); // an example, whose code keeps its layout although it runs past the margin of the file it is in\n     */\n    Int add(Int first, Int second) = first + second;\n}\n",
-        "expected": "module Reflow {\n    /**\n     * Adds two numbers, which may be negative, and returns their sum, which may overflow when both of the numbers are\n     * very large, as an Int has 64 bits.\n     *\n     * @param first   the first number,\n     *                to add\n     * @param second  the second number\n     *\n     *     Int sum = add(1, 2); // an example, whose code keeps its layout although it runs past the margin of the file it is in\n     */\n    Int add(Int first, Int second) = first + second;\n}\n"
+        "expected": "module Reflow {\n    /**\n     * Adds two numbers, which may be negative, and returns their sum, which may overflow when both of the numbers are\n     * very large, as an Int has 64 bits.\n     *\n     * @param first   the first number,\n     *                to add\n     * @param second  the second number\n     *\n     *     Int sum = add(1, 2); // an example, whose code keeps its layout although it runs past the margin of the file it is in\n     */\n    Int add(Int first, Int second) = first + second;\n}\n",
+        "reindented": "    Int add("
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "That the comment stays as it is with wrapping off, and that a second format changes nothing, are checked in the server's textDocument/formatting answer for the document, with the options LSP4IJ sends, tab size 4 and spaces, not through Reformat Code: a Reformat Code that changes nothing cannot be told from one whose edits have not come yet. The refill itself goes through Reformat Code."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X364": {
@@ -11262,10 +11261,8 @@
         "endOfLine": "crlf"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "IntelliJ applies end_of_line itself: while Code Style | General | Enable EditorConfig support is on, its EditorConfig support gives the file the line separator that .editorconfig asks for. The language server's xtc/endOfLine is for VS Code, whose formatting edits cannot change a document's line endings; the plugin does not read it, so there is nothing of the plugin's to check."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X365": {
