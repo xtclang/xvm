@@ -1434,6 +1434,39 @@ And, after that entry, a new entry:
   (run-14742488023735374840, the one failure there). Not part of this work: it is the server's ContentModified for a codeLens,
   which lagergren/own-release reworks (ContentModified says what overtook a request); to look at again once that is
   on errs.
+- [x] Found 2026-11-28 in a VS Code X26–X28 run (container xvm-playbook-s2-20261128-142639, which never reached its cases): the harness self-test "a playbook wait goes on while something happened within the minute, and is final once nothing has" waited from 14:28, as its record, on a fake clock that stops, also heard the real window's events, and VS Code's settings change and focus at startup were noted at that clock, "0 s ago" for good. Fixed (`5d5a4958fe`): the record hears only the workbench it is given (the tests' default fires nothing), and no change of the window's focus counts as a playbook wait's work, as it comes from the window manager, not from the work a wait waits for, so a window whose focus keeps changing can't keep a wait going; `focusTestWindow` asks for the focus at each try and checks it itself. A new harness test feeds a focus change at each of the first ten reads and finds the wait final before the tenth. harness-tests/run-gxT17N: 29 passing.
+- [ ] Found 2026-11-28 in the full VS Code catalog on errs `be43de847b` (`run-PP9aKZ`): X27 ("real file-watcher
+  creation and deletion refresh the module") failed its last step. Bad.x's error stayed after the case deleted the
+  file, until the diagnostics wait ended by the idle rule after 75 s. VS Code's file watcher never reported the
+  deletion. 424 ms after the case opened `X27/Project.x`, the server heard one batch of two changes, of which only the
+  new folder `X27` was news to it; nothing of `X27/Project`, its `Child.x` or `Bad.x` came. The server found Bad.x
+  only because the folder's event made it rediscover and compile the module from disk (14:05:39.967, 3 documents,
+  1 diagnostic). Its next watched-file event, at 14:06:56, was X28's. The server was not at fault:
+  - `run-sZgU8W` (a87f84055e) and `run-LVdDFN` (be43de847b, X26–X28 alone) got 9 changes, with `X27/Project` and
+    Bad.x created, then Bad.x's own Deleted event, and passed.
+  - IntelliJ's full catalog on be43de847b passed X27 (`run-14708052808944107397`).
+  - X27 had failed before, on 2026-11-18 and 2026-11-19, at its first step: Bad.x's diagnostic never came
+    (`run-2yeNpB`, `run-5mcnjm`, `run-sGQkt6`, `run-Y5yjgj`, `run-taAEJ0`). That would be the same gap if the
+    watcher missed Bad.x's creation then; their logs were not read.
+
+  Suspected: VS Code's recursive watcher misses a subtree made in one go before it watches the subtree's top
+  folder, under the load of a full catalog. X27's first write is a `mkdir -p` of `X27/Project` with its file.
+  Unconfirmed, so not filed upstream yet.
+  - Done, `34a956a771`: X27 no longer depends on the watcher catching such a subtree. It makes Bad.x's folders one
+    at a time, each once the server has heard of it (`Workspace.folders`). It then waits, progress-based, for the
+    watcher's own events of Bad.x, its creation and its deletion (`heard`). A missing event fails the case by saying
+    that VS Code's watcher did not report it, instead of a wait for Bad.x's diagnostics that ends by the idle rule.
+    VS Code X26–X28 passed (`run-D49i76`): the server heard of `X27`, then `X27/Project`, then the module's files,
+    then Bad.x created and Bad.x deleted, each in a batch of its own.
+  - Done, `ff2c9d6ae1`: server tests of a watched creation and deletion of a closed member in the workspace's pull,
+    in the graph and outside it (one of two modules of a name side by side, as the playbooks' cases are). They guard
+    the watcher path; they don't reproduce X27, as the server was fine.
+  - Open: confirm whether VS Code's watcher drops such a subtree, and file it with a reproduction outside the
+    playbook, or rule it out.
+  - Open, the product-side guard to consider: the workspace pull already reads the graph's files again for a change
+    that no watcher reported (`reportedDiagnostics`). It could recheck the sources of the open modules outside the
+    graph too, as a module whose name another module shares is, at the cost of reading their files on every idle
+    pull. Until then, a module outside the graph keeps a deleted member's errors when the watcher misses the deletion.
 
 ### Playbook cases for formatting from .editorconfig and a folder on another XDK (X361–X366)
 
