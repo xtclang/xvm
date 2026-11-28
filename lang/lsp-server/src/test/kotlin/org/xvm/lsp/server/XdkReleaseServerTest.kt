@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.CodeActionKind
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.DiagnosticCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
@@ -18,6 +19,8 @@ import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.FileOperationsWorkspaceCapabilities
 import org.eclipse.lsp4j.FileRename
+import org.eclipse.lsp4j.Hover
+import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.ProgressParams
@@ -31,8 +34,11 @@ import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentContentParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -48,6 +54,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.CompilerTestSupport
+import org.xvm.lsp.adapter.RenameOvertaken
 import org.xvm.lsp.adapter.hookedAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.protocol.RenameProposal
@@ -58,6 +65,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Checks, at the server boundary, the requests that a close or an open which changes nothing they read must not end: the
@@ -70,8 +78,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 class XdkReleaseServerTest {
     @TempDir lateinit var directory: Path
 
-    /** A workspace-wide request, as a playbook case makes it, and what its answer must be when nothing it reads changed. */
-    enum class Request {
+    /**
+     * A workspace-wide request, as a playbook case makes it, asked [of] a document, and what its answer must be when
+     * nothing it reads changed.
+     */
+    enum class Request(
+        val of: String? = null,
+    ) {
         /** X143's ordinary workspace symbols. */
         SYMBOLS {
             override fun ask(session: Session) = session.server.workspaceService.symbol(WorkspaceSymbolParams("Box"))
@@ -105,7 +118,7 @@ class XdkReleaseServerTest {
         },
 
         /** X357's Organize Imports, of the root's unused import. */
-        ORGANIZE_IMPORTS {
+        ORGANIZE_IMPORTS("Node0") {
             override fun ask(session: Session) =
                 session.server.textDocumentService.codeAction(
                     CodeActionParams(
@@ -126,7 +139,7 @@ class XdkReleaseServerTest {
         },
 
         /** X352's rename, as VS Code's extension asks for it with xtc/rename. */
-        RENAME {
+        RENAME("Node0") {
             override fun ask(session: Session): CompletableFuture<*> {
                 val root = SOURCES.getValue("Node0").lines()
                 val line = root.indexOfFirst { "class Box" in it }
@@ -144,7 +157,7 @@ class XdkReleaseServerTest {
         },
 
         /** X172's move proposal, which xtc/renameFiles asks for: the server answers it, here with the move's edits. */
-        MOVE {
+        MOVE("Node0/Part") {
             override fun ask(session: Session) =
                 session.server.renameFilesProposal(
                     RenameFilesParams(listOf(FileRename(session.uri("Node0/Part"), session.uri("Node0/Crate")))),
@@ -168,11 +181,12 @@ class XdkReleaseServerTest {
     }
 
     /**
-     * A close or an open as it comes while the requests wait, which they outlast unless it [overtakes] them; one that
-     * [compilesNothing] submits no compile, and one that [publishesNothing] publishes no diagnostics.
+     * A close or an open as it comes while the requests wait, which they outlast unless it [overtakes] them, as their
+     * ContentModified then says; one that [compilesNothing] submits no compile, and one that [publishesNothing] publishes
+     * no diagnostics.
      */
     enum class Event(
-        val overtakes: Boolean = false,
+        val overtakes: String? = null,
         val compilesNothing: Boolean = false,
         val publishesNothing: Boolean = false,
     ) {
@@ -194,7 +208,7 @@ class XdkReleaseServerTest {
         },
 
         /** The close of a document outside the graph with unsaved text, which gives the analyses its file's text again. */
-        UNSAVED(overtakes = true) {
+        UNSAVED(overtakes = "Other.x closed with text that its file does not have") {
             override fun prepare(session: Session) = session.edit("Other")
 
             override fun of(session: Session) = session.uri("Other")
@@ -261,7 +275,7 @@ class XdkReleaseServerTest {
         },
 
         /** The close of Lid with unsaved text, which gives the analyses its file's text again. */
-        MEMBER_UNSAVED(overtakes = true) {
+        MEMBER_UNSAVED(overtakes = "Lid.x closed with text that its file does not have") {
             override fun prepare(session: Session) {
                 session.open("Node0/Lid")
                 session.edit("Node0/Lid", "class Lid {\n    Int depth = 2;\n}\n")
@@ -271,7 +285,7 @@ class XdkReleaseServerTest {
         },
 
         /** The close of Lid with the text that its file had, which changed on disk without a watcher's event since. */
-        MEMBER_CHANGED(overtakes = true) {
+        MEMBER_CHANGED(overtakes = "Lid.x closed with text that its file does not have") {
             override fun prepare(session: Session) {
                 session.open("Node0/Lid")
                 session.write("Node0/Lid", "class Lid {\n    Int depth = 1;\n}\n")
@@ -284,7 +298,7 @@ class XdkReleaseServerTest {
          * VS Code's release of Consumer with its file's text, whose file then changes on disk, which no watcher reports:
          * the requests' graph queries read the document's text, which the file no longer has.
          */
-        RELEASED_CHANGED(overtakes = true) {
+        RELEASED_CHANGED(overtakes = RenameOvertaken.REASON) {
             override fun prepare(session: Session) = session.open("Consumer")
 
             override fun of(session: Session) = session.uri("Consumer")
@@ -296,7 +310,7 @@ class XdkReleaseServerTest {
         },
 
         /** As [RELEASED_CHANGED], with the watcher's report of the change. */
-        RELEASED_WATCHED(overtakes = true) {
+        RELEASED_WATCHED(overtakes = "Consumer.x changed on disk") {
             override fun prepare(session: Session) = session.open("Consumer")
 
             override fun of(session: Session) = session.uri("Consumer")
@@ -308,7 +322,7 @@ class XdkReleaseServerTest {
         },
 
         /** VS Code's release of Consumer, whose file then changes on disk, and its open again with the file's new text. */
-        REOPENED_CHANGED(overtakes = true) {
+        REOPENED_CHANGED(overtakes = "Consumer.x opened with text that its module's analyses did not read") {
             override fun prepare(session: Session) = session.open("Consumer")
 
             override fun of(session: Session) = session.uri("Consumer")
@@ -322,7 +336,7 @@ class XdkReleaseServerTest {
         },
 
         /** The open of Lid with text that its file does not have. */
-        OPEN_UNSAVED(overtakes = true) {
+        OPEN_UNSAVED(overtakes = "Lid.x opened with text that its file does not have") {
             override fun of(session: Session) = session.uri("Node0/Lid")
 
             override fun act(session: Session) =
@@ -444,7 +458,165 @@ class XdkReleaseServerTest {
             // which the request's own checks would find
             session.join("Extra", "module Extra {}\n")
             session.release.countDown()
-            assertContentModified(answer)
+            assertContentModified(answer, XtcTextDocumentService.GRAPH_CHANGED)
+        }
+
+    @Test
+    fun `a request whose graph query a newer one of the same kind takes the place of says so`() =
+        waiting(Request.ORGANIZE_IMPORTS) { session, first ->
+            val second = Request.ORGANIZE_IMPORTS.ask(session)
+            assertContentModified(first, "A newer textDocument/codeAction request took the place of its work")
+            session.release.countDown()
+            Request.ORGANIZE_IMPORTS.check(session, second.awaited())
+        }
+
+    /**
+     * A close or an open of the document that a request is asked of, [name], as it comes while the request waits, which
+     * the request outlasts unless the event [overtakes] it, as its ContentModified then says of the document's file.
+     */
+    enum class Own(
+        val overtakes: ((file: String) -> String)? = null,
+    ) {
+        /** VS Code's release of the document with its file's text, as of a peek's, while another member stays open. */
+        RELEASE {
+            override fun prepare(
+                session: Session,
+                name: String,
+            ) = session.open(if (name == "Node0") "Node0/Lid" else name)
+
+            override fun act(
+                session: Session,
+                name: String,
+            ) = session.close(name)
+        },
+
+        /** The document's open with its file's text, as VS Code opens a file that it moves, which no editor had open. */
+        OPEN {
+            override fun prepare(
+                session: Session,
+                name: String,
+            ) {
+                if (name == "Node0") session.close(name)
+            }
+
+            override fun act(
+                session: Session,
+                name: String,
+            ) = session.server.textDocumentService.didOpen(session.item(name))
+        },
+
+        /** Its release and its open again, with its file's text, as the language client opens a document VS Code holds. */
+        REOPEN {
+            override fun prepare(
+                session: Session,
+                name: String,
+            ) = RELEASE.prepare(session, name)
+
+            override fun act(
+                session: Session,
+                name: String,
+            ) {
+                RELEASE.act(session, name)
+                OPEN.act(session, name)
+            }
+        },
+
+        /** Its close with unsaved text, which gives the analyses its file's text again. */
+        UNSAVED({ "$it closed with text that its file does not have" }) {
+            override fun prepare(
+                session: Session,
+                name: String,
+            ) {
+                if (name != "Node0") session.open(name)
+                session.edit(name, SOURCES.getValue(name).replace(Regex("}\n$"), "    class Unsaved {}\n}\n"))
+            }
+
+            override fun act(
+                session: Session,
+                name: String,
+            ) = session.close(name)
+        },
+
+        /** Its open with text that its file does not have. */
+        OPEN_UNSAVED({ "$it opened with text that its file does not have" }) {
+            override fun act(
+                session: Session,
+                name: String,
+            ) = session.server.textDocumentService.didOpen(
+                DidOpenTextDocumentParams(TextDocumentItem(session.uri(name), "xtc", 1, "class Part {\n    class Unsaved {}\n}\n")),
+            )
+        },
+        ;
+
+        /** Readies the document [name], before the request is asked of it. */
+        open fun prepare(
+            session: Session,
+            name: String,
+        ) {}
+
+        abstract fun act(
+            session: Session,
+            name: String,
+        )
+    }
+
+    @ParameterizedTest(name = "{1} {0}")
+    @CsvSource(
+        "ORGANIZE_IMPORTS,RELEASE",
+        "RENAME,RELEASE",
+        "MOVE,RELEASE",
+        "ORGANIZE_IMPORTS,OPEN",
+        "MOVE,OPEN",
+        "ORGANIZE_IMPORTS,REOPEN",
+        "RENAME,REOPEN",
+        "MOVE,REOPEN",
+        "ORGANIZE_IMPORTS,UNSAVED",
+        "MOVE,UNSAVED",
+        "MOVE,OPEN_UNSAVED",
+    )
+    fun `a request outlasts the release or the open of the document it is asked of, unless its text is not its file's`(
+        request: Request,
+        event: Own,
+    ) {
+        val name = checkNotNull(request.of)
+        waiting(request, { event.prepare(it, name) }) { session, answer ->
+            event.act(session, name)
+            session.release.countDown()
+            event.overtakes?.let { assertContentModified(answer, it("${name.substringAfterLast('/')}.x")) }
+                ?: request.check(session, answer.awaited())
+        }
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource("Node0/Lid,depth", "Consumer,Child")
+    fun `a query of a member outlasts its release with its file's text, also as its module's last open document`(
+        name: String,
+        word: String,
+    ) = releasing(name, word) { session, hover ->
+        session.close(name)
+        session.release.countDown()
+        assertThat(
+            hover
+                .awaited()
+                ?.contents
+                ?.right
+                ?.value,
+        ).contains(word)
+    }
+
+    @Test
+    fun `a query of a released member ends as its module's text changes, and says so`() =
+        releasing("Node0/Lid", "depth") { session, hover ->
+            session.close("Node0/Lid")
+            session.change("Node0", SOURCES.getValue("Node0").replace("class Box {}", "class Box {}\n    class Crate {}"))
+            assertContentModified(hover, "The text of Node0.x changed")
+        }
+
+    @Test
+    fun `a query of a document outside the graph ends as it is released, which leaves it no analysis, and says so`() =
+        releasing("Other", "Extract", reopen = true) { session, hover ->
+            session.close("Other")
+            assertContentModified(hover, "Other.x closed")
         }
 
     @Test
@@ -467,6 +639,308 @@ class XdkReleaseServerTest {
             assertThat((completion.awaited() as Either<*, *>).left as List<*>).isNotEmpty()
         }
 
+    @Test
+    fun `a query of a released member outlasts the release of its module's last open document, another one`() =
+        releasing("Node0/Lid", "depth") { session, hover ->
+            session.close("Node0/Lid")
+            // Node0 has no query of its own: the analysis that Lid's hover waits for went with it
+            session.close("Node0")
+            session.release.countDown()
+            assertThat(
+                hover
+                    .awaited()
+                    ?.contents
+                    ?.right
+                    ?.value,
+            ).contains("depth")
+        }
+
+    @Test
+    fun `a rename of a local of its module's last open document outlasts the document's release`() =
+        waiting(
+            "the rename",
+            prepare = { session ->
+                session.close("Node0")
+                session.open("Node0/Lid")
+            },
+            ask = { session ->
+                session.server.textDocumentService.rename(
+                    RenameParams(
+                        TextDocumentIdentifier(session.uri("Node0/Lid")),
+                        Session.position(SOURCES.getValue("Node0/Lid"), "more"),
+                        "most",
+                    ),
+                )
+            },
+            queued = "rename-proof",
+        ) { session, rename ->
+            // a workspace request, whose proof the module's analysis that the release dropped was made on
+            session.close("Node0/Lid")
+            session.release.countDown()
+            val edit = rename.awaited() as WorkspaceEdit
+            assertThat(edit.documentChanges.orEmpty().size + edit.changes.orEmpty().size).isPositive()
+        }
+
+    @Test
+    fun `the analysis kept for a released member's query goes as the query ends`() =
+        releasing("Consumer", "Child") { session, hover ->
+            session.close("Consumer")
+            session.release.countDown()
+            assertThat(hover.awaited()).isNotNull()
+            awaitUntil("Consumer's analysis, which no document has open, goes") {
+                session.adapter.getCachedResult(session.uri("Consumer")) == null
+            }
+        }
+
+    @Test
+    fun `a closed member's query answers its file's text once the file changed on disk, as the watcher reports`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        Session(directory).use { session ->
+            // no document of Node0 is open: a hover of Part asks for the analysis of its closed files
+            session.close("Node0")
+            assertThat(session.hover("Node0/Part", "Part").awaited()).isNotNull()
+            val text = "class Part {\n    Int size = 1;\n}\n"
+            session.write("Node0/Part", text)
+            session.watched("Node0/Part")
+            assertThat(
+                session
+                    .hover("Node0/Part", "size", text)
+                    .awaited()
+                    ?.contents
+                    ?.right
+                    ?.value,
+            ).contains("size")
+        }
+    }
+
+    @Test
+    fun `a workspace request of a document outside the graph ends as it is released, and says so`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        Session(directory).use { session ->
+            // Other opens again with its file's text, and its analysis holds, which the request waits for: no analysis
+            // under way reads Other's file, so its release analyzes no open document again
+            session.close("Other")
+            session.hold.set(true)
+            session.server.textDocumentService.didOpen(session.item("Other"))
+            assertThat(session.entered.awaited()).isTrue()
+            val actions =
+                session.server.textDocumentService.codeAction(
+                    CodeActionParams(
+                        TextDocumentIdentifier(session.uri("Other")),
+                        Range(Position(0, 0), Position(0, 0)),
+                        CodeActionContext(emptyList(), listOf(CodeActionKind.SourceOrganizeImports)),
+                    ),
+                )
+            assertThat(actions).isNotDone()
+            // its analysis goes as it closes, which its Organize Imports reads, as it is not a member of the graph
+            session.close("Other")
+            assertContentModified(actions, "Other.x closed")
+        }
+    }
+
+    @Test
+    fun `a workspace pull that newer diagnostics overtake says what first made them, not a later event`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        Session(directory, pull = true).use { session ->
+            // the analysis of Other's edit holds, which the pull waits for; Other is outside the graph, so no file of the
+            // graph is one that it may read
+            session.hold.set(true)
+            session.change("Other", SOURCES.getValue("Other").replace("class Extract {", "class Crate {}\n    class Extract {"))
+            assertThat(session.entered.awaited()).isTrue()
+            val pull = session.server.workspaceDiagnostics(WorkspaceDiagnosticParams(emptyList()))
+            assertThat(pull).isNotDone()
+            // Consumer, which no editor has open, changes on disk: its diagnostics are new, and nothing that the pull waits
+            // for changes; then the host gives the graph again as it is, which changes nothing, and a new file of Consumer
+            // makes the diagnostics new again
+            session.write("Consumer", "\n" + SOURCES.getValue("Consumer"))
+            session.watched("Consumer")
+            session.regraph()
+            directory.resolve("Consumer").toFile().mkdirs()
+            session.write("Consumer/Spare", "class Spare {}\n")
+            session.watched("Consumer/Spare")
+            session.release.countDown()
+            assertContentModified(pull, "Consumer.x changed on disk")
+        }
+    }
+
+    @Test
+    fun `a closed file's query outlasts the end of the released member's query that its module's analysis was kept for`() =
+        releasing("Node0/Lid", "depth") { session, hover ->
+            session.close("Node0/Lid")
+            session.close("Node0")
+            // a query of Part, a closed file of Node0, which reads the analysis that Lid's hover kept, and was released by
+            // no editor
+            val part = session.hover("Node0/Part", "Part")
+            assertThat(part).describedAs("the hover of Part waits for Node0's held compile").isNotDone()
+            val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
+            hover.cancel(true)
+            // a change, as which the server lets go of the analyses that it kept for queries that have ended
+            session.regraph()
+            session.release.countDown()
+            assertThat(
+                part
+                    .awaited()
+                    ?.contents
+                    ?.right
+                    ?.value,
+            ).contains("Part")
+            assertThat(
+                session.adapter.compilerQueueSnapshot()["submittedTotal"],
+            ).describedAs("compiles of Node0 from disk").isEqualTo(submitted)
+        }
+
+    @Test
+    fun `a closed file's query outlasts the release of its module's last open document, which has no query of its own`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        Session(directory).use { session ->
+            // Lid's open with its file's text compiles Node0 again, which holds; Lid closes, and Node0 stays open
+            session.hold.set(true)
+            session.server.textDocumentService.didOpen(session.item("Node0/Lid"))
+            assertThat(session.entered.awaited()).isTrue()
+            session.close("Node0/Lid")
+            val part = session.hover("Node0/Part", "Part")
+            assertThat(part).describedAs("the hover of Part waits for Node0's held compile").isNotDone()
+            val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
+            session.close("Node0")
+            session.release.countDown()
+            assertThat(
+                part
+                    .awaited()
+                    ?.contents
+                    ?.right
+                    ?.value,
+            ).contains("Part")
+            assertThat(
+                session.adapter.compilerQueueSnapshot()["submittedTotal"],
+            ).describedAs("compiles of Node0 from disk").isEqualTo(submitted)
+        }
+    }
+
+    @Test
+    fun `a closed file's query under way as its module's analysis is retired ends, and says what retired it`() =
+        waiting(
+            "the type hierarchy",
+            prepare = { session ->
+                // no document of Node0 is open: a hover of Part leaves the analysis of Node0's closed files
+                session.close("Node0")
+                assertThat(session.hover("Node0/Part", "Part").awaited()).isNotNull()
+            },
+            ask = { session ->
+                session.server.textDocumentService.prepareTypeHierarchy(
+                    TypeHierarchyPrepareParams(
+                        TextDocumentIdentifier(session.uri("Node0/Part")),
+                        Session.position(SOURCES.getValue("Node0/Part"), "Part"),
+                    ),
+                )
+            },
+            queued = "project-NAVIGATION",
+        ) { session, hierarchy ->
+            session.write("Node0/Part", "class Part {\n    Int size = 1;\n}\n")
+            session.watched("Node0/Part")
+            // its graph query would run now, of the file's new text, and answer
+            session.release.countDown()
+            assertContentModified(hierarchy, "Part.x changed on disk")
+        }
+
+    @Test
+    fun `a closed file's query that went on to a member's open compile ends as that compile is retired, and says so`() {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        Session(directory).use { session ->
+            // no document of Node0 is open: Part's type hierarchy asks for the analysis of Node0's closed files, whose
+            // compile holds
+            session.close("Node0")
+            session.hold.set(true)
+            val hierarchy =
+                session.server.textDocumentService.prepareTypeHierarchy(
+                    TypeHierarchyPrepareParams(
+                        TextDocumentIdentifier(session.uri("Node0/Part")),
+                        Session.position(SOURCES.getValue("Node0/Part"), "Part"),
+                    ),
+                )
+            assertThat(session.entered.awaited()).isTrue()
+            // Part opens with its file's text, whose compile of Node0 takes the held one's place: the hierarchy goes on to
+            // it, as Part is open
+            session.server.textDocumentService.didOpen(session.item("Node0/Part"))
+            awaitUntil("Part's compile of Node0 queues behind the held one") {
+                @Suppress("UNCHECKED_CAST")
+                (session.adapter.compilerQueueSnapshot()["queuedJobs"] as List<String>).any { " compile " in it && it.endsWith("/Node0.x") }
+            }
+            // the graph's diagnostics, queued behind it, hold as they compile Consumer: the hierarchy, whose compile ends,
+            // queues its graph query behind them
+            session.holdModule.set("Consumer")
+            session.adapter.workspaceDiagnosticsAsync()
+            session.release.countDown()
+            assertThat(session.moduleEntered.awaited()).isTrue()
+            awaitUntil("the hierarchy queues its graph query behind the held diagnostics") {
+                @Suppress("UNCHECKED_CAST")
+                (session.adapter.compilerQueueSnapshot()["queuedJobs"] as List<String>).any { "project-NAVIGATION" in it }
+            }
+            // Part closes with its file's text, which keeps that compile for the hierarchy, and its file then changes
+            session.close("Node0/Part")
+            session.write("Node0/Part", "class Part {\n    Int size = 1;\n}\n")
+            session.watched("Node0/Part")
+            // its graph query would run now, of the file's new text, and answer
+            session.moduleRelease.countDown()
+            assertContentModified(hierarchy, "Part.x changed on disk")
+        }
+    }
+
+    @Test
+    fun `the release of an analysis kept for a query drops no compile that took its place`() =
+        waiting(
+            "the type hierarchy",
+            prepare = { session -> session.open("Node0/Lid") },
+            ask = { session ->
+                session.server.textDocumentService.prepareTypeHierarchy(
+                    TypeHierarchyPrepareParams(
+                        TextDocumentIdentifier(session.uri("Node0/Lid")),
+                        Session.position(SOURCES.getValue("Node0/Lid"), "Lid"),
+                    ),
+                )
+            },
+            queued = "project-NAVIGATION",
+        ) { session, hierarchy ->
+            // Lid's hierarchy, whose graph query waits behind the held compile, keeps Node0's analysis as both close
+            session.close("Node0/Lid")
+            session.close("Node0")
+            // the kept compile goes, and a compile from disk takes its place, which a query of the adapter asks for
+            session.adapter.retireClosed(setOf(checkNotNull(session.adapter.graphScope(session.uri("Node0/Part")))))
+            val later = checkNotNull(session.adapter.closedAnalysisAsync(session.uri("Node0/Part")))
+            // the hierarchy ends, and a change lets go of the kept analysis
+            hierarchy.cancel(true)
+            session.regraph()
+            session.release.countDown()
+            assertThat(later.awaited()).isNotNull()
+        }
+
+    /**
+     * [then] with a hover of the document [name] at [word], which waits for its module's compile: the document opens with
+     * its file's text, again if it was open ([reopen]), as the next compile holds.
+     */
+    private fun releasing(
+        name: String,
+        word: String,
+        reopen: Boolean = false,
+        then: (Session, CompletableFuture<Hover?>) -> Unit,
+    ) {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        Session(directory).use { session ->
+            if (reopen) session.close(name)
+            session.hold.set(true)
+            session.server.textDocumentService.didOpen(session.item(name))
+            assertThat(session.entered.awaited()).isTrue()
+            val hover = session.hover(name, word)
+            assertThat(hover).describedAs("the hover of $name waits for its module's compile").isNotDone()
+            then(session, hover)
+        }
+    }
+
     /**
      * [request], asked as the graph's held compile holds its graph query, then [event]; or, [again], the same request
      * asked once more after the event, while the first one waits and so keeps the event remembered: its graph query takes
@@ -486,7 +960,7 @@ class XdkReleaseServerTest {
         if (event.publishesNothing) assertThat(session.published.drop(published)).isEmpty()
         val answer = if (again) request.ask(session) else first
         session.release.countDown()
-        if (event.overtakes) assertContentModified(answer) else request.check(session, answer.awaited())
+        event.overtakes?.let { assertContentModified(answer, it) } ?: request.check(session, answer.awaited())
     }
 
     /**
@@ -528,11 +1002,16 @@ class XdkReleaseServerTest {
         }
     }
 
-    private fun assertContentModified(answer: CompletableFuture<*>) {
+    /** Checks that [answer] is ContentModified, which says what overtook it, [reason]. */
+    private fun assertContentModified(
+        answer: CompletableFuture<*>,
+        reason: String,
+    ) {
         assertThatThrownBy { answer.awaited() }
             .rootCause()
             .isInstanceOfSatisfying(ResponseErrorException::class.java) {
                 assertThat(it.responseError.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+                assertThat(it.responseError.message).isEqualTo(reason)
             }
     }
 
@@ -541,21 +1020,30 @@ class XdkReleaseServerTest {
      * Other, a module outside the graph, as an earlier case's file that the editor still has open, both with their
      * text as the files have it; the next module compile after [hold] is set holds until [release]. [openLibrary] opens
      * [library], String's source, as VS Code does after Go to Definition on Other's String. [published] has the
-     * diagnostics that the server published, in order.
+     * diagnostics that the server published, in order; a client that [pull]s them gets them so instead.
      */
     class Session(
         private val directory: Path,
+        pull: Boolean = false,
     ) : AutoCloseable {
         val hold = AtomicBoolean()
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
+
+        /** The module whose next compile holds, also within a graph query, until [moduleRelease]. */
+        val holdModule = AtomicReference<String?>()
+        val moduleEntered = CountDownLatch(1)
+        val moduleRelease = CountDownLatch(1)
         val progress = CopyOnWriteArrayList<ProgressParams>()
         val published = CopyOnWriteArrayList<PublishDiagnosticsParams>()
         val adapter =
-            hookedAdapter {
+            hookedAdapter { module ->
                 if (hold.compareAndSet(true, false)) {
                     entered.countDown()
                     check(release.awaited())
+                } else if (holdModule.get() == module.simpleModuleName && holdModule.getAndSet(null) != null) {
+                    moduleEntered.countDown()
+                    check(moduleRelease.awaited())
                 }
             }
         val server = XtcLanguageServer(adapter)
@@ -587,7 +1075,10 @@ class XdkReleaseServerTest {
                     InitializeParams().apply {
                         capabilities =
                             ClientCapabilities().apply {
-                                textDocument = editorInitializeParams().capabilities.textDocument
+                                textDocument =
+                                    editorInitializeParams().capabilities.textDocument.apply {
+                                        if (pull) diagnostic = DiagnosticCapabilities()
+                                    }
                                 workspace =
                                     WorkspaceClientCapabilities().apply {
                                         workspaceEdit =
@@ -604,6 +1095,9 @@ class XdkReleaseServerTest {
             server.replaceCompilerSourceModules(graph)
             listOf("Node0", "Other").forEach(::open)
         }
+
+        /** Gives the server the graph again, as it is. */
+        fun regraph() = server.replaceCompilerSourceModules(graph)
 
         /** Writes [text] to [name]'s file, a module that no editor has open, and adds it to the graph. */
         fun join(
@@ -622,6 +1116,25 @@ class XdkReleaseServerTest {
             server.textDocumentService.didOpen(item(name))
             server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri(name)))).awaited()
         }
+
+        /** The close of [name]'s document. */
+        fun close(name: String) = server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri(name))))
+
+        /** Gives [name]'s document [text], as an edit does, without waiting for its analysis. */
+        fun change(
+            name: String,
+            text: String,
+        ) = server.textDocumentService.didChange(
+            DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(uri(name), 2), listOf(TextDocumentContentChangeEvent(text))),
+        )
+
+        /** A hover of [name]'s document at [word]. */
+        fun hover(
+            name: String,
+            word: String,
+            text: String = SOURCES.getValue(name),
+        ): CompletableFuture<Hover?> =
+            server.textDocumentService.hover(HoverParams(TextDocumentIdentifier(uri(name)), position(text, word)))
 
         /** The watcher's report that [name]'s file changed. */
         fun watched(name: String) =
@@ -667,13 +1180,16 @@ class XdkReleaseServerTest {
             server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri(name)))).awaited()
         }
 
-        private fun position(
-            text: String,
-            word: String,
-        ): Position {
-            val lines = text.lines()
-            val line = lines.indexOfFirst { word in it }
-            return Position(line, lines[line].indexOf(word))
+        companion object {
+            /** The position of [word]'s first occurrence in [text]. */
+            fun position(
+                text: String,
+                word: String,
+            ): Position {
+                val lines = text.lines()
+                val line = lines.indexOfFirst { word in it }
+                return Position(line, lines[line].indexOf(word))
+            }
         }
 
         fun uri(name: String): String =
@@ -685,6 +1201,7 @@ class XdkReleaseServerTest {
 
         override fun close() {
             release.countDown()
+            moduleRelease.countDown()
             server.shutdown().awaited()
         }
     }
@@ -694,7 +1211,9 @@ class XdkReleaseServerTest {
             mapOf(
                 "Node0" to "module Node0 {\n    import ecstasy.collections.ReverseList;\n\n    class Box {}\n}\n",
                 "Node0/Part" to "class Part {}\n",
-                "Node0/Lid" to "class Lid {\n    Int depth = 0;\n}\n",
+                "Node0/Lid" to
+                    "class Lid {\n    Int depth = 0;\n\n" +
+                    "    Int deeper() {\n        Int more = depth + 1;\n        return more;\n    }\n}\n",
                 "Consumer" to "module Consumer {\n    package lib import Node0;\n    class Child extends lib.Box {}\n}\n",
                 "Other" to "module Other {\n    class Extract {\n        String text = \"value\";\n    }\n}\n",
             )

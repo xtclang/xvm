@@ -552,7 +552,7 @@ class XtcLanguageServer internal constructor(
                     } else if (model != null) {
                         val inputs = model.resolve()
                         gradleModel(inputs)
-                        textDocumentService.refreshDependencies {
+                        textDocumentService.refreshDependencies(XtcTextDocumentService.BUILD_CHANGED) {
                             adapter.replaceBuildInputs(inputs)
                         }
                     } else {
@@ -840,13 +840,13 @@ class XtcLanguageServer internal constructor(
                 } else if (model != null) {
                     val inputs = model.resolve()
                     gradleModel(inputs)
-                    textDocumentService.refreshDependencies {
+                    textDocumentService.refreshDependencies(XtcTextDocumentService.BUILD_CHANGED) {
                         (adapter as XdkAdapter).replaceBuildInputs(inputs)
                     }
                     updateResourceWatchers()
                 } else if (CompilerConfiguration.automatic(raw)) {
                     gradleModel(null)
-                    textDocumentService.refreshDependencies {
+                    textDocumentService.refreshDependencies(XtcTextDocumentService.GRAPH_CHANGED) {
                         (adapter as XdkAdapter).discoverSourceModules()
                     }
                     updateResourceWatchers()
@@ -889,7 +889,7 @@ class XtcLanguageServer internal constructor(
             )
         val replacement = inputs.copy(binaries = libraries.resolve(inputs.binaries))
         val automatic = model == null && explicit == null && CompilerConfiguration.automatic(raw)
-        textDocumentService.refreshDependencies {
+        textDocumentService.refreshDependencies(XtcTextDocumentService.BUILD_CHANGED) {
             compiler.replaceBuildInputs(replacement, automatic) + if (automatic) compiler.discoverSourceModules() else emptySet()
         }
         return true
@@ -1632,7 +1632,9 @@ class XtcLanguageServer internal constructor(
         val compiler = adapter as? XdkAdapter ?: return
         try {
             var applied: Set<String>? = emptySet()
-            textDocumentService.refreshDependencies { compiler.applyFileEvents(uris).also { applied = it }.orEmpty() }
+            textDocumentService.refreshDependencies(XtcTextDocumentService.GRAPH_CHANGED) {
+                compiler.applyFileEvents(uris).also { applied = it }.orEmpty()
+            }
             if (applied != null) {
                 updateResourceWatchers()
             } else {
@@ -1660,7 +1662,9 @@ class XtcLanguageServer internal constructor(
                 if (compilerSettings.get().closed) return
                 val scan = compiler.scanDiscoveredSources() ?: return
                 var installed = false
-                textDocumentService.refreshDependencies { scan.install()?.also { installed = true }.orEmpty() }
+                textDocumentService.refreshDependencies(XtcTextDocumentService.GRAPH_CHANGED) {
+                    scan.install()?.also { installed = true }.orEmpty()
+                }
                 if (installed) {
                     updateResourceWatchers()
                     return
@@ -1697,7 +1701,9 @@ class XtcLanguageServer internal constructor(
     /** Host API; project discovery/configuration is separate from installing matching artifacts. */
     fun replaceCompilerDependencies(dependencies: List<XdkDependency>) {
         val compiler = adapter as? XdkAdapter ?: error("Compiler dependencies require XdkAdapter")
-        textDocumentService.refreshDependencies { compiler.replaceDependencies(dependencies) }
+        textDocumentService.refreshDependencies(XtcTextDocumentService.LIBRARIES_CHANGED) {
+            compiler.replaceDependencies(dependencies)
+        }
     }
 
     /**
@@ -1705,7 +1711,9 @@ class XtcLanguageServer internal constructor(
      */
     fun replaceCompilerSourceModules(modules: List<XdkSourceModule>) {
         val compiler = adapter as? XdkAdapter ?: error("Compiler source modules require XdkAdapter")
-        textDocumentService.refreshDependencies { compiler.replaceSourceModules(modules) }
+        textDocumentService.refreshDependencies(XtcTextDocumentService.GRAPH_CHANGED) {
+            compiler.replaceSourceModules(modules)
+        }
         updateResourceWatchers()
     }
 

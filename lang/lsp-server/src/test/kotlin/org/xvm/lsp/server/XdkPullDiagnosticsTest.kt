@@ -1138,7 +1138,7 @@ class XdkPullDiagnosticsTest {
                 session.change(URI, VALID, 2)
                 release.countDown()
                 assertThatThrownBy { stale.awaited() }
-                    .hasMessageContaining("Document changed")
+                    .hasMessageContaining("The text of Pull.x changed")
                 assertThat(session.pull(URI).left.items).isEmpty()
                 assertThat(canceled.isCancelled).isTrue()
             }

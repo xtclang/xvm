@@ -150,6 +150,12 @@ class XdkAdapter
 
         internal fun compilerQueueSnapshot(): Map<String, Any> = queueTrace.snapshot()
 
+        /**
+         * How many times a change has retired analyses or the queries on them, as their sources changed: the server tells
+         * by it whether a change of its own did, which a query whose work ends so answers for.
+         */
+        internal fun retirements(): Long = synchronized(lifecycle) { retirements }
+
         /** The bundled libraries that the workspace's own modules replace ([XdkLibraryReplacement]). */
         internal fun replacedLibraries(): Set<String> = synchronized(lifecycle) { project.replaced }
 
@@ -1004,13 +1010,52 @@ class XdkAdapter
          * else a new one. That one changes no input, so it retires nothing. Null when [uri] is open, or not a file of
          * a configured or discovered module.
          */
-        internal fun closedAnalysisAsync(uri: String): CompletableFuture<CompilationResult>? =
+        internal fun closedAnalysisAsync(uri: String): CompletableFuture<CompilationResult>? = closedAnalysis(uri)?.result
+
+        /** As [closedAnalysisAsync], with the compile that it is the result of, which [answersClosed] judges. */
+        internal fun closedAnalysis(uri: String): ClosedAnalysis? =
             synchronized(lifecycle) {
                 if (closed || uri in overlays || isLibraryDocument(uri)) return null
                 val file = XdkSources.file(uri)?.takeIf(File::isFile) ?: return null
                 val scope = project.scope(file) ?: return null
-                requests[scope]?.result ?: submit(scope, uri, retire = false).request.result
+                val request = requests[scope] ?: submit(scope, uri, retire = false).request
+                ClosedAnalysis(request.result, request)
             }
+
+        /**
+         * The analysis of a closed file of the graph ([closedAnalysis]): the [result] of a compile of its module, the
+         * [compile], which only the adapter reads.
+         */
+        class ClosedAnalysis internal constructor(
+            val result: CompletableFuture<CompilationResult>,
+            internal val compile: Any,
+        )
+
+        /**
+         * Whether [analysis] still answers the closed file it is of: its compile, or the one that replaced it as a member
+         * opened with its file's text ([Request.successor]), is its module's; not once a change retired it, or the release
+         * of the module's last open document dropped it, as a query that it answered would read no analysis, or another.
+         */
+        internal fun answersClosed(analysis: ClosedAnalysis): Boolean =
+            synchronized(lifecycle) { !isOvertaken(analysis.compile as Request) }
+
+        /**
+         * The analysis that answers for [analysis] now, as its compile was replaced as a member opened with its file's text:
+         * the compile that replaced it ([Request.successor]); null once a change retired it.
+         */
+        internal fun answering(analysis: ClosedAnalysis): ClosedAnalysis? =
+            synchronized(lifecycle) {
+                current(analysis.compile as Request).takeUnless(::isStale)?.let { ClosedAnalysis(it.result, it) }
+            }
+
+        /** The analysis of the module of [uri], a document of the graph that is open, as its compile has it now. */
+        internal fun openAnalysis(uri: String): ClosedAnalysis? =
+            synchronized(lifecycle) {
+                currentCompilation(uri)?.takeIf { project.scope(uri) != null }?.let { ClosedAnalysis(it.result, it) }
+            }
+
+        /** The module of the graph that holds [uri], or null when it is no file of the graph. */
+        internal fun graphScope(uri: String): String? = synchronized(lifecycle) { project.scope(uri) }
 
         /**
          * Called under lifecycle. Queues a compile of [scope] for [uri], with the open documents of the modules it
@@ -1216,15 +1261,17 @@ class XdkAdapter
          * releases, changes nothing that they read.
          */
         private fun retireQueries(scope: String): List<QueryWork> =
-            (cursors.values + renames.values)
-                .filter { it.compilation.scope == scope }
-                .onEach {
-                    when (it) {
-                        is CursorRequest -> cursors.remove(it.key, it)
-                        is RenameRequest -> renames.remove(it.uri, it)
-                    }
-                    compiles.remove(it.task)
-                } + if (project.modules.values.any { it.uri == scope }) retireProjectQueries() else emptyList()
+            (
+                (cursors.values + renames.values)
+                    .filter { it.compilation.scope == scope }
+                    .onEach {
+                        when (it) {
+                            is CursorRequest -> cursors.remove(it.key, it)
+                            is RenameRequest -> renames.remove(it.uri, it)
+                        }
+                        compiles.remove(it.task)
+                    } + if (project.modules.values.any { it.uri == scope }) retireProjectQueries() else emptyList()
+            ).also { if (it.isNotEmpty()) retirements++ }
 
         /** Every graph query owns a complete configured snapshot, so any source change retires it. */
         private fun retireProjectQueries(): List<QueryWork> =
@@ -1232,6 +1279,7 @@ class XdkAdapter
                 projectQueries.clear()
                 navigationIndex.retire(project.modules.values.mapTo(hashSetOf()) { it.uri })
                 retired.forEach { compiles.remove(it.task) }
+                if (retired.isNotEmpty()) retirements++
             }
 
         /**
@@ -1744,6 +1792,7 @@ class XdkAdapter
             val retired = scopes.mapNotNull { requests.remove(it) }
             scopes.forEach(completed::remove)
             retired.forEach(::removeQueued)
+            if (retired.isNotEmpty()) retirements++
             return retired to scopes.flatMap(::retireQueries)
         }
 
@@ -1777,6 +1826,7 @@ class XdkAdapter
                                 !analysis.succeeded ||
                                 analysis.dependencies.any(changed::contains)
                         }
+                    if (retired.isNotEmpty()) retirements++
                     val probes =
                         retired.flatMap { request ->
                             requests.remove(request.scope, request)
@@ -1837,11 +1887,13 @@ class XdkAdapter
          * text is [unchanged], its file's text on disk, as the caller found it, retires nothing: each analysis and graph
          * query that read its text reads the same of its file now, as VS Code's release of a document that no editor shows
          * leaves it. Its module's analysis serves the module's other open documents, and goes, with the memory it holds,
-         * with the last of them, which retires nothing either.
+         * with the last of them, which retires nothing either; unless the caller [keep]s it for the queries of the
+         * document that wait on it, as the analysis of the module's closed files, which [closedAnalysisAsync] answers.
          */
         fun closeDocumentAndRefresh(
             uri: String,
             unchanged: Boolean = false,
+            keep: Boolean = false,
         ): Set<String> {
             // a copy's compile keeps its text until it closes, even when navigation has parsed it since it opened
             if (isUncompiledLibraryDocument(uri)) return emptySet()
@@ -1853,11 +1905,7 @@ class XdkAdapter
                     // a library's compile serves its other open copies, and goes, with the memory it holds, with the last
                     if (XdkLibrarySources.isCopy(scope) && scope in scopes.values) return emptySet()
                     if (unchanged && project.scope(uri) != null) {
-                        if (scope !in scopes.values) {
-                            dropped = requests.remove(scope)?.also(::removeQueued)
-                            completed.remove(scope)
-                            retainBuilds()
-                        }
+                        dropped = closeUnchanged(scope, keep)
                         return@synchronized emptyList<Request>() to emptyList<QueryWork>()
                     }
                     retireRequests(project.affected(scope)).also { retainBuilds() }
@@ -1882,6 +1930,61 @@ class XdkAdapter
                 retired.map { it.scope }
         }
 
+        /**
+         * Called under lifecycle, as a member of [scope] closes unchanged: the module's compile, which the caller ends, once
+         * no document of it is open, as [dropClosed] drops it; or, as the caller [keep]s it, null, and it stays as the
+         * compile of the module's closed files, which [releaseClosed] lets go of.
+         */
+        private fun closeUnchanged(
+            scope: String,
+            keep: Boolean,
+        ): Request? {
+            if (!keep) return dropClosed(scope)
+            if (scope !in scopes.values) requests[scope]?.let { kept[scope] = it }
+            return null
+        }
+
+        /**
+         * Called under lifecycle, as a member of [scope] closes unchanged: the module's analysis goes, with the memory it
+         * holds, and its compile, which the caller ends, once no document of it is open; null while one is.
+         */
+        private fun dropClosed(scope: String): Request? {
+            if (scope in scopes.values) return null
+            completed.remove(scope)
+            return requests.remove(scope)?.also(::removeQueued).also { retainBuilds() }
+        }
+
+        /**
+         * Lets go of the analysis of [scope] that [closeDocumentAndRefresh] kept for the queries of its closed members,
+         * once they have ended: the compile it kept goes as it would have as its last document closed, unless a document
+         * of the module is open again, or another compile, which a later query asked for, has taken its place.
+         */
+        internal fun releaseClosed(scope: String) {
+            val released =
+                synchronized(lifecycle) {
+                    kept.remove(scope)?.takeIf { scope !in scopes.values && requests.remove(scope, it) }?.also {
+                        completed.remove(scope)
+                        removeQueued(it)
+                        retainBuilds()
+                    }
+                }
+            released?.result?.cancel(false)
+        }
+
+        /**
+         * Retires the analyses of the [changed] modules, whose sources changed on disk, that no open document has: as the
+         * analysis of a module's closed files, which a query of one of them answers from ([closedAnalysisAsync]), read
+         * their old text. The caller analyzes again the modules that a document has open; the graph's queries check their
+         * sources as they end ([XdkProjectQueries.isCurrent]).
+         */
+        internal fun retireClosed(changed: Set<String>) {
+            val retired =
+                synchronized(lifecycle) {
+                    changed.filter { it !in scopes.values }.mapNotNull(::dropClosed).also { if (it.isNotEmpty()) retirements++ }
+                }
+            retired.forEach { it.result.cancel(false) }
+        }
+
         /** Called under lifecycle: keeps the module builds of the modules that a remaining analysis builds. */
         private fun retainBuilds() {
             builds.keys.retainAll(requests.keys.flatMap { project.buildOrder(it).map(XdkSourceModule::name) }.toSet())
@@ -1899,6 +2002,7 @@ class XdkAdapter
                     requests.clear()
                     cursors.clear()
                     renames.clear()
+                    kept.clear()
                     projectQueries.clear()
                     libraryQueries.clear()
                     diagnosticCache.clear()
@@ -3461,6 +3565,12 @@ class XdkAdapter
         private val queueTrace = CompilerQueueTrace()
         private val lifecycle = Any()
         private var closed = false
+
+        /** Under lifecycle: how many times a change retired analyses or the queries on them ([retirements]). */
+        private var retirements = 0L
+
+        /** Under lifecycle: the compile of each module that a release kept for its closed members' queries ([releaseClosed]). */
+        private val kept = mutableMapOf<String, Request>()
 
         /** Under lifecycle: the XDK copy's compile that the worker runs now, if one does; see [yieldCopyCompiles]. */
         private var runningCopy: Request? = null

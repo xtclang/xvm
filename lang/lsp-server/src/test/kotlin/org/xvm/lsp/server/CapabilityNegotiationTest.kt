@@ -333,7 +333,7 @@ class CapabilityNegotiationTest {
                 sent.awaited()
                 if (stalled) server.close()
                 assertThatThrownBy { applying.awaited() }
-                    .hasMessageContaining(if (stalled) "changed" else "Read-only document")
+                    .hasMessageContaining(if (stalled) "The language server shut down" else "Read-only document")
             }
         }
     }

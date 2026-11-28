@@ -322,7 +322,7 @@ class XdkLanguageServerTest {
             session.change("module New {}", 2)
             adapter.finish(0)
             assertThatThrownBy { outline.awaited() }
-                .hasMessageContaining("Document changed during analysis")
+                .hasMessageContaining("The text of Protocol.x changed")
         }
     }
 

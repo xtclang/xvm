@@ -176,6 +176,30 @@ class XtcTextDocumentService(
 
         /** The fields of a query's traced answer that say what it was asked, which a repeated answer keeps. */
         private val ASKED = setOf("previousResultId")
+
+        /** What a query that the server's shutdown ends answers. */
+        private const val SHUT_DOWN = "The language server shut down"
+
+        /** What a query that a check of its own finds overtaken answers, when no change since it started says why. */
+        private const val OVERTAKEN = "A document that it reads changed"
+
+        /** What a query whose work the compiler retired answers, when no change since it started retired any. */
+        private const val NEWER_REQUEST = "A newer request took the place of its work"
+
+        /** What a code action's command that names no action's title answers, as a resolve handle that expired does. */
+        private const val UNTITLED = "The code action's command names no title; request a fresh list"
+
+        /** What a code action whose edit the client can't apply answers, as of versioned edits or file renames. */
+        private const val UNAPPLIED = "The action's edit is not one that the client applies"
+
+        /** What a query that a change of the workspace's build overtook answers: its build model or its libraries. */
+        internal const val BUILD_CHANGED = "The workspace's build changed"
+
+        /** What a query that a change of the workspace's module graph overtook answers, as its files are discovered. */
+        internal const val GRAPH_CHANGED = "The workspace's module graph changed"
+
+        /** What a query that a change of the libraries that the host gives the workspace overtook answers. */
+        internal const val LIBRARIES_CHANGED = "The workspace's libraries changed"
     }
 
     /** Open-buffer revision and the analysis future associated with that exact content and module scope. */
@@ -249,25 +273,56 @@ class XtcTextDocumentService(
 
     private var diagnosticRevision = 0L
     private val publishedByScope = mutableMapOf<String, Set<String>>()
-    private val pendingQueries = mutableMapOf<CompletableFuture<*>, String>()
+    private val pendingQueries = mutableMapOf<CompletableFuture<*>, PendingQuery>()
+
+    /**
+     * What the server does as it holds the lock, a change or a newer query's start, which a query whose work the compiler
+     * retires within it answers for ([PendingQuery.retirement]).
+     */
+    private var activity: String? = null
+
+    /** How many changes the server has handled ([change]). */
+    private var changes = 0L
+
+    /**
+     * The modules whose analysis the compiler keeps, though none of their documents is open, for the pending queries that
+     * read it as one of them closed with its file's text ([didClose]); let go as the last of them ends ([releaseKept]).
+     */
+    private val keptModules = mutableSetOf<String>()
+
+    /**
+     * The last change that retired work in the compiler, which a query whose work the compiler retired off the server's
+     * thread since it started answers for, as a hover that joins a probe, or the workspace's symbols that join their graph
+     * query ([PendingQuery.retirement]).
+     */
+    private var lastRetirement: Change? = null
+
+    /** What a change was, as [reason] says, and how many the server had handled with it, [serial]. */
+    private class Change(
+        val reason: String,
+        val serial: Long,
+    )
 
     /**
      * What each document that closed with its text as the file has it, by URI, while queries were pending, closed with:
      * as VS Code releases a document that no editor shows, some minutes after an extension or a navigation opened it. Of
      * one outside the graph, or of a member of the graph ([didClose]), no analysis and no graph query reads anything else
      * for it, so a workspace query that started while it was open still answers for what it started with, by its basis
-     * ([startQuery]). Cleared as the last pending query ends, and for a URI as its file changes on disk
-     * ([refreshForFile]), or as it opens with other text than it closed with.
+     * ([PendingQuery.overtaken]), and so do its own queries, of a member. Cleared as the last pending query ends, and for
+     * a URI as its file changes on disk ([refreshForFile]), as it opens with other text than it closed with, or as its
+     * module's text changes ([refreshScopes]).
      */
     private val released = mutableMapOf<String, Release>()
 
     /**
      * The [bases] that a released document closed at, each of the times it closed with its file's text since it first
-     * did, as it opened again with that text between, and, of a member of the graph, that [text].
+     * did, as it opened again with that text between, and, of a member of the graph, that [text]; and its module,
+     * [scope].
      */
     private class Release(
         val bases: List<Any>,
         val text: String?,
+        val scope: String,
     )
 
     /**
@@ -275,7 +330,8 @@ class XtcTextDocumentService(
      * pending: as VS Code opens a document for a peek or a search, or the language client opens again each document
      * that VS Code holds as the server restarts. The graph's queries and the analyses of its modules read the file
      * already, so a workspace query answers for what it started with, as if the document had not opened, until the
-     * document changes ([startQuery]). Cleared as the last pending query ends.
+     * document changes ([PendingQuery.overtaken]), and so does a query of the document that its closed file answered.
+     * Cleared as the last pending query ends.
      */
     private val opened = mutableMapOf<String, Any>()
 
@@ -288,23 +344,19 @@ class XtcTextDocumentService(
         progress: WorkDoneProgressParams? = null,
         partial: ((R) -> PartialResults.Plan<R>)? = null,
         block: () -> R,
-    ): CompletableFuture<R> {
-        // before the document is taken, so that its new analysis is not taken for a change
-        synchronized(lifecycle) { if (!closed) reanalyzeRetired() }
-        val document = uri?.let { openDocuments[it] }
-        return queryAsync(
+    ): CompletableFuture<R> =
+        queryAsync(
             method,
             uri.orEmpty(),
-            request = {
+            request = { query ->
                 server.supplyAsync(method, logParams, logResult) {
-                    fun current() = !closed && (uri == null || !changed(document, openDocuments[uri]))
                     if (adapter.concurrentQueries) {
                         // queryAsync rechecks currency before publishing, so the lock guards only this check
-                        synchronized(lifecycle) { if (!current()) throw contentModified() }
+                        synchronized(lifecycle) { query.check() }
                         block()
                     } else {
                         synchronized(lifecycle) {
-                            if (!current()) throw contentModified()
+                            query.check()
                             block()
                         }
                     }
@@ -317,7 +369,6 @@ class XtcTextDocumentService(
         ) {
             it
         }
-    }
 
     /**
      * A semantic query owns its backend future, while the module analysis remains shared. Only a request that
@@ -326,12 +377,13 @@ class XtcTextDocumentService(
      * Backend work that the server retires for a change of what it reads, as the compiler retires a graph query when a
      * member's text changes, answers ContentModified, as a change that the query's own checks find does; one that
      * [cancelsWhenRetired], a document's diagnostic pull, answers RequestCancelled, after which VS Code's client pulls
-     * again, where it takes ContentModified as an empty report.
+     * again, where it takes ContentModified as an empty report. Either way the ContentModified says what overtook it
+     * ([PendingQuery]). The [request] starts the query's work, which can check the query itself as it runs.
      */
     private fun <T, R> queryAsync(
         method: String,
         uri: String,
-        request: () -> CompletableFuture<T>,
+        request: (PendingQuery) -> CompletableFuture<T>,
         workspace: Boolean = false,
         reportsOutOfSync: Boolean = false,
         waitsFor: (String) -> Boolean = { true },
@@ -400,7 +452,9 @@ class XtcTextDocumentService(
             val document = openDocuments[uri] ?: continue
             if (uri !in outOfSync && document.analysis.isCancelled) {
                 logger.info("analysis of {} was retired without a replacement; analyzing it again", uri)
-                analyzeOne(uri, document.content, document.version)
+                change("The analysis of ${name(uri)} was retired, and it is analyzed again") {
+                    analyzeOne(uri, document.content, document.version)
+                }
             }
         }
     }
@@ -427,7 +481,7 @@ class XtcTextDocumentService(
     private fun <T, R> startQuery(
         method: String,
         uri: String,
-        request: () -> CompletableFuture<T>,
+        request: (PendingQuery) -> CompletableFuture<T>,
         workspace: Boolean,
         reportsOutOfSync: Boolean,
         waitsFor: (String) -> Boolean,
@@ -439,57 +493,34 @@ class XtcTextDocumentService(
         convert: (T) -> R,
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
-
-        // work that the server retired, not the client, whose cancel completes the result first ([queryAsync])
-        fun retired() = if (cancelsWhenRetired) result.cancel(false) else result.completeExceptionally(contentModified())
         val trace = ExecutionTrace.span("lsp-query", method, uri)
         // the query's start, and one end that says how long each phase took and what it answered at DEBUG
         val phases = ExecutionTrace.Phases(trace)
         val answer = AtomicReference<Map<String, Any?>>(emptyMap())
         ExecutionTrace.event(trace, "start")
-        val (document, documents, revision) =
+        val (query, revision) =
             synchronized(lifecycle) {
-                if (closed) return CompletableFuture.failedFuture(contentModified())
+                if (closed) return CompletableFuture.failedFuture(contentModified(SHUT_DOWN))
                 if (uri in outOfSync && !reportsOutOfSync) return CompletableFuture.failedFuture(outOfSyncFailure(uri))
                 reanalyzeRetired()
-                pendingQueries[result] = uri
-                Triple(
-                    openDocuments[uri],
-                    if (workspace) openDocuments.filterKeys(waitsFor) else null,
-                    diagnosticRevision,
-                )
+                val query =
+                    PendingQuery(
+                        uri,
+                        openDocuments[uri],
+                        if (workspace) openDocuments.filterKeys(waitsFor) else null,
+                        reportsOutOfSync,
+                        waitsFor,
+                        changes,
+                        sourceOnly,
+                        // the module whose analysis it reads, which matters only of a member of the graph ([keeps])
+                        if (sourceOnly || uri.isEmpty()) null else openDocuments[uri]?.scope ?: (adapter as? XdkAdapter)?.graphScope(uri),
+                    )
+                pendingQueries[result] = query
+                query to diagnosticRevision
             }
 
-        // whether the document [other] still answers for what it was, [then], as the query started: at the same basis, as
-        // also one that had opened with its file's text before, or, while it is closed or since it opened again with its
-        // file's text, which the query reads of a closed member too, at one it was released at. A diagnostic pull joins
-        // the analyses of the open documents as it answers, under the lock, so it takes a document that opened since it
-        // started as a change, as it did not wait for its analysis
-        fun kept(
-            other: String,
-            then: Document,
-        ): Boolean {
-            val now = openDocuments[other]
-            if (now?.basis === then.basis) return true
-            val again = now == null || (now.basis === opened[other] && !reportsOutOfSync)
-            return again && released[other]?.bases?.any { it === then.basis } == true
-        }
-
-        // a query stays current while its document's basis does, also when another member's didOpen replaces the analysis;
-        // a workspace query while no document opens but a member with its file's text, which a pull takes as a change,
-        // and each document it started with is kept
-        fun stale(): Boolean =
-            closed ||
-                changed(document, openDocuments[uri]) ||
-                (
-                    documents != null &&
-                        (
-                            openDocuments.any { (it, now) ->
-                                it !in documents && waitsFor(it) && (reportsOutOfSync || now.basis !== opened[it])
-                            } ||
-                                documents.any { (it, then) -> !kept(it, then) }
-                        )
-                )
+        // work that the server retired, not the client, whose cancel completes the result first ([queryAsync])
+        fun retired() = if (cancelsWhenRetired) result.cancel(false) else result.completeExceptionally(contentModified(query.retirement()))
         val started = System.nanoTime()
         logger.info("{}: {}", method, uri)
         // A JSON-RPC cancellation can complete this future under the transport's request lock.
@@ -516,13 +547,17 @@ class XtcTextDocumentService(
         val ready =
             if (sourceOnly) {
                 CompletableFuture.completedFuture(null)
-            } else if (documents != null) {
-                CompletableFuture.allOf(*documents.map { (it, document) -> settled(it, document.analysis) }.toTypedArray())
+            } else if (query.documents != null) {
+                CompletableFuture.allOf(*query.documents.map { (it, document) -> settled(it, document.analysis) }.toTypedArray())
             } else {
                 // a document that is not open is answered from its text on disk, as its module analyzes it, until its
-                // didOpen, after which the editor's text wins: a restarted client asks before it opens its files again
-                document?.let { settled(uri, it.analysis) }
-                    ?: (adapter as? XdkAdapter)?.closedAnalysisAsync(uri)?.let { closedSettled(uri, it, result) }
+                // didOpen, after which the editor's text wins, unless it is its file's: a restarted client asks before it
+                // opens its files again
+                query.document?.let { settled(uri, it.analysis) }
+                    ?: (adapter as? XdkAdapter)?.let { compiler ->
+                        synchronized(lifecycle) { compiler.closedAnalysis(uri)?.also { query.closedAnalysis = it } }
+                            ?.let { closedSettled(compiler, uri, it, query, result) }
+                    }
                     ?: CompletableFuture.completedFuture(null)
             }
         ready
@@ -531,10 +566,15 @@ class XtcTextDocumentService(
                 val work =
                     synchronized(lifecycle) {
                         if (result.isDone) return@thenRunAsync
-                        if (stale()) throw contentModified()
+                        query.check()
                         phases.reached("started")
-                        ExecutionTrace.within(trace, request)
+                        // as the compiler retires an older query's work of the same kind, which this one's takes the place of
+                        during("A newer $method request took the place of its work") { ExecutionTrace.within(trace) { request(query) } }
                     }
+                // what retired the work, when the compiler did on the server's thread, within a change or a query's start
+                work.whenComplete { _, failure ->
+                    if (failure != null && Thread.holdsLock(lifecycle)) activity?.let { query.retiredBy.compareAndSet(null, it) }
+                }
                 // Register after starting work: prior cancellation still schedules backend cleanup.
                 result.whenCompleteAsync { _, failure -> if (failure != null) work.cancel(false) }
                 // Do not occupy the compiler worker while acquiring the publication lock: a
@@ -544,7 +584,7 @@ class XtcTextDocumentService(
                     synchronized(lifecycle) {
                         if (!result.isDone) {
                             when {
-                                stale() -> result.completeExceptionally(contentModified())
+                                query.overtaken() -> result.completeExceptionally(contentModified(query.reason()))
 
                                 failure != null -> {
                                     val cause =
@@ -557,6 +597,10 @@ class XtcTextDocumentService(
                                         result.completeExceptionally(cause)
                                     }
                                 }
+
+                                // newer diagnostics overtake a diagnostic report, as the change that made them says
+                                reportsOutOfSync && diagnosticRevision != revision ->
+                                    result.completeExceptionally(contentModified(query.revisedBy ?: OVERTAKEN))
 
                                 else -> {
                                     try {
@@ -592,7 +636,8 @@ class XtcTextDocumentService(
                         synchronized(lifecycle) {
                             // newer diagnostics overtake a diagnostic report, the one kind that reports out-of-sync
                             // documents; another answer's batches stay current while its query does
-                            if (stale() || (reportsOutOfSync && diagnosticRevision != revision)) throw contentModified()
+                            query.check()
+                            if (reportsOutOfSync && diagnosticRevision != revision) throw contentModified(query.revisedBy ?: OVERTAKEN)
                         }
                     },
                     partial,
@@ -602,6 +647,7 @@ class XtcTextDocumentService(
         publication.whenCompleteAsync { _, _ ->
             synchronized(lifecycle) {
                 pendingQueries.remove(result)
+                releaseKept()
                 if (pendingQueries.isEmpty()) {
                     released.clear()
                     opened.clear()
@@ -609,6 +655,107 @@ class XtcTextDocumentService(
             }
         }
         return server.observeQuery(method, progress, publication, uri)
+    }
+
+    /**
+     * A query as it started: of [uri], whose [document] it answers for, open then or not, and, of the workspace, the open
+     * [documents] whose analyses it waits for ([waitsFor]); after [since] [changes]. One that is [sourceOnly] reads no
+     * analysis; one of a document reads its module's, [scope]'s.
+     */
+    private inner class PendingQuery(
+        val uri: String,
+        val document: Document?,
+        val documents: Map<String, Document>?,
+        val reportsOutOfSync: Boolean,
+        val waitsFor: (String) -> Boolean,
+        val since: Long,
+        val sourceOnly: Boolean,
+        val scope: String?,
+    ) {
+        /** What retired its work as the compiler did on the server's thread: a change, or a newer query's start ([activity]). */
+        val retiredBy = AtomicReference<String>()
+
+        /** Under lifecycle: the change that first found the query [overtaken], also once its answer is done ([change]). */
+        var overtakenBy: String? = null
+
+        /**
+         * Under lifecycle: the analysis of its module that a query of a closed file waits for and then reads, as it chose
+         * it and each one it went on to ([closedSettled]).
+         */
+        var closedAnalysis: XdkAdapter.ClosedAnalysis? = null
+
+        /** Under lifecycle: of a diagnostic report, what made the diagnostics new first since it started ([revise]). */
+        var revisedBy: String? = null
+
+        /**
+         * Called under lifecycle: whether the query no longer answers for what it started with. It stays current while its
+         * own document answers for it ([answers]), also when another member's didOpen replaces the analysis; a workspace
+         * query while no document opens but a member with its file's text, which a pull takes as a change, and each
+         * document it started with is kept.
+         */
+        fun overtaken(): Boolean =
+            closed ||
+                !answers() ||
+                closedAnalysis?.let { it.result.isDone && !it.result.isCancelled && !(adapter as XdkAdapter).answersClosed(it) } == true ||
+                (
+                    documents != null &&
+                        (
+                            openDocuments.any { (it, now) ->
+                                it !in documents && waitsFor(it) && (reportsOutOfSync || now.basis !== opened[it])
+                            } ||
+                                documents.any { (it, then) -> !kept(it, then) }
+                        )
+                )
+
+        /** Called under lifecycle: fails the work of the query, as a check of its own finds it [overtaken]. */
+        fun check() {
+            if (overtaken()) throw contentModified(reason())
+        }
+
+        /**
+         * Called under lifecycle: what overtook the query, as a check of its own finds it, as of a partial answer's
+         * batches after the answer: the change that did ([overtakenBy]), which ends it first.
+         */
+        fun reason(): String = overtakenBy ?: if (closed) SHUT_DOWN else OVERTAKEN
+
+        /**
+         * Called under lifecycle: what retired its work: the change or newer query that did on the server's thread;
+         * else the last change since it started that retired work; else a newer query, which takes the place of an older
+         * one's work off the server's thread too, as a hover's probe does.
+         */
+        fun retirement(): String = retiredBy.get() ?: lastRetirement?.takeIf { it.serial > since }?.reason ?: NEWER_REQUEST
+
+        /**
+         * Whether its own document answers for it still, as the others do ([kept]), one that its closed file answered
+         * also once it opened with that text; a query of one that closed needs its module's analysis, which answers a
+         * closed member of the graph: a closed document outside the graph has none, which a workspace query of it, such
+         * as its Organize Imports, reads too.
+         */
+        private fun answers(): Boolean {
+            val now = openDocuments[uri]
+            return if (document == null) {
+                now == null || (now.basis === opened[uri] && !reportsOutOfSync)
+            } else {
+                kept(uri, document) && (now != null || released[uri]?.text != null)
+            }
+        }
+
+        /**
+         * Whether the document [other] still answers for what it was, [then], as the query started: at the same basis, as
+         * also one that had opened with its file's text before, or, while it is closed or since it opened again with its
+         * file's text, which the query reads of a closed member too, at one it was released at. A diagnostic pull joins
+         * the analyses of the open documents as it answers, under the lock, so it takes a document that opened since it
+         * started as a change, as it did not wait for its analysis.
+         */
+        private fun kept(
+            other: String,
+            then: Document,
+        ): Boolean {
+            val now = openDocuments[other]
+            if (now?.basis === then.basis) return true
+            val again = now == null || (now.basis === opened[other] && !reportsOutOfSync)
+            return again && released[other]?.bases?.any { it === then.basis } == true
+        }
     }
 
     /** Whether [failure] is a cancellation, also in the completions that carry it. */
@@ -638,22 +785,35 @@ class XtcTextDocumentService(
             .thenCompose { replacement -> replacement?.let { settled(uri, it) } ?: CompletableFuture.completedFuture(null) }
 
     /**
-     * Completes once the analysis that answers [uri], a document that is not open, has: [analysis], or, when the compiler
-     * ended it unfinished, as a member's open with its file's text replaces its module's compile, the one it has now,
-     * while the [query] that waits for it does. Off the thread that ended [analysis], which can hold the compiler's lock.
+     * Completes once the analysis that answers [uri], a document that was not open, has: [analysis], which the [query]
+     * reads as it ends, as a change that then retires it overtakes it ([PendingQuery.closedAnalysis]). When the compiler
+     * ended it unfinished, it goes on to the one that answers it now, which it reads instead: the compile that replaced
+     * it as a member opened with its file's text, or, once a change retired it, a new one of its module, or, as the
+     * document opened since, the open document's, while the query's [result] is pending. Off the thread that ended
+     * [analysis], which can hold the compiler's lock, and under this one: the compiler ends it as the document's didOpen
+     * holds it, before the didOpen installs the document's analysis.
      */
     private fun closedSettled(
+        compiler: XdkAdapter,
         uri: String,
-        analysis: CompletableFuture<*>,
-        query: CompletableFuture<*>,
+        analysis: XdkAdapter.ClosedAnalysis,
+        query: PendingQuery,
+        result: CompletableFuture<*>,
     ): CompletableFuture<*> =
-        analysis
+        analysis.result
             .handleAsync { _, _ ->
-                (adapter as? XdkAdapter)
-                    ?.takeIf { analysis.isCancelled && !query.isDone }
-                    ?.closedAnalysisAsync(uri)
-                    ?.takeIf { it !== analysis }
-            }.thenCompose { replacement -> replacement?.let { closedSettled(uri, it, query) } ?: CompletableFuture.completedFuture(null) }
+                synchronized(lifecycle) {
+                    if (!analysis.result.isCancelled || result.isDone) {
+                        null
+                    } else {
+                        (compiler.answering(analysis) ?: compiler.closedAnalysis(uri) ?: compiler.openAnalysis(uri))
+                            ?.takeIf { it.result !== analysis.result }
+                            ?.also { query.closedAnalysis = it }
+                    }
+                }
+            }.thenCompose { next ->
+                next?.let { closedSettled(compiler, uri, it, query, result) } ?: CompletableFuture.completedFuture(null)
+            }
 
     private fun outOfSyncFailure(uri: String) =
         ResponseErrorException(
@@ -664,23 +824,87 @@ class XtcTextDocumentService(
             ),
         )
 
-    private fun contentModified() =
+    /** A query's answer that [reason], what overtook it, says the content it was asked of changed. */
+    private fun contentModified(reason: String) =
         ResponseErrorException(
             ResponseError(
                 ResponseErrorCode.ContentModified,
-                "Document changed during analysis",
+                reason,
                 null,
             ),
         )
 
-    /** Called under lifecycle; retire the public result even if a backend ignores cancellation. */
-    private fun invalidateQueries(uris: Set<String>) {
-        pendingQueries
-            .filterValues { it in uris }
-            .keys
-            .toList()
-            .forEach { it.completeExceptionally(contentModified()) }
+    /**
+     * Called under lifecycle: [block], as what [reason] says the server does ([activity]), which a query whose work the
+     * compiler retires within it answers for.
+     */
+    private inline fun <T> during(
+        reason: String,
+        block: () -> T,
+    ): T {
+        val previous = activity
+        activity = reason
+        try {
+            return block()
+        } finally {
+            activity = previous
+        }
     }
+
+    /**
+     * Called under lifecycle: [block], a change of a document or of the workspace that [reason] says, after which each
+     * pending query that it overtook ends, with ContentModified and that reason, even if a backend ignores cancellation;
+     * a query whose work the compiler retired within it answers for it too, and so, once it retired any, does a query
+     * whose work the compiler retired off the server's thread ([PendingQuery.retirement]).
+     */
+    private inline fun <T> change(
+        reason: String,
+        block: () -> T,
+    ): T {
+        val compiler = adapter as? XdkAdapter
+        val retirements = compiler?.retirements()
+        try {
+            return during(reason, block)
+        } finally {
+            val serial = ++changes
+            if (compiler == null || compiler.retirements() != retirements) lastRetirement = Change(reason, serial)
+            pendingQueries
+                .filter { (_, query) -> query.overtakenBy == null && query.overtaken() }
+                .forEach { (result, query) ->
+                    query.overtakenBy = reason
+                    result.completeExceptionally(contentModified(reason))
+                }
+            releaseKept()
+        }
+    }
+
+    /**
+     * Called under lifecycle, within a [change]: the diagnostics are new, as the change says, which overtakes each pending
+     * diagnostic report, as the first change since it started that made them new does.
+     */
+    private fun revise() {
+        diagnosticRevision++
+        pendingQueries.values.filter { it.reportsOutOfSync && it.revisedBy == null }.forEach { it.revisedBy = activity ?: OVERTAKEN }
+    }
+
+    /**
+     * Called under lifecycle, as a query or a change ends: lets go of each module analysis that the compiler keeps for the
+     * queries that read it, once none of them is pending; the compiler drops it unless a document of the module is open
+     * again, or another compile has taken its place.
+     */
+    private fun releaseKept() {
+        val served =
+            pendingQueries
+                .filter { (result, query) -> !result.isDone && !query.sourceOnly }
+                .values
+                .mapNotNullTo(hashSetOf()) { it.scope }
+        val unserved = keptModules - served
+        keptModules -= unserved
+        unserved.forEach { (adapter as XdkAdapter).releaseClosed(it) }
+    }
+
+    /** The name of [uri]'s file, as an answer that a change of it overtook says. */
+    private fun name(uri: String): String = uri.substringAfterLast('/')
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
         synchronized(lifecycle) {
@@ -697,16 +921,26 @@ class XtcTextDocumentService(
             // and the graph's queries too, of a member of the graph, as VS Code opens one for a peek or a search, unless
             // the document closed with other text while they were pending, or the analyses read other text of the file:
             // it changed on disk since, which no watcher has reported yet
+            val compiler = adapter as? XdkAdapter
             val unchanged =
                 !edited &&
                     released[uri].let { it == null || it.text == params.textDocument.text } &&
-                    (adapter as? XdkAdapter)?.opensUnchanged(uri, params.textDocument.text) == true
-            if (!unchanged) {
-                released.remove(uri)
-                opened.remove(uri)
+                    compiler?.opensUnchanged(uri, params.textDocument.text) == true
+            val member = compiler?.hasProject(uri) == true
+            val reason =
+                when {
+                    edited -> "${name(uri)} opened with text that its file does not have"
+                    member && !unchanged -> "${name(uri)} opened with text that its module's analyses did not read"
+                    else -> "${name(uri)} opened"
+                }
+            change(reason) {
+                if (!unchanged) {
+                    released.remove(uri)
+                    opened.remove(uri)
+                }
+                analyze(uri, params.textDocument.text, params.textDocument.version, edited = edited, unchanged = unchanged)
+                if (unchanged && pendingQueries.isNotEmpty()) openDocuments[uri]?.let { opened[uri] = it.basis }
             }
-            analyze(uri, params.textDocument.text, params.textDocument.version, edited = edited, unchanged = unchanged)
-            if (unchanged && pendingQueries.isNotEmpty()) openDocuments[uri]?.let { opened[uri] = it.basis }
         }
     }
 
@@ -725,25 +959,27 @@ class XtcTextDocumentService(
             if (version <= previous.version) return
             val changes = params.contentChanges
             if (changes.isNullOrEmpty()) return
-            // Out of sync, only a full-text change (and the edits after it) gives the editor's text again.
-            val resync = changes.indexOfLast { it.range == null }
-            if (uri in outOfSync && resync < 0) {
-                openDocuments[uri] = Document(previous.content, version, previous.scope, previous.analysis)
-                return
-            }
-            val content =
-                try {
-                    if (uri in outOfSync) {
-                        DocumentText(changes[resync].text).change(changes.drop(resync + 1), server.synchronization.incremental)
-                    } else {
-                        DocumentText(previous.content).change(changes, server.synchronization.incremental)
-                    }
-                } catch (e: IllegalArgumentException) {
-                    desynchronize(uri, previous, version, e.message)
+            change("The text of ${name(uri)} changed") {
+                // Out of sync, only a full-text change (and the edits after it) gives the editor's text again.
+                val resync = changes.indexOfLast { it.range == null }
+                if (uri in outOfSync && resync < 0) {
+                    openDocuments[uri] = Document(previous.content, version, previous.scope, previous.analysis)
                     return
                 }
-            if (outOfSync.remove(uri)) logger.info("textDocument/didChange: {} is in sync again", uri)
-            analyze(uri, content, version)
+                val content =
+                    try {
+                        if (uri in outOfSync) {
+                            DocumentText(changes[resync].text).change(changes.drop(resync + 1), server.synchronization.incremental)
+                        } else {
+                            DocumentText(previous.content).change(changes, server.synchronization.incremental)
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        desynchronize(uri, previous, version, e.message)
+                        return
+                    }
+                if (outOfSync.remove(uri)) logger.info("textDocument/didChange: {} is in sync again", uri)
+                analyze(uri, content, version)
+            }
         }
         // outside the lock, as it tells a debug session, once the adapter has the text
         server.sourceChanged(params.textDocument.uri)
@@ -761,10 +997,11 @@ class XtcTextDocumentService(
     ) {
         logger.warn("textDocument/didChange: cannot apply changes to {}, now out of sync: {}", uri, reason)
         val result = CompilationResult.failure(uri, listOf(outOfSyncDiagnostic(uri)))
-        openDocuments[uri] = Document(previous.content, version, previous.scope, CompletableFuture.completedFuture(result))
-        invalidateQueries(setOf(uri))
+        change("${name(uri)} went out of sync with the editor") {
+            openDocuments[uri] = Document(previous.content, version, previous.scope, CompletableFuture.completedFuture(result))
+            revise()
+        }
         clearResolveReports()
-        diagnosticRevision++
         diagnosticReports.record(uri, result.diagnostics)
         server.publishDiagnostics(uri, result.diagnostics, version)
         server.refreshDiagnostics()
@@ -806,7 +1043,7 @@ class XtcTextDocumentService(
         edited: Boolean = true,
         unchanged: Boolean = false,
     ) {
-        if (!unchanged) diagnosticRevision++
+        if (!unchanged) revise()
         // an open with the text on disk, as a close with it, leaves what a listed action was made from as it was
         if (edited) clearResolveReports()
         val compiler = adapter as? XdkAdapter
@@ -821,6 +1058,8 @@ class XtcTextDocumentService(
         edited: Boolean = true,
     ) {
         if (scopes.isEmpty()) return
+        // a released member stands for its module's text too, which changed, also of a module that no editor has open
+        if (edited) released.values.removeIf { it.text != null && it.scope in scopes }
         val ownership = analysisScopes()
         scopes
             .mapNotNull { scope ->
@@ -843,8 +1082,9 @@ class XtcTextDocumentService(
 
     /**
      * A member edit replaces the analysis future for every open document in that module, and the pending queries of
-     * them are stale. Unless the module's text [edited]: then only the queries of a document whose text changed are. A
-     * member of the graph [unchanged] retires nothing in the compiler ([XdkAdapter.compileAsync]).
+     * them are stale, and so are those of its released members. Unless the module's text [edited]: then only the queries
+     * of a document whose text changed are. A member of the graph [unchanged] retires nothing in the compiler
+     * ([XdkAdapter.compileAsync]), and its queries go on ([PendingQuery.overtaken]).
      */
     private fun analyzeOne(
         uri: String,
@@ -877,7 +1117,7 @@ class XtcTextDocumentService(
                 }.toMutableMap()
         current[uri] = Document(content, version, scope, analysis)
         openDocuments.putAll(current)
-        invalidateQueries(current.filter { (it, document) -> changed(affected[it], document) }.keys)
+        if (edited) released.values.removeIf { it.text != null && it.scope == scope }
         affected.values
             .map { it.analysis }
             .distinct()
@@ -972,25 +1212,50 @@ class XtcTextDocumentService(
             val unchanged = clean && member
             // nor, for a document outside the graph, anything that an analysis of another or a graph query reads
             val release = kept && (unchanged || !member)
-            val affected = forget(uri, open, kept, unchanged, release, member)
-            val retired =
-                if (compiler != null) {
-                    compiler.closeDocumentAndRefresh(uri, unchanged)
-                } else {
-                    adapter.closeDocument(uri)
-                    emptySet()
-                }
-            if (closed) return
-            afterClose(uri, open, unchanged, affected, retired)
+            change(closing(uri, kept)) {
+                val keep = unchanged && keeps(open.scope)
+                val affected = forget(uri, open, kept, unchanged, release, member)
+                val retired =
+                    if (compiler != null) {
+                        compiler.closeDocumentAndRefresh(uri, unchanged, keep)
+                    } else {
+                        adapter.closeDocument(uri)
+                        emptySet()
+                    }
+                if (closed) return
+                if (keep && openDocuments.values.none { it.scope == open.scope }) keptModules += open.scope
+                afterClose(uri, open, unchanged, affected, retired)
+            }
         }
     }
+
+    /** Called under lifecycle: what the close of [uri] is, as an answer that it overtakes says, which [kept] its text or not. */
+    private fun closing(
+        uri: String,
+        kept: Boolean,
+    ): String =
+        when {
+            uri in outOfSync -> "${name(uri)} closed out of sync with the editor"
+            !kept -> "${name(uri)} closed with text that its file does not have"
+            else -> "${name(uri)} closed"
+        }
+
+    /**
+     * Called under lifecycle, as the last open document of [scope], a module of the graph, closes with its file's text:
+     * whether the module's analysis stays, as a query that reads it is pending, of the document, of a member released
+     * before it, or of a closed file of the module, which go on. One that has answered, or that reads only text, keeps
+     * nothing.
+     */
+    private fun keeps(scope: String): Boolean =
+        pendingQueries.any { (result, query) -> !result.isDone && !query.sourceOnly && query.scope == scope }
 
     /**
      * Called under lifecycle, as [open] of [uri] closes: what was made from its text goes, unless the close [kept] its text
      * as its file has it, and the analyses and the diagnostic reports that read it, unless it closed [unchanged], a member
      * of the graph with its file's text; a pending workspace query keeps the document by its basis when the close is a
-     * [release] ([released]), with its text if it is a [member]; its own pending queries end. Returns the scopes whose
-     * open documents are analyzed again, those that read its text.
+     * [release] ([released]), with its text if it is a [member], and so do its own queries, of a member, which its
+     * module's analysis answers; any other close ends them ([change]). Returns the scopes whose open documents are
+     * analyzed again, those that read its text.
      */
     private fun forget(
         uri: String,
@@ -1000,18 +1265,17 @@ class XtcTextDocumentService(
         release: Boolean,
         member: Boolean,
     ): Set<String> {
-        if (!unchanged) diagnosticRevision++
+        if (!unchanged) revise()
         if (!kept) clearResolveReports()
         if (release && pendingQueries.isNotEmpty()) {
             // a document that opened again with its file's text since it was released keeps each basis it closed at
             val earlier = released[uri]?.takeIf { open.basis === opened[uri] }?.bases.orEmpty()
-            released[uri] = Release(earlier + open.basis, open.content.takeIf { member })
+            released[uri] = Release(earlier + open.basis, open.content.takeIf { member }, open.scope)
         }
         val affected = if (unchanged) emptySet() else adapter.affectedAnalysisScopes(uri)
         semanticTokenReports.retire(uri)
         openDocuments.remove(uri)
         outOfSync.remove(uri)
-        invalidateQueries(setOf(uri))
         // the analysis of a module that a member closes unchanged from goes on, for its other documents and queries
         if (!unchanged) open.analysis.cancel(false)
         return affected
@@ -1053,47 +1317,61 @@ class XtcTextDocumentService(
             // deleted. Recompiling identical overlays here cancels otherwise current queries.
             // didChange already propagates edits; didClose re-reads disk and membership.
             if (closed || openDocuments.containsKey(uri)) return
-            // a released document whose file no longer has the text it closed with, which pending workspace queries read
-            released[uri]?.text?.takeUnless { onDisk(uri, it) }?.let { released.remove(uri) }
-            val affected =
-                (adapter as? XdkAdapter)?.changedFileScopes(uri)
-                    ?: adapter.affectedAnalysisScopes(uri)
-            if (affected.isEmpty()) return
-            diagnosticRevision++
-            clearResolveReports()
-            server.refreshDiagnostics()
-            server.refreshSemanticFeatures()
-            refreshScopes(affected + publishedByScope.filterValues { uri in it }.keys)
+            change("${name(uri)} changed on disk") {
+                // a released document whose file no longer has the text it closed with, which pending workspace queries read
+                released[uri]?.text?.takeUnless { onDisk(uri, it) }?.let { released.remove(uri) }
+                val affected =
+                    (adapter as? XdkAdapter)?.changedFileScopes(uri)
+                        ?: adapter.affectedAnalysisScopes(uri)
+                if (affected.isEmpty()) return
+                revise()
+                // the analysis of a module whose files no editor has open, which a query of one of them answers from,
+                // read the file's old text
+                (adapter as? XdkAdapter)?.retireClosed(affected)
+                clearResolveReports()
+                server.refreshDiagnostics()
+                server.refreshSemanticFeatures()
+                refreshScopes(affected + publishedByScope.filterValues { uri in it }.keys)
+            }
         }
     }
 
-    /** Dependency replacement and versioned reanalysis share the diagnostic publication lock. */
-    internal fun refreshDependencies(replace: () -> Set<String>) {
+    /**
+     * Dependency replacement and versioned reanalysis share the diagnostic publication lock; a query that the replacement
+     * overtakes answers what [reason] says changed, as one whose work it retires does.
+     */
+    internal fun refreshDependencies(
+        reason: String,
+        replace: () -> Set<String>,
+    ) {
         synchronized(lifecycle) {
             if (closed) return
-            val affected = replace()
-            if (affected.isEmpty()) return
-            diagnosticRevision++
-            clearResolveReports()
-            refreshScopes(affected)
-            server.refreshDiagnostics()
-            server.refreshSemanticFeatures()
+            change(reason) {
+                val affected = replace()
+                if (affected.isEmpty()) return
+                revise()
+                clearResolveReports()
+                refreshScopes(affected)
+                server.refreshDiagnostics()
+                server.refreshSemanticFeatures()
+            }
         }
     }
 
     fun close() {
         synchronized(lifecycle) {
-            closed = true
-            val documents = openDocuments.toMap()
-            openDocuments.clear()
-            invalidateQueries(pendingQueries.values.toSet())
-            publishedByScope.clear()
-            diagnosticReports.clear()
-            semanticTokenReports.clear()
-            clearResolveReports()
-            documents.forEach { (uri, document) ->
-                document.analysis.cancel(false)
-                adapter.closeDocument(uri)
+            change(SHUT_DOWN) {
+                closed = true
+                val documents = openDocuments.toMap()
+                openDocuments.clear()
+                publishedByScope.clear()
+                diagnosticReports.clear()
+                semanticTokenReports.clear()
+                clearResolveReports()
+                documents.forEach { (uri, document) ->
+                    document.analysis.cancel(false)
+                    adapter.closeDocument(uri)
+                }
             }
         }
     }
@@ -1213,7 +1491,6 @@ class XtcTextDocumentService(
                 ),
             )
         }
-        val revision = synchronized(lifecycle) { diagnosticRevision }
         // a library source's analysis reports on no document of the workspace, so a pull of one waits for none of them:
         // the whole library's compile that Go to Definition into its source starts can take half a minute
         val library = (adapter as? XdkAdapter)?.let { compiler -> compiler::isLibraryDocument }
@@ -1241,7 +1518,6 @@ class XtcTextDocumentService(
             partial = partial,
             traced = traced,
             convert = { results ->
-                if (revision != diagnosticRevision) throw contentModified()
                 val owned = results.flatMap { it.documentUris }.toSet()
                 // A closed member can belong to an open standalone module, outside the
                 // configured graph. Preserve that module's current analysis for document pulls
@@ -2131,7 +2407,7 @@ class XtcTextDocumentService(
                         is String -> value
                         is JsonPrimitive -> value.takeIf { it.isString }?.asString
                         else -> null
-                    } ?: throw contentModified()
+                    } ?: throw contentModified(UNTITLED)
                 val edit =
                     actionReports.resolve(
                         arguments.firstOrNull(),
@@ -2139,7 +2415,7 @@ class XtcTextDocumentService(
                         title,
                         consume = true,
                     )
-                val proposed = protocolEdit(edit) ?: throw contentModified()
+                val proposed = protocolEdit(edit) ?: throw contentModified(UNAPPLIED)
                 // Do not hold the document lifecycle while entering the JSON-RPC transport.
                 CompletableFuture
                     .supplyAsync {
@@ -2173,7 +2449,7 @@ class XtcTextDocumentService(
             }
             if (action.data != null) {
                 val edit = actionReports.resolve(action.data, resolveRevision, action.title)
-                if (action.edit == null) action.edit = protocolEdit(edit) ?: throw contentModified()
+                if (action.edit == null) action.edit = protocolEdit(edit) ?: throw contentModified(UNAPPLIED)
             }
             action
         }
