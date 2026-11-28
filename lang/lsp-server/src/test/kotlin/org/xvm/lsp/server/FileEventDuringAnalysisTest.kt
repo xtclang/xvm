@@ -72,7 +72,7 @@ class FileEventDuringAnalysisTest {
                     ),
                 )
                 release.countDown()
-                // a request retired here fails with "Document changed during analysis"
+                // a request retired here fails with ContentModified, "The workspace's module graph changed"
                 assertThat(
                     hover
                         .awaited()
