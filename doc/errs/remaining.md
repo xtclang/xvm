@@ -1292,18 +1292,18 @@ reflow* and *A folder on another XDK*; sections 13 and 18a point to them.
   and every line formatted with them off. Both editors full.
 - [x] X363: with wrapping of comments on (IntelliJ's Wrap at right margin, VS Code's `xtc.formatting.wrapComments`),
   a doc comment's paragraph past the margin is refilled, its `@param` paragraphs and an indented code line past the
-  margin keep their layout, and a second format changes nothing; off, nothing changes. VS Code full; IntelliJ
-  partial: its "nothing changes" checks read the server's formatting answer, not Reformat Code.
+  margin keep their layout, and a second format changes nothing; off, nothing changes. Both editors full, IntelliJ's
+  through Reformat Code (`9d286c82dd`, below).
 - [x] X364, VS Code: `end_of_line = crlf` gives an LF document CRLF at Format Document (`xtc/endOfLine`). IntelliJ
-  not-implemented: its own EditorConfig support applies `end_of_line`, and the plugin does not read the request.
+  full since `9d286c82dd`, below: the plugin applies `end_of_line`, which IntelliJ gives new files only.
 - [x] X365: `trim_trailing_whitespace = true` trims a line's trailing spaces and tab, `false` keeps them, also where
   VS Code's `files.trimTrailingWhitespace` asks to trim, which without the property trims. Both editors full.
 - [x] X366 (slow): a Gradle build whose `xdkDistribution` is `org.xtclang:xdk:0.9.0`, from a Maven repository the
   case makes, beside one on the tree's XDK; once their models are imported the first builds and runs with Gradle and
   the notice, the picker or Build and Run page and the status bar or Select Ecstasy Build Mode say `builds with XDK
   0.9.0, not the bundled XDK`, and the server's `gradleFolders` has it, while the second builds and runs embedded.
-  VS Code full, with the two builds as folders of the window; IntelliJ partial: one server per project takes the
-  whole project to Gradle, so the bundled build goes first at the project root and the other in its place.
+  VS Code full, with the two builds as folders of the window; IntelliJ full since `77172bbfec`, below, with the
+  build on the other XDK as a project of its own beside the playbook's.
 - [x] Found by X366 and fixed (`c76f19d7f6`): in a VS Code window of several folders, Run of a module in Gradle mode
   ran `./gradlew` where the terminal starts, not in the module's folder, and ended with exit code 127; Run Module
   (`runModuleTask`) now gives the run task the module's folder, and Run, Build, Debug and the Gradle test runs run
@@ -1350,26 +1350,90 @@ a window of one folder). `:lang:spotlessCheck`, `:lang:detekt`, npmCompile and e
   Select All and Copy, a stable command path, until one shows `OtherXdk runs with Gradle` after the run's command line;
   every terminal is cleared before the Run, and checked to show no earlier run, so that an earlier try's output cannot
   count (`0619928521`).
-- [ ] IntelliJ's Build Project in Gradle mode is checked only not to be the embedded compiler's.
 - [x] VS Code's notice that a folder builds with Gradle is once a session for each folder while it is in the window,
   not once a session: a folder is forgotten as it leaves the window, on VS Code's change of the folders, whether a
   server says anything then or not (`90bd6bd12d`, tested in `build-mode.test.ts`), so X366 checks it whatever cases ran
   before it, also in a second X366 of the window, whose folders left it (`0619928521`).
-- [ ] IntelliJ's X366 checks the notice only while the project has not been told yet: its notice is once a session for
-  the project.
 - [x] VS Code's X366 makes both XDKs from this tree's `xdk:installDist`, this tree's version and 0.9.0, in its own Maven
   repository, which the case's settings put before mavenLocal, so its bundled half no longer depends on mavenLocal's
   XDK (`0619928521`). Gradle takes the SNAPSHOT XDK from that repository without a `maven-metadata.xml`, before
   mavenLocal's, offline (`./gradlew --offline` with the case's templates, while mavenLocal had 0.4.4-SNAPSHOT too). It
   holds where this checkout's `xdk:installDist` is of its current sources, as X303 needs; both builds still take the XTC
   plugin from mavenLocal, whose publication only publishLocal writes.
-- [ ] IntelliJ's X366 still makes the other XDK from mavenLocal's and builds BundledXdk with mavenLocal's XDK: its bundled
-  half holds only where publishLocal ran from the same tree. To take VS Code's way: both XDKs from the catalog's
-  `installed` with its `pom`; then `mavenLocal()` can leave the settings template's dependency repositories.
-- [ ] X366's other XDK is still this tree's with one entry more in its `javatools.jar`, republished as 0.9.0, not a second
-  XDK version built for the case: a build of one takes as long as the XDK's own, and a released one needs Maven Central
-  or a copy in the Gradle cache, which an offline container run cannot count on. The server tells XDKs apart by the
-  SHA-256 of their module files and javatools.jar's entries, which the marker changes.
+- [x] X363 in IntelliJ through Reformat Code (`9d286c82dd`): a Reformat Code that changes nothing cannot be told from
+  one that has not run, so each "nothing changes" check takes the indentation out of one line (the catalog's
+  `reindented`, `    Int add(`), drives Reformat Code and waits until the document is the expected text again: the
+  format put that line back and changed nothing else, the comment included. No check reads the server's formatting
+  answer any more. IntelliJ full.
+- [x] X364 in IntelliJ, and the plugin applies `end_of_line` (`9d286c82dd`): IntelliJ's EditorConfig support does not
+  apply it to a file that has line separators already. It maps `end_of_line` to the per-file Code Style line
+  separator, which IntelliJ gives new files only; the file's detected separator wins at every save, and nothing
+  converts at Reformat Code or on save. Shown in the container with the plugin's change taken out,
+  run-8183883519588398496: with `end_of_line = crlf` and EditorConfig support on, `Endings.x` kept LF after Reformat
+  Code and after Save. XtcFormattingService now asks the server's `xtc/endOfLine` beside a whole file's format, as
+  VS Code's extension does (none while IntelliJ's EditorConfig support is off, which the server is told), for a file
+  that File | File Properties | Line Separators converts (local, and `AbstractConvertLineSeparatorsAction.shouldProcess`:
+  writable, not ignored, not binary). Reformat Code that changed the text sets the file's separator and saves the
+  document, which keeps the format to undo; one that changed nothing converts the file as that action does. A
+  synchronous format (on save, headless) sets the separator when a save writes the document after it, as it does when
+  the document has changes; a headless format that changes no text leaves it. A file whose detected separator (the
+  status bar's) is already the one asked for keeps its line endings, mixed ones too, as that action does. X364 checks
+  the document's indentation, the file on disk with CRLF, IntelliJ's detected separator, and that Undo undoes the
+  format. IntelliJ full. The user guide's formatting settings say so.
+- [x] Found by X364's Undo check and fixed (`9d286c82dd`): converting through `changeLineSeparators` after the
+  format's edits rewrote the file outside the save, and Undo no longer undid the format (run-5636809005789544120,
+  run-9486093076467446163).
+- [x] X366 in IntelliJ with both builds at once (`77172bbfec`): the build on the other XDK is a project of its own,
+  opened beside the playbook's in a new window, whose Gradle build IntelliJ imports; BundledXdk is at the playbook's
+  root with its module open, and builds (Build Project) and runs embedded while OtherXdk builds with Gradle beside it.
+  The waits watch both projects' work (TourUi's work, activity, busy and serverState cover every open project).
+  IntelliJ full.
+- [x] IntelliJ's Build Project in Gradle mode runs Gradle, checked by Gradle's own output in the Build tool window
+  (`77172bbfec`): in X366, OtherXdk's artifact is deleted first, the output has `> Task :compileXtc` without an
+  outcome, and the artifact is there again; in X303 (also the R5 gap below), `> Task :compileXtc` and
+  `> Task :compileTestXtc`, both artifacts, and the broken module's Build Project failing with `COMPILER-43` at
+  `GradleBuilt.x:3`. The external system's task events did not reach a listener of
+  ExternalSystemProgressNotificationManager for Build Project's Gradle run (run-7220844408978369343), so the case
+  reads the Build tool window.
+- [x] X366's notice is checked whatever ran before it (`77172bbfec`): IntelliJ gives it once for each project, and
+  OtherXdk's project is new; the probe's read of XtcBuildSettings' private `told` is gone.
+- [x] X366's XDKs come from this tree's xdk:installDist in IntelliJ too (`77172bbfec`), as `0619928521` makes VS
+  Code's: both, this tree's version and 0.9.0 with the marker, zipped in `xdk-<version>` with the files' Unix modes
+  and a POM from the catalog's template; mavenLocal gives only the XTC plugin. The catalog's manual notes say so for
+  both editors.
+- [x] A second project's open and close, one way (`77172bbfec`): ProjectLifecycle.kt's `openBeside` and
+  `closeBeside`, which X145, X303 and X366 use; `closeBeside` closes the project at its path once an open of it has
+  ended (the probe's `closeAt`), so a project whose open outlasted a wait that gave up is closed too. X366 always
+  removes its other project's folder, X303 its folder, and X366's model removal names the playbook's project rather
+  than `singleProject()`. X366's last cleanup wait is gone: the playbook's project builds with Gradle at no point of
+  the case. `gradleFolders` is the server's status when it runs, none without a server, and not known while it starts
+  or stops.
+- [x] Found and fixed on the way (`77172bbfec`): IntelliJ's Gradle import of a project with no SDK failed on
+  `#USE_PROJECT_JDK` (run-9766322145495277261), so the case links it with the IDE's JDK; a status read waited out the
+  hang's bound for a server that a project with no Ecstasy file open does not have (run-2561209433469551729, stopped);
+  a project folder named as its root project made "every module is Gradle's" true before the import's source-set
+  modules came (run-13468248954399304660), so the case waits for ProjectDataImportListener's onImportFinished; and
+  X340's debug test's Gradle run still ran after its session when gradleProject's cleanup removed the root's entries,
+  and wrote `.gradle` again, which X366 then found (run-5636809005789544120, run-9486093076467446163), so
+  gradleProject's cleanup waits for the case's runs to end first.
+- [x] `lang/doc/configuration.md`'s `xtc/endOfLine` paragraph says how the plugin applies `end_of_line` (`9d286c82dd`).
+
+Runs, in the container, IntelliJ, on lagergren/ij-format-cases with the two commits uncommitted: run-1665841420556037793 and
+run-209741301408779715, X132, X288, X289, X290, X303, X337, X340 and X361–X366, 10 passed and 3 partial (X288, X303 and
+X340, as their coverage says) of 13 selected in each, no failure and no IDE failure; X145, in the project lifecycle
+playbook of the same Gradle runs, passed in run-10138892462308261750 and run-151065571500454909. Focused unit tests
+(EditorConfigSwitchTest, LanguageServiceConfigurationTest, PluginManifestTest, XtcProjectTaskRunnerTest,
+BuildModePageTest), `--rerun-tasks`: 23 tests, 0 skipped, 0 failures; verifyPluginInternalApis: no new internal API;
+`:lang:spotlessCheck` and `:lang:detekt`: no findings.
+
+- [ ] X366's other XDK is still this tree's XDK with one entry more in its `javatools.jar`, not a second XDK version
+  built for the case; both editors make it from xdk:installDist, so the bundled half holds where this checkout's
+  installDist is of its current sources.
+- [ ] XtcFormattingService's line separator has no unit test; X364 covers Reformat Code's asynchronous path in the
+  container, and the synchronous path (format on save, headless formatting) has no case of its own.
+- [ ] X303 still makes its project with the New Project wizard's creator, not through the wizard's pages (partial).
+- [ ] TourUi.kt, the tour's probe, changed in `77172bbfec` (work, activity, busy and serverState over every open
+  project): a tour change to the same functions would meet it in a merge.
 - [ ] None of X361–X366 has been in a full-catalog run yet.
 
 Runs, in the container, on errs at `a28850efbb` with the series uncommitted, after an independent review's fixes: VS
@@ -1437,7 +1501,11 @@ Only if a real need comes up; each is a documented refusal today.
   does (`53c9d3eede`, IntelliJ X280 `run-8190292223384484870`).
 - [x] A shared case with a real Gradle build: X303 builds and runs a project made by `xtc init` or
   the IntelliJ wizard's creator in Gradle mode (`7a28e49bd6`, VS Code `run-2VWzIc`, IntelliJ
-  `run-6946269300745727450`). IntelliJ's Build Project in Gradle mode is not driven.
+  `run-6946269300745727450`). IntelliJ's Build Project in Gradle mode was not driven; it is now (2026-11-28): X303 opens the project in a
+window of its own, as the New Project wizard does, with its Gradle build imported, and Build Project runs Gradle's
+classes and testClasses, checked by `> Task :compileXtc` and `> Task :compileTestXtc` in the Build tool window and
+both artifacts, and fails with `COMPILER-43` at `GradleBuilt.x:3` for the broken module (`77172bbfec`,
+run-1665841420556037793, run-209741301408779715).
 - [x] Renaming a root whose editor is still open: discovery drops the open buffer whose file is gone
   when a file on disk has its text (`5ab3a005fc`, X301 in both editors).
 - [x] An IDE move of a discovered root into another directory: allowed when the module uses no
