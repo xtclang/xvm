@@ -7,8 +7,10 @@ import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionKind
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
@@ -464,7 +466,18 @@ class XdkReleaseServerTest {
     @Test
     fun `a request whose graph query a newer one of the same kind takes the place of says so`() =
         waiting(Request.ORGANIZE_IMPORTS) { session, first ->
-            val second = Request.ORGANIZE_IMPORTS.ask(session)
+            // Organize Imports again, of a diagnostic: another question of the same range and kinds
+            val second =
+                session.server.textDocumentService.codeAction(
+                    CodeActionParams(
+                        TextDocumentIdentifier(session.uri("Node0")),
+                        Range(Position(0, 0), Position(0, 0)),
+                        CodeActionContext(
+                            listOf(Diagnostic(Range(Position(1, 4), Position(1, 10)), "unused")),
+                            listOf(CodeActionKind.SourceOrganizeImports),
+                        ),
+                    ),
+                )
             assertContentModified(first, "A newer textDocument/codeAction request took the place of its work")
             session.release.countDown()
             Request.ORGANIZE_IMPORTS.check(session, second.awaited())
@@ -917,6 +930,52 @@ class XdkReleaseServerTest {
             session.release.countDown()
             assertThat(later.awaited()).isNotNull()
         }
+
+    @Test
+    fun `two code lens requests of a document share its pending graph query, and both answer`() =
+        waiting(
+            "the code lenses",
+            ask = { session -> session.server.textDocumentService.codeLens(CodeLensParams(TextDocumentIdentifier(session.uri("Node0")))) },
+            queued = "project-CODE_LENSES",
+        ) { session, first ->
+            // as LSP4IJ asks a document's code lenses while the playbook's X131 does: the second asks what the first does,
+            // of the same documents, and took the first's place, which answered ContentModified
+            val second = session.server.textDocumentService.codeLens(CodeLensParams(TextDocumentIdentifier(session.uri("Node0"))))
+            session.release.countDown()
+            assertThat(first.awaited() as List<*>).isNotEmpty()
+            assertThat(second.awaited()).isNotEmpty()
+        }
+
+    @Test
+    fun `two Organize Imports requests of a document share its pending graph query, and both answer`() =
+        waiting(Request.ORGANIZE_IMPORTS) { session, first ->
+            val second = Request.ORGANIZE_IMPORTS.ask(session)
+            session.release.countDown()
+            Request.ORGANIZE_IMPORTS.check(session, first.awaited())
+            Request.ORGANIZE_IMPORTS.check(session, second.awaited())
+        }
+
+    @Test
+    fun `a request that asks a pending graph query something else, or of other text, takes its place`() {
+        val root = SOURCES.getValue("Node0").lines()
+        val line = root.indexOfFirst { "class Box" in it }
+        val column = root[line].indexOf("Box")
+        waiting(
+            "the references",
+            ask = { session -> session.adapter.findReferencesAsync(session.uri("Node0"), line, column, true) },
+            queued = "project-REFERENCES",
+        ) { session, first ->
+            // the same references without the declaration: another question
+            val other = session.adapter.findReferencesAsync(session.uri("Node0"), line, column, false)
+            assertThat(first).describedAs("the references that another question took the place of").isCancelled()
+            // the same question once a document's text changed
+            session.adapter.updateDocument(session.uri("Node0/Lid"), "class Lid {}\n")
+            val again = session.adapter.findReferencesAsync(session.uri("Node0"), line, column, false)
+            assertThat(other).describedAs("the references that a question of other text took the place of").isCancelled()
+            session.release.countDown()
+            assertThat(again.awaited()).isNotEmpty()
+        }
+    }
 
     /**
      * [then] with a hover of the document [name] at [word], which waits for its module's compile: the document opens with

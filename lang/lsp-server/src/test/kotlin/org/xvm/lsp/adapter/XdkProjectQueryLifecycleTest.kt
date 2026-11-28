@@ -186,16 +186,30 @@ class XdkProjectQueryLifecycleTest {
 
     @ParameterizedTest
     @EnumSource(Feature::class)
-    fun `a newer query supersedes blocked work but preserves shared analysis`(feature: Feature) {
+    fun `a newer query of something else supersedes blocked work but preserves shared analysis`(feature: Feature) {
+        Session().use { session ->
+            session.hold.set(true)
+            val old = session.request(feature)
+            assertThat(session.entered.awaited()).isTrue()
+            val current = session.request(feature, other = true)
+            assertThat(old.isCancelled).isTrue()
+            session.release.countDown()
+            assertThat(current.awaited()).isNotNull()
+            assertThat(session.adapter.getCachedResult(session.libraryUri)?.success).isTrue()
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(Feature::class)
+    fun `an equal newer query shares blocked work, and both answer`(feature: Feature) {
         Session().use { session ->
             session.hold.set(true)
             val old = session.request(feature)
             assertThat(session.entered.awaited()).isTrue()
             val current = session.request(feature)
-            assertThat(old.isCancelled).isTrue()
             session.release.countDown()
+            assertThat(old.awaited()).isNotNull()
             assertThat(current.awaited()).isNotNull()
-            assertThat(session.adapter.getCachedResult(session.libraryUri)?.success).isTrue()
         }
     }
 
@@ -280,18 +294,23 @@ class XdkProjectQueryLifecycleTest {
             assertThat(result.success).describedAs(result.diagnostics.toString()).isTrue()
         }
 
-        fun request(feature: Feature): CompletableFuture<*> =
+        /** The query of [feature]; or, [other], one that asks something else of it, or the same of other text. */
+        fun request(
+            feature: Feature,
+            other: Boolean = false,
+        ): CompletableFuture<*> =
             when (feature) {
                 Feature.REFERENCES -> {
-                    adapter.findReferencesAsync(libraryUri, 0, LIBRARY.indexOf("pick"), true)
+                    adapter.findReferencesAsync(libraryUri, 0, LIBRARY.indexOf("pick"), !other)
                 }
 
                 Feature.CODE_LENSES -> {
+                    if (other) adapter.updateDocument(consumerUri, "\n$CONSUMER")
                     adapter.getCodeLensesAsync(libraryUri, true)
                 }
 
                 Feature.RENAME -> {
-                    adapter.renameAsync(libraryUri, 0, LIBRARY.indexOf("pick"), "choose")
+                    adapter.renameAsync(libraryUri, 0, LIBRARY.indexOf("pick"), if (other) "select" else "choose")
                 }
             }
 
