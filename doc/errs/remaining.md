@@ -1324,17 +1324,59 @@ run-gzhmN9 (a settings change before VS Code wrote the workspace file for X366's
 run-18179416478162994728 (IntelliJ's markers on by default); the extension suite run-MCF6SW (a test's expectation for
 a window of one folder). `:lang:spotlessCheck`, `:lang:detekt`, npmCompile and eslint: no findings.
 
-- [ ] X366's other XDK is this tree's XDK with one entry more in its `javatools.jar`, republished as 0.9.0, not a
-  second XDK version built for the case; its bundled half holds only where `publishLocal` ran from the same tree, as
-  in the container (an older mavenLocal XDK is another XDK too).
-- [ ] X366 does not read the Gradle run's output in VS Code's task terminal (18a.9); IntelliJ's Build Project in
-  Gradle mode is checked only not to be the embedded compiler's.
-- [ ] VS Code: a run of a module name typed into Run Module, which no folder holds, in a window of several folders
-  still runs where the terminal starts.
-- [ ] None of X361–X366 has been in a full-catalog run yet. X366 checks the notice only when its reason is the
-  session's first; after another folder's reason it checks the reason alone and says so.
-- [ ] VS Code: an included build without a wrapper of its own runs at its own root, where `./gradlew` is not;
-  `gradleRoot` does not read the imported model's build roots.
+- [x] VS Code: a run of a module name typed into Run Module, or of a file that no folder holds, in a window of several
+  folders ran where the terminal starts. Run Module now asks with VS Code's folder picker which folder's build runs it,
+  before the name, takes that folder's build mode and runs in its build, and runs nothing when the pick is canceled; a
+  window of one folder runs as before (`8abf0f5edc`). Asked rather than found: the server names a module's project by
+  its path in its build tree, which two builds' root projects share as `:`, as X366's two do. `run-task.test.ts` tests
+  the decision, the source's folder found among the folders given, the innermost of nested ones, with a picker that
+  answers as each check says; the suite's window has one folder, so VS Code's own picker in a window of several is not
+  run.
+- [x] VS Code: an included build without a wrapper of its own ran at its own root, where `./gradlew` is not. `gradleBuild`
+  (`gradle-root.ts`) reads the folders' imported models: a build whose projects' `buildTreePath` is not their
+  `projectPath` (#813) is an included one, and runs its Gradle tasks at the root of the build that includes it, the
+  first build root of the model whose import ran there; without that model, its own root if it has a wrapper of its
+  own, as its report may be left over from a build that no longer includes it, else the nearest wrapper above it.
+  Build, Rebuild and the task provider's folder tasks address its projects (`:included:build :included:app:build`),
+  their paths in the build tree as the including build's model has them, and the provider's Build, Test and Clean run
+  where Run and Build do; Ecstasy: Build and Rebuild run the task that the folder's Build is. Without a model the
+  directory walk is as it was (`f75b739942`, tests in `run-task.test.ts`, the provider's tasks and the shared Build
+  task among them). Still so: without a model nothing says that a build is an included one; an included build beside
+  the including build, in a window without the including build's folder, runs at its own root; Build of an included
+  build builds the Ecstasy projects that the model names; an included build with a wrapper of its own that no model
+  says another build includes runs on its own, where a run of one of its modules names its project by the path in the
+  build tree that its left-over report gives.
+- [x] VS Code's X366 reads the Gradle run's output in the task terminal (18a.9): each terminal's buffer through Terminal:
+  Select All and Copy, a stable command path, until one shows `OtherXdk runs with Gradle` after the run's command line;
+  every terminal is cleared before the Run, and checked to show no earlier run, so that an earlier try's output cannot
+  count (`0619928521`).
+- [ ] IntelliJ's Build Project in Gradle mode is checked only not to be the embedded compiler's.
+- [x] VS Code's notice that a folder builds with Gradle is once a session for each folder while it is in the window,
+  not once a session: a folder is forgotten as it leaves the window, on VS Code's change of the folders, whether a
+  server says anything then or not (`90bd6bd12d`, tested in `build-mode.test.ts`), so X366 checks it whatever cases ran
+  before it, also in a second X366 of the window, whose folders left it (`0619928521`).
+- [ ] IntelliJ's X366 checks the notice only while the project has not been told yet: its notice is once a session for
+  the project.
+- [x] VS Code's X366 makes both XDKs from this tree's `xdk:installDist`, this tree's version and 0.9.0, in its own Maven
+  repository, which the case's settings put before mavenLocal, so its bundled half no longer depends on mavenLocal's
+  XDK (`0619928521`). Gradle takes the SNAPSHOT XDK from that repository without a `maven-metadata.xml`, before
+  mavenLocal's, offline (`./gradlew --offline` with the case's templates, while mavenLocal had 0.4.4-SNAPSHOT too). It
+  holds where this checkout's `xdk:installDist` is of its current sources, as X303 needs; both builds still take the XTC
+  plugin from mavenLocal, whose publication only publishLocal writes.
+- [ ] IntelliJ's X366 still makes the other XDK from mavenLocal's and builds BundledXdk with mavenLocal's XDK: its bundled
+  half holds only where publishLocal ran from the same tree. To take VS Code's way: both XDKs from the catalog's
+  `installed` with its `pom`; then `mavenLocal()` can leave the settings template's dependency repositories.
+- [ ] X366's other XDK is still this tree's with one entry more in its `javatools.jar`, republished as 0.9.0, not a second
+  XDK version built for the case: a build of one takes as long as the XDK's own, and a released one needs Maven Central
+  or a copy in the Gradle cache, which an offline container run cannot count on. The server tells XDKs apart by the
+  SHA-256 of their module files and javatools.jar's entries, which the marker changes.
+- [ ] None of X361–X366 has been in a full-catalog run yet.
+
+Runs, in the container, on errs at `a28850efbb` with the series uncommitted, after an independent review's fixes: VS
+Code run-aAfbLu and run-FVJvz1, X288, X289, X290, X303 and X361–X366, 10 of 10 passed in each, the harness's 28 tests
+first; the extension suite, 116 passing (extension-tests/run-BTd6kh). Before the fixes: run-0vZUGt and run-q8bKjn, with
+X132, X138, X139, X249 and X250 too, 15 of 15 each; the suite, 115 passing (run-C7Nzb3). `:lang:spotlessCheck`,
+npmCompile, and tsc and eslint on each commit's tree: no findings.
 
 ### Beyond the current scope
 
