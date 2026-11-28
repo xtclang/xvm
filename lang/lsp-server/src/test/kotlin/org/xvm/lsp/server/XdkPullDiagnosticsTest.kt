@@ -28,6 +28,7 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDocumentDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceFullDocumentDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
@@ -719,6 +720,90 @@ class XdkPullDiagnosticsTest {
             assertThat(member.delete()).isTrue()
             watched(FileChangeType.Deleted)
             assertThat(session.pull(uri, brokenAgain.resultId).left.items).isEmpty()
+        }
+    }
+
+    /**
+     * The workspace's pull as VS Code's client asks it, with the result ID of each document's report before, which [ids]
+     * keeps: its full reports.
+     */
+    private fun Session.workspacePull(ids: MutableMap<String, String>): List<WorkspaceFullDocumentDiagnosticReport> {
+        val items = workspace(ids.map { PreviousResultId(it.key, it.value) }).items
+        items.forEach { if (it.isLeft) ids[it.left.uri] = it.left.resultId else ids[it.right.uri] = it.right.resultId }
+        return items.mapNotNull { it.left }
+    }
+
+    /** What [session]'s watcher reports of [file], as VS Code's does once it watches the file's folder. */
+    private fun watched(
+        session: Session,
+        file: File,
+        type: FileChangeType,
+    ) = session.server.workspaceService.didChangeWatchedFiles(
+        DidChangeWatchedFilesParams(listOf(FileEvent(file.toURI().toString(), type))),
+    )
+
+    @Test
+    fun `a closed member of the graph comes and goes in the workspace's pull as the watcher reports it created and deleted`() {
+        val workspace = directory.toRealPath().toFile()
+        val root = workspace.resolve("Project.x").apply { writeText("module Project {}\n") }
+        workspace.resolve("Project/Member.x").apply { parentFile.mkdirs() }.writeText("class Member {}\n")
+        val bad = workspace.resolve("Project/Bad.x")
+        Session().use { session ->
+            session.server.changeCompilerWorkspaceFolders(listOf(workspace.toURI().toString()), emptyList())
+            session.server.discoveryIdle().awaited()
+            session.open(root.toURI().toString(), root.readText(), 1)
+            val ids = mutableMapOf<String, String>()
+            assertThat(session.workspacePull(ids).map { it.uri }).noneMatch { it.endsWith("/Bad.x") }
+
+            bad.writeText("class Bad extends Missing {}")
+            watched(session, bad, FileChangeType.Created)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Bad.x") }.items).isNotEmpty()
+            assertThat(bad.delete()).isTrue()
+            watched(session, bad, FileChangeType.Deleted)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Bad.x") }.items).isEmpty()
+        }
+    }
+
+    @Test
+    fun `a closed member of a module outside the graph, one of two of a name, comes and goes with the watcher's events`() {
+        val workspace = directory.toRealPath().toFile()
+
+        // two modules named Project, as the editor playbooks' cases have them side by side, which leave the graph
+        fun project(folder: String): File {
+            workspace.resolve("$folder/Project/Child.x").apply { parentFile.mkdirs() }.writeText("class Child extends Base<String> {}\n")
+            return workspace.resolve("$folder/Project.x").apply { writeText("module Project {\n    class Base<T> {}\n}\n") }
+        }
+        val first = project("First")
+        val second = project("Second")
+        val child = workspace.resolve("First/Project/Child.x")
+        val bad = workspace.resolve("Second/Project/Bad.x")
+
+        fun Session.didClose(file: File) =
+            server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(file.toURI().toString())))
+        Session().use { session ->
+            session.server.changeCompilerWorkspaceFolders(listOf(workspace.toURI().toString()), emptyList())
+            session.server.discoveryIdle().awaited()
+            val ids = mutableMapOf<String, String>()
+            // the first module's root and a member that an edit breaks, mends and closes, as the case before does
+            session.open(first.toURI().toString(), first.readText(), 1)
+            session.workspacePull(ids)
+            session.open(child.toURI().toString(), child.readText(), 1)
+            session.change(child.toURI().toString(), "class Child extends Missing {}\n", 2)
+            assertThat(session.pull(child.toURI().toString()).left.items).isNotEmpty()
+            session.change(child.toURI().toString(), child.readText(), 3)
+            session.didClose(child)
+            session.workspacePull(ids)
+            session.didClose(first)
+            session.workspacePull(ids)
+
+            session.open(second.toURI().toString(), second.readText(), 1)
+            session.workspacePull(ids)
+            bad.writeText("class Bad extends Missing {}")
+            watched(session, bad, FileChangeType.Created)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Second/Project/Bad.x") }.items).isNotEmpty()
+            assertThat(bad.delete()).isTrue()
+            watched(session, bad, FileChangeType.Deleted)
+            assertThat(session.workspacePull(ids).single { it.uri.endsWith("/Second/Project/Bad.x") }.items).isEmpty()
         }
     }
 
