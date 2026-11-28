@@ -820,6 +820,7 @@ internal fun ParityScenarios.platformCases() {
             val document = open(variant.string("root"))
             clean(document)
             with(driver) {
+                val refusals = IdeRefusals(this)
                 withContext(OnDispatcher.EDT) {
                     utility(FileTreeOperations::class)
                         .rename(
@@ -829,7 +830,7 @@ internal fun ParityScenarios.platformCases() {
                 }
                 chooseXtcFileRename()
                 fillRenameDialog(variant.string("newName"))
-                awaitUi("native file rename updates references", HANG_LIMIT) {
+                awaitApplied("native file rename updates references", refusals::first) {
                     document.text == variant.string("expected")
                 }
             }
@@ -924,6 +925,7 @@ internal fun ParityScenarios.platformCases() {
         try {
             clean(document)
             with(driver) {
+                val refusals = IdeRefusals(this)
                 withContext(OnDispatcher.EDT) {
                     utility(FileTreeOperations::class)
                         .move(
@@ -943,7 +945,7 @@ internal fun ParityScenarios.platformCases() {
                         Files.exists(target.resolve(it)) == expected &&
                             Files.exists(directory.resolve(it)) != expected
                     }
-                awaitUi("all selected containers moved", HANG_LIMIT) { moved(true) }
+                awaitApplied("all selected containers moved", refusals::first) { moved(true) }
                 clean(document)
                 listOf("\$Undo" to false, "\$Redo" to true).forEach { (action, expected) ->
                     // A file-only Move belongs to project history, not the unchanged Consumer

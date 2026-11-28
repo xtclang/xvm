@@ -10,8 +10,8 @@ internal fun ParityScenarios.documentationCases() {
         val document = open(data.string("file"), source)
         configure(listOf(SharedScenarios.SourceModule("Documentation", document.uri, emptyList())))
         clean(document)
-        with(driver) { quickFix(document.editor, document.at(data.string("anchor")), data.string("title")) }
-        awaitUi("documentation matches the compiler signature", HANG_LIMIT) { document.text == expected }
+        val refusals = with(driver) { quickFix(document.editor, document.at(data.string("anchor")), data.string("title")) }
+        awaitApplied("documentation matches the compiler signature", refusals::first) { document.text == expected }
         clean(document)
         val at = ParityWorkspace.position(document.text, document.at(data.string("anchor")))
         val actions =

@@ -66,8 +66,8 @@ fun Driver.renameFamily(
             .forEach { check(root.resolve(it["file"].asString).toString() !in opened) }
     }
     if (data.values.has("outsideUses") || data.values.has("unchangedSpellings")) dismissServerMessages()
-    rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
-    awaitUi("$id source and resource edits applied", HANG_LIMIT) {
+    val refusals = rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
+    awaitApplied("$id source and resource edits applied", refusals::first) {
         files.all { file ->
             val destination = file["destination"].asString
             Files.exists(root.resolve(destination)) &&

@@ -1528,12 +1528,13 @@ class CompilerPlaybook(
                 discovered(id) { data ->
                     val editor = open(data.text("file"))
                     editor.awaitDiagnostics(emptyList())
-                    rename(
-                        editor,
-                        editor.text.indexOf(data.text("anchor")),
-                        data.text("replacement"),
-                    )
-                    awaitUi("all source rename edits applied", HANG_LIMIT) {
+                    val refusals =
+                        rename(
+                            editor,
+                            editor.text.indexOf(data.text("anchor")),
+                            data.text("replacement"),
+                        )
+                    awaitApplied("all source rename edits applied", refusals::first) {
                         editor.text.split(data.text("replacement")).size - 1 ==
                             data.values["edits"].asInt
                     }
@@ -1549,8 +1550,8 @@ class CompilerPlaybook(
                 val editor = open(data.text("file"))
                 editor.awaitDiagnostics(emptyList())
                 val root = Path.of(editor.editor.getVirtualFile().getPath()).parent
-                rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
-                awaitUi("type rename moves the member file", HANG_LIMIT) {
+                val refusals = rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
+                awaitApplied("type rename moves the member file", refusals::first) {
                     Files.exists(root.resolve(data.text("destination"))) &&
                         !Files.exists(root.resolve(data.text("member"))) &&
                         editor.text.contains(data.text("replacement"))
@@ -1570,12 +1571,13 @@ class CompilerPlaybook(
                 val reopened = open(data.text("file"))
                 reopened.awaitDiagnostics(emptyList())
                 // Restore through the same native refactoring path, including the reverse move.
-                rename(
-                    reopened,
-                    reopened.text.indexOf(data.text("replacement")),
-                    data.text("anchor"),
-                )
-                awaitUi("reverse rename restores source and the member", HANG_LIMIT) {
+                val reverse =
+                    rename(
+                        reopened,
+                        reopened.text.indexOf(data.text("replacement")),
+                        data.text("anchor"),
+                    )
+                awaitApplied("reverse rename restores source and the member", reverse::first) {
                     Files.exists(root.resolve(data.text("member"))) &&
                         !Files.exists(root.resolve(data.text("destination"))) &&
                         reopened.text == data.text("source")
@@ -1690,20 +1692,20 @@ class CompilerPlaybook(
                     // Diagnostic quick fixes use a caret at the error; expression refactorings
                     // use the complete selection specified by the shared scenario.
                     val selectionEnd = if (data.values["initiallyValid"]?.asBoolean == false) at else at + data.text("selected").length
-                    quickFix(editor, at, data.text("title"), selectionEnd)
+                    val refusals = quickFix(editor, at, data.text("title"), selectionEnd)
                     if (companion) {
                         // TODO LSP4IJ: UP89 — LSP4IJ applies a resolved action's edit only to the documents as they
                         // were when the action ran, and refuses the whole edit, with an error hint only, when a target
                         // was opened since ("The document was opened after the edit was requested"), even a closed file
                         // opened with its text unchanged, as the companion was when it opened before the reply (X214,
                         // in run-7200481125011092613). It opens once the edit has changed its document.
-                        awaitUi("local refactoring changes the closed ${data.text("destinationFile")}", HANG_LIMIT) {
+                        awaitApplied("local refactoring changes the closed ${data.text("destinationFile")}", refusals::first) {
                             documentText(data.text("destinationFile")) == data.text("expected")
                         }
                     }
                     val destination = if (companion) open(data.text("destinationFile")) else editor
                     val destinationOriginal = if (companion) data.text("destinationSource") else original
-                    awaitUi("local refactoring matches shared source", HANG_LIMIT) { destination.text == data.text("expected") }
+                    awaitApplied("local refactoring matches shared source", refusals::first) { destination.text == data.text("expected") }
                     outsideUses?.let { message ->
                         // LSP4IJ runs the command after the edit, and shows the server's message as a notification
                         awaitUi("the message on modules outside the workspace", HANG_LIMIT) { message in serverMessages() }
@@ -1744,12 +1746,13 @@ class CompilerPlaybook(
                 data.rows("variants").forEach { variant ->
                     editor.text = variant["source"].asString
                     editor.awaitError()
-                    quickFix(
-                        editor,
-                        editor.text.indexOf(variant["anchor"].asString),
-                        variant["title"].asString,
-                    )
-                    awaitUi("native import quick fix applied", HANG_LIMIT) {
+                    val refusals =
+                        quickFix(
+                            editor,
+                            editor.text.indexOf(variant["anchor"].asString),
+                            variant["title"].asString,
+                        )
+                    awaitApplied("native import quick fix applied", refusals::first) {
                         variant["importText"].asString in editor.text
                     }
                     editor.awaitDiagnostics(emptyList())

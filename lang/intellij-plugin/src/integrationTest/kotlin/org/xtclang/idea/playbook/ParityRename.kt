@@ -182,10 +182,8 @@ internal fun ParityWorkspace.applyRename(
     name: String,
 ) {
     val before = document.text
-    with(driver) {
-        rename(document.editor, at, name)
-        awaitUi("native rename changes ${document.file}", HANG_LIMIT) { document.text != before }
-    }
+    val refusals = with(driver) { rename(document.editor, at, name) }
+    awaitApplied("native rename changes ${document.file}", refusals::first) { document.text != before }
     settle(document)
     clean(document)
 }

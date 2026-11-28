@@ -82,9 +82,9 @@ fun Driver.focusRecovery(
         // Capture the same guard before a real rename, then prove it rejects any replay afterward.
         val renameInspection =
             PopupInspection(this, editor) { error("A completed rename must never be replayed") }
-        rename(editor, document.at("word"), "text")
         val renamed = accepted.replace("word", "text")
-        awaitUi("rename applied exactly once", HANG_LIMIT) { editor.text == renamed }
+        val refusals = rename(editor, document.at("word"), "text")
+        awaitApplied("rename applied exactly once", refusals::first) { editor.text == renamed }
         interruptFocus(editor) {
             val failure = runCatching { renameInspection.recover() }.exceptionOrNull()
             check(
@@ -104,6 +104,7 @@ fun Driver.focusRecovery(
         var opened = 0
         focusEditor(editor)
         withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(editor.text.indexOf("pair(Int")) }
+        val generation = IdeRefusals(this, editor.editor)
         choosePopup(editor, listOf(title), title) {
             invokeAction("ShowIntentionActions", now = false, component = editor.component)
             if (opened++ == 0) {
@@ -111,7 +112,7 @@ fun Driver.focusRecovery(
                 dismissPopups()
             }
         }
-        awaitUi("the documentation comment is generated", HANG_LIMIT) { "@param number TODO" in editor.text }
+        awaitApplied("the documentation comment is generated", generation::first) { "@param number TODO" in editor.text }
         check(opened >= 2 && editor.text.split("TODO: add description.").size == 2) {
             "Expected one comment after reopening the closed menu ($opened openings): ${editor.text}"
         }

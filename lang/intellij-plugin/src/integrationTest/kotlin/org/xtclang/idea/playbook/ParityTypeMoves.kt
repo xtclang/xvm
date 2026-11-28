@@ -85,6 +85,7 @@ internal fun ParityScenarios.typeMoveCases() {
             refresh(target)
             with(driver) {
                 if (data.has("outsideUses")) dismissServerMessages()
+                val refusals = IdeRefusals(this)
                 withContext(OnDispatcher.EDT) {
                     utility(FileTreeOperations::class).move(
                         singleProject(),
@@ -101,7 +102,7 @@ internal fun ParityScenarios.typeMoveCases() {
                 withContext(OnDispatcher.EDT) { cast(dialog.button("Refactor").component, NativeButton::class).doClick() }
 
                 fun verify(moved: Boolean) {
-                    awaitUi("source Move ${if (moved) "applied" else "undone"}", HANG_LIMIT) {
+                    awaitApplied("source Move ${if (moved) "applied" else "undone"}", refusals::first) {
                         files.all { file ->
                             val path = directory.resolve(file.string(if (moved) "destination" else "file"))
                             val expected = file.string(if (moved) "expected" else "source")
