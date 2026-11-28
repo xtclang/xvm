@@ -8,17 +8,49 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 
-import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.charset.StandardCharsets;
+
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.UserPrincipal;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+import java.time.Duration;
+import java.time.Instant;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+
+import java.util.concurrent.ConcurrentHashMap;
+
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+import java.util.stream.Stream;
+
+import org.xvm.util.Lazy;
 
 /**
  * A simple ModuleRepository that manages its contents in a directory.
@@ -50,10 +82,26 @@ public class DirRepository
      * @param fReadOnly  true to make the repository "read-only"
      */
     public DirRepository(File dir, boolean fReadOnly) {
+        this(dir, fReadOnly, USER_CACHE);
+    }
+
+    /**
+     * Construct a File System ModuleRepository that keeps its persistent cache in the given place.
+     *
+     * @param dir        the directory that contains the repository contents
+     * @param fReadOnly  true to make the repository "read-only"
+     * @param cache      the directory to keep the persistent cache in
+     */
+    DirRepository(File dir, boolean fReadOnly, CacheDirectory cache) {
+        this(dir, fReadOnly, () -> cache);
+    }
+
+    private DirRepository(File dir, boolean fReadOnly, Supplier<CacheDirectory> cache) {
         assert dir != null && dir.isDirectory();
 
-        m_dir = dir;
-        m_fRO = fReadOnly;
+        m_dir   = dir;
+        m_fRO   = fReadOnly;
+        m_cache = cache;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -83,8 +131,20 @@ public class DirRepository
     @Override
     public synchronized ModuleStructure loadModule(String sModule) {
         ensureCache();
-        ModuleInfo info = modulesByName.get(sModule);
-        return info == null ? null : info.ensureModule();
+        ModuleStructure module = loadIndexed(sModule);
+        if (module == null || module.getIdentityConstant().getName().equals(sModule)) {
+            return module;
+        }
+
+        // the index named a file that holds another module, so the persistent cache it came from
+        // is stale or forged; trust none of it and read every file again
+        Optional.ofNullable(m_dir.listFiles(ModulesOnly))
+                .ifPresentOrElse(files -> scan(files, Map.of(), true), this::clearCache);
+
+        module = loadIndexed(sModule);
+        return module == null || module.getIdentityConstant().getName().equals(sModule)
+                ? module
+                : null;
     }
 
     @Override
@@ -166,6 +226,17 @@ public class DirRepository
             }
         }
 
+        scan(files, oldModulesByFile, fWriteCache);
+    }
+
+    /**
+     * Index the module files, reusing the information known for each file that has not changed.
+     *
+     * @param files             the module files
+     * @param oldModulesByFile  the information known for the files
+     * @param fWriteCache       true to save the persistent cache even if nothing changed
+     */
+    private void scan(File[] files, Map<File, ModuleInfo> oldModulesByFile, boolean fWriteCache) {
         Map<File, ModuleInfo> newModulesByFile = new HashMap<>();
 
         modulesByFile = newModulesByFile;
@@ -199,6 +270,18 @@ public class DirRepository
     }
 
     /**
+     * Load a module through the index, which may have come from the persistent cache.
+     *
+     * @param sModule  the module name
+     *
+     * @return the module that the index names a file for, or null
+     */
+    private ModuleStructure loadIndexed(String sModule) {
+        ModuleInfo info = modulesByName.get(sModule);
+        return info == null ? null : info.ensureModule();
+    }
+
+    /**
      * Create the information cached for a module file.
      *
      * @param file  the module file
@@ -215,20 +298,32 @@ public class DirRepository
      * @return the cached module information, or null if no valid cache exists
      */
     private Map<File, ModuleInfo> readCache() {
-        File fileCache = getCacheFile();
-        if (fileCache == null || !fileCache.isFile()) {
+        Path pathCache = getCacheFile();
+        if (pathCache == null) {
             return null;
         }
 
-        try (DataInputStream in = new DataInputStream(
-                new BufferedInputStream(Files.newInputStream(fileCache.toPath())))) {
+        long cbCache;
+        try {
+            BasicFileAttributes attrs = Files.readAttributes(pathCache, BasicFileAttributes.class,
+                    LinkOption.NOFOLLOW_LINKS);
+            if (!attrs.isRegularFile()) {
+                return null;
+            }
+            cbCache = attrs.size();
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(
+                Files.newInputStream(pathCache, LinkOption.NOFOLLOW_LINKS)))) {
             if (in.readInt() != CACHE_MAGIC || in.readInt() != CACHE_VERSION ||
                     !in.readUTF().equals(m_dir.getCanonicalPath())) {
                 return null;
             }
 
             int  cModules  = in.readInt();
-            long cbEntries = fileCache.length() - MIN_CACHE_HEADER_SIZE;
+            long cbEntries = cbCache - MIN_CACHE_HEADER_SIZE;
             if (cModules < 0 || cbEntries < (long) cModules * MIN_CACHE_ENTRY_SIZE) {
                 // probably a corrupted file
                 return null;
@@ -263,20 +358,22 @@ public class DirRepository
      * Save enough module information to avoid deserializing unchanged files in the next process.
      */
     private void writeCache() {
-        File fileCache = getCacheFile();
-        if (fileCache == null) {
+        Path pathCache = getCacheFile();
+        if (pathCache == null) {
             return;
         }
 
-        Path pathCache = fileCache.toPath();
-        Path pathTemp  = null;
+        Path pathTemp = null;
         try {
-            Path pathDir = pathCache.getParent();
-            Files.createDirectories(pathDir);
-            pathTemp = Files.createTempFile(pathDir, fileCache.getName(), ".tmp");
+            // a new file of this process's own, next to the cache file and moved over it, so that
+            // a reader sees the old cache or the new one, and a link at either name is never
+            // written through
+            pathTemp = Files.createTempFile(pathCache.getParent(),
+                    pathCache.getFileName().toString(), ".tmp");
 
-            try (DataOutputStream out = new DataOutputStream(
-                    new BufferedOutputStream(Files.newOutputStream(pathTemp)))) {
+            try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
+                    Files.newOutputStream(pathTemp, StandardOpenOption.WRITE,
+                            LinkOption.NOFOLLOW_LINKS)))) {
                 out.writeInt(CACHE_MAGIC);
                 out.writeInt(CACHE_VERSION);
                 out.writeUTF(m_dir.getCanonicalPath());
@@ -293,12 +390,10 @@ public class DirRepository
                 }
             }
 
-            try {
-                Files.move(pathTemp, pathCache,
-                        StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(pathTemp, pathCache, StandardCopyOption.REPLACE_EXISTING);
-            }
+            // without an atomic move there is no cache, rather than one that a reader sees half
+            // written
+            Files.move(pathTemp, pathCache,
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             pathTemp = null;
         } catch (IOException | RuntimeException ignore) {
             // a persistent cache is only a performance aid
@@ -318,19 +413,23 @@ public class DirRepository
     }
 
     /**
-     * @return the persistent cache file for this repository, or null if it cannot be determined
+     * @return the persistent cache file for this repository, named by the SHA-256 of the
+     *         repository's canonical path, or null if the repository is a throwaway one or there
+     *         is no cache directory to use
      */
-    private File getCacheFile() {
-        String tempDir = System.getProperty("java.io.tmpdir");
-        if (tempDir == null) {
-            return null;
-        }
-
+    private Path getCacheFile() {
         try {
-            String path = m_dir.getCanonicalPath();
-            String key  = Integer.toUnsignedString(path.hashCode(), 16);
-            return new File(new File(tempDir, CACHE_DIRECTORY), key + CACHE_SUFFIX);
-        } catch (IOException | RuntimeException e) {
+            CacheDirectory cache    = m_cache.get();
+            String         sPath    = m_dir.getCanonicalPath();
+            Path           dirCache = cache.caches(Path.of(sPath)) ? cache.checked() : null;
+            if (dirCache == null) {
+                return null;
+            }
+
+            byte[] abHash = MessageDigest.getInstance("SHA-256")
+                    .digest(sPath.getBytes(StandardCharsets.UTF_8));
+            return dirCache.resolve(HexFormat.of().formatHex(abHash) + CACHE_SUFFIX);
+        } catch (IOException | NoSuchAlgorithmException | RuntimeException e) {
             return null;
         }
     }
@@ -427,6 +526,302 @@ public class DirRepository
         private transient ModuleStructure module;
     }
 
+    // ----- inner class: CacheDirectory -----------------------------------------------------------
+
+    /**
+     * The directory that keeps a user's persistent caches: the first of its candidates that is, or
+     * can be made, a directory of the user's own that no one else can write, in a parent that no
+     * one else can rename it out of. Each use checks it again without following links; a link, a
+     * directory that another user owns, or one that its group or others can write is never used.
+     * Without a directory to use, there is no persistent cache, and a repository reads its module
+     * files instead. The first time a directory passes its check in this process, the cache files
+     * in it that have not been written for {@link #MAX_AGE} are deleted, so that the caches of
+     * repositories that are gone do not pile up.
+     */
+    static final class CacheDirectory {
+        /**
+         * The candidate directories, in order of preference.
+         */
+        private final List<Path> candidates;
+
+        /**
+         * The real path of the temporary directory, whose repositories are throwaway ones that are
+         * not worth caching, or null to cache repositories anywhere.
+         */
+        private final Path temporary;
+
+        /**
+         * Whether the current user owns a path, without following a link.
+         */
+        private final Predicate<Path> owned;
+
+        /**
+         * The directories already pruned in this process.
+         */
+        private final Set<Path> pruned = ConcurrentHashMap.newKeySet();
+
+        /**
+         * Construct a cache directory that the current user must own.
+         *
+         * @param candidates  the candidate directories, in order of preference
+         * @param temporary   the real path of the directory whose repositories are not cached, or
+         *                    null to cache repositories anywhere
+         */
+        CacheDirectory(List<Path> candidates, Path temporary) {
+            this(candidates, temporary, ownedByCurrentUser());
+        }
+
+        /**
+         * Construct a cache directory.
+         *
+         * @param candidates  the candidate directories, in order of preference
+         * @param temporary   the real path of the directory whose repositories are not cached, or
+         *                    null to cache repositories anywhere
+         * @param owned       whether the current user owns a path, without following a link
+         */
+        CacheDirectory(List<Path> candidates, Path temporary, Predicate<Path> owned) {
+            this.candidates = List.copyOf(candidates);
+            this.temporary  = temporary;
+            this.owned      = owned;
+        }
+
+        /**
+         * @return the candidate directories, in order of preference
+         */
+        List<Path> getCandidates() {
+            return candidates;
+        }
+
+        /**
+         * @param pathRepo  the canonical path of a repository directory
+         *
+         * @return true if the repository is worth caching: one that is not in the temporary
+         *         directory
+         */
+        boolean caches(Path pathRepo) {
+            return temporary == null || !pathRepo.startsWith(temporary);
+        }
+
+        /**
+         * @return the first candidate that is a directory of the current user's that no one else
+         *         can write, made for its owner alone if it did not exist, or null if there is none
+         */
+        Path checked() {
+            for (Path dir : candidates) {
+                if (usable(made(dir))) {
+                    if (pruned.add(dir)) {
+                        prune(dir);
+                    }
+                    return dir;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * @param dir  a candidate directory
+         *
+         * @return true if the directory is a directory, not a link, that the current user owns,
+         *         that its group and others cannot write, and that others cannot rename away
+         */
+        private boolean usable(Path dir) {
+            try {
+                BasicFileAttributes attrs = Files.readAttributes(dir, BasicFileAttributes.class,
+                        LinkOption.NOFOLLOW_LINKS);
+                // a Windows junction is "other"
+                if (attrs.isSymbolicLink() || attrs.isOther() || !attrs.isDirectory() ||
+                        !owned.test(dir)) {
+                    return false;
+                }
+
+                PosixFileAttributeView view = Files.getFileAttributeView(dir,
+                        PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+                if (view != null) {
+                    Set<PosixFilePermission> perms = view.readAttributes().permissions();
+                    if (perms.contains(PosixFilePermission.GROUP_WRITE) ||
+                            perms.contains(PosixFilePermission.OTHERS_WRITE)) {
+                        return false;
+                    }
+                }
+
+                // in a parent that anyone can write, only the sticky bit keeps others from
+                // renaming the directory away and putting their own in its place
+                Path parent = dir.getParent();
+                if (parent != null &&
+                        dir.getFileSystem().supportedFileAttributeViews().contains("unix")) {
+                    int nMode = (Integer) Files.getAttribute(parent, "unix:mode");
+                    return (nMode & OTHERS_WRITABLE) == 0 || (nMode & STICKY) != 0;
+                }
+                return true;
+            } catch (IOException | RuntimeException e) {
+                return false;
+            }
+        }
+
+        /**
+         * Delete the cache files and the temporary files in a checked directory that have not been
+         * written for {@link #MAX_AGE}, if they are this user's regular files; never what a link
+         * names.
+         *
+         * @param dir  the directory
+         */
+        private void prune(Path dir) {
+            FileTime timeOldest = FileTime.from(Instant.now().minus(MAX_AGE));
+            try (DirectoryStream<Path> files = Files.newDirectoryStream(dir, "*.{cache,tmp}")) {
+                for (Path file : files) {
+                    try {
+                        BasicFileAttributes attrs = Files.readAttributes(file,
+                                BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+                        if (attrs.isRegularFile() && owned.test(file) &&
+                                attrs.lastModifiedTime().compareTo(timeOldest) < 0) {
+                            Files.deleteIfExists(file);
+                        }
+                    } catch (IOException | RuntimeException e) {
+                        // another file may still be pruned
+                    }
+                }
+            } catch (IOException | RuntimeException e) {
+                // pruning is only housekeeping
+            }
+        }
+
+        /**
+         * Make a directory for its owner alone where the file system has permissions, unless
+         * something is already there, which {@link #usable} then checks.
+         *
+         * @param dir  the directory
+         *
+         * @return the directory
+         */
+        private static Path made(Path dir) {
+            try {
+                Path parent = dir.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
+                }
+                if (dir.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+                    Files.createDirectory(dir, PosixFilePermissions.asFileAttribute(
+                            PosixFilePermissions.fromString("rwx------")));
+                } else {
+                    Files.createDirectory(dir);
+                }
+            } catch (FileAlreadyExistsException e) {
+                // made by an earlier process, or by someone else, which usable() checks
+            } catch (IOException | RuntimeException e) {
+                // usable() finds nothing to use
+            }
+            return dir;
+        }
+
+        /**
+         * @return the current user's cache directory
+         */
+        static CacheDirectory forCurrentUser() {
+            return forUser(System.getProperty("os.name", ""), System::getenv, System::getProperty);
+        }
+
+        /**
+         * @param sOS         the name of the operating system
+         * @param env         the environment variables, null for the ones not set
+         * @param properties  the system properties, null for the ones not set
+         *
+         * @return the user's cache directory: {@code xtclang/dir-repository} in
+         *         {@code ~/Library/Caches} on macOS, in {@code %LOCALAPPDATA%} on Windows, and in
+         *         {@code $XDG_CACHE_HOME} or {@code ~/.cache} on other systems, else a directory
+         *         named for the user in {@code java.io.tmpdir}; repositories in
+         *         {@code java.io.tmpdir} are not cached
+         */
+        static CacheDirectory forUser(String sOS, Function<String, String> env,
+                                      Function<String, String> properties) {
+            Optional<Path> home = absolute(properties.apply("user.home"));
+            Optional<Path> dirBase;
+            if (sOS.startsWith("Windows")) {
+                dirBase = absolute(env.apply("LOCALAPPDATA"));
+            } else if (sOS.startsWith("Mac")) {
+                dirBase = home.map(path -> path.resolve("Library").resolve("Caches"));
+            } else {
+                dirBase = absolute(env.apply("XDG_CACHE_HOME"))
+                        .or(() -> home.map(path -> path.resolve(".cache")));
+            }
+            Optional<Path> dirUser = dirBase.map(path ->
+                    path.resolve("xtclang").resolve("dir-repository"));
+
+            String         sUser       = Objects.requireNonNullElse(properties.apply("user.name"), "");
+            Optional<Path> dirTemp     = absolute(properties.apply("java.io.tmpdir"));
+            Optional<Path> dirFallback = dirTemp.map(path -> path.resolve(
+                    "xtclang-dir-repository-" + sUser.replaceAll("[^A-Za-z0-9._-]", "_")));
+            return new CacheDirectory(
+                    Stream.of(dirUser, dirFallback).flatMap(Optional::stream).toList(),
+                    dirTemp.flatMap(CacheDirectory::real).orElse(null));
+        }
+
+        /**
+         * @param sPath  a path, or null
+         *
+         * @return the path, if it is an absolute one
+         */
+        private static Optional<Path> absolute(String sPath) {
+            if (sPath == null || sPath.isEmpty()) {
+                return Optional.empty();
+            }
+
+            try {
+                return Optional.of(Path.of(sPath)).filter(Path::isAbsolute);
+            } catch (InvalidPathException e) {
+                return Optional.empty();
+            }
+        }
+
+        /**
+         * @param path  a path
+         *
+         * @return the real path, if there is one
+         */
+        private static Optional<Path> real(Path path) {
+            try {
+                return Optional.of(path.toRealPath());
+            } catch (IOException | RuntimeException e) {
+                return Optional.empty();
+            }
+        }
+
+        /**
+         * @return whether the current user, the owner of a file that this process makes, owns a
+         *         path; true of every path on a file system without owners
+         */
+        private static Predicate<Path> ownedByCurrentUser() {
+            UserPrincipal user;
+            try {
+                Path probe = Files.createTempFile("xvm-owner-", null);
+                try {
+                    user = Files.getOwner(probe, LinkOption.NOFOLLOW_LINKS);
+                } finally {
+                    Files.deleteIfExists(probe);
+                }
+            } catch (UnsupportedOperationException e) {
+                return path -> true;
+            } catch (IOException | RuntimeException e) {
+                return path -> false;
+            }
+
+            return path -> {
+                try {
+                    return user.equals(Files.getOwner(path, LinkOption.NOFOLLOW_LINKS));
+                } catch (IOException e) {
+                    return false;
+                }
+            };
+        }
+
+        /**
+         * How long a cache file may go unwritten before it is deleted.
+         */
+        static final Duration MAX_AGE = Duration.ofDays(30);
+
+        private static final int OTHERS_WRITABLE = 0002;
+        private static final int STICKY          = 01000;
+    }
+
     // ----- constants -----------------------------------------------------------------------------
 
     public static final FileFilter ModulesOnly = file ->
@@ -437,13 +832,18 @@ public class DirRepository
     private static final int    CACHE_VERSION         = 1;
     private static final int    MIN_CACHE_HEADER_SIZE = Integer.BYTES * 3 + Short.BYTES;
     private static final int    MIN_CACHE_ENTRY_SIZE  = Long.BYTES * 2 + Short.BYTES + Byte.BYTES;
-    private static final String CACHE_DIRECTORY       = "xvm-dir-repository";
     private static final String CACHE_SUFFIX          = ".cache";
+
+    /**
+     * The current user's cache directory, found on first use.
+     */
+    private static final Lazy<CacheDirectory> USER_CACHE = Lazy.of(CacheDirectory::forCurrentUser);
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final File    m_dir;
-    private final boolean m_fRO;
+    private final File                     m_dir;
+    private final boolean                  m_fRO;
+    private final Supplier<CacheDirectory> m_cache;
 
     private       Map<File  , ModuleInfo> modulesByFile = new HashMap<>();
     private final Map<String, ModuleInfo> modulesByName = new TreeMap<>();
