@@ -37,7 +37,7 @@ download = "5.7.0"
 foojay-resolver = "1.0.0"
 gradle-portal-publish = "2.2.1"
 palantir-git-version = "5.2.0"
-spotless = "8.11.0"
+spotless = "8.12.0"
 vanniktech-maven-publish = "0.37.0"
 
 # =============================================================================
@@ -69,7 +69,7 @@ lang-ktlint = "1.8.0"
 # =============================================================================
 # Lang tooling - LSP, DAP & logging
 # =============================================================================
-lang-logback = "1.6.7"
+lang-logback = "1.6.8"
 lang-lsp4j = "1.0.0"
 lang-slf4j = "2.0.20"
 
@@ -114,7 +114,7 @@ lang-zig = "0.15.2"
 # vulnerable Jackson versions on their build script classpaths, and both are already
 # at their latest release. The Jackson BOM raises that floor without pinning.
 lang-jackson = "2.23.0"
-lang-jsoup = "1.23.2"
+lang-jsoup = "1.24.1"
 
 # Align the modules that JetBrains Starter and the IntelliJ test framework resolve.
 lang-intellij-netty = "4.2.21.Final"
