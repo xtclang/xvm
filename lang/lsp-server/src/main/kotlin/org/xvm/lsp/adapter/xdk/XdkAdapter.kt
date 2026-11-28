@@ -1015,7 +1015,8 @@ class XdkAdapter
         /**
          * Called under lifecycle. Queues a compile of [scope] for [uri], with the open documents of the modules it
          * builds; one that brings a new input, [retire], first retires the analyses that it affects. One that brings none
-         * ends the compile of [scope] that it replaces, which, superseded, would never run nor end.
+         * ends the compile of [scope] that it replaces, which, superseded, would never run nor end, and is its successor,
+         * on which the queries on it go on.
          */
         private fun submit(
             scope: String,
@@ -1067,8 +1068,8 @@ class XdkAdapter
                 if (retire) {
                     retireRequests(project.affected(scope))
                 } else {
-                    // as a member's open with its file's text replaces the compile that a query of a closed member waits on
-                    listOfNotNull(requests.remove(scope)?.also(::removeQueued)) to emptyList()
+                    // a member's open with its file's text ends the compile it replaces, whose queries go on, on its successor
+                    listOfNotNull(requests.remove(scope)?.also(::removeQueued)?.also { it.successor = request }) to emptyList()
                 }
             requests[scope] = request
             scheduled[request] =
@@ -1392,7 +1393,16 @@ class XdkAdapter
         private fun isStale(request: CursorRequest): Boolean =
             cursors[request.key] !== request ||
                 request.result.isCancelled ||
-                isStale(request.compilation)
+                isOvertaken(request.compilation)
+
+        /** The compile that answers the queries on [request] now: itself, or its [Request.successor]'s, as it was replaced. */
+        private fun current(request: Request): Request = generateSequence(request) { it.successor }.last()
+
+        /**
+         * Whether a change of what [compilation] read overtakes the queries on it: neither it nor the compile that replaced
+         * it as a member opened with its file's text ([current]) is its module's.
+         */
+        private fun isOvertaken(compilation: Request): Boolean = isStale(current(compilation))
 
         private fun runCursorAnalysis(request: CursorRequest) {
             try {
@@ -1532,6 +1542,13 @@ class XdkAdapter
             /** Set, on an XDK copy's compile, by a project's work that it must not keep waiting; see [yieldCopyCompiles]. */
             @Volatile
             var preempted = false
+
+            /**
+             * The compile that replaced this one as a member of the graph opened with its file's text, which reads what
+             * this one reads: the queries on this one go on, on it ([current]).
+             */
+            @Volatile
+            var successor: Request? = null
         }
 
         /** How far an analysis has got in reading its sources from disk and the editor's buffers. */
@@ -3117,7 +3134,7 @@ class XdkAdapter
         private fun isStale(request: RenameRequest): Boolean =
             renames[request.uri] !== request ||
                 request.result.isCancelled ||
-                isStale(request.compilation)
+                isOvertaken(request.compilation)
 
         /** Both proof attempts stay on the compiler worker and never replace the live analysis. */
         private fun runRename(request: RenameRequest) {
@@ -3381,7 +3398,7 @@ class XdkAdapter
                     val ordinary = partial?.let { XdkCursorQueries.completions(it, text) }.orEmpty()
                     val site = partial?.sites?.singleOrNull()
                     val prefix = site?.memberPrefix
-                    if (compilation == null || isStale(compilation)) {
+                    if (compilation == null || isOvertaken(compilation)) {
                         CompletableFuture.completedFuture(emptyList())
                     } else if (text == null || site?.kind != PartialSemanticModel.Kind.NAME ||
                         prefix == null || prefix.text.length < 2 || !hasProject(uri)
@@ -3389,9 +3406,9 @@ class XdkAdapter
                         CompletableFuture.completedFuture(ordinary)
                     } else {
                         projectQuery(ProjectQueryKey(uri, ProjectQueryKind.COMPLETION_IMPORTS), emptyList()) {
-                            if (isStale(compilation)) return@projectQuery emptyList()
+                            if (isOvertaken(compilation)) return@projectQuery emptyList()
                             val imports = it.importCompletions(uri, text, prefix, ordinary.map { item -> item.label }.toSet())
-                            if (isStale(compilation)) emptyList() else ordinary + imports
+                            if (isOvertaken(compilation)) emptyList() else ordinary + imports
                         }
                     }
                 }
@@ -3411,7 +3428,7 @@ class XdkAdapter
             }
             return analyzeAtAsync(CursorKey(uri, CursorKind.INLINE_COMPLETION), position)
                 .mapCancellable { partial ->
-                    if (partial == null || isStale(compilation)) {
+                    if (partial == null || isOvertaken(compilation)) {
                         emptyList()
                     } else {
                         XdkInlineCompletions.project(text, position, context, XdkCursorQueries.completions(partial))

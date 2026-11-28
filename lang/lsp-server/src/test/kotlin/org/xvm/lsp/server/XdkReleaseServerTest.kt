@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionKind
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
@@ -446,6 +447,26 @@ class XdkReleaseServerTest {
             assertContentModified(answer)
         }
 
+    @Test
+    fun `a completion outlasts another member's open with its file's text, which replaces their module's compile`() =
+        waiting(
+            "the completion",
+            ask = { session ->
+                val root = SOURCES.getValue("Node0").lines()
+                val line = root.indexOfFirst { "class Box" in it }
+                session.server.textDocumentService.completion(
+                    CompletionParams(TextDocumentIdentifier(session.uri("Node0")), Position(line, root[line].indexOf('{') + 1)),
+                )
+            },
+            queued = "cursor-",
+        ) { session, completion ->
+            // Lid's open with its file's text compiles Node0 again and ends the compile that the completion's probe, queued
+            // behind the held compile, was made on: the probe ended with it, and the completion answered ContentModified
+            session.server.textDocumentService.didOpen(session.item("Node0/Lid"))
+            session.release.countDown()
+            assertThat((completion.awaited() as Either<*, *>).left as List<*>).isNotEmpty()
+        }
+
     /**
      * [request], asked as the graph's held compile holds its graph query, then [event]; or, [again], the same request
      * asked once more after the event, while the first one waits and so keeps the event remembered: its graph query takes
@@ -476,6 +497,18 @@ class XdkReleaseServerTest {
         request: Request,
         prepare: (Session) -> Unit = {},
         then: (Session, CompletableFuture<*>) -> Unit,
+    ) = waiting("$request", prepare, request::ask, then = then)
+
+    /**
+     * [then] with the [answer][then] that [ask] asks for, [what], once its compiler work, of a kind that [queued] names,
+     * queues behind the graph's held compile, after [prepare] readied the session.
+     */
+    private fun waiting(
+        what: String,
+        prepare: (Session) -> Unit = {},
+        ask: (Session) -> CompletableFuture<*>,
+        queued: String = "project-",
+        then: (Session, CompletableFuture<*>) -> Unit,
     ) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
@@ -485,12 +518,12 @@ class XdkReleaseServerTest {
             session.hold.set(true)
             session.adapter.workspaceDiagnosticsAsync()
             assertThat(session.entered.awaited()).isTrue()
-            val answer = request.ask(session)
-            awaitUntil("$request queues its graph query behind the held compile") {
+            val answer = ask(session)
+            awaitUntil("$what queues its work behind the held compile") {
                 @Suppress("UNCHECKED_CAST")
-                (session.adapter.compilerQueueSnapshot()["queuedJobs"] as List<String>).any { "project-" in it && "DIAGNOSTICS" !in it }
+                (session.adapter.compilerQueueSnapshot()["queuedJobs"] as List<String>).any { queued in it && "DIAGNOSTICS" !in it }
             }
-            assertThat(answer).describedAs("$request waits for the held compile").isNotDone()
+            assertThat(answer).describedAs("$what waits for the held compile").isNotDone()
             then(session, answer)
         }
     }
