@@ -125,6 +125,16 @@ private fun descendants(component: Component): Sequence<Component> =
         if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
     }
 
+/** The EDT's queue of the events that run outside a modal dialog under the write-intent lock, as LSP4IJ's Go to answers do. */
+object NonModalEvents {
+    /**
+     * Returns once the EDT has run each such event that was queued before the call: the queue runs events of the same
+     * modality and lock in the order they came, while a call of the driver, which takes no lock, can run before them.
+     */
+    @JvmStatic
+    fun drain() = boundedEdt(ModalityState.nonModal()) {}
+}
+
 /** The modal dialog that a playbook case leaves open, which holds every later call that waits for the EDT outside it. */
 object HeldDialogs {
     /** Closes the dialogs that show when a modal one holds the EDT, as their Cancel does, and answers that one by its title and text; null for none. */

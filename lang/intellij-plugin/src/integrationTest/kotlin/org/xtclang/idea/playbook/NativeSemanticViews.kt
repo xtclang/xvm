@@ -55,13 +55,20 @@ internal fun Driver.nativeLocations(
     }
 
     // TODO LSP4IJ: UP80 — a Go to request that ends unanswered, as one cancelled by the closing of its file, shows "No …
-    //  found", and once its editor is gone in a modal dialog (redhat-developer/lsp4ij#2093), which held every later case.
-    //  Its task hands its answer to the EDT before its progress ends, so the check waits for that and leaves no request
-    //  behind it. The caret alone does not wait when a target is where the lookup starts, as an implementation that is
-    //  the declaration it is asked at.
+    //  found", and once its editor is gone in a modal dialog (redhat-developer/lsp4ij#2093), which held every later case;
+    //  so does an empty answer that comes once its editor is gone. Its task queues its answer for the EDT before its
+    //  progress ends, to run under the write-intent lock, which the EDT's queue may run after a call of the driver that
+    //  comes later and takes no lock, as while a write action runs: in the full catalog X66 closed its file 4 ms after
+    //  its last Go to Implementation's progress ended, before the EDT ran the empty answer, which then showed the modal
+    //  dialog. So the check waits for the progress to end and then for the EDT to run what was queued before, and leaves
+    //  no request or answer behind it. The caret alone does not wait when a target is where the lookup starts, as an
+    //  implementation that is the declaration it is asked at.
     val name = Path.of(document.file).fileName.toString()
 
-    fun settle() = awaitUi("native $kind's request in $name ends", HANG_LIMIT) { !goToRuns(name) }
+    fun settle() {
+        awaitUi("native $kind's request in $name ends", HANG_LIMIT) { !goToRuns(name) }
+        utility(NonModalEvents::class).drain()
+    }
     if (expected.isEmpty()) {
         val support = semanticSupport(document.editor)
         val feature =
@@ -252,6 +259,13 @@ private fun Driver.goToRuns(name: String): Boolean =
         // a progress that is not a task's has no title
         runCatching { indicator.getTitle() }.getOrNull()?.let { it.startsWith("Find ") && "(s) of '$name' at '" in it } == true
     }
+
+/** The EDT's queue of the events that run outside a modal dialog under the write-intent lock, as LSP4IJ's Go to answers do. */
+@Remote("org.xtclang.idea.playbook.probe.NonModalEvents", plugin = "org.xtclang.playbook.probe")
+internal interface NonModalEvents {
+    /** Returns once the EDT has run each such event that was queued before the call. */
+    fun drain()
+}
 
 /** IntelliJ's running progress, among it that of LSP4IJ's Go to requests. */
 @Remote("com.intellij.openapi.progress.impl.CoreProgressManager")
