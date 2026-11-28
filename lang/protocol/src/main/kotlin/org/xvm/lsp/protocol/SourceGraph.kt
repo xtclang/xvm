@@ -1,6 +1,8 @@
 package org.xvm.lsp.protocol
 
 import org.eclipse.lsp4j.WorkspaceEdit
+import java.security.MessageDigest
+import java.util.HexFormat
 
 /**
  * A rename's edit, `xtc/rename` and `xtc/renameFiles`, paired with any source-graph change that must be applied in the
@@ -11,7 +13,36 @@ data class RenameProposal(
     val edit: WorkspaceEdit,
     val graph: SourceGraphReplacement? = null,
     val scope: RenameScope? = null,
-)
+    /**
+     * The hash ([textHash]) of the text that each document the [edit] changes had as the server computed its changes,
+     * an editor's buffer or the file on the disk, by the URI the edit names it with. A client applies the edit only to
+     * documents that still have that text: a file on the disk can change after the server read it with no document
+     * version to say so, and an edit of other text puts its changes in the wrong places. Null when the server proves no
+     * text, as for an adapter whose edit changes only the open document that the rename was asked in.
+     */
+    val textHashes: Map<String, String>? = null,
+) {
+    companion object {
+        /**
+         * The hash of [text] that [textHashes] names: the SHA-256 of its UTF-8, as lowercase hex, with each of its line
+         * breaks written as `\n`. An LSP position counts lines, and characters within a line, so an edit applies alike to
+         * texts that differ only in the kind of their line breaks, as an IntelliJ document does to its file with CRLF
+         * ones. VS Code's extension hashes the same way.
+         */
+        fun textHash(text: CharSequence): String =
+            HexFormat.of().formatHex(
+                MessageDigest
+                    .getInstance("SHA-256")
+                    .digest(
+                        text
+                            .toString()
+                            .replace("\r\n", "\n")
+                            .replace('\r', '\n')
+                            .toByteArray(Charsets.UTF_8),
+                    ),
+            )
+    }
+}
 
 /**
  * Expected and proposed source graphs, for a guarded configuration replacement: clients apply the replacement only if

@@ -49,7 +49,8 @@ import org.xvm.lsp.protocol.TestSelector
  * and TestEvent.kt), serialized with lsp4j's Gson as the server's connection writes them. Each value here is the same
  * value made from the protocol's types the way the server makes it now: a build's modules and diagnostics and a
  * module's tests through ProtocolConversions. Since the capture, ReplacedLibrariesParams has gained `reasons`, which
- * its captured cases now write as the empty map they have, beside a case of its own; the fields it had are as captured.
+ * its captured cases now write as the empty map they have, beside a case of its own, and RenameProposal `textHashes`,
+ * which its captured cases leave out as the null they have, beside a case of its own; the fields they had are as captured.
  */
 class ProtocolWireFormatTest {
     private val gson = MessageJsonHandler(emptyMap()).gson
@@ -196,6 +197,7 @@ class ProtocolWireFormatTest {
                     RenameScope("source-graph", listOf(source), listOf(app, lib), "rev-1"),
                 ),
             "RenameProposal.editOnly" to RenameProposal(edit),
+            "RenameProposal.textHashes" to RenameProposal(edit, textHashes = mapOf(app to RenameProposal.textHash("module app {}\n"))),
             "SourceModuleConfiguration" to source,
             "SourceModuleConfiguration.noResources" to sourceNoResources,
             "DiscoverConsumersParams" to DiscoverConsumersParams(listOf("file:///w/", "file:///v/")),

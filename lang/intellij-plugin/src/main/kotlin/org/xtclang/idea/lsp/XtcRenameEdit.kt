@@ -32,8 +32,8 @@ import java.util.concurrent.CompletableFuture
 /**
  * A rename response bound to the client documents that produced it. The XTC rename applies its proposal itself,
  * outside LSP4IJ's own checks, so it keeps the request's immutable snapshot until application and checks it under
- * the same write action as all of the returned edits. No second version counter or long-lived document listener is
- * needed.
+ * the same write action as all of the returned edits, with the server's proof of the text of each document that the
+ * edit changes, [proved] ([ProvedTexts]). No second version counter or long-lived document listener is needed.
  */
 class XtcRenameEdit
     private constructor(
@@ -41,6 +41,8 @@ class XtcRenameEdit
         val edit: WorkspaceEdit,
         private val graph: SourceGraphEdit? = null,
         private val command: String = "Rename",
+        /** The hash of the text that the server computed each document's changes against, by URI ([RenameProposal.textHashes]). */
+        private val proved: Map<String, String> = emptyMap(),
     ) {
         /** Return false without changing any file when the request's documents have been retired. */
         fun apply(): Boolean {
@@ -79,7 +81,7 @@ class XtcRenameEdit
                     ) {
                         false
                     } else {
-                        if (UnsavedClosedTargets.refuse(project, edit, snapshot.unread)) return@compute false
+                        if (!ProvedTexts.current(edit, proved, snapshot.read())) return@compute false
                         graph?.beforeApply()
                         // TODO LSP4IJ: UP03 — 0.21 only renames the basename, ignoring a changed parent URI.
                         // Apply resource moves through VFS inside this same undo command.
@@ -176,6 +178,9 @@ class XtcRenameEdit
             val unread: Set<Document>,
             val moves: List<FileMove> = emptyList(),
         ) {
+            /** The documents whose buffers the server read for the request, as the snapshot captured them. */
+            fun read(): Set<Document> = buffers.mapTo(hashSetOf()) { it.synchronizer.document }
+
             fun isCurrent(): Boolean {
                 val opened = wrapper.openedDocuments.toSet()
                 val captured = buffers.map { it.opened }.toSet()
@@ -318,7 +323,7 @@ class XtcRenameEdit
                     ) { proposal, graph ->
                         proposal?.let {
                             check(it.edit.changes.isNullOrEmpty()) { "File operations require versioned edits" }
-                            XtcRenameEdit(snapshot, it.edit, it.graph?.let(graph::replacement), command)
+                            XtcRenameEdit(snapshot, it.edit, it.graph?.let(graph::replacement), command, it.textHashes.orEmpty())
                         }
                     }
                 }
@@ -369,6 +374,7 @@ class XtcRenameEdit
                                 snapshot,
                                 edit,
                                 proposal.graph?.let(graph::replacement),
+                                proved = proposal.textHashes.orEmpty(),
                             )
                         } else {
                             null

@@ -54,6 +54,7 @@ import org.eclipse.lsp4j.WorkspaceDocumentDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFullDocumentDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageClientAware
@@ -62,11 +63,16 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
 import org.xtclang.idea.lsp.CompilerSettings
 import org.xtclang.idea.lsp.XtcClientFeatures
+import org.xvm.lsp.protocol.RenameProposal
+import org.xvm.lsp.protocol.XtcServerProtocol
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -81,7 +87,9 @@ import java.util.concurrent.Future
  * report has the [reported] ones. With [codeActions] it has a code action provider that resolves actions, as the real
  * server does, and offers none of its own: a test gives LSP4IJ the action that it resolves. With [hover] it has a hover
  * provider, which answers as [hovers] says. With [callHierarchy] it has a call hierarchy provider, which prepares the
- * word at the position as a method, and answers its callers as [incomingCalls] says. The client it connects to is the
+ * word at the position as a method, and answers its callers as [incomingCalls] says. With [xtc] LSP4IJ's proxy of it
+ * is the Ecstasy server's, which asks it for a rename with xtc/rename, as the plugin asks the real server, and it answers
+ * with [renameEdit]'s edit and the hash of each changed document's text as it read it. The client it connects to is the
  * [client] that LSP4IJ makes, by default LSP4IJ's own. Each connection runs [connecting] as it starts, on LSP4IJ's
  * thread, where a test can hold it. [LightEditor] connects it as the Ecstasy server, with the plugin's own client
  * features, so LSP4IJ's code runs as it does against the real server.
@@ -95,6 +103,7 @@ class StubLanguageServer(
     val codeActions: Boolean = false,
     val hover: Boolean = false,
     val callHierarchy: Boolean = false,
+    val xtc: Boolean = false,
     val client: (Project) -> LanguageClientImpl = ::LanguageClientImpl,
     val connecting: () -> Unit = {},
 ) : LanguageServer,
@@ -106,6 +115,9 @@ class StubLanguageServer(
 
     /** Each open document's text, as the client has sent it. */
     val texts = ConcurrentHashMap<String, String>()
+
+    /** The URIs of the documents that the client has open at the server: it has sent their didOpen, and no didClose since. */
+    private val open = ConcurrentHashMap.newKeySet<String>()
 
     /** The caret's line, as the client has sent it, of each completion the client has asked for. */
     val completionLines = CopyOnWriteArrayList<String>()
@@ -162,6 +174,13 @@ class StubLanguageServer(
     /** How the server answers textDocument/rename: by default, with no edit. */
     @Volatile
     var renameEdit: (RenameParams) -> WorkspaceEdit? = { null }
+
+    /**
+     * Whether xtc/rename names the hash of each changed document's text, as the compiler's adapter does; without, it
+     * answers as an adapter that proves no text does, the mock's or tree-sitter's.
+     */
+    @Volatile
+    var proves = true
 
     /** The client of each connection that LSP4IJ has made to the server, in order. */
     val clients = CopyOnWriteArrayList<LanguageClient>()
@@ -299,13 +318,16 @@ class StubLanguageServer(
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
         texts[params.textDocument.uri] = params.textDocument.text
+        open += params.textDocument.uri
     }
 
     override fun didChange(params: DidChangeTextDocumentParams) {
         params.contentChanges.lastOrNull()?.let { texts[params.textDocument.uri] = it.text }
     }
 
-    override fun didClose(params: DidCloseTextDocumentParams) = Unit
+    override fun didClose(params: DidCloseTextDocumentParams) {
+        open -= params.textDocument.uri
+    }
 
     override fun didSave(params: DidSaveTextDocumentParams) = Unit
 
@@ -327,6 +349,37 @@ class StubLanguageServer(
         requests += "textDocument/rename"
         return CompletableFuture.completedFuture(renameEdit(params))
     }
+
+    /**
+     * xtc/rename, which the client sends with [xtc]: [renameEdit]'s edit, with the hash of the text of each document that
+     * it changes as the stub reads it as it answers, as the real server proves its edits, unless it [proves] none: an open
+     * document's text, as the client sent it, or else its file's on the disk, without a byte order mark, as the compiler
+     * reads a source.
+     */
+    @JsonRequest("xtc/rename")
+    fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> {
+        requests += "xtc/rename"
+        val proposal =
+            renameEdit(params)?.let { edit ->
+                RenameProposal(
+                    edit,
+                    textHashes =
+                        edit.changes
+                            .orEmpty()
+                            .keys
+                            .associateWith { uri ->
+                                RenameProposal.textHash(
+                                    texts[uri]?.takeIf { uri in open } ?: Files.readString(Path.of(URI(uri))).removePrefix("\uFEFF"),
+                                )
+                            }.takeIf { proves },
+                )
+            }
+        return CompletableFuture.completedFuture(proposal)
+    }
+
+    /** xtc/languageServiceStatus, which the plugin's client asks for with [xtc] as the server starts: no status. */
+    @JsonRequest("xtc/languageServiceStatus")
+    fun languageServiceStatus(): CompletableFuture<Map<String, Any?>> = CompletableFuture.completedFuture(emptyMap())
 
     /**
      * LSP4IJ's extension for the stub as the Ecstasy server, in place of the plugin's. Its factory, which LSP4IJ keeps
@@ -367,6 +420,9 @@ class StubLanguageServer(
         override fun createLanguageClient(project: Project): LanguageClientImpl = server.client(project)
 
         override fun createClientFeatures(): LSPClientFeatures = XtcClientFeatures()
+
+        override fun getServerInterface(): Class<out LanguageServer> =
+            if (server.xtc) XtcServerProtocol::class.java else LanguageServer::class.java
     }
 
     /** A loopback socket between LSP4IJ and the stub, whose launcher listens on its own thread. */

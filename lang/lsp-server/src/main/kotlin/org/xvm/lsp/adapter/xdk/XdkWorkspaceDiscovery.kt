@@ -299,7 +299,7 @@ internal object XdkWorkspaceDiscovery {
     ): Header? {
         val text =
             buffers[file] ?: try {
-                file.readText()
+                XdkSources.read(file)
             } catch (failure: IOException) {
                 logger.warn("Source discovery cannot read {}, which it leaves out: {}", file.toURI(), failure.toString())
                 return null

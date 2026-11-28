@@ -56,7 +56,7 @@ internal object XdkAttachedSources {
                         ) { "Attachment requires a relative artifact source path: $sourcePath" }
                         val source = roots.asSequence().map { it.toPath().resolve(relative).toFile() }.firstOrNull(File::isFile)
                         requireNotNull(source) { "No attached source for ${dependency.module}: $sourcePath" }
-                        val text = source.readText()
+                        val text = XdkSources.read(source)
                         val revision = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.toByteArray()))
                         val snapshot = directory.resolve(dependency.revision).resolve(revision).resolve(relative)
                         Files.createDirectories(snapshot.parent)

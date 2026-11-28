@@ -139,9 +139,16 @@ data class WorkspaceEdit(
     val versioned: Boolean = false,
     /** Apply text edits before these file moves; destinations must not be overwritten. */
     val renames: Map<String, String> = emptyMap(),
+    /**
+     * The text that the changes of each document were computed against, by the same URI as [changes], which xtc/rename
+     * and xtc/renameFiles name by their hashes for the client to check before it applies them: a file read from the disk
+     * can change after its edit was made, with no document version to say so. Empty for an edit that proves no text.
+     */
+    val texts: Map<String, String> = emptyMap(),
 ) {
     init {
         require(renames.isEmpty() || versioned) { "File moves require versioned document changes" }
+        require(texts.isEmpty() || texts.keys == changes.keys) { "A proved edit has the text of each document it changes" }
     }
 }
 

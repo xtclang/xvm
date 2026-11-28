@@ -136,7 +136,7 @@ internal class XdkBuildModel private constructor(
         val catalog =
             XdkWorkspaceDiscovery.traced("build-model") {
                 sources.filter(File::isFile).fold(XdkWorkspaceDiscovery.Catalog()) { result, file ->
-                    result.withSource(file, file.readText()) { false }
+                    result.withSource(file, XdkSources.read(file)) { false }
                 }
             }
         val roots = sourceSets.flatMap { it.roots }.toSet()

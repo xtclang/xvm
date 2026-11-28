@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import * as vscode from 'vscode';
 import {
     LanguageClient, LSPErrorCodes, RenameFile, RenameFilesParams, RenameParams, RequestType, ResponseError, TextDocumentEdit, WorkspaceEdit
@@ -7,6 +8,11 @@ import { SourceModule, sourceGraphEdits, sourceGraphKey, sourceModulesIn } from 
 interface RenameProposal {
     edit: WorkspaceEdit;
     graph?: { before: SourceModule[]; after: SourceModule[] };
+    /**
+     * The hash ([textHash]) of the text that each document the edit changes had as the server computed its changes, an
+     * editor's buffer or the file on the disk, by the URI the edit names it with; none when the server proves no text.
+     */
+    textHashes?: Record<string, string>;
 }
 const renameRequest = new RequestType<RenameParams, RenameProposal | null, void>('xtc/rename');
 const moveRequest = new RequestType<RenameFilesParams, RenameProposal | null, void>('xtc/renameFiles');
@@ -41,6 +47,45 @@ export function sourcesChanged(before: readonly SourceState[], open: readonly vs
     return before.some(({ document, version, dirty }) => document.version !== version || (document.isClosed && dirty))
         || open.some(document => document.isDirty && !before.some(state => state.document === document));
 }
+
+/**
+ * The hash of [text] that a proposal's textHashes names, as the server and IntelliJ's plugin compute it
+ * (RenameProposal.textHash): the SHA-256 of its UTF-8, as lowercase hex, with each of its line breaks written as `\n`, as
+ * an LSP position counts lines alike whatever their line breaks.
+ */
+export function textHash(text: string): string {
+    return createHash('sha256').update(text.replace(/\r\n?/g, '\n'), 'utf8').digest('hex');
+}
+
+/**
+ * Whether a document that the server's [edit] changes no longer has the text that the server computed its changes
+ * against, which [hashes] names: the text that VS Code's application of the edit changes, an open document's, or else
+ * its file's as VS Code reads it from the disk, as the server read it, in its encoding and without a byte order mark,
+ * with no version to say that it changed since. A document whose hash is not named must be one of [read], open as the
+ * proof started, whose version VS Code checks: a server that proves no text, or its adapter that edits only the
+ * document of a rename, read no other.
+ */
+async function textsChanged(edit: WorkspaceEdit, hashes: Record<string, string> | undefined, read: readonly SourceState[]): Promise<boolean> {
+    const uris = [...Object.keys(edit.changes ?? {}), ...(edit.documentChanges ?? []).filter(TextDocumentEdit.is).map(change => change.textDocument.uri)];
+    for (const uri of new Set(uris)) {
+        const file = vscode.Uri.parse(uri);
+        const document = vscode.workspace.textDocuments.find(value => !value.isClosed && value.uri.toString() === file.toString());
+        const hash = hashes?.[uri];
+        if (hash === undefined) {
+            if (!document || !read.some(state => state.document === document)) return true;
+            continue;
+        }
+        const text = await vscode.workspace.openTextDocument(file).then(value => value.getText(), () => undefined);
+        if (text === undefined || textHash(text) !== hash) return true;
+    }
+    return false;
+}
+
+/**
+ * What a refactoring says when a document that its edit changes no longer has the text that the server proved the edit
+ * against, as a file that changed on the disk since the server read it.
+ */
+export const TEXTS_CHANGED = 'Source files changed since the language server read them for this refactoring. Try again.';
 
 /**
  * Whether the server's [error] says that a change of the project overtook its proof: ContentModified, or a cancellation
@@ -275,6 +320,8 @@ async function proposalWithConfiguration(
     const snapshot = settings && { version: settings.version, text: settings.getText() };
     const proposal = await request();
     if (!proposal || token.isCancellationRequested) return null;
+    // the server's own edit, which the compiler settings' edit below joins
+    const proved = proposal.edit;
     if (proposal.graph) {
         if (!settings || !snapshot || !location || !Array.isArray(config)
             || folderOverrides(uri).some(value => value !== undefined)
@@ -312,5 +359,10 @@ async function proposalWithConfiguration(
         throw new Overtaken('Source documents changed while calculating the refactoring. Try again.');
     }
     if (!client.validateWorkspaceEdit(proposal.edit)) throw new Overtaken('Documents changed while calculating the refactoring. Try again.');
+    // the last check that this extension makes: VS Code applies the edit that a rename provider or a file operation's
+    // participant returns itself, once this returns, with no hook before it, so a closed file that changes on the disk
+    // between this check and that application, as while VS Code shows the refactoring's preview, still takes the edit
+    if (await textsChanged(proved, proposal.textHashes, documents)) throw new Overtaken(TEXTS_CHANGED);
+    if (token.isCancellationRequested) return null;
     return converted ?? null;
 }
