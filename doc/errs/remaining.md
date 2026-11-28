@@ -1416,11 +1416,35 @@ And, after that entry, a new entry:
   them refuses, and UnsavedClosedTargets refuses an edit of one, open or closed, saved or not. The proof also refuses
   once LocalTimeCounter (24 bits) has wrapped since the request. RenameProofTest (9 tests): the two new tests apply on
   be43de847b. Container: X53-X58, X169 and X352 all passed (run-8952449847676642991).
-- [ ] Open, the stamp rule's known gaps, not new: a file deleted and recreated outside the IDE with other text gets a
-  new VFS entry with stamp 0 (only executeTouch sets one), and a change on the disk that the VFS has not refreshed yet
-  loads cached text with an unchanged stamp; either, opened since the request, passes. The proper follow-up is a
-  server-side proof: a hash of the text proved for each edited URI in RenameProposal, which the apply checks against
-  the document.
+- [x] The stamp rule's known gaps, for the documents an edit changes (`3ddb333918`): a file deleted and recreated outside
+  the IDE with other text, whose new VFS entry has stamp 0, and a change on the disk that the VFS has not refreshed
+  yet, whose cached text loads with an unchanged stamp. The server now proves each edit against the text it computed
+  it from: the edit of every rename and move carries the text of each changed document (XdkRename.Plan.workspaceEdit,
+  from the plan's own original: an editor's buffer or the file read from the disk), and xtc/rename and xtc/renameFiles
+  answer with RenameProposal.textHashes (SHA-256 of the UTF-8, line breaks as `\n`). Our own xtc/ result rather than a
+  change annotation or WorkspaceEdit metadata: both clients already read RenameProposal before they apply it, a plain
+  LSP client never asks xtc/, WorkspaceEdit has no metadata field, and a change annotation is UI that VS Code shows in
+  its preview. IntelliJ's apply (ProvedTexts, which replaces UnsavedClosedTargets, whose three refusals the hash covers)
+  refuses unless each changed document has its hash, and its file on the disk too when the server read it there, and
+  then refreshes the files that did not match, so that a rename invoked again can apply; a changed document without a
+  hash must be a buffer the server read. VS Code's extension checks the text VS Code will edit (openTextDocument) as
+  the last step before it returns the edit (TEXTS_CHANGED; a move asks the server again). The snapshot stays as the
+  early refusal and as the guard of the proof's unchanged inputs. Found by the review: the server read a closed source
+  with its byte order mark (File.readText), so a module with such a file did not compile and a rename across it was
+  refused as unproven, and a watcher's event of it unchanged read as a change; it now reads sources as the compiler
+  does (Handy.readFileChars, XdkSources.read). Tests: RenameProofTest (15: recreated, stale-VFS opened, stale-VFS
+  closed with the refusal's refresh, a byte order mark, a server that proves no text either way), XdkRenameServerTest
+  (buffer, CRLF disk text, a local's module proof, a file rename's move, a byte order mark), XdkFileChangesTest,
+  RenameProposalTest and the extension's rename-refusal suite. Container: IntelliJ X53-X58, X128, X130, X169-X176 and X352 passed (run-16507431472671745914); VS Code, the same cases, passed (run-MyfzcQ); the extension suite, 119 passing (run-qL8nP2).
+- [ ] Open, what the hash leaves (`3ddb333918`): VS Code applies a rename provider's or a move participant's edit itself,
+  after the extension's check, with no hook, so a closed file changed on the disk in between (as during the
+  refactoring preview) still takes the edit. textDocument/rename and workspace/willRenameFiles carry no hashes (a plain
+  LSP client gets version null for a closed file, as before). The proof's inputs that the edit leaves unchanged keep
+  the stamp rule and its two gaps: such a file recreated, or changed on the disk before a refresh, then opened, leaves
+  a stale proof of bindings standing, though no edit in the wrong place. experimental.xtcRenameProposal stays 1 while
+  both clients depend on the hashes; bump it if another server is ever to answer xtc/rename. IntelliJ reads the disk
+  as UTF-8, so a closed UTF-16 source with a mark is refused there. The VS Code suite's new tests ran only with their
+  checks (no negative container run); that each fails without its check follows from the code.
 - [ ] UP93, upstream, to file (LSP4IJ, against 0.30.1; needs a reproduction): a document connected without an
   editor stays connected for good, after its file is deleted too: `getOpenedDocuments()` keeps an OpenedDocument whose
   file is invalid, no didClose is sent, and its diagnostics are still pulled; a file created again at its URL is
