@@ -5,7 +5,6 @@ import java.io.IOException;
 
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.NoSuchFileException;
 
@@ -26,6 +25,8 @@ import org.xvm.javajit.Ctx;
 
 import org.xvm.javajit.annotations.JitFromNatural;
 import org.xvm.javajit.annotations.JitGenerated;
+
+import org.xvm.util.Files;
 
 /**
  * The native implementation of {@code _native.fs.OSFileStore}.
@@ -52,11 +53,6 @@ public class OSFileStore
     }
 
     /**
-     * The root of the Java file system.
-     */
-    private static final java.io.File $ROOT = new java.io.File("/");
-
-    /**
      * The native implementation of {@code @Lazy Directory root.calc()}.
      */
     @JitFromNatural
@@ -71,21 +67,21 @@ public class OSFileStore
      * The native implementation of {@code @RO Int capacity;}.
      */
     public long capacity$get$p(Ctx ctx) {
-        return $ROOT.getTotalSpace();
+        return Files.totalSpace();
     }
 
     /**
      * The native implementation of {@code @RO Int bytesUsed;}.
      */
     public long bytesUsed$get$p(Ctx ctx) {
-        return $ROOT.getTotalSpace() - $ROOT.getFreeSpace();
+        return Files.usedSpace();
     }
 
     /**
      * The native implementation of {@code @RO Int bytesFree;}.
      */
     public long bytesFree$get$p(Ctx ctx) {
-        return $ROOT.getFreeSpace();
+        return Files.freeSpace();
     }
 
     /**
@@ -114,27 +110,18 @@ public class OSFileStore
     /**
      * The native implementation of the OSFileStore.x method:
      * {@code OSDirectory|OSFile copyOrMove(Path sourcePath, String sourceStr, Path destPath,
-     *                                      String destStr, Boolean move)}.
+     *                                      String destStr, Int operation, Boolean requireMissingDest)}.
      */
     public Object copyOrMove$p(Ctx ctx, Path sourcePath, String sourceStr, Path destPath,
-                               String destStr, boolean move) {
+                               String destStr, long operation, boolean requireMissingDest) {
 
         try {
             java.nio.file.Path pathSrc = OSFileNode.$toOsPath(ctx, sourceStr);
-            if (Files.notExists(pathSrc)) {
-                throw new FileNotFound(ctx)
-                        .$init(ctx, "Could not find file or directory: " + sourceStr, sourcePath);
-            }
+            Files.requireSource(pathSrc, sourceStr.toString());
 
             java.nio.file.Path pathDest = OSFileNode.$toOsPath(ctx, destStr);
-            if (Files.exists(pathDest) && !Files.isDirectory(pathDest)) {
-                throw new FileAlreadyExists(ctx)
-                        .$init(ctx, "Could not overwrite file or directory: " + destStr, destPath);
-            }
-
-            java.nio.file.Path pathResult = move
-                    ? Files.move(pathSrc, pathDest)
-                    : Files.copy(pathSrc, pathDest);
+            java.nio.file.Path pathResult = Files.copyOrMove(
+                    pathSrc, pathDest, destStr.toString(), operation, requireMissingDest);
 
             return OSFileNode.$nodeFor(ctx, this, pathResult);
         } catch (NoSuchFileException | FileNotFoundException e) {

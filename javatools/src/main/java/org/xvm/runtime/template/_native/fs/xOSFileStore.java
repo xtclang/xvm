@@ -1,6 +1,5 @@
 package org.xvm.runtime.template._native.fs;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -19,13 +18,22 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import static org.xvm.util.Files.copyOrMove;
+import static org.xvm.util.Files.freeSpace;
+import static org.xvm.util.Files.requireSource;
+import static org.xvm.util.Files.toOsPath;
+import static org.xvm.util.Files.totalSpace;
+import static org.xvm.util.Files.usedSpace;
 
 /**
  * Native OSFileStore implementation.
@@ -66,13 +74,13 @@ public class xOSFileStore
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         switch (sPropName) {
         case "capacity":
-            return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getTotalSpace()));
+            return frame.assignValue(iReturn, xInt64.makeHandle(totalSpace()));
 
         case "bytesFree":
-            return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getFreeSpace()));
+            return frame.assignValue(iReturn, xInt64.makeHandle(freeSpace()));
 
         case "bytesUsed":
-            return frame.assignValue(iReturn, xInt64.makeHandle(ROOT.getTotalSpace() - ROOT.getFreeSpace()));
+            return frame.assignValue(iReturn, xInt64.makeHandle(usedSpace()));
         }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -85,7 +93,7 @@ public class xOSFileStore
         case "dirFor": { // (pathString)
             StringHandle hPathString = (StringHandle) hArg;
             try {
-                Path path = xOSFileNode.toOsPath(hPathString.getStringValue());
+                Path path = toOsPath(hPathString.getStringValue());
                 return xOSFileNode.createHandle(frame, hTarget, path, true, iReturn);
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
@@ -94,7 +102,7 @@ public class xOSFileStore
         case "fileFor": { // (pathString)
             StringHandle hPathString = (StringHandle) hArg;
             try {
-                Path path = xOSFileNode.toOsPath(hPathString.getStringValue());
+                Path path = toOsPath(hPathString.getStringValue());
                 return xOSFileNode.createHandle(frame, hTarget, path, false, iReturn);
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
@@ -109,30 +117,21 @@ public class xOSFileStore
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn) {
         switch (method.getName()) {
         case "copyOrMove": {
-            ObjectHandle hSrc  = ahArg[0];
-            String       sSrc  = ((StringHandle) ahArg[1]).getStringValue();
-            ObjectHandle hDest = ahArg[2];
-            String       sDest = ((StringHandle) ahArg[3]).getStringValue();
-            boolean      fMove = ((xBoolean.BooleanHandle) ahArg[4]).get();
+            ObjectHandle hSrc                = ahArg[0];
+            String       sSrc                = ((StringHandle) ahArg[1]).getStringValue();
+            ObjectHandle hDest               = ahArg[2];
+            String       sDest               = ((StringHandle) ahArg[3]).getStringValue();
+            long         lOperation          = ((JavaLong) ahArg[4]).getValue();
+            boolean      fRequireMissingDest = ((BooleanHandle) ahArg[5]).get();
 
             Path pathResult;
             try {
-                Path    pathSrc = xOSFileNode.toOsPath(sSrc);
+                Path    pathSrc = toOsPath(sSrc);
                 boolean fDir    = Files.isDirectory(pathSrc);
-                if (Files.notExists(pathSrc)) {
-                    return frame.raiseException(xException.fileNotFoundException(
-                            frame, "Could not find file or directory: " + sSrc, hSrc));
-                }
+                requireSource(pathSrc, sSrc);
 
-                Path pathDest = xOSFileNode.toOsPath(sDest);
-                if (Files.exists(pathDest) && !Files.isDirectory(pathDest)) {
-                    return frame.raiseException(xException.fileAlreadyExistsException(
-                            frame, "Could not overwrite file or directory: " + sDest, hDest));
-                }
-
-                pathResult = fMove
-                        ? Files.move(pathSrc, pathDest)
-                        : Files.copy(pathSrc, pathDest);
+                Path pathDest = toOsPath(sDest);
+                pathResult = copyOrMove(pathSrc, pathDest, sDest, lOperation, fRequireMissingDest);
                 return xOSFileNode.createHandle(frame, hTarget, pathResult, fDir, iReturn);
             } catch (NoSuchFileException | FileNotFoundException e) {
                 return frame.raiseException(xException.fileNotFoundException(frame, e.getMessage(), hSrc));
@@ -156,7 +155,7 @@ public class xOSFileStore
         case "linkAsFile": { // pathString
             StringHandle hPathString = (StringHandle) ahArg[0];
             try {
-                Path path = xOSFileNode.toOsPath(hPathString.getStringValue());
+                Path path = toOsPath(hPathString.getStringValue());
 
                 if (Files.isSymbolicLink(path)) {
                     // TODO: implement native support for link files
@@ -170,8 +169,4 @@ public class xOSFileStore
         }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
     }
-
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static final File ROOT = new File("/");
 }

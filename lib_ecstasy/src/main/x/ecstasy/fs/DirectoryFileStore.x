@@ -26,7 +26,16 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
 
     @Override
     conditional Directory|File find(Path path) {
-        if (Directory|File result := origStore.find(toOrig(path))) {
+        Path original;
+        if (!(original := resolveOrig(path))) {
+            return False;
+        }
+
+        if (original == origPath) {
+            return origDir.exists ? (True, root) : False;
+        }
+
+        if (Directory|File result := origStore.find(original), fromOrig(result.path)) {
             return True, wrap(result);
         }
 
@@ -35,7 +44,8 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
 
     @Override
     Directory dirFor(Path path) {
-        return wrap(origStore.dirFor(toOrig(path)));
+        Path original = toOrig(path);
+        return original == origPath ? root : wrap(origStore.dirFor(original));
     }
 
     @Override
@@ -81,13 +91,24 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
      * @return the corresponding Path as it would be known in the original FileStore
      */
     protected Path toOrig(Path path) {
+        if (Path original := resolveOrig(path)) {
+            return original;
+        }
+        throw new AccessDenied(path);
+    }
+
+    private conditional Path resolveOrig(Path path) {
+        if (path.toString().indexOf('\\')) {
+            return False;
+        }
+
         Path base = origPath;
         Path add  = path.normalize();
         return switch (add[0].form) {
-            case Root:    add.size > 1 ? base + add[1 ..< add.size] : base;
-            case Parent:  assert;
-            case Current: assert;
-            case Name:    base + add;
+            case Root:    (True, add.size > 1 ? base + add[1 ..< add.size] : base);
+            case Parent:  False;
+            case Current: (True, base);
+            case Name:    (True, base + add);
         };
     }
 
@@ -147,7 +168,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
          * True iff this file node is the root directory of the DirectoryFileStore.
          */
         protected Boolean isRoot.get() {
-            return origNode.path == origDir.path;
+            return path == Path.ROOT;
         }
 
         /**
@@ -214,8 +235,18 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         }
 
         @Override
-        conditional FileNode renameTo(String name) {
-            if (checkWritable(), FileNode result := origNode.renameTo(name)) {
+        conditional FileNode renameTo(String name, Boolean allowOverwrite = False) {
+            if (name == this.name) {
+                return exists ? (True, this) : False;
+            }
+
+            // keep replacements inside the wrapped store
+            if (readOnly || isRoot || name == "" || name == "." || name == ".." ||
+                    name.indexOf('/') || name.indexOf('\\')) {
+                return False;
+            }
+
+            if (FileNode result := origNode.renameTo(name, allowOverwrite)) {
                 return True, &result == &origNode ? this : wrap(result.as(Directory|File));
             }
 
@@ -295,8 +326,9 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
 
         @Override
         conditional Directory|File find(String name) {
-            if (Directory|File result := origDir.find(name)) {
-                return True, wrap(result);
+            if (Path resolved := resolveName(name),
+                    Directory|File result := this.DirectoryFileStore.find(resolved)) {
+                return True, result;
             }
 
             return False;
@@ -304,12 +336,35 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
 
         @Override
         Directory dirFor(String name) {
-            return wrap(origDir.dirFor(name));
+            if (Path resolved := resolveName(name)) {
+                return this.DirectoryFileStore.dirFor(resolved);
+            }
+            throw new AccessDenied(path);
         }
 
         @Override
         File fileFor(String name) {
-            return wrap(origDir.fileFor(name));
+            if (Path resolved := resolveName(name)) {
+                return this.DirectoryFileStore.fileFor(resolved);
+            }
+            throw new AccessDenied(path);
+        }
+
+        private conditional Path resolveName(String name) {
+            if (name.startsWith('/') || name.indexOf('\\')) {
+                return False;
+            }
+
+            Path requested = new Path(name);
+            Int depth = path.depth;
+            for (Path segment : requested) {
+                depth += segment.form.depth;
+                if (depth < 0) {
+                    return False;
+                }
+            }
+
+            return True, path + requested;
         }
 
         @Override

@@ -4,9 +4,7 @@ import java.io.IOException;
 
 import java.nio.ByteBuffer;
 
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
-import java.nio.channels.NonReadableChannelException;
 
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -41,6 +39,9 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate;
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 
 import org.xvm.runtime.template._native.io.xRawChannel;
+
+import static org.xvm.util.Files.CHANNEL_READ_SIZE;
+import static org.xvm.util.Files.readChunk;
 
 /**
  * Native RawOSFileChannel implementation.
@@ -175,17 +176,9 @@ public class xRawOSFileChannel
      */
     protected int invokeTake(Frame frame, ChannelHandle hChannel, int iReturn) {
         // we use the HeapByteBuffer as a thin wrapper around the underlying byte array
-        ByteBuffer buffer = ByteBuffer.allocate(8192);
+        ByteBuffer buffer = ByteBuffer.allocate(CHANNEL_READ_SIZE);
 
-        Callable<Integer> task = () -> {
-            try {
-                return hChannel.f_channel.read(buffer);
-            } catch (NonReadableChannelException e) {
-                return -2; // InputShutdown
-            } catch (ClosedChannelException e) {
-                return -3; // closed
-            }
-        };
+        Callable<Integer> task = () -> readChunk(hChannel.f_channel, buffer);
 
         CompletableFuture<Integer> cfRead = frame.f_context.f_container.scheduleIO(task);
 

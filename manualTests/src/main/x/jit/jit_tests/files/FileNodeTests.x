@@ -1,5 +1,6 @@
-import ecstasy.fs.FileStore;
+import ecstasy.fs.FileAlreadyExists;
 import ecstasy.fs.FileNode;
+import ecstasy.fs.FileStore;
 import ecstasy.fs.Path;
 
 /**
@@ -30,6 +31,7 @@ class FileNodeTests {
         shouldCreateAndDelete();
         shouldEnsureAndDelete();
         shouldRename();
+        shouldReplaceExistingFile();
         shouldEmitListing();
     }
 
@@ -195,6 +197,52 @@ class FileNodeTests {
         assert !node1.exists;
         assert node3.delete();
         assert !node3.exists;
+    }
+
+    void shouldReplaceExistingFile() {
+        @Inject Directory tmpDir;
+        Directory dir = tmpDir.dirFor("file-node-rename-overwrite");
+        assert dir.create();
+        try {
+            File source = dir.fileFor("replacement").ensure();
+            File target = dir.fileFor("target").ensure();
+            source.contents = [1];
+            target.contents = [2];
+
+            assert FileNode same := source.renameTo(source.name);
+            assert same.path == source.path;
+            assert !source.renameTo(target.name);
+            assert !source.renameTo("");
+
+            try {
+                source.store.move(source.path, target.path);
+                assert;
+            } catch (FileAlreadyExists e) {}
+
+            Directory subdir = dir.dirFor("subdir").ensure();
+            Directory other = dir.dirFor("other").ensure();
+            assert !source.renameTo("subdir/target", allowOverwrite=True);
+            assert !source.renameTo(subdir.name, allowOverwrite=True);
+            assert !subdir.renameTo(target.name, allowOverwrite=True);
+            assert !subdir.renameTo(other.name, allowOverwrite=True);
+            assert subdir.exists && other.exists;
+            if (Directory alias := dir.findDir("SUBDIR")) {
+                assert !subdir.renameTo("SUBDIR");
+                subdir.store.move(subdir.path, alias.path);
+                assert subdir.exists;
+            }
+            assert Directory moved := subdir.renameTo("moved", allowOverwrite=True);
+            assert moved.exists && !subdir.exists;
+            assert source.contents[0] == 1;
+            assert target.contents[0] == 2;
+
+            assert FileNode renamed := source.renameTo(target.name, allowOverwrite=True);
+            assert renamed.path == target.path;
+            assert renamed.as(File).contents[0] == 1;
+            assert !source.exists;
+        } finally {
+            dir.deleteRecursively();
+        }
     }
 
     void shouldEmitListing() {

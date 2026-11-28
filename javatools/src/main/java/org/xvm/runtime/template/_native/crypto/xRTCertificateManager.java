@@ -60,7 +60,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
-import org.xvm.runtime.template._native.fs.xOSFileNode;
+import static org.xvm.util.Files.toOsPath;
 
 /**
  * Native implementation of the xRTCertificateManager.x service.
@@ -592,14 +592,14 @@ public class xRTCertificateManager
     }
 
     private File getChallengePath(StringHandle hPath) {
-        return new File(xOSFileNode.toOsPath(hPath.getStringValue()).toFile().getParentFile(), ".challenge");
+        return new File(toOsPath(hPath.getStringValue()).toFile().getParentFile(), ".challenge");
     }
 
     /**
      * @return the OS path of a keystore, which arrives as the {@code pathString} of an OS file
      */
     private static String osPath(ObjectHandle hPath) {
-        return xOSFileNode.toOsPath(((StringHandle) hPath).getStringValue()).toString();
+        return toOsPath(((StringHandle) hPath).getStringValue()).toString();
     }
 
     // ----- data fields and constants -------------------------------------------------------------

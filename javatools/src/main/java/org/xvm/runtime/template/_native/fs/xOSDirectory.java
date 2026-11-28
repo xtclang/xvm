@@ -1,14 +1,8 @@
 package org.xvm.runtime.template._native.fs;
 
-import java.io.File;
 import java.io.IOException;
 
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-
-import java.nio.file.attribute.BasicFileAttributes;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants;
@@ -22,6 +16,8 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+
+import org.xvm.util.Files;
 
 /**
  * Native OSDirectory implementation.
@@ -69,30 +65,8 @@ public class xOSDirectory
 
         switch (method.getName()) {
         case "deleteRecursively": {
-            Path pathDir = hNode.f_path;
-            File file    = pathDir.toFile();
-            if (!file.isDirectory()) {
-                return frame.assignValue(iReturn, xBoolean.FALSE);
-            }
-
             try {
-                Files.walkFileTree(pathDir,
-                    new SimpleFileVisitor<>() {
-                        @Override
-                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                                throws IOException {
-                           Files.delete(file);
-                           return FileVisitResult.CONTINUE;
-                       }
-
-                       @Override
-                       public FileVisitResult postVisitDirectory(Path dir, IOException exc)
-                                throws IOException {
-                           Files.delete(dir);
-                           return FileVisitResult.CONTINUE;
-                       }
-                });
-                return frame.assignValue(iReturn, xBoolean.TRUE);
+                return frame.assignValue(iReturn, xBoolean.makeHandle(Files.deleteRecursively(hNode.f_path)));
             } catch (IOException e) {
                 return raisePathException(frame, e, hNode.f_path);
             }

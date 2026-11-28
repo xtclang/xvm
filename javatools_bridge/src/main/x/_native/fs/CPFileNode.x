@@ -46,7 +46,8 @@ const CPFileNode(Object cookie, FileStore? fileStore, Path path, Time created, T
     Boolean delete() = exists ? throw new AccessDenied() : False;
 
     @Override
-    conditional FileNode renameTo(String name) = False;
+    conditional FileNode renameTo(String name, Boolean allowOverwrite = False) =
+            name == this.name && exists ? (True, this) : False;
 
     @Override
     Cancellable watch(FileWatcher watch)  = () -> {};

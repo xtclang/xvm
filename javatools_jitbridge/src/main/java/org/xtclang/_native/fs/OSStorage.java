@@ -1,5 +1,7 @@
 package org.xtclang._native.fs;
 
+import java.io.IOException;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -19,6 +21,11 @@ import org.xvm.javajit.Ctx;
 import org.xvm.javajit.annotations.JitGenerated;
 
 import org.xvm.javajit.builders.generators.OSStorageGenerator;
+
+import static org.xvm.util.Files.createDirectory;
+import static org.xvm.util.Files.createFile;
+import static org.xvm.util.Files.delete;
+import static org.xvm.util.Files.listNames;
 
 /**
  * The native implementation of {@code _native.fs.OSStorage}.
@@ -93,14 +100,9 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code String[] names(String pathString)}.
      */
-    public ArrayᐸObjectᐳ names(Ctx ctx, String pathString)      {
-        Path               path = OSFileNode.$toOsPath(ctx, pathString);
-        java.lang.String[] list = path.toFile().list();
-
-        if (list == null) {
-            list = new java.lang.String[0];
-        }
-        String[] names = Arrays.stream(list)
+    public ArrayᐸObjectᐳ names(Ctx ctx, String pathString) {
+        Path     path  = OSFileNode.$toOsPath(ctx, pathString);
+        String[] names = Arrays.stream(listNames(path))
                                .map(name -> String.of(ctx, name))
                                .toArray(String[]::new);
         return ArrayᐸObjectᐳ.$makeStringArray(ctx, names);
@@ -109,33 +111,18 @@ public class OSStorage extends nService {
     /**
      * The native implementation of the method {@code Boolean createDir(String pathString)}.
      */
-    public boolean  createDir$p(Ctx ctx, String pathString)  {
-        java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
-        if (Files.exists(path) && Files.isDirectory(path)) {
-            return false;
-        }
-        return path.toFile().mkdirs();
+    public boolean createDir$p(Ctx ctx, String pathString) {
+        return createDirectory(OSFileNode.$toOsPath(ctx, pathString));
     }
 
     /**
      * The native implementation of the method {@code Boolean createFile(String pathString)}.
      */
     public boolean createFile$p(Ctx ctx, String pathString) {
-        java.nio.file.Path path = OSFileNode.$toOsPath(ctx, pathString);
-        if (Files.exists(path) && !Files.isDirectory(path)) {
-            return false;
-        }
-
-        Path parent = path.getParent();
-        if (!Files.exists(parent)) {
-            throw Exception.$io(ctx, "Cannot create file, parent directory does not exist: " + path);
-        }
-        if (!Files.isDirectory(parent)) {
-            throw Exception.$io(ctx, "Cannot create file, parent is not a directory: " + path);
-        }
+        Path path = OSFileNode.$toOsPath(ctx, pathString);
         try {
-            return path.toFile().createNewFile();
-        } catch (java.io.IOException e) {
+            return createFile(path);
+        } catch (IOException e) {
             throw Exception.$io(ctx, e.getMessage(), e);
         }
     }
@@ -144,11 +131,7 @@ public class OSStorage extends nService {
      * The native implementation of the method {@code Boolean delete(String pathString)}.
      */
     public boolean delete$p(Ctx ctx, String pathString) {
-        Path path = OSFileNode.$toOsPath(ctx, pathString);
-        if (Files.exists(path)) {
-            return path.toFile().delete();
-        }
-        return false;
+        return delete(OSFileNode.$toOsPath(ctx, pathString));
     }
 
     /**
