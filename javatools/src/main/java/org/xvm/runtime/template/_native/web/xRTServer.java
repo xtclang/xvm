@@ -306,8 +306,7 @@ public class xRTServer
         Server  server  = new Server(pool);
         Binding binding = new Binding(server, router, null);
         server.setHandler(router);
-        ServerWebSocketContainer sockets = ServerWebSocketContainer.ensure(server);
-        sockets.setIdleTimeout(Duration.ofMinutes(5));
+        ServerWebSocketContainer.ensure(server);
         hServer.setBinding(binding);
 
         try {
@@ -718,7 +717,8 @@ public class xRTServer
 
     /**
      * Implementation of "Object? upgradeWebSocketImpl(RequestContext context,
-     *      String? protocol, Int maxMessageSize, String[] headerNames, String[] headerValues)"
+     *      String? protocol, Int maxMessageSize, String[] headerNames, String[] headerValues,
+     *      Int idleMillis)"
      * method.
      *
      * <p/>Return a {@code Null} context object on failure.
@@ -729,8 +729,10 @@ public class xRTServer
         long              cbMax     = ((JavaLong) ahArg[2]).getValue();
         String[]          asNames   = getStrings((ArrayHandle) ahArg[3]);
         String[]          asValues  = getStrings((ArrayHandle) ahArg[4]);
+        Duration          idleTime  = Duration.ofMillis(((JavaLong) ahArg[5]).getValue());
 
-        CompletableFuture<WebSocketHandle> cf = hCtx.upgradeWebSocket(sProtocol, cbMax, asNames, asValues);
+        CompletableFuture<WebSocketHandle> cf =
+                hCtx.upgradeWebSocket(sProtocol, cbMax, asNames, asValues, idleTime);
         return frame.waitForIO(cf, frameCaller -> {
             try {
                 WebSocketHandle hSocket = cf.get();
@@ -1148,8 +1150,8 @@ public class xRTServer
         }
 
         protected CompletableFuture<WebSocketHandle> upgradeWebSocket(String sProtocol,
-                long cbMax, String[] asNames, String[] asValues) {
-            WebSocketConnection                conn = new WebSocketConnection((int) cbMax);
+                long cbMax, String[] asNames, String[] asValues, Duration idleTime) {
+            WebSocketConnection                conn = new WebSocketConnection((int) cbMax, idleTime);
             CompletableFuture<WebSocketHandle> cf   = conn.getOpenedFuture();
             try {
                 synchronized (this) {

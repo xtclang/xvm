@@ -14,14 +14,18 @@
      * @param protocol        (optional) the application subprotocol to negotiate; for a server
      *                        endpoint, the client must offer this value in its
      *                        `Sec-WebSocket-Protocol` header
+     * @param idleTimeout     (optional) the transport idle timeout, at least one second
      *
      * @see [RFC 6455 §4.2.2](https://www.rfc-editor.org/rfc/rfc6455.html#section-4.2.2)
      * @see [RFC 6455 §10.4](https://www.rfc-editor.org/rfc/rfc6455.html#section-10.4)
      */
-    construct(Int maxMessageSize = 64ki, String? protocol = Null) {
+    construct(Int maxMessageSize = 64ki, String? protocol = Null,
+              Duration idleTimeout = Duration:5m) {
+        assert:arg idleTimeout >= Second as "Idle timeout too small";
+
         this.maxMessageSize = maxMessageSize;
         this.protocol       = protocol;
-
+        this.idleTimeout    = idleTimeout;
     }
 
     // ----- customizable WebSocket actions --------------------------------------------------------
@@ -78,6 +82,11 @@
      * Indicates whether the WebSocket is open or not.
      */
     @RO Boolean open.get() = underlying?.open : False;
+
+    /**
+     * How long the WebSocket transport may be idle before it closes.
+     */
+    public/private Duration idleTimeout;
 
     /**
      * The maximum message size for this WebSocket.

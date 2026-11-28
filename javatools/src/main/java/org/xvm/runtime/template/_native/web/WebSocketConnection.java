@@ -4,6 +4,8 @@ import java.io.IOException;
 
 import java.nio.ByteBuffer;
 
+import java.time.Duration;
+
 import java.util.concurrent.CompletableFuture;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,8 +25,9 @@ import org.xvm.runtime.template.xObject;
  */
 public class WebSocketConnection
         implements Session.Listener {
-    public WebSocketConnection(int cbMax) {
-        f_cbMax = cbMax;
+    public WebSocketConnection(int cbMax, Duration idleTimeout) {
+        f_cbMax       = cbMax;
+        f_idleTimeout = idleTimeout;
     }
 
     public CompletableFuture<WebSocketHandle> getOpenedFuture() {
@@ -50,6 +53,7 @@ public class WebSocketConnection
     @Override
     public void onWebSocketOpen(Session session) {
         m_session = session;
+        session.setIdleTimeout(f_idleTimeout);
         session.setMaxTextMessageSize(f_cbMax);
         session.setMaxBinaryMessageSize(f_cbMax);
         f_cfOpened.complete(new WebSocketHandle(this));
@@ -155,6 +159,7 @@ public class WebSocketConnection
     }
 
     private final int                                f_cbMax;
+    private final Duration                           f_idleTimeout;
     private final CompletableFuture<WebSocketHandle> f_cfOpened  = new CompletableFuture<>();
     private final AtomicBoolean                      f_fClosed   = new AtomicBoolean();
     private final AtomicBoolean                      f_fNotified = new AtomicBoolean();

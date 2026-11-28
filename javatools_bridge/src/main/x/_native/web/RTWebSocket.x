@@ -7,8 +7,8 @@ service RTWebSocket<Message extends String|Byte[]>(RTServer server, Object conte
         String? protocol, Int maxMessageSize, WebSocket<Message> endpoint)
         extends WebSocket<Message> {
     construct(RTServer server, Object context, String? protocol, Int maxMessageSize,
-            WebSocket<Message> endpoint) {
-        construct WebSocket(maxMessageSize, protocol);
+            WebSocket<Message> endpoint, Duration idleTimeout) {
+        construct WebSocket(maxMessageSize, protocol, idleTimeout);
 
         this.server   = server;
         this.context  = context;

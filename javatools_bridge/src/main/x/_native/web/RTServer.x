@@ -192,14 +192,16 @@ service RTServer
     Boolean upgradeWebSocket(RequestContext context, WebSocket<String|Byte[]> socket,
                              String? protocol, Int maxMessageSize, String[] headerNames,
                              String[] headerValues) {
+        Duration idleTimeout = socket.idleTimeout;
         if (Object socketContext ?=
-                upgradeWebSocketImpl(context, protocol, maxMessageSize, headerNames, headerValues)) {
+                upgradeWebSocketImpl(context, protocol, maxMessageSize, headerNames, headerValues,
+                        idleTimeout.milliseconds)) {
 
             // the caller's WebSocket type may be wider than the endpoint's actual Message type
             Type<String|Byte[]> messageType = socket.Message;
             connectWebSocket(socketContext,
                     new RTWebSocket<messageType.DataType>(this, socketContext, protocol, maxMessageSize,
-                            socket.as(WebSocket<messageType.DataType>)));
+                            socket.as(WebSocket<messageType.DataType>), idleTimeout));
             return True;
         }
         return False;
@@ -261,7 +263,7 @@ service RTServer
                     Int responseLength)                                                              = TODO("Native");
     void setBodyBytes(RequestContext context, Byte[] bytes, Boolean final)                           = TODO("Native");
     Object? upgradeWebSocketImpl(RequestContext context, String? protocol, Int maxMessageSize,
-                                 String[] headerNames, String[] headerValues)                        = TODO("Native");
+            String[] headerNames, String[] headerValues, Int idleMillis)                             = TODO("Native");
     void connectWebSocket(Object context, WebSocket socket)                                          = TODO("Native");
     void sendWebSocket(Object context, String|Byte[] message)                                        = TODO("Native");
     Boolean isWebSocketOpen(Object context)                                                          = TODO("Native");
